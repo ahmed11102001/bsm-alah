@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== User ====================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  password  String
+  image     String?
+
+  // Relations
+  campaigns  Campaign[]
+  audiences  Audience[]
+  templates  Template[]
+  messages   Message[] // ده اللي كان عامل المشكلة
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ==================== Audience (جهات الاتصال) ====================
+model Audience {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  contacts  Contact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==================== Contact (رقم الاتصال) ====================
+model Contact {
+  id         String   @id @default(cuid())
+  phone      String
+  audienceId String
+  audience   Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+
+  // Relations
+  messages   Message[]
+
+  createdAt DateTime @default(now())
+
+  @@index([audienceId])
+  @@index([phone])
+}
+
+// ==================== Campaign (حملة) ====================
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String   @default("Unnamed Campaign")
+  description String?
+  status      String   @default("draft") 
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  templateId  String?
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  sentCount       Int @default(0)
+  deliveredCount  Int @default(0)
+  readCount       Int @default(0)
+  failedCount     Int @default(0)
+
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  messages    Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ==================== Template (قالب) ====================
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  content   String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  campaigns Campaign[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==================== Message (رسالة) ====================
+model Message {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  status      String   @default("pending")
+
+  // الربط اللي كان ناقص مع المستخدم
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  whatsappId  String?  @unique
+  error       String?
+
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])     // اندكس جديد للسرعة
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+}
+
+// ==================== بقية الموديلات زي ما هي ====================
+model WebhookLog {
+  id        String   @id @default(cuid())
+  eventType String
+  payload   String   @db.Text
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([processed])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
