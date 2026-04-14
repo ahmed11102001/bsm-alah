@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(37, 211, 102, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(37, 211, 102, 0.6);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Progress bar styling */
+[data-slot="progress-indicator"] {
+  background: linear-gradient(90deg, #25D366, #128C7E) !important;
+}
+
+/* RTL specific adjustments */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .space-x-2 > * + * {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .space-x-4 > * + * {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .space-x-8 > * + * {
+  --tw-space-x-reverse: 1;
+}
+/* ✅ تخلي الماوس يتحول لـ "إيد" فوق أي حاجة قابلة للضغط */
+button, 
+[role="button"], 
+a, 
+input[type="submit"], 
+input[type="button"],
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+/* ✅ تحسين شكل الـ Inputs عشان تبقى متناسقة مع التصميم */
+input:focus, 
+textarea:focus {
+  outline: none;
+  border-color: #22c55e; /* لون أخضر واتس برو */
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+/* ✅ منع الـ Horizontal Scroll اللي بيعمل مشاكل في الموبايل */
+html, body {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
