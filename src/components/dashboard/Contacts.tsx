@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 
-export default function AudiencesPage() {
+export default function Contacts() {
   const [audiences, setAudiences] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
