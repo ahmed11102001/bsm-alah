@@ -59,13 +59,6 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('home');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // ✅ SAFE AUTH REDIRECT (no SSR crash)
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/");
-    }
-  }, [status, router]);
-
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: "/" });
   };
@@ -124,11 +117,6 @@ export default function DashboardPage() {
         جاري التحميل...
       </div>
     );
-  }
-
-  // ✅ PREVENT RENDER BEFORE AUTH RESOLVE
-  if (status === "unauthenticated") {
-    return null;
   }
 
   return (
