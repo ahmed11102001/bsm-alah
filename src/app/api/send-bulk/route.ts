@@ -30,16 +30,28 @@ export async function POST(req: NextRequest) {
       return cleaned;
     };
 
+    const userId = (session.user as any).id as string;
+
     // ✅ إنشاء الحملة في قاعدة البيانات
     const campaign = await prisma.campaign.create({
       data: {
         name: campaignName || "حملة جديدة",
         status: scheduled ? "scheduled" : "running",
-        userId: (session.user as any).id,
+        userId,
         user: {
-          connect: { id: (session.user as any).id }
+          connect: { id: userId }
         },
         scheduledAt: scheduled ? new Date(scheduled) : null,
+      }
+    });
+
+    const autoAudience = await prisma.audience.create({
+      data: {
+        name: `Auto-generated-${campaign.id}`,
+        userId,
+        user: {
+          connect: { id: userId }
+        }
       }
     });
 
@@ -74,12 +86,20 @@ export async function POST(req: NextRequest) {
               data: {
                 content: `Template: ${templateName}`,
                 status: "sent",
-                userId: (session.user as any).id,
+                userId,
                 campaignId: campaign.id,
                 contact: {
                   connectOrCreate: {
-                    where: { phone: number },
-                    create: { phone: number, audience: { create: { name: "Auto-generated", userId: (session.user as any).id } } }
+                    where: {
+                      phone_audienceId: {
+                        phone: number,
+                        audienceId: autoAudience.id,
+                      }
+                    },
+                    create: {
+                      phone: number,
+                      audienceId: autoAudience.id,
+                    }
                   }
                 },
                 whatsappId: data.messages?.[0]?.id,
@@ -101,12 +121,20 @@ export async function POST(req: NextRequest) {
         data: {
           content: `Template: ${templateName}`,
           status: "failed",
-          userId: (session.user as any).id,
+          userId,
           campaignId: campaign.id,
           contact: {
             connectOrCreate: {
-              where: { phone: number },
-              create: { phone: number, audience: { create: { name: "Auto-generated", userId: (session.user as any).id } } }
+              where: {
+                phone_audienceId: {
+                  phone: number,
+                  audienceId: autoAudience.id,
+                }
+              },
+              create: {
+                phone: number,
+                audienceId: autoAudience.id,
+              }
             }
           },
           error: JSON.stringify(lastError),

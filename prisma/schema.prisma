@@ -56,6 +56,7 @@ model Contact {
 
   createdAt DateTime @default(now())
 
+  @@unique([phone, audienceId])
   @@index([audienceId])
   @@index([phone])
 }
