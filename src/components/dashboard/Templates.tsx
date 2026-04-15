@@ -35,7 +35,11 @@ export default function TemplatesPage() {
 
   // 3. حذف قالب
   const deleteTemplate = async (id) => {
-    await fetch(`/api/templates?id=${id}`, { method: "DELETE" });
+    await fetch("/api/templates", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
     setTemplates(templates.filter((t) => t.id !== id));
   };
 

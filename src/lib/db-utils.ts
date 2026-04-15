@@ -97,8 +97,7 @@ export async function getAudiences(userId: string) {
   return safeQuery(() =>
     prisma.audience.findMany({
       where: {
-        // Assuming you add userId to Audience model
-        // Temporary: return all
+        userId,
       },
       include: {
         contacts: true,
@@ -110,7 +109,7 @@ export async function getAudiences(userId: string) {
 /**
  * Create audience with contacts
  */
-export async function createAudience(data: {
+export async function createAudience(userId: string, data: {
   name: string;
   contacts: string[];
 }) {
@@ -118,6 +117,10 @@ export async function createAudience(data: {
     prisma.audience.create({
       data: {
         name: data.name,
+        userId,
+        user: {
+          connect: { id: userId }
+        },
         contacts: {
           create: data.contacts.map((phone) => ({
             phone,
@@ -134,9 +137,12 @@ export async function createAudience(data: {
 /**
  * Get campaigns
  */
-export async function getCampaigns() {
+export async function getCampaigns(userId: string) {
   return safeQuery(() =>
     prisma.campaign.findMany({
+      where: {
+        userId,
+      },
       orderBy: { createdAt: "desc" },
     })
   );
@@ -145,7 +151,7 @@ export async function getCampaigns() {
 /**
  * Create campaign
  */
-export async function createCampaign(data: {
+export async function createCampaign(userId: string, data: {
   name?: string;
   status?: string;
 }) {
@@ -154,6 +160,10 @@ export async function createCampaign(data: {
       data: {
         name: data.name || "Unnamed Campaign",
         status: data.status || "pending",
+        userId,
+        user: {
+          connect: { id: userId }
+        },
       },
     })
   );
