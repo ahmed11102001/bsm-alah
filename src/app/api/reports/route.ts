@@ -14,7 +14,7 @@ export async function GET() {
     const campaigns = await prisma.campaign.findMany({
       where: {
         // نربط الداتا باليوزر عشان ميبقاش "عك" وكل الناس تشوف داتا بعض
-        userId: session.user.id 
+        userId: (session.user as any).id 
       },
       orderBy: { createdAt: "desc" },
     });
