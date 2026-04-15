@@ -2,10 +2,10 @@
 module.exports = {
   darkMode: ["class"],
 
- content: [
-  "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-],
+  content: [
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
 
   theme: {
     extend: {
@@ -64,11 +64,10 @@ module.exports = {
       },
 
       borderRadius: {
-        xl: "calc(var(--radius) + 4px)",
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        xs: "calc(var(--radius) - 6px)",
+        xl: "1rem",
+        lg: "0.75rem",
+        md: "0.5rem",
+        sm: "0.25rem",
       },
 
       boxShadow: {
