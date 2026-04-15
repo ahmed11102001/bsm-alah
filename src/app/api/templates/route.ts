@@ -44,9 +44,6 @@ export async function POST(req: Request) {
         name,
         content,
         userId: (session.user as any).id,
-        user: {
-          connect: { id: (session.user as any).id }
-        }
       }
     });
 

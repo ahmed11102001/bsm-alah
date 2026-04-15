@@ -118,9 +118,6 @@ export async function createAudience(userId: string, data: {
       data: {
         name: data.name,
         userId,
-        user: {
-          connect: { id: userId }
-        },
         contacts: {
           create: data.contacts.map((phone) => ({
             phone,
@@ -161,9 +158,6 @@ export async function createCampaign(userId: string, data: {
         name: data.name || "Unnamed Campaign",
         status: data.status || "pending",
         userId,
-        user: {
-          connect: { id: userId }
-        },
       },
     })
   );

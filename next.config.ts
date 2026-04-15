@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    typedRoutes: false, // تعطيل typed routes لتجنب مشاكل TypeScript
-  },
+  typedRoutes: false,
 };
 
 export default nextConfig;

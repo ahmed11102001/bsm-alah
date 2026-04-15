@@ -38,9 +38,6 @@ export async function POST(req: NextRequest) {
         name: campaignName || "حملة جديدة",
         status: scheduled ? "scheduled" : "running",
         userId,
-        user: {
-          connect: { id: userId }
-        },
         scheduledAt: scheduled ? new Date(scheduled) : null,
       }
     });
@@ -49,9 +46,6 @@ export async function POST(req: NextRequest) {
       data: {
         name: `Auto-generated-${campaign.id}`,
         userId,
-        user: {
-          connect: { id: userId }
-        }
       }
     });
 
@@ -82,26 +76,27 @@ export async function POST(req: NextRequest) {
 
           if (response.ok) {
             // ✅ نجح الإرسال
+            const contact = await prisma.contact.upsert({
+              where: {
+                phone_audienceId: {
+                  phone: number,
+                  audienceId: autoAudience.id,
+                }
+              },
+              create: {
+                phone: number,
+                audienceId: autoAudience.id,
+              },
+              update: {}
+            });
+
             await prisma.message.create({
               data: {
                 content: `Template: ${templateName}`,
                 status: "sent",
                 userId,
                 campaignId: campaign.id,
-                contact: {
-                  connectOrCreate: {
-                    where: {
-                      phone_audienceId: {
-                        phone: number,
-                        audienceId: autoAudience.id,
-                      }
-                    },
-                    create: {
-                      phone: number,
-                      audienceId: autoAudience.id,
-                    }
-                  }
-                },
+                contactId: contact.id,
                 whatsappId: data.messages?.[0]?.id,
                 sentAt: new Date(),
               }
@@ -117,26 +112,27 @@ export async function POST(req: NextRequest) {
       }
 
       // ❌ فشل بعد جميع المحاولات
+      const failedContact = await prisma.contact.upsert({
+        where: {
+          phone_audienceId: {
+            phone: number,
+            audienceId: autoAudience.id,
+          }
+        },
+        create: {
+          phone: number,
+          audienceId: autoAudience.id,
+        },
+        update: {}
+      });
+
       await prisma.message.create({
         data: {
           content: `Template: ${templateName}`,
           status: "failed",
           userId,
           campaignId: campaign.id,
-          contact: {
-            connectOrCreate: {
-              where: {
-                phone_audienceId: {
-                  phone: number,
-                  audienceId: autoAudience.id,
-                }
-              },
-              create: {
-                phone: number,
-                audienceId: autoAudience.id,
-              }
-            }
-          },
+          contactId: failedContact.id,
           error: JSON.stringify(lastError),
         }
       });

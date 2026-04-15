@@ -53,9 +53,6 @@ export async function POST(req: Request) {
         name,
         status: scheduledAt ? "scheduled" : "pending",
         userId: (session.user as any).id,
-        user: {
-          connect: { id: (session.user as any).id }
-        },
         templateId: templateId || null,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       }

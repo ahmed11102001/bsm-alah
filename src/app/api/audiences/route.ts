@@ -47,9 +47,6 @@ export async function POST(req: Request) {
       data: {
         name,
         userId: (session.user as any).id,
-        user: {
-          connect: { id: (session.user as any).id }
-        },
         contacts: {
           create: contacts
         }

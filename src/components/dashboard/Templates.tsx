@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, CheckCircle, Clock, Layout } from "lucide-react"; // لو مستخدم أيقونات
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 1. جلب البيانات
@@ -34,7 +34,7 @@ export default function TemplatesPage() {
   };
 
   // 3. حذف قالب
-  const deleteTemplate = async (id) => {
+  const deleteTemplate = async (id: number) => {
     await fetch("/api/templates", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -110,7 +110,7 @@ export default function TemplatesPage() {
 }
 
 // مكون الكارت عشان الكود يبقى نظيف
-function StatCard({ label, value, color }) {
+function StatCard({ label, value, color }: { label: string; value: number; color: "blue" | "green" | "yellow" | "red"; }) {
   const colors = {
     blue: "border-blue-500 text-blue-700",
     green: "border-green-500 text-green-700",
