@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 interface Template {
   id: string;
   name: string;
-  content: string;
+  content?: string;
   status?: string;
   language?: string;
   category?: string;
@@ -15,39 +15,40 @@ interface Template {
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  // 1. جلب البيانات
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("🔄 جاري جلب القوالب...");
-        
-        const res = await fetch("/api/templates");
-        
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "فشل تحميل القوالب");
-        }
-        
-        const data = await res.json();
-        console.log("✅ تم جلب القوالب:", data);
-        
-        // تأكد من أن البيانات هي array
-        const validTemplates = Array.isArray(data) ? data : [];
-        setTemplates(validTemplates);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "حدث خطأ في تحميل القوالب";
-        console.error("❌ خطأ في جلب القوالب:", err);
-        setError(errorMsg);
-        setTemplates([]);
-      } finally {
-        setLoading(false);
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setMessage(null);
+
+      console.log("🔄 جاري جلب القوالب...");
+      const res = await fetch("/api/templates");
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "فشل تحميل القوالب");
       }
-    };
 
+      const data = await res.json();
+      console.log("✅ تم جلب القوالب:", data);
+
+      const validTemplates = Array.isArray(data) ? data : [];
+      setTemplates(validTemplates);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "حدث خطأ في تحميل القوالب";
+      console.error("❌ خطأ في جلب القوالب:", err);
+      setError(errorMsg);
+      setTemplates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTemplates();
   }, []);
 
@@ -77,10 +78,35 @@ export default function TemplatesPage() {
       console.log("✅ تم إنشاء القالب:", data);
       
       setTemplates([data, ...templates]);
-      alert("✅ تم إنشاء القالب بنجاح");
+      setMessage("تم إنشاء القالب بنجاح");
     } catch (error) {
       console.error("❌ خطأ في إنشاء القالب:", error);
-      alert("❌ فشل إنشاء القالب: " + (error instanceof Error ? error.message : "خطأ غير معروف"));
+      setError(error instanceof Error ? error.message : "خطأ غير معروف");
+    }
+  };
+
+  const syncTemplates = async () => {
+    try {
+      setSyncing(true);
+      setError(null);
+      setMessage(null);
+
+      console.log("🔄 جاري مزامنة القوالب من Meta...");
+      const res = await fetch("/api/templates/sync", { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "فشل مزامنة القوالب");
+      }
+
+      console.log("✅ تمت المزامنة:", data);
+      setMessage(`تمت مزامنة ${data.count ?? 0} قالب`);
+      await fetchTemplates();
+    } catch (error) {
+      console.error("❌ خطأ في مزامنة القوالب:", error);
+      setError(error instanceof Error ? error.message : "فشل مزامنة القوالب");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -147,16 +173,32 @@ export default function TemplatesPage() {
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen text-right font-sans" dir="rtl">
       
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          إدارة القوالب
-        </h1>
-        <button
-          onClick={addTemplate}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-md transition-all flex items-center gap-2"
-        >
-          <span>+ إنشاء قالب</span>
-        </button>
+      <div className="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            إدارة القوالب
+          </h1>
+          {message ? (
+            <p className="mt-2 text-sm text-green-700">✅ {message}</p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button
+            onClick={syncTemplates}
+            disabled={loading || syncing}
+            className="bg-whatsapp-gradient hover:opacity-90 text-white px-6 py-2 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {syncing ? "جاري المزامنة..." : "مزامنة القوالب"}
+          </button>
+          <button
+            onClick={addTemplate}
+            disabled={loading || syncing}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>+ إنشاء قالب</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Section */}
