@@ -117,7 +117,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
                       <span className="text-white text-xl font-bold">و</span>
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-white">واقع برو</div>
+                      <div className="font-semibold text-white">واتس برو</div>
                       <div className="text-xs text-green-300 flex items-center gap-1">
                         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                         متصل الآن
