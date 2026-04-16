@@ -1,12 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
-
   content: [
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/sections/**/*.{js,ts,jsx,tsx,mdx}", // مهم
   ],
-
   theme: {
     extend: {
       colors: {
@@ -15,65 +14,53 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
-
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
-
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
-
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        // 👇 إضافة ألوان واتساب المباشرة (للاستخدام المباشر)
+        whatsapp: {
+          green: "#25D366",
+          dark: "#128C7E",
+          light: "#DCF8C6",
+          teal: "#075E54",
         },
       },
-
       borderRadius: {
         xl: "1rem",
         lg: "0.75rem",
         md: "0.5rem",
         sm: "0.25rem",
       },
-
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        'whatsapp-glow': "0 0 20px rgba(37, 211, 102, 0.3)",
+        'whatsapp-glow-lg': "0 0 40px rgba(37, 211, 102, 0.5)",
       },
-
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -88,7 +75,6 @@ module.exports = {
           "20%,50%": { opacity: "0" },
         },
       },
-
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -96,6 +82,5 @@ module.exports = {
       },
     },
   },
-
   plugins: [require("tailwindcss-animate")],
 };

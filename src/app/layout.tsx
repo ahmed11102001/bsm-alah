@@ -1,27 +1,31 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import ClientProvider from '@/components/ClientProvider'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import ClientProvider from "@/components/ClientProvider";
 
-const inter = Inter({ subsets: ['latin'] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: 'واتس برو',
-  description: 'منصة إرسال الرسائل التلقائية عبر واتساب',
-}
+  title: "WhatsProf - واتس برو",
+  description: "نظام إرسال رسائل واتساب جماعية احترافي",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className={inter.className}>
-        <ClientProvider>
-          {children}
-        </ClientProvider>
+    <html lang="ar" dir="rtl" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased">
+        <ClientProvider>{children}</ClientProvider>
       </body>
     </html>
-  )
+  );
 }
