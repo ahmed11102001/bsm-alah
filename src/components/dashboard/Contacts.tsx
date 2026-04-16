@@ -8,8 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 
+interface Contact {
+  id: string;
+  phone: string;
+  audienceId: string;
+}
+
+interface Audience {
+  id: string;
+  name: string;
+  contacts: Contact[];
+  _count: {
+    contacts: number;
+  };
+}
+
 export default function Contacts() {
-  const [audiences, setAudiences] = useState<any[]>([]);
+  const [audiences, setAudiences] = useState<Audience[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,10 +37,15 @@ export default function Contacts() {
   const fetchAudiences = async () => {
     try {
       const res = await fetch("/api/audiences");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "فشل تحميل الجماهير");
+      }
       const data = await res.json();
       setAudiences(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error("❌ خطأ في تحميل الجماهير:", error);
+      alert("❌ فشل تحميل الجماهير");
     }
   };
 
@@ -112,14 +132,21 @@ export default function Contacts() {
         }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "فشل الحفظ");
+      }
+
+      const data = await res.json();
+      console.log("✅ تم الحفظ:", data);
 
       alert("✅ تم الحفظ بنجاح");
 
       setIsOpen(false);
       reset();
       fetchAudiences();
-    } catch (err) {
+    } catch (error) {
+      console.error("❌ خطأ في حفظ الجمهور:", error);
       alert("❌ فشل الحفظ");
     } finally {
       setIsLoading(false);
@@ -127,11 +154,11 @@ export default function Contacts() {
   };
 
   // ================= Delete =================
-  const deleteAudience = async (id: number) => {
+  const deleteAudience = async (id: string) => {
     if (!confirm("متأكد؟")) return;
 
     try {
-      await fetch("/api/audiences", {
+      const res = await fetch("/api/audiences", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -139,14 +166,20 @@ export default function Contacts() {
         body: JSON.stringify({ id }),
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "فشل الحذف");
+      }
+
       fetchAudiences();
-    } catch {
+    } catch (error) {
+      console.error("❌ خطأ في حذف الجمهور:", error);
       alert("❌ فشل الحذف");
     }
   };
 
   // ================= Add Number to Existing Audience =================
-  const addNumberToAudience = async (audienceId: number) => {
+  const addNumberToAudience = async (audienceId: string) => {
     const number = prompt("أدخل الرقم:");
     if (!number) return;
 
@@ -158,7 +191,7 @@ export default function Contacts() {
     }
 
     try {
-      await fetch(`/api/audiences`, {
+      const res = await fetch(`/api/audiences`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -167,8 +200,14 @@ export default function Contacts() {
         }),
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "فشل الإضافة");
+      }
+
       fetchAudiences();
-    } catch {
+    } catch (error) {
+      console.error("❌ خطأ في إضافة الرقم:", error);
       alert("❌ فشل الإضافة");
     }
   };

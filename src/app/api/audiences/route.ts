@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
@@ -34,14 +34,18 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
+      console.error("❌ جلسة غير صالحة");
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
     const { name, contacts } = await req.json();
 
     if (!name || !contacts || !Array.isArray(contacts)) {
+      console.error("❌ بيانات غير صحيحة:", { name, contacts });
       return NextResponse.json({ error: "بيانات غير صحيحة" }, { status: 400 });
     }
+
+    console.log("📝 إنشاء جمهور جديد:", { name, contactCount: contacts.length });
 
     const newAudience = await prisma.audience.create({
       data: {
@@ -57,9 +61,11 @@ export async function POST(req: Request) {
       }
     });
 
+    console.log("✅ تم إنشاء الجمهور:", newAudience.id);
+
     return NextResponse.json({ success: true, data: newAudience });
   } catch (error) {
-    console.error("❌ Database Error:", error);
+    console.error("❌ خطأ في إنشاء الجمهور:", error);
     return NextResponse.json({ error: "فشل حفظ الجمهور" }, { status: 500 });
   }
 }
