@@ -97,6 +97,9 @@ model Template {
   id        String   @id @default(cuid())
   name      String
   content   String   @db.Text
+  status    String   @default("pending") // pending, approved, rejected
+  language  String   @default("ar") // ar, en
+  category  String   @default("marketing") // marketing, transactional, etc
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -106,6 +109,7 @@ model Template {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([status])
 }
 
 // ==================== Message (رسالة) ====================
