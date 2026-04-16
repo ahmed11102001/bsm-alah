@@ -48,15 +48,19 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      console.log("🔍 [AUTH] JWT Callback - Token:", token.sub, "User:", user?.id);
       if (user) {
         token.id = user.id;
+        console.log("🔍 [AUTH] Set token.id to:", token.id);
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      console.log("🔍 [AUTH] Session Callback - Token ID:", token.id, "Session User:", session.user?.id);
+      if (session.user && token.id) {
         // @ts-ignore
         session.user.id = token.id;
+        console.log("🔍 [AUTH] Set session.user.id to:", session.user.id);
       }
       return session;
     },
