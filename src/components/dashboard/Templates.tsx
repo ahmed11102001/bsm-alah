@@ -1,6 +1,9 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw, CheckCircle2, Clock, XCircle, Layout } from "lucide-react";
+import { syncWhatsAppTemplates } from "@/app/actions/whatsapp";
+import { toast } from "sonner"; // لو بتستخدم sonner للإشعارات
 
 interface Template {
   id: string;
@@ -17,31 +20,22 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
+  // 1. جلب القوالب من الـ API الداخلي
   const fetchTemplates = async () => {
     try {
       setLoading(true);
       setError(null);
-      setMessage(null);
-
-      console.log("🔄 جاري جلب القوالب...");
       const res = await fetch("/api/templates");
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "فشل تحميل القوالب");
+        throw new Error("فشل في تحميل القوالب من السيرفر");
       }
 
       const data = await res.json();
-      console.log("✅ تم جلب القوالب:", data);
-
-      const validTemplates = Array.isArray(data) ? data : [];
-      setTemplates(validTemplates);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "حدث خطأ في تحميل القوالب";
-      console.error("❌ خطأ في جلب القوالب:", err);
-      setError(errorMsg);
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setError(err.message);
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -52,211 +46,142 @@ export default function TemplatesPage() {
     fetchTemplates();
   }, []);
 
-  // 2. إضافة قالب
-  const addTemplate = async () => {
+  // 2. دالة المزامنة باستخدام الـ Server Action الجديد
+  const handleSync = async () => {
+    setSyncing(true);
     try {
-      console.log("📝 جاري إنشاء قالب جديد...");
-      
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "قالب جديد",
-          content: "رسالة جديدة 👋",
-          category: "marketing",
-          language: "ar",
-          status: "pending"
-        })
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "فشل إنشاء القالب");
+      const result = await syncWhatsAppTemplates();
+      if (result.success) {
+        toast.success(`تمت مزامنة ${result.count} قالب بنجاح`);
+        await fetchTemplates(); // إعادة تحميل القائمة بعد المزامنة
+      } else {
+        toast.error(result.error || "حدث خطأ أثناء المزامنة");
       }
-
-      const data = await res.json();
-      console.log("✅ تم إنشاء القالب:", data);
-      
-      setTemplates([data, ...templates]);
-      setMessage("تم إنشاء القالب بنجاح");
-    } catch (error) {
-      console.error("❌ خطأ في إنشاء القالب:", error);
-      setError(error instanceof Error ? error.message : "خطأ غير معروف");
-    }
-  };
-
-  const syncTemplates = async () => {
-    try {
-      setSyncing(true);
-      setError(null);
-      setMessage(null);
-
-      console.log("🔄 جاري مزامنة القوالب من Meta...");
-      const res = await fetch("/api/templates/sync", { method: "POST" });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "فشل مزامنة القوالب");
-      }
-
-      console.log("✅ تمت المزامنة:", data);
-      setMessage(`تمت مزامنة ${data.count ?? 0} قالب`);
-      await fetchTemplates();
-    } catch (error) {
-      console.error("❌ خطأ في مزامنة القوالب:", error);
-      setError(error instanceof Error ? error.message : "فشل مزامنة القوالب");
+    } catch (err) {
+      toast.error("فشلت عملية المزامنة");
     } finally {
       setSyncing(false);
     }
   };
 
   // 3. حذف قالب
-  const deleteTemplate = async (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("هل أنت متأكد من حذف هذا القالب؟")) return;
 
     try {
-      console.log("🗑️ جاري حذف القالب:", id);
-      
       const res = await fetch("/api/templates", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id })
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "فشل حذف القالب");
+      if (res.ok) {
+        setTemplates(templates.filter(t => t.id !== id));
+        toast.success("تم حذف القالب");
+      } else {
+        toast.error("فشل حذف القالب");
       }
-
-      console.log("✅ تم حذف القالب");
-      
-      setTemplates(templates.filter((t) => t.id !== id));
-      alert("✅ تم حذف القالب بنجاح");
-    } catch (error) {
-      console.error("❌ خطأ في حذف القالب:", error);
-      alert("❌ فشل حذف القالب: " + (error instanceof Error ? error.message : "خطأ غير معروف"));
+    } catch (err) {
+      toast.error("حدث خطأ أثناء الحذف");
     }
   };
 
-  const stats = {
-    total: Array.isArray(templates) ? templates.length : 0,
-    approved: Array.isArray(templates) ? templates.filter((t) => t.status === "approved").length : 0,
-    pending: Array.isArray(templates) ? templates.filter((t) => t.status === "pending").length : 0,
-    rejected: Array.isArray(templates) ? templates.filter((t) => t.status === "rejected").length : 0
+  // دالة مساعدة لتنسيق حالة القالب وألوانه
+  const getStatusDetails = (status?: string) => {
+    const s = status?.toUpperCase();
+    switch (s) {
+      case "APPROVED":
+        return { label: "معتمد", color: "bg-green-100 text-green-700 border-green-200", icon: <CheckCircle2 className="w-3 h-3" /> };
+      case "REJECTED":
+        return { label: "مرفوض", color: "bg-red-100 text-red-700 border-red-200", icon: <XCircle className="w-3 h-3" /> };
+      default:
+        return { label: "قيد المراجعة", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: <Clock className="w-3 h-3" /> };
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="p-10 text-center font-bold text-blue-600">
-        جاري تحميل القوالب...
-      </div>
-    );
-  }
+  // حساب الإحصائيات بدقة (Case Insensitive)
+  const stats = {
+    total: templates.length,
+    approved: templates.filter(t => t.status?.toUpperCase() === "APPROVED").length,
+    pending: templates.filter(t => t.status?.toUpperCase() !== "APPROVED" && t.status?.toUpperCase() !== "REJECTED").length,
+  };
 
-  if (error) {
-    return (
-      <div className="p-10 text-center">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 font-bold">❌ {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-          >
-            إعادة محاولة
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-20 text-center animate-pulse text-gray-500">جاري تحميل القوالب...</div>;
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen text-right font-sans" dir="rtl">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen" dir="rtl">
       
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            إدارة القوالب
+            <Layout className="w-6 h-6 text-blue-600" />
+            إدارة قوالب واتساب
           </h1>
-          {message ? (
-            <p className="mt-2 text-sm text-green-700">✅ {message}</p>
-          ) : null}
+          <p className="text-sm text-gray-500 mt-1">إدارة ومزامنة القوالب المعتمدة من Meta</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <div className="flex gap-3 w-full md:w-auto">
           <button
-            onClick={syncTemplates}
-            disabled={loading || syncing}
-            className="bg-whatsapp-gradient hover:opacity-90 text-white px-6 py-2 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
-            {syncing ? "جاري المزامنة..." : "مزامنة القوالب"}
-          </button>
-          <button
-            onClick={addTemplate}
-            disabled={loading || syncing}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span>+ إنشاء قالب</span>
+            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "جاري المزامنة..." : "مزامنة من ميتا"}
           </button>
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard label="إجمالي القوالب" value={stats.total} color="blue" />
         <StatCard label="المعتمدة" value={stats.approved} color="green" />
-        <StatCard label="قيد المراجعة" value={stats.pending} color="yellow" />
-        <StatCard label="المرفوضة" value={stats.rejected} color="red" />
+        <StatCard label="في الانتظار" value={stats.pending} color="yellow" />
       </div>
 
-      {/* Templates List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden text-right">
-        {templates && templates.length > 0 ? (
-          templates.map((t) => (
-            <div
-              key={t.id}
-              className="p-5 border-b last:border-0 hover:bg-gray-50 flex justify-between items-center transition-colors"
-            >
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-800">{t.name ?? "بدون اسم"}</h3>
-                <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">
-                  {t.language ?? "ar"} • {t.category ?? "marketing"}
-                </p>
-                <p className="text-sm text-gray-600 mt-2 bg-gray-100 p-2 rounded-lg">
-                  {t.content ?? "بدون محتوى"}
-                </p>
-              </div>
+      {/* Templates Grid/List */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {templates.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {templates.map((t) => {
+              const status = getStatusDetails(t.status);
+              return (
+                <div key={t.id} className="p-5 hover:bg-gray-50 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-gray-900">{t.name}</h3>
+                      <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.color}`}>
+                        {status.icon}
+                        {status.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">{t.language} • {t.category}</p>
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{t.content}</p>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col items-end gap-4 ml-4">
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                    t.status === "approved"
-                      ? "bg-green-100 text-green-700 border-green-200"
-                      : t.status === "rejected"
-                      ? "bg-red-100 text-red-700 border-red-200"
-                      : "bg-yellow-100 text-yellow-700 border-yellow-200"
-                  }`}
-                >
-                  {t.status === "approved"
-                    ? "معتمد ✅"
-                    : t.status === "rejected"
-                    ? "مرفوض ❌"
-                    : "قيد المراجعة ⏳"}
-                </span>
-                <button
-                  onClick={() => deleteTemplate(t.id)}
-                  className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-all"
-                  title="حذف"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          ))
+                  <div className="flex items-center gap-2 self-end md:self-center">
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                      title="حذف"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <div className="p-8 text-center text-gray-500">
-            <p className="text-lg font-semibold">لا توجد قوالب حالياً</p>
-            <p className="text-sm mt-2">اضغط على زر "إنشاء قالب" لإنشاء قالب جديد</p>
+          <div className="p-16 text-center">
+            <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Layout className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-gray-500 font-medium">لا توجد قوالب معروضة حالياً</p>
+            <p className="text-sm text-gray-400 mt-1">تأكد من ربط حسابك ثم اضغط على زر المزامنة</p>
           </div>
         )}
       </div>
@@ -264,18 +189,16 @@ export default function TemplatesPage() {
   );
 }
 
-// مكون الكارت عشان الكود يبقى نظيف
-function StatCard({ label, value, color }: { label: string; value: number; color: "blue" | "green" | "yellow" | "red"; }) {
+function StatCard({ label, value, color }: { label: string; value: number; color: "blue" | "green" | "yellow" }) {
   const colors = {
-    blue: "border-blue-500 text-blue-700",
-    green: "border-green-500 text-green-700",
-    yellow: "border-yellow-500 text-yellow-700",
-    red: "border-red-500 text-red-700"
+    blue: "border-blue-500 text-blue-700 bg-blue-50/30",
+    green: "border-green-500 text-green-700 bg-green-50/30",
+    yellow: "border-yellow-500 text-yellow-700 bg-yellow-50/30",
   };
   return (
-    <div className={`bg-white p-4 rounded-xl border-r-4 shadow-sm ${colors[color]}`}>
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
+    <div className={`p-5 rounded-2xl border-r-4 shadow-sm bg-white ${colors[color]}`}>
+      <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
+      <p className="text-3xl font-bold">{value}</p>
     </div>
   );
 }
