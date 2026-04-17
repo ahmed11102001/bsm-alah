@@ -156,7 +156,7 @@ export default function Campaigns() {
     
     setLoading(true);
     try {
-      const response = await fetch('https://whatsprof.vercel.app/api/send-bulk', {
+      const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
