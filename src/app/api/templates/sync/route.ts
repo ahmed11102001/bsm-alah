@@ -6,74 +6,46 @@ import prisma from "@/lib/prisma";
 const SYNC_COOLDOWN_MS = 10_000;
 const syncCooldown = new Map<string, number>();
 
-// --- تعديل الدالة لضمان عدم تجاهل أي قالب ---
+// --- دالة تنظيف البيانات (Normalize) ---
 function normalizeMetaTemplate(template: any) {
-  if (!template || !template.id || !template.name) {
-    return null;
-  }
+  if (!template || !template.id || !template.name) return null;
 
-  const status = typeof template.status === "string" ? template.status.toLowerCase() : "pending";
-  const category = typeof template.category === "string" ? template.category : "marketing";
-  const language = typeof template.language === "string" ? template.language : "en";
-
-  // محاولة استخراج النص من الـ components
-  let content = "Template content available in Meta Dashboard"; 
-  
-  if (Array.isArray(template.components)) {
-    const bodyComponent = template.components.find(
-      (comp: any) => comp?.type === "BODY"
-    );
-    if (bodyComponent?.text) {
-      content = bodyComponent.text;
-    }
-  } else if (template.components && typeof template.components.text === "string") {
-    content = template.components.text;
+  // استخراج النص من الـ BODY component
+  let content = "Template content available in Meta Dashboard";
+  if (template.components && Array.isArray(template.components)) {
+    const bodyComponent = template.components.find((c: any) => c.type === "BODY");
+    if (bodyComponent?.text) content = bodyComponent.text;
   }
 
   return {
     metaId: String(template.id),
     name: String(template.name),
-    status,
-    category,
-    language,
-    content, // سيحتوي دائماً على نص بدلاً من null
+    status: String(template.status || "pending").toLowerCase(),
+    category: String(template.category || "marketing").toLowerCase(),
+    language: String(template.language || "en"),
+    content: content,
   };
 }
 
+// --- دالة جلب البيانات من ميتا ---
 async function fetchMetaTemplates(accessToken: string, wabaId: string) {
-  const fields = [
-    "id",
-    "name",
-    "status",
-    "category",
-    "language",
-    "components{type,text}",
-  ].join(",");
-
-  let url = `https://graph.facebook.com/v20.0/${encodeURIComponent(
-    wabaId
-  )}/message_templates?fields=${encodeURIComponent(fields)}&limit=100`;
-  
+  // استخدمنا اللينك البسيط اللي اشتغل معاك في المتصفح لضمان وصول البيانات
+  let url = `https://graph.facebook.com/v20.0/${wabaId}/message_templates?limit=100`;
   const templates: Array<any> = [];
 
   while (url) {
     const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store'
     });
 
     if (!response.ok) {
-      const responseText = await response.text();
-      console.error("Meta API Error Response:", responseText);
-      throw new Error(`Meta API error ${response.status}: ${responseText}`);
+      const errorBody = await response.text();
+      throw new Error(`Meta API error ${response.status}: ${errorBody}`);
     }
 
     const body = await response.json();
-    if (!body || !Array.isArray(body.data)) {
-      break;
-    }
+    if (!body || !Array.isArray(body.data)) break;
 
     for (const item of body.data) {
       const normalized = normalizeMetaTemplate(item);
@@ -89,41 +61,31 @@ async function fetchMetaTemplates(accessToken: string, wabaId: string) {
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    if (!session?.user) {
       return NextResponse.json({ success: false, error: "غير مصرح لك" }, { status: 401 });
     }
 
     const userId = (session.user as any).id;
-    if (!userId) {
-      return NextResponse.json({ success: false, error: "معرف المستخدم غير متوفر" }, { status: 401 });
-    }
-
+    
+    // Cooldown logic
     const lastSync = syncCooldown.get(userId) ?? 0;
-    const now = Date.now();
-    if (now - lastSync < SYNC_COOLDOWN_MS) {
-      return NextResponse.json(
-        { success: false, error: "يرجى الانتظار قليلاً" },
-        { status: 429 }
-      );
+    if (Date.now() - lastSync < SYNC_COOLDOWN_MS) {
+      return NextResponse.json({ success: false, error: "يرجى الانتظار قليلاً" }, { status: 429 });
     }
+    syncCooldown.set(userId, Date.now());
 
-    syncCooldown.set(userId, now);
-
-    // --- التأكد من قراءة المتغيرات بكافة المسميات المحتملة ---
+    // --- قراءة المتغيرات بأي مسمى موجود في Env ---
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY;
     const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || process.env.WABA_ID;
 
     if (!accessToken || !wabaId) {
-      console.error("Missing Credentials:", { hasToken: !!accessToken, hasWaba: !!wabaId });
       return NextResponse.json(
-        { success: false, error: "Missing Meta API credentials in Environment Variables" },
+        { success: false, error: "Missing Credentials (Token or WABA ID)" },
         { status: 500 }
       );
     }
 
     const metaTemplates = await fetchMetaTemplates(accessToken, wabaId);
-    console.log(`Fetched ${metaTemplates.length} templates from Meta for WABA: ${wabaId}`);
-
     let syncedCount = 0;
 
     for (const template of metaTemplates) {
@@ -152,22 +114,20 @@ export async function POST() {
             userId,
           },
         });
-        syncedCount += 1;
+        syncedCount++;
       } catch (error) {
-        console.error("Prisma Upsert Error for template:", template.metaId, error);
+        console.error(`❌ Upsert error for ${template.metaId}:`, error);
       }
     }
 
     return NextResponse.json({ 
       success: true, 
       count: syncedCount,
-      message: `Successfully synced ${syncedCount} templates to database`
+      message: `تمت مزامنة ${syncedCount} قوالب بنجاح`
     });
+
   } catch (error: any) {
-    console.error("Critical Error in /api/templates/sync:", error.message);
-    return NextResponse.json(
-      { success: false, error: error.message || "فشل مزامنة القوالب" },
-      { status: 500 }
-    );
+    console.error("Critical Error:", error.message);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
