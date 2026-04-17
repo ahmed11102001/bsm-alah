@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { saveWhatsAppSettings } from "@/app/actions/whatsapp";
+// استيراد الأكشن الجديد هنا
+import { saveWhatsAppSettings, syncWhatsAppTemplates } from "@/app/actions/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Copy, CheckCircle, RefreshCw } from "lucide-react";
-import { toast } from "sonner"; // أو استخدم alert لو مش ضايف sonner
+import { toast } from "sonner";
 
 const endpoints = [
   { method: "POST", path: "/v1/messages", description: "إرسال رسالة" },
@@ -19,8 +20,8 @@ const endpoints = [
 export default function API({ initialData }: { initialData?: any }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false); // حالة خاصة بمزامنة القوالب
   const [apiKey, setApiKey] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState("");
 
   useEffect(() => {
     fetch("/api/me/api-key")
@@ -35,10 +36,26 @@ export default function API({ initialData }: { initialData?: any }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // دالة مزامنة القوالب
+  const handleSyncTemplates = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncWhatsAppTemplates();
+      if (result.success) {
+        toast.success(`تمت مزامنة ${result.count} قالب بنجاح`);
+      } else {
+        toast.error(result.error || "فشلت المزامنة");
+      }
+    } catch (err) {
+      toast.error("حدث خطأ غير متوقع");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
     const formData = new FormData(e.currentTarget);
 
     try {
@@ -47,8 +64,7 @@ export default function API({ initialData }: { initialData?: any }) {
         phoneNumberId: formData.get("phoneNumberId") as string,
         wabaId: formData.get("wabaId") as string,
       });
-
-      toast.success("تم حفظ الإعدادات وتحديث الصفحة");
+      toast.success("تم حفظ الإعدادات بنجاح");
     } catch (err) {
       toast.error("حدث خطأ أثناء الحفظ");
     } finally {
@@ -63,10 +79,16 @@ export default function API({ initialData }: { initialData?: any }) {
           <h1 className="text-2xl font-bold">API Dashboard</h1>
           <p className="text-gray-500">ربط واتساب وإدارة الـ API</p>
         </div>
-        {/* زرار إضافي لمزامنة القوالب مستقبلاً */}
-        <Button variant="outline" className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          تحديث القوالب
+        
+        {/* تحديث الزرار ليعمل مع الأكشن */}
+        <Button 
+          variant="outline" 
+          className="gap-2" 
+          onClick={handleSyncTemplates}
+          disabled={isSyncing}
+        >
+          <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+          {isSyncing ? "جاري المزامنة..." : "تحديث القوالب"}
         </Button>
       </div>
 
@@ -87,7 +109,7 @@ export default function API({ initialData }: { initialData?: any }) {
                 <div>
                   <Label>Access Token</Label>
                   <Input 
-                    key={`token-${initialData?.accessToken}`} // الحل السحري لظهور البيانات
+                    key={`token-${initialData?.accessToken}`}
                     name="accessToken" 
                     defaultValue={initialData?.accessToken || ""} 
                     placeholder="EAA..."
@@ -122,7 +144,6 @@ export default function API({ initialData }: { initialData?: any }) {
           </Card>
         </TabsContent>
 
-        {/* باقي الـ Tabs (Docs & Webhooks) تفضل زي ما هي */}
         <TabsContent value="docs">
           <Card>
             <CardHeader>
@@ -137,7 +158,21 @@ export default function API({ initialData }: { initialData?: any }) {
               </div>
             </CardContent>
           </Card>
-          {/* Endpoints Table... */}
+          
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Endpoints</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {endpoints.map((ep, i) => (
+                <div key={i} className="flex justify-between p-2 border-b">
+                  <span className="font-bold text-blue-600">{ep.method}</span>
+                  <code className="bg-gray-100 px-1 rounded">{ep.path}</code>
+                  <span className="text-gray-600 text-sm">{ep.description}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
