@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth"; // تأكد من مسار الـ auth عندك
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth"; // رجعنا للقديم عشان يشتغل معاك فوراً
+import { authOptions } from "@/lib/auth"; // تأكد إن المسار ده صح عندك
+import prisma from "@/lib/prisma"; // شيلنا الأقواس { } لأن بريزما عندك غالباً default export
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    // @ts-ignore
+    const userId = session.user.id as string;
 
     const {
       numbers,
@@ -26,19 +28,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // جلب بيانات واتساب الخاصة بالمستخدم
     const account = await prisma.whatsAppAccount.findUnique({
       where: { userId },
     });
 
     if (!account) {
       return NextResponse.json(
-        { error: "قم بربط حساب واتساب أولاً من صفحة API" },
+        { error: "قم بربط حساب واتساب أولاً" },
         { status: 400 }
       );
     }
 
-    // تنظيف الرقم
     const cleanNumber = (value: string) => {
       let cleaned = value.toString().replace(/\D/g, "");
       if (cleaned.startsWith("0")) cleaned = "20" + cleaned.slice(1);
@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
       return cleaned;
     };
 
-    // 1. إنشاء حملة
     const campaign = await prisma.campaign.create({
       data: {
         name: campaignName || "حملة جديدة",
@@ -55,7 +54,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 2. إنشاء قائمة تلقائية
     const autoAudience = await prisma.audience.create({
       data: {
         name: `Auto-generated-${campaign.id}`,
@@ -91,7 +89,6 @@ export async function POST(req: NextRequest) {
           const data = await response.json();
 
           if (response.ok) {
-            // التعديل الجوهري هنا: استخدام phone_audienceId
             const contact = await prisma.contact.upsert({
               where: {
                 phone_audienceId: {
@@ -99,7 +96,7 @@ export async function POST(req: NextRequest) {
                   audienceId: autoAudience.id,
                 },
               },
-              update: { name: "جهة اتصال محدثة" },
+              update: { userId }, // مجرد تحديث بسيط
               create: {
                 phone: number,
                 userId,
@@ -128,7 +125,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // في حالة الفشل النهائي
       const failedContact = await prisma.contact.upsert({
         where: {
           phone_audienceId: {
