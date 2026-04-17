@@ -1,132 +1,37 @@
 "use client";
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Copy, CheckCircle, Key, RefreshCw, BookOpen, Terminal, Webhook } from 'lucide-react';
 
-const codeExamples = {
-  curl: `curl -X POST https://api.whatspro.com/v1/messages \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "to": "+966501234567",
-    "template": "welcome",
-    "variables": {
-      "name": "أحمد"
-    }
-  }'`,
-  
-  javascript: `const axios = require('axios');
-
-const response = await axios.post(
-  'https://api.whatspro.com/v1/messages',
-  {
-    to: '+966501234567',
-    template: 'welcome',
-    variables: {
-      name: 'أحمد'
-    }
-  },
-  {
-    headers: {
-      'Authorization': 'Bearer YOUR_API_KEY',
-      'Content-Type': 'application/json'
-    }
-  }
-);
-
-console.log(response.data);`,
-
-  php: `<?php
-$curl = curl_init();
-
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://api.whatspro.com/v1/messages',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_POST => true,
-  CURLOPT_POSTFIELDS => json_encode([
-    'to' => '+966501234567',
-    'template' => 'welcome',
-    'variables' => ['name' => 'أحمد']
-  ]),
-  CURLOPT_HTTPHEADER => [
-    'Authorization: Bearer YOUR_API_KEY',
-    'Content-Type: application/json'
-  ]
-]);
-
-$response = curl_exec($curl);
-curl_close($curl);
-
-echo $response;`,
-
-  python: `import requests
-
-response = requests.post(
-    'https://api.whatspro.com/v1/messages',
-    headers={
-        'Authorization': 'Bearer YOUR_API_KEY',
-        'Content-Type': 'application/json'
-    },
-    json={
-        'to': '+966501234567',
-        'template': 'welcome',
-        'variables': {
-            'name': 'أحمد'
-        }
-    }
-)
-
-print(response.json())`
-};
+import { useEffect, useState } from "react";
+import { saveWhatsAppSettings } from "@/app/actions/whatsapp";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Copy, CheckCircle, Key, RefreshCw, BookOpen, Terminal, Webhook } from "lucide-react";
 
 const endpoints = [
-  {
-    method: 'POST',
-    path: '/v1/messages',
-    description: 'إرسال رسالة',
-    auth: true
-  },
-  {
-    method: 'GET',
-    path: '/v1/messages/{id}',
-    description: 'الحصول على حالة الرسالة',
-    auth: true
-  },
-  {
-    method: 'POST',
-    path: '/v1/campaigns',
-    description: 'إنشاء حملة جديدة',
-    auth: true
-  },
-  {
-    method: 'GET',
-    path: '/v1/contacts',
-    description: 'قائمة جهات الاتصال',
-    auth: true
-  },
-  {
-    method: 'POST',
-    path: '/v1/contacts',
-    description: 'إضافة جهة اتصال',
-    auth: true
-  },
-  {
-    method: 'GET',
-    path: '/v1/templates',
-    description: 'قائمة القوالب',
-    auth: true
-  },
+  { method: "POST", path: "/v1/messages", description: "إرسال رسالة" },
+  { method: "GET", path: "/v1/messages/{id}", description: "حالة الرسالة" },
+  { method: "POST", path: "/v1/campaigns", description: "إنشاء حملة جديدة" },
 ];
 
-export default function API() {
+export default function API({ initialData }: { initialData?: any }) {
   const [copied, setCopied] = useState(false);
-  const [activeLanguage, setActiveLanguage] = useState('curl');
-  const [apiKey] = useState('whatspro_live_xxxxxxxxxxxxxxxx');
+  const [activeLanguage, setActiveLanguage] = useState("curl");
+
+  const [loading, setLoading] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+
+  const [webhookUrl, setWebhookUrl] = useState("");
+
+  // 🔥 API KEY من السيرفر
+  useEffect(() => {
+    fetch("/api/me/api-key")
+      .then((res) => res.json())
+      .then((data) => setApiKey(data.apiKey))
+      .catch(() => setApiKey("not-available"));
+  }, []);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -134,209 +39,135 @@ export default function API() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      await saveWhatsAppSettings({
+        accessToken: formData.get("accessToken") as string,
+        phoneNumberId: formData.get("phoneNumberId") as string,
+        wabaId: formData.get("wabaId") as string,
+      });
+
+      alert("تم حفظ الإعدادات بنجاح");
+    } catch (err) {
+      alert("حدث خطأ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-8">
+
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">API</h1>
-          <p className="text-gray-600">ربط تطبيقك مع واتس برو</p>
-        </div>
-        <Button variant="outline">
-          <BookOpen className="w-4 h-4 ml-2" />
-          التوثيق الكامل
-        </Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">API Dashboard</h1>
+        <p className="text-gray-500">ربط واتساب وإدارة الـ API</p>
       </div>
 
-      {/* API Key Card */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5" />
-            مفتاح API
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <Label className="text-sm text-gray-500 mb-2 block">مفتاحك السري</Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={apiKey} 
-                  type="password" 
-                  readOnly 
-                  className="font-mono"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => copyToClipboard(apiKey)}
-                >
-                  {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <RefreshCw className="w-4 h-4 ml-2" />
-                إعادة توليد
-              </Button>
-            </div>
-          </div>
-          <div className="mt-4 p-4 bg-yellow-50 rounded-xl">
-            <p className="text-sm text-yellow-700">
-              ⚠️ لا تشارك مفتاح API مع أي شخص. استخدمه فقط في الخادم الخاص بك.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="connect">
 
-      <Tabs defaultValue="docs" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+        <TabsList>
+          <TabsTrigger value="connect">ربط الحساب</TabsTrigger>
           <TabsTrigger value="docs">التوثيق</TabsTrigger>
-          <TabsTrigger value="examples">أمثلة</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="docs" className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">الطلبات هذا الشهر</p>
-                <p className="text-2xl font-bold">12,450</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">معدل النجاح</p>
-                <p className="text-2xl font-bold text-green-600">99.2%</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">متوسط الاستجابة</p>
-                <p className="text-2xl font-bold">120ms</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">حد الطلبات</p>
-                <p className="text-2xl font-bold">10,000/يوم</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Endpoints */}
+        {/* ================= CONNECT ================= */}
+        <TabsContent value="connect">
           <Card>
             <CardHeader>
-              <CardTitle>نقاط النهاية (Endpoints)</CardTitle>
+              <CardTitle>ربط WhatsApp</CardTitle>
             </CardHeader>
+
             <CardContent>
-              <div className="space-y-3">
-                {endpoints.map((endpoint, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <Badge className={
-                        endpoint.method === 'GET' ? 'bg-blue-100 text-blue-700' :
-                        endpoint.method === 'POST' ? 'bg-green-100 text-green-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }>
-                        {endpoint.method}
-                      </Badge>
-                      <code className="text-sm font-mono">{endpoint.path}</code>
-                    </div>
-                    <span className="text-gray-600">{endpoint.description}</span>
-                  </div>
-                ))}
-              </div>
+              <form onSubmit={handleSave} className="space-y-4">
+
+                <div>
+                  <Label>Access Token</Label>
+                  <Input name="accessToken" defaultValue={initialData?.accessToken || ""} />
+                </div>
+
+                <div>
+                  <Label>Phone Number ID</Label>
+                  <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} />
+                </div>
+
+                <div>
+                  <Label>WABA ID</Label>
+                  <Input name="wabaId" defaultValue={initialData?.wabaId || ""} />
+                </div>
+
+                <Button disabled={loading}>
+                  {loading ? "جاري الحفظ..." : "حفظ الإعدادات"}
+                </Button>
+
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="examples">
+        {/* ================= DOCS ================= */}
+        <TabsContent value="docs">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Terminal className="w-5 h-5" />
-                  أمثلة الكود
-                </CardTitle>
-                <div className="flex gap-2">
-                  {['curl', 'javascript', 'php', 'python'].map((lang) => (
-                    <Button
-                      key={lang}
-                      variant={activeLanguage === lang ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setActiveLanguage(lang)}
-                      className={activeLanguage === lang ? 'bg-whatsapp-gradient' : ''}
-                    >
-                      {lang}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              <CardTitle>API Key</CardTitle>
             </CardHeader>
+
             <CardContent>
-              <div className="relative">
-                <pre className="p-4 bg-gray-900 text-gray-100 rounded-xl overflow-x-auto text-sm font-mono">
-                  <code>{codeExamples[activeLanguage as keyof typeof codeExamples]}</code>
-                </pre>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute top-4 left-4 bg-white"
-                  onClick={() => copyToClipboard(codeExamples[activeLanguage as keyof typeof codeExamples])}
-                >
-                  {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <div className="flex gap-2">
+                <Input value={apiKey} readOnly />
+                <Button onClick={() => copyToClipboard(apiKey)}>
+                  {copied ? <CheckCircle /> : <Copy />}
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="webhooks">
-          <Card>
+          <Card className="mt-4">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Webhook className="w-5 h-5" />
-                Webhooks
-              </CardTitle>
+              <CardTitle>Endpoints</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <Label>رابط Webhook</Label>
-                <Input placeholder="https://your-website.com/webhook" />
-                <p className="text-sm text-gray-500 mt-2">
-                  سيتم إرسال إشعارات إلى هذا الرابط عند تغير حالة الرسائل
-                </p>
-              </div>
 
-              <div>
-                <Label className="mb-2 block">الأحداث</Label>
-                <div className="space-y-2">
-                  {[
-                    { id: 'message_sent', label: 'تم إرسال الرسالة' },
-                    { id: 'message_delivered', label: 'تم تسليم الرسالة' },
-                    { id: 'message_read', label: 'تم قراءة الرسالة' },
-                    { id: 'message_failed', label: 'فشل إرسال الرسالة' },
-                  ].map((event) => (
-                    <div key={event.id} className="flex items-center gap-2">
-                      <input type="checkbox" id={event.id} className="rounded" defaultChecked />
-                      <label htmlFor={event.id}>{event.label}</label>
-                    </div>
-                  ))}
+            <CardContent>
+              {endpoints.map((ep, i) => (
+                <div key={i} className="flex justify-between p-2 border-b">
+                  <span>{ep.method}</span>
+                  <code>{ep.path}</code>
+                  <span>{ep.description}</span>
                 </div>
-              </div>
-
-              <Button className="bg-whatsapp-gradient">
-                حفظ الإعدادات
-              </Button>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ================= WEBHOOK ================= */}
+        <TabsContent value="webhooks">
+          <Card>
+            <CardHeader>
+              <CardTitle>Webhook URL</CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+
+              <Input
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://your-domain.com/webhook"
+              />
+
+              <Button>
+                حفظ Webhook
+              </Button>
+
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   );

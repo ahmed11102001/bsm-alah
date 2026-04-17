@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
         name: campaignName || "حملة جديدة",
         status: scheduled ? "scheduled" : "running",
         userId,
-        scheduledAt: scheduled ? new Date(scheduled) : null,
       }
     });
 
@@ -78,16 +77,19 @@ export async function POST(req: NextRequest) {
             // ✅ نجح الإرسال
             const contact = await prisma.contact.upsert({
               where: {
-                phone_audienceId: {
+                phone_userId: {
                   phone: number,
-                  audienceId: autoAudience.id,
+                  userId,
                 }
               },
               create: {
                 phone: number,
+                userId,
                 audienceId: autoAudience.id,
               },
-              update: {}
+              update: {
+                audienceId: autoAudience.id,
+              }
             });
 
             await prisma.message.create({

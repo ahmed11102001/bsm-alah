@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== User ====================
+// ================= USER =================
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -16,26 +16,42 @@ model User {
   password  String
   image     String?
 
-  // Relations
-  campaigns  Campaign[]
-  audiences  Audience[]
-  templates  Template[]
-  messages   Message[] // ده اللي كان عامل المشكلة
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  whatsappAccount WhatsAppAccount?
+  campaigns       Campaign[]
+  audiences       Audience[]
+  templates       Template[]
+  messages        Message[]
+  contacts        Contact[]
 
   @@index([email])
 }
 
-// ==================== Audience (جهات الاتصال) ====================
+// ================= WHATSAPP ACCOUNT =================
+model WhatsAppAccount {
+  id            String   @id @default(cuid())
+
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken   String   @db.Text
+  phoneNumberId String
+  wabaId        String
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ================= AUDIENCE =================
 model Audience {
   id        String   @id @default(cuid())
   name      String
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
   contacts  Contact[]
 
   createdAt DateTime @default(now())
@@ -44,63 +60,57 @@ model Audience {
   @@index([userId])
 }
 
-// ==================== Contact (رقم الاتصال) ====================
+// ================= CONTACT =================
 model Contact {
-  id         String   @id @default(cuid())
-  phone      String
-  audienceId String
-  audience   Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  phone     String
+  name      String?
 
-  // Relations
-  messages   Message[]
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  audienceId String?
+  audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+
+  messages  Message[]
 
   createdAt DateTime @default(now())
 
-  @@unique([phone, audienceId])
-  @@index([audienceId])
+  @@unique([phone, userId])
+  @@index([userId])
   @@index([phone])
 }
 
-// ==================== Campaign (حملة) ====================
+// ================= CAMPAIGN =================
 model Campaign {
-  id          String   @id @default(cuid())
-  name        String   @default("Unnamed Campaign")
-  description String?
-  status      String   @default("draft") 
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("draft")
 
-  templateId  String?
-  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sentCount       Int @default(0)
-  deliveredCount  Int @default(0)
-  readCount       Int @default(0)
-  failedCount     Int @default(0)
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
-  scheduledAt DateTime?
-  startedAt   DateTime?
-  completedAt DateTime?
+  sentCount Int @default(0)
 
-  messages    Message[]
+  messages  Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([status])
 }
 
-// ==================== Template (قالب) ====================
+// ================= TEMPLATE =================
 model Template {
   id        String   @id @default(cuid())
   metaId    String
   name      String
-  status    String   @default("pending") // pending, approved, rejected
-  category  String   @default("marketing") // marketing, transactional, etc
-  language  String   @default("ar") // ar, en
-  content   String?  @db.Text
+  content   String   @db.Text
+  status    String   @default("pending")
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -110,56 +120,34 @@ model Template {
   updatedAt DateTime @updatedAt
 
   @@unique([metaId, userId])
-  @@index([userId])
-  @@index([status])
 }
 
-// ==================== Message (رسالة) ====================
+// ================= MESSAGE =================
 model Message {
   id          String   @id @default(cuid())
-  content     String   @db.Text
+  content     String?  @db.Text
+
+  direction   String   @default("outbound")
   status      String   @default("pending")
 
-  // الربط اللي كان ناقص مع المستخدم
+  whatsappId  String?  @unique
+
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  campaignId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   contactId   String
   contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
-  whatsappId  String?  @unique
-  error       String?
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  sentAt      DateTime?
-  deliveredAt DateTime?
-  readAt      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])     // اندكس جديد للسرعة
-  @@index([campaignId])
-  @@index([contactId])
-  @@index([status])
+  createdAt   DateTime @default(now())
 }
 
-// ==================== بقية الموديلات زي ما هي ====================
+// ================= WEBHOOK LOG =================
 model WebhookLog {
   id        String   @id @default(cuid())
-  eventType String
   payload   String   @db.Text
   processed Boolean  @default(false)
   createdAt DateTime @default(now())
-  @@index([processed])
-}
-
-model Setting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
