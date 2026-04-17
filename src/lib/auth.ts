@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("كلمة المرور غير صحيحة");
         }
 
+        // إرجاع البيانات الأساسية
         return {
           id: user.id,
           name: user.name,
@@ -48,20 +49,20 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      console.log("🔍 [AUTH] JWT Callback - Token:", token.sub, "User:", user?.id);
+      // عند تسجيل الدخول لأول مرة، الـ user بيبقى موجود
       if (user) {
-        token.id = user.id;
-        console.log("🔍 [AUTH] Set token.id to:", token.id);
+        token.id = user.id; // نأكد إن الـ id اتخزن في التوكن
       }
       return token;
     },
     async session({ session, token }) {
-      console.log("🔍 [AUTH] Session Callback - Token ID:", token.id, "Session User:", session.user?.id);
-      if (session.user && token.id) {
+      // نقل الـ id من التوكن للسيشن بشكل صريح
+      if (session.user) {
         // @ts-ignore
-        session.user.id = token.id;
-        console.log("🔍 [AUTH] Set session.user.id to:", session.user.id);
+        session.user.id = token.id || token.sub; 
       }
+      
+      console.log("✅ [AUTH] Session user ID set to:", session.user?.id);
       return session;
     },
   },

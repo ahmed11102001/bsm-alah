@@ -3,18 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// 1. وظيفة الجلب (GET): تقرأ فقط من قاعدة البيانات لضمان السرعة
+// 1. وظيفة الجلب (GET)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    // تأكد من وجود الجلسة واليوزر والـ ID بشكل آمن
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
 
-    // جلب القوالب الخاصة بالمستخدم الحالي فقط من قاعدة البيانات
     const templates = await prisma.template.findMany({
       where: {
         userId: userId,
@@ -22,22 +22,22 @@ export async function GET() {
       orderBy: { createdAt: "desc" }
     });
 
-    return NextResponse.json(Array.isArray(templates) ? templates : []);
+    return NextResponse.json(templates || []);
   } catch (error) {
     console.error("❌ خطأ في جلب القوالب:", error);
     return NextResponse.json(
-      { error: "فشل تحميل القوالب" },
+      { error: "حدث خطأ في السيرفر" },
       { status: 500 }
     );
   }
 }
 
-// 2. وظيفة الإنشاء (POST): تستخدم عند إنشاء قالب يدوي (يجب إضافة metaId وهمي أو تركه للـ Sync)
+// 2. وظيفة الإنشاء (POST)
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
@@ -47,11 +47,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "الاسم والمحتوى مطلوبان" }, { status: 400 });
     }
 
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
 
     const newTemplate = await prisma.template.create({
       data: {
-        metaId: `local_${Date.now()}`, // إضافة معرف فريد محلي لتجنب خطأ الـ Schema
+        metaId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, 
         name,
         content,
         language,
@@ -62,10 +62,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(newTemplate);
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ خطأ في إنشاء القالب:", error);
     return NextResponse.json(
-      { error: "فشل حفظ القالب" },
+      { error: error.message || "فشل حفظ القالب" },
       { status: 500 }
     );
   }
@@ -76,37 +76,28 @@ export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
     const { id } = await req.json();
+    const userId = session.user.id;
 
-    if (!id) {
-      return NextResponse.json({ error: "معرف القالب مطلوب" }, { status: 400 });
-    }
-
-    const userId = (session.user as any).id;
-
-    // تأكد أن القالب ينتمي للمستخدم قبل الحذف
-    const template = await prisma.template.findFirst({
-      where: { id, userId },
+    // حذف القالب مع التأكد من ملكيته للمستخدم في خطوة واحدة
+    const deleteResult = await prisma.template.deleteMany({
+      where: { 
+        id: id,
+        userId: userId 
+      }
     });
 
-    if (!template) {
-      return NextResponse.json({ error: "القالب غير موجود" }, { status: 404 });
+    if (deleteResult.count === 0) {
+      return NextResponse.json({ error: "القالب غير موجود أو لا تملك صلاحية حذفه" }, { status: 404 });
     }
-
-    await prisma.template.delete({
-      where: { id }
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ خطأ في حذف القالب:", error);
-    return NextResponse.json(
-      { error: "فشل حذف القالب" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "فشل حذف القالب" }, { status: 500 });
   }
 }
