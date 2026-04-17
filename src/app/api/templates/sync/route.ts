@@ -3,16 +3,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+// كول داون عشان نمنع السبام (10 ثواني)
 const SYNC_COOLDOWN_MS = 10_000;
 const syncCooldown = new Map<string, number>();
 
-// --- دالة تنظيف البيانات (Normalize) ---
+/**
+ * تنظيف وتحويل بيانات القالب من ميتا لتناسب قاعدة البيانات
+ */
 function normalizeMetaTemplate(template: any) {
   if (!template || !template.id || !template.name) return null;
 
-  // استخراج النص من الـ BODY component
-  let content = "Template content available in Meta Dashboard";
-  if (template.components && Array.isArray(template.components)) {
+  // البحث عن محتوى الرسالة في الـ Components
+  let content = "محتوى القالب متاح في Meta Dashboard";
+  if (Array.isArray(template.components)) {
     const bodyComponent = template.components.find((c: any) => c.type === "BODY");
     if (bodyComponent?.text) content = bodyComponent.text;
   }
@@ -22,37 +25,40 @@ function normalizeMetaTemplate(template: any) {
     name: String(template.name),
     status: String(template.status || "pending").toLowerCase(),
     category: String(template.category || "marketing").toLowerCase(),
-    language: String(template.language || "en"),
+    language: String(template.language || "ar"),
     content: content,
   };
 }
 
-// --- دالة جلب البيانات من ميتا ---
+/**
+ * جلب القوالب من Meta API مع كسر الكاش
+ */
 async function fetchMetaTemplates(accessToken: string, wabaId: string) {
-  // استخدمنا اللينك البسيط اللي اشتغل معاك في المتصفح لضمان وصول البيانات
-  let url = `https://graph.facebook.com/v20.0/${wabaId}/message_templates?limit=100`;
-  const templates: Array<any> = [];
+  // إضافة Timestamp لضمان عدم استرجاع بيانات قديمة (Cache Breaking)
+  const cb = Date.now();
+  const url = `https://graph.facebook.com/v20.0/${wabaId}/message_templates?limit=100&_cb=${cb}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    cache: 'no-store', // منع التخزين المؤقت تماماً
+  });
 
-  while (url) {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: 'no-store'
-    });
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`Meta API error: ${errorData}`);
+  }
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Meta API error ${response.status}: ${errorBody}`);
-    }
-
-    const body = await response.json();
-    if (!body || !Array.isArray(body.data)) break;
-
-    for (const item of body.data) {
-      const normalized = normalizeMetaTemplate(item);
-      if (normalized) templates.push(normalized);
-    }
-
-    url = body?.paging?.next || null;
+  const result = await response.json();
+  const rawData = result.data || [];
+  
+  const templates: any[] = [];
+  for (const item of rawData) {
+    const normalized = normalizeMetaTemplate(item);
+    if (normalized) templates.push(normalized);
   }
 
   return templates;
@@ -66,25 +72,26 @@ export async function POST() {
     }
 
     const userId = (session.user as any).id;
-    
-    // Cooldown logic
+
+    // Cooldown Logic
     const lastSync = syncCooldown.get(userId) ?? 0;
     if (Date.now() - lastSync < SYNC_COOLDOWN_MS) {
-      return NextResponse.json({ success: false, error: "يرجى الانتظار قليلاً" }, { status: 429 });
+      return NextResponse.json({ success: false, error: "يرجى الانتظار قليلاً قبل المحاولة مرة أخرى" }, { status: 429 });
     }
     syncCooldown.set(userId, Date.now());
 
-    // --- قراءة المتغيرات بأي مسمى موجود في Env ---
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY;
-    const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || process.env.WABA_ID;
+    // --- جلب المتغيرات (دعم كل المسميات اللي جربناها) ---
+    const accessToken = process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_ACCESS_TOKEN;
+    const wabaId = process.env.WABA_ID || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 
     if (!accessToken || !wabaId) {
-      return NextResponse.json(
-        { success: false, error: "Missing Credentials (Token or WABA ID)" },
-        { status: 500 }
-      );
+      return NextResponse.json({ 
+        success: false, 
+        error: "نقص في بيانات الربط (Token or WABA ID)" 
+      }, { status: 500 });
     }
 
+    // التنفيذ
     const metaTemplates = await fetchMetaTemplates(accessToken, wabaId);
     let syncedCount = 0;
 
@@ -94,7 +101,7 @@ export async function POST() {
           where: {
             metaId_userId: {
               metaId: template.metaId,
-              userId,
+              userId: userId,
             },
           },
           update: {
@@ -111,23 +118,23 @@ export async function POST() {
             category: template.category,
             language: template.language,
             content: template.content,
-            userId,
+            userId: userId,
           },
         });
         syncedCount++;
-      } catch (error) {
-        console.error(`❌ Upsert error for ${template.metaId}:`, error);
+      } catch (dbError) {
+        console.error("خطأ أثناء التحديث في قاعدة البيانات:", dbError);
       }
     }
 
     return NextResponse.json({ 
       success: true, 
       count: syncedCount,
-      message: `تمت مزامنة ${syncedCount} قوالب بنجاح`
+      message: `تمت مزامنة ${syncedCount} قالب بنجاح`
     });
 
   } catch (error: any) {
-    console.error("Critical Error:", error.message);
+    console.error("Critical Sync Error:", error.message);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
