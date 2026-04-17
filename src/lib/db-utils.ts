@@ -105,9 +105,9 @@ export async function getAudiences(userId: string) {
     })
   );
 }
-
 /**
  * Create audience with contacts
+ * تم إضافة userId لكل جهة اتصال لأنها حقل إجباري في الـ Schema
  */
 export async function createAudience(userId: string, data: {
   name: string;
@@ -121,6 +121,8 @@ export async function createAudience(userId: string, data: {
         contacts: {
           create: data.contacts.map((phone) => ({
             phone,
+            // السطر ده هو اللي هيخلي الـ Build يعدي بنجاح
+            userId: userId, 
           })),
         },
       },
@@ -130,7 +132,6 @@ export async function createAudience(userId: string, data: {
     })
   );
 }
-
 /**
  * Get campaigns
  */

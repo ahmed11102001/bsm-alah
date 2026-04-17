@@ -96,6 +96,8 @@ model Template {
   metaId    String
   name      String
   content   String   @db.Text
+  language  String   @default("ar") 
+  category  String   @default("MARKETING")
   status    String   @default("pending")
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
