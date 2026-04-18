@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth"; // رجعنا للقديم عشان يشتغل معاك فوراً
-import { authOptions } from "@/lib/auth"; // تأكد إن المسار ده صح عندك
-import prisma from "@/lib/prisma"; // شيلنا الأقواس { } لأن بريزما عندك غالباً default export
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { CampaignStatus, MessageType, MessageStatus, MessageDirection } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // تنظيف الرقم
     const cleanNumber = (value: string) => {
       let cleaned = value.toString().replace(/\D/g, "");
       if (cleaned.startsWith("0")) cleaned = "20" + cleaned.slice(1);
@@ -46,14 +48,18 @@ export async function POST(req: NextRequest) {
       return cleaned;
     };
 
+    // إنشاء الحملة
     const campaign = await prisma.campaign.create({
       data: {
         name: campaignName || "حملة جديدة",
-        status: scheduled ? "scheduled" : "running",
+        status: scheduled
+          ? CampaignStatus.scheduled
+          : CampaignStatus.running,
         userId,
       },
     });
 
+    // Audience تلقائي
     const autoAudience = await prisma.audience.create({
       data: {
         name: `Auto-generated-${campaign.id}`,
@@ -61,6 +67,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // إرسال مع retry
     const sendWithRetry = async (number: string, retries = 3) => {
       let lastError: any = null;
 
@@ -89,14 +96,15 @@ export async function POST(req: NextRequest) {
           const data = await response.json();
 
           if (response.ok) {
+            // ✅ FIXED UPSERT (صح 100%)
             const contact = await prisma.contact.upsert({
               where: {
-                phone_audienceId: {
+                phone_userId: {
                   phone: number,
-                  audienceId: autoAudience.id,
+                  userId,
                 },
               },
-              update: { userId }, // مجرد تحديث بسيط
+              update: {},
               create: {
                 phone: number,
                 userId,
@@ -107,8 +115,9 @@ export async function POST(req: NextRequest) {
             await prisma.message.create({
               data: {
                 content: `Template: ${templateName}`,
-                type: "template",
-                status: "sent",
+                type: MessageType.template,
+                status: MessageStatus.sent,
+                direction: MessageDirection.outbound,
                 userId,
                 campaignId: campaign.id,
                 contactId: contact.id,
@@ -119,17 +128,19 @@ export async function POST(req: NextRequest) {
 
             return { success: true };
           }
+
           lastError = data;
         } catch (error) {
           lastError = error;
         }
       }
 
+      // فشل
       const failedContact = await prisma.contact.upsert({
         where: {
-          phone_audienceId: {
+          phone_userId: {
             phone: number,
-            audienceId: autoAudience.id,
+            userId,
           },
         },
         update: {},
@@ -143,8 +154,9 @@ export async function POST(req: NextRequest) {
       await prisma.message.create({
         data: {
           content: `Template: ${templateName}`,
-          type: "template",
-          status: "failed",
+          type: MessageType.template,
+          status: MessageStatus.failed,
+          direction: MessageDirection.outbound,
           userId,
           campaignId: campaign.id,
           contactId: failedContact.id,
@@ -155,9 +167,12 @@ export async function POST(req: NextRequest) {
       return { success: false, error: lastError };
     };
 
+    // إرسال كل الأرقام
     const results = [];
+
     for (const item of numbers) {
       const cleaned = cleanNumber(item);
+
       if (cleaned) {
         const result = await sendWithRetry(cleaned);
         results.push({ number: cleaned, ...result });
@@ -167,24 +182,35 @@ export async function POST(req: NextRequest) {
     const sentCount = results.filter((r) => r.success).length;
     const failedCount = results.filter((r) => !r.success).length;
 
+    // تحديث الحملة
     await prisma.campaign.update({
       where: { id: campaign.id },
       data: {
         sentCount,
         failedCount,
-        status: scheduled ? "scheduled" : sentCount > 0 ? "completed" : "failed",
-        completedAt: scheduled ? null : new Date(),
+        status:
+          sentCount > 0
+            ? CampaignStatus.completed
+            : CampaignStatus.failed,
+        completedAt: new Date(),
       },
     });
 
     return NextResponse.json({
       success: true,
       campaignId: campaign.id,
-      summary: { total: numbers.length, sent: sentCount, failed: failedCount },
+      summary: {
+        total: numbers.length,
+        sent: sentCount,
+        failed: failedCount,
+      },
       results,
     });
   } catch (error) {
     console.error("❌ Send Bulk Error:", error);
-    return NextResponse.json({ error: "فشل إرسال الحملة" }, { status: 500 });
+    return NextResponse.json(
+      { error: "فشل إرسال الحملة" },
+      { status: 500 }
+    );
   }
 }

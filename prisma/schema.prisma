@@ -126,21 +126,19 @@ model Contact {
 
   unreadCount Int @default(0)
 
-  lastMessageAt DateTime @default(now())
+  lastMessageAt DateTime?
 
   deletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([phone, userId])
+  @@unique([phone, userId], name: "phone_userId")
   @@index([userId])
   @@index([phone])
   @@index([lastMessageAt])
   @@index([isPinned])
 }
-
-
 
 model Template {
   id       String @id @default(cuid())
