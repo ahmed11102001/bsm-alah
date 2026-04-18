@@ -1,6 +1,5 @@
 "use client";
 
-import TeamPage from '@/app/dashboard/team/page';
 import { useEffect, useState } from "react";
 import {
   UserPlus,
