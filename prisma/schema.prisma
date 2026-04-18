@@ -52,22 +52,28 @@ model Audience {
 }
 
 model Contact {
-  id         String   @id @default(cuid())
-  phone      String
-  name       String?
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  audienceId String?
-  audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
-  messages   Message[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String    @id @default(cuid())
+  phone        String
+  name         String?
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audienceId   String?
+  audience     Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  
+  // الإضافات الجديدة للشات 👇
+  notes        String?   @db.Text    // لحفظ الملاحظات اللي في الـ Sidebar اليمين
+  isPinned     Boolean   @default(false) // لتثبيت المحادثة فوق
+  isArchived   Boolean   @default(false) // لأرشفة المحادثة
+  lastMessageAt DateTime @default(now()) // مهم جداً لترتيب المحادثات من الأحدث للأقدم
 
-  // ده اللي هيحل مشكلة الـ Build في ملف send-bulk
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
   @@unique([phone, audienceId], name: "phone_audienceId")
   @@index([userId])
   @@index([phone])
-  @@index([audienceId])
+  @@index([lastMessageAt]) // تسريع الترتيب
 }
 
 model Campaign {
@@ -111,32 +117,35 @@ model Template {
 }
 
 model Message {
-  id          String   @id @default(cuid())
-  content     String?  @db.Text
-  type        String   @default("text")
-  direction   String   @default("outbound")
-  status      String   @default("pending")
-  whatsappId  String?  @unique
+  id          String    @id @default(cuid())
+  content     String?   @db.Text
+  type        String    @default("text") // text, image, document, template, audio
+  direction   String    @default("outbound")
+  status      String    @default("pending") // sent, delivered, read, failed
+  whatsappId  String?   @unique
+  
+  // الإضافات الجديدة للشات 👇
+  mediaUrl    String?   @db.Text    // رابط الصورة أو الملف لو الرسالة مش نصية
+  replyToId   String?               // لو الرسالة رد على رسالة تانية
+  
   error       String?
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   contactId   String
-  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   campaignId  String?
   campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId])
   @@index([contactId])
-  @@index([campaignId])
-  @@index([status])
-  @@index([direction])
+  @@index([createdAt]) // تسريع جلب تاريخ المحادثة
 }
-
 model WebhookLog {
   id        String   @id @default(cuid())
   payload   String   @db.Text

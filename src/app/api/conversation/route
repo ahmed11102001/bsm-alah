@@ -1,0 +1,75 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth"; // تأكد من مسار authOptions الصحيح في مشروعك
+import prisma from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    // 1. التحقق من جلسة المستخدم
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "غير مصرح لك بالوصول" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    // 2. جلب جهات الاتصال المرتبطة بالمستخدم
+    // نستخدم orderBy بـ lastMessageAt لضمان ظهور أحدث المحادثات في الأعلى
+    const contacts = await prisma.contact.findMany({
+      where: { 
+        userId,
+        // إذا كنت تريد إخفاء المحادثات المؤرشفة من القائمة الرئيسية:
+        // isArchived: false 
+      },
+      include: {
+        // جلب آخر رسالة فقط لكل جهة اتصال لعرضها في القائمة الجانبية
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: [
+        { isPinned: "desc" },     // أولاً المحادثات المثبتة
+        { lastMessageAt: "desc" }  // ثم الأحدث حسب تاريخ آخر رسالة
+      ],
+    });
+
+    // 3. تحويل البيانات (Mapping) لتناسب الواجهة الأمامية (ChatPage.tsx)
+    const conversations = contacts
+      .filter(c => c.messages.length > 0) // إظهار من لديهم تاريخ محادثة فقط
+      .map(contact => {
+        const lastMessage = contact.messages[0];
+        
+        return {
+          contact: {
+            id: contact.id,
+            name: contact.name || "عميل واتساب",
+            phone: contact.phone,
+            notes: contact.notes, // الحقل الجديد للملاحظات
+            audienceId: contact.audienceId,
+          },
+          lastMessage: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content || "",
+            type: lastMessage.type,
+            direction: lastMessage.direction,
+            status: lastMessage.status,
+            createdAt: lastMessage.createdAt.toISOString(),
+            contactId: contact.id,
+          } : null,
+          unreadCount: 0, // يمكنك لاحقاً إضافة logic لعد الرسائل التي حالتها ليست read
+          isPinned: contact.isPinned,     // الحقل الجديد للتثبيت
+          isArchived: contact.isArchived, // الحقل الجديد للأرشفة
+        };
+      });
+
+    return NextResponse.json(conversations);
+
+  } catch (error: any) {
+    console.error("❌ GET /api/conversations Error:", error.message);
+    return NextResponse.json(
+      { error: "حدث خطأ أثناء جلب المحادثات" }, 
+      { status: 500 }
+    );
+  }
+}

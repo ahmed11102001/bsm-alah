@@ -1,0 +1,155 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+
+// ===== GET: جلب رسائل محادثة معينة =====
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const contactId = searchParams.get("contactId");
+    const cursor = searchParams.get("cursor");
+    const limit = parseInt(searchParams.get("limit") || "50");
+
+    if (!contactId) {
+      return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
+    }
+
+    const contact = await prisma.contact.findFirst({
+      where: { id: contactId, userId: session.user.id }
+    });
+
+    if (!contact) {
+      return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { contactId: contactId, userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+
+    return NextResponse.json({
+      messages: messages.reverse(),
+      hasMore: messages.length === limit,
+      nextCursor: messages.length === limit ? messages[messages.length - 1].id : null,
+    });
+
+  } catch (error: any) {
+    console.error("❌ GET /api/chat:", error.message);
+    return NextResponse.json({ error: "فشل جلب الرسائل" }, { status: 500 });
+  }
+}
+
+// ===== POST: إرسال رسالة =====
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    }
+
+    const { contactId, content, type = "text", templateId } = await req.json();
+
+    if (!contactId || !content) {
+      return NextResponse.json({ error: "contactId والمحتوى مطلوبان" }, { status: 400 });
+    }
+
+    const contact = await prisma.contact.findFirst({
+      where: { id: contactId, userId: session.user.id }
+    });
+
+    if (!contact) {
+      return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+    }
+
+    // تأكد من تطابق اسم الموديل مع السكيما (WhatsAppAccount)
+    const account = await prisma.whatsappAccount.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!account?.accessToken || !account?.phoneNumberId) {
+      return NextResponse.json({
+        error: "برجاء ضبط إعدادات Meta API أولاً"
+      }, { status: 400 });
+    }
+
+    let whatsappPayload: any;
+    if (type === "template" && templateId) {
+      const template = await prisma.template.findFirst({
+        where: { id: templateId, userId: session.user.id }
+      });
+
+      if (!template) return NextResponse.json({ error: "القالب غير موجود" }, { status: 404 });
+
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "template",
+        template: {
+          name: template.name,
+          language: { code: template.language || "ar" }
+        }
+      };
+    } else {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "text",
+        text: { body: content }
+      };
+    }
+
+    const metaResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${account.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(whatsappPayload),
+      }
+    );
+
+    const metaData = await metaResponse.json();
+
+    if (metaData.error) {
+      return NextResponse.json({ error: `Meta: ${metaData.error.message}` }, { status: 400 });
+    }
+
+    // --- التحديث الجديد باستخدام Transaction ---
+    const [message] = await prisma.$transaction([
+      // 1. إنشاء الرسالة
+      prisma.message.create({
+        data: {
+          content,
+          type: type as any,
+          direction: "outbound",
+          status: "sent",
+          whatsappId: metaData.messages?.[0]?.id || null,
+          userId: session.user.id,
+          contactId: contactId,
+          sentAt: new Date(),
+        }
+      }),
+      // 2. تحديث وقت آخر رسالة للـ Contact لضمان الترتيب الصحيح في القائمة
+      prisma.contact.update({
+        where: { id: contactId },
+        data: { lastMessageAt: new Date() }
+      })
+    ]);
+
+    return NextResponse.json({ success: true, message });
+
+  } catch (error: any) {
+    console.error("❌ POST /api/chat:", error.message);
+    return NextResponse.json({ error: "فشل إرسال الرسالة" }, { status: 500 });
+  }
+}
