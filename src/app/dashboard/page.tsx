@@ -35,17 +35,25 @@ import Campaigns from '@/components/dashboard/Campaigns';
 import Reports from '@/components/dashboard/Reports';
 import Automation from '@/components/dashboard/Automation';
 import API from '@/components/dashboard/API';
+import TeamPage from './team/page';
 
 const sidebarItems = [
+  // Main
   { icon: Home, label: 'الرئيسية', id: 'home' },
-  { icon: Code, label: 'API', id: 'api' },
+
+  // Business
+   { icon: Users, label: 'الفريق', id: 'team' },
   { icon: Users, label: 'جهات الاتصال', id: 'contacts' },
   { icon: FileText, label: 'القوالب', id: 'templates' },
   { icon: Send, label: 'الحملات', id: 'campaigns' },
-  { icon: BarChart3, label: 'التقارير', id: 'reports' },
+
+  // Tools
   { icon: MessageSquare, label: 'المحادثات', id: 'chat' },
+  { icon: BarChart3, label: 'التقارير', id: 'reports' },
   { icon: Settings, label: 'الأتمتة الذكية', id: 'automation' },
-  
+
+  // Dev
+  { icon: Code, label: 'API', id: 'api' },
 ];
 
 const statsData = [
@@ -72,6 +80,8 @@ export default function DashboardPage() {
         return <Contacts />;
         case 'chat':        // 👈 ضيف الحالة دي
       return <ChatPage />;
+      case 'team':
+  return <TeamPage />;
       case 'templates':
         return <Templates />;
       case 'campaigns':
