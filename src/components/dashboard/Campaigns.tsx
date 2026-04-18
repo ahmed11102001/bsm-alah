@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useSession } from "next-auth/react"; // 1. ضيف الـ Import ده
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // أضفنا DialogDescription للـ Accessibility
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 
 export default function Campaigns() {
+  const { data: session } = useSession(); // 2. تعريف الـ session هنا
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -26,7 +29,7 @@ export default function Campaigns() {
 
   // States لتخزين البيانات
   const [campaignName, setCampaignName] = useState("");
-  const [template, setTemplate] = useState("hello_world");
+  const [template, setTemplate] = useState("");
   const [numbers, setNumbers] = useState<string[]>([]);
   const [manualNumbers, setManualNumbers] = useState("");
   const [scheduleTime, setScheduleTime] = useState("now");
