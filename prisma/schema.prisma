@@ -32,9 +32,9 @@ enum MessageDirection {
 
 enum CampaignStatus {
   draft
+  scheduled
   running
   completed
-  paused
   failed
 }
 
