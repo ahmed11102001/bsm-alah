@@ -7,9 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* =========================
-   ENUMS
-========================= */
+
 
 enum MessageType {
   text
@@ -46,9 +44,7 @@ enum UserRole {
   agent
 }
 
-/* =========================
-   USER
-========================= */
+
 
 model User {
   id        String   @id @default(cuid())
@@ -75,9 +71,7 @@ model User {
   @@index([email])
 }
 
-/* =========================
-   WHATSAPP ACCOUNT
-========================= */
+
 
 model WhatsAppAccount {
   id            String @id @default(cuid())
@@ -93,9 +87,7 @@ model WhatsAppAccount {
   updatedAt DateTime @updatedAt
 }
 
-/* =========================
-   AUDIENCE
-========================= */
+
 
 model Audience {
   id        String @id @default(cuid())
@@ -112,9 +104,7 @@ model Audience {
   @@index([userId])
 }
 
-/* =========================
-   CONTACT
-========================= */
+
 
 model Contact {
   id        String @id @default(cuid())
@@ -150,9 +140,7 @@ model Contact {
   @@index([isPinned])
 }
 
-/* =========================
-   TEMPLATE
-========================= */
+
 
 model Template {
   id       String @id @default(cuid())
@@ -178,9 +166,7 @@ model Template {
   @@index([status])
 }
 
-/* =========================
-   CAMPAIGN
-========================= */
+
 
 model Campaign {
   id        String @id @default(cuid())
@@ -211,9 +197,7 @@ model Campaign {
   @@index([status])
 }
 
-/* =========================
-   MESSAGE
-========================= */
+
 
 model Message {
   id String @id @default(cuid())
@@ -259,9 +243,7 @@ model Message {
   @@index([contactId, createdAt])
 }
 
-/* =========================
-   WEBHOOK LOGS
-========================= */
+
 
 model WebhookLog {
   id String @id @default(cuid())
