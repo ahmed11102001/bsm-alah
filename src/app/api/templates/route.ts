@@ -6,27 +6,42 @@ import prisma from "@/lib/prisma";
 // 1. وظيفة الجلب (GET)
 export async function GET() {
   try {
+    console.log("📋 [GET] Fetching templates...");
+    
     const session = await getServerSession(authOptions);
+    
+    console.log("🔍 [GET] Session check:", {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      hasId: !!session?.user?.id,
+      userId: session?.user?.id
+    });
 
-    // تأكد من وجود الجلسة واليوزر والـ ID بشكل آمن
+    // تأكد من وجود الـ session و user ID
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+      console.error("❌ [AUTH] Unauthorized - No session or user ID");
+      return NextResponse.json(
+        { error: "غير مصرح لك - سجل دخولك أولاً" },
+        { status: 401 }
+      );
     }
 
     const userId = session.user.id;
+    console.log("✅ [AUTH] User authenticated:", userId);
 
+    // جلب القوالب من DB
     const templates = await prisma.template.findMany({
-      where: {
-        userId: userId,
-      },
+      where: { userId: userId },
       orderBy: { createdAt: "desc" }
     });
 
+    console.log(`✅ [DB] Found ${templates.length} templates`);
     return NextResponse.json(templates || []);
-  } catch (error) {
-    console.error("❌ خطأ في جلب القوالب:", error);
+
+  } catch (error: any) {
+    console.error("❌ [ERROR] GET /templates:", error.message);
     return NextResponse.json(
-      { error: "حدث خطأ في السيرفر" },
+      { error: "حدث خطأ في السيرفر", details: error.message },
       { status: 500 }
     );
   }
