@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+import ChatPage from '@/app/dashboard/chat/page';
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -37,12 +38,14 @@ import API from '@/components/dashboard/API';
 
 const sidebarItems = [
   { icon: Home, label: 'الرئيسية', id: 'home' },
+  { icon: Code, label: 'API', id: 'api' },
   { icon: Users, label: 'جهات الاتصال', id: 'contacts' },
   { icon: FileText, label: 'القوالب', id: 'templates' },
   { icon: Send, label: 'الحملات', id: 'campaigns' },
   { icon: BarChart3, label: 'التقارير', id: 'reports' },
+  { icon: MessageSquare, label: 'المحادثات', id: 'chat' },
   { icon: Settings, label: 'الأتمتة الذكية', id: 'automation' },
-  { icon: Code, label: 'API', id: 'api' },
+  
 ];
 
 const statsData = [
@@ -67,6 +70,8 @@ export default function DashboardPage() {
     switch (activeTab) {
       case 'contacts':
         return <Contacts />;
+        case 'chat':        // 👈 ضيف الحالة دي
+      return <ChatPage />;
       case 'templates':
         return <Templates />;
       case 'campaigns':
