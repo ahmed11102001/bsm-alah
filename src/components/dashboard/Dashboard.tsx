@@ -1,4 +1,5 @@
 "use client";
+import ChatPage from '@/app/dashboard/chat/page'; 
 import { signOut } from "next-auth/react";
 import "@/app/globals.css";
 import { useState } from 'react';
@@ -38,12 +39,14 @@ interface DashboardProps {
 
 const sidebarItems = [
   { icon: Home, label: 'الرئيسية', id: 'home' },
+   { icon: Code, label: 'API', id: 'api' },
   { icon: Users, label: 'جهات الاتصال', id: 'contacts' },
   { icon: FileText, label: 'القوالب', id: 'templates' },
   { icon: Send, label: 'الحملات', id: 'campaigns' },
   { icon: BarChart3, label: 'التقارير', id: 'reports' },
+  { icon: MessageSquare, label: 'المحادثات', id: 'chat' },
   { icon: Settings, label: 'الأتمتة الذكية', id: 'automation' },
-  { icon: Code, label: 'API', id: 'api' },
+ 
 ];
 
 const recentCampaigns = [
@@ -248,15 +251,19 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [activeSection, setActiveSection] = useState('home');
 
   const user = {
-    name: 'محمد أحمد',
+    name:'نون',
     package: 'الباقة الاحترافية',
-    avatar: 'م',
+    avatar: 'ن',
   };
 
   const renderContent = () => {
     switch (activeSection) {
       case 'home':
         return <HomeDashboard onCreateCampaign={() => setActiveSection('campaigns')} />;
+        case 'chat':    // 👈 ضيف الحالة دي
+      return <ChatPage />; 
+    case 'contacts':
+      return <Contacts />;
       case 'contacts':
         return <Contacts />;
       case 'templates':
