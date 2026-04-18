@@ -166,18 +166,19 @@ export default function Campaigns() {
     
     setLoading(true);
     try {
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          numbers: numbers,
-          templateName: template,
-          campaignName: campaignName,
-          scheduled: scheduleTime !== "now" ? dateTime : null
-        }),
-      });
+     const response = await fetch('/api/campaigns', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    userId: (session?.user as any).id, // الحقل المطلوب في الباك إند الجديد
+    name: campaignName,               // الباك إند ينتظر 'name' وليس 'campaignName'
+    templateName: template,           // اسم القالب المختار
+    numbers: numbers,                 // مصفوفة الأرقام من الإكسيل أو اليدوية
+    scheduled: scheduleTime !== "now" ? dateTime : null
+  }),
+});
 
       const data = await response.json();
 
