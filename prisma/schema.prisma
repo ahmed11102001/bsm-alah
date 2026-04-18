@@ -45,7 +45,6 @@ enum UserRole {
 }
 
 
-
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -56,6 +55,11 @@ model User {
   apiKey    String?  @unique
 
   role      UserRole @default(OWNER)
+  inviteCode String?  @unique
+  parentId  String?  
+  parent    User?    @relation("TeamHierarchy", fields: [parentId], references: [id])
+  members   User[]   @relation("TeamHierarchy")
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,6 +74,7 @@ model User {
   webhooks   WebhookLog[]
 
   @@index([email])
+  @@index([parentId]) 
 }
 
 model WhatsAppAccount {

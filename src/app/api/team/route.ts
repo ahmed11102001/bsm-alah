@@ -1,115 +1,95 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import crypto from "crypto";
 
 // ===== GET TEAM =====
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    }
+
     const team = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" }, // أفضل من id
+      where: {
+        parentId: session.user.id
+      },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(team);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "تعذر جلب بيانات الفريق" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "تعذر جلب بيانات الفريق" }, { status: 500 });
   }
 }
 
-// ===== ADD MEMBER =====
+// ===== ADD MEMBER (توليد كود الدعوة) =====
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id || session.user.role === "CHAT_ONLY") {
+      return NextResponse.json({ error: "لا تملك صلاحية إضافة أعضاء" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { email, name, role } = body;
 
-    // Validation أساسي
     if (!email || !role) {
-      return NextResponse.json(
-        { error: "email و role مطلوبين" },
-        { status: 400 }
-      );
-    }
-
-    const allowedRoles = ["FULL_ACCESS", "CHAT_ONLY"];
-
-    if (!allowedRoles.includes(role)) {
-      return NextResponse.json(
-        { error: "Role غير صالح" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "البريد والدور مطلوبان" }, { status: 400 });
     }
 
     // منع التكرار
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return NextResponse.json(
-        { error: "هذا البريد مستخدم بالفعل" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "هذا البريد مسجل مسبقاً" }, { status: 400 });
     }
+
+    // --- الزتونة الجديدة: توليد كود دعوة فريد ---
+    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
 
     const newMember = await prisma.user.create({
       data: {
         email,
         name,
         role,
-        password: crypto.randomUUID(), // حل مشكلة required field
+        parentId: session.user.id,
+        inviteCode: inviteCode, // تخزين الكود
+        password: `PENDING_${crypto.randomUUID()}`, // كلمة مرور مؤقتة غير قابلة للاختراق
       },
     });
 
     return NextResponse.json(newMember);
   } catch (error) {
     console.error("POST TEAM ERROR:", error);
-    return NextResponse.json(
-      { error: "فشل إضافة العضو" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "فشل إضافة العضو" }, { status: 500 });
   }
 }
 
 // ===== DELETE MEMBER =====
 export async function DELETE(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return NextResponse.json({ status: 401 });
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID مطلوب" },
-        { status: 400 }
-      );
-    }
+    if (!id) return NextResponse.json({ error: "ID مطلوب" }, { status: 400 });
 
-    // حماية بسيطة (اختياري لكن مهم)
-    const user = await prisma.user.findUnique({ where: { id } });
+    const userToDelete = await prisma.user.findUnique({ where: { id } });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "المستخدم غير موجود" },
-        { status: 404 }
-      );
-    }
+    if (!userToDelete) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
 
-    if (user.role === "OWNER") {
-      return NextResponse.json(
-        { error: "لا يمكن حذف الـ OWNER" },
-        { status: 403 }
-      );
+    if (userToDelete.parentId !== session.user.id) {
+      return NextResponse.json({ error: "لا تملك صلاحية حذف هذا المستخدم" }, { status: 403 });
     }
 
     await prisma.user.delete({ where: { id } });
-
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "فشل حذف العضو" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "فشل حذف العضو" }, { status: 500 });
   }
 }
