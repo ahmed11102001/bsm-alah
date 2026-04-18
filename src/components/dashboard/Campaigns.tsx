@@ -32,15 +32,25 @@ export default function Campaigns() {
   const [scheduleTime, setScheduleTime] = useState("now");
   const [dateTime, setDateTime] = useState("");
 
-  // ✅ 2. جلب القوالب من الـ API عند فتح الصفحة
+ // ✅ 2. جلب القوالب من الـ API عند فتح الصفحة
   useEffect(() => {
     fetch("/api/templates")
       .then((res) => res.json())
       .then((data) => {
-        // بنجيب القوالب المعتمدة بس
-        const approved = data.filter((t: any) => t.status === 'approved');
-        setAvailableTemplates(approved);
-        if (approved.length > 0) setTemplate(approved[0].name);
+        console.log("Templates received:", data); // سطر مفيد للفحص في الـ Console
+
+        // التعديل هنا: فحص مرن للحالة (Case-insensitive) وقبول المعمد والمنتظر
+        const filtered = data.filter((t: any) => {
+          const status = t.status?.toLowerCase();
+          return status === 'approved' || status === 'pending';
+        });
+
+        setAvailableTemplates(filtered);
+        
+        // ضبط أول قالب كاختيار افتراضي إذا وجد
+        if (filtered.length > 0) {
+          setTemplate(filtered[0].name);
+        }
       })
       .catch((err) => console.error("Error fetching templates:", err));
   }, []);
