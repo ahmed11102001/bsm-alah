@@ -39,9 +39,9 @@ enum CampaignStatus {
 }
 
 enum UserRole {
-  owner
-  admin
-  agent
+  OWNER
+  FULL_ACCESS
+  CHAT_ONLY
 }
 
 
@@ -54,7 +54,8 @@ model User {
   password  String
   image     String?
   apiKey    String?  @unique
-  role      UserRole @default(owner)
+
+  role      UserRole @default(OWNER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,8 +71,6 @@ model User {
 
   @@index([email])
 }
-
-
 
 model WhatsAppAccount {
   id            String @id @default(cuid())
