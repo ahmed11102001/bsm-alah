@@ -7,6 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/* =========================
+   ENUMS
+========================= */
+
+enum MessageType {
+  text
+  image
+  document
+  audio
+  template
+}
+
+enum MessageStatus {
+  pending
+  sent
+  delivered
+  read
+  failed
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+enum CampaignStatus {
+  draft
+  running
+  completed
+  paused
+  failed
+}
+
+enum UserRole {
+  owner
+  admin
+  agent
+}
+
+/* =========================
+   USER
+========================= */
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -14,143 +57,223 @@ model User {
   phone     String?
   password  String
   image     String?
-  apiKey String? @unique
+  apiKey    String?  @unique
+  role      UserRole @default(owner)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   whatsappAccount WhatsAppAccount?
-  campaigns       Campaign[]
-  audiences       Audience[]
-  templates       Template[]
-  messages        Message[]
-  contacts        Contact[]
+
+  contacts   Contact[]
+  audiences  Audience[]
+  templates  Template[]
+  campaigns  Campaign[]
+  messages   Message[]
+  webhooks   WebhookLog[]
 
   @@index([email])
 }
 
+/* =========================
+   WHATSAPP ACCOUNT
+========================= */
+
 model WhatsAppAccount {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken   String   @db.Text
+  id            String @id @default(cuid())
+
+  userId        String @unique
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken   String @db.Text
   phoneNumberId String
   wabaId        String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+/* =========================
+   AUDIENCE
+========================= */
+
 model Audience {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   name      String
+
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   contacts  Contact[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
+/* =========================
+   CONTACT
+========================= */
+
 model Contact {
-  id           String    @id @default(cuid())
-  phone        String
-  name         String?
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  audienceId   String?
-  audience     Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
-  messages     Message[]
-  
-  // الإضافات الجديدة للشات 👇
-  notes        String?   @db.Text    // لحفظ الملاحظات اللي في الـ Sidebar اليمين
-  isPinned     Boolean   @default(false) // لتثبيت المحادثة فوق
-  isArchived   Boolean   @default(false) // لأرشفة المحادثة
-  lastMessageAt DateTime @default(now()) // مهم جداً لترتيب المحادثات من الأحدث للأقدم
+  id        String @id @default(cuid())
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  phone     String
+  name      String?
+  notes     String? @db.Text
 
-  @@unique([phone, audienceId], name: "phone_audienceId")
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  audienceId String?
+  audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+
+  messages Message[]
+
+  isPinned    Boolean @default(false)
+  isArchived  Boolean @default(false)
+
+  unreadCount Int @default(0)
+
+  lastMessageAt DateTime @default(now())
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([phone, userId])
   @@index([userId])
   @@index([phone])
-  @@index([lastMessageAt]) // تسريع الترتيب
+  @@index([lastMessageAt])
+  @@index([isPinned])
 }
 
-model Campaign {
-  id             String   @id @default(cuid())
-  name           String
-  status         String   @default("draft")
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId     String?
-  template       Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  sentCount      Int      @default(0)
-  deliveredCount Int      @default(0)
-  readCount      Int      @default(0)
-  failedCount    Int      @default(0)
-  startedAt      DateTime?
-  completedAt    DateTime?
-  messages       Message[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([userId])
-  @@index([status])
-}
+/* =========================
+   TEMPLATE
+========================= */
 
 model Template {
-  id        String   @id @default(cuid())
-  metaId    String
-  name      String
-  content   String   @db.Text
-  language  String   @default("ar") 
-  category  String   @default("MARKETING")
-  status    String   @default("pending")
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+
+  metaId   String
+  name     String
+  content  String @db.Text
+
+  language String @default("ar")
+  category String @default("MARKETING")
+  status   String @default("pending")
+
+  userId   String
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   campaigns Campaign[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([metaId, userId])
   @@index([userId])
+  @@index([status])
 }
 
+/* =========================
+   CAMPAIGN
+========================= */
+
+model Campaign {
+  id        String @id @default(cuid())
+
+  name      String
+  status    CampaignStatus @default(draft)
+
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  messages Message[]
+
+  sentCount      Int @default(0)
+  deliveredCount Int @default(0)
+  readCount      Int @default(0)
+  failedCount    Int @default(0)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+/* =========================
+   MESSAGE
+========================= */
+
 model Message {
-  id          String    @id @default(cuid())
-  content     String?   @db.Text
-  type        String    @default("text") // text, image, document, template, audio
-  direction   String    @default("outbound")
-  status      String    @default("pending") // sent, delivered, read, failed
-  whatsappId  String?   @unique
-  
-  // الإضافات الجديدة للشات 👇
-  mediaUrl    String?   @db.Text    // رابط الصورة أو الملف لو الرسالة مش نصية
-  replyToId   String?               // لو الرسالة رد على رسالة تانية
-  
-  error       String?
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contactId   String
-  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  campaignId  String?
-  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  
+  id String @id @default(cuid())
+
+  content String? @db.Text
+
+  type      MessageType      @default(text)
+  status    MessageStatus    @default(pending)
+  direction MessageDirection @default(outbound)
+
+  whatsappId String? @unique
+
+  mediaUrl String? @db.Text
+  error    String?
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
+
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([contactId])
-  @@index([createdAt]) // تسريع جلب تاريخ المحادثة
+  @@index([campaignId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([contactId, createdAt])
 }
+
+/* =========================
+   WEBHOOK LOGS
+========================= */
+
 model WebhookLog {
-  id        String   @id @default(cuid())
-  payload   String   @db.Text
-  processed Boolean  @default(false)
+  id String @id @default(cuid())
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  payload   String @db.Text
+  processed Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   @@index([processed])
+  @@index([createdAt])
 }
