@@ -6,81 +6,83 @@ import prisma from "@/lib/prisma";
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id;
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: "لم يتم العثور على الجلسة" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "يجب تسجيل الدخول أولاً" }, { status: 401 });
     }
 
-    // تنظيف المتغيرات
-    const accessToken = (process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_ACCESS_TOKEN)?.trim();
-    const wabaId = (process.env.WABA_ID || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID)?.trim();
+    const userId = session.user.id;
 
-    if (!accessToken || !wabaId) {
-      return NextResponse.json({ success: false, error: "بيانات Meta API ناقصة" }, { status: 500 });
+    // 1. جلب بيانات الربط الخاصة باليوزر من الداتابيز وليس من .env
+    const account = await prisma.whatsAppAccount.findUnique({
+      where: { userId: userId }
+    });
+
+    if (!account || !account.accessToken || !account.wabaId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "برجاء ضبط إعدادات Meta API أولاً من صفحة الإعدادات" 
+      }, { status: 400 });
     }
 
-    // جلب البيانات من ميتا - اللينك الخام اللي اشتغل معاك
-    const metaUrl = `https://graph.facebook.com/v20.0/${wabaId}/message_templates?limit=100`;
+    // 2. طلب البيانات من ميتا باستخدام بيانات اليوزر الخاصة
+    const metaUrl = `https://graph.facebook.com/v20.0/${account.wabaId}/message_templates?limit=100`;
     const response = await fetch(metaUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${account.accessToken}` },
       cache: 'no-store'
     });
 
     const body = await response.json();
+
+    if (body.error) {
+      return NextResponse.json({ success: false, error: body.error.message }, { status: 400 });
+    }
+
     const remoteTemplates = body.data || [];
-
-    console.log(`[SYNC] Meta returned ${remoteTemplates.length} templates for user ${userId}`);
-
     let syncedCount = 0;
 
+    // 3. المزامنة مع الداتابيز
     for (const temp of remoteTemplates) {
       try {
         const bodyComp = temp.components?.find((c: any) => c.type === "BODY");
         
-        // تحويل كل المعرفات لسلسلة نصية (String) لضمان التوافق مع Schema بريزما
-        const templateMetaId = String(temp.id);
-        const currentUserId = String(userId);
-
         await prisma.template.upsert({
           where: {
-            // هنا بنستخدم الـ Composite Unique Key اللي في الـ Schema بتاعتك
             metaId_userId: {
-              metaId: templateMetaId,
-              userId: currentUserId,
+              metaId: String(temp.id),
+              userId: userId,
             },
           },
           update: {
             name: String(temp.name),
-            status: String(temp.status).toLowerCase(),
-            category: String(temp.category).toLowerCase(),
+            status: String(temp.status).toUpperCase(), // توحيد الحروف الكبيرة
+            category: String(temp.category),
             language: String(temp.language),
             content: bodyComp?.text || "No content",
           },
           create: {
-            metaId: templateMetaId,
+            metaId: String(temp.id),
             name: String(temp.name),
-            status: String(temp.status).toLowerCase(),
-            category: String(temp.category).toLowerCase(),
+            status: String(temp.status).toUpperCase(),
+            category: String(temp.category),
             language: String(temp.language),
             content: bodyComp?.text || "No content",
-            userId: currentUserId,
+            userId: userId,
           },
         });
         syncedCount++;
       } catch (upsertError: any) {
-        console.error(`❌ Upsert Failed for template ${temp.id}:`, upsertError.message);
+        console.error(`❌ فشل مزامنة قالب ${temp.id}:`, upsertError.message);
       }
     }
 
     return NextResponse.json({ 
       success: true, 
       count: syncedCount,
-      message: `تمت مزامنة ${syncedCount} قالب` 
+      message: `تمت مزامنة ${syncedCount} قالب بنجاح` 
     });
 
   } catch (error: any) {
-    console.error("❌ Critical Error:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("❌ Critical Sync Error:", error.message);
+    return NextResponse.json({ success: false, error: "حدث خطأ داخلي أثناء المزامنة" }, { status: 500 });
   }
 }
