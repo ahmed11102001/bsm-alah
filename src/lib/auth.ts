@@ -5,7 +5,8 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // استخدام as any هنا لحل تعارض الـ Types في Vercel بخصوص الحقول الإضافية
+  adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -22,25 +23,21 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email.toLowerCase() },
         });
 
-        // 1. التأكد من وجود المستخدم وكلمة مرور مخزنة
         if (!user || !user.password) {
           throw new Error("المستخدم غير موجود");
         }
 
-        // 2. حماية: منع دخول الموظف إذا لم يقم بالتفعيل عبر كود الانضمام
-        // إذا كان لديه inviteCode فهذا يعني أنه لم ينهِ خطوة اختيار الباسورد الخاصة به
+        // حماية: منع دخول الموظف إذا لم يقم بالتفعيل عبر كود الانضمام
         if (user.role !== "OWNER" && user.inviteCode) {
           throw new Error("يرجى تفعيل حسابك أولاً باستخدام كود الانضمام");
         }
 
-        // 3. التحقق من صحة كلمة المرور باستخدام bcrypt
         const isValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isValid) {
           throw new Error("كلمة المرور غير صحيحة");
         }
 
-        // 4. إرجاع البيانات (الآن ستعمل مع TypeScript بسلاسة بفضل ملف الـ types)
         return { 
           id: user.id, 
           name: user.name, 
@@ -66,16 +63,15 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        // بفضل التعديلات السابقة، TypeScript الآن يتعرف على هذه الحقول تلقائياً
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.parentId = token.parentId;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.parentId = token.parentId as string | null;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/", // أو مسار صفحة اللوجن عندك
+    signIn: "/",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
