@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, CampaignStatus } from "@prisma/client";
 
 /**
  * Safe database query wrapper
@@ -30,7 +30,6 @@ export async function getUser(userId: string) {
         email: true,
         phone: true,
         createdAt: true,
-        // Don't select password
       },
     })
   );
@@ -72,10 +71,13 @@ export async function createUser(data: {
 /**
  * Update user
  */
-export async function updateUser(userId: string, data: Partial<{
-  name: string;
-  phone: string;
-}>) {
+export async function updateUser(
+  userId: string,
+  data: Partial<{
+    name: string;
+    phone: string;
+  }>
+) {
   return safeQuery(() =>
     prisma.user.update({
       where: { id: userId },
@@ -96,23 +98,24 @@ export async function updateUser(userId: string, data: Partial<{
 export async function getAudiences(userId: string) {
   return safeQuery(() =>
     prisma.audience.findMany({
-      where: {
-        userId,
-      },
+      where: { userId },
       include: {
         contacts: true,
       },
     })
   );
 }
+
 /**
  * Create audience with contacts
- * تم إضافة userId لكل جهة اتصال لأنها حقل إجباري في الـ Schema
  */
-export async function createAudience(userId: string, data: {
-  name: string;
-  contacts: string[];
-}) {
+export async function createAudience(
+  userId: string,
+  data: {
+    name: string;
+    contacts: string[];
+  }
+) {
   return safeQuery(() =>
     prisma.audience.create({
       data: {
@@ -121,8 +124,7 @@ export async function createAudience(userId: string, data: {
         contacts: {
           create: data.contacts.map((phone) => ({
             phone,
-            // السطر ده هو اللي هيخلي الـ Build يعدي بنجاح
-            userId: userId, 
+            userId,
           })),
         },
       },
@@ -132,32 +134,45 @@ export async function createAudience(userId: string, data: {
     })
   );
 }
+
 /**
  * Get campaigns
  */
 export async function getCampaigns(userId: string) {
   return safeQuery(() =>
     prisma.campaign.findMany({
-      where: {
-        userId,
-      },
+      where: { userId },
       orderBy: { createdAt: "desc" },
     })
   );
 }
 
 /**
- * Create campaign
+ * Create campaign (FIXED ENUM)
  */
-export async function createCampaign(userId: string, data: {
-  name?: string;
-  status?: string;
-}) {
+export async function createCampaign(
+  userId: string,
+  data: {
+    name?: string;
+    status?: CampaignStatus | string;
+  }
+) {
+  const statusMap: Record<string, CampaignStatus> = {
+    draft: CampaignStatus.draft,
+    scheduled: CampaignStatus.scheduled,
+    running: CampaignStatus.running,
+    completed: CampaignStatus.completed,
+    failed: CampaignStatus.failed,
+  };
+
   return safeQuery(() =>
     prisma.campaign.create({
       data: {
         name: data.name || "Unnamed Campaign",
-        status: data.status || "pending",
+        status:
+          typeof data.status === "string"
+            ? statusMap[data.status] ?? CampaignStatus.draft
+            : CampaignStatus.draft,
         userId,
       },
     })
@@ -165,18 +180,34 @@ export async function createCampaign(userId: string, data: {
 }
 
 /**
- * Update campaign
+ * Update campaign (FIXED ENUM)
  */
-export async function updateCampaign(campaignId: string, data: Partial<{
-  status: string;
-  sentCount: number;
-  deliveredCount: number;
-  failedCount: number;
-}>) {
+export async function updateCampaign(
+  campaignId: string,
+  data: Partial<{
+    status: string;
+    sentCount: number;
+    deliveredCount: number;
+    failedCount: number;
+  }>
+) {
+  const statusMap: Record<string, CampaignStatus> = {
+    draft: CampaignStatus.draft,
+    scheduled: CampaignStatus.scheduled,
+    running: CampaignStatus.running,
+    completed: CampaignStatus.completed,
+    failed: CampaignStatus.failed,
+  };
+
   return safeQuery(() =>
     prisma.campaign.update({
       where: { id: campaignId },
-      data,
+      data: {
+        ...data,
+        status: data.status
+          ? statusMap[data.status] ?? CampaignStatus.draft
+          : undefined,
+      },
     })
   );
 }
