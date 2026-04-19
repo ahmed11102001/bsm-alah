@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search, Send, Paperclip, Smile, Phone,
   MoreVertical, Check, CheckCheck, FileText, Mic, X,
-  Clock, RefreshCw, Info, Image as ImageIcon,
+  Clock, RefreshCw, Info, Image as ImageIcon, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 
