@@ -65,19 +65,25 @@ export async function POST(req: NextRequest) {
             ...(newStatus === 'read' ? { readAt: new Date() } : {})
           }
         });
-
-        // تحديث إحصائيات الحملة لو الرسالة تابعة لحملة
-        // هنا ممكن تضيف Logic لتحديث الـ Campaign counts
       }
 
       // --- ب: استقبال رسائل جديدة (ردود العملاء) ---
       if (value?.messages) {
         const msg = value.messages[0];
 
+        // 🚀 التعديل الجوهري هنا: تحديث وقت آخر رسالة وعداد غير المقروء
         const contact = await prisma.contact.upsert({
           where: { phone_userId: { phone: msg.from, userId: accountOwner.userId } },
-          create: { phone: msg.from, userId: accountOwner.userId },
-          update: {}
+          create: { 
+            phone: msg.from, 
+            userId: accountOwner.userId,
+            lastMessageAt: new Date(), // لو عميل جديد أول مرة يبعت
+            unreadCount: 1 
+          },
+          update: {
+            lastMessageAt: new Date(), // لو عميل قديم ورد عليك
+            unreadCount: { increment: 1 } // تزويد العداد بواحد
+          }
         });
         
         // تسجيل الرسالة الواردة في قاعدة البيانات
@@ -88,7 +94,8 @@ export async function POST(req: NextRequest) {
             content: msg.text?.body || "رسالة وسائط",
             type: "text", // أو حسب النوع
             direction: "inbound",
-            status: "read"
+            status: "read", // ممكن تخليها delivered ولما اليوزر يفتحها تقلب read
+            whatsappId: msg.id // يفضل حفظ الـ ID بتاع رسالة العميل كمان
           }
         });
       }

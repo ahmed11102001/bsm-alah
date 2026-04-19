@@ -5,8 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET(req: Request) {
   try {
-    const session =
-      await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -16,133 +15,127 @@ export async function GET(req: Request) {
     }
 
     const userId = session.user.id;
+    const { searchParams } = new URL(req.url);
 
-    const { searchParams } =
-      new URL(req.url);
+    const limit = Number(searchParams.get("limit") || 30);
+    const cursor = searchParams.get("cursor");
+    const search = searchParams.get("search") || "";
 
-    const limit = Number(
-      searchParams.get("limit") || 30
-    );
-
-    const cursor =
-      searchParams.get("cursor");
-
-    const search =
-      searchParams.get("search") || "";
-
-    const contacts =
-      await prisma.contact.findMany({
-        where: {
-          userId,
-          isArchived: false,
-          lastMessageAt: {
-            not: null
-          },
-          OR: search
-            ? [
-                {
-                  name: {
-                    contains: search,
-                    mode: "insensitive"
-                  }
-                },
-                {
-                  phone: {
-                    contains: search
-                  }
+    const contacts = await prisma.contact.findMany({
+      where: {
+        userId,
+        isArchived: false,
+        lastMessageAt: {
+          not: null
+        },
+        // ✅ الفلتر السحري: إظهار فقط من لديهم رسالة واردة واحدة على الأقل
+        messages: {
+          some: {
+            direction: "inbound"
+          }
+        },
+        OR: search
+          ? [
+              {
+                name: {
+                  contains: search,
+                  mode: "insensitive"
                 }
-              ]
-            : undefined
+              },
+              {
+                phone: {
+                  contains: search
+                }
+              }
+            ]
+          : undefined
+      },
+
+      take: limit,
+
+      ...(cursor
+        ? {
+            skip: 1,
+            cursor: {
+              id: cursor
+            }
+          }
+        : {}),
+
+      orderBy: [
+        { isPinned: "desc" },
+        { lastMessageAt: "desc" }
+      ],
+
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        notes: true,
+        audienceId: true,
+        isPinned: true,
+        isArchived: true,
+
+        messages: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc"
+          },
+          select: {
+            id: true,
+            content: true,
+            type: true,
+            direction: true,
+            status: true,
+            createdAt: true
+          }
         },
 
-        take: limit,
-
-        ...(cursor
-          ? {
-              skip: 1,
-              cursor: {
-                id: cursor
-              }
-            }
-          : {}),
-
-        orderBy: [
-          { isPinned: "desc" },
-          { lastMessageAt: "desc" }
-        ],
-
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          notes: true,
-          audienceId: true,
-          isPinned: true,
-          isArchived: true,
-
-          messages: {
-            take: 1,
-            orderBy: {
-              createdAt: "desc"
-            },
-            select: {
-              id: true,
-              content: true,
-              type: true,
-              direction: true,
-              status: true,
-              createdAt: true
-            }
-          },
-
-          _count: {
-            select: {
-              messages: {
-                where: {
-                  direction: "inbound",
-                  status: {
-                    not: "read"
-                  }
+        _count: {
+          select: {
+            messages: {
+              where: {
+                direction: "inbound",
+                status: {
+                  not: "read"
                 }
               }
             }
           }
         }
-      });
+      }
+    });
 
-    const conversations =
-      contacts.map((c) => ({
-        contact: {
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          notes: c.notes,
-          audienceId: c.audienceId
-        },
+    // تحويل البيانات لشكل المحادثة (Mapping)
+    const conversations = contacts.map((c) => ({
+      contact: {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        notes: c.notes,
+        audienceId: c.audienceId
+      },
 
-        lastMessage:
-          c.messages[0] || null,
+      lastMessage: c.messages[0] || null,
 
-        unreadCount:
-          c._count.messages,
+      unreadCount: c._count.messages,
 
-        isPinned: c.isPinned,
-        isArchived: c.isArchived
-      }));
+      isPinned: c.isPinned,
+      isArchived: c.isArchived
+    }));
 
     return NextResponse.json({
       conversations,
       nextCursor:
         contacts.length === limit
-          ? contacts[
-              contacts.length - 1
-            ].id
+          ? contacts[contacts.length - 1].id
           : null
     });
 
   } catch (error) {
+    console.error("Fetch Conversations Error:", error);
     return NextResponse.json(
-      { error: "Failed" },
+      { error: "Failed to fetch conversations" },
       { status: 500 }
     );
   }
