@@ -6,21 +6,18 @@ export async function sendMessage(
   message: string
 ): Promise<void> {
   try {
-    // Get user's WhatsApp account settings
     const whatsappAccount = await prisma.whatsAppAccount.findUnique({
       where: { userId },
     });
 
-    if (!whatsappAccount) {
-      throw new Error("حساب واتساب غير مكون");
+    if (!whatsappAccount || !whatsappAccount.accessToken || !whatsappAccount.phoneNumberId) {
+      throw new Error("إعدادات واتساب غير مكتملة لهذا الحساب");
     }
 
-    // Normalize phone number (remove + if present, ensure it's numeric)
     const normalizedPhone = phone.replace(/\D/g, "");
 
-    // Send message via WhatsApp API
     const response = await fetch(
-      `https://graph.facebook.com/v19.0/${whatsappAccount.phoneNumberId}/messages`,
+      `https://graph.facebook.com/v21.0/${whatsappAccount.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {
@@ -31,9 +28,7 @@ export async function sendMessage(
           messaging_product: "whatsapp",
           to: normalizedPhone,
           type: "text",
-          text: {
-            body: message,
-          },
+          text: { body: message },
         }),
       }
     );
@@ -41,28 +36,32 @@ export async function sendMessage(
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.error?.message || "فشل إرسال الرسالة عبر واتساب"
-      );
+      throw new Error(data.error?.message || "فشل إرسال الرسالة");
     }
 
-    // Log the message in database
-    const contact = await prisma.contact.findFirst({
-      where: { phone: normalizedPhone, userId },
+    // ✅ التحسين: ابحث عن الكونتاكت أو أنشئه لو مش موجود
+    const contact = await prisma.contact.upsert({
+      where: { phone_userId: { phone: normalizedPhone, userId } },
+      update: {}, // لا تغير شيء لو موجود
+      create: {
+        phone: normalizedPhone,
+        userId: userId,
+        name: "عميل جديد", // اسم افتراضي
+      },
     });
 
-    if (contact) {
-      await prisma.message.create({
-        data: {
-          content: message,
-          direction: "outbound",
-          status: "sent",
-          whatsappId: data.messages?.[0]?.id,
-          userId,
-          contactId: contact.id,
-        },
-      });
-    }
+    // ✅ تسجيل الرسالة دايماً
+    await prisma.message.create({
+      data: {
+        content: message,
+        direction: "outbound",
+        status: "sent",
+        whatsappId: data.messages?.[0]?.id, // مهم جداً للربط مع الويب هوك
+        userId,
+        contactId: contact.id,
+      },
+    });
+
   } catch (error) {
     console.error("WhatsApp send error:", error);
     throw error;
