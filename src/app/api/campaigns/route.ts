@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, CampaignStatus } from "@prisma/client";
 
 // ===============================
-// GET /api/campaigns?status=&search=&page=&limit=&report=true
+// GET /api/campaigns?status=&search=&page=&limit=
 // ===============================
 export async function GET(req: NextRequest) {
   try {
@@ -49,10 +49,7 @@ export async function GET(req: NextRequest) {
         ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(2)
         : 0;
 
-      // إحصائيات يومية
       const dailyStats = await getDailyStats(userId, startDate);
-
-      // أداء القوالب
       const templatePerformance = await getTemplatePerformance(userId, startDate);
 
       return NextResponse.json({
@@ -91,28 +88,24 @@ export async function GET(req: NextRequest) {
     }
 
     // ===============================
-    // حالة 3: جلب كل الحملات (مع Pagination)
+    // حالة 3: جلب كل الحملات ✅ ترجع ARRAY مباشرة
     // ===============================
     const where: any = { userId };
     if (status && status !== "all") where.status = status;
     if (search) where.name = { contains: search, mode: "insensitive" };
 
     const skip = (page - 1) * limit;
-    const [campaigns, total] = await Promise.all([
-      prisma.campaign.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: { template: { select: { name: true, content: true } } },
-      }),
-      prisma.campaign.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      data: campaigns,
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    const campaigns = await prisma.campaign.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: { template: { select: { name: true, content: true } } },
     });
+
+    // ✅ هنا التعديل: أرجع campaigns مباشرة كـ Array
+    return NextResponse.json(campaigns);
+    
   } catch (error) {
     console.error("GET campaigns error:", error);
     return NextResponse.json({ error: "فشل في جلب الحملات" }, { status: 500 });
@@ -136,17 +129,17 @@ export async function POST(req: NextRequest) {
     const parentId = (session.user as any).parentId;
     const userId = parentId ?? rawUserId;
 
-    // ✅ حالة التحديث (PUT عبر POST)
-    if (campaignId) {
+    // حالة التحديث
+    if (campaignId && body._action !== "delete") {
       return await updateCampaign(userId, campaignId, body);
     }
 
-    // ✅ حالة الحذف (DELETE عبر POST)
+    // حالة الحذف
     if (body._action === "delete" && campaignId) {
       return await deleteCampaign(userId, campaignId);
     }
 
-    // ✅ حالة الإنشاء الجديد
+    // حالة الإنشاء الجديد
     if (!name || !templateName || !Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json(
         { error: "Missing required fields: name, templateName, or numbers" },
@@ -166,6 +159,7 @@ export async function POST(req: NextRequest) {
 
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
+    
     const campaign = await prisma.campaign.create({
       data: {
         name,
@@ -188,6 +182,7 @@ export async function POST(req: NextRequest) {
 
     // الإرسال الفوري
     let sentCount = 0, failedCount = 0;
+    
     for (const phone of numbers) {
       try {
         const contact = await prisma.contact.upsert({
@@ -239,10 +234,22 @@ export async function POST(req: NextRequest) {
 
     await prisma.campaign.update({
       where: { id: campaign.id },
-      data: { status: CampaignStatus.completed, sentCount, failedCount, completedAt: new Date() },
+      data: { 
+        status: CampaignStatus.completed, 
+        sentCount, 
+        failedCount, 
+        completedAt: new Date() 
+      },
     });
 
-    return NextResponse.json({ success: true, campaignId: campaign.id, sentCount, failedCount, total: numbers.length });
+    return NextResponse.json({ 
+      success: true, 
+      campaignId: campaign.id, 
+      sentCount, 
+      failedCount, 
+      total: numbers.length 
+    });
+    
   } catch (error: any) {
     console.error("POST campaign error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -256,7 +263,11 @@ export async function POST(req: NextRequest) {
 async function updateCampaign(userId: string, campaignId: string, body: any) {
   const { name, status, scheduledAt } = body;
   const existing = await prisma.campaign.findFirst({ where: { id: campaignId, userId } });
-  if (!existing) return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+  
+  if (!existing) {
+    return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+  }
+  
   if (existing.status === CampaignStatus.completed) {
     return NextResponse.json({ error: "لا يمكن تعديل حملة مكتملة" }, { status: 400 });
   }
@@ -269,17 +280,22 @@ async function updateCampaign(userId: string, campaignId: string, body: any) {
       scheduledAt: scheduledAt ? new Date(scheduledAt) : existing.scheduledAt,
     },
   });
+  
   return NextResponse.json({ success: true, campaign: updated });
 }
 
 async function deleteCampaign(userId: string, campaignId: string) {
   const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, userId } });
-  if (!campaign) return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+  
+  if (!campaign) {
+    return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+  }
 
   await prisma.$transaction([
     prisma.message.deleteMany({ where: { campaignId } }),
     prisma.campaign.delete({ where: { id: campaignId } }),
   ]);
+  
   return NextResponse.json({ success: true, message: "تم الحذف بنجاح" });
 }
 
@@ -295,24 +311,37 @@ function getStartDate(period: string): Date | null {
 
 async function getDailyStats(userId: string, startDate: Date | null) {
   const campaigns = await prisma.campaign.findMany({
-    where: { userId, status: CampaignStatus.completed, ...(startDate && { createdAt: { gte: startDate } }) },
+    where: { 
+      userId, 
+      status: CampaignStatus.completed, 
+      ...(startDate && { createdAt: { gte: startDate } }) 
+    },
     select: { createdAt: true, sentCount: true, failedCount: true },
   });
+  
   const dailyMap = new Map();
+  
   campaigns.forEach(c => {
     const date = c.createdAt.toISOString().split('T')[0];
-    if (!dailyMap.has(date)) dailyMap.set(date, { date, sent: 0, failed: 0 });
+    if (!dailyMap.has(date)) {
+      dailyMap.set(date, { date, sent: 0, failed: 0 });
+    }
     const day = dailyMap.get(date);
     day.sent += c.sentCount || 0;
     day.failed += c.failedCount || 0;
   });
+  
   return Array.from(dailyMap.values());
 }
 
 async function getTemplatePerformance(userId: string, startDate: Date | null) {
   const performance = await prisma.campaign.groupBy({
     by: ['templateId'],
-    where: { userId, status: CampaignStatus.completed, ...(startDate && { createdAt: { gte: startDate } }) },
+    where: { 
+      userId, 
+      status: CampaignStatus.completed, 
+      ...(startDate && { createdAt: { gte: startDate } }) 
+    },
     _sum: { sentCount: true, failedCount: true },
   });
 
@@ -324,7 +353,9 @@ async function getTemplatePerformance(userId: string, startDate: Date | null) {
     where: { id: { in: templateIds } },
     select: { id: true, name: true },
   });
+  
   const templateMap = new Map<string, string>(templates.map(t => [t.id, t.name]));
+  
   return performance.map(p => ({
     name: templateMap.get(p.templateId ?? "") || "غير معروف",
     sent: p._sum.sentCount || 0,
