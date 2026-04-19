@@ -1,275 +1,152 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import {
-  MessageDirection,
-  MessageStatus,
-  MessageType,
-} from "@prisma/client";
 
 // =======================================
-// Verify Token
+// GET Conversations / Chat List
 // =======================================
-const VERIFY_TOKEN =
-  process.env.WHATSAPP_VERIFY_TOKEN || "bsm_alah_2026";
-
-// =======================================
-// GET Verify Webhook
-// =======================================
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-
-  const mode = searchParams.get("hub.mode");
-  const token = searchParams.get("hub.verify_token");
-  const challenge = searchParams.get("hub.challenge");
-
-  if (
-    mode &&
-    token &&
-    mode === "subscribe" &&
-    token === VERIFY_TOKEN
-  ) {
-    console.log("✅ Webhook Verified");
-
-    return new NextResponse(challenge, {
-      status: 200,
-    });
-  }
-
-  return new NextResponse("Forbidden", {
-    status: 403,
-  });
-}
-
-// =======================================
-// POST Receive Webhook
-// =======================================
-export async function POST(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const body = await req.json();
+    const session = await getServerSession(authOptions);
 
-    // حفظ اللوج
-    await prisma.webhookLog.create({
-      data: {
-        payload: JSON.stringify(body),
-        processed: false,
-      },
-    });
-
-    if (body.object !== "whatsapp_business_account") {
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { status: "ignored" },
-        { status: 200 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
-    const entry = body.entry?.[0];
-    const wabaId = entry?.id;
+    // دعم أعضاء الفريق
+    const rawUserId = (session.user as any).id;
+    const parentId = (session.user as any).parentId;
 
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
+    const userId = parentId ?? rawUserId;
 
-    // =======================================
-    // تحديد مالك الحساب
-    // =======================================
-    const accountOwner =
-      await prisma.whatsAppAccount.findFirst({
-        where: {
-          wabaId,
-        },
-      });
+    const { searchParams } = new URL(req.url);
 
-    if (!accountOwner) {
-      return NextResponse.json(
-        { status: "owner_not_found" },
-        { status: 200 }
-      );
-    }
+    const limit = Number(searchParams.get("limit") || 30);
+    const cursor = searchParams.get("cursor");
+    const search = searchParams.get("search") || "";
 
-    const userId = accountOwner.userId;
-
-    // =======================================
-    // تحديث حالات الرسائل
-    // =======================================
-    if (value?.statuses?.length > 0) {
-      const statusData = value.statuses[0];
-
-      const whatsappMsgId = statusData.id;
-      const newStatus = statusData.status;
-
-      await prisma.message.updateMany({
-        where: {
-          whatsappId: whatsappMsgId,
-          userId,
-        },
-
-        data: {
-          status: mapStatus(newStatus),
-
-          ...(newStatus === "delivered"
-            ? {
-                deliveredAt: new Date(),
-              }
-            : {}),
-
-          ...(newStatus === "read"
-            ? {
-                readAt: new Date(),
-              }
-            : {}),
-        },
-      });
-    }
-
-    // =======================================
-    // استقبال رسالة واردة فقط
-    // =======================================
-    if (value?.messages?.length > 0) {
-      const msg = value.messages[0];
-
-      const from = msg.from;
-      const whatsappId = msg.id;
-
-      // منع التكرار
-      const existing =
-        await prisma.message.findFirst({
-          where: {
-            whatsappId,
-          },
-        });
-
-      if (existing) {
-        return NextResponse.json(
-          { status: "duplicate_ignored" },
-          { status: 200 }
-        );
-      }
-
-      let messageType: MessageType =
-        MessageType.text;
-
-      let content = msg.text?.body || "";
-      let mediaUrl: string | null = null;
-
-      // صورة
-      if (msg.type === "image") {
-        messageType = MessageType.image;
-        content =
-          msg.image?.caption || "📷 صورة";
-        mediaUrl = msg.image?.id || null;
-      }
-
-      // ملف
-      if (msg.type === "document") {
-        messageType = MessageType.document;
-        content =
-          msg.document?.filename ||
-          "📄 ملف";
-        mediaUrl = msg.document?.id || null;
-      }
-
-      // صوت
-      if (msg.type === "audio") {
-        messageType = MessageType.audio;
-        content = "🎵 رسالة صوتية";
-        mediaUrl = msg.audio?.id || null;
-      }
-
-      // =======================================
-      // تحديث أو إنشاء Contact
-      // =======================================
-      const contact =
-        await prisma.contact.upsert({
-          where: {
-            phone_userId: {
-              phone: from,
-              userId,
-            },
-          },
-
-          create: {
-            phone: from,
-            userId,
-            lastMessageAt: new Date(),
-            unreadCount: 1,
-          },
-
-          update: {
-            lastMessageAt: new Date(),
-            unreadCount: {
-              increment: 1,
-            },
-          },
-        });
-
-      // =======================================
-      // تسجيل الرسالة الواردة فقط
-      // الكامبين لا تظهر هنا
-      // =======================================
-      await prisma.message.create({
-        data: {
-          userId,
-          contactId: contact.id,
-
-          content,
-          type: messageType,
-
-          direction:
-            MessageDirection.inbound,
-
-          status:
-            MessageStatus.delivered,
-
-          whatsappId,
-          mediaUrl,
-        },
-      });
-    }
-
-    // تحديث اللوج
-    await prisma.webhookLog.updateMany({
+    const contacts = await prisma.contact.findMany({
       where: {
-        processed: false,
+        userId,
+        isArchived: false,
+        lastMessageAt: {
+          not: null,
+        },
+
+        // البحث
+        ...(search
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  phone: {
+                    contains: search,
+                  },
+                },
+              ],
+            }
+          : {}),
       },
-      data: {
-        processed: true,
+
+      take: limit,
+
+      ...(cursor
+        ? {
+            skip: 1,
+            cursor: {
+              id: cursor,
+            },
+          }
+        : {}),
+
+      orderBy: [
+        { isPinned: "desc" },
+        { lastMessageAt: "desc" },
+      ],
+
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        notes: true,
+        audienceId: true,
+
+        isPinned: true,
+        isArchived: true,
+        unreadCount: true,
+        lastMessageAt: true,
+
+        messages: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            id: true,
+            content: true,
+            type: true,
+            direction: true,
+            status: true,
+            createdAt: true,
+          },
+        },
+
+        _count: {
+          select: {
+            messages: {
+              where: {
+                direction: "inbound",
+                status: {
+                  not: "read",
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    const conversations = contacts.map((c) => ({
+      contact: {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        notes: c.notes,
+        audienceId: c.audienceId,
+      },
+
+      lastMessage: c.messages[0] || null,
+
+      unreadCount: c._count.messages,
+
+      isPinned: c.isPinned,
+      isArchived: c.isArchived,
+      lastMessageAt: c.lastMessageAt,
+    }));
 
     return NextResponse.json({
-      status: "success",
+      conversations,
+
+      nextCursor:
+        contacts.length === limit
+          ? contacts[contacts.length - 1].id
+          : null,
     });
   } catch (error) {
-    console.error(
-      "❌ Webhook Error:",
-      error
-    );
+    console.error("Fetch Conversations Error:", error);
 
     return NextResponse.json(
-      { error: "Internal Error" },
-      { status: 200 }
+      { error: "Failed to fetch conversations" },
+      { status: 500 }
     );
   }
-}
-
-// =======================================
-// Status Mapper
-// =======================================
-function mapStatus(
-  waStatus: string
-): MessageStatus {
-  const map: Record<
-    string,
-    MessageStatus
-  > = {
-    sent: MessageStatus.sent,
-    delivered:
-      MessageStatus.delivered,
-    read: MessageStatus.read,
-    failed: MessageStatus.failed,
-  };
-
-  return (
-    map[waStatus] ||
-    MessageStatus.pending
-  );
 }

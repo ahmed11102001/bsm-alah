@@ -1,152 +1,181 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { MessageDirection, MessageStatus, MessageType, CampaignStatus } from "@prisma/client";
 
-// =======================================
-// GET Conversations / Chat List
-// =======================================
-export async function GET(req: Request) {
+// ===============================
+// جلب جميع الحملات
+// ===============================
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    }
 
-    if (!session?.user?.id) {
+    const rawUserId = (session.user as any).id;
+    const parentId = (session.user as any).parentId;
+    const userId = parentId ?? rawUserId;
+
+    const campaigns = await prisma.campaign.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        template: true,
+      },
+    });
+
+    return NextResponse.json(campaigns);
+  } catch (error) {
+    console.error("Fetch campaigns error:", error);
+    return NextResponse.json({ error: "فشل في جلب الحملات" }, { status: 500 });
+  }
+}
+
+// ===============================
+// إنشاء حملة وإرسال للأرقام مباشرة
+// ===============================
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { name, templateName, numbers } = body;
+
+    const rawUserId = (session.user as any).id;
+    const parentId = (session.user as any).parentId;
+    const userId = parentId ?? rawUserId;
+
+    if (!name || !templateName || !Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "Missing required fields: name, templateName, or numbers" },
+        { status: 400 }
       );
     }
 
-    // دعم أعضاء الفريق
-    const rawUserId = (session.user as any).id;
-    const parentId = (session.user as any).parentId;
+    // البحث عن حساب واتساب
+    const whatsappAccount = await prisma.whatsAppAccount.findUnique({
+      where: { userId },
+    });
 
-    const userId = parentId ?? rawUserId;
+    if (!whatsappAccount) {
+      return NextResponse.json(
+        { error: "WhatsApp account not connected" },
+        { status: 400 }
+      );
+    }
 
-    const { searchParams } = new URL(req.url);
+    // البحث عن القالب
+    const template = await prisma.template.findFirst({
+      where: { name: templateName, userId },
+    });
 
-    const limit = Number(searchParams.get("limit") || 30);
-    const cursor = searchParams.get("cursor");
-    const search = searchParams.get("search") || "";
+    if (!template) {
+      return NextResponse.json(
+        { error: `Template "${templateName}" not found` },
+        { status: 404 }
+      );
+    }
 
-    const contacts = await prisma.contact.findMany({
-      where: {
+    // إنشاء سجل الحملة
+    const campaign = await prisma.campaign.create({
+      data: {
+        name,
         userId,
-        isArchived: false,
-        lastMessageAt: {
-          not: null,
-        },
-
-        // البحث
-        ...(search
-          ? {
-              OR: [
-                {
-                  name: {
-                    contains: search,
-                    mode: "insensitive",
-                  },
-                },
-                {
-                  phone: {
-                    contains: search,
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
-
-      take: limit,
-
-      ...(cursor
-        ? {
-            skip: 1,
-            cursor: {
-              id: cursor,
-            },
-          }
-        : {}),
-
-      orderBy: [
-        { isPinned: "desc" },
-        { lastMessageAt: "desc" },
-      ],
-
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        notes: true,
-        audienceId: true,
-
-        isPinned: true,
-        isArchived: true,
-        unreadCount: true,
-        lastMessageAt: true,
-
-        messages: {
-          take: 1,
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            id: true,
-            content: true,
-            type: true,
-            direction: true,
-            status: true,
-            createdAt: true,
-          },
-        },
-
-        _count: {
-          select: {
-            messages: {
-              where: {
-                direction: "inbound",
-                status: {
-                  not: "read",
-                },
-              },
-            },
-          },
-        },
+        templateId: template.id,
+        status: CampaignStatus.running,
+        startedAt: new Date(),
       },
     });
 
-    const conversations = contacts.map((c) => ({
-      contact: {
-        id: c.id,
-        name: c.name,
-        phone: c.phone,
-        notes: c.notes,
-        audienceId: c.audienceId,
+    // معالجة الإرسال
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of numbers) {
+      try {
+        // تحديث أو إنشاء جهة الاتصال
+        const contact = await prisma.contact.upsert({
+          where: { phone_userId: { phone, userId } },
+          update: { lastMessageAt: new Date() },
+          create: { phone, userId, lastMessageAt: new Date() },
+        });
+
+        // إرسال الرسالة عبر WhatsApp API
+        const payload = {
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: "ar" },
+          },
+        };
+
+        const metaRes = await fetch(
+          `https://graph.facebook.com/v20.0/${whatsappAccount.phoneNumberId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${whatsappAccount.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const meta = await metaRes.json();
+
+        if (meta.error) {
+          throw new Error(meta.error.message);
+        }
+
+        // تسجيل الرسالة في قاعدة البيانات
+        await prisma.message.create({
+          data: {
+            content: `Campaign: ${name} (Template: ${templateName})`,
+            type: MessageType.template,
+            direction: MessageDirection.outbound,
+            status: MessageStatus.sent,
+            userId,
+            contactId: contact.id,
+            campaignId: campaign.id,
+            whatsappId: meta.messages?.[0]?.id,
+            sentAt: new Date(),
+          },
+        });
+
+        sentCount++;
+      } catch (error) {
+        console.error(`Error sending to ${phone}:`, error);
+        failedCount++;
+      }
+    }
+
+    // تحديث حالة الحملة النهائية
+    await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        status: CampaignStatus.completed,
+        sentCount,
+        failedCount,
+        completedAt: new Date(),
       },
-
-      lastMessage: c.messages[0] || null,
-
-      unreadCount: c._count.messages,
-
-      isPinned: c.isPinned,
-      isArchived: c.isArchived,
-      lastMessageAt: c.lastMessageAt,
-    }));
+    });
 
     return NextResponse.json({
-      conversations,
-
-      nextCursor:
-        contacts.length === limit
-          ? contacts[contacts.length - 1].id
-          : null,
+      success: true,
+      campaignId: campaign.id,
+      sentCount,
+      failedCount,
+      total: numbers.length,
     });
-  } catch (error) {
-    console.error("Fetch Conversations Error:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error("Create campaign error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
