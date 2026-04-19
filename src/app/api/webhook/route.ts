@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
 
-// ✅ الـ Token اللي ثبتناه في Vercel
+// ✅ الـ Token الذي ثبتناه في Vercel
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "bsm_alah_2026";
 
 // -------------------------------------------------------------------
@@ -23,79 +24,89 @@ export async function GET(req: NextRequest) {
 }
 
 // -------------------------------------------------------------------
-// 📩 2. استقبال البيانات (POST) - قلب الـ CRM
+// 📩 2. استقبال البيانات (POST) - معالجة الرسائل والصور
 // -------------------------------------------------------------------
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // التأكد أن الإشعار من واتساب حسابات البيزنس
     if (body.object === "whatsapp_business_account") {
       const entry = body.entry?.[0];
-      const wabaId = entry?.id; // 🆔 المعرف الفريد لحساب العميل (WABA ID)
+      const wabaId = entry?.id;
       const changes = entry?.changes?.[0];
       const value = changes?.value;
 
-      // 🔍 البحث عن العميل (User) صاحب هذا الـ WABA ID في قاعدة البيانات
+      // 🔍 البحث عن مالك الحساب باستخدام WABA ID
       const accountOwner = await prisma.whatsAppAccount.findFirst({
         where: { wabaId: wabaId },
-        include: { user: true }
       });
 
       if (!accountOwner) {
-        console.warn(`⚠️ إشعار من WABA ID غير مسجل لدينا: ${wabaId}`);
         return NextResponse.json({ status: "ignored" }, { status: 200 });
       }
 
-      // --- أ: تحديث حالات الرسائل (Sent, Delivered, Read) ---
+      const userId = accountOwner.userId;
+
+      // --- أ: تحديث حالات الرسائل (Delivered, Read) ---
       if (value?.statuses) {
         const statusData = value.statuses[0];
         const whatsappMsgId = statusData.id;
-        const newStatus = statusData.status; // مثلاً: 'delivered' أو 'read'
+        const newStatus = statusData.status;
 
         await prisma.message.updateMany({
-          where: { 
-            whatsappId: whatsappMsgId,
-            userId: accountOwner.userId 
-          },
+          where: { whatsappId: whatsappMsgId, userId },
           data: { 
             status: mapStatus(newStatus),
-            // تحديث التوقيتات بناءً على الحالة
             ...(newStatus === 'delivered' ? { deliveredAt: new Date() } : {}),
             ...(newStatus === 'read' ? { readAt: new Date() } : {})
           }
         });
       }
 
-      // --- ب: استقبال رسائل جديدة (ردود العملاء) ---
+      // --- ب: استقبال الرسائل الجديدة (نصوص وصور) ---
       if (value?.messages) {
         const msg = value.messages[0];
+        const from = msg.from; // رقم العميل
+        
+        let messageType = MessageType.text;
+        let content = msg.text?.body || "";
+        let mediaUrl = null;
 
-        // 🚀 التعديل الجوهري هنا: تحديث وقت آخر رسالة وعداد غير المقروء
+        // دعم استقبال الصور
+        if (msg.type === "image") {
+          messageType = MessageType.image;
+          content = msg.image?.caption || "📷 صورة";
+          // ملاحظة: هنا ستحتاج لاحقاً لجلب رابط الصورة الفعلي باستخدام id الصورة من Meta API
+          // حالياً سنخزن الـ ID كمرجع مؤقت
+          mediaUrl = msg.image?.id; 
+        }
+
+        // 🚀 تحديث جهة الاتصال لضمان ظهورها في الشات فوراً
         const contact = await prisma.contact.upsert({
-          where: { phone_userId: { phone: msg.from, userId: accountOwner.userId } },
+          where: { phone_userId: { phone: from, userId } },
           create: { 
-            phone: msg.from, 
-            userId: accountOwner.userId,
-            lastMessageAt: new Date(), // لو عميل جديد أول مرة يبعت
+            phone: from, 
+            userId,
+            lastMessageAt: new Date(),
             unreadCount: 1 
           },
           update: {
-            lastMessageAt: new Date(), // لو عميل قديم ورد عليك
-            unreadCount: { increment: 1 } // تزويد العداد بواحد
+            lastMessageAt: new Date(),
+            unreadCount: { increment: 1 }
           }
         });
         
-        // تسجيل الرسالة الواردة في قاعدة البيانات
+        // تسجيل الرسالة الواردة (Inbound)
         await prisma.message.create({
           data: {
-            userId: accountOwner.userId,
+            userId,
             contactId: contact.id,
-            content: msg.text?.body || "رسالة وسائط",
-            type: "text", // أو حسب النوع
-            direction: "inbound",
-            status: "read", // ممكن تخليها delivered ولما اليوزر يفتحها تقلب read
-            whatsappId: msg.id // يفضل حفظ الـ ID بتاع رسالة العميل كمان
+            content,
+            type: messageType,
+            direction: MessageDirection.inbound,
+            status: MessageStatus.delivered, // حالة مبدئية للرسالة الواردة
+            whatsappId: msg.id,
+            mediaUrl: mediaUrl
           }
         });
       }
@@ -106,18 +117,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not a WABA object" }, { status: 404 });
   } catch (error) {
     console.error("❌ Webhook Error:", error);
-    // نرد بـ 200 دائماً لميتا حتى في الخطأ عشان ميتعطلش الويب هوك عندهم
     return NextResponse.json({ error: "Internal Error" }, { status: 200 });
   }
 }
 
-// دالة مساعدة لتحويل حالات واتساب لحالات الـ Enum عندك في بريسما
-function mapStatus(waStatus: string): any {
-  const map: Record<string, string> = {
-    sent: "sent",
-    delivered: "delivered",
-    read: "read",
-    failed: "failed",
+// دالة تحويل الحالات لتتوافق مع الـ Enums في schema.prisma [cite: 10, 14, 15]
+function mapStatus(waStatus: string): MessageStatus {
+  const map: Record<string, MessageStatus> = {
+    sent: MessageStatus.sent,
+    delivered: MessageStatus.delivered,
+    read: MessageStatus.read,
+    failed: MessageStatus.failed,
   };
-  return map[waStatus] || "pending";
+  return map[waStatus] || MessageStatus.pending;
 }
