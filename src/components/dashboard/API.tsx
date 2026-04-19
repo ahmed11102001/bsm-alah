@@ -219,4 +219,15 @@ export default function API({ initialData }: { initialData?: any }) {
               </div>
 
               {/* تنبيه سريع للعميل */}
-              <div className="p-4
+                            <div className="p-4 rounded-lg border border-dashed border-slate-200 bg-slate-50">
+                              <p className="text-sm text-slate-700">
+                                استخدم هذا الرابط و Verify Token داخل إعدادات Webhook في Meta Developers.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                );
+              }
