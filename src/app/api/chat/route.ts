@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const account = await prisma.whatsappAccount.findUnique({
+    const account = await prisma.whatsAppAccount.findUnique({
       where: { userId }  // ✅ استخدم userId المصحح
     });
 

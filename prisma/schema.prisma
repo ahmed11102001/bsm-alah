@@ -195,6 +195,7 @@ model Campaign {
 
   startedAt   DateTime?
   completedAt DateTime?
+  scheduledAt DateTime? @map("scheduled_at")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
