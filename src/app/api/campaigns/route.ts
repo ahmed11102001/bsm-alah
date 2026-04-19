@@ -103,7 +103,6 @@ export async function GET(req: NextRequest) {
       include: { template: { select: { name: true, content: true } } },
     });
 
-    // ✅ هنا التعديل: أرجع campaigns مباشرة كـ Array
     return NextResponse.json(campaigns);
     
   } catch (error) {
@@ -119,7 +118,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -139,27 +138,45 @@ export async function POST(req: NextRequest) {
       return await deleteCampaign(userId, campaignId);
     }
 
-    // حالة الإنشاء الجديد
+    // ✅ التحقق من البيانات الأساسية
     if (!name || !templateName || !Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json(
-        { error: "Missing required fields: name, templateName, or numbers" },
+        { error: "بيانات ناقصة: الاسم أو القالب أو الأرقام" },
         { status: 400 }
       );
     }
 
+    // ✅ التحقق من حساب واتساب
     const whatsappAccount = await prisma.whatsAppAccount.findUnique({ where: { userId } });
     if (!whatsappAccount) {
-      return NextResponse.json({ error: "WhatsApp account not connected" }, { status: 400 });
+      return NextResponse.json({ error: "حساب واتساب غير مربوط. يرجى ربط الحساب أولاً" }, { status: 400 });
     }
 
-    const template = await prisma.template.findFirst({ where: { name: templateName, userId } });
+    // ✅ البحث عن القالب (يدعم ID أو اسم)
+    const template = await prisma.template.findFirst({
+      where: {
+        OR: [
+          { id: templateName },     // لو جاي بالـ ID
+          { name: templateName }    // لو جاي بالاسم
+        ],
+        userId: userId
+      }
+    });
+
     if (!template) {
-      return NextResponse.json({ error: `Template "${templateName}" not found` }, { status: 404 });
+      console.error(`القالب غير موجود: ${templateName} للمستخدم ${userId}`);
+      return NextResponse.json(
+        { error: `القالب "${templateName}" غير موجود. يرجى التحقق من اسم القالب أو المعرف` },
+        { status: 404 }
+      );
     }
+
+    console.log(`✅ تم العثور على القالب: ${template.name} (ID: ${template.id})`);
 
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
     
+    // ✅ إنشاء سجل الحملة
     const campaign = await prisma.campaign.create({
       data: {
         name,
@@ -171,6 +188,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log(`✅ تم إنشاء الحملة: ${campaign.id}`);
+
+    // ✅ إذا كانت مجدولة
     if (isScheduled) {
       return NextResponse.json({
         success: true,
@@ -180,22 +200,30 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // الإرسال الفوري
+    // ✅ الإرسال الفوري
     let sentCount = 0, failedCount = 0;
+    const errors: string[] = [];
     
     for (const phone of numbers) {
       try {
+        console.log(`📤 جاري الإرسال إلى: ${phone}`);
+        
+        // تحديث أو إنشاء جهة الاتصال
         const contact = await prisma.contact.upsert({
           where: { phone_userId: { phone, userId } },
           update: { lastMessageAt: new Date() },
           create: { phone, userId, lastMessageAt: new Date() },
         });
 
+        // ✅ استخدام template.name (الاسم الحقيقي في Meta)
         const payload = {
           messaging_product: "whatsapp",
           to: phone,
           type: "template",
-          template: { name: templateName, language: { code: "ar" } },
+          template: { 
+            name: template.name,  // ✅ مهم: استخدم اسم القالب من قاعدة البيانات
+            language: { code: "ar" } 
+          },
         };
 
         const metaRes = await fetch(
@@ -211,11 +239,16 @@ export async function POST(req: NextRequest) {
         );
 
         const meta = await metaRes.json();
-        if (meta.error) throw new Error(meta.error.message);
+        
+        if (meta.error) {
+          console.error(`❌ خطأ من Meta API:`, meta.error);
+          throw new Error(meta.error.message);
+        }
 
+        // تسجيل الرسالة في قاعدة البيانات
         await prisma.message.create({
           data: {
-            content: `Campaign: ${name}`,
+            content: `حملة: ${name}`,
             type: MessageType.template,
             direction: MessageDirection.outbound,
             status: MessageStatus.sent,
@@ -226,12 +259,18 @@ export async function POST(req: NextRequest) {
             sentAt: new Date(),
           },
         });
+        
         sentCount++;
-      } catch (error) {
+        console.log(`✅ تم الإرسال بنجاح إلى: ${phone}`);
+        
+      } catch (error: any) {
+        console.error(`❌ فشل الإرسال إلى ${phone}:`, error.message);
         failedCount++;
+        errors.push(`${phone}: ${error.message}`);
       }
     }
 
+    // ✅ تحديث حالة الحملة النهائية
     await prisma.campaign.update({
       where: { id: campaign.id },
       data: { 
@@ -242,16 +281,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log(`📊 تقرير الحملة - مرسل: ${sentCount}, فاشل: ${failedCount}`);
+
     return NextResponse.json({ 
       success: true, 
       campaignId: campaign.id, 
       sentCount, 
       failedCount, 
-      total: numbers.length 
+      total: numbers.length,
+      errors: errors.length > 0 ? errors : undefined
     });
     
   } catch (error: any) {
-    console.error("POST campaign error:", error);
+    console.error("خطأ في إنشاء الحملة:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

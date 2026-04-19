@@ -73,7 +73,8 @@ export default function Campaigns() {
   // State للقوالب
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   const [selectedTemplateContent, setSelectedTemplateContent] = useState("");
-  const [template, setTemplate] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState(""); // ✅ جديد: خزن الـ ID
+  const [template, setTemplate] = useState(""); // ده الاسم
 
   // State لنموذج الحملة
   const [campaignName, setCampaignName] = useState("");
@@ -95,12 +96,24 @@ export default function Campaigns() {
       const data = await res.json();
 
       if (res.ok) {
-        setCampaigns(data);
+        // ✅ لو الرجع array مباشرة
+        if (Array.isArray(data)) {
+          setCampaigns(data);
+        }
+        // ✅ لو الرجع { data: [] }
+        else if (data.data && Array.isArray(data.data)) {
+          setCampaigns(data.data);
+        }
+        else {
+          setCampaigns([]);
+        }
       } else {
         console.error("Error loading campaigns:", data.error);
+        setCampaigns([]);
       }
     } catch (error) {
       console.error("Error loading campaigns:", error);
+      setCampaigns([]);
     } finally {
       setLoadingCampaigns(false);
     }
@@ -113,7 +126,8 @@ export default function Campaigns() {
     fetch("/api/templates")
       .then((res) => res.json())
       .then((data) => {
-        const filtered = data.filter((t: Template) => {
+        const templates = Array.isArray(data) ? data : data.data || [];
+        const filtered = templates.filter((t: Template) => {
           const status = t.status?.toLowerCase();
           return status === "approved" || status === "pending";
         });
@@ -122,6 +136,7 @@ export default function Campaigns() {
 
         if (filtered.length > 0) {
           setTemplate(filtered[0].name);
+          setSelectedTemplateId(filtered[0].id); // ✅ خزن الـ ID
           setSelectedTemplateContent(filtered[0].content);
         }
       })
@@ -135,6 +150,7 @@ export default function Campaigns() {
   useEffect(() => {
     const found = availableTemplates.find((t) => t.name === template);
     if (found) {
+      setSelectedTemplateId(found.id); // ✅ خزن الـ ID
       setSelectedTemplateContent(found.content);
     }
   }, [template, availableTemplates]);
@@ -227,11 +243,12 @@ export default function Campaigns() {
     setDateTime("");
     if (availableTemplates.length > 0) {
       setTemplate(availableTemplates[0].name);
+      setSelectedTemplateId(availableTemplates[0].id);
     }
   };
 
   // ===============================
-  // إنشاء حملة
+  // إنشاء حملة ✅ المعدلة
   // ===============================
   const handleCreateCampaign = async () => {
     if (!campaignName.trim()) {
@@ -241,6 +258,12 @@ export default function Campaigns() {
 
     if (numbers.length === 0) {
       alert("❌ من فضلك أضف أرقام جهات الاتصال أولاً");
+      return;
+    }
+
+    // ✅ استخدام selectedTemplateId بدل الاسم
+    if (!selectedTemplateId) {
+      alert("❌ من فضلك اختر قالب أولاً");
       return;
     }
 
@@ -258,6 +281,7 @@ export default function Campaigns() {
     setLoading(true);
 
     try {
+      // ✅ التعديل المهم: أرسل templateName بالاسم (لأن الـ API بيبحث بالاسم)
       const response = await fetch("/api/campaigns", {
         method: "POST",
         headers: {
@@ -265,8 +289,9 @@ export default function Campaigns() {
         },
         body: JSON.stringify({
           name: campaignName,
-          templateName: template,
+          templateName: template, // ✅ أرسل الاسم مش الـ ID
           numbers: numbers,
+          scheduledAt: scheduleTime !== "now" ? dateTime : null,
         }),
       });
 
@@ -282,6 +307,8 @@ export default function Campaigns() {
           `📨 تم الإرسال: ${data.sentCount} رسالة\n` +
           `❌ فشل الإرسال: ${data.failedCount} رسالة`
         );
+      } else if (data.message) {
+        alert(`✅ ${data.message}`);
       }
 
       await loadCampaigns();
@@ -338,6 +365,13 @@ export default function Campaigns() {
             قيد التنفيذ
           </span>
         );
+      case "scheduled":
+        return (
+          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            مجدولة
+          </span>
+        );
       case "failed":
         return (
           <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs flex items-center gap-1">
@@ -348,7 +382,7 @@ export default function Campaigns() {
       default:
         return (
           <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-            غير معروف
+            {status || "غير معروف"}
           </span>
         );
     }
@@ -396,7 +430,7 @@ export default function Campaigns() {
           </Button>
         </div>
       ) : (
-        /* قائمة الحملات فقط - بدون إحصائيات */
+        /* قائمة الحملات */
         <div className="space-y-3">
           {campaigns.map((campaign) => (
             <Card key={campaign.id} className="hover:shadow-md transition-shadow">
@@ -408,6 +442,8 @@ export default function Campaigns() {
                         <CheckCircle className="w-5 h-5 text-green-600" />
                       ) : campaign.status === "running" ? (
                         <Clock className="w-5 h-5 text-blue-600" />
+                      ) : campaign.status === "scheduled" ? (
+                        <Calendar className="w-5 h-5 text-yellow-600" />
                       ) : (
                         <Send className="w-5 h-5 text-gray-600" />
                       )}
@@ -442,13 +478,12 @@ export default function Campaigns() {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        // عرض تفاصيل سريعة
                         alert(
                           `📊 تفاصيل الحملة:\n\n` +
                           `الاسم: ${campaign.name}\n` +
-                          `القالب: ${campaign.template?.name}\n` +
-                          `تم الإرسال: ${campaign.sentCount}\n` +
-                          `فشل: ${campaign.failedCount}\n` +
+                          `القالب: ${campaign.template?.name || "غير محدد"}\n` +
+                          `تم الإرسال: ${campaign.sentCount || 0}\n` +
+                          `فشل: ${campaign.failedCount || 0}\n` +
                           `الحالة: ${campaign.status}\n` +
                           `التاريخ: ${new Date(campaign.createdAt).toLocaleString("ar-EG")}`
                         );
@@ -474,7 +509,7 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Dialog إنشاء حملة - نفس الكود السابق */}
+      {/* Dialog إنشاء حملة */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl text-right" dir="rtl">
           <DialogHeader>
@@ -567,7 +602,7 @@ export default function Campaigns() {
             <div className="space-y-6">
               <Select onValueChange={setTemplate} value={template}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="اختر قالب..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableTemplates.map((t) => (
@@ -575,19 +610,28 @@ export default function Campaigns() {
                       {t.name}
                     </SelectItem>
                   ))}
+                  {availableTemplates.length === 0 && (
+                    <SelectItem value="none" disabled>
+                      لا توجد قوالب متاحة
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
 
               <div className="bg-gray-50 p-4 rounded-xl">
                 <p className="text-sm text-gray-500 mb-2">📄 معاينة:</p>
-                <p className="text-gray-700">{selectedTemplateContent || "لا يوجد معاينة"}</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{selectedTemplateContent || "لا يوجد معاينة"}</p>
               </div>
 
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
                   <ChevronLeft className="w-4 h-4 ml-2" /> السابق
                 </Button>
-                <Button className="flex-1 bg-green-500 text-white" onClick={() => setStep(3)}>
+                <Button 
+                  className="flex-1 bg-green-500 text-white" 
+                  onClick={() => setStep(3)}
+                  disabled={availableTemplates.length === 0}
+                >
                   التالي: الإعدادات
                 </Button>
               </div>
@@ -597,18 +641,22 @@ export default function Campaigns() {
           {/* الخطوة 3 */}
           {step === 3 && (
             <div className="space-y-6">
-              <Input
-                placeholder="اسم الحملة"
-                value={campaignName}
-                onChange={(e) => setCampaignName(e.target.value)}
-              />
+              <div className="space-y-2">
+                <Label>اسم الحملة</Label>
+                <Input
+                  placeholder="مثال: حملة رمضان 2024"
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                />
+              </div>
 
               <div className="bg-green-50 p-4 rounded-xl">
-                <h4 className="font-bold text-green-800">📊 ملخص</h4>
-                <div className="text-sm mt-2">
-                  <p>• الاسم: {campaignName || "غير محدد"}</p>
-                  <p>• المستلمين: {numbers.length}</p>
-                  <p>• القالب: {template}</p>
+                <h4 className="font-bold text-green-800">📊 ملخص الحملة</h4>
+                <div className="text-sm mt-2 space-y-1">
+                  <p>• الاسم: <strong>{campaignName || "غير محدد"}</strong></p>
+                  <p>• عدد المستلمين: <strong>{numbers.length}</strong></p>
+                  <p>• القالب: <strong>{template || "غير محدد"}</strong></p>
+                  <p>• وقت الإرسال: <strong>{scheduleTime === "now" ? "فوراً" : dateTime || "غير محدد"}</strong></p>
                 </div>
               </div>
 
@@ -617,11 +665,18 @@ export default function Campaigns() {
                   <ChevronLeft className="w-4 h-4 ml-2" /> السابق
                 </Button>
                 <Button
-                  className="flex-1 bg-green-500 text-white"
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                   onClick={handleCreateCampaign}
-                  disabled={loading || !campaignName}
+                  disabled={loading || !campaignName || numbers.length === 0}
                 >
-                  {loading ? "⏳ جاري..." : "🚀 إنشاء الحملة"}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
+                      جاري الإرسال...
+                    </>
+                  ) : (
+                    "🚀 إنشاء الحملة"
+                  )}
                 </Button>
               </div>
             </div>
