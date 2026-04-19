@@ -1,47 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendMessage } from "@/lib/whatsapp"; // تأكد من المسار الصحيح للدالة اللي عدلناها سوا
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
+    if (!session?.user) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
-    const { to, templateName = "welcome_message" } = await req.json();
+    // @ts-ignore
+    const userId = session.user.id;
+    const { to, message } = await req.json();
 
-    if (!to) {
-      return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
+    if (!to || !message) {
+      return NextResponse.json({ error: "الرقم والرسالة مطلوبان" }, { status: 400 });
     }
 
-    const response = await fetch("https://graph.facebook.com/v19.0/979565035250717/messages", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.WHATSAPP_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: to,
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: "ar" }
-        }
-      })
-    });
+    // استخدام الدالة الديناميكية اللي بتسحب بيانات العميل من الداتا بيز وتسجل الرسالة
+    await sendMessage(userId, to, message);
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json({ error: data.error?.message || "فشل إرسال الرسالة" }, { status: response.status });
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
+    return NextResponse.json({ success: true, message: "تم إرسال الرسالة بنجاح" });
+  } catch (error: any) {
     console.error("❌ Send Message Error:", error);
-    return NextResponse.json({ error: "حدث خطأ أثناء إرسال الرسالة" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "حدث خطأ أثناء إرسال الرسالة" }, 
+      { status: 500 }
+    );
   }
 }
