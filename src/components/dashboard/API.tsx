@@ -174,7 +174,49 @@ export default function API({ initialData }: { initialData?: any }) {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
+
+        {/* =========================================
+            تمت إضافة كود الويب هوك هنا
+            ========================================= */}
+        <TabsContent value="webhooks">
+          <Card>
+            <CardHeader>
+              <CardTitle>إعدادات الويب هوك (Webhook Settings)</CardTitle>
+              <p className="text-sm text-gray-500">انسخ هذه البيانات لربط نظامك مع Meta Developers لاستقبال تقارير الوصول والقراءة</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* رابط الويب هوك */}
+              <div className="space-y-2">
+                <Label className="text-blue-600 font-bold">Callback URL</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value={typeof window !== "undefined" ? `https://${window.location.host}/api/webhook` : ""} 
+                    className="bg-gray-50 font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard(typeof window !== "undefined" ? `https://${window.location.host}/api/webhook` : "")}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Verify Token */}
+              <div className="space-y-2">
+                <Label className="text-blue-600 font-bold">Verify Token</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value="bsm_alah_2026" 
+                    className="bg-gray-50 font-mono text-sm"
+                    dir="ltr"
+                  />
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard("bsm_alah_2026")}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* تنبيه سريع للعميل */}
+              <div className="p-4
