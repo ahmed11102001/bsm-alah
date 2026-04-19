@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
       // --- ب: استقبال الرسائل الجديدة (نصوص وصور) ---
       if (value?.messages) {
         const msg = value.messages[0];
-        const from = msg.from; // رقم العميل
+        const from = msg.from; 
         
-        let messageType = MessageType.text;
+        // 🚀 التعديل هنا: تحديد النوع كـ MessageType ليتوافق مع Enum
+        let messageType: MessageType = MessageType.text;
         let content = msg.text?.body || "";
         let mediaUrl = null;
 
@@ -76,12 +77,10 @@ export async function POST(req: NextRequest) {
         if (msg.type === "image") {
           messageType = MessageType.image;
           content = msg.image?.caption || "📷 صورة";
-          // ملاحظة: هنا ستحتاج لاحقاً لجلب رابط الصورة الفعلي باستخدام id الصورة من Meta API
-          // حالياً سنخزن الـ ID كمرجع مؤقت
           mediaUrl = msg.image?.id; 
         }
 
-        // 🚀 تحديث جهة الاتصال لضمان ظهورها في الشات فوراً
+        // تحديث جهة الاتصال لضمان ظهورها في الشات فوراً
         const contact = await prisma.contact.upsert({
           where: { phone_userId: { phone: from, userId } },
           create: { 
@@ -104,7 +103,7 @@ export async function POST(req: NextRequest) {
             content,
             type: messageType,
             direction: MessageDirection.inbound,
-            status: MessageStatus.delivered, // حالة مبدئية للرسالة الواردة
+            status: MessageStatus.delivered,
             whatsappId: msg.id,
             mediaUrl: mediaUrl
           }
@@ -121,7 +120,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// دالة تحويل الحالات لتتوافق مع الـ Enums في schema.prisma [cite: 10, 14, 15]
 function mapStatus(waStatus: string): MessageStatus {
   const map: Record<string, MessageStatus> = {
     sent: MessageStatus.sent,
