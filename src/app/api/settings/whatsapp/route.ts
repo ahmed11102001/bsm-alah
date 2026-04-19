@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     // حفظ أو تحديث بيانات واتساب الخاص باليوزر
-    const account = await prisma.whatsappAccount.upsert({
+    const account = await prisma.whatsAppAccount.upsert({
       where: { userId: (session.user as any).id },
       update: {
         accessToken,
