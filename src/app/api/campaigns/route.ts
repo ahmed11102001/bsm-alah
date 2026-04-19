@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
               userId,
               contactId: contact.id,
               campaignId: campaign.id,
-              whatsappId: response?.messages?.[0]?.id, // حفظ معرف واتساب للمتابعة [cite: 15]
+              whatsappId: (response as any)?.messages?.[0]?.id, // حفظ معرف واتساب للمتابعة [cite: 15]
             },
           });
 
