@@ -4,9 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search, Send, Paperclip, Smile, Phone,
   MoreVertical, Check, CheckCheck, FileText, Mic, X,
-  Star, Archive, Trash2, Clock, MessageSquare,
-  RefreshCw, ArrowLeft, Info, BellOff,
-  Layout, Reply, Copy, Zap, AlertCircle,
+  Clock, RefreshCw, Info, Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,512 +15,237 @@ interface Contact {
   id: string;
   name?: string | null;
   phone: string;
-  audienceId?: string | null;
 }
 
 interface Message {
   id: string;
   content: string | null;
-  type: string;
-  direction: string;
+  type: string; // text, image, etc.
+  direction: string; // inbound, outbound
   status: string;
+  mediaUrl?: string | null;
   createdAt: string;
-  contactId: string;
 }
 
 interface Conversation {
   contact: Contact;
   lastMessage: Message | null;
   unreadCount: number;
-  isPinned?: boolean;
-  isMuted?: boolean;
-}
-
-interface Template {
-  id: string;
-  name: string;
-  content: string;
-  status: string;
-  language: string;
-  category: string;
 }
 
 /* ===========================
-   HELPERS
+   COMPONENTS
 =========================== */
-const formatTime = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const days = Math.floor((Date.now() - date.getTime()) / 86400000);
-
-  if (days === 0)
-    return date.toLocaleTimeString("ar-EG", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  if (days === 1) return "أمس";
-  if (days < 7) return `${days} أيام`;
-
-  return date.toLocaleDateString("ar-EG", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-};
-
-const formatDateSeparator = (dateStr: string) => {
-  const days = Math.floor(
-    (Date.now() - new Date(dateStr).getTime()) / 86400000
-  );
-
-  if (days === 0) return "اليوم";
-  if (days === 1) return "أمس";
-
-  return new Date(dateStr).toLocaleDateString("ar-EG", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
-};
-
 function MsgStatus({ status }: { status: string }) {
-  if (status === "pending")
-    return <Clock className="w-3 h-3 text-gray-400" />;
-
-  if (status === "sent")
-    return <Check className="w-3 h-3 text-gray-400" />;
-
-  if (status === "delivered")
-    return <CheckCheck className="w-3 h-3 text-gray-400" />;
-
-  if (status === "read")
-    return <CheckCheck className="w-3 h-3 text-blue-400" />;
-
-  if (status === "failed")
-    return <AlertCircle className="w-3 h-3 text-red-400" />;
-
+  if (status === "pending") return <Clock className="w-3 h-3 text-gray-400" />;
+  if (status === "sent") return <Check className="w-3 h-3 text-gray-400" />;
+  if (status === "delivered") return <CheckCheck className="w-3 h-3 text-gray-400" />;
+  if (status === "read") return <CheckCheck className="w-3 h-3 text-blue-400" />;
   return null;
 }
 
-function Avatar({
-  name,
-  phone,
-  size = "md",
-}: {
-  name?: string | null;
-  phone: string;
-  size?: "sm" | "md" | "lg";
-}) {
-  const styles = {
-    sm: "w-8 h-8 text-sm",
-    md: "w-10 h-10 text-base",
-    lg: "w-20 h-20 text-3xl",
-  };
-
-  return (
-    <div
-      className={`${styles[size]} rounded-full bg-gradient-to-br from-[#075E54] to-[#25D366] flex items-center justify-center text-white font-bold`}
-    >
-      {(name?.[0] || phone[0] || "?").toUpperCase()}
-    </div>
-  );
-}
-
-/* ===========================
-   PAGE
-=========================== */
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-
   const [newMessage, setNewMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [templateSearch, setTemplateSearch] = useState("");
-  const [contactNote, setContactNote] = useState("");
-
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [showContactInfo, setShowContactInfo] = useState(false);
-
   const [loadingConvs, setLoadingConvs] = useState(true);
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [isSending, setIsSending] = useState(false);
-
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  /* ===========================
-     FETCH CONVERSATIONS
-  =========================== */
+  // جلب المحادثات
   const fetchConversations = useCallback(async () => {
     try {
-      setLoadingConvs(true);
-
       const res = await fetch("/api/conversations");
       const data = await res.json();
-
-      const sorted = data.sort((a: Conversation, b: Conversation) => {
-        const aDate = a.lastMessage?.createdAt || "";
-        const bDate = b.lastMessage?.createdAt || "";
-
-        return (
-          new Date(bDate).getTime() - new Date(aDate).getTime()
-        );
-      });
-
-      setConversations(sorted);
-    } catch {
-      toast.error("فشل تحميل المحادثات");
-    } finally {
-      setLoadingConvs(false);
-    }
+      setConversations(data.conversations || []);
+    } catch { toast.error("خطأ في جلب المحادثات"); }
+    finally { setLoadingConvs(false); }
   }, []);
 
-  /* ===========================
-     FETCH MESSAGES
-  =========================== */
+  // جلب الرسائل وتصفير العداد
   const fetchMessages = useCallback(async (contactId: string) => {
     try {
-      setLoadingMsgs(true);
-
       const res = await fetch(`/api/chat?contactId=${contactId}`);
       const data = await res.json();
-
       setMessages(data.messages || []);
-    } catch {
-      toast.error("فشل تحميل الرسائل");
-    } finally {
-      setLoadingMsgs(false);
-    }
-  }, []);
-
-  /* ===========================
-     FETCH TEMPLATES
-  =========================== */
-  const fetchTemplates = useCallback(async () => {
-    try {
-      const res = await fetch("/api/templates");
-      const data = await res.json();
-
-      setTemplates(
-        data.filter((x: Template) => x.status === "APPROVED")
-      );
+      
+      // تحديث العداد محلياً فوراً
+      setConversations(prev => prev.map(c => 
+        c.contact.id === contactId ? { ...c, unreadCount: 0 } : c
+      ));
     } catch {}
   }, []);
 
-  /* ===========================
-     EFFECTS
-  =========================== */
   useEffect(() => {
     fetchConversations();
-    fetchTemplates();
-  }, [fetchConversations, fetchTemplates]);
+  }, [fetchConversations]);
 
   useEffect(() => {
     if (!selectedConv) return;
-
     fetchMessages(selectedConv.contact.id);
-
-    const controller = new AbortController();
-
-    const interval = setInterval(() => {
-      fetchMessages(selectedConv.contact.id);
-      fetchConversations();
-    }, 15000);
-
-    return () => {
-      clearInterval(interval);
-      controller.abort();
-    };
-  }, [selectedConv, fetchMessages, fetchConversations]);
+    const interval = setInterval(() => fetchMessages(selectedConv.contact.id), 10000);
+    return () => clearInterval(interval);
+  }, [selectedConv, fetchMessages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* ===========================
-     SEND MESSAGE
-  =========================== */
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConv || isSending) return;
-
-    const text = newMessage.trim();
-
+    const text = newMessage;
     setNewMessage("");
     setIsSending(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contactId: selectedConv.contact.id,
           content: text,
-          type: "text",
+          type: "text"
         }),
       });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        toast.error(data.error || "فشل الإرسال");
-      }
-
       fetchMessages(selectedConv.contact.id);
-      fetchConversations();
-    } catch {
-      toast.error("خطأ في الإرسال");
-    } finally {
-      setIsSending(false);
-      inputRef.current?.focus();
-    }
+    } catch { toast.error("فشل الإرسال"); }
+    finally { setIsSending(true); }
   };
 
-  /* ===========================
-     SAVE NOTE
-  =========================== */
-  const saveNote = async () => {
-    if (!selectedConv) return;
-
-    try {
-      await fetch("/api/contact-note", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contactId: selectedConv.contact.id,
-          note: contactNote,
-        }),
-      });
-
-      toast.success("تم حفظ الملاحظة");
-    } catch {
-      toast.error("فشل حفظ الملاحظة");
-    }
-  };
-
-  /* ===========================
-     AUTO HEIGHT
-  =========================== */
-  const handleTextArea = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    setNewMessage(e.target.value);
-
-    e.target.style.height = "auto";
-    e.target.style.height = e.target.scrollHeight + "px";
-  };
-
-  /* ===========================
-     FILTERS
-  =========================== */
-  const filteredConversations = conversations.filter((conv) => {
-    const q = searchQuery.toLowerCase();
-
-    return (
-      conv.contact.name?.toLowerCase().includes(q) ||
-      conv.contact.phone.includes(q)
-    );
-  });
-
-  const filteredTemplates = templates.filter((t) => {
-    const q = templateSearch.toLowerCase();
-
-    return (
-      t.name.toLowerCase().includes(q) ||
-      t.content.toLowerCase().includes(q)
-    );
-  });
-
-  /* ===========================
-     RENDER
-  =========================== */
   return (
-    <div className="flex h-screen bg-gray-100" dir="rtl">
-
+    <div className="flex h-screen bg-[#f0f2f5] font-sans" dir="rtl">
+      
       {/* SIDEBAR */}
-      <aside className="w-[380px] bg-white border-l flex flex-col">
+      <aside className="w-[400px] bg-white border-l flex flex-col">
+        <header className="bg-[#f0f2f5] p-3 flex justify-between items-center border-b">
+          <div className="w-10 h-10 bg-gray-300 rounded-full overflow-hidden">
+            <img src="https://ui-avatars.com/api/?name=User&background=075E54&color=fff" alt="Profile" />
+          </div>
+          <div className="flex gap-4 text-gray-600">
+            <MessageSquare className="w-5 h-5 cursor-pointer" />
+            <MoreVertical className="w-5 h-5 cursor-pointer" />
+          </div>
+        </header>
 
-        <div className="bg-[#075E54] text-white p-4 font-bold text-lg">
-          المحادثات
+        <div className="p-2 bg-white">
+          <div className="relative">
+            <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+            <input 
+              placeholder="بحث أو بدء دردشة جديدة" 
+              className="w-full bg-[#f0f2f5] py-1.5 pr-10 pl-4 rounded-lg text-sm outline-none"
+            />
+          </div>
         </div>
 
-        <div className="p-3 border-b">
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث..."
-            className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm"
-          />
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loadingConvs ? (
-            <p className="p-5 text-center text-gray-400">
-              جاري التحميل...
-            </p>
-          ) : (
-            filteredConversations.map((conv) => (
-              <button
-                key={conv.contact.id}
-                onClick={() => setSelectedConv(conv)}
-                className="w-full flex items-center gap-3 px-4 py-3 border-b hover:bg-gray-50"
-              >
-                <Avatar
-                  name={conv.contact.name}
-                  phone={conv.contact.phone}
-                />
-
-                <div className="flex-1 text-right">
-                  <p className="font-semibold text-sm">
-                    {conv.contact.name || conv.contact.phone}
-                  </p>
-
-                  <p className="text-xs text-gray-500 truncate">
-                    {conv.lastMessage?.content || "—"}
-                  </p>
+        <div className="flex-1 overflow-y-auto bg-white">
+          {conversations.map((conv) => (
+            <div 
+              key={conv.contact.id}
+              onClick={() => setSelectedConv(conv)}
+              className={`flex items-center p-3 cursor-pointer border-b hover:bg-[#f5f6f6] ${selectedConv?.contact.id === conv.contact.id ? 'bg-[#ebebeb]' : ''}`}
+            >
+              <div className="w-12 h-12 bg-gray-400 rounded-full flex-shrink-0 text-white flex items-center justify-center font-bold text-lg">
+                {conv.contact.name?.[0] || conv.contact.phone[0]}
+              </div>
+              <div className="mr-3 flex-1 border-b pb-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium text-[#111b21]">{conv.contact.name || conv.contact.phone}</span>
+                  <span className="text-xs text-gray-500">
+                    {conv.lastMessage ? new Date(conv.lastMessage.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : ''}
+                  </span>
                 </div>
-              </button>
-            ))
-          )}
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-500 truncate w-48">
+                    {conv.lastMessage?.type === 'image' ? '📷 صورة' : conv.lastMessage?.content}
+                  </p>
+                  {conv.unreadCount > 0 && (
+                    <span className="bg-[#25d366] text-white text-[10px] rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+                      {conv.unreadCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </aside>
 
-      {/* CHAT */}
-      <main className="flex-1 flex flex-col">
+      {/* CHAT WINDOW */}
+      <main className="flex-1 flex flex-col relative bg-[#efeae2]">
+        {/* Chat Wallpaper Pattern - يمكنك استبداله بصورة واتساب الأصلية */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none" 
+             style={{backgroundImage: 'url("https://w0.peakpx.com/wallpaper/580/650/wallpaper-whatsapp-background.jpg")'}} />
 
-        {!selectedConv ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400">
-            اختر محادثة
-          </div>
-        ) : (
+        {selectedConv ? (
           <>
-            {/* HEADER */}
-            <div className="bg-[#075E54] text-white p-4 font-bold flex justify-between">
-              <span>
-                {selectedConv.contact.name ||
-                  selectedConv.contact.phone}
-              </span>
+            <header className="bg-[#f0f2f5] p-3 flex items-center justify-between z-10 border-b">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3" />
+                <span className="mr-3 font-medium">{selectedConv.contact.name || selectedConv.contact.phone}</span>
+              </div>
+              <div className="flex gap-5 text-gray-600">
+                <Search className="w-5 h-5" />
+                <MoreVertical className="w-5 h-5" />
+              </div>
+            </header>
 
-              <button
-                onClick={() =>
-                  setShowContactInfo(!showContactInfo)
-                }
-              >
-                <Info className="w-5 h-5" />
-              </button>
-            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-2 z-10 custom-scrollbar">
+              {messages.map((msg) => {
+                const isMe = msg.direction === "outbound";
+                return (
+                  <div key={msg.id} className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}>
+                    <div className={`relative max-w-[65%] p-2 rounded-lg shadow-sm text-sm ${isMe ? 'bg-[#dcf8c6]' : 'bg-white'}`}>
+                      
+                      {/* عرض الصور لو وجدت */}
+                      {msg.type === 'image' && msg.mediaUrl && (
+                        <div className="mb-1">
+                          <img src={msg.mediaUrl} alt="sent image" className="rounded-md max-w-full h-auto cursor-pointer hover:opacity-90" />
+                        </div>
+                      )}
 
-            {/* MESSAGES */}
-            <div className="flex-1 overflow-y-auto p-4 bg-[#ECE5DD] space-y-2">
-              {loadingMsgs ? (
-                <p className="text-center text-gray-500">
-                  جاري التحميل...
-                </p>
-              ) : (
-                messages.map((msg) => {
-                  const isOut =
-                    msg.direction === "outbound";
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${
-                        isOut
-                          ? "justify-start"
-                          : "justify-end"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow ${
-                          isOut
-                            ? "bg-[#DCF8C6]"
-                            : "bg-white"
-                        }`}
-                      >
-                        {msg.content}
+                      <p className="leading-relaxed whitespace-pre-wrap mb-1">{msg.content}</p>
+                      
+                      <div className="flex items-center justify-end gap-1 text-[10px] text-gray-500">
+                        {new Date(msg.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}
+                        {isMe && <MsgStatus status={msg.status} />}
                       </div>
                     </div>
-                  );
-                })
-              )}
-
+                  </div>
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* INPUT */}
-            <div className="bg-white border-t p-3 flex gap-2">
-              <textarea
-                ref={inputRef}
-                rows={1}
+            <footer className="bg-[#f0f2f5] p-3 flex items-center gap-3 z-10">
+              <Smile className="w-6 h-6 text-gray-600 cursor-pointer" />
+              <label className="cursor-pointer">
+                <Paperclip className="w-6 h-6 text-gray-600" />
+                {/* هنا ممكن تضيف input لإرسال الصور لاحقاً */}
+              </label>
+              <textarea 
                 value={newMessage}
-                onChange={handleTextArea}
-                placeholder="اكتب رسالة..."
-                className="flex-1 resize-none max-h-28 rounded-2xl border px-4 py-2 text-sm"
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+                placeholder="اكتب رسالة"
+                className="flex-1 bg-white rounded-lg px-4 py-2 text-sm outline-none resize-none"
+                rows={1}
               />
-
-              <button
-                onClick={sendMessage}
-                disabled={isSending}
-                className="w-12 h-12 rounded-full bg-[#075E54] text-white flex items-center justify-center"
-              >
-                {isSending ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
+              <button onClick={sendMessage} className="text-gray-600">
+                <Send className="w-6 h-6" />
               </button>
-            </div>
+            </footer>
           </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+            <div className="w-64 h-64 bg-gray-200 rounded-full mb-4 flex items-center justify-center">
+              <MessageSquare className="w-32 h-32 text-gray-300" />
+            </div>
+            <h1 className="text-2xl font-light">WhatsProf للأعمال</h1>
+            <p className="text-sm mt-2">أرسل واستقبل الرسائل دون إبقاء هاتفك متصلاً بالإنترنت.</p>
+          </div>
         )}
       </main>
-
-      {/* CONTACT INFO */}
-      {showContactInfo && selectedConv && (
-        <aside className="w-[320px] bg-white border-r p-4 flex flex-col gap-4">
-
-          <h2 className="font-bold text-lg">
-            معلومات العميل
-          </h2>
-
-          <Avatar
-            name={selectedConv.contact.name}
-            phone={selectedConv.contact.phone}
-            size="lg"
-          />
-
-          <p className="font-semibold">
-            {selectedConv.contact.name ||
-              "بدون اسم"}
-          </p>
-
-          <p className="text-sm text-gray-500">
-            {selectedConv.contact.phone}
-          </p>
-
-          <textarea
-            rows={5}
-            value={contactNote}
-            onChange={(e) =>
-              setContactNote(e.target.value)
-            }
-            placeholder="ملاحظات..."
-            className="border rounded-xl p-3 text-sm"
-          />
-
-          <button
-            onClick={saveNote}
-            className="bg-[#075E54] text-white py-2 rounded-xl"
-          >
-            حفظ الملاحظة
-          </button>
-        </aside>
-      )}
     </div>
   );
 }
