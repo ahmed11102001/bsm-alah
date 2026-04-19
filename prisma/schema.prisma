@@ -45,47 +45,54 @@ enum UserRole {
 }
 
 
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  phone     String?
-  password  String
-  image     String?
-  apiKey    String?  @unique
+  id       String  @id @default(cuid())
+  email    String  @unique
+  name     String?
+  phone    String?
+  password String
+  image    String?
+  apiKey   String? @unique
 
-  role      UserRole @default(OWNER)
-  inviteCode String?  @unique
-  parentId  String?  
-  parent    User?    @relation("TeamHierarchy", fields: [parentId], references: [id])
-  members   User[]   @relation("TeamHierarchy")
+  role UserRole @default(OWNER)
 
+  workspaceId String?
+
+  inviteCode String? @unique
+
+  parentId String?
+
+  parent  User?  @relation("TeamHierarchy", fields: [parentId], references: [id])
+  members User[] @relation("TeamHierarchy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   whatsappAccount WhatsAppAccount?
 
-  contacts   Contact[]
-  audiences  Audience[]
-  templates  Template[]
-  campaigns  Campaign[]
-  messages   Message[]
-  webhooks   WebhookLog[]
+  contacts  Contact[]
+  audiences Audience[]
+  templates Template[]
+  campaigns Campaign[]
+  messages  Message[]
 
   @@index([email])
-  @@index([parentId]) 
+  @@index([workspaceId])
+  @@index([parentId])
 }
 
-model WhatsAppAccount {
-  id            String @id @default(cuid())
 
-  userId        String @unique
-  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+model WhatsAppAccount {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   accessToken   String @db.Text
   phoneNumberId String
-  wabaId        String
+  wabaId        String @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -94,13 +101,13 @@ model WhatsAppAccount {
 
 
 model Audience {
-  id        String @id @default(cuid())
-  name      String
+  id   String @id @default(cuid())
+  name String
 
-  userId    String
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  contacts  Contact[]
+  contacts Contact[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,25 +118,23 @@ model Audience {
 
 
 model Contact {
-  id        String @id @default(cuid())
+  id    String  @id @default(cuid())
+  phone String
+  name  String?
+  notes String? @db.Text
 
-  phone     String
-  name      String?
-  notes     String? @db.Text
-
-  userId    String
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   audienceId String?
   audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
 
   messages Message[]
 
-  isPinned    Boolean @default(false)
-  isArchived  Boolean @default(false)
+  isPinned   Boolean @default(false)
+  isArchived Boolean @default(false)
 
   unreadCount Int @default(0)
-
   lastMessageAt DateTime?
 
   deletedAt DateTime?
@@ -137,26 +142,26 @@ model Contact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([phone, userId], name: "phone_userId")
+  @@unique([phone, userId])
   @@index([userId])
   @@index([phone])
   @@index([lastMessageAt])
-  @@index([isPinned])
 }
 
-model Template {
-  id       String @id @default(cuid())
 
-  metaId   String
-  name     String
-  content  String @db.Text
+
+model Template {
+  id      String @id @default(cuid())
+  metaId  String
+  name    String
+  content String @db.Text
 
   language String @default("ar")
   category String @default("MARKETING")
   status   String @default("pending")
 
-  userId   String
-  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   campaigns Campaign[]
 
@@ -171,13 +176,12 @@ model Template {
 
 
 model Campaign {
-  id        String @id @default(cuid())
+  id     String @id @default(cuid())
+  name   String
+  status CampaignStatus @default(draft)
 
-  name      String
-  status    CampaignStatus @default(draft)
-
-  userId    String
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   templateId String?
   template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
@@ -224,10 +228,6 @@ model Message {
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
-  replyToId String?
-  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   Message[] @relation("MessageReplies")
-
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
@@ -251,9 +251,8 @@ model WebhookLog {
   id String @id @default(cuid())
 
   userId String?
-  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  payload   String @db.Text
+  payload String @db.Text
   processed Boolean @default(false)
 
   createdAt DateTime @default(now())
