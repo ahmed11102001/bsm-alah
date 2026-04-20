@@ -42,18 +42,17 @@ export default function Hero({ onLoginClick }: HeroProps) {
             {/* Badge متحرك */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-6 animate-float">
               <Sparkles className="w-4 h-4 text-[#25D366] animate-pulse" />
-              <span className="text-white/90 text-sm font-medium">نظام إرسال الرسائل الأكثر تطوراً</span>
+              <span className="text-white/90 text-sm font-medium">نظام CRM الاكثر تطورا</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              أرسل رسائل
-              <span className="block text-[#25D366] drop-shadow-lg">واتساب جماعية</span>
+             أرسل رسائلك، تواصل مع جمهورك
+              <span className="block text-[#25D366] drop-shadow-lg">حقق نمواً غير مسبوق لمبيعاتك</span>
               بكل سهولة
             </h1>
 
             <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              منصة متكاملة لإدارة وإرسال رسائل الواتساب للعملاء. حملات تسويقية فعالة، 
-              تقارير مفصلة، وأتمتة ذكية لنمو أعمالك.
+             ليس مجرد ارسال رسائل ... بل منصة متكاملة  لادارة حملاتك التسويقية ع الواتساب بدون فوض بدون تاخير وبأعلي كفائة
             </p>
 
             {/* Stats - إحصائيات متحركة */}
