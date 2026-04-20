@@ -1,13 +1,106 @@
-// app/api/campaigns/route.ts
+// src/app/api/campaigns/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType, CampaignStatus } from "@prisma/client";
+import {
+  MessageDirection,
+  MessageStatus,
+  MessageType,
+  CampaignStatus,
+} from "@prisma/client";
 
-// ===============================
-// GET /api/campaigns?status=&search=&page=&limit=
-// ===============================
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** استخراج userId الحقيقي (يدعم sub-accounts) */
+function resolveUserId(session: any): string {
+  const raw    = (session.user as any).id as string;
+  const parent = (session.user as any).parentId as string | null;
+  return parent ?? raw;
+}
+
+/** إرسال رسالة واحدة عبر Meta API */
+async function sendWhatsAppTemplate(
+  phoneNumberId: string,
+  accessToken: string,
+  to: string,
+  templateName: string,
+  language = "ar"
+): Promise<{ ok: boolean; whatsappId?: string; error?: string }> {
+  const res = await fetch(
+    `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "template",
+        template: { name: templateName, language: { code: language } },
+      }),
+    }
+  );
+  const data = await res.json();
+  if (data.error) return { ok: false, error: data.error.message };
+  return { ok: true, whatsappId: data.messages?.[0]?.id };
+}
+
+/** إرسال حملة كاملة (يُستخدم للإرسال الفوري وعند التكرار) */
+async function runCampaign(
+  campaignId: string,
+  userId: string,
+  numbers: string[],
+  templateName: string,
+  phoneNumberId: string,
+  accessToken: string
+): Promise<{ sentCount: number; failedCount: number }> {
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const phone of numbers) {
+    try {
+      // upsert جهة الاتصال
+      const contact = await prisma.contact.upsert({
+        where: { phone_userId: { phone, userId } },
+        update: { lastMessageAt: new Date() },
+        create: { phone, userId, lastMessageAt: new Date() },
+      });
+
+      const result = await sendWhatsAppTemplate(
+        phoneNumberId,
+        accessToken,
+        phone,
+        templateName
+      );
+
+      await prisma.message.create({
+        data: {
+          content: `حملة: ${campaignId}`,
+          type: MessageType.template,
+          direction: MessageDirection.outbound,
+          status: result.ok ? MessageStatus.sent : MessageStatus.failed,
+          userId,
+          contactId: contact.id,
+          campaignId,
+          whatsappId: result.ok ? result.whatsappId : undefined,
+          error: result.ok ? undefined : result.error,
+          sentAt: result.ok ? new Date() : undefined,
+        },
+      });
+
+      result.ok ? sentCount++ : failedCount++;
+    } catch {
+      failedCount++;
+    }
+  }
+
+  return { sentCount, failedCount };
+}
+
+// ─── GET /api/campaigns ───────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,105 +108,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
-    const rawUserId = (session.user as any).id;
-    const parentId = (session.user as any).parentId;
-    const userId = parentId ?? rawUserId;
-
+    const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);
-    const isReport = searchParams.get("report") === "true";
-    const id = searchParams.get("id");
+
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const period = searchParams.get("period");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const page = parseInt(searchParams.get("page") || "1");
+    const limit  = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const page   = Math.max(parseInt(searchParams.get("page")  || "1"),  1);
 
-    // ===============================
-    // حالة 1: جلب تقرير إحصائيات
-    // ===============================
-    if (isReport) {
-      const startDate = getStartDate(period || "30d");
-      const dateFilter = startDate ? { createdAt: { gte: startDate } } : {};
-
-      const [totalCampaigns, campaignStats] = await Promise.all([
-        prisma.campaign.count({ where: { userId, ...dateFilter } }),
-        prisma.campaign.aggregate({
-          where: { userId, status: CampaignStatus.completed, ...dateFilter },
-          _sum: { sentCount: true, failedCount: true },
-        }),
-      ]);
-
-      const totalSent = campaignStats._sum.sentCount || 0;
-      const totalFailed = campaignStats._sum.failedCount || 0;
-      const successRate = totalSent + totalFailed > 0
-        ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(2)
-        : 0;
-
-      const dailyStats = await getDailyStats(userId, startDate);
-      const templatePerformance = await getTemplatePerformance(userId, startDate);
-
-      return NextResponse.json({
-        summary: {
-          totalCampaigns,
-          totalSent,
-          totalFailed,
-          successRate: parseFloat(successRate as string),
-        },
-        dailyStats,
-        templatePerformance,
-      });
-    }
-
-    // ===============================
-    // حالة 2: جلب حملة واحدة
-    // ===============================
-    if (id) {
-      const campaign = await prisma.campaign.findFirst({
-        where: { id, userId },
-        include: {
-          template: true,
-          messages: {
-            include: { contact: { select: { phone: true } } },
-            orderBy: { sentAt: "desc" },
-            take: 100,
-          },
-        },
-      });
-
-      if (!campaign) {
-        return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
-      }
-
-      return NextResponse.json(campaign);
-    }
-
-    // ===============================
-    // حالة 3: جلب كل الحملات ✅ ترجع ARRAY مباشرة
-    // ===============================
-    const where: any = { userId };
+    const where: Record<string, unknown> = { userId };
     if (status && status !== "all") where.status = status;
     if (search) where.name = { contains: search, mode: "insensitive" };
 
-    const skip = (page - 1) * limit;
     const campaigns = await prisma.campaign.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip,
+      skip: (page - 1) * limit,
       take: limit,
-      include: { template: { select: { name: true, content: true } } },
+      include: {
+        template: { select: { name: true, content: true } },
+      },
     });
 
     return NextResponse.json(campaigns);
-    
-  } catch (error) {
-    console.error("GET campaigns error:", error);
+  } catch (err) {
+    console.error("GET /api/campaigns:", err);
     return NextResponse.json({ error: "فشل في جلب الحملات" }, { status: 500 });
   }
 }
 
-// ===============================
-// POST /api/campaigns (إنشاء حملة جديدة)
-// ===============================
+// ─── POST /api/campaigns ──────────────────────────────────────────────────────
+// الحالات المدعومة:
+//   1. إنشاء حملة جديدة  → { name, templateName, numbers, scheduledAt? }
+//   2. تكرار حملة        → { _action: "repeat", campaignId }
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -121,286 +148,223 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { name, templateName, numbers, scheduledAt, campaignId } = body;
+    const userId = resolveUserId(session);
+    const body   = await req.json();
 
-    const rawUserId = (session.user as any).id;
-    const parentId = (session.user as any).parentId;
-    const userId = parentId ?? rawUserId;
-
-    // حالة التحديث
-    if (campaignId && body._action !== "delete") {
-      return await updateCampaign(userId, campaignId, body);
+    // ── حالة 2: تكرار ────────────────────────────────────────────
+    if (body._action === "repeat" && body.campaignId) {
+      return await handleRepeat(userId, body.campaignId);
     }
 
-    // حالة الحذف
-    if (body._action === "delete" && campaignId) {
-      return await deleteCampaign(userId, campaignId);
-    }
-
-    // ✅ التحقق من البيانات الأساسية
-    if (!name || !templateName || !Array.isArray(numbers) || numbers.length === 0) {
-      return NextResponse.json(
-        { error: "بيانات ناقصة: الاسم أو القالب أو الأرقام" },
-        { status: 400 }
-      );
-    }
-
-    // ✅ التحقق من حساب واتساب
-    const whatsappAccount = await prisma.whatsAppAccount.findUnique({ where: { userId } });
-    if (!whatsappAccount) {
-      return NextResponse.json({ error: "حساب واتساب غير مربوط. يرجى ربط الحساب أولاً" }, { status: 400 });
-    }
-
-    // ✅ البحث عن القالب (يدعم ID أو اسم)
-    const template = await prisma.template.findFirst({
-      where: {
-        OR: [
-          { id: templateName },     // لو جاي بالـ ID
-          { name: templateName }    // لو جاي بالاسم
-        ],
-        userId: userId
-      }
-    });
-
-    if (!template) {
-      console.error(`القالب غير موجود: ${templateName} للمستخدم ${userId}`);
-      return NextResponse.json(
-        { error: `القالب "${templateName}" غير موجود. يرجى التحقق من اسم القالب أو المعرف` },
-        { status: 404 }
-      );
-    }
-
-    console.log(`✅ تم العثور على القالب: ${template.name} (ID: ${template.id})`);
-
-    const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
-    const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
-    
-    // ✅ إنشاء سجل الحملة
-    const campaign = await prisma.campaign.create({
-      data: {
-        name,
-        userId,
-        templateId: template.id,
-        status: isScheduled ? CampaignStatus.scheduled : CampaignStatus.running,
-        scheduledAt: isScheduled ? scheduledDate : null,
-        startedAt: !isScheduled ? new Date() : null,
-      },
-    });
-
-    console.log(`✅ تم إنشاء الحملة: ${campaign.id}`);
-
-    // ✅ إذا كانت مجدولة
-    if (isScheduled) {
-      return NextResponse.json({
-        success: true,
-        campaignId: campaign.id,
-        message: "تم جدولة الحملة بنجاح",
-        scheduledAt: scheduledDate,
-      });
-    }
-
-    // ✅ الإرسال الفوري
-    let sentCount = 0, failedCount = 0;
-    const errors: string[] = [];
-    
-    for (const phone of numbers) {
-      try {
-        console.log(`📤 جاري الإرسال إلى: ${phone}`);
-        
-        // تحديث أو إنشاء جهة الاتصال
-        const contact = await prisma.contact.upsert({
-          where: { phone_userId: { phone, userId } },
-          update: { lastMessageAt: new Date() },
-          create: { phone, userId, lastMessageAt: new Date() },
-        });
-
-        // ✅ استخدام template.name (الاسم الحقيقي في Meta)
-        const payload = {
-          messaging_product: "whatsapp",
-          to: phone,
-          type: "template",
-          template: { 
-            name: template.name,  // ✅ مهم: استخدم اسم القالب من قاعدة البيانات
-            language: { code: "ar" } 
-          },
-        };
-
-        const metaRes = await fetch(
-          `https://graph.facebook.com/v20.0/${whatsappAccount.phoneNumberId}/messages`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${whatsappAccount.accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
-
-        const meta = await metaRes.json();
-        
-        if (meta.error) {
-          console.error(`❌ خطأ من Meta API:`, meta.error);
-          throw new Error(meta.error.message);
-        }
-
-        // تسجيل الرسالة في قاعدة البيانات
-        await prisma.message.create({
-          data: {
-            content: `حملة: ${name}`,
-            type: MessageType.template,
-            direction: MessageDirection.outbound,
-            status: MessageStatus.sent,
-            userId,
-            contactId: contact.id,
-            campaignId: campaign.id,
-            whatsappId: meta.messages?.[0]?.id,
-            sentAt: new Date(),
-          },
-        });
-        
-        sentCount++;
-        console.log(`✅ تم الإرسال بنجاح إلى: ${phone}`);
-        
-      } catch (error: any) {
-        console.error(`❌ فشل الإرسال إلى ${phone}:`, error.message);
-        failedCount++;
-        errors.push(`${phone}: ${error.message}`);
-      }
-    }
-
-    // ✅ تحديث حالة الحملة النهائية
-    await prisma.campaign.update({
-      where: { id: campaign.id },
-      data: { 
-        status: CampaignStatus.completed, 
-        sentCount, 
-        failedCount, 
-        completedAt: new Date() 
-      },
-    });
-
-    console.log(`📊 تقرير الحملة - مرسل: ${sentCount}, فاشل: ${failedCount}`);
-
-    return NextResponse.json({ 
-      success: true, 
-      campaignId: campaign.id, 
-      sentCount, 
-      failedCount, 
-      total: numbers.length,
-      errors: errors.length > 0 ? errors : undefined
-    });
-    
-  } catch (error: any) {
-    console.error("خطأ في إنشاء الحملة:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // ── حالة 1: إنشاء ─────────────────────────────────────────────
+    return await handleCreate(userId, body);
+  } catch (err: any) {
+    console.error("POST /api/campaigns:", err);
+    return NextResponse.json({ error: err.message ?? "خطأ في السيرفر" }, { status: 500 });
   }
 }
 
-// ===============================
-// دوال مساعدة
-// ===============================
+// ─── DELETE /api/campaigns ────────────────────────────────────────────────────
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    }
 
-async function updateCampaign(userId: string, campaignId: string, body: any) {
-  const { name, status, scheduledAt } = body;
-  const existing = await prisma.campaign.findFirst({ where: { id: campaignId, userId } });
-  
-  if (!existing) {
-    return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+    const userId = resolveUserId(session);
+    const { id } = await req.json();
+
+    if (!id) {
+      return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+    }
+
+    // تأكد إن الحملة تبع المستخدم ده
+    const campaign = await prisma.campaign.findFirst({ where: { id, userId } });
+    if (!campaign) {
+      return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
+    }
+
+    // حذف الرسائل أولاً ثم الحملة (transaction)
+    await prisma.$transaction([
+      prisma.message.deleteMany({ where: { campaignId: id } }),
+      prisma.campaign.delete({ where: { id } }),
+    ]);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/campaigns:", err);
+    return NextResponse.json({ error: "فشل الحذف" }, { status: 500 });
   }
-  
-  if (existing.status === CampaignStatus.completed) {
-    return NextResponse.json({ error: "لا يمكن تعديل حملة مكتملة" }, { status: 400 });
+}
+
+// ─── Handlers ─────────────────────────────────────────────────────────────────
+
+async function handleCreate(userId: string, body: any) {
+  const { name, templateName, numbers, scheduledAt } = body;
+
+  // validation
+  if (!name?.trim()) {
+    return NextResponse.json({ error: "اسم الحملة مطلوب" }, { status: 400 });
+  }
+  if (!templateName) {
+    return NextResponse.json({ error: "القالب مطلوب" }, { status: 400 });
+  }
+  if (!Array.isArray(numbers) || numbers.length === 0) {
+    return NextResponse.json({ error: "قائمة الأرقام مطلوبة" }, { status: 400 });
   }
 
-  const updated = await prisma.campaign.update({
-    where: { id: campaignId },
+  // حساب واتساب
+  const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
+  if (!account) {
+    return NextResponse.json(
+      { error: "لم يتم ربط حساب واتساب — اذهب للإعدادات وأضف بياناتك" },
+      { status: 400 }
+    );
+  }
+
+  // القالب
+  const template = await prisma.template.findFirst({
+    where: {
+      userId,
+      OR: [{ id: templateName }, { name: templateName }],
+    },
+  });
+  if (!template) {
+    return NextResponse.json({ error: `القالب "${templateName}" غير موجود` }, { status: 404 });
+  }
+
+  // تحديد نوع الجدولة
+  const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+  const isScheduled   = scheduledDate ? scheduledDate > new Date() : false;
+
+  // إنشاء سجل الحملة
+  const campaign = await prisma.campaign.create({
     data: {
-      name: name || existing.name,
-      status: status || existing.status,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : existing.scheduledAt,
+      name: name.trim(),
+      userId,
+      templateId: template.id,
+      status: isScheduled ? CampaignStatus.scheduled : CampaignStatus.running,
+      scheduledAt: isScheduled ? scheduledDate : null,
+      startedAt: !isScheduled ? new Date() : null,
     },
   });
-  
-  return NextResponse.json({ success: true, campaign: updated });
+
+  // ── جدولة: حفظ فقط وإرجاع ──────────────────────────────────────
+  if (isScheduled) {
+    return NextResponse.json({
+      success: true,
+      campaignId: campaign.id,
+      scheduledAt: scheduledDate,
+      message: "تم جدولة الحملة بنجاح",
+    });
+  }
+
+  // ── إرسال فوري ─────────────────────────────────────────────────
+  const { sentCount, failedCount } = await runCampaign(
+    campaign.id,
+    userId,
+    numbers,
+    template.name,
+    account.phoneNumberId,
+    account.accessToken
+  );
+
+  // تحديث نتائج الحملة
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: {
+      status: sentCount > 0 ? CampaignStatus.completed : CampaignStatus.failed,
+      sentCount,
+      failedCount,
+      completedAt: new Date(),
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    campaignId: campaign.id,
+    sentCount,
+    failedCount,
+    total: numbers.length,
+  });
 }
 
-async function deleteCampaign(userId: string, campaignId: string) {
-  const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, userId } });
-  
-  if (!campaign) {
+async function handleRepeat(userId: string, campaignId: string) {
+  // جلب الحملة الأصلية مع رسائلها عشان نعرف الأرقام
+  const original = await prisma.campaign.findFirst({
+    where: { id: campaignId, userId },
+    include: {
+      template: true,
+      messages: {
+        where: { direction: MessageDirection.outbound },
+        include: { contact: { select: { phone: true } } },
+      },
+    },
+  });
+
+  if (!original) {
     return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
   }
-
-  await prisma.$transaction([
-    prisma.message.deleteMany({ where: { campaignId } }),
-    prisma.campaign.delete({ where: { id: campaignId } }),
-  ]);
-  
-  return NextResponse.json({ success: true, message: "تم الحذف بنجاح" });
-}
-
-function getStartDate(period: string): Date | null {
-  const now = new Date();
-  switch (period) {
-    case "7d": return new Date(now.setDate(now.getDate() - 7));
-    case "30d": return new Date(now.setDate(now.getDate() - 30));
-    case "90d": return new Date(now.setDate(now.getDate() - 90));
-    default: return null;
+  if (!original.template) {
+    return NextResponse.json({ error: "القالب الأصلي للحملة غير موجود" }, { status: 400 });
   }
-}
 
-async function getDailyStats(userId: string, startDate: Date | null) {
-  const campaigns = await prisma.campaign.findMany({
-    where: { 
-      userId, 
-      status: CampaignStatus.completed, 
-      ...(startDate && { createdAt: { gte: startDate } }) 
+  // حساب واتساب
+  const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
+  if (!account) {
+    return NextResponse.json({ error: "لم يتم ربط حساب واتساب" }, { status: 400 });
+  }
+
+  // استخراج الأرقام من رسائل الحملة الأصلية
+  const numbers = [
+    ...new Set(
+      original.messages
+        .map((m) => m.contact?.phone)
+        .filter((p): p is string => Boolean(p))
+    ),
+  ];
+
+  if (numbers.length === 0) {
+    return NextResponse.json({ error: "لا توجد أرقام في الحملة الأصلية" }, { status: 400 });
+  }
+
+  // إنشاء حملة جديدة بنفس الاسم + "(تكرار)"
+  const newCampaign = await prisma.campaign.create({
+    data: {
+      name: `${original.name} (تكرار)`,
+      userId,
+      templateId: original.template.id,
+      status: CampaignStatus.running,
+      startedAt: new Date(),
     },
-    select: { createdAt: true, sentCount: true, failedCount: true },
   });
-  
-  const dailyMap = new Map();
-  
-  campaigns.forEach(c => {
-    const date = c.createdAt.toISOString().split('T')[0];
-    if (!dailyMap.has(date)) {
-      dailyMap.set(date, { date, sent: 0, failed: 0 });
-    }
-    const day = dailyMap.get(date);
-    day.sent += c.sentCount || 0;
-    day.failed += c.failedCount || 0;
-  });
-  
-  return Array.from(dailyMap.values());
-}
 
-async function getTemplatePerformance(userId: string, startDate: Date | null) {
-  const performance = await prisma.campaign.groupBy({
-    by: ['templateId'],
-    where: { 
-      userId, 
-      status: CampaignStatus.completed, 
-      ...(startDate && { createdAt: { gte: startDate } }) 
+  // إرسال
+  const { sentCount, failedCount } = await runCampaign(
+    newCampaign.id,
+    userId,
+    numbers,
+    original.template.name,
+    account.phoneNumberId,
+    account.accessToken
+  );
+
+  await prisma.campaign.update({
+    where: { id: newCampaign.id },
+    data: {
+      status: sentCount > 0 ? CampaignStatus.completed : CampaignStatus.failed,
+      sentCount,
+      failedCount,
+      completedAt: new Date(),
     },
-    _sum: { sentCount: true, failedCount: true },
   });
 
-  const templateIds = performance
-    .map(p => p.templateId)
-    .filter((id): id is string => id !== null);
-
-  const templates = await prisma.template.findMany({
-    where: { id: { in: templateIds } },
-    select: { id: true, name: true },
+  return NextResponse.json({
+    success: true,
+    campaignId: newCampaign.id,
+    sentCount,
+    failedCount,
+    total: numbers.length,
   });
-  
-  const templateMap = new Map<string, string>(templates.map(t => [t.id, t.name]));
-  
-  return performance.map(p => ({
-    name: templateMap.get(p.templateId ?? "") || "غير معروف",
-    sent: p._sum.sentCount || 0,
-    failed: p._sum.failedCount || 0,
-  }));
 }
