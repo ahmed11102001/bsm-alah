@@ -2,7 +2,7 @@
 import ChatPage from '@/app/dashboard/chat/page'; 
 import { signOut } from "next-auth/react";
 import "@/app/globals.css";
-import { useState } from 'react';
+import { useState , useEffect  } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -250,6 +250,18 @@ function HomeDashboard({ onCreateCampaign }: { onCreateCampaign: () => void }) {
 export default function Dashboard({ onLogout }: DashboardProps) {
   const [activeSection, setActiveSection] = useState('home');
 
+useEffect(() => {
+  const h = (e: any) => {
+    if (e.detail) {
+      setActiveSection(e.detail);
+    }
+  };
+
+  window.addEventListener("navigate-to", h);
+
+  return () => window.removeEventListener("navigate-to", h);
+}, []);
+
   const user = {
     name:'نون',
     package: 'الباقة الاحترافية',
@@ -264,9 +276,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       return <ChatPage />; 
     case 'contacts':
       return <Contacts />;
-      case 'contacts':
-        return <Contacts />;
-      case 'templates':
+
+     case 'templates':
         return <Templates />;
       case 'campaigns':
         return <Campaigns />;
