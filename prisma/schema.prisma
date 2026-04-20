@@ -103,6 +103,8 @@ model WhatsAppAccount {
 model Audience {
   id   String @id @default(cuid())
   name String
+  
+  type String @default("excel")
 
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
