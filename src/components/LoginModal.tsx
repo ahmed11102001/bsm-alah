@@ -24,6 +24,10 @@ interface LoginModalProps {
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
+import { cubicBezier } from "framer-motion";
+
+const easeSmooth = cubicBezier(0.25, 0.1, 0.25, 1);
+
 const slide = {
   initial: { opacity: 0, x: 24 },
   animate: {
@@ -31,7 +35,7 @@ const slide = {
     x: 0,
     transition: {
       duration: 0.22,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: easeSmooth,
     },
   },
   exit: {
@@ -39,7 +43,7 @@ const slide = {
     x: -20,
     transition: {
       duration: 0.15,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: easeSmooth,
     },
   },
 };
@@ -550,4 +554,4 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       </DialogContent>
     </Dialog>
   );
-}a
+}
