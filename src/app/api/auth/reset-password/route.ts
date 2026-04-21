@@ -4,16 +4,7 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null);
-
-    if (!body) {
-      return NextResponse.json(
-        { error: "Invalid request" },
-        { status: 400 }
-      );
-    }
-
-    const { token, password } = body;
+    const { token, password } = await req.json();
 
     if (!token || !password) {
       return NextResponse.json(
@@ -33,20 +24,21 @@ export async function POST(req: NextRequest) {
       where: { token },
     });
 
-    if (!record || new Date(record.expires) <= new Date()) {
+    if (!record || record.expires < new Date()) {
       return NextResponse.json(
         { error: "الرابط منتهي الصلاحية أو غير صحيح" },
         { status: 400 }
       );
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     await prisma.$transaction([
       prisma.user.update({
         where: { id: record.userId },
-        data: { password: hashed },
+        data: { password: hashedPassword },
       }),
+
       prisma.passwordResetToken.delete({
         where: { token },
       }),
@@ -56,7 +48,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Password updated successfully",
     });
-  } catch (err) {
+  } catch (error) {
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
