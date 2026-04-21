@@ -45,7 +45,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
               <span className="text-white/90 text-sm font-medium"> المنصة الاكثر تطورا في مصر </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight mb-6">
+            <h1 className="text-4xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight mb-6">
              حول واتساب الي
 
               <span className="block text-[#25D366] drop-shadow-lg"> ماكينة مابيعات</span>
