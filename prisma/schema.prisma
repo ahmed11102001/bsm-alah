@@ -82,7 +82,16 @@ model User {
   @@index([parentId])
 }
 
-
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  token   String   @unique
+  userId  String
+  expires DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([token])
+  @@index([userId])
+}
 
 model WhatsAppAccount {
   id String @id @default(cuid())
