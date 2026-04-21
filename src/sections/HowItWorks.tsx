@@ -1,100 +1,124 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Upload, MessageSquare, Send, BarChart3 } from 'lucide-react';
+import { Upload, FileText, Rocket, BarChart3, ArrowLeft } from 'lucide-react';
 
 const steps = [
   {
-    number: '01',
+    n: "01",
     icon: Upload,
-    title: 'رفع جهات الاتصال',
-    description: 'قم برفع قائمة جهات الاتصال الخاصة بك بسهولة عبر ملف Excel أو CSV، أو أضفها يدوياً واحداً تلو الآخر',
-    color: 'bg-blue-500',
+    color: "bg-blue-500",
+    ring: "ring-blue-100",
+    title: "ارفع جهات اتصالك",
+    what: "Excel أو CSV أو إدخال يدوي",
+    description: "النظام بيحلل الملف تلقائياً، بيميّز الأرقام الصحيحة من الغلط، وبيقسمهم لقوائم جاهزة للاستخدام.",
+    time: "دقيقة واحدة",
   },
   {
-    number: '02',
-    icon: MessageSquare,
-    title: 'إنشاء الرسالة',
-    description: 'اكتب رسالتك أو اختر من قوالبنا الجاهزة. يمكنك إضافة متغيرات مثل اسم العميل لتخصيص الرسالة',
-    color: 'bg-green-500',
+    n: "02",
+    icon: FileText,
+    color: "bg-[#25D366]",
+    ring: "ring-green-100",
+    title: "اختار أو اعمل قالبك",
+    what: "قوالب جاهزة أو مخصصة",
+    description: "اختار من قوالبك المعتمدة أو اعمل رسالة جديدة. القوالب بتترسل عبر واتساب API الرسمي — مش هترفض.",
+    time: "دقيقتين",
   },
   {
-    number: '03',
-    icon: Send,
-    title: 'إرسال الحملة',
-    description: 'اختر جهات الاتصال المستهدفة واضغط إرسال. سيتم إرسال رسائلك فوراً أو جدولها للوقت المناسب',
-    color: 'bg-purple-500',
+    n: "03",
+    icon: Rocket,
+    color: "bg-purple-500",
+    ring: "ring-purple-100",
+    title: "أرسل أو جدوّل الحملة",
+    what: "فوري أو في الوقت اللي تختاره",
+    description: "اختار الجمهور المستهدف، راجع الملخص، واضغط إرسال. واتس برو بيكمل الشغل حتى لو قفلت الجهاز.",
+    time: "دقيقتين",
   },
   {
-    number: '04',
+    n: "04",
     icon: BarChart3,
-    title: 'متابعة النتائج',
-    description: 'تابع أداء حملتك لحظياً مع إحصائيات مفصلة عن الرسائل المرسلة والمستلمة والمقروءة',
-    color: 'bg-orange-500',
+    color: "bg-orange-500",
+    ring: "ring-orange-100",
+    title: "تابع وحسّن",
+    what: "تقارير لحظية كاملة",
+    description: "شوف مين وصل ومين قرأ ومين رد — وعلى أساس كده خطط حملتك الجاية أذكى.",
+    time: "مستمر",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 lg:py-32 bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
+    <section id="how-it-works" className="py-20 lg:py-32 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-2 mb-4">
-            <span className="text-blue-600 text-sm font-medium">خطوات العمل</span>
+          <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 mb-4 shadow-sm">
+            <Rocket className="w-4 h-4 text-[#25D366]" />
+            <span className="text-gray-600 text-sm font-medium">خطوات العمل</span>
           </div>
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            كيف يعمل <span className="text-gradient">واتس برو</span>؟
+            من التسجيل لأول رسالة —{" "}
+            <span className="text-gradient">في أقل من 15 دقيقة</span>
           </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            أربع خطوات بسيطة تفصلك عن إطلاق حملتك التسويقية الناجحة
+          <p className="text-gray-500 max-w-xl mx-auto text-base leading-relaxed">
+            4 خطوات واضحة. مفيش setup معقد. مفيش كورس تتعلمه.
           </p>
         </div>
 
         {/* Steps */}
         <div className="relative">
-          {/* Connection Line - Desktop */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 via-green-200 to-purple-200 -translate-y-1/2 z-0" />
+          {/* connector line desktop */}
+          <div className="hidden lg:block absolute top-16 right-[12.5%] left-[12.5%] h-px bg-gradient-to-r from-blue-200 via-green-200 via-purple-200 to-orange-200 z-0" />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-            {steps.map((step, index) => (
-              <Card
-                key={index}
-                className="group hover-lift border-0 shadow-xl bg-white overflow-visible"
-              >
-                <CardContent className="p-6 text-center relative">
-                  {/* Step Number */}
-                  <div className={`absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 ${step.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg`}>
-                    {step.number}
-                  </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+            {steps.map((s, i) => (
+              <div key={i} className="flex flex-col items-center text-center group">
+                {/* circle */}
+                <div className={`relative w-16 h-16 ${s.color} ring-4 ${s.ring} rounded-2xl
+                  flex items-center justify-center mb-5 shadow-md
+                  group-hover:scale-110 transition-transform duration-200`}>
+                  <s.icon className="w-7 h-7 text-white" />
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-gray-200
+                    rounded-full text-[11px] font-bold text-gray-500 flex items-center justify-center shadow-sm">
+                    {s.n}
+                  </span>
+                </div>
 
-                  {/* Icon */}
-                  <div className={`w-20 h-20 ${step.color} rounded-2xl flex items-center justify-center mx-auto mb-6 mt-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                    <step.icon className="w-10 h-10 text-white" />
-                  </div>
+                {/* time badge */}
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                  {s.time}
+                </span>
 
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">
-                    {step.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed text-sm">
-                    {step.description}
-                  </p>
-                </CardContent>
-              </Card>
+                <h3 className="text-base font-bold text-gray-900 mb-1 leading-snug">{s.title}</h3>
+
+                <p className="text-xs font-medium text-[#25D366] mb-2">{s.what}</p>
+
+                <p className="text-sm text-gray-500 leading-relaxed max-w-[200px]">
+                  {s.description}
+                </p>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Video CTA */}
-        <div className="mt-16 text-center">
-          <div className="inline-flex items-center gap-4 bg-white rounded-2xl p-4 shadow-lg">
-            <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-              <span className="text-white text-xl">▶</span>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-gray-900">شاهد الفيديو التوضيحي</p>
-              <p className="text-sm text-gray-500">مدة الفيديو: 2 دقيقة</p>
-            </div>
+        {/* CTA */}
+        <div className="mt-14 bg-white border border-gray-100 rounded-3xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="text-center sm:text-right">
+            <p className="text-lg font-bold text-gray-900 mb-1">
+              جاهز تبدأ؟ الخطوة الأولى مجانية
+            </p>
+            <p className="text-sm text-gray-400">
+              100 رسالة مجانية — بدون بطاقة ائتمان — بدون التزام
+            </p>
           </div>
+          <a
+            href="#"
+            className="flex-shrink-0 inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a]
+              text-white font-bold px-7 py-3.5 rounded-xl transition-colors text-sm whitespace-nowrap"
+          >
+            ابدأ مجاناً الآن
+            <ArrowLeft className="w-4 h-4" />
+          </a>
         </div>
+
       </div>
     </section>
   );
