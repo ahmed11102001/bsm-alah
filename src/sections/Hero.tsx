@@ -42,17 +42,17 @@ export default function Hero({ onLoginClick }: HeroProps) {
             {/* Badge متحرك */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-6 animate-float">
               <Sparkles className="w-4 h-4 text-[#25D366] animate-pulse" />
-              <span className="text-white/90 text-sm font-medium">نظام CRM الاكثر تطورا</span>
+              <span className="text-white/90 text-sm font-medium"> المنصة الاكثر تطورا في مصر </span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-             أرسل ، تواصلك
-              <span className="block text-[#25D366] drop-shadow-lg">حقق نموا</span>
-              بكل سهولة
+             حول واتساب
+              <span className="block text-[#25D366] drop-shadow-lg">الي ماكينة مابيعات</span>
+              متكاملة 
             </h1>
 
             <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-             ليس مجرد ارسال رسائل ... بل منصة متكاملة  لادارة حملاتك التسويقية ع الواتساب بدون فوض بدون تاخير وبأعلي كفائة
+             ليس مجرد ارسال رسائل ... بل منصة متكاملة  لادارة حملاتك التسويقية ع الواتساب بدون فوضي , بدون تأخير و بأعلي كفائة
             </p>
 
             {/* Stats - إحصائيات متحركة */}
@@ -67,13 +67,13 @@ export default function Hero({ onLoginClick }: HeroProps) {
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
                   <Shield className="w-4 h-4 text-[#25D366]" />
                 </div>
-                <span className="text-sm">آمن وموثوق</span>
+                <span className="text-sm">تواصل مريح </span>
               </div>
               <div className="flex items-center gap-2 text-white/90 group hover:scale-105 transition-transform duration-300">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
                   <CheckCheck className="w-4 h-4 text-[#25D366]" />
                 </div>
-                <span className="text-sm">تسليم فوري</span>
+                <span className="text-sm">آمن وموثوق</span>
               </div>
             </div>
 
