@@ -46,8 +46,10 @@ export default function Hero({ onLoginClick }: HeroProps) {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-             حول واتساب
-              <span className="block text-[#25D366] drop-shadow-lg">الي ماكينة مابيعات</span>
+             حول واتساب الي
+
+              <span className="block text-[#25D366] drop-shadow-lg"> ماكينة مابيعات</span>
+
               متكاملة 
             </h1>
 
@@ -142,7 +144,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
                     {/* رسالة واردة 1 - مع أنيميشن */}
                     <div className="flex justify-start animate-message-received">
                       <div className="bg-white rounded-2xl rounded-tr-none px-4 py-2 max-w-[85%] shadow-sm relative">
-                        <p className="text-gray-800 text-sm">مرحباً! هل يمكنك إرسال عرض الأسعار؟</p>
+                        <p className="text-gray-800 text-sm">ممكن تفاصيل لو سمحت ؟ </p>
                         <span className="text-[10px] text-gray-400 float-left mt-1">10:30 ص</span>
                       </div>
                     </div>
@@ -150,7 +152,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
                     {/* رسالة صادرة 1 - مع أنيميشن */}
                     <div className="flex justify-end animate-message-sent">
                       <div className="bg-[#DCF8C6] rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] shadow-sm">
-                        <p className="text-gray-800 text-sm">بالتأكيد! سأرسله لك خلال دقائق</p>
+                        <p className="text-gray-800 text-sm">باتأكيد ! سأرسل قائمة العروض فورا</p>
                         <div className="flex items-center justify-end gap-1 mt-1">
                           <span className="text-[10px] text-gray-500">10:31 ص</span>
                           <CheckCheck className="w-3.5 h-3.5 text-[#25D366]" />
@@ -161,7 +163,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
                     {/* رسالة صادرة 2 - مع أنيميشن متأخر */}
                     <div className="flex justify-end animate-message-sent delay-150">
                       <div className="bg-[#DCF8C6] rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] shadow-sm">
-                        <p className="text-gray-800 text-sm">تم إرسال عرض الأسعار بنجاح 📎</p>
+                        <p className="text-gray-800 text-sm">تم ارسال قائمة العروض بنجاح 📎</p>
                         <div className="flex items-center justify-end gap-1 mt-1">
                           <span className="text-[10px] text-gray-500">10:32 ص</span>
                           <CheckCheck className="w-3.5 h-3.5 text-[#25D366]" />
