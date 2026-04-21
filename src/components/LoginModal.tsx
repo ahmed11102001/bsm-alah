@@ -26,8 +26,22 @@ interface LoginModalProps {
 // ─── Animation variants ───────────────────────────────────────────────────────
 const slide = {
   initial: { opacity: 0, x: 24 },
-  animate: { opacity: 1, x: 0, transition: { duration: 0.22, ease: "easeOut" } },
-  exit:    { opacity: 0, x: -20, transition: { duration: 0.15 } },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.22,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: -20,
+    transition: {
+      duration: 0.15,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+  },
 };
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
