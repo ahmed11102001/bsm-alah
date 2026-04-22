@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus } from "@prisma/client";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -17,7 +18,6 @@ function dateRange(from?: string | null, to?: string | null) {
   lte.setHours(23, 59, 59, 999);
   return { gte, lte };
 }
-
 // ─── GET /api/reports?type=overview|customers|team|logs ───────────────────────
 export async function GET(req: NextRequest) {
   try {
@@ -27,17 +27,30 @@ export async function GET(req: NextRequest) {
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);
-    const type    = searchParams.get("type") ?? "overview";
-    const from    = searchParams.get("from");
-    const to      = searchParams.get("to");
-    const range   = dateRange(from, to);
+
+    const type = searchParams.get("type") ?? "overview";
+
+    // ✅ حماية التقارير المتقدمة
+    if (["customers", "team", "logs"].includes(type)) {
+      const check = await checkFeature(userId, "advancedReports");
+      const block = guardResponse(check);
+      if (block) return block;
+    }
+
+    const from  = searchParams.get("from");
+    const to    = searchParams.get("to");
+    const range = dateRange(from, to);
 
     switch (type) {
       case "overview":  return overview(userId, range);
       case "customers": return customers(userId, range, searchParams);
       case "team":      return team(userId);
       case "logs":      return logs(userId, range, searchParams);
-      default:          return NextResponse.json({ error: "نوع غير معروف" }, { status: 400 });
+      default:
+        return NextResponse.json(
+          { error: "نوع غير معروف" },
+          { status: 400 }
+        );
     }
   } catch (err) {
     console.error("reports error:", err);
