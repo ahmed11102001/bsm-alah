@@ -1,6 +1,7 @@
 "use client";
 
 import ChatPage    from "@/app/dashboard/chat/page";
+import TeamPage    from "@/app/dashboard/team/page";
 import { signOut, useSession } from "next-auth/react";
 import "@/app/globals.css";
 import { useState, useEffect, useCallback } from "react";
@@ -59,11 +60,12 @@ interface DashboardData {
 // ─── Sidebar items ────────────────────────────────────────────────────────────
 const sidebarItems = [
   { icon: Home,         label: "الرئيسية",       id: "home"       },
+  { icon: Users,        label: "الفريق",         id: "team"       },
   { icon: Users,        label: "جهات الاتصال",   id: "contacts"   },
-  { icon: FileText,     label: "القوالب",         id: "templates"  },
   { icon: Send,         label: "الحملات",         id: "campaigns"  },
-  { icon: BarChart3,    label: "التقارير",        id: "reports"    },
+  { icon: FileText,     label: "القوالب",         id: "templates"  },
   { icon: MessageSquare,label: "المحادثات",       id: "chat"       },
+  { icon: BarChart3,    label: "التقارير",        id: "reports"    },
   { icon: Settings,     label: "الأتمتة الذكية", id: "automation" },
   { icon: Code,         label: "API",             id: "api"        },
 ];
@@ -620,6 +622,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
+      case "team":       return <TeamPage />;
       case "templates":  return <Templates />;
       case "campaigns":  return <Campaigns />;
       case "reports":    return <Reports />;
