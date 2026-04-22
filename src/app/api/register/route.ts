@@ -1,13 +1,13 @@
+// src/app/api/register/route.ts
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    // 1. استلام البيانات (ضفنا phone هنا)
     const { email, password, name, phone } = await req.json();
 
-    // 2. التأكد إن البيانات الأساسية موجودة
+    // ── Validation ──────────────────────────────────────────────
     if (!email || !password) {
       return NextResponse.json(
         { error: "البريد الإلكتروني وكلمة المرور مطلوبان" },
@@ -15,29 +15,68 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. التأكد إن المستخدم مش موجود قبل كده
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" },
+        { status: 400 }
+      );
+    }
+
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: "الاسم مطلوب" },
+        { status: 400 }
+      );
+    }
+
+    if (!phone?.trim()) {
+      return NextResponse.json(
+        { error: "رقم الهاتف مطلوب" },
+        { status: 400 }
+      );
+    }
+
+    // ── التأكد إن البريد مش موجود ──────────────────────────────
+    const existing = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
     });
 
-    if (existingUser) {
+    if (existing) {
       return NextResponse.json(
         { error: "هذا البريد مسجل بالفعل" },
         { status: 400 }
       );
     }
 
-    // 4. تشفير كلمة المرور
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 5. حفظ المستخدم الجديد مع رقم الهاتف
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashedPassword,
-        phone, // ✅ تم إضافة الحقل هنا
-      },
+    // ── إنشاء المستخدم + اشتراك مجاني في transaction واحدة ────
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          name:  name.trim(),
+          phone: phone.trim(),
+          password: hashedPassword,
+          role: "OWNER",
+        },
+      });
+
+      // ✅ إنشاء اشتراك مجاني تلقائياً
+      await tx.subscription.create({
+        data: {
+          userId: newUser.id,
+          plan:   "free",
+          status: "active",
+          campaignsUsedThisMonth: 0,
+          periodResetAt:          new Date(),
+          currentPeriodStart:     new Date(),
+          // free لا تنتهي — نضع تاريخ بعيد جداً
+          currentPeriodEnd: new Date("2099-12-31"),
+        },
+      });
+
+      return newUser;
     });
 
     return NextResponse.json(
