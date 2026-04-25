@@ -35,7 +35,7 @@ function sanitizeFilename(name: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { mediaId: string } }
+  { params }: { params: Promise<{ mediaId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -44,7 +44,8 @@ export async function GET(
     }
 
     const userId = uid(session);
-    const mediaId = decodeURIComponent(params.mediaId);
+    const { mediaId: rawMediaId } = await params;
+    const mediaId = decodeURIComponent(rawMediaId);
 
     const message = await prisma.message.findFirst({
       where: {
@@ -129,4 +130,3 @@ export async function GET(
     return NextResponse.json({ error: "حدث خطأ في تحميل الوسيط" }, { status: 500 });
   }
 }
-
