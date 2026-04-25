@@ -3,13 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType, CampaignStatus } from "@prisma/client";
+import { CampaignStatus, MessageDirection, QueueStatus } from "@prisma/client";
 import {
-  checkCampaignsLimit,
-  checkFeature,
-  incrementCampaignUsage,
-  guardResponse,
+  checkCampaignsLimit, checkFeature,
+  incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
+import { enqueueCampaign } from "@/lib/queue";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -25,6 +24,7 @@ export async function GET(req: NextRequest) {
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);
+
     const status = searchParams.get("status");
     const search = searchParams.get("search");
     const limit  = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
@@ -34,15 +34,18 @@ export async function GET(req: NextRequest) {
     if (status && status !== "all") where.status = status;
     if (search) where.name = { contains: search, mode: "insensitive" };
 
-    const campaigns = await prisma.campaign.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: { template: { select: { name: true, content: true } } },
-    });
+    const [campaigns, total] = await Promise.all([
+      prisma.campaign.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip:    (page - 1) * limit,
+        take:    limit,
+        include: { template: { select: { name: true, content: true } } },
+      }),
+      prisma.campaign.count({ where }),
+    ]);
 
-    return NextResponse.json(campaigns);
+    return NextResponse.json({ campaigns, total, page, limit });
   } catch (err) {
     console.error("GET /api/campaigns:", err);
     return NextResponse.json({ error: "فشل في جلب الحملات" }, { status: 500 });
@@ -84,7 +87,12 @@ export async function DELETE(req: NextRequest) {
     if (!campaign)
       return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
 
+    // إلغاء الرسائل في الـ queue + حذف الحملة
     await prisma.$transaction([
+      prisma.messageQueue.updateMany({
+        where: { campaignId: id, status: QueueStatus.pending },
+        data:  { status: QueueStatus.cancelled },
+      }),
       prisma.message.deleteMany({ where: { campaignId: id } }),
       prisma.campaign.delete({ where: { id } }),
     ]);
@@ -98,8 +106,9 @@ export async function DELETE(req: NextRequest) {
 
 // ─── handleCreate ─────────────────────────────────────────────────────────────
 async function handleCreate(userId: string, body: any) {
-  const { name, templateName, numbers, scheduledAt } = body;
+  const { name, templateName, numbers, scheduledAt, templateVars } = body;
 
+  // Validation
   if (!name?.trim())
     return NextResponse.json({ error: "اسم الحملة مطلوب" }, { status: 400 });
   if (!templateName)
@@ -107,12 +116,12 @@ async function handleCreate(userId: string, body: any) {
   if (!Array.isArray(numbers) || numbers.length === 0)
     return NextResponse.json({ error: "قائمة الأرقام مطلوبة" }, { status: 400 });
 
-  // ✅ Guard 1: حد الحملات الشهري
+  // ✅ Guard: حد الحملات الشهري
   const campaignCheck = await checkCampaignsLimit(userId);
   const campaignBlock = guardResponse(campaignCheck);
   if (campaignBlock) return campaignBlock;
 
-  // ✅ Guard 2: الحملات المجدولة (إذا طلب جدولة)
+  // ✅ Guard: الجدولة
   const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
   const isScheduled   = scheduledDate ? scheduledDate > new Date() : false;
 
@@ -126,9 +135,18 @@ async function handleCreate(userId: string, body: any) {
   const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
   if (!account)
     return NextResponse.json(
-      { error: "لم يتم ربط حساب واتساب — اذهب للإعدادات وأضف بياناتك" },
+      { error: "لم يتم ربط حساب واتساب — اذهب للإعدادات" },
       { status: 400 }
     );
+
+  // التحقق من الـ backoff
+  if (account.backoffUntil && account.backoffUntil > new Date()) {
+    const waitMin = Math.ceil((account.backoffUntil.getTime() - Date.now()) / 60_000);
+    return NextResponse.json(
+      { error: `رقمك في فترة توقف مؤقت بسبب ضغط Meta. انتظر ${waitMin} دقيقة.` },
+      { status: 429 }
+    );
+  }
 
   // القالب
   const template = await prisma.template.findFirst({
@@ -140,44 +158,42 @@ async function handleCreate(userId: string, body: any) {
       { status: 404 }
     );
 
-  // إنشاء الحملة
+  // إنشاء سجل الحملة
   const campaign = await prisma.campaign.create({
     data: {
-      name: name.trim(),
+      name:       name.trim(),
       userId,
       templateId: template.id,
-      status:     isScheduled ? CampaignStatus.scheduled : CampaignStatus.running,
-      scheduledAt: isScheduled ? scheduledDate : null,
-      startedAt:  !isScheduled ? new Date() : null,
+      status:     CampaignStatus.draft, // سيُحدَّث بواسطة enqueueCampaign
     },
   });
 
-  // ✅ زيادة عداد الحملات بعد الإنشاء
+  // ✅ إضافة للـ Queue بدل الإرسال المباشر
+  const { queued } = await enqueueCampaign({
+    campaignId:       campaign.id,
+    userId,
+    numbers,
+    templateName:     template.name,
+    templateLang:     template.language ?? "ar",
+    templateVars:     templateVars ?? null,
+    scheduledAt:      isScheduled ? scheduledDate : null,
+    whatsappAccountId: account.id,
+    phoneNumberId:    account.phoneNumberId,
+    accessToken:      account.accessToken,
+  });
+
+  // ✅ زيادة عداد الحملات
   await incrementCampaignUsage(userId);
 
-  // جدولة فقط
-  if (isScheduled) {
-    return NextResponse.json({
-      success: true, campaignId: campaign.id,
-      scheduledAt: scheduledDate, message: "تم جدولة الحملة بنجاح",
-    });
-  }
-
-  // إرسال فوري
-  const { sentCount, failedCount } = await runCampaign(
-    campaign.id, userId, numbers, template.name,
-    account.phoneNumberId, account.accessToken
-  );
-
-  await prisma.campaign.update({
-    where: { id: campaign.id },
-    data: {
-      status:      sentCount > 0 ? CampaignStatus.completed : CampaignStatus.failed,
-      sentCount, failedCount, completedAt: new Date(),
-    },
+  return NextResponse.json({
+    success:    true,
+    campaignId: campaign.id,
+    queued,
+    scheduled:  isScheduled,
+    message:    isScheduled
+      ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
+      : `تم إضافة ${queued} رسالة للـ Queue — الإرسال يبدأ خلال دقيقة`,
   });
-
-  return NextResponse.json({ success: true, campaignId: campaign.id, sentCount, failedCount, total: numbers.length });
 }
 
 // ─── handleRepeat ─────────────────────────────────────────────────────────────
@@ -188,12 +204,13 @@ async function handleRepeat(userId: string, campaignId: string) {
   if (block) return block;
 
   const original = await prisma.campaign.findFirst({
-    where: { id: campaignId, userId },
+    where:   { id: campaignId, userId },
     include: {
       template: true,
       messages: {
         where:   { direction: MessageDirection.outbound },
-        include: { contact: { select: { phone: true } } },
+        select:  { contact: { select: { phone: true } } },
+        take:    10_000,
       },
     },
   });
@@ -204,84 +221,46 @@ async function handleRepeat(userId: string, campaignId: string) {
   const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
   if (!account) return NextResponse.json({ error: "لم يتم ربط حساب واتساب" }, { status: 400 });
 
-  const numbers = [...new Set(
-    original.messages.map(m => m.contact?.phone).filter((p): p is string => Boolean(p))
-  )];
+  // استخرج الأرقام من رسائل الحملة الأصلية
+  const numbers = [
+    ...new Set(
+      original.messages
+        .map((m) => m.contact?.phone)
+        .filter((p): p is string => Boolean(p))
+    ),
+  ];
 
   if (numbers.length === 0)
     return NextResponse.json({ error: "لا توجد أرقام في الحملة الأصلية" }, { status: 400 });
 
+  // حملة جديدة
   const newCampaign = await prisma.campaign.create({
     data: {
-      name: `${original.name} (تكرار)`, userId,
+      name:       `${original.name} (تكرار)`,
+      userId,
       templateId: original.template.id,
-      status: CampaignStatus.running, startedAt: new Date(),
+      status:     CampaignStatus.draft,
     },
+  });
+
+  const { queued } = await enqueueCampaign({
+    campaignId:       newCampaign.id,
+    userId,
+    numbers,
+    templateName:     original.template.name,
+    templateLang:     original.template.language ?? "ar",
+    scheduledAt:      null,
+    whatsappAccountId: account.id,
+    phoneNumberId:    account.phoneNumberId,
+    accessToken:      account.accessToken,
   });
 
   await incrementCampaignUsage(userId);
 
-  const { sentCount, failedCount } = await runCampaign(
-    newCampaign.id, userId, numbers, original.template.name,
-    account.phoneNumberId, account.accessToken
-  );
-
-  await prisma.campaign.update({
-    where: { id: newCampaign.id },
-    data: {
-      status:      sentCount > 0 ? CampaignStatus.completed : CampaignStatus.failed,
-      sentCount, failedCount, completedAt: new Date(),
-    },
+  return NextResponse.json({
+    success:    true,
+    campaignId: newCampaign.id,
+    queued,
+    message:    `تم تكرار الحملة — ${queued} رسالة في الـ Queue`,
   });
-
-  return NextResponse.json({ success: true, campaignId: newCampaign.id, sentCount, failedCount });
-}
-
-// ─── runCampaign ──────────────────────────────────────────────────────────────
-async function runCampaign(
-  campaignId: string, userId: string, numbers: string[],
-  templateName: string, phoneNumberId: string, accessToken: string
-): Promise<{ sentCount: number; failedCount: number }> {
-  let sentCount = 0, failedCount = 0;
-
-  for (const phone of numbers) {
-    try {
-      const contact = await prisma.contact.upsert({
-        where:  { phone_userId: { phone, userId } },
-        update: { lastMessageAt: new Date() },
-        create: { phone, userId, lastMessageAt: new Date() },
-      });
-
-      const res = await fetch(
-        `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messaging_product: "whatsapp", to: phone, type: "template",
-            template: { name: templateName, language: { code: "ar" } },
-          }),
-        }
-      );
-      const meta = await res.json();
-
-      await prisma.message.create({
-        data: {
-          content: `حملة: ${campaignId}`, type: MessageType.template,
-          direction: MessageDirection.outbound,
-          status: meta.error ? MessageStatus.failed : MessageStatus.sent,
-          userId, contactId: contact.id, campaignId,
-          whatsappId: meta.messages?.[0]?.id,
-          error:      meta.error?.message,
-          sentAt:     meta.error ? undefined : new Date(),
-        },
-      });
-
-      meta.error ? failedCount++ : sentCount++;
-    } catch {
-      failedCount++;
-    }
-  }
-
-  return { sentCount, failedCount };
 }

@@ -44,7 +44,6 @@ enum UserRole {
   CHAT_ONLY
 }
 
-
 enum PlanTier {
   free
   starter
@@ -52,11 +51,19 @@ enum PlanTier {
   enterprise
 }
 
-
 enum SubscriptionStatus {
   active
   expired
   cancelled
+}
+
+// ✅ جديد: حالة رسالة الـ Queue
+enum QueueStatus {
+  pending      // في الانتظار
+  processing   // جاري المعالجة (محجوز)
+  sent         // تم الإرسال
+  failed       // فشل نهائي (استنفذ المحاولات)
+  cancelled    // ألغاه المستخدم
 }
 
 
@@ -70,13 +77,10 @@ model User {
   image    String?
   apiKey   String? @unique
 
-  role UserRole @default(OWNER)
-
+  role        UserRole @default(OWNER)
   workspaceId String?
-
-  inviteCode String? @unique
-
-  parentId String?
+  inviteCode  String?  @unique
+  parentId    String?
 
   parent  User?  @relation("TeamHierarchy", fields: [parentId], references: [id])
   members User[] @relation("TeamHierarchy")
@@ -85,39 +89,33 @@ model User {
   updatedAt DateTime @updatedAt
 
   whatsappAccount WhatsAppAccount?
+  subscription    Subscription?
 
- 
-  subscription Subscription?
-
-  contacts  Contact[]
-  audiences Audience[]
-  templates Template[]
-  campaigns Campaign[]
-  messages  Message[]
+  contacts      Contact[]
+  audiences     Audience[]
+  templates     Template[]
+  campaigns     Campaign[]
+  messages      Message[]
+  messageQueues MessageQueue[]
 
   @@index([email])
   @@index([workspaceId])
   @@index([parentId])
 }
 
-
 model Subscription {
   id     String @id @default(cuid())
-
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   plan   PlanTier           @default(free)
   status SubscriptionStatus @default(active)
 
-
   campaignsUsedThisMonth Int      @default(0)
   periodResetAt          DateTime @default(now())
+  currentPeriodStart     DateTime @default(now())
+  currentPeriodEnd       DateTime @default(dbgenerated("NOW() + INTERVAL '100 years'"))
 
-  currentPeriodStart DateTime @default(now())
-  currentPeriodEnd   DateTime @default(dbgenerated("NOW() + INTERVAL '100 years'"))
-
- 
   stripeCustomerId     String? @unique
   stripeSubscriptionId String? @unique
 
@@ -149,8 +147,72 @@ model WhatsAppAccount {
   phoneNumberId String
   wabaId        String @unique
 
+  // ✅ جديد: تتبع الـ Tier الخاص بكل رقم
+  messagingTier  Int      @default(1)    // 1=1K, 2=10K, 3=100K, 4=unlimited
+  dailySentCount Int      @default(0)    // عداد يومي
+  dailyResetAt   DateTime @default(now()) // آخر تصفير
+
+  // ✅ جديد: backoff state لو Meta رجعت 429
+  backoffUntil   DateTime? // النظام ينتظر لحد الوقت ده
+  backoffCount   Int       @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  messageQueues MessageQueue[]
+}
+
+// ✅ جديد: جدول الـ Queue الرئيسي
+model MessageQueue {
+  id String @id @default(cuid())
+
+  // ─ مين صاحب الرسالة
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ─ Credentials (نسخة وقت الإنشاء — مش بتتغير لو العميل بدّل التوكن)
+  whatsappAccountId String
+  whatsappAccount   WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+  phoneNumberId     String          // نسخة للفرز السريع بدون join
+  accessTokenSnap   String          @db.Text // snapshot من التوكن وقت الإنشاء
+
+  // ─ المستقبل
+  toPhone   String
+  contactId String?
+
+  // ─ المحتوى
+  messageType  String  @default("template") // template | text
+  templateName String?
+  templateLang String  @default("ar")
+  templateVars Json?   // متغيرات القالب لو فيه
+  content      String? @db.Text             // للرسائل النصية العادية
+
+  // ─ ربط الحملة
+  campaignId String?
+
+  // ─ Queue Control
+  status      QueueStatus @default(pending)
+  scheduledAt DateTime    @default(now())  // موعد الإرسال المطلوب
+  processedAt DateTime?                     // وقت المعالجة الفعلي
+  sentAt      DateTime?
+
+  attempts    Int  @default(0)
+  maxAttempts Int  @default(3)
+  nextRetryAt DateTime?
+
+  // ─ النتيجة
+  whatsappMsgId String? // ID اللي رجعته Meta بعد الإرسال
+  error         String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ─ الـ Indexes الحرجة للأداء
+  @@index([status, scheduledAt])           // الأهم: للـ cron يجيب الـ pending
+  @@index([phoneNumberId, status])         // للـ rate limiting per number
+  @@index([campaignId])                    // لتتبع الحملة
+  @@index([userId, status])               // لعرض رسائل اليوزر
+  @@index([status, nextRetryAt])           // للـ retry logic
 }
 
 model Audience {
@@ -185,11 +247,9 @@ model Contact {
 
   isPinned   Boolean @default(false)
   isArchived Boolean @default(false)
-
   unreadCount   Int       @default(0)
   lastMessageAt DateTime?
-
-  deletedAt DateTime?
+  deletedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -241,6 +301,10 @@ model Campaign {
   readCount      Int @default(0)
   failedCount    Int @default(0)
 
+  // ✅ جديد: تتبع الـ Queue
+  totalQueued    Int @default(0)  // إجمالي اللي اتحط في الـ queue
+  queuedCount    Int @default(0)  // لسه في الانتظار
+
   startedAt   DateTime?
   completedAt DateTime?
   scheduledAt DateTime? @map("scheduled_at")
@@ -250,6 +314,7 @@ model Campaign {
 
   @@index([userId])
   @@index([status])
+  @@index([scheduledAt]) // للـ cron يجيب الـ scheduled campaigns
 }
 
 model Message {
@@ -266,11 +331,10 @@ model Message {
   mediaUrl String? @db.Text
   error    String?
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   contactId String
-  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
@@ -278,8 +342,7 @@ model Message {
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
-
-  deletedAt DateTime?
+  deletedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
