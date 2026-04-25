@@ -138,7 +138,7 @@ function Bubble({ msg }: { msg: Message }) {
 // ─── Attach menu options ──────────────────────────────────────────────────────
 const ATTACH = [
   { key: "image",    label: "صورة",           icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                  color: "bg-purple-500" },
-  { key: "video",    label: "فيديو",           icon: <Video className="w-4 h-4" />,      accept: "video/*",                  color: "bg-red-500" },
+  { key: "video",    label: "فيديو",           icon: <Video className="w-4 h-4" />,      accept: "video/*",                  color: "bg-red-500", disabled: true },
   { key: "document", label: "ملف / مستند",    icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
 ];
 
@@ -640,17 +640,25 @@ export default function ChatPage() {
             {/* Template picker */}
             {showTpl && (
               <div className="bg-white border-t border-gray-200 max-h-56 overflow-y-auto z-10">
-                <p className="text-xs text-gray-400 px-4 pt-3 pb-2 font-medium">اختر قالباً</p>
+                <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-gray-100">
+                  <p className="text-xs text-gray-400 font-medium">اختر قالباً</p>
+                  <button
+                    onClick={() => setShowTpl(false)}
+                    className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    aria-label="إغلاق القوالب"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
                 {templates.length === 0 ? (
                   <p className="text-sm text-gray-400 px-4 pb-3">لا توجد قوالب معتمدة</p>
                 ) : templates.map(t => (
                   <button
                     key={t.id}
                     onClick={() => sendTemplate(t)}
-                    className="w-full text-right px-4 py-2.5 hover:bg-gray-50 border-b border-gray-50 transition-colors"
+                    className="w-full text-right px-4 py-3 hover:bg-gray-50 border-b border-gray-50 transition-colors"
                   >
                     <p className="text-sm font-medium text-gray-800">{t.name}</p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{t.content}</p>
                   </button>
                 ))}
               </div>
@@ -670,24 +678,37 @@ export default function ChatPage() {
 
                 {showAttach && (
                   <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 w-44">
-                    {ATTACH.map(a => (
-                      <label key={a.key} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors">
-                        <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
-                          {a.icon}
-                        </span>
-                        <span className="text-sm text-gray-700">{a.label}</span>
-                        <input type="file" accept={a.accept} className="hidden"
-                          ref={fileRef}
-                          onChange={async (e) => {
-                            const f = e.target.files?.[0];
-                            if (!f) return;
-                            await sendFile(f, a.key);
-                            setShowAttach(false);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                    ))}
+                    {ATTACH.map(a => {
+                      const isDisabled = Boolean(a.disabled);
+                      return (
+                        <label
+                          key={a.key}
+                          onClick={(e) => { if (isDisabled) e.preventDefault(); }}
+                          className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                            isDisabled
+                              ? "opacity-50 cursor-not-allowed bg-gray-50"
+                              : "hover:bg-gray-50 cursor-pointer"
+                          }`}
+                        >
+                          <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
+                            {a.icon}
+                          </span>
+                          <span className={`text-sm ${isDisabled ? "text-gray-400" : "text-gray-700"}`}>{a.label}</span>
+                          <input type="file" accept={a.accept} className="hidden"
+                            ref={fileRef}
+                            disabled={isDisabled}
+                            onChange={async (e) => {
+                              if (isDisabled) return;
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              await sendFile(f, a.key);
+                              setShowAttach(false);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      );
+                    })}
                     {/* Location */}
                     <button
                       onClick={() => { sendLocation(); setShowAttach(false); }}
