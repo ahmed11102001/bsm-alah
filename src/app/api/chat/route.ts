@@ -111,6 +111,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     lastMessage: c.messages[0] ?? null,
     unreadCount: c._count.messages,
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+    isArchived: c.isArchived,
   }));
 
   return NextResponse.json({ conversations });
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── PATCH /api/chat ───────────────────────────────────────────────────────────
-//   { action: "archive" | "delete" | "addToAudience", contactId, audienceId? }
+//   { action: "archive" | "unarchive" | "delete" | "addToAudience", contactId, audienceId? }
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
@@ -194,10 +195,10 @@ export async function PATCH(req: NextRequest) {
   const contact = await prisma.contact.findFirst({ where: { id: contactId, userId } });
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
-  if (action === "archive") {
+  if (action === "archive" || action === "unarchive") {
     await prisma.contact.update({
       where: { id: contactId },
-      data:  { isArchived: true },
+      data:  { isArchived: action === "archive" },
     });
     return NextResponse.json({ success: true });
   }

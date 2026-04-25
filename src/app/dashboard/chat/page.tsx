@@ -31,6 +31,7 @@ interface Conversation {
   lastMessage: LastMsg | null;
   unreadCount: number;
   lastMessageAt: string | null;
+  isArchived: boolean;
 }
 
 interface Message {
@@ -337,17 +338,24 @@ export default function ChatPage() {
   };
 
   // ── Contact actions ───────────────────────────────────────────────
-  const archiveContact = async (contactId: string) => {
+  const setConversationArchived = async (contactId: string, shouldArchive: boolean) => {
     try {
-      await fetch("/api/chat", {
+      const r = await fetch("/api/chat", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "archive", contactId }),
+        body: JSON.stringify({
+          action: shouldArchive ? "archive" : "unarchive",
+          contactId,
+        }),
       });
-      toast.success("تم الأرشفة");
+      if (!r.ok) {
+        const d = await r.json();
+        throw new Error(d.error ?? "فشلت العملية");
+      }
+      toast.success(shouldArchive ? "تم الأرشفة" : "تم إلغاء الأرشفة");
       setSelected(null);
       fetchConvs();
-    } catch { toast.error("فشلت العملية"); }
+    } catch (e: any) { toast.error(e.message ?? "فشلت العملية"); }
   };
 
   const deleteConversation = async (contactId: string) => {
@@ -572,9 +580,9 @@ export default function ChatPage() {
 
                   <DropdownMenuItem
                     className="gap-2 text-sm cursor-pointer"
-                    onClick={() => archiveContact(selected.contact.id)}
+                    onClick={() => setConversationArchived(selected.contact.id, !selected.isArchived)}
                   >
-                    <Archive className="w-4 h-4" /> أرشفة المحادثة
+                    <Archive className="w-4 h-4" /> {selected.isArchived ? "إلغاء الأرشفة" : "أرشفة المحادثة"}
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
