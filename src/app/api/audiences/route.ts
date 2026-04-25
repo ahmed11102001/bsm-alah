@@ -148,45 +148,72 @@ export async function GET(req: NextRequest) {
 // Body: { name, notes?, type: "excel"|"custom", contacts: { phone, name? }[] }
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D" }, { status: 401 });
   const userId = uid(session);
 
   const body = await req.json();
   const { name, notes, type = "excel", contacts } = body;
 
   if (!name?.trim())
-    return NextResponse.json({ error: "اسم الجمهور مطلوب" }, { status: 400 });
+    return NextResponse.json({ error: "\u0627\u0633\u0645 \u0627\u0644\u062C\u0645\u0647\u0648\u0631 \u0645\u0637\u0644\u0648\u0628" }, { status: 400 });
   if (!Array.isArray(contacts) || contacts.length === 0)
-    return NextResponse.json({ error: "لا توجد جهات اتصال" }, { status: 400 });
+    return NextResponse.json({ error: "\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0647\u0627\u062A \u0627\u062A\u0635\u0627\u0644" }, { status: 400 });
 
-  // Deduplicate phones
-  const unique = [...new Map(contacts.map((c: any) => [c.phone, c])).values()] as {
-    phone: string; name?: string | null
-  }[];
+  // Deduplicate + sanitize
+  const unique = [
+    ...new Map(
+      (contacts as any[])
+        .map((c) => ({
+          phone: String(c?.phone ?? "").trim(),
+          name: c?.name ? String(c.name).trim() : null,
+        }))
+        .filter((c) => c.phone.length > 0)
+        .map((c) => [c.phone, c])
+    ).values(),
+  ] as { phone: string; name: string | null }[];
+
+  if (unique.length === 0)
+    return NextResponse.json({ error: "\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0647\u0627\u062A \u0627\u062A\u0635\u0627\u0644 \u0635\u0627\u0644\u062D\u0629" }, { status: 400 });
 
   try {
-    const audience = await prisma.audience.create({
-      data: {
-        name:    name.trim(),
-        userId,
-        // store type in name prefix if schema has no type field — use notes field as workaround
-        // Ideally add a `type` field to Audience model
-        contacts: {
-          create: unique.map(c => ({
-            phone:  c.phone,
-            name:   c.name ?? null,
+    const audience = await prisma.$transaction(async (tx) => {
+      const createdAudience = await tx.audience.create({
+        data: {
+          name: name.trim(),
+          type: String(type || "excel"),
+          userId,
+        },
+      });
+
+      // Upsert avoids unique(phone,userId) crashes for existing contacts
+      for (const c of unique) {
+        await tx.contact.upsert({
+          where: { phone_userId: { phone: c.phone, userId } },
+          update: {
+            audienceId: createdAudience.id,
+            name: c.name ?? undefined,
+            deletedAt: null,
+          },
+          create: {
+            phone: c.phone,
+            name: c.name,
             userId,
-          })),
+            audienceId: createdAudience.id,
+          },
+        });
+      }
+
+      return tx.audience.findUniqueOrThrow({
+        where: { id: createdAudience.id },
+        include: {
+          contacts: {
+            where: { deletedAt: null },
+            take: 5,
+            select: { id: true, phone: true, name: true },
+          },
+          _count: { select: { contacts: { where: { deletedAt: null } } } },
         },
-      },
-      include: {
-        contacts: {
-          where: { deletedAt: null },
-          take: 5,
-          select: { id: true, phone: true, name: true },
-        },
-        _count: { select: { contacts: { where: { deletedAt: null } } } },
-      },
+      });
     });
 
     return NextResponse.json({
@@ -195,7 +222,7 @@ export async function POST(req: NextRequest) {
         id:           audience.id,
         name:         audience.name,
         notes:        notes ?? null,
-        type,
+        type:         audience.type ?? type,
         contacts:     audience.contacts,
         contactCount: audience._count.contacts,
         createdAt:    audience.createdAt.toISOString(),
@@ -203,13 +230,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("POST /api/audiences:", err);
-    return NextResponse.json({ error: err.message ?? "فشل الحفظ" }, { status: 500 });
+    return NextResponse.json({ error: err.message ?? "\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638" }, { status: 500 });
   }
 }
 
-// ─── PATCH /api/audiences ──────────────────────────────────────────────────────
-// Body: { id, contacts: ContactRow[] }
-// Replaces the contact list of the audience
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
