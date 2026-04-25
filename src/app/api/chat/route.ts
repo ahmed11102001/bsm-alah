@@ -15,7 +15,7 @@ async function whatsappAccount(userId: string) {
 }
 
 // ─── GET /api/chat ─────────────────────────────────────────────────────────────
-//   ?type=conversations&filter=all|unread|replied|today&search=
+//   ?type=conversations&filter=all|unread|replied|today|archived&search=
 //   ?type=messages&contactId=
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -30,13 +30,21 @@ export async function GET(req: NextRequest) {
 
 // ─── GET conversations ────────────────────────────────────────────────────────
 async function getConversations(userId: string, sp: URLSearchParams) {
-  const filter = sp.get("filter") ?? "all";
+  const rawFilter = sp.get("filter");
+  const filter =
+    rawFilter === "unread" ||
+    rawFilter === "replied" ||
+    rawFilter === "today" ||
+    rawFilter === "archived"
+      ? rawFilter
+      : "all";
   const search = sp.get("search") ?? "";
+  const isArchivedFilter = filter === "archived";
 
   // Base where: only contacts that have at least one INBOUND message (replied)
   const where: any = {
     userId,
-    isArchived: false,
+    isArchived: isArchivedFilter,
     deletedAt: null,
     // Filer: only show contacts that have received at least one inbound message
     messages: {
