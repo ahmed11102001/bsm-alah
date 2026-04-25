@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Audience { id: string; name: string }
 interface Template { id: string; name: string; content: string; status: string }
 
@@ -40,7 +40,7 @@ interface Message {
 
 type Filter = "all" | "replied" | "today" | "unread" | "archived";
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const initials = (c: Contact) =>
   (c.name ?? c.phone).slice(0, 2).toUpperCase();
 
@@ -62,8 +62,8 @@ const typeIcon: Record<string, React.ReactNode> = {
 };
 
 const typePreview: Record<string, string> = {
-  image: "ðŸ“· ØµÙˆØ±Ø©", video: "ðŸŽ¥ ÙÙŠØ¯ÙŠÙˆ",
-  audio: "ðŸŽ™ Ø±Ø³Ø§Ù„Ø© ØµÙˆØªÙŠØ©", document: "ðŸ“„ Ù…Ù„Ù",
+  image: "📷 صورة", video: "🎥 فيديو",
+  audio: "🎙 رسالة صوتية", document: "📄 ملف",
 };
 
 function MsgTick({ status, isMe }: { status: string; isMe: boolean }) {
@@ -85,13 +85,13 @@ function timeStr(iso: string) {
 function dateStr(iso: string) {
   const d = new Date(iso);
   const today = new Date();
-  if (d.toDateString() === today.toDateString()) return "Ø§Ù„ÙŠÙˆÙ…";
+  if (d.toDateString() === today.toDateString()) return "اليوم";
   const yest = new Date(today); yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === yest.toDateString()) return "Ø£Ù…Ø³";
+  if (d.toDateString() === yest.toDateString()) return "أمس";
   return d.toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
 }
 
-// â”€â”€â”€ Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Bubble ───────────────────────────────────────────────────────────────────
 function Bubble({ msg }: { msg: Message }) {
   const isMe = msg.direction === "outbound";
   return (
@@ -113,7 +113,7 @@ function Bubble({ msg }: { msg: Message }) {
         {msg.type === "document" && msg.mediaUrl && (
           <a href={msg.mediaUrl} target="_blank" rel="noreferrer"
             className="flex items-center gap-2 text-blue-600 text-xs mb-1 hover:underline">
-            <FileText className="w-4 h-4" /> ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ù„Ù
+            <FileText className="w-4 h-4" /> تحميل الملف
           </a>
         )}
 
@@ -134,14 +134,14 @@ function Bubble({ msg }: { msg: Message }) {
   );
 }
 
-// â”€â”€â”€ Attach menu options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Attach menu options ──────────────────────────────────────────────────────
 const ATTACH = [
-  { key: "image",    label: "ØµÙˆØ±Ø©",           icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                  color: "bg-purple-500" },
-  { key: "video",    label: "ÙÙŠØ¯ÙŠÙˆ",           icon: <Video className="w-4 h-4" />,      accept: "video/*",                  color: "bg-red-500" },
-  { key: "document", label: "Ù…Ù„Ù / Ù…Ø³ØªÙ†Ø¯",    icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
+  { key: "image",    label: "صورة",           icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                  color: "bg-purple-500" },
+  { key: "video",    label: "فيديو",           icon: <Video className="w-4 h-4" />,      accept: "video/*",                  color: "bg-red-500" },
+  { key: "document", label: "ملف / مستند",    icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
 ];
 
-// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
   // conversations
   const [convs,       setConvs]        = useState<Conversation[]>([]);
@@ -169,7 +169,7 @@ export default function ChatPage() {
   const chunksRef  = useRef<Blob[]>([]);
   const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // â”€â”€ Fetch conversations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch conversations ──────────────────────────────────────────
   const fetchConvs = useCallback(async () => {
     try {
       const q = new URLSearchParams({ type: "conversations", filter, search });
@@ -180,7 +180,7 @@ export default function ChatPage() {
     finally { setLoadingConvs(false); }
   }, [filter, search]);
 
-  // â”€â”€ Fetch messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch messages ────────────────────────────────────────────────
   const fetchMsgs = useCallback(async (contactId: string) => {
     setLoadingMsgs(true);
     try {
@@ -194,7 +194,7 @@ export default function ChatPage() {
     } finally { setLoadingMsgs(false); }
   }, []);
 
-  // â”€â”€ Select conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Select conversation ───────────────────────────────────────────
   const selectConv = useCallback((conv: Conversation) => {
     setSelected(conv);
     fetchMsgs(conv.contact.id);
@@ -204,7 +204,7 @@ export default function ChatPage() {
     pollRef.current = setInterval(() => fetchMsgs(conv.contact.id), 8000);
   }, [fetchMsgs]);
 
-  // â”€â”€ Misc fetches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Misc fetches ──────────────────────────────────────────────────
   const fetchTemplates = useCallback(async () => {
     const r = await fetch("/api/templates");
     const d = await r.json();
@@ -229,7 +229,7 @@ export default function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // â”€â”€ Send text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send text ─────────────────────────────────────────────────────
   const sendText = async () => {
     if (!text.trim() || !selected || sending) return;
     const body = text; setText(""); setSending(true);
@@ -245,7 +245,7 @@ export default function ChatPage() {
     finally { setSending(false); }
   };
 
-  // â”€â”€ Send template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send template ─────────────────────────────────────────────────
   const sendTemplate = async (tpl: Template) => {
     if (!selected || sending) return;
     setSending(true); setShowTpl(false);
@@ -256,20 +256,20 @@ export default function ChatPage() {
         body: JSON.stringify({
           action:"send", contactId: selected.contact.id,
           type:"template", templateName: tpl.name,
-          content: `[Ù‚Ø§Ù„Ø¨] ${tpl.name}`,
+          content: `[قالب] ${tpl.name}`,
         }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
-      toast.success("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù‚Ø§Ù„Ø¨");
+      toast.success("تم إرسال القالب");
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }
   };
 
-  // â”€â”€ Send location â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send location ─────────────────────────────────────────────────
   const sendLocation = () => {
     if (!selected) return;
-    if (!navigator.geolocation) { toast.error("Ø§Ù„Ù…ØªØµÙØ­ Ù„Ø§ ÙŠØ¯Ø¹Ù… Ø§Ù„Ù…ÙˆÙ‚Ø¹"); return; }
+    if (!navigator.geolocation) { toast.error("المتصفح لا يدعم الموقع"); return; }
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude: lat, longitude: lng } = pos.coords;
       setSending(true);
@@ -279,18 +279,18 @@ export default function ChatPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action:"send", contactId: selected.contact.id,
-            type:"text", content: `ðŸ“ Ø§Ù„Ù…ÙˆÙ‚Ø¹: https://maps.google.com/?q=${lat},${lng}`,
+            type:"text", content: `📍 الموقع: https://maps.google.com/?q=${lat},${lng}`,
           }),
         });
         if (!r.ok) throw new Error();
-        toast.success("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…ÙˆÙ‚Ø¹");
+        toast.success("تم إرسال الموقع");
         fetchMsgs(selected.contact.id);
-      } catch { toast.error("ÙØ´Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…ÙˆÙ‚Ø¹"); }
+      } catch { toast.error("فشل إرسال الموقع"); }
       finally { setSending(false); }
-    }, () => toast.error("Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù„Ù…ÙˆÙ‚Ø¹"));
+    }, () => toast.error("لم يتم السماح بالوصول للموقع"));
   };
 
-  // â”€â”€ Send file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send file ─────────────────────────────────────────────────────
   const sendFile = async (file: File, mediaType: string) => {
     if (!selected) return;
     setSending(true);
@@ -305,14 +305,14 @@ export default function ChatPage() {
         method: "POST",
         body: formData,
       });
-      if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? "ÙØ´Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„"); }
-      toast.success("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…Ù„Ù");
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? "فشل الإرسال"); }
+      toast.success("تم إرسال الملف");
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }
   };
 
-  // â”€â”€ Voice note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Voice note ────────────────────────────────────────────────────
   const toggleRecord = async () => {
     if (recording) {
       mediaRecRef.current?.stop();
@@ -332,11 +332,11 @@ export default function ChatPage() {
         };
         mr.start();
         setRecording(true);
-      } catch { toast.error("Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù„Ù…ÙŠÙƒØ±ÙˆÙÙˆÙ†"); }
+      } catch { toast.error("لا يمكن الوصول للميكروفون"); }
     }
   };
 
-  // â”€â”€ Contact actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Contact actions ───────────────────────────────────────────────
   const archiveContact = async (contactId: string) => {
     try {
       await fetch("/api/chat", {
@@ -344,10 +344,10 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "archive", contactId }),
       });
-      toast.success("ØªÙ… Ø§Ù„Ø£Ø±Ø´ÙØ©");
+      toast.success("تم الأرشفة");
       setSelected(null);
       fetchConvs();
-    } catch { toast.error("ÙØ´Ù„Øª Ø§Ù„Ø¹Ù…Ù„ÙŠØ©"); }
+    } catch { toast.error("فشلت العملية"); }
   };
 
   const deleteConversation = async (contactId: string) => {
@@ -357,10 +357,10 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", contactId }),
       });
-      toast.success("ØªÙ… Ø§Ù„Ø­Ø°Ù");
+      toast.success("تم الحذف");
       setSelected(null);
       fetchConvs();
-    } catch { toast.error("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù"); }
+    } catch { toast.error("فشل الحذف"); }
   };
 
   const addToAudience = async (contactId: string, audienceId: string) => {
@@ -371,11 +371,11 @@ export default function ChatPage() {
         body: JSON.stringify({ action: "addToAudience", contactId, audienceId }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
-      toast.success("ØªÙ…Øª Ø§Ù„Ø¥Ø¶Ø§ÙØ© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©");
+      toast.success("تمت الإضافة للقائمة");
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // â”€â”€ Filtered convs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Filtered convs ────────────────────────────────────────────────
   const filteredConvs = useMemo(() => {
     const q = search.toLowerCase();
     return convs.filter(c => {
@@ -385,13 +385,13 @@ export default function ChatPage() {
     });
   }, [convs, search]);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────────
   return (
     <div
       className="flex h-[calc(100vh-64px)] bg-[#f0f2f5] overflow-hidden"
       style={{ direction: "rtl" }}
     >
-      {/* â•â•â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════ SIDEBAR ══════════ */}
       <aside className="w-[340px] flex-shrink-0 bg-white flex flex-col border-l border-gray-200">
 
         {/* Search */}
@@ -401,7 +401,7 @@ export default function ChatPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ø±Ù‚Ù…"
+              placeholder="بحث بالاسم أو الرقم"
               className="w-full bg-[#f0f2f5] rounded-xl py-2 pr-9 pl-4 text-sm outline-none placeholder-gray-400 text-gray-800"
             />
             {search && (
@@ -416,11 +416,11 @@ export default function ChatPage() {
         {/* Filters */}
         <div className="flex gap-1.5 px-3 py-2 border-b border-gray-100 overflow-x-auto">
           {([
-            { value: "all",      label: "\u0627\u0644\u0643\u0644" },
-            { value: "replied",  label: "\u062a\u0645 \u0627\u0644\u0631\u062f" },
-            { value: "today",    label: "\u0627\u0644\u064a\u0648\u0645" },
-            { value: "unread",   label: "\u063a\u064a\u0631 \u0645\u0642\u0631\u0648\u0621\u0629" },
-            { value: "archived", label: "\u0627\u0644\u0623\u0631\u0634\u064a\u0641" },
+            { value: "all",      label: "الكل" },
+            { value: "replied",  label: "تم الرد" },
+            { value: "today",    label: "اليوم" },
+            { value: "unread",   label: "غير مقروءة" },
+            { value: "archived", label: "الأرشيف" },
           ] as { value: Filter; label: string }[]).map(f => (
             <button
               key={f.value}
@@ -445,17 +445,17 @@ export default function ChatPage() {
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <MessageSquare className="w-12 h-12 text-gray-200 mb-3" />
-              <p className="text-sm text-gray-400 mb-1">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†</p>
-              <p className="text-xs text-gray-300 mb-5">Ø³ØªØ¸Ù‡Ø± Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù‡Ù†Ø§ Ø¨Ø¹Ø¯ Ø±Ø¯ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡</p>
+              <p className="text-sm text-gray-400 mb-1">لا توجد محادثات حتى الآن</p>
+              <p className="text-xs text-gray-300 mb-5">ستظهر المحادثات هنا بعد رد العملاء</p>
               <Button
                 size="sm"
                 className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-1.5"
                 onClick={() => {
-                  // navigate to campaigns via parent state â€” send a custom event
+                  // navigate to campaigns via parent state — send a custom event
                   window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }));
                 }}
               >
-                <Megaphone className="w-4 h-4" /> Ø§Ø¨Ø¯Ø£ Ø­Ù…Ù„Ø© Ø§Ù„Ø¢Ù†
+                <Megaphone className="w-4 h-4" /> ابدأ حملة الآن
               </Button>
             </div>
           ) : (
@@ -492,11 +492,11 @@ export default function ChatPage() {
                       <p className={`text-xs truncate ${isUnread ? "text-[#111b21]" : "text-gray-400"}`}>
                         {last
                           ? <>
-                              {last.direction === "outbound" && <span className="text-gray-400">Ø£Ù†Øª: </span>}
+                              {last.direction === "outbound" && <span className="text-gray-400">أنت: </span>}
                               {typeIcon[last.type]}
                               {typePreview[last.type] ?? last.content ?? ""}
                             </>
-                          : <span className="italic text-gray-300">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±Ø³Ø§Ø¦Ù„</span>
+                          : <span className="italic text-gray-300">لا توجد رسائل</span>
                         }
                       </p>
                       {/* Unread badge */}
@@ -516,7 +516,7 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      {/* â•â•â•â•â•â•â•â•â•â• CHAT â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════ CHAT ══════════ */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
 
         {selected ? (
@@ -547,12 +547,12 @@ export default function ChatPage() {
                   {/* Add to audience */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger className="gap-2 text-sm">
-                      <Plus className="w-4 h-4" /> Ø¥Ø¶Ø§ÙØ© Ù„Ù‚Ø§Ø¦Ù…Ø©
+                      <Plus className="w-4 h-4" /> إضافة لقائمة
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="w-48">
                       {audiences.length === 0 ? (
                         <div className="text-xs text-gray-400 px-3 py-2">
-                          Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ø¦Ù… â€” Ø£Ù†Ø´Ø¦Ù‡Ø§ Ù…Ù† Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„
+                          لا توجد قوائم — أنشئها من جهات الاتصال
                         </div>
                       ) : (
                         audiences.map(a => (
@@ -574,14 +574,14 @@ export default function ChatPage() {
                     className="gap-2 text-sm cursor-pointer"
                     onClick={() => archiveContact(selected.contact.id)}
                   >
-                    <Archive className="w-4 h-4" /> Ø£Ø±Ø´ÙØ© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©
+                    <Archive className="w-4 h-4" /> أرشفة المحادثة
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
                     className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
                     onClick={() => deleteConversation(selected.contact.id)}
                   >
-                    <Trash2 className="w-4 h-4" /> Ø­Ø°Ù Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©
+                    <Trash2 className="w-4 h-4" /> حذف المحادثة
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -602,7 +602,7 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="flex justify-center">
                   <p className="text-xs text-gray-400 bg-white/60 px-4 py-1.5 rounded-full">
-                    Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±Ø³Ø§Ø¦Ù„ Ø¨Ø¹Ø¯
+                    لا توجد رسائل بعد
                   </p>
                 </div>
               ) : (
@@ -632,9 +632,9 @@ export default function ChatPage() {
             {/* Template picker */}
             {showTpl && (
               <div className="bg-white border-t border-gray-200 max-h-56 overflow-y-auto z-10">
-                <p className="text-xs text-gray-400 px-4 pt-3 pb-2 font-medium">Ø§Ø®ØªØ± Ù‚Ø§Ù„Ø¨Ø§Ù‹</p>
+                <p className="text-xs text-gray-400 px-4 pt-3 pb-2 font-medium">اختر قالباً</p>
                 {templates.length === 0 ? (
-                  <p className="text-sm text-gray-400 px-4 pb-3">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯Ø©</p>
+                  <p className="text-sm text-gray-400 px-4 pb-3">لا توجد قوالب معتمدة</p>
                 ) : templates.map(t => (
                   <button
                     key={t.id}
@@ -688,7 +688,7 @@ export default function ChatPage() {
                       <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white flex-shrink-0">
                         <MapPin className="w-4 h-4" />
                       </span>
-                      <span className="text-sm text-gray-700">Ø§Ù„Ù…ÙˆÙ‚Ø¹</span>
+                      <span className="text-sm text-gray-700">الموقع</span>
                     </button>
                     {/* Template */}
                     <button
@@ -698,7 +698,7 @@ export default function ChatPage() {
                       <span className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white flex-shrink-0">
                         <FileText className="w-4 h-4" />
                       </span>
-                      <span className="text-sm text-gray-700">Ù‚Ø§Ù„Ø¨ Ø±Ø³Ù…ÙŠ</span>
+                      <span className="text-sm text-gray-700">قالب رسمي</span>
                     </button>
                   </div>
                 )}
@@ -713,7 +713,7 @@ export default function ChatPage() {
                     e.preventDefault(); sendText();
                   }
                 }}
-                placeholder="Ø§ÙƒØªØ¨ Ø±Ø³Ø§Ù„Ø©..."
+                placeholder="اكتب رسالة..."
                 rows={1}
                 className="flex-1 bg-white rounded-xl px-4 py-2.5 text-sm outline-none resize-none
                   max-h-28 overflow-y-auto text-[#111b21] placeholder-gray-400
@@ -755,10 +755,10 @@ export default function ChatPage() {
                 <MessageSquare className="w-12 h-12 text-[#25d366]" />
               </div>
               <h2 className="text-xl font-light text-[#41525d] mb-2">
-                Ø§Ø®ØªØ± Ù…Ø­Ø§Ø¯Ø«Ø© Ù„Ù„Ø¨Ø¯Ø¡
+                اختر محادثة للبدء
               </h2>
               <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                Ø³ØªØ¸Ù‡Ø± Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ù‡Ù†Ø§ Ø¨Ø¹Ø¯ Ø±Ø¯ÙˆØ¯Ù‡Ù… Ø¹Ù„Ù‰ Ø±Ø³Ø§Ø¦Ù„Ùƒ
+                ستظهر محادثات العملاء هنا بعد ردودهم على رسائلك
               </p>
               {filteredConvs.length === 0 && (
                 <Button
@@ -767,7 +767,7 @@ export default function ChatPage() {
                     window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }));
                   }}
                 >
-                  <Megaphone className="w-4 h-4" /> Ø§Ø¨Ø¯Ø£ Ø­Ù…Ù„Ø© Ø§Ù„Ø¢Ù†
+                  <Megaphone className="w-4 h-4" /> ابدأ حملة الآن
                 </Button>
               )}
             </div>
