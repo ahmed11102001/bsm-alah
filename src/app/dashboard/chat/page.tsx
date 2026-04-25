@@ -67,6 +67,12 @@ const typePreview: Record<string, string> = {
   audio: "🎙 رسالة صوتية", document: "📄 ملف",
 };
 
+function mediaSrc(mediaUrl: string, opts?: { download?: boolean }) {
+  if (/^https?:\/\//i.test(mediaUrl)) return mediaUrl;
+  const base = `/api/chat/media/${encodeURIComponent(mediaUrl)}`;
+  return opts?.download ? `${base}?download=1` : base;
+}
+
 function MsgTick({ status, isMe }: { status: string; isMe: boolean }) {
   if (!isMe) return null;
   if (status === "pending")   return <Clock className="w-3 h-3 opacity-60" />;
@@ -95,6 +101,17 @@ function dateStr(iso: string) {
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 function Bubble({ msg }: { msg: Message }) {
   const isMe = msg.direction === "outbound";
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
+  const resolvedMediaSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl) : null;
+  const resolvedMediaDownloadSrc = msg.mediaUrl
+    ? mediaSrc(msg.mediaUrl, { download: true })
+    : null;
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+  }, [speed, msg.id]);
+
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1`}>
       <div
@@ -102,17 +119,48 @@ function Bubble({ msg }: { msg: Message }) {
           ${isMe ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}`}
       >
         {/* media */}
-        {msg.type === "image" && msg.mediaUrl && (
-          <img src={msg.mediaUrl} alt="" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
+        {msg.type === "image" && resolvedMediaSrc && (
+          <>
+            <a href={resolvedMediaSrc} target="_blank" rel="noreferrer">
+              <img src={resolvedMediaSrc} alt="صورة واردة" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
+            </a>
+            {resolvedMediaDownloadSrc && (
+              <a
+                href={resolvedMediaDownloadSrc}
+                download
+                className="inline-flex items-center text-[11px] text-blue-600 hover:underline mb-1"
+              >
+                حفظ الصورة
+              </a>
+            )}
+          </>
         )}
-        {msg.type === "video" && msg.mediaUrl && (
-          <video src={msg.mediaUrl} controls className="rounded-lg mb-1 max-w-full max-h-48" />
+        {msg.type === "video" && resolvedMediaSrc && (
+          <video src={resolvedMediaSrc} controls className="rounded-lg mb-1 max-w-full max-h-48" />
         )}
-        {msg.type === "audio" && msg.mediaUrl && (
-          <audio src={msg.mediaUrl} controls className="mb-1 w-48" />
+        {msg.type === "audio" && resolvedMediaSrc && (
+          <>
+            <audio ref={audioRef} src={resolvedMediaSrc} controls className="mb-1 w-56" />
+            <div className="flex items-center gap-1 mb-1">
+              {[1, 1.5, 2].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setSpeed(r as 1 | 1.5 | 2)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${
+                    speed === r
+                      ? "bg-[#25d366] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {r}x
+                </button>
+              ))}
+            </div>
+          </>
         )}
-        {msg.type === "document" && msg.mediaUrl && (
-          <a href={msg.mediaUrl} target="_blank" rel="noreferrer"
+        {msg.type === "document" && resolvedMediaSrc && (
+          <a href={resolvedMediaSrc} target="_blank" rel="noreferrer"
             className="flex items-center gap-2 text-blue-600 text-xs mb-1 hover:underline">
             <FileText className="w-4 h-4" /> تحميل الملف
           </a>
