@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +65,17 @@ interface Campaign {
   createdAt: string;
   completedAt: string | null;
   template: { name: string; content: string } | null;
+}
+
+interface AudienceContact {
+  phone: string;
+}
+
+interface AudienceOption {
+  id: string;
+  name: string;
+  type: string;
+  contactCount: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -358,7 +368,9 @@ export default function Campaigns() {
 
   // ── Step 1: numbers ─────────────────────────────────────────────
   const [numbers, setNumbers] = useState<string[]>([]);
-  const [manualInput, setManualInput] = useState("");
+  const [audiences, setAudiences] = useState<AudienceOption[]>([]);
+  const [selectedAudienceId, setSelectedAudienceId] = useState("");
+  const [importingAudience, setImportingAudience] = useState(false);
 
   // ── Step 2: template ────────────────────────────────────────────
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -401,16 +413,35 @@ export default function Campaigns() {
     }
   }, []);
 
+  const loadAudiences = useCallback(async () => {
+    try {
+      const res = await fetch("/api/audiences");
+      const data = await res.json();
+      const list: AudienceOption[] = (Array.isArray(data) ? data : [])
+        .filter((a) => ["excel", "custom"].includes(a.type))
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          contactCount: Number(a.contactCount ?? 0),
+        }));
+      setAudiences(list);
+    } catch {
+      toast.error("فشل في تحميل جهات الاتصال");
+    }
+  }, []);
+
   useEffect(() => {
     loadCampaigns();
     loadTemplates();
-  }, [loadCampaigns, loadTemplates]);
+    loadAudiences();
+  }, [loadCampaigns, loadTemplates, loadAudiences]);
 
   // ── Helpers ──────────────────────────────────────────────────────
   const resetDialog = () => {
     setStep(1);
     setNumbers([]);
-    setManualInput("");
+    setSelectedAudienceId("");
     setSelectedTemplate(templates[0] ?? null);
     setCampaignName("");
     setSendMode("now");
@@ -443,19 +474,38 @@ export default function Campaigns() {
     e.target.value = "";
   };
 
-  const addManual = () => {
-    const parsed = manualInput
-      .split(/[\n,،\s]+/)
-      .map((v) => cleanNumber(v.trim()))
-      .filter(isValidPhone);
-    if (parsed.length === 0) {
-      toast.error("لا توجد أرقام صالحة");
+  const importAudienceContacts = async () => {
+    if (!selectedAudienceId) {
+      toast.error("اختر جهة اتصال أولاً");
       return;
     }
-    const unique = [...new Set([...numbers, ...parsed])];
-    setNumbers(unique);
-    setManualInput("");
-    toast.success(`تمت إضافة ${parsed.length} رقم`);
+
+    setImportingAudience(true);
+    try {
+      const res = await fetch(
+        `/api/audiences?audienceId=${encodeURIComponent(selectedAudienceId)}&includeContacts=all`
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل في تحميل جهة الاتصال");
+
+      const contacts: AudienceContact[] = Array.isArray(data.contacts) ? data.contacts : [];
+      const extracted = contacts
+        .map((c) => cleanNumber(String(c.phone ?? "").trim()))
+        .filter(isValidPhone);
+
+      if (extracted.length === 0) {
+        toast.error("جهة الاتصال لا تحتوي على أرقام صالحة");
+        return;
+      }
+
+      const unique = [...new Set([...numbers, ...extracted])];
+      setNumbers(unique);
+      toast.success(`تم استيراد ${extracted.length} رقم`);
+    } catch (err: unknown) {
+      toast.error((err as Error).message);
+    } finally {
+      setImportingAudience(false);
+    }
   };
 
   const goStep2 = () => {
@@ -667,30 +717,44 @@ export default function Campaigns() {
                 </label>
               </div>
 
-              {/* Manual */}
+              {/* Import audience */}
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  أو أضف أرقاماً يدوياً
+                  أو استيراد جهة اتصال
                 </Label>
-                <Textarea
-                  dir="ltr"
-                  placeholder={"201234567890\n201098765432"}
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  className="font-mono text-sm min-h-[90px] resize-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  رقم في كل سطر — الصيغة: 20 ثم 10 أرقام
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2"
-                  onClick={addManual}
-                  disabled={!manualInput.trim()}
-                >
-                  إضافة الأرقام
-                </Button>
+                <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+                  <Select value={selectedAudienceId} onValueChange={setSelectedAudienceId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر قائمة من جهات الاتصال..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {audiences.length === 0 ? (
+                        <SelectItem value="no-audiences" disabled>
+                          لا توجد قوائم متاحة
+                        </SelectItem>
+                      ) : (
+                        audiences.map((audience) => (
+                          <SelectItem key={audience.id} value={audience.id}>
+                            {audience.name} ({audience.contactCount.toLocaleString("ar-EG")})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={importAudienceContacts}
+                    disabled={!selectedAudienceId || importingAudience}
+                  >
+                    {importingAudience ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
+                    استيراد جهة الاتصال
+                  </Button>
+                </div>
               </div>
 
               {/* Numbers preview */}

@@ -16,6 +16,39 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   const userId = uid(session);
+  const { searchParams } = new URL(req.url);
+  const audienceId = searchParams.get("audienceId");
+  const includeContacts = searchParams.get("includeContacts");
+
+  // Used by campaign flow to import all contacts from a specific audience
+  if (audienceId) {
+    const audience = await prisma.audience.findFirst({
+      where: { id: audienceId, userId },
+      include: {
+        contacts: {
+          where: { deletedAt: null },
+          ...(includeContacts === "all" ? {} : { take: 5 }),
+          select: { id: true, phone: true, name: true },
+        },
+        _count: {
+          select: { contacts: { where: { deletedAt: null } } },
+        },
+      },
+    });
+
+    if (!audience)
+      return NextResponse.json({ error: "الجمهور غير موجود" }, { status: 404 });
+
+    return NextResponse.json({
+      id:           audience.id,
+      name:         audience.name,
+      notes:        null,
+      type:         audience.type ?? "excel",
+      contacts:     audience.contacts,
+      contactCount: audience._count.contacts,
+      createdAt:    audience.createdAt.toISOString(),
+    });
+  }
 
   // ── 1. regular audiences (excel + custom) ──────────────────────
   const rawAudiences = await prisma.audience.findMany({
@@ -37,7 +70,7 @@ export async function GET(req: NextRequest) {
     id:           a.id,
     name:         a.name,
     notes:        null as string | null,
-    type:         (a as any).type as string ?? "excel",
+    type:         a.type ?? "excel",
     contacts:     a.contacts,
     contactCount: a._count.contacts,
     createdAt:    a.createdAt.toISOString(),
