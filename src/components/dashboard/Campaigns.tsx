@@ -57,6 +57,8 @@ interface Campaign {
   id: string;
   name: string;
   status: "draft" | "scheduled" | "running" | "completed" | "failed";
+  totalQueued?: number;
+  queuedCount?: number;
   sentCount: number;
   deliveredCount: number;
   readCount: number;
@@ -156,13 +158,21 @@ function CampaignCard({
   onDelete,
   onRepeat,
   onDetails,
+  repeatBlocked,
+  repeatBlockedNote,
 }: {
   campaign: Campaign;
   onDelete: () => void;
   onRepeat: () => void;
   onDetails: () => void;
+  repeatBlocked: boolean;
+  repeatBlockedNote: string;
 }) {
   const cfg = statusConfig[campaign.status] ?? statusConfig.draft;
+  const totalRecipients =
+    campaign.totalQueued && campaign.totalQueued > 0
+      ? campaign.totalQueued
+      : Math.max(campaign.sentCount + campaign.failedCount, campaign.sentCount, 1);
   const total = campaign.sentCount || 1;
   const deliveryRate = Math.round((campaign.deliveredCount / total) * 100);
   const readRate     = Math.round((campaign.readCount / total) * 100);
@@ -187,6 +197,9 @@ function CampaignCard({
                     قالب: {campaign.template.name}
                   </span>
                 )}
+                <span className="text-xs text-gray-500">
+                  {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")} مرسل
+                </span>
                 {campaign.scheduledAt && campaign.status === "scheduled" && (
                   <span className="text-xs text-yellow-600">
                     {new Date(campaign.scheduledAt).toLocaleString("ar-EG", {
@@ -194,6 +207,9 @@ function CampaignCard({
                     })}
                   </span>
                 )}
+                <span className="text-xs text-gray-400">
+                  توقيت الإرسال: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}
+                </span>
               </div>
             </div>
           </div>
@@ -209,9 +225,10 @@ function CampaignCard({
             </Button>
             <Button
               size="sm" variant="ghost"
-              className="h-8 px-2 text-gray-500 hover:text-green-600 hover:bg-green-50"
+              className="h-8 px-2 text-gray-500 hover:text-green-600 hover:bg-green-50 disabled:text-gray-300 disabled:hover:bg-transparent"
               onClick={onRepeat}
-              title="تكرار الحملة"
+              title={repeatBlocked ? repeatBlockedNote : "تكرار الحملة"}
+              disabled={repeatBlocked}
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -256,6 +273,12 @@ function CampaignCard({
             مجدولة للإرسال: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}
           </div>
         )}
+
+        {repeatBlocked && (
+          <div className="border-t border-amber-100 bg-amber-50/70 px-4 py-2 text-xs text-amber-700 rounded-b-lg">
+            {repeatBlockedNote}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -273,6 +296,10 @@ function DetailsModal({
 }) {
   if (!campaign) return null;
   const total = campaign.sentCount || 1;
+  const totalRecipients =
+    campaign.totalQueued && campaign.totalQueued > 0
+      ? campaign.totalQueued
+      : Math.max(campaign.sentCount + campaign.failedCount, campaign.sentCount, 1);
   const cfg = statusConfig[campaign.status] ?? statusConfig.draft;
 
   const stats = [
@@ -342,6 +369,8 @@ function DetailsModal({
 
         {/* Meta */}
         <div className="text-xs text-gray-400 space-y-1 pt-1 border-t border-gray-100">
+          <p>المرسل: {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")}</p>
+          <p>توقيت الإرسال: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}</p>
           <p>تاريخ الإنشاء: {new Date(campaign.createdAt).toLocaleString("ar-EG")}</p>
           {campaign.completedAt && (
             <p>تاريخ الاكتمال: {new Date(campaign.completedAt).toLocaleString("ar-EG")}</p>
@@ -390,7 +419,7 @@ export default function Campaigns() {
       setLoadingList(true);
       const res = await fetch("/api/campaigns");
       const data = await res.json();
-      setCampaigns(Array.isArray(data) ? data : data.data ?? []);
+      setCampaigns(Array.isArray(data) ? data : data.campaigns ?? data.data ?? []);
     } catch {
       toast.error("فشل في تحميل الحملات");
     } finally {
@@ -582,6 +611,15 @@ export default function Campaigns() {
 
   // ── Repeat ────────────────────────────────────────────────────────
   const handleRepeat = async (campaign: Campaign) => {
+    const createdAt = new Date(campaign.createdAt).getTime();
+    const elapsedMs = Date.now() - createdAt;
+    const min48Hours = 48 * 60 * 60 * 1000;
+    if (elapsedMs < min48Hours) {
+      const hoursLeft = Math.ceil((min48Hours - elapsedMs) / (60 * 60 * 1000));
+      toast.error(`تكرار الحملة متاح بعد 48 ساعة من إنشائها. متبقي حوالي ${hoursLeft} ساعة.`);
+      return;
+    }
+
     const toastId = toast.loading("جاري تكرار الحملة...");
     try {
       const res = await fetch("/api/campaigns", {
@@ -667,15 +705,28 @@ export default function Campaigns() {
         </div>
       ) : (
         <div className="space-y-3">
-          {campaigns.map((c) => (
+          {campaigns.map((c) => {
+            const createdAt = new Date(c.createdAt).getTime();
+            const elapsedMs = Date.now() - createdAt;
+            const min48Hours = 48 * 60 * 60 * 1000;
+            const repeatBlocked = elapsedMs < min48Hours;
+            const hoursLeft = Math.ceil((min48Hours - elapsedMs) / (60 * 60 * 1000));
+            const repeatBlockedNote = repeatBlocked
+              ? `يمكن تكرار الحملة بعد مرور 48 ساعة من إنشائها (المتبقي تقريبًا ${hoursLeft} ساعة).`
+              : "";
+
+            return (
             <CampaignCard
               key={c.id}
               campaign={c}
               onDelete={() => handleDelete(c.id)}
               onRepeat={() => handleRepeat(c)}
               onDetails={() => setDetailsCampaign(c)}
+              repeatBlocked={repeatBlocked}
+              repeatBlockedNote={repeatBlockedNote}
             />
-          ))}
+            );
+          })}
         </div>
       )}
 

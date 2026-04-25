@@ -218,6 +218,15 @@ async function handleRepeat(userId: string, campaignId: string) {
   if (!original) return NextResponse.json({ error: "الحملة غير موجودة" }, { status: 404 });
   if (!original.template) return NextResponse.json({ error: "القالب غير موجود" }, { status: 400 });
 
+  // منع التكرار قبل مرور 48 ساعة من إنشاء الحملة
+  const minRepeatAt = new Date(original.createdAt.getTime() + 48 * 60 * 60 * 1000);
+  if (new Date() < minRepeatAt) {
+    return NextResponse.json(
+      { error: `تكرار الحملة متاح بعد 48 ساعة من إنشائها. متاح بعد: ${minRepeatAt.toLocaleString("ar-EG")}` },
+      { status: 400 }
+    );
+  }
+
   const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
   if (!account) return NextResponse.json({ error: "لم يتم ربط حساب واتساب" }, { status: 400 });
 
