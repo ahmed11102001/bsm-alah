@@ -8,7 +8,7 @@ import {
   checkCampaignsLimit, checkFeature,
   incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
-import { enqueueCampaign } from "@/lib/queue";
+import { enqueueCampaign, processQueue } from "@/lib/queue";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -185,6 +185,13 @@ async function handleCreate(userId: string, body: any) {
   // ✅ زيادة عداد الحملات
   await incrementCampaignUsage(userId);
 
+  // ✅ لو مش مجدولة — شغّل الـ Queue فوراً بدل انتظار الـ Cron
+  if (!isScheduled) {
+    processQueue().catch((err) =>
+      console.error("[campaigns] processQueue error:", err)
+    );
+  }
+
   return NextResponse.json({
     success:    true,
     campaignId: campaign.id,
@@ -192,7 +199,7 @@ async function handleCreate(userId: string, body: any) {
     scheduled:  isScheduled,
     message:    isScheduled
       ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-      : `تم إضافة ${queued} رسالة للـ Queue — الإرسال يبدأ خلال دقيقة`,
+      : `تم إنشاء الحملة — جاري الإرسال`,
   });
 }
 
@@ -266,10 +273,15 @@ async function handleRepeat(userId: string, campaignId: string) {
 
   await incrementCampaignUsage(userId);
 
+  // شغّل الـ Queue فوراً
+  processQueue().catch((err) =>
+    console.error("[campaigns/repeat] processQueue error:", err)
+  );
+
   return NextResponse.json({
     success:    true,
     campaignId: newCampaign.id,
     queued,
-    message:    `تم تكرار الحملة — ${queued} رسالة في الـ Queue`,
+    message:    `تم تكرار الحملة — جاري الإرسال`,
   });
 }
