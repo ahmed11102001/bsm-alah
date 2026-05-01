@@ -20,14 +20,20 @@ const endpoints = [
 export default function API({ initialData }: { initialData?: any }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false); // حالة خاصة بمزامنة القوالب
+  const [isSyncing, setIsSyncing] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
 
   useEffect(() => {
     fetch("/api/me/api-key")
       .then((res) => res.json())
       .then((data) => setApiKey(data.apiKey))
       .catch(() => setApiKey("not-available"));
+
+    fetch("/api/me/webhook-config")
+      .then((res) => res.json())
+      .then((data) => setVerifyToken(data.verifyToken ?? ""))
+      .catch(() => setVerifyToken(""));
   }, []);
 
   const copyToClipboard = (text: string) => {
@@ -206,13 +212,13 @@ export default function API({ initialData }: { initialData?: any }) {
               <div className="space-y-2">
                 <Label className="text-blue-600 font-bold">Verify Token</Label>
                 <div className="flex gap-2">
-                  <Input 
-                    readOnly 
-                    value="bsm_alah_2026" 
+                  <Input
+                    readOnly
+                    value={verifyToken || "جاري التحميل..."}
                     className="bg-gray-50 font-mono text-sm"
                     dir="ltr"
                   />
-                  <Button variant="outline" size="icon" onClick={() => copyToClipboard("bsm_alah_2026")}>
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard(verifyToken)} disabled={!verifyToken}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
