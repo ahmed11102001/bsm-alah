@@ -10,6 +10,10 @@ import {
 } from "@/lib/plan-guard";
 import { enqueueCampaign, processQueue } from "@/lib/queue";
 
+// حملة صغيرة: نبعتها فوراً بـ await — 50 × 350ms ≈ 17s (آمن على Vercel)
+// حملة كبيرة: الـ Cron هيبعتها في أقل من دقيقة
+const SMALL_CAMPAIGN_LIMIT = 50;
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -185,11 +189,11 @@ async function handleCreate(userId: string, body: any) {
   // ✅ زيادة عداد الحملات
   await incrementCampaignUsage(userId);
 
-  // ✅ لو مش مجدولة — شغّل الـ Queue فوراً بدل انتظار الـ Cron
-  if (!isScheduled) {
-    processQueue().catch((err) =>
-      console.error("[campaigns] processQueue error:", err)
-    );
+  // ✅ تشغيل الـ Queue بذكاء حسب حجم الحملة:
+  // - حملة صغيرة (≤ 50): await مباشر — آمن (أقل من 20 ثانية)
+  // - حملة كبيرة (> 50): الـ Cron هيبعتها في أقل من دقيقة تلقائياً
+  if (!isScheduled && numbers.length <= SMALL_CAMPAIGN_LIMIT) {
+    await processQueue();
   }
 
   return NextResponse.json({
@@ -199,7 +203,9 @@ async function handleCreate(userId: string, body: any) {
     scheduled:  isScheduled,
     message:    isScheduled
       ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-      : `تم إنشاء الحملة — جاري الإرسال`,
+      : numbers.length <= SMALL_CAMPAIGN_LIMIT
+        ? `تم إنشاء الحملة — جاري الإرسال`
+        : `تم إنشاء الحملة — سيبدأ الإرسال خلال دقيقة`,
   });
 }
 
@@ -273,15 +279,17 @@ async function handleRepeat(userId: string, campaignId: string) {
 
   await incrementCampaignUsage(userId);
 
-  // شغّل الـ Queue فوراً
-  processQueue().catch((err) =>
-    console.error("[campaigns/repeat] processQueue error:", err)
-  );
+  // نفس المنطق — حملة صغيرة فوراً، كبيرة على الـ Cron
+  if (numbers.length <= SMALL_CAMPAIGN_LIMIT) {
+    await processQueue();
+  }
 
   return NextResponse.json({
     success:    true,
     campaignId: newCampaign.id,
     queued,
-    message:    `تم تكرار الحملة — جاري الإرسال`,
+    message:    numbers.length <= SMALL_CAMPAIGN_LIMIT
+      ? `تم تكرار الحملة — جاري الإرسال`
+      : `تم تكرار الحملة — سيبدأ الإرسال خلال دقيقة`,
   });
 }
