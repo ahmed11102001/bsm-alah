@@ -201,8 +201,12 @@ model MessageQueue {
   nextRetryAt DateTime?
 
   // ─ النتيجة
-  whatsappMsgId String? // ID اللي رجعته Meta بعد الإرسال
-  error         String? @db.Text
+  whatsappMsgId    String? // ID اللي رجعته Meta بعد الإرسال
+  error            String? @db.Text
+
+  // ─ ربط برسالة Chat موجودة (لرسائل الـ Chat الفردية)
+  // لو موجود → نعمل update للرسالة دي بدل create جديدة
+  existingMessageId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

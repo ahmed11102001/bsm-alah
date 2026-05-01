@@ -10,10 +10,6 @@ function uid(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
 
-async function whatsappAccount(userId: string) {
-  return prisma.whatsAppAccount.findUnique({ where: { userId } });
-}
-
 // ─── GET /api/chat ─────────────────────────────────────────────────────────────
 //   ?type=conversations&filter=all|unread|replied|today|archived&search=
 //   ?type=messages&contactId=
@@ -245,82 +241,63 @@ async function sendMessage(
   if (type === "text" && !content?.trim())
     return NextResponse.json({ error: "محتوى الرسالة مطلوب" }, { status: 400 });
 
-  const contact = await prisma.contact.findFirst({ where: { id: contactId, userId } });
+  // ── جيب الـ contact والـ account بالتوازي (بدل sequential) ──────────────
+  const [contact, account] = await Promise.all([
+    prisma.contact.findFirst({ where: { id: contactId, userId } }),
+    prisma.whatsAppAccount.findUnique({ where: { userId } }),
+  ]);
+
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+  if (!account)  return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
-  const account = await whatsappAccount(userId);
-  if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
+  const isTemplate = type === "template" && !!templateName;
+  const msgType: MessageType = isTemplate ? MessageType.template : MessageType.text;
+  const msgContent = content ?? `[قالب] ${templateName}`;
 
-  // Build Meta payload
-  let metaPayload: object;
-  let msgType: MessageType = MessageType.text;
-
-  if (type === "template" && templateName) {
-    msgType = MessageType.template;
-    metaPayload = {
-      messaging_product: "whatsapp",
-      to: contact.phone,
-      type: "template",
-      template: { name: templateName, language: { code: "ar" } },
-    };
-  } else {
-    metaPayload = {
-      messaging_product: "whatsapp",
-      to: contact.phone,
-      type: "text",
-      text: { body: content! },
-    };
-  }
-
-  // Create pending record first
-  const pending = await prisma.message.create({
-    data: {
-      userId, contactId,
-      content: content ?? `[قالب] ${templateName}`,
-      type: msgType,
-      direction: MessageDirection.outbound,
-      status: MessageStatus.pending,
-    },
-  });
-
-  // Send to Meta
-  const metaRes = await fetch(
-    `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${account.accessToken}`,
-        "Content-Type": "application/json",
+  // ── احفظ الرسالة pending + ضيفها في الـ Queue في transaction واحدة ──────
+  const pending = await prisma.$transaction(async (tx) => {
+    const msg = await tx.message.create({
+      data: {
+        userId, contactId,
+        content:   msgContent,
+        type:      msgType,
+        direction: MessageDirection.outbound,
+        status:    MessageStatus.pending,
       },
-      body: JSON.stringify(metaPayload),
-    }
-  );
-
-  const metaData = await metaRes.json();
-
-  if (metaData.error) {
-    await prisma.message.update({
-      where: { id: pending.id },
-      data: { status: MessageStatus.failed, error: metaData.error.message },
     });
-    return NextResponse.json({ error: metaData.error.message }, { status: 400 });
-  }
 
-  const updated = await prisma.message.update({
-    where: { id: pending.id },
-    data: {
-      status: MessageStatus.sent,
-      whatsappId: metaData.messages?.[0]?.id,
-      sentAt: new Date(),
-    },
+    // ضيف في الـ Queue — الـ Cron هيبعتها خلال أقل من دقيقة
+    // نفس الـ rate-limit وbackoff وretry logic بتاع الحملات
+    await tx.messageQueue.create({
+      data: {
+        userId,
+        whatsappAccountId: account.id,
+        phoneNumberId:     account.phoneNumberId,
+        accessTokenSnap:   account.accessToken,
+        toPhone:           contact.phone,
+        contactId,
+        messageType:       isTemplate ? "template" : "text",
+        templateName:      isTemplate ? templateName : null,
+        templateLang:      "ar",
+        content:           isTemplate ? null : content!,
+        scheduledAt:       new Date(),
+        status:            "pending",
+        maxAttempts:       3,
+        existingMessageId: msg.id, // ← الـ Cron هيعمل update للرسالة دي مش create جديدة
+      },
+    });
+
+    // حدّث lastMessageAt فوراً
+    await tx.contact.update({
+      where: { id: contactId },
+      data:  { lastMessageAt: new Date() },
+    });
+
+    return msg;
   });
 
-  await prisma.contact.update({
-    where: { id: contactId },
-    data: { lastMessageAt: new Date() },
-  });
-
-  return NextResponse.json({ success: true, message: updated });
+  // ارجع فوراً — الـ UI يشوف الرسالة pending، والـ Cron يبعتها
+  return NextResponse.json({ success: true, message: pending });
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────

@@ -253,6 +253,7 @@ export async function processQueue(): Promise<ProcessResult> {
           maxAttempts:     true,
           phoneNumberId:   true,
           accessTokenSnap: true,
+          existingMessageId: true, // ← لرسائل الـ Chat الفردية
         },
       });
 
@@ -316,7 +317,7 @@ export async function processQueue(): Promise<ProcessResult> {
             },
           });
 
-          // 2. أنشئ Message record للمحادثات
+          // 2. أنشئ أو حدّث Message record للمحادثات
           const contact = item.contactId
             ? await tx.contact.findFirst({ where: { id: item.contactId }, select: { id: true } })
             : await tx.contact.upsert({
@@ -326,19 +327,32 @@ export async function processQueue(): Promise<ProcessResult> {
               });
 
           if (contact) {
-            await tx.message.create({
-              data: {
-                userId:     item.userId,
-                contactId:  contact.id,
-                campaignId: item.campaignId ?? undefined,
-                content:    item.templateName ? `[قالب] ${item.templateName}` : item.content,
-                type:       MessageType.template,
-                direction:  MessageDirection.outbound,
-                status:     MessageStatus.sent,
-                whatsappId: sendResult.whatsappMsgId,
-                sentAt:     new Date(),
-              },
-            });
+            if (item.existingMessageId) {
+              // رسالة Chat فردية — حدّث الـ pending record الموجود
+              await tx.message.update({
+                where: { id: item.existingMessageId },
+                data: {
+                  status:     MessageStatus.sent,
+                  whatsappId: sendResult.whatsappMsgId,
+                  sentAt:     new Date(),
+                },
+              });
+            } else {
+              // رسالة حملة — أنشئ record جديد
+              await tx.message.create({
+                data: {
+                  userId:     item.userId,
+                  contactId:  contact.id,
+                  campaignId: item.campaignId ?? undefined,
+                  content:    item.templateName ? `[قالب] ${item.templateName}` : item.content,
+                  type:       MessageType.template,
+                  direction:  MessageDirection.outbound,
+                  status:     MessageStatus.sent,
+                  whatsappId: sendResult.whatsappMsgId,
+                  sentAt:     new Date(),
+                },
+              });
+            }
 
             // تحديث آخر رسالة للكونتاكت
             await tx.contact.update({
@@ -425,12 +439,21 @@ export async function processQueue(): Promise<ProcessResult> {
             },
           });
 
-          // لو فشل نهائي → سجّل في الـ Message بحالة failed
-          if (isFinal && item.contactId && item.campaignId) {
-            await tx.campaign.update({
-              where: { id: item.campaignId },
-              data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
-            });
+          // لو فشل نهائي → حدّث الـ Message بحالة failed
+          if (isFinal) {
+            if (item.existingMessageId) {
+              // رسالة Chat — حدّث الـ pending record
+              await tx.message.update({
+                where: { id: item.existingMessageId },
+                data:  { status: MessageStatus.failed, error: sendResult.error },
+              });
+            } else if (item.contactId && item.campaignId) {
+              // رسالة حملة — حدّث عداد الفشل
+              await tx.campaign.update({
+                where: { id: item.campaignId },
+                data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              });
+            }
           }
         });
       }
@@ -525,6 +548,44 @@ export async function enqueueCampaign(params: {
   });
 
   return { queued: numbers.length };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// enqueueDirectMessage: رسالة chat فردية → Queue (بدل fire-and-forget)
+// الـ Cron هيبعتها خلال أقل من دقيقة مع نفس الـ rate-limit وbackoff logic
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function enqueueDirectMessage(params: {
+  messageId:        string;   // الـ Message record اللي اتحفظ pending
+  userId:           string;
+  contactId:        string;
+  toPhone:          string;
+  content:          string;
+  whatsappAccountId: string;
+  phoneNumberId:    string;
+  accessToken:      string;
+}): Promise<void> {
+  const {
+    messageId, userId, contactId, toPhone, content,
+    whatsappAccountId, phoneNumberId, accessToken,
+  } = params;
+
+  await prisma.messageQueue.create({
+    data: {
+      userId,
+      whatsappAccountId,
+      phoneNumberId,
+      accessTokenSnap:  accessToken,
+      toPhone,
+      contactId,
+      messageType:      "text",
+      content,
+      scheduledAt:      new Date(), // ابعت فوراً في أول cron run
+      status:           QueueStatus.pending,
+      // ربط الـ Queue record بالـ Message الـ pending عشان يقدر يحدّثه
+      // بنحطه في حقل campaignId مش مناسب — الـ message record نفسه
+      // هيتحدّث عن طريق whatsappId لما الـ webhook يرجع
+    },
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
