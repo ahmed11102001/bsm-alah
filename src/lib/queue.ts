@@ -81,7 +81,7 @@ async function sendOneMessage(item: {
   let payload: object;
 
   if (item.messageType === "template" && item.templateName) {
-    // بناء components لو في متغيرات
+    // ── قالب ──────────────────────────────────────────────────────────────────
     const components: object[] = [];
     if (item.templateVars && Array.isArray(item.templateVars.body)) {
       components.push({
@@ -102,8 +102,23 @@ async function sendOneMessage(item: {
         components: components.length ? components : undefined,
       },
     };
+
+  } else if (item.messageType === "media" && item.content) {
+    // ── ميديا (image / video / audio / document) ──────────────────────────────
+    // content بيتخزن بصيغة "mediaType:mediaId"  مثلاً "image:12345678"
+    const colonIdx = item.content.indexOf(":");
+    const mediaType = colonIdx > -1 ? item.content.slice(0, colonIdx) : "document";
+    const mediaId   = colonIdx > -1 ? item.content.slice(colonIdx + 1) : item.content;
+
+    payload = {
+      messaging_product: "whatsapp",
+      to:                item.toPhone,
+      type:              mediaType,
+      [mediaType]:       { id: mediaId },
+    };
+
   } else {
-    // رسالة نصية عادية
+    // ── نص عادي ───────────────────────────────────────────────────────────────
     payload = {
       messaging_product: "whatsapp",
       to:                item.toPhone,

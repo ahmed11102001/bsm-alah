@@ -301,23 +301,31 @@ async function sendMessage(
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
+// الـ flow:
+//   1. ارفع الملف على Meta فوراً عشان تجيب media_id  (~1-2 ثانية)
+//   2. احفظ pending message + ضيف في Queue
+//   3. ارجع للـ UI فوراً — الـ Cron يبعت رسالة الإرسال
 async function sendMedia(userId: string, req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file     = formData.get("file") as File | null;
-    const contactId= formData.get("contactId") as string | null;
-    const fileType = (formData.get("type") as string | null) ?? "document";
+    const formData  = await req.formData();
+    const file      = formData.get("file") as File | null;
+    const contactId = formData.get("contactId") as string | null;
+    const fileType  = (formData.get("type") as string | null) ?? "document";
 
     if (!file || !contactId)
       return NextResponse.json({ error: "file و contactId مطلوبان" }, { status: 400 });
 
-    const contact = await prisma.contact.findFirst({ where: { id: contactId, userId } });
+    // جيب الـ contact والـ account بالتوازي
+    const [contact, account] = await Promise.all([
+      prisma.contact.findFirst({ where: { id: contactId, userId } }),
+      prisma.whatsAppAccount.findUnique({ where: { userId } }),
+    ]);
+
     if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+    if (!account)  return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
-    const account = await whatsappAccount(userId);
-    if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
-
-    // Step 1: Upload media to Meta
+    // ── Step 1: ارفع الملف على Meta عشان تجيب media_id ──────────────────────
+    // ده لازم يحصل في الـ request — مش ممكن ترفع File object في Queue
     const uploadForm = new FormData();
     uploadForm.append("file", file, file.name);
     uploadForm.append("messaging_product", "whatsapp");
@@ -341,61 +349,58 @@ async function sendMedia(userId: string, req: NextRequest) {
 
     const mediaId = uploadData.id as string;
 
-    // Step 2: Map type to Meta type
-    const metaTypeMap: Record<string, string> = {
-      image: "image", video: "video", audio: "audio", document: "document",
-    };
-    const metaType = metaTypeMap[fileType] ?? "document";
-
-    // Step 3: Send the media message
-    const msgPayload: any = {
-      messaging_product: "whatsapp",
-      to: contact.phone,
-      type: metaType,
-      [metaType]: { id: mediaId },
-    };
-
-    const sendRes = await fetch(
-      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${account.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(msgPayload),
-      }
-    );
-    const sendData = await sendRes.json();
-
-    if (sendData.error) {
-      return NextResponse.json({ error: sendData.error.message }, { status: 400 });
-    }
-
+    // map نوع الملف
     const msgTypeMap: Record<string, MessageType> = {
-      image: MessageType.image, video: MessageType.image,
-      audio: MessageType.audio, document: MessageType.document,
+      image: MessageType.image,
+      video: MessageType.image,   // مفيش video enum — بنستخدم image
+      audio: MessageType.audio,
+      document: MessageType.document,
     };
+    const msgType = msgTypeMap[fileType] ?? MessageType.document;
+    const metaType = fileType === "video" ? "video" : fileType; // Meta بيقبل video
 
-    const saved = await prisma.message.create({
-      data: {
-        userId, contactId,
-        content: file.name,
-        type: msgTypeMap[fileType] ?? MessageType.document,
-        direction: MessageDirection.outbound,
-        status: MessageStatus.sent,
-        whatsappId: sendData.messages?.[0]?.id,
-        mediaUrl: mediaId,
-        sentAt: new Date(),
-      },
+    // ── Step 2: احفظ pending + ضيف في Queue في transaction واحدة ────────────
+    const pending = await prisma.$transaction(async (tx) => {
+      const msg = await tx.message.create({
+        data: {
+          userId, contactId,
+          content:   file.name,
+          type:      msgType,
+          direction: MessageDirection.outbound,
+          status:    MessageStatus.pending,
+          mediaUrl:  mediaId,   // نحفظ الـ media_id هنا للـ preview في الـ UI
+        },
+      });
+
+      // ضيف في Queue — الـ Cron هيبعت رسالة الإرسال
+      await tx.messageQueue.create({
+        data: {
+          userId,
+          whatsappAccountId: account.id,
+          phoneNumberId:     account.phoneNumberId,
+          accessTokenSnap:   account.accessToken,
+          toPhone:           contact.phone,
+          contactId,
+          messageType:       "media",
+          content:           `${metaType}:${mediaId}`, // نحتفظ بالنوع والـ ID معاً
+          scheduledAt:       new Date(),
+          status:            "pending",
+          maxAttempts:       3,
+          existingMessageId: msg.id,
+        },
+      });
+
+      await tx.contact.update({
+        where: { id: contactId },
+        data:  { lastMessageAt: new Date() },
+      });
+
+      return msg;
     });
 
-    await prisma.contact.update({
-      where: { id: contactId },
-      data: { lastMessageAt: new Date() },
-    });
+    // ارجع فوراً
+    return NextResponse.json({ success: true, message: pending });
 
-    return NextResponse.json({ success: true, message: saved });
   } catch (err: any) {
     console.error("sendMedia error:", err);
     return NextResponse.json({ error: err.message ?? "خطأ في السيرفر" }, { status: 500 });
