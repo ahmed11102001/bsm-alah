@@ -1,20 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "bsm_alah_2026";
+// -------------------------------------------------------------------
+// HELPER: التحقق من توقيع Meta (HMAC-SHA256)
+// Meta بتبعت header: x-hub-signature-256 = "sha256=<hex>"
+// لازم نتحقق منه قبل أي معالجة لمنع الطلبات المزيفة
+// -------------------------------------------------------------------
+async function verifyMetaSignature(
+  req: NextRequest
+): Promise<{ valid: boolean; rawBody: string }> {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+
+  if (!appSecret) {
+    console.error("[WEBHOOK] WHATSAPP_APP_SECRET is not set — rejecting all requests");
+    return { valid: false, rawBody: "" };
+  }
+
+  const signature = req.headers.get("x-hub-signature-256") ?? "";
+  if (!signature.startsWith("sha256=")) {
+    return { valid: false, rawBody: "" };
+  }
+
+  const rawBody = await req.text();
+
+  const expectedHex = createHmac("sha256", appSecret)
+    .update(rawBody, "utf8")
+    .digest("hex");
+
+  const expected = Buffer.from(`sha256=${expectedHex}`, "utf8");
+  const received = Buffer.from(signature, "utf8");
+
+  // timingSafeEqual يمنع Timing Attacks
+  if (expected.length !== received.length) {
+    return { valid: false, rawBody };
+  }
+
+  return { valid: timingSafeEqual(expected, received), rawBody };
+}
 
 // -------------------------------------------------------------------
 // GET: Webhook Verification (للتفعيل الأول مع ميتا)
 // -------------------------------------------------------------------
 export async function GET(req: NextRequest) {
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+  if (!verifyToken) {
+    console.error("[WEBHOOK] WHATSAPP_VERIFY_TOKEN is not set");
+    return new NextResponse("Server misconfiguration", { status: 500 });
+  }
+
   const { searchParams } = new URL(req.url);
-  const mode = searchParams.get("hub.mode");
-  const token = searchParams.get("hub.verify_token");
+  const mode      = searchParams.get("hub.mode");
+  const token     = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("✅ Webhook verified successfully");
+  if (mode === "subscribe" && token === verifyToken) {
     return new NextResponse(challenge, { status: 200 });
   }
 
@@ -25,61 +67,60 @@ export async function GET(req: NextRequest) {
 // POST: Incoming Webhook Events (معالجة الرسائل والحالات)
 // -------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+  // ── Step 1: التحقق من التوقيع أولاً قبل أي معالجة ───────────────
+  const { valid, rawBody } = await verifyMetaSignature(req);
 
-    // طباعة الـ Body بالكامل للتشخيص في الـ Logs
-    console.log("📩 Incoming Webhook Payload:", JSON.stringify(body, null, 2));
+  if (!valid) {
+    console.warn("[WEBHOOK] Invalid or missing signature — request rejected");
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const body = JSON.parse(rawBody);
 
     if (body.object !== "whatsapp_business_account") {
       return NextResponse.json({ error: "Invalid object" }, { status: 404 });
     }
 
-    const entry = body.entry?.[0];
+    const entry   = body.entry?.[0];
     const changes = entry?.changes?.[0];
-    const value = changes?.value;
+    const value   = changes?.value;
 
-    // استخراج المعرفات (WABA ID من الـ entry و Phone ID من الـ metadata)
-    const wabaIdFromMeta = entry?.id;
+    const wabaIdFromMeta  = entry?.id;
     const phoneIdFromMeta = value?.metadata?.phone_number_id;
 
-    // البحث عن المستخدم (دعم البحث بكلا المعرفين لضمان عمل الـ Sample)
     const accountOwner = await prisma.whatsAppAccount.findFirst({
       where: {
         OR: [
           { wabaId: wabaIdFromMeta },
-          { phoneNumberId: phoneIdFromMeta }
-        ]
+          { phoneNumberId: phoneIdFromMeta },
+        ],
       },
     });
 
     if (!accountOwner) {
-      console.log("⚠️ No account owner found in DB for ID:", wabaIdFromMeta || phoneIdFromMeta);
+      // نرجع 200 عشان Meta ما تعيدش المحاولة
       return NextResponse.json({ status: "ignored" });
     }
 
     const userId = accountOwner.userId;
 
-    // 1. معالجة تحديثات الحالة (Delivered / Read / Failed)
+    // ── Step 2: تحديثات الحالة (Delivered / Read / Failed) ──────────
     if (value?.statuses?.length) {
       const status = value.statuses[0];
       await prisma.message.updateMany({
-        where: {
-          whatsappId: status.id,
-          userId,
-        },
+        where: { whatsappId: status.id, userId },
         data: {
           status: mapStatus(status.status),
           ...(status.status === "delivered" && { deliveredAt: new Date() }),
-          ...(status.status === "read" && { readAt: new Date() }),
+          ...(status.status === "read"      && { readAt:      new Date() }),
         },
       });
-      console.log(`📊 Status updated to ${status.status} for message: ${status.id}`);
     }
 
-    // 2. معالجة الرسائل الواردة (Inbound Messages)
+    // ── Step 3: الرسائل الواردة (Inbound Messages) ──────────────────
     if (value?.messages?.length) {
-      const msg = value.messages[0];
+      const msg  = value.messages[0];
       const from = msg.from;
 
       // منع التكرار بناءً على معرف واتساب
@@ -92,56 +133,47 @@ export async function POST(req: NextRequest) {
       }
 
       // تحديد نوع المحتوى
-      let type: MessageType = MessageType.text;
-      let content = msg.text?.body || "";
+      let type: MessageType       = MessageType.text;
+      let content                 = msg.text?.body || "";
       let mediaUrl: string | null = null;
 
       if (msg.type === "image") {
-        type = MessageType.image;
-        content = msg.image?.caption || "📷 Image";
+        type     = MessageType.image;
+        content  = msg.image?.caption || "📷 Image";
         mediaUrl = msg.image?.id || null;
       } else if (msg.type === "audio") {
-        type = MessageType.audio;
-        content = "🎵 Audio message";
+        type     = MessageType.audio;
+        content  = "🎵 Audio message";
         mediaUrl = msg.audio?.id || null;
       }
 
-      // تنفيذ المعاملة (Transaction) لضمان سلامة البيانات
       await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
-          where: { phone_userId: { phone: from, userId } },
-          update: {
-            lastMessageAt: new Date(),
-            unreadCount: { increment: 1 },
-          },
-          create: {
-            phone: from,
-            userId,
-            lastMessageAt: new Date(),
-            unreadCount: 1,
-          },
+          where:  { phone_userId: { phone: from, userId } },
+          update: { lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+          create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
         });
 
         await tx.message.create({
           data: {
             userId,
-            contactId: contact.id,
+            contactId:  contact.id,
             content,
             type,
-            direction: MessageDirection.inbound,
-            status: MessageStatus.delivered,
+            direction:  MessageDirection.inbound,
+            status:     MessageStatus.delivered,
             whatsappId: msg.id,
             mediaUrl,
           },
         });
       });
-
-      console.log("✅ Message saved to Neon successfully");
     }
 
     return NextResponse.json({ status: "success" });
+
   } catch (error) {
-    console.error("❌ Webhook Error:", error);
+    console.error("[WEBHOOK] Processing error:", error);
+    // نرجع 200 دايماً عشان Meta ما تعيدش المحاولة وتعمل flood
     return NextResponse.json({ error: "Internal error" }, { status: 200 });
   }
 }
@@ -151,10 +183,10 @@ export async function POST(req: NextRequest) {
 // -------------------------------------------------------------------
 function mapStatus(waStatus: string): MessageStatus {
   const map: Record<string, MessageStatus> = {
-    sent: MessageStatus.sent,
+    sent:      MessageStatus.sent,
     delivered: MessageStatus.delivered,
-    read: MessageStatus.read,
-    failed: MessageStatus.failed,
+    read:      MessageStatus.read,
+    failed:    MessageStatus.failed,
   };
   return map[waStatus] || MessageStatus.pending;
 }
