@@ -4,11 +4,6 @@
 
 import prisma from "@/lib/prisma";
 import { QueueStatus, CampaignStatus, MessageDirection, MessageStatus, MessageType } from "@prisma/client";
-import {
-  notifyCampaignSuccess,
-  notifyCampaignFailed,
-  notifyCampaignPartial,
-} from "@/lib/notifications";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -76,7 +71,7 @@ async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
 async function sendOneMessage(item: {
   toPhone:      string;
   phoneNumberId: string;
-  accessToken:  string;
+  accessTokenSnap: string;
   messageType:  string;
   templateName: string | null;
   templateLang: string;
@@ -138,7 +133,7 @@ async function sendOneMessage(item: {
       {
         method:  "POST",
         headers: {
-          Authorization:  `Bearer ${item.accessToken}`,
+          Authorization:  `Bearer ${item.accessTokenSnap}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -203,6 +198,11 @@ export async function processQueue(): Promise<ProcessResult> {
   const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0 };
   const now = new Date();
 
+  // ── حد زمني: نرجع قبل Vercel يقتل الـ function ──────────────────────────────
+  // Free plan = 10s، Pro = 300s — بنحسب من startTime ونوقف عند 8s أماناً
+  const BUDGET_MS  = Number(process.env.QUEUE_BUDGET_MS ?? 8000);
+  const deadline   = Date.now() + BUDGET_MS;
+
   // ── Step 1: جيب كل الـ accounts النشطة (مش في backoff) ─────────────────────
   const accounts = await prisma.whatsAppAccount.findMany({
     where: {
@@ -214,7 +214,6 @@ export async function processQueue(): Promise<ProcessResult> {
     select: {
       id:             true,
       phoneNumberId:  true,
-      accessToken:    true,
       messagingTier:  true,
       dailySentCount: true,
       dailyResetAt:   true,
@@ -273,7 +272,8 @@ export async function processQueue(): Promise<ProcessResult> {
           attempts:        true,
           maxAttempts:     true,
           phoneNumberId:   true,
-          existingMessageId: true,
+          accessTokenSnap: true,
+          existingMessageId: true, // ← لرسائل الـ Chat الفردية
         },
       });
 
@@ -310,10 +310,16 @@ export async function processQueue(): Promise<ProcessResult> {
         continue;
       }
 
+      // ── توقف لو اقتربنا من نهاية الـ budget ─────────────────────────────────
+      if (Date.now() > deadline) {
+        console.log(`[QUEUE] Budget exhausted after ${result.sent} sent — will resume next cron`);
+        break;
+      }
+
       const sendResult = await sendOneMessage({
         toPhone:         item.toPhone,
         phoneNumberId:   item.phoneNumberId,
-        accessToken:     account.accessToken,
+        accessTokenSnap: item.accessTokenSnap,
         messageType:     item.messageType,
         templateName:    item.templateName,
         templateLang:    item.templateLang,
@@ -496,31 +502,19 @@ async function checkAndCompleteCampaigns(campaignIds: string[]) {
   if (campaignIds.length === 0) return;
   const unique = [...new Set(campaignIds)];
 
-  // جيب كل الحملات دفعة واحدة (بدل N+1 query)
-  const campaigns = await prisma.campaign.findMany({
-    where:  { id: { in: unique } },
-    select: { id: true, name: true, userId: true, queuedCount: true, status: true, sentCount: true, failedCount: true },
-  });
-
-  for (const campaign of campaigns) {
-    if (campaign.status !== CampaignStatus.running) continue;
-    if (campaign.queuedCount > 0) continue;
-
-    await prisma.campaign.update({
-      where: { id: campaign.id },
-      data:  { status: CampaignStatus.completed, completedAt: new Date() },
+  for (const id of unique) {
+    const campaign = await prisma.campaign.findUnique({
+      where:  { id },
+      select: { queuedCount: true, status: true },
     });
+    if (!campaign) continue;
+    if (campaign.status !== CampaignStatus.running) continue;
 
-    // إشعار حسب النتيجة
-    const sent   = campaign.sentCount;
-    const failed = campaign.failedCount;
-
-    if (failed === 0) {
-      await notifyCampaignSuccess(campaign.userId, campaign.name, campaign.id, sent);
-    } else if (sent === 0) {
-      await notifyCampaignFailed(campaign.userId, campaign.name, campaign.id, failed);
-    } else {
-      await notifyCampaignPartial(campaign.userId, campaign.name, campaign.id, sent, failed);
+    if (campaign.queuedCount <= 0) {
+      await prisma.campaign.update({
+        where: { id },
+        data:  { status: CampaignStatus.completed, completedAt: new Date() },
+      });
     }
   }
 }
@@ -538,11 +532,12 @@ export async function enqueueCampaign(params: {
   scheduledAt?: Date | null;
   whatsappAccountId: string;
   phoneNumberId:     string;
+  accessToken:       string;
 }): Promise<{ queued: number }> {
   const {
     campaignId, userId, numbers, templateName,
     templateLang = "ar", templateVars, scheduledAt,
-    whatsappAccountId, phoneNumberId,
+    whatsappAccountId, phoneNumberId, accessToken,
   } = params;
 
   const sendAt = scheduledAt ?? new Date();
@@ -552,6 +547,7 @@ export async function enqueueCampaign(params: {
     userId,
     whatsappAccountId,
     phoneNumberId,
+    accessTokenSnap: accessToken, // snapshot
     toPhone:     phone,
     messageType: "template",
     templateName,
@@ -585,17 +581,18 @@ export async function enqueueCampaign(params: {
 // الـ Cron هيبعتها خلال أقل من دقيقة مع نفس الـ rate-limit وbackoff logic
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function enqueueDirectMessage(params: {
-  messageId:        string;
+  messageId:        string;   // الـ Message record اللي اتحفظ pending
   userId:           string;
   contactId:        string;
   toPhone:          string;
   content:          string;
   whatsappAccountId: string;
   phoneNumberId:    string;
+  accessToken:      string;
 }): Promise<void> {
   const {
     messageId, userId, contactId, toPhone, content,
-    whatsappAccountId, phoneNumberId,
+    whatsappAccountId, phoneNumberId, accessToken,
   } = params;
 
   await prisma.messageQueue.create({
@@ -603,12 +600,16 @@ export async function enqueueDirectMessage(params: {
       userId,
       whatsappAccountId,
       phoneNumberId,
+      accessTokenSnap:  accessToken,
       toPhone,
       contactId,
-      messageType: "text",
+      messageType:      "text",
       content,
-      scheduledAt: new Date(),
-      status:      QueueStatus.pending,
+      scheduledAt:      new Date(), // ابعت فوراً في أول cron run
+      status:           QueueStatus.pending,
+      // ربط الـ Queue record بالـ Message الـ pending عشان يقدر يحدّثه
+      // بنحطه في حقل campaignId مش مناسب — الـ message record نفسه
+      // هيتحدّث عن طريق whatsappId لما الـ webhook يرجع
     },
   });
 }
