@@ -2,12 +2,24 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { rateLimit, getIP } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  // ── Rate Limit: 5 تسجيلات كل ساعة لنفس الـ IP ────────────────────────────
+  const ip     = getIP(req);
+  const result = rateLimit(`register:${ip}`, { limit: 5, windowSecs: 60 * 60 });
+
+  if (!result.success) {
+    return NextResponse.json(
+      { error: `كثير من المحاولات. حاول بعد ${result.retryAfter} ثانية.` },
+      { status: 429, headers: { "Retry-After": String(result.retryAfter) } }
+    );
+  }
+
   try {
     const { email, password, name, phone } = await req.json();
 
-    // ── Validation ──────────────────────────────────────────────
+    // ── Validation ────────────────────────────────────────────────────────────
     if (!email || !password) {
       return NextResponse.json(
         { error: "البريد الإلكتروني وكلمة المرور مطلوبان" },
@@ -23,56 +35,51 @@ export async function POST(req: Request) {
     }
 
     if (!name?.trim()) {
-      return NextResponse.json(
-        { error: "الاسم مطلوب" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
     }
 
     if (!phone?.trim()) {
-      return NextResponse.json(
-        { error: "رقم الهاتف مطلوب" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
     }
 
-    // ── التأكد إن البريد مش موجود ──────────────────────────────
+    // ── التأكد إن البريد مش موجود ─────────────────────────────────────────────
+    // ⚠️ نرجع نفس الرسالة سواء الإيميل موجود أو لأ — بنمنع user enumeration
     const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where:  { email: email.toLowerCase().trim() },
+      select: { id: true },
     });
 
     if (existing) {
+      // نفس رسالة النجاح — مش بنكشف إن الإيميل موجود
       return NextResponse.json(
-        { error: "هذا البريد مسجل بالفعل" },
-        { status: 400 }
+        { message: "تم إنشاء الحساب بنجاح" },
+        { status: 201 }
       );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ── إنشاء المستخدم + اشتراك مجاني في transaction واحدة ────
+    // ── إنشاء المستخدم + اشتراك مجاني في transaction واحدة ───────────────────
     const user = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
-          email: email.toLowerCase(),
-          name:  name.trim(),
-          phone: phone.trim(),
+          email:    email.toLowerCase().trim(),
+          name:     name.trim(),
+          phone:    phone.trim(),
           password: hashedPassword,
-          role: "OWNER",
+          role:     "OWNER",
         },
       });
 
-      // ✅ إنشاء اشتراك مجاني تلقائياً
       await tx.subscription.create({
         data: {
-          userId: newUser.id,
-          plan:   "free",
-          status: "active",
+          userId:                 newUser.id,
+          plan:                   "free",
+          status:                 "active",
           campaignsUsedThisMonth: 0,
           periodResetAt:          new Date(),
           currentPeriodStart:     new Date(),
-          // free لا تنتهي — نضع تاريخ بعيد جداً
-          currentPeriodEnd: new Date("2099-12-31"),
+          currentPeriodEnd:       new Date("2099-12-31"),
         },
       });
 

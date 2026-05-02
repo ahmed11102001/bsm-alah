@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -131,8 +131,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [regPhone,    setRegPhone]    = useState("");
   const [regPass,     setRegPass]     = useState("");
   const [regConfirm,  setRegConfirm]  = useState("");
-  // instant email check
-  const [emailStatus, setEmailStatus] = useState<"idle"|"checking"|"ok"|"taken">("idle");
 
   // join team
   const [joinEmail,   setJoinEmail]   = useState("");
@@ -145,20 +143,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const go = (v: View) => { setView(v); setErr(""); };
 
   // ── Instant email check ───────────────────────────────────────
-  const checkEmail = useCallback(async (email: string) => {
-    if (!/\S+@\S+\.\S+/.test(email)) { setEmailStatus("idle"); return; }
-    setEmailStatus("checking");
-    try {
-      const r = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
-      const d = await r.json();
-      setEmailStatus(d.exists ? "taken" : "ok");
-    } catch { setEmailStatus("idle"); }
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => { if (regEmail) checkEmail(regEmail); }, 600);
-    return () => clearTimeout(t);
-  }, [regEmail, checkEmail]);
+  // تحقق محلي فقط من صيغة الإيميل — بدون API call عشان منكشفش وجود المستخدمين
+  const emailFormatOk = /\S+@\S+\.\S+/.test(regEmail);
+  const emailIcon = regEmail
+    ? emailFormatOk
+      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+      : <XCircle className="w-4 h-4 text-red-400" />
+    : null;
 
   // ── Login ─────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
@@ -175,10 +166,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   // ── Register ──────────────────────────────────────────────────
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault(); setErr(""); 
+    e.preventDefault(); setErr("");
     const fullName = `${regFirst.trim()} ${regLast.trim()}`.trim();
     if (!regFirst.trim() || !regLast.trim()) { setErr("الاسم الثنائي مطلوب"); return; }
-    if (emailStatus === "taken") { setErr("هذا البريد مسجل بالفعل"); return; }
+    if (!emailFormatOk) { setErr("صيغة البريد الإلكتروني غير صحيحة"); return; }
     if (!regPhone.trim()) { setErr("رقم الهاتف مطلوب"); return; }
     if (regPass.length < 8) { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
     if (regPass !== regConfirm) { setErr("كلمتا المرور غير متطابقتين"); return; }
@@ -236,14 +227,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };
-
-  // email status icon
-  const emailIcon = {
-    idle:     null,
-    checking: <Loader2 className="w-4 h-4 animate-spin text-gray-400" />,
-    ok:       <CheckCircle2 className="w-4 h-4 text-green-500" />,
-    taken:    <XCircle className="w-4 h-4 text-red-400" />,
-  }[emailStatus];
 
   // ─────────────────────────────────────────────────────────────
   return (
@@ -348,28 +331,21 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </div>
                 </div>
 
-                {/* Email with instant check */}
                 <div className="space-y-1">
                   <Label className="text-xs font-medium text-gray-600">البريد الإلكتروني</Label>
                   <div className="relative">
                     <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
                       type="email" required
-                      value={regEmail} onChange={e => { setRegEmail(e.target.value); setEmailStatus("idle"); }}
+                      value={regEmail} onChange={e => setRegEmail(e.target.value)}
                       placeholder="owner@email.com"
                       className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors ${
-                        emailStatus === "taken" ? "border-red-400 focus:ring-red-300" :
-                        emailStatus === "ok"    ? "border-green-400 focus:ring-green-200" : ""
+                        regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
+                        regEmail &&  emailFormatOk ? "border-green-400 focus:ring-green-200" : ""
                       }`}
                     />
                     <span className="absolute left-3 top-3">{emailIcon}</span>
                   </div>
-                  {emailStatus === "taken" && (
-                    <p className="text-xs text-red-500">هذا البريد مسجل بالفعل</p>
-                  )}
-                  {emailStatus === "ok" && (
-                    <p className="text-xs text-green-600">البريد متاح ✓</p>
-                  )}
                 </div>
 
                 {/* Phone */}
@@ -430,7 +406,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 {err && <ErrMsg msg={err} />}
 
                 <Button
-                  type="submit" disabled={busy || emailStatus === "taken"}
+                  type="submit" disabled={busy || (!!regEmail && !emailFormatOk)}
                   className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm mt-1"
                 >
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}

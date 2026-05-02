@@ -3,15 +3,15 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
-  // استخدام as any هنا لحل تعارض الـ Types في Vercel بخصوص الحقول الإضافية
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email:    { label: "Email",    type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -19,32 +19,40 @@ export const authOptions: NextAuthOptions = {
           throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
         }
 
+        // ── Rate Limit: 10 محاولات كل 15 دقيقة لنفس الإيميل ─────────────────
+        const key    = `login:${credentials.email.toLowerCase()}`;
+        const result = rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
+        if (!result.success) {
+          throw new Error(`كثير من المحاولات. حاول بعد ${result.retryAfter} ثانية.`);
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() },
         });
 
+        // رسالة موحدة — مش بنكشف هل الإيميل موجود أو لأ
         if (!user || !user.password) {
-          throw new Error("المستخدم غير موجود");
+          throw new Error("بيانات الدخول غير صحيحة");
         }
 
-        // حماية: منع دخول الموظف إذا لم يقم بالتفعيل عبر كود الانضمام
+        // حماية: منع دخول الموظف قبل تفعيل حسابه
         if (user.role !== "OWNER" && user.inviteCode) {
           throw new Error("يرجى تفعيل حسابك أولاً باستخدام كود الانضمام");
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
 
+        // نفس الرسالة لو الباسورد غلط
         if (!isValid) {
-          throw new Error("كلمة المرور غير صحيحة");
+          throw new Error("بيانات الدخول غير صحيحة");
         }
 
-        return { 
-          id:       user.id, 
-          name:     user.name, 
+        return {
+          id:       user.id,
+          name:     user.name,
           email:    user.email,
-          role:     user.role, 
+          role:     user.role,
           parentId: user.parentId,
-          isSuper:  user.isSuper,
         };
       },
     }),
@@ -56,19 +64,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) { 
-        token.id       = user.id;
-        token.role     = user.role;
+        token.id = user.id;
+        token.role = user.role;
         token.parentId = user.parentId;
-        token.isSuper  = user.isSuper;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id       = token.id       as string;
-        session.user.role     = token.role     as string;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
         session.user.parentId = token.parentId as string | null;
-        session.user.isSuper  = token.isSuper  as boolean;
       }
       return session;
     },
