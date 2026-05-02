@@ -78,7 +78,6 @@ model User {
   apiKey   String? @unique
 
   role        UserRole @default(OWNER)
-  isSuper     Boolean  @default(false)
   workspaceId String?
   inviteCode  String?  @unique
   parentId    String?
@@ -98,7 +97,6 @@ model User {
   campaigns     Campaign[]
   messages      Message[]
   messageQueues MessageQueue[]
-  notifications Notification[]
 
   @@index([email])
   @@index([workspaceId])
@@ -172,11 +170,11 @@ model MessageQueue {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ─ Credentials
+  // ─ Credentials (نسخة وقت الإنشاء — مش بتتغير لو العميل بدّل التوكن)
   whatsappAccountId String
   whatsappAccount   WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
   phoneNumberId     String          // نسخة للفرز السريع بدون join
-  // التوكن بيتجاب من WhatsAppAccount وقت الإرسال — مش محتاجين نخزنه هنا
+  accessTokenSnap   String          @db.Text // snapshot من التوكن وقت الإنشاء
 
   // ─ المستقبل
   toPhone   String
@@ -375,31 +373,37 @@ model WebhookLog {
   @@index([createdAt])
 }
 
-// ─── Notifications ────────────────────────────────────────────────────────────
-enum NotificationType {
-  CAMPAIGN_SUCCESS
-  CAMPAIGN_FAILED
-  CAMPAIGN_PARTIAL
-  PLAN_LIMIT_REACHED
-  NEW_MESSAGE
+// ─── آراء العملاء ─────────────────────────────────────────────────────────────
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String                        // اسم العميل
+  brandName   String                        // اسم البراند
+  phone       String                        // رقم الهاتف للتحقق
+  rating      Int                           // 1-5
+  content     String   @db.Text            // نص الرأي
+  approved    Boolean  @default(false)     // بيظهر بس لو وافق عليه الأدمن
+  userId      String?                       // لو موجود = مستخدم مسجل (للتحقق من الاشتراك)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([approved])
+  @@index([createdAt])
 }
 
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+// ─── كوبونات الخصم ────────────────────────────────────────────────────────────
+model Coupon {
+  id           String    @id @default(cuid())
+  code         String    @unique              // الكود (مثلاً: SAVE20)
+  discountType String    @default("percent")  // percent | fixed
+  discountValue Float                         // قيمة الخصم
+  maxUses      Int       @default(1)          // أقصى عدد استخدامات
+  usedCount    Int       @default(0)          // عدد الاستخدامات الفعلية
+  expiresAt    DateTime?                      // تاريخ الانتهاء (اختياري)
+  active       Boolean   @default(true)
 
-  type      NotificationType
-  title     String
-  body      String           @db.Text
-  isRead    Boolean          @default(false)
-  link      String?          // رابط اختياري (مثلاً /dashboard?section=campaigns)
+  createdAt    DateTime  @default(now())
 
-  // بيانات إضافية (campaignId مثلاً)
-  meta      Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([userId, isRead, createdAt])
-  @@index([userId, createdAt])
+  @@index([code])
+  @@index([active])
 }
