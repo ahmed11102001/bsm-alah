@@ -78,6 +78,7 @@ model User {
   apiKey   String? @unique
 
   role        UserRole @default(OWNER)
+  isSuper     Boolean  @default(false)
   workspaceId String?
   inviteCode  String?  @unique
   parentId    String?

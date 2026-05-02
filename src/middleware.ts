@@ -3,23 +3,26 @@ import { NextResponse } from "next/server";
 
 export const middleware = withAuth(
   function onSuccess(req) {
-    // الطلب عنده token، خليه يروح
+    const token    = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
+
+    // حماية صفحة Admin — أي حد غير Super يشوف 404 (حتى ما يعرفش الصفحة موجودة)
+    if (pathname.startsWith("/dashboard/admin") && !token?.isSuper) {
+      return NextResponse.rewrite(new URL("/not-found", req.url));
+    }
+
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // إذا فيه token، معناه مسجل دخول
-        return !!token;
-      },
+      authorized: ({ token }) => !!token,
     },
     pages: {
-      signIn: "/", // لو مش مسجل، روح للـ home
+      signIn: "/",
     },
   }
 );
 
-// حط الـ middleware على المسارات المحمية بس
 export const config = {
   matcher: ["/dashboard/:path*"],
 };

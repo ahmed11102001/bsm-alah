@@ -31,6 +31,7 @@ import Campaigns  from "@/components/dashboard/Campaigns";
 import Reports    from "@/components/dashboard/Reports";
 import Automation from "@/components/dashboard/Automation";
 import API        from "@/components/dashboard/API";
+import AdminPage  from "@/app/dashboard/admin/page";
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
   user: { id: string; name: string | null; email: string; phone: string | null; role: string };
@@ -69,6 +70,9 @@ const sidebarItems = [
   { icon: Settings,     label: "الأتمتة الذكية", id: "automation" },
   { icon: Code,         label: "API",             id: "api"        },
 ];
+
+// الـ Admin item — بيتضاف ديناميكياً لو isSuper بس
+const adminItem = { icon: Shield, label: "Admin", id: "admin" };
 
 const PLAN_COLORS: Record<string, string> = {
   free:       "bg-gray-100 text-gray-600",
@@ -628,6 +632,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       case "reports":    return <Reports />;
       case "automation": return <Automation />;
       case "api":        return <API />;
+      case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
     }
   };
@@ -663,6 +668,21 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <span>{item.label}</span>
             </button>
           ))}
+
+          {/* Admin — مش شايفه غير Super Admin */}
+          {session?.user?.isSuper && (
+            <button
+              onClick={() => setActiveSection("admin")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${
+                activeSection === "admin"
+                  ? "bg-red-50 text-red-600 font-semibold"
+                  : "text-red-400 hover:bg-red-50"
+              }`}
+            >
+              <adminItem.icon className="w-[18px] h-[18px]" />
+              <span>{adminItem.label}</span>
+            </button>
+          )}
         </nav>
 
         {/* User + plan strip */}

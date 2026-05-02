@@ -39,11 +39,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         return { 
-          id: user.id, 
-          name: user.name, 
-          email: user.email,
-          role: user.role, 
-          parentId: user.parentId 
+          id:       user.id, 
+          name:     user.name, 
+          email:    user.email,
+          role:     user.role, 
+          parentId: user.parentId,
+          isSuper:  user.isSuper,
         };
       },
     }),
@@ -55,17 +56,19 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) { 
-        token.id = user.id;
-        token.role = user.role;
+        token.id       = user.id;
+        token.role     = user.role;
         token.parentId = user.parentId;
+        token.isSuper  = user.isSuper;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.id       = token.id       as string;
+        session.user.role     = token.role     as string;
         session.user.parentId = token.parentId as string | null;
+        session.user.isSuper  = token.isSuper  as boolean;
       }
       return session;
     },
