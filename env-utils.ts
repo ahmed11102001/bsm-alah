@@ -6,7 +6,7 @@
 const requiredEnvVars = {
   // NextAuth
   NEXTAUTH_SECRET: {
-    description: "Secret key for NextAuth",
+    description: "Secret key for NextAuth sessions",
     optional: false,
   },
   NEXTAUTH_URL: {
@@ -16,18 +16,24 @@ const requiredEnvVars = {
 
   // Database
   DATABASE_URL: {
-    description: "PostgreSQL connection string",
+    description: "PostgreSQL connection string (Neon)",
     optional: false,
   },
 
-  // WhatsApp (Optional for now)
-  WHATSAPP_API_KEY: {
-    description: "WhatsApp API key",
-    optional: true,
+  // WhatsApp
+  WHATSAPP_VERIFY_TOKEN: {
+    description: "Token للتحقق من الـ Webhook مع Meta",
+    optional: false,
   },
-  WHATSAPP_BUSINESS_ACCOUNT_ID: {
-    description: "WhatsApp Business Account ID",
-    optional: true,
+  WHATSAPP_APP_SECRET: {
+    description: "App Secret من Meta لتوقيع الـ Webhook",
+    optional: false,
+  },
+
+  // Cron
+  CRON_SECRET: {
+    description: "Secret لحماية الـ Cron endpoint",
+    optional: false,
   },
 };
 
