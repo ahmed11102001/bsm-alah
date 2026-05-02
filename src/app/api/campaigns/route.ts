@@ -174,16 +174,15 @@ async function handleCreate(userId: string, body: any) {
 
   // ✅ إضافة للـ Queue بدل الإرسال المباشر
   const { queued } = await enqueueCampaign({
-    campaignId:       campaign.id,
+    campaignId:        campaign.id,
     userId,
     numbers,
-    templateName:     template.name,
-    templateLang:     template.language ?? "ar",
-    templateVars:     templateVars ?? null,
-    scheduledAt:      isScheduled ? scheduledDate : null,
+    templateName:      template.name,
+    templateLang:      template.language ?? "ar",
+    templateVars:      templateVars ?? null,
+    scheduledAt:       isScheduled ? scheduledDate : null,
     whatsappAccountId: account.id,
-    phoneNumberId:    account.phoneNumberId,
-    accessToken:      account.accessToken,
+    phoneNumberId:     account.phoneNumberId,
   });
 
   // ✅ زيادة عداد الحملات
@@ -266,15 +265,14 @@ async function handleRepeat(userId: string, campaignId: string) {
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId:       newCampaign.id,
+    campaignId:        newCampaign.id,
     userId,
     numbers,
-    templateName:     original.template.name,
-    templateLang:     original.template.language ?? "ar",
-    scheduledAt:      null,
+    templateName:      original.template.name,
+    templateLang:      original.template.language ?? "ar",
+    scheduledAt:       null,
     whatsappAccountId: account.id,
-    phoneNumberId:    account.phoneNumberId,
-    accessToken:      account.accessToken,
+    phoneNumberId:     account.phoneNumberId,
   });
 
   await incrementCampaignUsage(userId);

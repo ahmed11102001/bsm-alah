@@ -170,11 +170,11 @@ model MessageQueue {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ─ Credentials (نسخة وقت الإنشاء — مش بتتغير لو العميل بدّل التوكن)
+  // ─ Credentials
   whatsappAccountId String
   whatsappAccount   WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
   phoneNumberId     String          // نسخة للفرز السريع بدون join
-  accessTokenSnap   String          @db.Text // snapshot من التوكن وقت الإنشاء
+  // التوكن بيتجاب من WhatsAppAccount وقت الإرسال — مش محتاجين نخزنه هنا
 
   // ─ المستقبل
   toPhone   String

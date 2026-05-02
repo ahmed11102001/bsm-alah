@@ -71,7 +71,7 @@ async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
 async function sendOneMessage(item: {
   toPhone:      string;
   phoneNumberId: string;
-  accessTokenSnap: string;
+  accessToken:  string;
   messageType:  string;
   templateName: string | null;
   templateLang: string;
@@ -133,7 +133,7 @@ async function sendOneMessage(item: {
       {
         method:  "POST",
         headers: {
-          Authorization:  `Bearer ${item.accessTokenSnap}`,
+          Authorization:  `Bearer ${item.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -209,6 +209,7 @@ export async function processQueue(): Promise<ProcessResult> {
     select: {
       id:             true,
       phoneNumberId:  true,
+      accessToken:    true,
       messagingTier:  true,
       dailySentCount: true,
       dailyResetAt:   true,
@@ -267,8 +268,7 @@ export async function processQueue(): Promise<ProcessResult> {
           attempts:        true,
           maxAttempts:     true,
           phoneNumberId:   true,
-          accessTokenSnap: true,
-          existingMessageId: true, // ← لرسائل الـ Chat الفردية
+          existingMessageId: true,
         },
       });
 
@@ -308,7 +308,7 @@ export async function processQueue(): Promise<ProcessResult> {
       const sendResult = await sendOneMessage({
         toPhone:         item.toPhone,
         phoneNumberId:   item.phoneNumberId,
-        accessTokenSnap: item.accessTokenSnap,
+        accessToken:     account.accessToken,
         messageType:     item.messageType,
         templateName:    item.templateName,
         templateLang:    item.templateLang,
@@ -521,12 +521,11 @@ export async function enqueueCampaign(params: {
   scheduledAt?: Date | null;
   whatsappAccountId: string;
   phoneNumberId:     string;
-  accessToken:       string;
 }): Promise<{ queued: number }> {
   const {
     campaignId, userId, numbers, templateName,
     templateLang = "ar", templateVars, scheduledAt,
-    whatsappAccountId, phoneNumberId, accessToken,
+    whatsappAccountId, phoneNumberId,
   } = params;
 
   const sendAt = scheduledAt ?? new Date();
@@ -536,7 +535,6 @@ export async function enqueueCampaign(params: {
     userId,
     whatsappAccountId,
     phoneNumberId,
-    accessTokenSnap: accessToken, // snapshot
     toPhone:     phone,
     messageType: "template",
     templateName,
@@ -570,18 +568,17 @@ export async function enqueueCampaign(params: {
 // الـ Cron هيبعتها خلال أقل من دقيقة مع نفس الـ rate-limit وbackoff logic
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function enqueueDirectMessage(params: {
-  messageId:        string;   // الـ Message record اللي اتحفظ pending
+  messageId:        string;
   userId:           string;
   contactId:        string;
   toPhone:          string;
   content:          string;
   whatsappAccountId: string;
   phoneNumberId:    string;
-  accessToken:      string;
 }): Promise<void> {
   const {
     messageId, userId, contactId, toPhone, content,
-    whatsappAccountId, phoneNumberId, accessToken,
+    whatsappAccountId, phoneNumberId,
   } = params;
 
   await prisma.messageQueue.create({
@@ -589,16 +586,12 @@ export async function enqueueDirectMessage(params: {
       userId,
       whatsappAccountId,
       phoneNumberId,
-      accessTokenSnap:  accessToken,
       toPhone,
       contactId,
-      messageType:      "text",
+      messageType: "text",
       content,
-      scheduledAt:      new Date(), // ابعت فوراً في أول cron run
-      status:           QueueStatus.pending,
-      // ربط الـ Queue record بالـ Message الـ pending عشان يقدر يحدّثه
-      // بنحطه في حقل campaignId مش مناسب — الـ message record نفسه
-      // هيتحدّث عن طريق whatsappId لما الـ webhook يرجع
+      scheduledAt: new Date(),
+      status:      QueueStatus.pending,
     },
   });
 }
