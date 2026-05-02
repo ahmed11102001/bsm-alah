@@ -12,21 +12,21 @@ async function guardSuper() {
 // ─── PATCH /api/admin/users/[id] — تعديل الـ plan ────────────────────────────
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!await guardSuper())
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
+  const { id } = await params;
   const { plan } = await req.json();
   if (!plan)
     return NextResponse.json({ error: "plan مطلوب" }, { status: 400 });
 
-  // upsert الـ subscription — لو مفيش subscription للـ user ده هيعملها
   await prisma.subscription.upsert({
-    where:  { userId: params.id },
+    where:  { userId: id },
     update: { plan },
     create: {
-      userId:                params.id,
+      userId:                id,
       plan,
       status:                "active",
       periodResetAt:         new Date(),
@@ -37,15 +37,15 @@ export async function PATCH(
   return NextResponse.json({ success: true });
 }
 
-// ─── DELETE /api/admin/users/[id] — حذف يوزر ─────────────────────────────────
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!await guardSuper())
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
-  await prisma.user.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.user.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
 }
