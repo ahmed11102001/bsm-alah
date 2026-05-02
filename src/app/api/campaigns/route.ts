@@ -10,10 +10,6 @@ import {
 } from "@/lib/plan-guard";
 import { enqueueCampaign, processQueue } from "@/lib/queue";
 
-// حملة صغيرة: نبعتها فوراً بـ await — 50 × 350ms ≈ 17s (آمن على Vercel)
-// حملة كبيرة: الـ Cron هيبعتها في أقل من دقيقة
-const SMALL_CAMPAIGN_LIMIT = 50;
-
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -174,25 +170,26 @@ async function handleCreate(userId: string, body: any) {
 
   // ✅ إضافة للـ Queue بدل الإرسال المباشر
   const { queued } = await enqueueCampaign({
-    campaignId:        campaign.id,
+    campaignId:       campaign.id,
     userId,
     numbers,
-    templateName:      template.name,
-    templateLang:      template.language ?? "ar",
-    templateVars:      templateVars ?? null,
-    scheduledAt:       isScheduled ? scheduledDate : null,
+    templateName:     template.name,
+    templateLang:     template.language ?? "ar",
+    templateVars:     templateVars ?? null,
+    scheduledAt:      isScheduled ? scheduledDate : null,
     whatsappAccountId: account.id,
-    phoneNumberId:     account.phoneNumberId,
+    phoneNumberId:    account.phoneNumberId,
+    accessToken:      account.accessToken,
   });
 
   // ✅ زيادة عداد الحملات
   await incrementCampaignUsage(userId);
 
-  // ✅ تشغيل الـ Queue بذكاء حسب حجم الحملة:
-  // - حملة صغيرة (≤ 50): await مباشر — آمن (أقل من 20 ثانية)
-  // - حملة كبيرة (> 50): الـ Cron هيبعتها في أقل من دقيقة تلقائياً
-  if (!isScheduled && numbers.length <= SMALL_CAMPAIGN_LIMIT) {
-    await processQueue();
+  // ✅ لو مش مجدولة — شغّل الـ Queue فوراً بدل انتظار الـ Cron
+  if (!isScheduled) {
+    processQueue().catch((err) =>
+      console.error("[campaigns] processQueue error:", err)
+    );
   }
 
   return NextResponse.json({
@@ -202,9 +199,7 @@ async function handleCreate(userId: string, body: any) {
     scheduled:  isScheduled,
     message:    isScheduled
       ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-      : numbers.length <= SMALL_CAMPAIGN_LIMIT
-        ? `تم إنشاء الحملة — جاري الإرسال`
-        : `تم إنشاء الحملة — سيبدأ الإرسال خلال دقيقة`,
+      : `تم إنشاء الحملة — جاري الإرسال`,
   });
 }
 
@@ -265,29 +260,28 @@ async function handleRepeat(userId: string, campaignId: string) {
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId:        newCampaign.id,
+    campaignId:       newCampaign.id,
     userId,
     numbers,
-    templateName:      original.template.name,
-    templateLang:      original.template.language ?? "ar",
-    scheduledAt:       null,
+    templateName:     original.template.name,
+    templateLang:     original.template.language ?? "ar",
+    scheduledAt:      null,
     whatsappAccountId: account.id,
-    phoneNumberId:     account.phoneNumberId,
+    phoneNumberId:    account.phoneNumberId,
+    accessToken:      account.accessToken,
   });
 
   await incrementCampaignUsage(userId);
 
-  // نفس المنطق — حملة صغيرة فوراً، كبيرة على الـ Cron
-  if (numbers.length <= SMALL_CAMPAIGN_LIMIT) {
-    await processQueue();
-  }
+  // شغّل الـ Queue فوراً
+  processQueue().catch((err) =>
+    console.error("[campaigns/repeat] processQueue error:", err)
+  );
 
   return NextResponse.json({
     success:    true,
     campaignId: newCampaign.id,
     queued,
-    message:    numbers.length <= SMALL_CAMPAIGN_LIMIT
-      ? `تم تكرار الحملة — جاري الإرسال`
-      : `تم تكرار الحملة — سيبدأ الإرسال خلال دقيقة`,
+    message:    `تم تكرار الحملة — جاري الإرسال`,
   });
 }
