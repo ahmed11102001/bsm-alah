@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
+import { inngest } from "@/inngest/client";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -296,7 +297,12 @@ async function sendMessage(
     return msg;
   });
 
-  // ارجع فوراً — الـ UI يشوف الرسالة pending، والـ Cron يبعتها
+  // ✅ بعت event لـ Inngest — هيبعت الرسالة فوراً بدون Cron
+  await inngest.send({
+    name: "message/send",
+    data: { queueId: pending.id },
+  });
+
   return NextResponse.json({ success: true, message: pending });
 }
 
@@ -398,7 +404,12 @@ async function sendMedia(userId: string, req: NextRequest) {
       return msg;
     });
 
-    // ارجع فوراً
+    // ✅ بعت event لـ Inngest
+    await inngest.send({
+      name: "message/send",
+      data: { queueId: pending.id },
+    });
+
     return NextResponse.json({ success: true, message: pending });
 
   } catch (err: any) {

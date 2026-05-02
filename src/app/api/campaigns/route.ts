@@ -8,7 +8,8 @@ import {
   checkCampaignsLimit, checkFeature,
   incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
-import { enqueueCampaign, processQueue } from "@/lib/queue";
+import { enqueueCampaign } from "@/lib/queue";
+import { inngest }         from "@/inngest/client";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -185,12 +186,14 @@ async function handleCreate(userId: string, body: any) {
   // ✅ زيادة عداد الحملات
   await incrementCampaignUsage(userId);
 
-  // ✅ لو مش مجدولة — شغّل الـ Queue فوراً بدل انتظار الـ Cron
-  if (!isScheduled) {
-    processQueue().catch((err) =>
-      console.error("[campaigns] processQueue error:", err)
-    );
-  }
+  // ✅ بعت event لـ Inngest — هو هيشتغل بدون timeout وبـ retry تلقائي
+  await inngest.send({
+    name: "campaign/send",
+    data: {
+      campaignId:  campaign.id,
+      scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
+    },
+  });
 
   return NextResponse.json({
     success:    true,
@@ -273,10 +276,11 @@ async function handleRepeat(userId: string, campaignId: string) {
 
   await incrementCampaignUsage(userId);
 
-  // شغّل الـ Queue فوراً
-  processQueue().catch((err) =>
-    console.error("[campaigns/repeat] processQueue error:", err)
-  );
+  // ✅ بعت event لـ Inngest
+  await inngest.send({
+    name: "campaign/send",
+    data: { campaignId: newCampaign.id, scheduledAt: null },
+  });
 
   return NextResponse.json({
     success:    true,
