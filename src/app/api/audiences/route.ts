@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus } from "@prisma/client";
+import { checkContactsLimit } from "@/lib/plan-guard";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -174,6 +175,15 @@ export async function POST(req: NextRequest) {
 
   if (unique.length === 0)
     return NextResponse.json({ error: "\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0647\u0627\u062A \u0627\u062A\u0635\u0627\u0644 \u0635\u0627\u0644\u062D\u0629" }, { status: 400 });
+
+  // ── تحقق من حد الخطة قبل الإضافة ────────────────────────────────────────
+  const limitCheck = await checkContactsLimit(userId, unique.length);
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      { error: limitCheck.message, code: limitCheck.code, requiredPlan: limitCheck.requiredPlan },
+      { status: 403 }
+    );
+  }
 
   try {
     const audience = await prisma.$transaction(async (tx) => {
