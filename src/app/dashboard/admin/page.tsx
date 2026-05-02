@@ -258,7 +258,7 @@ export default function AdminPage() {
                       {new Date(user.createdAt).toLocaleDateString("ar-EG")}
                     </td>
                     <td className="px-6 py-4">
-                      {!user.isSuper && (
+                      {!user.isSuper ? (
                         <div className="flex items-center gap-2 justify-end">
                           <button
                             onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
@@ -277,6 +277,17 @@ export default function AdminPage() {
                               ? <Loader2 className="w-4 h-4 animate-spin" />
                               : <Trash2 className="w-4 h-4" />
                             }
+                          </button>
+                        </div>
+                      ) : (
+                        // Super Admin — يقدر يعدل باقته بس مش يحذف نفسه
+                        <div className="flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
+                            className="text-gray-400 hover:text-blue-600 transition"
+                            title="تعديل الباقة"
+                          >
+                            <Pencil className="w-4 h-4" />
                           </button>
                         </div>
                       )}
