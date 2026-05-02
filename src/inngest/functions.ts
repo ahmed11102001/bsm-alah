@@ -111,7 +111,7 @@ export const processCampaign = inngest.createFunction(
   {
     id:          "process-campaign",
     retries:     2,
-    concurrency: { limit: 10 },
+    concurrency: { limit: 5 },
     triggers:    [{ event: "campaign/send" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
