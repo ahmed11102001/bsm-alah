@@ -387,12 +387,21 @@ export async function processQueue(): Promise<ProcessResult> {
             });
           }
 
-          // 3. تحديث عداد الحملة
+          // 3. تحديث عداد الحملة + تحقق من اكتمالها فوراً
           if (item.campaignId) {
-            await tx.campaign.update({
+            const updated = await tx.campaign.update({
               where: { id: item.campaignId },
               data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              select: { queuedCount: true, status: true },
             });
+
+            // لو الـ queuedCount وصل صفر → أغلق الحملة فوراً في نفس الـ transaction
+            if (updated.queuedCount <= 0 && updated.status === CampaignStatus.running) {
+              await tx.campaign.update({
+                where: { id: item.campaignId },
+                data:  { status: CampaignStatus.completed, completedAt: new Date() },
+              });
+            }
           }
 
           // 4. تحديث العداد اليومي للـ account
@@ -490,8 +499,6 @@ export async function processQueue(): Promise<ProcessResult> {
       }
     }
 
-    // تحقق من اكتمال الحملات
-    await checkAndCompleteCampaigns(batch.map(i => i.campaignId).filter(Boolean) as string[]);
   }
 
   return result;
