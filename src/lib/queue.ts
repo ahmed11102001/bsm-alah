@@ -71,7 +71,7 @@ async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
 async function sendOneMessage(item: {
   toPhone:      string;
   phoneNumberId: string;
-  accessTokenSnap: string;
+  accessToken:  string;
   messageType:  string;
   templateName: string | null;
   templateLang: string;
@@ -133,7 +133,7 @@ async function sendOneMessage(item: {
       {
         method:  "POST",
         headers: {
-          Authorization:  `Bearer ${item.accessTokenSnap}`,
+          Authorization:  `Bearer ${item.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -258,22 +258,21 @@ export async function processQueue(): Promise<ProcessResult> {
         orderBy: { scheduledAt: "asc" },
         take:    batchSize,
         select: {
-          id:              true,
-          userId:          true,
+          id:                true,
+          userId:            true,
           whatsappAccountId: true,
-          toPhone:         true,
-          contactId:       true,
-          messageType:     true,
-          templateName:    true,
-          templateLang:    true,
-          templateVars:    true,
-          content:         true,
-          campaignId:      true,
-          attempts:        true,
-          maxAttempts:     true,
-          phoneNumberId:   true,
-          accessTokenSnap: true,
-          existingMessageId: true, // ← لرسائل الـ Chat الفردية
+          toPhone:           true,
+          contactId:         true,
+          messageType:       true,
+          templateName:      true,
+          templateLang:      true,
+          templateVars:      true,
+          content:           true,
+          campaignId:        true,
+          attempts:          true,
+          maxAttempts:       true,
+          phoneNumberId:     true,
+          existingMessageId: true,
         },
       });
 
@@ -319,7 +318,7 @@ export async function processQueue(): Promise<ProcessResult> {
       const sendResult = await sendOneMessage({
         toPhone:         item.toPhone,
         phoneNumberId:   item.phoneNumberId,
-        accessTokenSnap: item.accessTokenSnap,
+        accessToken:     account.accessToken,
         messageType:     item.messageType,
         templateName:    item.templateName,
         templateLang:    item.templateLang,
@@ -554,7 +553,6 @@ export async function enqueueCampaign(params: {
     userId,
     whatsappAccountId,
     phoneNumberId,
-    accessTokenSnap: accessToken, // snapshot
     toPhone:     phone,
     messageType: "template",
     templateName,
@@ -607,16 +605,12 @@ export async function enqueueDirectMessage(params: {
       userId,
       whatsappAccountId,
       phoneNumberId,
-      accessTokenSnap:  accessToken,
       toPhone,
       contactId,
       messageType:      "text",
       content,
-      scheduledAt:      new Date(), // ابعت فوراً في أول cron run
+      scheduledAt:      new Date(),
       status:           QueueStatus.pending,
-      // ربط الـ Queue record بالـ Message الـ pending عشان يقدر يحدّثه
-      // بنحطه في حقل campaignId مش مناسب — الـ message record نفسه
-      // هيتحدّث عن طريق whatsappId لما الـ webhook يرجع
     },
   });
 }

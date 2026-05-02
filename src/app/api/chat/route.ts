@@ -273,6 +273,7 @@ async function sendMessage(
         userId,
         whatsappAccountId: account.id,
         phoneNumberId:     account.phoneNumberId,
+        // accessToken جاي من account مباشرة,
         toPhone:           contact.phone,
         contactId,
         messageType:       isTemplate ? "template" : "text",
@@ -282,7 +283,7 @@ async function sendMessage(
         scheduledAt:       new Date(),
         status:            "pending",
         maxAttempts:       3,
-        existingMessageId: msg.id,
+        existingMessageId: msg.id, // ← الـ Cron هيعمل update للرسالة دي مش create جديدة
       },
     });
 
@@ -377,10 +378,11 @@ async function sendMedia(userId: string, req: NextRequest) {
           userId,
           whatsappAccountId: account.id,
           phoneNumberId:     account.phoneNumberId,
+          // accessToken جاي من account مباشرة,
           toPhone:           contact.phone,
           contactId,
           messageType:       "media",
-          content:           `${metaType}:${mediaId}`,
+          content:           `${metaType}:${mediaId}`, // نحتفظ بالنوع والـ ID معاً
           scheduledAt:       new Date(),
           status:            "pending",
           maxAttempts:       3,
