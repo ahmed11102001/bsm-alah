@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
+import { notifyNewMessage } from "@/lib/notifications";
 
 // -------------------------------------------------------------------
 // HELPER: التحقق من توقيع Meta (HMAC-SHA256)
@@ -167,6 +168,9 @@ export async function POST(req: NextRequest) {
           },
         });
       });
+
+      // إشعار رسالة واردة جديدة
+      await notifyNewMessage(userId, from);
     }
 
     return NextResponse.json({ status: "success" });

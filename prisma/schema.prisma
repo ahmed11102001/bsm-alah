@@ -98,6 +98,7 @@ model User {
   campaigns     Campaign[]
   messages      Message[]
   messageQueues MessageQueue[]
+  notifications Notification[]
 
   @@index([email])
   @@index([workspaceId])
@@ -372,4 +373,33 @@ model WebhookLog {
 
   @@index([processed])
   @@index([createdAt])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+enum NotificationType {
+  CAMPAIGN_SUCCESS
+  CAMPAIGN_FAILED
+  CAMPAIGN_PARTIAL
+  PLAN_LIMIT_REACHED
+  NEW_MESSAGE
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  body      String           @db.Text
+  isRead    Boolean          @default(false)
+  link      String?          // رابط اختياري (مثلاً /dashboard?section=campaigns)
+
+  // بيانات إضافية (campaignId مثلاً)
+  meta      Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
 }

@@ -8,6 +8,7 @@ import {
   isUnlimited, limitLabel,
   type PlanTier,
 } from "@/lib/plans";
+import { notifyPlanLimitReached } from "@/lib/notifications";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,7 @@ export async function checkContactsLimit(
   });
 
   if (currentCount + addingCount > limit) {
+    await notifyPlanLimitReached(ownerId, "contacts");
     return {
       allowed:      false,
       code:         "LIMIT_REACHED",
@@ -115,6 +117,7 @@ export async function checkCampaignsLimit(ownerId: string): Promise<GuardResult>
   }
 
   if (used >= limit) {
+    await notifyPlanLimitReached(ownerId, "campaignsPerMonth");
     return {
       allowed:      false,
       code:         "LIMIT_REACHED",

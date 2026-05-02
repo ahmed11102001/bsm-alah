@@ -30,8 +30,9 @@ import Templates  from "@/components/dashboard/Templates";
 import Campaigns  from "@/components/dashboard/Campaigns";
 import Reports    from "@/components/dashboard/Reports";
 import Automation from "@/components/dashboard/Automation";
-import API        from "@/components/dashboard/API";
-import AdminPage  from "@/app/dashboard/admin/page";
+import API             from "@/components/dashboard/API";
+import AdminPage       from "@/app/dashboard/admin/page";
+import NotificationBell from "@/components/dashboard/NotificationBell";
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
   user: { id: string; name: string | null; email: string; phone: string | null; role: string };
@@ -747,6 +748,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             >
               <Settings className="w-4.5 h-4.5 w-[18px] h-[18px]" />
             </button>
+
+            {/* Notification Bell */}
+            <NotificationBell onNavigate={(section) => setActiveSection(section)} />
 
             {/* User chip */}
             <div className="flex items-center gap-2">
