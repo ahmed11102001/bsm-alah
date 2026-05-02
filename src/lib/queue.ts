@@ -214,6 +214,7 @@ export async function processQueue(): Promise<ProcessResult> {
     select: {
       id:             true,
       phoneNumberId:  true,
+      accessToken:    true,
       messagingTier:  true,
       dailySentCount: true,
       dailyResetAt:   true,
