@@ -46,7 +46,7 @@ export default function Hero({ onLoginClick }: HeroProps) {
             </div>
 
             <h1 className="text-4xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight mb-6">
-             حول واتساب الي
+              اجعل الواتساب 
 
               <span className="block text-[#25D366] drop-shadow-lg"> ماكينة مابيعات</span>
 
