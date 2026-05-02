@@ -564,7 +564,10 @@ export default function Campaigns() {
           name: campaignName,
           templateName: selectedTemplate.name,
           numbers,
-          scheduledAt: sendMode === "scheduled" ? scheduledAt : null,
+          // تحويل التوقيت المحلي لـ UTC قبل الإرسال
+          scheduledAt: sendMode === "scheduled"
+            ? new Date(scheduledAt).toISOString()
+            : null,
         }),
       });
       const data = await res.json();
@@ -975,7 +978,14 @@ export default function Campaigns() {
                   <Input
                     type="datetime-local"
                     value={scheduledAt}
-                    min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                    min={(() => {
+                      // datetime-local بيحتاج التوقيت المحلي مش UTC
+                      const local = new Date(Date.now() + 60_000);
+                      local.setSeconds(0, 0);
+                      return new Date(local.getTime() - local.getTimezoneOffset() * 60_000)
+                        .toISOString()
+                        .slice(0, 16);
+                    })()}
                     onChange={(e) => setScheduledAt(e.target.value)}
                   />
                 </div>
