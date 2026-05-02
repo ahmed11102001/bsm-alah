@@ -53,6 +53,7 @@ export const authOptions: NextAuthOptions = {
           email:    user.email,
           role:     user.role,
           parentId: user.parentId,
+          isSuper:  (user as any).isSuper ?? false,
         };
       },
     }),
