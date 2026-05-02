@@ -516,19 +516,38 @@ async function checkAndCompleteCampaigns(campaignIds: string[]) {
   if (campaignIds.length === 0) return;
   const unique = [...new Set(campaignIds)];
 
-  for (const id of unique) {
-    const campaign = await prisma.campaign.findUnique({
-      where:  { id },
-      select: { queuedCount: true, status: true },
-    });
-    if (!campaign) continue;
-    if (campaign.status !== CampaignStatus.running) continue;
+  // جيب كل الحملات دفعة واحدة (بدل N+1 query)
+  const campaigns = await prisma.campaign.findMany({
+    where:  { id: { in: unique } },
+    select: { id: true, name: true, userId: true, queuedCount: true, status: true, sentCount: true, failedCount: true },
+  });
 
-    if (campaign.queuedCount <= 0) {
-      await prisma.campaign.update({
-        where: { id },
-        data:  { status: CampaignStatus.completed, completedAt: new Date() },
-      });
+  for (const campaign of campaigns) {
+    if (campaign.status !== CampaignStatus.running) continue;
+    if (campaign.queuedCount > 0) continue;
+
+    await prisma.campaign.update({
+      where: { id: campaign.id },
+      data:  { status: CampaignStatus.completed, completedAt: new Date() },
+    });
+
+    // إشعار حسب النتيجة
+    const sent   = campaign.sentCount;
+    const failed = campaign.failedCount;
+
+    try {
+      const { notifyCampaignSuccess, notifyCampaignFailed, notifyCampaignPartial } =
+        await import("@/lib/notifications");
+
+      if (failed === 0) {
+        await notifyCampaignSuccess(campaign.userId, campaign.name, campaign.id, sent);
+      } else if (sent === 0) {
+        await notifyCampaignFailed(campaign.userId, campaign.name, campaign.id, failed);
+      } else {
+        await notifyCampaignPartial(campaign.userId, campaign.name, campaign.id, sent, failed);
+      }
+    } catch (err) {
+      console.error("[QUEUE] Failed to send campaign notification:", err);
     }
   }
 }
