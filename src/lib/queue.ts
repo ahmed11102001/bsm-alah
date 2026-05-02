@@ -395,8 +395,15 @@ export async function processQueue(): Promise<ProcessResult> {
               select: { queuedCount: true, status: true },
             });
 
-            // لو الـ queuedCount وصل صفر → أغلق الحملة فوراً في نفس الـ transaction
-            if (updated.queuedCount <= 0 && updated.status === CampaignStatus.running) {
+            // تحقق فعلي من الداتابيز — أأمن من الاعتماد على queuedCount
+            const remaining = await tx.messageQueue.count({
+              where: {
+                campaignId: item.campaignId,
+                status: { in: [QueueStatus.pending, QueueStatus.processing] },
+              },
+            });
+
+            if (remaining === 0 && updated.status === CampaignStatus.running) {
               await tx.campaign.update({
                 where: { id: item.campaignId },
                 data:  { status: CampaignStatus.completed, completedAt: new Date() },
