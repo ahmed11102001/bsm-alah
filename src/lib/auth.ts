@@ -64,18 +64,20 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) { 
-        token.id = user.id;
-        token.role = user.role;
+      if (user) {
+        token.id       = user.id;
+        token.role     = user.role;
         token.parentId = user.parentId;
+        token.isSuper  = user.isSuper ?? false;  // ← احفظ isSuper في الـ JWT
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.id       = token.id as string;
+        session.user.role     = token.role as string;
         session.user.parentId = token.parentId as string | null;
+        session.user.isSuper  = token.isSuper as boolean;  // ← مرره للـ session
       }
       return session;
     },
