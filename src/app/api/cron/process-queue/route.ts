@@ -1,12 +1,13 @@
 // ════════════════════════════════════════════════════════════════════════════
 // FILE: src/app/api/cron/process-queue/route.ts
-// يُشغَّل كل دقيقة من Vercel Cron
+// يُشغَّل كل دقيقة من cron-job.org
+// ⚠️ Vercel Free = 10s timeout — الـ processQueue بيوقف عند 8s تلقائياً
 // ════════════════════════════════════════════════════════════════════════════
 import { NextRequest, NextResponse } from "next/server";
 import { processQueue, triggerScheduledCampaigns } from "@/lib/queue";
 
-export const maxDuration = 60; // Vercel: max execution time (seconds)
-export const dynamic     = "force-dynamic";
+export const dynamic = "force-dynamic";
+// maxDuration شغّال على Pro فقط — على Free مش بيفرق، حذفناه
 
 export async function GET(req: NextRequest) {
   // ── Security: تحقق من Vercel Cron Secret ─────────────────────────────────
