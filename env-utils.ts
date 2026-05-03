@@ -30,10 +30,10 @@ const requiredEnvVars = {
     optional: false,
   },
 
-  // Cron
+  // Cron / Queue
   CRON_SECRET: {
     description: "Secret لحماية الـ Cron endpoint",
-    optional: false,
+    optional: true,
   },
 };
 
