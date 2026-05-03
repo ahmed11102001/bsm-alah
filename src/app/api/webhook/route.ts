@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
+import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
 import { notifyNewMessage } from "@/lib/notifications";
+import { getSmartReply } from "@/lib/gemini";
 
 // -------------------------------------------------------------------
 // HELPER: التحقق من توقيع Meta (HMAC-SHA256)
@@ -130,7 +131,6 @@ export async function POST(req: NextRequest) {
         const reactedMsgId   = msg.reaction?.message_id ?? "";
 
         if (reactedMsgId) {
-          // ابحث عن الرسالة الأصلية وحدّث الـ reactions
           const original = await prisma.message.findFirst({
             where:  { whatsappId: reactedMsgId, userId },
             select: { id: true, reactions: true },
@@ -138,9 +138,7 @@ export async function POST(req: NextRequest) {
 
           if (original) {
             const existingReactions = (original.reactions as any[] ?? []);
-            // شيل الـ reaction القديمة من نفس المُرسِل لو موجودة
             const filtered = existingReactions.filter((r: any) => r.senderId !== from);
-            // لو الـ emoji مش فاضي → أضف، لو فاضي → شيل (يعني إلغاء reaction)
             const updated = reactionEmoji
               ? [...filtered, { emoji: reactionEmoji, senderId: from }]
               : filtered;
@@ -201,6 +199,13 @@ export async function POST(req: NextRequest) {
 
       // إشعار رسالة واردة جديدة
       await notifyNewMessage(userId, from);
+
+      // ── Step 4: تشغيل الأتمتة (بدون await — Meta لازم تاخد 200 فوري) ──
+      if (type === MessageType.text && content.trim()) {
+        handleAutomation({ userId, from, messageText: content, accountOwner }).catch(
+          (err) => console.error("[AUTOMATION] Unhandled error:", err)
+        );
+      }
     }
 
     return NextResponse.json({ status: "success" });
@@ -210,6 +215,180 @@ export async function POST(req: NextRequest) {
     // نرجع 200 دايماً عشان Meta ما تعيدش المحاولة وتعمل flood
     return NextResponse.json({ error: "Internal error" }, { status: 200 });
   }
+}
+
+// -------------------------------------------------------------------
+// AUTOMATION: منطق الأتمتة — يُشغَّل بعد حفظ الرسالة وإرسال 200 لـ Meta
+// -------------------------------------------------------------------
+async function handleAutomation(ctx: {
+  userId:       string;
+  from:         string;
+  messageText:  string;
+  accountOwner: { accessToken: string; phoneNumberId: string };
+}) {
+  const { userId, from, messageText, accountOwner } = ctx;
+  const textLower = messageText.toLowerCase().trim();
+
+  // جيب كل القواعد المفعّلة مرتبة من الأقدم للأحدث
+  const rules = await prisma.automationRule.findMany({
+    where:   { userId, isEnabled: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!rules.length) return;
+
+  // جيب بيانات البراند الخاصة بالمستخدم
+  const owner = await prisma.user.findUnique({
+    where:  { id: userId },
+    select: {
+      brandName: true, businessDesc: true, productsInfo: true,
+      pricingInfo: true, workingHours: true, aiTone: true,
+    },
+  });
+  if (!owner) return;
+
+  // ── A: Human keywords — أي قاعدة فيها كلمة تحويل بشري ──────────
+  const humanTriggered = rules.some(r =>
+    r.humanKeywords.some(kw => textLower.includes(kw.toLowerCase()))
+  );
+  if (humanTriggered) {
+    // بعت إشعار للمالك فقط بدون رد تلقائي
+    await notifyNewMessage(userId, from);
+    console.log(`[AUTOMATION] Human takeover triggered for ${from}`);
+    return;
+  }
+
+  // ── B: pauseOnReply — لو البشري ردّ يدوياً خلال آخر 24 ساعة ────
+  const shouldPause = rules.some(r => r.pauseOnReply);
+  if (shouldPause) {
+    const lastManualOutbound = await prisma.message.findFirst({
+      where: {
+        userId,
+        contact:    { phone: from },
+        direction:  MessageDirection.outbound,
+        campaignId: null, // مش رسالة حملة = رد يدوي
+      },
+      orderBy: { createdAt: "desc" },
+      select:  { createdAt: true },
+    });
+    if (lastManualOutbound) {
+      const hoursSince = (Date.now() - lastManualOutbound.createdAt.getTime()) / 3_600_000;
+      if (hoursSince < 24) {
+        console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
+        return;
+      }
+    }
+  }
+
+  // ── C: هل ده أول رسالة من الجهة دي؟ ────────────────────────────
+  const msgCount = await prisma.message.count({
+    where: { userId, contact: { phone: from } },
+  });
+  const isFirstMessage = msgCount <= 1; // الرسالة الحالية اتحفظت للتو
+
+  // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
+  let matchedRule: (typeof rules)[0] | null = null;
+
+  // 1. FIRST_MESSAGE
+  if (isFirstMessage) {
+    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
+  }
+
+  // 2. KEYWORD — أول كلمة مفتاحية تطابق
+  if (!matchedRule) {
+    matchedRule = rules.find(r =>
+      r.triggerType === TriggerType.KEYWORD &&
+      r.triggerValue?.trim() &&
+      textLower.includes(r.triggerValue.toLowerCase())
+    ) ?? null;
+  }
+
+  // 3. AI fallback — لو مفيش keyword match والمستخدم عنده businessDesc
+  if (!matchedRule && owner.businessDesc?.trim()) {
+    matchedRule = rules.find(r => r.replyType === ReplyType.AI) ?? null;
+  }
+
+  if (!matchedRule) return;
+
+  // ── E: جهّز نص الرد ─────────────────────────────────────────────
+  let replyText: string | null = null;
+
+  if (matchedRule.replyType === ReplyType.TEXT) {
+    replyText = matchedRule.replyContent;
+
+  } else if (matchedRule.replyType === ReplyType.AI && owner.businessDesc) {
+    const geminiResult = await getSmartReply(messageText, {
+      brandName:         owner.brandName,
+      businessDesc:      owner.businessDesc,
+      productsInfo:      owner.productsInfo,
+      pricingInfo:       owner.pricingInfo,
+      workingHours:      owner.workingHours,
+      aiTone:            owner.aiTone ?? "friendly",
+      extraInstructions: matchedRule.extraInstructions,
+    });
+
+    if (!geminiResult.ok || geminiResult.offTopic) {
+      console.log(`[AUTOMATION] Gemini off-topic or error for ${from}:`, geminiResult.error ?? "off-topic");
+      return;
+    }
+    replyText = geminiResult.reply ?? null;
+
+  } else if (matchedRule.replyType === ReplyType.TEMPLATE) {
+    // Template replies — هيتوسع في النسخة الجاية
+    console.log(`[AUTOMATION] Template reply not yet implemented — rule: ${matchedRule.id}`);
+    return;
+  }
+
+  if (!replyText?.trim()) return;
+
+  // ── F: ابعت الرد عبر Meta API مباشرة ────────────────────────────
+  const metaRes = await fetch(
+    `https://graph.facebook.com/v19.0/${accountOwner.phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${accountOwner.accessToken}`,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to:   from,
+        type: "text",
+        text: { body: replyText },
+      }),
+    }
+  );
+
+  if (!metaRes.ok) {
+    const err = await metaRes.text();
+    console.error(`[AUTOMATION] Meta send failed for ${from}:`, err);
+    return;
+  }
+
+  const metaData = await metaRes.json();
+  const whatsappMsgId: string | undefined = metaData?.messages?.[0]?.id;
+
+  // ── G: احفظ الرد في الـ DB ───────────────────────────────────────
+  const contact = await prisma.contact.findFirst({
+    where:  { phone: from, userId },
+    select: { id: true },
+  });
+  if (!contact) return;
+
+  await prisma.message.create({
+    data: {
+      userId,
+      contactId:  contact.id,
+      content:    replyText,
+      type:       MessageType.text,
+      direction:  MessageDirection.outbound,
+      status:     MessageStatus.sent,
+      whatsappId: whatsappMsgId,
+      sentAt:     new Date(),
+    },
+  });
+
+  console.log(`[AUTOMATION] ✓ Replied to ${from} via rule "${matchedRule.name}"`);
 }
 
 // -------------------------------------------------------------------

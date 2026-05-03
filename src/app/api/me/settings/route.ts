@@ -17,7 +17,11 @@ export async function GET() {
   const [user, whatsapp] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
-      select: { id: true, name: true, email: true, phone: true, image: true, role: true },
+      select: {
+        id: true, name: true, email: true, phone: true, image: true, role: true,
+        brandName: true, businessDesc: true, productsInfo: true,
+        pricingInfo: true, workingHours: true, aiTone: true,
+      },
     }),
     prisma.whatsAppAccount.findUnique({
       where:  { userId: ownerId },
@@ -108,6 +112,39 @@ export async function PATCH(req: NextRequest) {
       success: true,
       whatsapp: { phoneNumberId: account.phoneNumberId, wabaId: account.wabaId },
     });
+  }
+
+  // ── Brand / AI settings ────────────────────────────────────────
+  if (type === "brand") {
+    // فقط OWNER يعدّل بيانات البراند
+    if ((session.user as any).parentId)
+      return NextResponse.json({ error: "فقط المالك يمكنه تعديل بيانات البراند" }, { status: 403 });
+
+    const { brandName, businessDesc, productsInfo, pricingInfo, workingHours, aiTone } = body;
+
+    if (!businessDesc?.trim())
+      return NextResponse.json({ error: "وصف النشاط مطلوب لتفعيل الردود الذكية" }, { status: 400 });
+
+    const VALID_TONES = ["friendly", "formal", "egyptian"];
+    const tone = VALID_TONES.includes(aiTone) ? aiTone : "friendly";
+
+    const updated = await prisma.user.update({
+      where: { id: ownerId },
+      data: {
+        brandName:    brandName?.trim()    || null,
+        businessDesc: businessDesc.trim(),
+        productsInfo: productsInfo?.trim() || null,
+        pricingInfo:  pricingInfo?.trim()  || null,
+        workingHours: workingHours?.trim() || null,
+        aiTone:       tone,
+      },
+      select: {
+        brandName: true, businessDesc: true, productsInfo: true,
+        pricingInfo: true, workingHours: true, aiTone: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, brand: updated });
   }
 
   return NextResponse.json({ error: "type غير معروف" }, { status: 400 });

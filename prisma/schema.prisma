@@ -72,6 +72,21 @@ enum NotificationType {
   NEW_MESSAGE
 }
 
+// ─── Automation Enums ─────────────────────────────────────────────────────────
+
+enum TriggerType {
+  KEYWORD
+  FIRST_MESSAGE
+  NO_REPLY
+  TIME_BASED
+}
+
+enum ReplyType {
+  TEXT
+  TEMPLATE
+  AI
+}
+
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
@@ -87,6 +102,14 @@ model User {
   inviteCode  String?  @unique
   parentId    String?
 
+  // ─── Brand / AI settings ──────────────────────────────────────
+  brandName    String?
+  businessDesc String? @db.Text
+  productsInfo String? @db.Text
+  pricingInfo  String? @db.Text
+  workingHours String?
+  aiTone       String  @default("friendly")
+
   parent  User?  @relation("TeamHierarchy", fields: [parentId], references: [id])
   members User[] @relation("TeamHierarchy")
 
@@ -96,13 +119,14 @@ model User {
   whatsappAccount WhatsAppAccount?
   subscription    Subscription?
 
-  contacts      Contact[]
-  audiences     Audience[]
-  templates     Template[]
-  campaigns     Campaign[]
-  messages      Message[]
-  messageQueues MessageQueue[]
-  notifications Notification[]
+  contacts        Contact[]
+  audiences       Audience[]
+  templates       Template[]
+  campaigns       Campaign[]
+  messages        Message[]
+  messageQueues   MessageQueue[]
+  notifications   Notification[]
+  automationRules AutomationRule[]
 
   @@index([email])
   @@index([workspaceId])
@@ -286,7 +310,8 @@ model Template {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  campaigns Campaign[]
+  campaigns      Campaign[]
+  automationRules AutomationRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -412,4 +437,37 @@ model Coupon {
 
   @@index([code])
   @@index([active])
+}
+
+// ─── Automation ───────────────────────────────────────────────────────────────
+
+model AutomationRule {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  isEnabled Boolean @default(true)
+
+  // ─── Trigger ──────────────────────────────────────────────────
+  triggerType  TriggerType
+  triggerValue String?     // keyword text | عدد الأيام لـ NO_REPLY
+
+  // ─── Reply ────────────────────────────────────────────────────
+  replyType         ReplyType
+  replyContent      String?   @db.Text
+  templateId        String?
+  template          Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  extraInstructions String?   @db.Text
+
+  // ─── Human takeover ───────────────────────────────────────────
+  humanKeywords String[]
+  pauseOnReply  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isEnabled])
+  @@index([triggerType])
+  @@index([userId, triggerType])
 }
