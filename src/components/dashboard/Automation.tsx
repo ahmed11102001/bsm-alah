@@ -20,7 +20,7 @@ import {
   Zap, Plus, MoreVertical, Trash2, Edit2, Loader2,
   MessageSquare, Users, Clock, Bot, Key, CheckCircle,
   ChevronRight, ChevronLeft, ToggleLeft, ToggleRight,
-  AlertCircle, X,
+  AlertCircle, X, Settings, Pencil, Save,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,6 +43,24 @@ interface AutomationRule {
 }
 
 interface Template { id: string; name: string; status: string; }
+
+interface BrandSettings {
+  brandName:    string;
+  businessDesc: string;
+  productsInfo: string;
+  pricingInfo:  string;
+  workingHours: string;
+  aiTone:       string;
+}
+
+const EMPTY_BRAND: BrandSettings = {
+  brandName:    "",
+  businessDesc: "",
+  productsInfo: "",
+  pricingInfo:  "",
+  workingHours: "",
+  aiTone:       "friendly",
+};
 
 // ─── Config maps ──────────────────────────────────────────────────────────────
 const TRIGGER_CONFIG: Record<TriggerType, { label: string; icon: React.ReactNode; desc: string }> = {
@@ -185,6 +203,10 @@ export default function Automation() {
   const [templates,  setTemplates]  = useState<Template[]>([]);
   const [hasBrand,   setHasBrand]   = useState<boolean | null>(null);
   const [loading,    setLoading]    = useState(true);
+  const [brand,      setBrand]      = useState<BrandSettings>({ ...EMPTY_BRAND });
+  const [showBrand,  setShowBrand]  = useState(false);
+  const [brandForm,  setBrandForm]  = useState<BrandSettings>({ ...EMPTY_BRAND });
+  const [savingBrand, setSavingBrand] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [editTarget, setEditTarget] = useState<AutomationRule | null>(null);
   const [step,       setStep]       = useState(1);
@@ -205,7 +227,18 @@ export default function Automation() {
       const tplData      = await templatesRes.json();
 
       setRules(Array.isArray(rulesData) ? rulesData : []);
-      setHasBrand(!!settingsData?.user?.businessDesc?.trim());
+      const u = settingsData?.user;
+      const brandData: BrandSettings = {
+        brandName:    u?.brandName    ?? "",
+        businessDesc: u?.businessDesc ?? "",
+        productsInfo: u?.productsInfo ?? "",
+        pricingInfo:  u?.pricingInfo  ?? "",
+        workingHours: u?.workingHours ?? "",
+        aiTone:       u?.aiTone       ?? "friendly",
+      };
+      setBrand(brandData);
+      setBrandForm(brandData);
+      setHasBrand(!!u?.businessDesc?.trim());
       setTemplates(
         (Array.isArray(tplData) ? tplData : tplData?.templates ?? [])
           .filter((t: Template) => t.status === "APPROVED")
@@ -307,6 +340,32 @@ export default function Automation() {
     }
   };
 
+  // ── save brand ─────────────────────────────────────────────────
+  const saveBrand = async () => {
+    if (!brandForm.businessDesc.trim()) {
+      toast.error("وصف النشاط مطلوب");
+      return;
+    }
+    setSavingBrand(true);
+    try {
+      const r = await fetch("/api/me/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "brand", ...brandForm }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setBrand({ ...brandForm });
+      setHasBrand(true);
+      setShowBrand(false);
+      toast.success("تم حفظ بيانات البراند");
+    } catch (e: any) {
+      toast.error(e.message ?? "خطأ في الحفظ");
+    } finally {
+      setSavingBrand(false);
+    }
+  };
+
   // ── step validation ─────────────────────────────────────────────
   const canGoNext = () => {
     if (step === 1) return !!form.name.trim() && !!form.triggerType;
@@ -334,19 +393,39 @@ export default function Automation() {
   return (
     <div className="p-4 lg:p-8 max-w-5xl mx-auto" dir="rtl">
 
-      {/* Brand warning */}
-      {hasBrand === false && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
-          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">بيانات البراند غير مكتملة</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              لاستخدام الرد الذكي بالـ AI يجب إدخال وصف نشاطك في{" "}
-              <a href="/dashboard?tab=settings" className="underline font-medium">إعدادات البراند</a>.
-            </p>
+      {/* ── Brand Settings Card ── */}
+      <div className={`rounded-2xl border p-4 mb-6 ${hasBrand ? "bg-white border-gray-200" : "bg-amber-50 border-amber-200"}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasBrand ? "bg-green-50 text-green-600" : "bg-amber-100 text-amber-600"}`}>
+              <Bot className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">إعدادات الرد الذكي (AI)</p>
+              {hasBrand ? (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {brand.brandName ? `${brand.brandName} — ` : ""}{brand.aiTone === "friendly" ? "ودود" : brand.aiTone === "formal" ? "رسمي" : "عامية مصرية"}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600 mt-0.5">أدخل بيانات براندك لتفعيل الرد الذكي</p>
+              )}
+            </div>
           </div>
+          <Button
+            size="sm"
+            variant={hasBrand ? "outline" : "default"}
+            className={hasBrand ? "gap-1.5 text-xs" : "gap-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white border-0"}
+            onClick={() => { setBrandForm({ ...brand }); setShowBrand(true); }}
+          >
+            <Pencil className="w-3 h-3" />
+            {hasBrand ? "تعديل" : "إعداد الآن"}
+          </Button>
         </div>
-      )}
+
+        {hasBrand && brand.businessDesc && (
+          <p className="text-xs text-gray-400 mt-3 pr-11 line-clamp-2">{brand.businessDesc}</p>
+        )}
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -393,6 +472,109 @@ export default function Automation() {
           ))}
         </div>
       )}
+
+      {/* ══ BRAND SETTINGS DIALOG ══════════════════════════════════ */}
+      <Dialog open={showBrand} onOpenChange={v => { if (!v) setShowBrand(false); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Bot className="w-5 h-5 text-green-500" /> إعدادات الرد الذكي
+            </DialogTitle>
+            <DialogDescription>
+              بيانات براندك هتتبعت لـ Gemini عشان يرد بشكل صح على عملائك
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pl-1">
+            {/* اسم البراند */}
+            <div>
+              <Label className="text-sm mb-1.5 block">اسم البراند</Label>
+              <Input
+                value={brandForm.brandName}
+                onChange={e => setBrandForm(f => ({ ...f, brandName: e.target.value }))}
+                placeholder="مثال: متجر الأناقة"
+              />
+            </div>
+
+            {/* وصف النشاط */}
+            <div>
+              <Label className="text-sm mb-1.5 block">
+                وصف النشاط <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                value={brandForm.businessDesc}
+                onChange={e => setBrandForm(f => ({ ...f, businessDesc: e.target.value }))}
+                placeholder="مثال: نحن متجر ملابس نسائية متخصص في الموضة العصرية، نوفر شحن سريع لجميع محافظات مصر"
+                className="min-h-[90px] resize-none text-sm"
+                dir="rtl"
+              />
+              <p className="text-xs text-gray-400 mt-1">الأهم — هذا ما سيعرفه الـ AI عن نشاطك</p>
+            </div>
+
+            {/* المنتجات والخدمات */}
+            <div>
+              <Label className="text-sm mb-1.5 block">المنتجات والخدمات (اختياري)</Label>
+              <Textarea
+                value={brandForm.productsInfo}
+                onChange={e => setBrandForm(f => ({ ...f, productsInfo: e.target.value }))}
+                placeholder="مثال: فساتين سهرة، عبايات، ملابس كاجوال، إكسسوارات"
+                className="min-h-[70px] resize-none text-sm"
+                dir="rtl"
+              />
+            </div>
+
+            {/* الأسعار */}
+            <div>
+              <Label className="text-sm mb-1.5 block">الأسعار (اختياري)</Label>
+              <Textarea
+                value={brandForm.pricingInfo}
+                onChange={e => setBrandForm(f => ({ ...f, pricingInfo: e.target.value }))}
+                placeholder="مثال: الأسعار من 200 لـ 2000 جنيه، الشحن 60 جنيه لأي محافظة"
+                className="min-h-[70px] resize-none text-sm"
+                dir="rtl"
+              />
+            </div>
+
+            {/* ساعات العمل */}
+            <div>
+              <Label className="text-sm mb-1.5 block">ساعات العمل (اختياري)</Label>
+              <Input
+                value={brandForm.workingHours}
+                onChange={e => setBrandForm(f => ({ ...f, workingHours: e.target.value }))}
+                placeholder="مثال: من السبت للخميس 9 صباحاً لـ 10 مساءً"
+              />
+            </div>
+
+            {/* لهجة الرد */}
+            <div>
+              <Label className="text-sm mb-1.5 block">لهجة الرد</Label>
+              <Select value={brandForm.aiTone} onValueChange={v => setBrandForm(f => ({ ...f, aiTone: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="friendly">ودود وقريب من العميل</SelectItem>
+                  <SelectItem value="formal">رسمي ومهني</SelectItem>
+                  <SelectItem value="egyptian">عامية مصرية طبيعية</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-gray-100">
+            <Button variant="outline" onClick={() => setShowBrand(false)}>إلغاء</Button>
+            <div className="flex-1" />
+            <Button
+              className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
+              onClick={saveBrand}
+              disabled={savingBrand || !brandForm.businessDesc.trim()}
+            >
+              {savingBrand ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              حفظ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ══ WIZARD ══════════════════════════════════════════════════ */}
       <Dialog open={showWizard} onOpenChange={v => { if (!v) setShowWizard(false); }}>

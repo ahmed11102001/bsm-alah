@@ -19,13 +19,13 @@ export async function GET() {
       where:  { id: userId },
       select: {
         id: true, name: true, email: true, phone: true, image: true, role: true,
+        // ─── Brand fields ───────────────────────────────────────
         brandName: true, businessDesc: true, productsInfo: true,
         pricingInfo: true, workingHours: true, aiTone: true,
       },
     }),
     prisma.whatsAppAccount.findUnique({
       where:  { userId: ownerId },
-      // لا نرجع accessToken للواجهة لأسباب أمنية
       select: { phoneNumberId: true, wabaId: true },
     }),
   ]);
@@ -35,9 +35,10 @@ export async function GET() {
 
 // ─── PATCH /api/me/settings ───────────────────────────────────────────────────
 // Body options:
-//   { type: "profile",   name, phone }
-//   { type: "password",  currentPassword, newPassword }
-//   { type: "whatsapp",  accessToken, phoneNumberId, wabaId }
+//   { type: "profile",  name, phone }
+//   { type: "password", currentPassword, newPassword }
+//   { type: "whatsapp", accessToken, phoneNumberId, wabaId }
+//   { type: "brand",    brandName, businessDesc, productsInfo, pricingInfo, workingHours, aiTone }
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user)
@@ -94,7 +95,6 @@ export async function PATCH(req: NextRequest) {
 
   // ── WhatsApp settings ──────────────────────────────────────────
   if (type === "whatsapp") {
-    // فقط OWNER يقدر يعدل إعدادات واتساب
     if ((session.user as any).parentId)
       return NextResponse.json({ error: "فقط المالك يمكنه تعديل إعدادات واتساب" }, { status: 403 });
 
@@ -123,7 +123,7 @@ export async function PATCH(req: NextRequest) {
     const { brandName, businessDesc, productsInfo, pricingInfo, workingHours, aiTone } = body;
 
     if (!businessDesc?.trim())
-      return NextResponse.json({ error: "وصف النشاط مطلوب لتفعيل الردود الذكية" }, { status: 400 });
+      return NextResponse.json({ error: "وصف النشاط مطلوب" }, { status: 400 });
 
     const VALID_TONES = ["friendly", "formal", "egyptian"];
     const tone = VALID_TONES.includes(aiTone) ? aiTone : "friendly";
