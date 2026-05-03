@@ -185,7 +185,8 @@ export async function PATCH(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   const userId = uid(session);
 
-  const { action, contactId, audienceId } = await req.json();
+  const body = await req.json();
+  const { action, contactId, audienceId, messageId, emoji } = body;
 
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
 
@@ -230,7 +231,6 @@ export async function PATCH(req: NextRequest) {
 
   // ── React to message ───────────────────────────────────────────────────────
   if (action === "react") {
-    const { messageId, emoji } = body;
     if (!messageId || !emoji)
       return NextResponse.json({ error: "messageId و emoji مطلوبان" }, { status: 400 });
 

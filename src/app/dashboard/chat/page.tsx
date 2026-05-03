@@ -351,7 +351,7 @@ export default function ChatPage() {
     ));
     try {
       await fetch("/api/chat", {
-        method: "POST",
+        method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action:    "react",
