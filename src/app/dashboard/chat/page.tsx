@@ -124,105 +124,103 @@ function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoj
   }, {});
 
   return (
-    <div
-      className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1 group`}
-      onMouseEnter={() => setShowReactions(true)}
-      onMouseLeave={() => setShowReactions(false)}
-    >
-      <div className="relative">
-        {/* زر الـ reactions — يظهر عند hover */}
+    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`}>
+      {/* الـ bubble نفسها + زر reactions */}
+      <div className="relative inline-block max-w-[68%]">
+
+        {/* Reaction bar — يظهر عند الضغط على الرسالة */}
         {showReactions && onReact && (
           <div className={`absolute -top-10 z-20 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-2 py-1
-            ${isMe ? "left-0" : "right-0"}`}>
+            ${isMe ? "right-0" : "left-0"}`}>
             {QUICK_REACTIONS.map(emoji => (
               <button
                 key={emoji}
-                onClick={() => { onReact(msg.id, emoji); setShowReactions(false); }}
-                className="text-lg hover:scale-125 transition-transform"
+                onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowReactions(false); }}
+                className="text-lg hover:scale-125 transition-transform leading-none"
               >
                 {emoji}
               </button>
             ))}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowReactions(false); }}
+              className="text-gray-400 hover:text-gray-600 text-xs mr-1"
+            >✕</button>
           </div>
         )}
 
+        {/* الـ bubble */}
         <div
-          className={`relative max-w-[68%] rounded-xl px-3 py-2 text-sm shadow-sm
+          onClick={() => onReact && setShowReactions(p => !p)}
+          className={`rounded-xl px-3 py-2 text-sm shadow-sm cursor-pointer
             ${isMe ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}`}
         >
-        {/* media */}
-        {msg.type === "image" && resolvedMediaSrc && (
-          <>
-            <a href={resolvedMediaSrc} target="_blank" rel="noreferrer">
-              <img src={resolvedMediaSrc} alt="صورة واردة" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
-            </a>
-            {resolvedMediaDownloadSrc && (
-              <a
-                href={resolvedMediaDownloadSrc}
-                download
-                className="inline-flex items-center text-[11px] text-blue-600 hover:underline mb-1"
-              >
-                حفظ الصورة
+          {/* media */}
+          {msg.type === "image" && resolvedMediaSrc && (
+            <>
+              <a href={resolvedMediaSrc} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+                <img src={resolvedMediaSrc} alt="صورة واردة" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
               </a>
-            )}
-          </>
-        )}
-        {msg.type === "video" && resolvedMediaSrc && (
-          <video src={resolvedMediaSrc} controls className="rounded-lg mb-1 max-w-full max-h-48" />
-        )}
-        {msg.type === "audio" && resolvedMediaSrc && (
-          <>
-            <audio ref={audioRef} src={resolvedMediaSrc} controls className="mb-1 w-56" />
-            <div className="flex items-center gap-1 mb-1">
-              {[1, 1.5, 2].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setSpeed(r as 1 | 1.5 | 2)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${
-                    speed === r
-                      ? "bg-[#25d366] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {r}x
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        {msg.type === "document" && resolvedMediaSrc && (
-          <a href={resolvedMediaSrc} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 text-blue-600 text-xs mb-1 hover:underline">
-            <FileText className="w-4 h-4" /> تحميل الملف
-          </a>
-        )}
+              {resolvedMediaDownloadSrc && (
+                <a href={resolvedMediaDownloadSrc} download onClick={e => e.stopPropagation()}
+                  className="inline-flex items-center text-[11px] text-blue-600 hover:underline mb-1">
+                  حفظ الصورة
+                </a>
+              )}
+            </>
+          )}
+          {msg.type === "video" && resolvedMediaSrc && (
+            <video src={resolvedMediaSrc} controls onClick={e => e.stopPropagation()}
+              className="rounded-lg mb-1 max-w-full max-h-48" />
+          )}
+          {msg.type === "audio" && resolvedMediaSrc && (
+            <>
+              <audio ref={audioRef} src={resolvedMediaSrc} controls onClick={e => e.stopPropagation()}
+                className="mb-1 w-56" />
+              <div className="flex items-center gap-1 mb-1">
+                {[1, 1.5, 2].map((r) => (
+                  <button key={r} type="button"
+                    onClick={(e) => { e.stopPropagation(); setSpeed(r as 1 | 1.5 | 2); }}
+                    className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${
+                      speed === r ? "bg-[#25d366] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}>
+                    {r}x
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {msg.type === "document" && resolvedMediaSrc && (
+            <a href={resolvedMediaSrc} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+              className="flex items-center gap-2 text-blue-600 text-xs mb-1 hover:underline">
+              <FileText className="w-4 h-4" /> تحميل الملف
+            </a>
+          )}
 
-        {msg.content && (
-          <p className="leading-relaxed whitespace-pre-wrap break-words text-[#111b21]">
-            {msg.content}
-          </p>
-        )}
+          {msg.content && (
+            <p className="leading-relaxed whitespace-pre-wrap break-words text-[#111b21]">
+              {msg.content}
+            </p>
+          )}
 
-        <div className={`flex items-center gap-0.5 mt-0.5 text-[10px] text-gray-400
-          ${isMe ? "justify-end" : "justify-start"}`}
-        >
-          {timeStr(msg.createdAt)}
-          <MsgTick status={msg.status} isMe={isMe} />
+          {/* الوقت + علامات الصح */}
+          <div className={`flex items-center gap-0.5 mt-0.5 text-[10px] text-gray-400
+            ${isMe ? "justify-end" : "justify-start"}`}>
+            {timeStr(msg.createdAt)}
+            <MsgTick status={msg.status} isMe={isMe} />
+          </div>
         </div>
 
-        {/* عرض الـ reactions على الرسالة */}
+        {/* Reactions تحت الـ bubble */}
         {Object.keys(reactionCounts).length > 0 && (
           <div className={`flex gap-1 flex-wrap mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
             {Object.entries(reactionCounts).map(([emoji, count]) => (
               <span key={emoji}
                 className="inline-flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 text-xs shadow-sm">
-                {emoji} {count > 1 && <span className="text-gray-500">{count}</span>}
+                {emoji}{count > 1 && <span className="text-gray-500 text-[10px]">{count}</span>}
               </span>
             ))}
           </div>
         )}
-        </div>
       </div>
     </div>
   );
