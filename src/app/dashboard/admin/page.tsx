@@ -155,6 +155,9 @@ export default function AdminPage() {
       setShowCouponF(false);
       setCouponForm({ prefix: "SAVE", discountType: "percent", discountValue: "", maxUses: "1", expiresAt: "" });
       fetchCoupons();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      alert(d.error ?? "حدث خطأ أثناء إنشاء الكوبون");
     }
   };
 
