@@ -37,6 +37,7 @@ interface Conversation {
 interface Message {
   id: string; content: string | null; type: string;
   direction: string; status: string; mediaUrl: string | null; createdAt: string;
+  reactions?: { emoji: string; senderId: string }[];
 }
 
 type Filter = "all" | "replied" | "today" | "unread" | "archived";
@@ -98,11 +99,15 @@ function dateStr(iso: string) {
   return d.toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
 }
 
+// ─── Quick reactions ──────────────────────────────────────────────────────────
+const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
+
 // ─── Bubble ───────────────────────────────────────────────────────────────────
-function Bubble({ msg }: { msg: Message }) {
+function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoji: string) => void }) {
   const isMe = msg.direction === "outbound";
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
+  const [showReactions, setShowReactions] = useState(false);
   const resolvedMediaSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl) : null;
   const resolvedMediaDownloadSrc = msg.mediaUrl
     ? mediaSrc(msg.mediaUrl, { download: true })
@@ -112,12 +117,39 @@ function Bubble({ msg }: { msg: Message }) {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, msg.id]);
 
+  // تجميع الـ reactions
+  const reactionCounts = (msg.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
+    acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-      <div
-        className={`relative max-w-[68%] rounded-xl px-3 py-2 text-sm shadow-sm
-          ${isMe ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}`}
-      >
+    <div
+      className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1 group`}
+      onMouseEnter={() => setShowReactions(true)}
+      onMouseLeave={() => setShowReactions(false)}
+    >
+      <div className="relative">
+        {/* زر الـ reactions — يظهر عند hover */}
+        {showReactions && onReact && (
+          <div className={`absolute -top-10 z-20 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-2 py-1
+            ${isMe ? "left-0" : "right-0"}`}>
+            {QUICK_REACTIONS.map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => { onReact(msg.id, emoji); setShowReactions(false); }}
+                className="text-lg hover:scale-125 transition-transform"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div
+          className={`relative max-w-[68%] rounded-xl px-3 py-2 text-sm shadow-sm
+            ${isMe ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}`}
+        >
         {/* media */}
         {msg.type === "image" && resolvedMediaSrc && (
           <>
@@ -178,6 +210,19 @@ function Bubble({ msg }: { msg: Message }) {
           {timeStr(msg.createdAt)}
           <MsgTick status={msg.status} isMe={isMe} />
         </div>
+
+        {/* عرض الـ reactions على الرسالة */}
+        {Object.keys(reactionCounts).length > 0 && (
+          <div className={`flex gap-1 flex-wrap mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+            {Object.entries(reactionCounts).map(([emoji, count]) => (
+              <span key={emoji}
+                className="inline-flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 text-xs shadow-sm">
+                {emoji} {count > 1 && <span className="text-gray-500">{count}</span>}
+              </span>
+            ))}
+          </div>
+        )}
+        </div>
       </div>
     </div>
   );
@@ -207,6 +252,7 @@ export default function ChatPage() {
   const [text,        setText]         = useState("");
   const [sending,     setSending]      = useState(false);
   const [showAttach,  setShowAttach]   = useState(false);
+  const [showEmoji,   setShowEmoji]    = useState(false);
   const [recording,   setRecording]    = useState(false);
   const [showTpl,     setShowTpl]      = useState(false);
   const [templates,   setTemplates]    = useState<Template[]>([]);
@@ -292,6 +338,29 @@ export default function ChatPage() {
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); setText(body); }
     finally { setSending(false); }
+  };
+
+  // ── Send reaction ─────────────────────────────────────────────────
+  const sendReaction = async (msgId: string, emoji: string) => {
+    if (!selected) return;
+    // حدّث الـ UI فوراً (optimistic)
+    setMessages(prev => prev.map(m =>
+      m.id === msgId
+        ? { ...m, reactions: [...(m.reactions ?? []), { emoji, senderId: "me" }] }
+        : m
+    ));
+    try {
+      await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action:    "react",
+          contactId: selected.contact.id,
+          messageId: msgId,
+          emoji,
+        }),
+      });
+    } catch { /* silent — الـ UI اتحدث فعلاً */ }
   };
 
   // ── Send template ─────────────────────────────────────────────────
@@ -592,8 +661,19 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* Three-dot menu */}
-              <DropdownMenu>
+              {/* Header actions */}
+              <div className="flex items-center gap-1">
+                {/* زر X — إغلاق المحادثة */}
+                <button
+                  onClick={() => { setSelected(null); setMessages([]); }}
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-500"
+                  title="إغلاق المحادثة"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Three-dot menu */}
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-600">
                     <MoreVertical className="w-5 h-5" />
@@ -641,6 +721,7 @@ export default function ChatPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </header>
 
             {/* Messages area */}
@@ -676,7 +757,7 @@ export default function ChatPage() {
                             </span>
                           </div>
                         )}
-                        <Bubble msg={msg} />
+                        <Bubble msg={msg} onReact={sendReaction} />
                       </div>
                     );
                   })}
@@ -718,10 +799,10 @@ export default function ChatPage() {
               {/* Attach menu */}
               <div className="relative">
                 <button
-                  onClick={() => { setShowAttach(p => !p); setShowTpl(false); }}
+                  onClick={() => { setShowAttach(p => !p); setShowTpl(false); setShowEmoji(false); }}
                   className={`p-2 rounded-full transition-colors ${showAttach ? "bg-gray-300 text-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
                 >
-                  <Paperclip className="w-5 h-5" />
+                  {showAttach ? <X className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
                 </button>
 
                 {showAttach && (
@@ -777,6 +858,57 @@ export default function ChatPage() {
                       </span>
                       <span className="text-sm text-gray-700">قالب رسمي</span>
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Emoji picker */}
+              <div className="relative">
+                <button
+                  onClick={() => { setShowEmoji(p => !p); setShowAttach(false); setShowTpl(false); }}
+                  className={`p-2 rounded-full transition-colors ${showEmoji ? "bg-gray-300 text-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+                {showEmoji && (
+                  <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-72 z-20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-400 font-medium">إيموجي</span>
+                      <button onClick={() => setShowEmoji(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                      {[
+                        "😀","😃","😄","😁","😆","😅","😂","🤣",
+                        "😊","😇","🙂","🙃","😉","😌","😍","🥰",
+                        "😘","😗","😙","😚","😋","😛","😝","😜",
+                        "🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳",
+                        "😏","😒","😞","😔","😟","😕","🙁","☹️",
+                        "😣","😖","😫","😩","🥺","😢","😭","😤",
+                        "😠","😡","🤬","🤯","😳","🥵","🥶","😱",
+                        "😨","😰","😥","😓","🤗","🤔","🫣","🤭",
+                        "🤫","🤥","😶","😑","😬","🙄","😯","😦",
+                        "😧","😮","😲","🥱","😴","🤤","😪","😵",
+                        "🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕",
+                        "🤑","🤠","😈","👿","👹","👺","💀","☠️",
+                        "👻","👽","🤖","💩","😺","😸","😹","😻",
+                        "❤️","🧡","💛","💚","💙","💜","🖤","🤍",
+                        "💔","❣️","💕","💞","💓","💗","💖","💘",
+                        "💝","💟","👍","👎","👏","🙌","🤝","🙏",
+                        "✌️","🤞","🤟","🤘","🤙","👈","👉","👆",
+                        "🖕","👇","☝️","👋","🤚","🖐","✋","🖖",
+                        "💪","🦾","🦿","🦵","🦶","👂","🦻","👃",
+                        "🔥","⭐","✨","💥","💫","🎉","🎊","🎈",
+                      ].map(em => (
+                        <button key={em}
+                          onClick={() => { setText(t => t + em); }}
+                          className="text-xl hover:bg-gray-100 rounded-lg p-0.5 transition-colors"
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

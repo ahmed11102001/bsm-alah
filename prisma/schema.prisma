@@ -341,6 +341,7 @@ model Message {
 
   mediaUrl String? @db.Text
   error    String?
+  reactions Json?  @default("[]")
 
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)

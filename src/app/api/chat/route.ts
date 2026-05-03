@@ -228,6 +228,63 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  // ── React to message ───────────────────────────────────────────────────────
+  if (action === "react") {
+    const { messageId, emoji } = body;
+    if (!messageId || !emoji)
+      return NextResponse.json({ error: "messageId و emoji مطلوبان" }, { status: 400 });
+
+    const account = await prisma.whatsAppAccount.findUnique({
+      where:  { userId },
+      select: { phoneNumberId: true, accessToken: true },
+    });
+    if (!account)
+      return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
+
+    // جيب الـ whatsappId من الرسالة
+    const message = await prisma.message.findFirst({
+      where:  { id: messageId, userId },
+      select: { whatsappId: true },
+    });
+    if (!message?.whatsappId)
+      return NextResponse.json({ error: "الرسالة غير موجودة أو لم تُرسَل بعد" }, { status: 404 });
+
+    // ابعت الـ reaction لـ Meta
+    const contactObj = await prisma.contact.findFirst({
+      where:  { id: contactId, userId },
+      select: { phone: true },
+    });
+    if (!contactObj)
+      return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
+      {
+        method:  "POST",
+        headers: {
+          Authorization:  `Bearer ${account.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type:    "individual",
+          to:                contactObj.phone,
+          type:              "reaction",
+          reaction: {
+            message_id: message.whatsappId,
+            emoji,
+          },
+        }),
+      }
+    );
+
+    const metaData = await metaRes.json();
+    if (metaData.error)
+      return NextResponse.json({ error: metaData.error.message }, { status: 400 });
+
+    return NextResponse.json({ success: true });
+  }
+
   return NextResponse.json({ error: "action غير معروف" }, { status: 400 });
 }
 

@@ -124,6 +124,36 @@ export async function POST(req: NextRequest) {
       const msg  = value.messages[0];
       const from = msg.from;
 
+      // ── معالجة الـ Reaction ──────────────────────────────────────────────
+      if (msg.type === "reaction") {
+        const reactionEmoji  = msg.reaction?.emoji ?? "";
+        const reactedMsgId   = msg.reaction?.message_id ?? "";
+
+        if (reactedMsgId) {
+          // ابحث عن الرسالة الأصلية وحدّث الـ reactions
+          const original = await prisma.message.findFirst({
+            where:  { whatsappId: reactedMsgId, userId },
+            select: { id: true, reactions: true },
+          });
+
+          if (original) {
+            const existingReactions = (original.reactions as any[] ?? []);
+            // شيل الـ reaction القديمة من نفس المُرسِل لو موجودة
+            const filtered = existingReactions.filter((r: any) => r.senderId !== from);
+            // لو الـ emoji مش فاضي → أضف، لو فاضي → شيل (يعني إلغاء reaction)
+            const updated = reactionEmoji
+              ? [...filtered, { emoji: reactionEmoji, senderId: from }]
+              : filtered;
+
+            await prisma.message.update({
+              where: { id: original.id },
+              data:  { reactions: updated },
+            });
+          }
+        }
+        return NextResponse.json({ status: "reaction_processed" });
+      }
+
       // منع التكرار بناءً على معرف واتساب
       const existing = await prisma.message.findFirst({
         where: { whatsappId: msg.id, userId },
