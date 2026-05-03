@@ -7,8 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
 enum MessageType {
   text
   image
@@ -49,6 +47,7 @@ enum PlanTier {
   starter
   pro
   enterprise
+  beta
 }
 
 enum SubscriptionStatus {
@@ -57,16 +56,21 @@ enum SubscriptionStatus {
   cancelled
 }
 
-// ✅ جديد: حالة رسالة الـ Queue
 enum QueueStatus {
-  pending      // في الانتظار
-  processing   // جاري المعالجة (محجوز)
-  sent         // تم الإرسال
-  failed       // فشل نهائي (استنفذ المحاولات)
-  cancelled    // ألغاه المستخدم
+  pending
+  processing
+  sent
+  failed
+  cancelled
 }
 
-
+enum NotificationType {
+  CAMPAIGN_SUCCESS
+  CAMPAIGN_FAILED
+  CAMPAIGN_PARTIAL
+  PLAN_LIMIT_REACHED
+  NEW_MESSAGE
+}
 
 model User {
   id       String  @id @default(cuid())
@@ -78,6 +82,7 @@ model User {
   apiKey   String? @unique
 
   role        UserRole @default(OWNER)
+  isSuper     Boolean  @default(false)
   workspaceId String?
   inviteCode  String?  @unique
   parentId    String?
@@ -97,6 +102,7 @@ model User {
   campaigns     Campaign[]
   messages      Message[]
   messageQueues MessageQueue[]
+  notifications Notification[]
 
   @@index([email])
   @@index([workspaceId])
@@ -147,14 +153,12 @@ model WhatsAppAccount {
   phoneNumberId String
   wabaId        String @unique
 
-  // ✅ جديد: تتبع الـ Tier الخاص بكل رقم
-  messagingTier  Int      @default(1)    // 1=1K, 2=10K, 3=100K, 4=unlimited
-  dailySentCount Int      @default(0)    // عداد يومي
-  dailyResetAt   DateTime @default(now()) // آخر تصفير
+  messagingTier  Int      @default(1)
+  dailySentCount Int      @default(0)
+  dailyResetAt   DateTime @default(now())
 
-  // ✅ جديد: backoff state لو Meta رجعت 429
-  backoffUntil   DateTime? // النظام ينتظر لحد الوقت ده
-  backoffCount   Int       @default(0)
+  backoffUntil DateTime?
+  backoffCount Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -162,61 +166,66 @@ model WhatsAppAccount {
   messageQueues MessageQueue[]
 }
 
-// ✅ جديد: جدول الـ Queue الرئيسي
 model MessageQueue {
   id String @id @default(cuid())
 
-  // ─ مين صاحب الرسالة
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ─ Credentials (نسخة وقت الإنشاء — مش بتتغير لو العميل بدّل التوكن)
   whatsappAccountId String
   whatsappAccount   WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
-  phoneNumberId     String          // نسخة للفرز السريع بدون join
-  accessTokenSnap   String          @db.Text // snapshot من التوكن وقت الإنشاء
+  phoneNumberId     String
 
-  // ─ المستقبل
   toPhone   String
   contactId String?
 
-  // ─ المحتوى
-  messageType  String  @default("template") // template | text
+  messageType  String  @default("template")
   templateName String?
   templateLang String  @default("ar")
-  templateVars Json?   // متغيرات القالب لو فيه
-  content      String? @db.Text             // للرسائل النصية العادية
+  templateVars Json?
+  content      String? @db.Text
 
-  // ─ ربط الحملة
   campaignId String?
 
-  // ─ Queue Control
   status      QueueStatus @default(pending)
-  scheduledAt DateTime    @default(now())  // موعد الإرسال المطلوب
-  processedAt DateTime?                     // وقت المعالجة الفعلي
+  scheduledAt DateTime    @default(now())
+  processedAt DateTime?
   sentAt      DateTime?
 
-  attempts    Int  @default(0)
-  maxAttempts Int  @default(3)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
   nextRetryAt DateTime?
 
-  // ─ النتيجة
-  whatsappMsgId    String? // ID اللي رجعته Meta بعد الإرسال
-  error            String? @db.Text
-
-  // ─ ربط برسالة Chat موجودة (لرسائل الـ Chat الفردية)
-  // لو موجود → نعمل update للرسالة دي بدل create جديدة
+  whatsappMsgId     String?
+  error             String? @db.Text
   existingMessageId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // ─ الـ Indexes الحرجة للأداء
-  @@index([status, scheduledAt])           // الأهم: للـ cron يجيب الـ pending
-  @@index([phoneNumberId, status])         // للـ rate limiting per number
-  @@index([campaignId])                    // لتتبع الحملة
-  @@index([userId, status])               // لعرض رسائل اليوزر
-  @@index([status, nextRetryAt])           // للـ retry logic
+  @@index([status, scheduledAt])
+  @@index([phoneNumberId, status])
+  @@index([campaignId])
+  @@index([userId, status])
+  @@index([status, nextRetryAt])
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type   NotificationType
+  title  String
+  body   String           @db.Text
+  isRead Boolean          @default(false)
+  link   String?
+  meta   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Audience {
@@ -249,8 +258,8 @@ model Contact {
 
   messages Message[]
 
-  isPinned   Boolean @default(false)
-  isArchived Boolean @default(false)
+  isPinned      Boolean   @default(false)
+  isArchived    Boolean   @default(false)
   unreadCount   Int       @default(0)
   lastMessageAt DateTime?
   deletedAt     DateTime?
@@ -304,10 +313,8 @@ model Campaign {
   deliveredCount Int @default(0)
   readCount      Int @default(0)
   failedCount    Int @default(0)
-
-  // ✅ جديد: تتبع الـ Queue
-  totalQueued    Int @default(0)  // إجمالي اللي اتحط في الـ queue
-  queuedCount    Int @default(0)  // لسه في الانتظار
+  totalQueued    Int @default(0)
+  queuedCount    Int @default(0)
 
   startedAt   DateTime?
   completedAt DateTime?
@@ -318,7 +325,7 @@ model Campaign {
 
   @@index([userId])
   @@index([status])
-  @@index([scheduledAt]) // للـ cron يجيب الـ scheduled campaigns
+  @@index([scheduledAt])
 }
 
 model Message {
@@ -373,36 +380,34 @@ model WebhookLog {
   @@index([createdAt])
 }
 
-// ─── آراء العملاء ─────────────────────────────────────────────────────────────
 model Testimonial {
-  id          String   @id @default(cuid())
-  name        String                        // اسم العميل
-  brandName   String                        // اسم البراند
-  phone       String                        // رقم الهاتف للتحقق
-  rating      Int                           // 1-5
-  content     String   @db.Text            // نص الرأي
-  approved    Boolean  @default(false)     // بيظهر بس لو وافق عليه الأدمن
-  userId      String?                       // لو موجود = مستخدم مسجل (للتحقق من الاشتراك)
+  id        String  @id @default(cuid())
+  name      String
+  brandName String
+  phone     String
+  rating    Int
+  content   String  @db.Text
+  approved  Boolean @default(false)
+  userId    String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([approved])
   @@index([createdAt])
 }
 
-// ─── كوبونات الخصم ────────────────────────────────────────────────────────────
 model Coupon {
-  id           String    @id @default(cuid())
-  code         String    @unique              // الكود (مثلاً: SAVE20)
-  discountType String    @default("percent")  // percent | fixed
-  discountValue Float                         // قيمة الخصم
-  maxUses      Int       @default(1)          // أقصى عدد استخدامات
-  usedCount    Int       @default(0)          // عدد الاستخدامات الفعلية
-  expiresAt    DateTime?                      // تاريخ الانتهاء (اختياري)
-  active       Boolean   @default(true)
+  id            String    @id @default(cuid())
+  code          String    @unique
+  discountType  String    @default("percent")
+  discountValue Float
+  maxUses       Int       @default(1)
+  usedCount     Int       @default(0)
+  expiresAt     DateTime?
+  active        Boolean   @default(true)
 
-  createdAt    DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([code])
   @@index([active])
