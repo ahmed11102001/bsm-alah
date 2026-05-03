@@ -208,19 +208,19 @@ function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoj
             {timeStr(msg.createdAt)}
             <MsgTick status={msg.status} isMe={isMe} />
           </div>
-        </div>
 
-        {/* Reactions تحت الـ bubble */}
-        {Object.keys(reactionCounts).length > 0 && (
-          <div className={`flex gap-1 flex-wrap mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-            {Object.entries(reactionCounts).map(([emoji, count]) => (
-              <span key={emoji}
-                className="inline-flex items-center gap-0.5 bg-white border border-gray-100 rounded-full px-1.5 py-0.5 text-xs shadow-sm">
-                {emoji}{count > 1 && <span className="text-gray-500 text-[10px]">{count}</span>}
-              </span>
-            ))}
-          </div>
-        )}
+          {/* Reactions — جوه الـ bubble */}
+          {Object.keys(reactionCounts).length > 0 && (
+            <div className={`flex gap-1 flex-wrap mt-1.5 pt-1.5 border-t border-black/5 ${isMe ? "justify-end" : "justify-start"}`}>
+              {Object.entries(reactionCounts).map(([emoji, count]) => (
+                <span key={emoji}
+                  className="inline-flex items-center gap-0.5 bg-black/5 rounded-full px-1.5 py-0.5 text-xs">
+                  {emoji}{count > 1 && <span className="text-gray-600 text-[10px]">{count}</span>}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
