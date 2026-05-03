@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent }   from "@/components/ui/card";
 import { Star, Quote, PenLine, X, Loader2, CheckCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
 
 interface Testimonial {
   id:        string;
@@ -88,11 +87,9 @@ function TestimonialForm({ onClose, onSuccess }: { onClose: () => void; onSucces
 }
 
 export default function Testimonials() {
-  const { data: session } = useSession();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [showForm,     setShowForm]     = useState(false);
-  const [isPaidUser,   setIsPaidUser]   = useState(false);
 
   const fetchTestimonials = async () => {
     setLoading(true);
@@ -100,18 +97,6 @@ export default function Testimonials() {
     if (r.ok) setTestimonials(await r.json());
     setLoading(false);
   };
-
-  // التحقق من الباقة — الزرار يظهر بس لو مشترك في باقة مدفوعة
-  useEffect(() => {
-    if (!session?.user) return;
-    fetch("/api/dashboard")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        const plan = d?.plan?.tier ?? d?.subscription?.plan;
-        setIsPaidUser(plan && plan !== "free");
-      })
-      .catch(() => {});
-  }, [session]);
 
   useEffect(() => { fetchTestimonials(); }, []);
 
@@ -133,14 +118,13 @@ export default function Testimonials() {
             تجارب حقيقية من أصحاب مشاريع بيستخدموا واتس برو في شغلهم اليومي
           </p>
 
-          {/* زرار إضافة رأي — بس للمشتركين في باقة مدفوعة */}
-          {isPaidUser && (
-            <button onClick={() => setShowForm(true)}
-              className="mt-6 inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#20b557] transition">
-              <PenLine className="w-4 h-4" />
-              أضف رأيك
-            </button>
-          )}
+          {/* زرار إضافة رأي — لكل الزوار */}
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-6 inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#20b557] transition">
+            <PenLine className="w-4 h-4" />
+            أضف رأيك
+          </button>
         </div>
 
         {/* Testimonials Grid */}

@@ -37,43 +37,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // التحقق من الجلسة
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "يجب تسجيل الدخول أولاً" },
-      { status: 401 }
-    );
-  }
-
-  // التحقق من الاشتراك المدفوع
-  const userId = session.user.id;
-  const sub    = await prisma.subscription.findUnique({
-    where:  { userId },
-    select: { plan: true, status: true },
-  });
-
-  const isPaid = sub && sub.status === "active" && sub.plan !== "free";
-  if (!isPaid) {
-    return NextResponse.json(
-      { error: "يجب الاشتراك في خطة مدفوعة لإضافة رأيك" },
-      { status: 403 }
-    );
-  }
-
-  // التحقق من عدم إرسال رأي قبل كده
-  const existing = await prisma.testimonial.findFirst({
-    where:  { userId },
-    select: { id: true },
-  });
-  if (existing) {
-    return NextResponse.json(
-      { error: "لقد أرسلت رأيك من قبل" },
-      { status: 409 }
-    );
-  }
-
-  // Validation
+  // التحقق من عدم التكرار بالهاتف
   const { name, brandName, phone, rating, content } = await req.json();
 
   if (!name?.trim())      return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
@@ -87,6 +51,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "الرأي يجب أن يكون 20 حرف على الأقل" }, { status: 400 });
   }
 
+  // منع التكرار بنفس رقم الهاتف
+  const existing = await prisma.testimonial.findFirst({
+    where:  { phone: phone.trim() },
+    select: { id: true },
+  });
+  if (existing) {
+    return NextResponse.json(
+      { error: "تم إرسال رأي بهذا الرقم من قبل" },
+      { status: 409 }
+    );
+  }
+
+  const session = await getServerSession(authOptions);
+
   const testimonial = await prisma.testimonial.create({
     data: {
       name:      name.trim(),
@@ -94,8 +72,8 @@ export async function POST(req: NextRequest) {
       phone:     phone.trim(),
       rating:    Number(rating),
       content:   content.trim(),
-      userId,
-      approved:  false, // بيستنى موافقة الأدمن
+      userId:    session?.user?.id ?? null,
+      approved:  false,
     },
   });
 
