@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Step 4: Verify state token for CSRF protection ──────────────────────
-    let stateData: { userId: string; timestamp: number } | null = null;
+    let stateData: { userId: string; timestamp: number };
     try {
       const decoded = Buffer.from(state, "base64").toString("utf8");
       stateData = JSON.parse(decoded);
@@ -70,12 +70,6 @@ export async function GET(req: NextRequest) {
       }
     } catch (error) {
       console.error("[Shopify Callback] Invalid state token:", error);
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=invalid_state`
-      );
-    }
-
-    if (!stateData) {
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=invalid_state`
       );
