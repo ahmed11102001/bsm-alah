@@ -15,8 +15,8 @@ export const handleShopifyOrderCreated = inngest.createFunction(
   {
     id: "shopify-order-created",
     retries: 2,
+    triggers: [{ event: "shopify/order.created" }],
   },
-  { event: "shopify/order.created" },
   async ({ event, step }: { event: any; step: any }) => {
     const {
       userId,
@@ -150,8 +150,8 @@ export const handleShopifyOrderFulfilled = inngest.createFunction(
   {
     id: "shopify-order-fulfilled",
     retries: 2,
+    triggers: [{ event: "shopify/order.fulfilled" }],
   },
-  { event: "shopify/order.fulfilled" },
   async ({ event, step }: { event: any; step: any }) => {
     const { userId, orderId, orderNumber, customerPhone, trackingUrl } = event.data;
 
@@ -250,8 +250,8 @@ export const handleShopifyOrderUpdated = inngest.createFunction(
   {
     id: "shopify-order-updated",
     retries: 2,
+    triggers: [{ event: "shopify/order.updated" }],
   },
-  { event: "shopify/order.updated" },
   async ({ event, step }: { event: any; step: any }) => {
     const { userId, orderId, orderNumber, status, fulfillmentStatus, customerPhone } =
       event.data;
