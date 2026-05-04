@@ -6,8 +6,19 @@
 import { serve }            from "inngest/next";
 import { inngest }          from "@/inngest/client";
 import { processCampaign, sendDirectMessage } from "@/inngest/functions";
+import {
+  handleShopifyOrderCreated,
+  handleShopifyOrderFulfilled,
+  handleShopifyOrderUpdated,
+} from "@/inngest/shopify-functions";
 
 export const { GET, POST, PUT } = serve({
   client:    inngest,
-  functions: [processCampaign, sendDirectMessage],
+  functions: [
+    processCampaign,
+    sendDirectMessage,
+    handleShopifyOrderCreated,
+    handleShopifyOrderFulfilled,
+    handleShopifyOrderUpdated,
+  ],
 });
