@@ -75,6 +75,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!stateData) {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=invalid_state`
+      );
+    }
+
     // ── Step 5: Get current session ──────────────────────────────────────────
     const session = await getServerSession();
 
