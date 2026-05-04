@@ -4,7 +4,7 @@
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
-import { sendWhatsAppMessage } from "./functions";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import type { Prisma } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
