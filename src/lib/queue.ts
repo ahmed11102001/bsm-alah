@@ -4,7 +4,13 @@
 // الإرسال الفعلي بيتم من خلال Inngest (src/inngest/functions.ts)
 
 import prisma from "@/lib/prisma";
-import { QueueStatus, CampaignStatus } from "@prisma/client";
+import {
+  QueueStatus,
+  CampaignStatus,
+  MessageStatus,
+  MessageType,
+  MessageDirection,
+} from "@prisma/client";
 import { sendWhatsAppMessage, QUEUE_CONSTANTS } from "@/lib/whatsapp-api";
 import { notifyPlanLimitReached } from "@/lib/notifications";
 
