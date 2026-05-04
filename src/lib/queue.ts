@@ -1,49 +1,22 @@
 // src/lib/queue.ts
-// ─── محرك الـ Queue الأساسي ────────────────────────────────────────────────────
-// هذا الملف هو القلب — يُستدعى من الـ Cron ومن أي مكان آخر يحتاج إرسال
+// ─── Queue Management ─────────────────────────────────────────────────────────
+// مسؤول بس عن: إضافة الرسائل للـ Queue + تشغيل الحملات المجدولة
+// الإرسال الفعلي بيتم من خلال Inngest (src/inngest/functions.ts)
 
 import prisma from "@/lib/prisma";
-import { QueueStatus, CampaignStatus, MessageDirection, MessageStatus, MessageType } from "@prisma/client";
+import { QueueStatus, CampaignStatus } from "@prisma/client";
+import { sendWhatsAppMessage, QUEUE_CONSTANTS } from "@/lib/whatsapp-api";
+import { notifyPlanLimitReached } from "@/lib/notifications";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-// حد الإرسال اليومي لكل Tier
-const TIER_DAILY_LIMIT: Record<number, number> = {
-  1: 1_000,
-  2: 10_000,
-  3: 100_000,
-  4: Infinity,
-};
-
-// كام رسالة نبعت في كل batch حسب الـ Tier
-const TIER_BATCH_SIZE: Record<number, number> = {
-  1: 10,
-  2: 30,
-  3: 80,
-  4: 150,
-};
-
-// وقت الانتظار بين الرسائل (ms)
-const DELAY_BETWEEN_MSGS = 350;
-
-// backoff مراحل (بالثواني)
-const BACKOFF_STEPS_SEC = [60, 300, 900, 3600]; // 1m, 5m, 15m, 1h
+const { DELAY_BETWEEN_MSGS, BACKOFF_STEPS_SEC, TIER_DAILY_LIMIT, TIER_BATCH_SIZE } = QUEUE_CONSTANTS;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SendResult {
-  ok:           boolean;
-  whatsappMsgId?: string;
-  error?:       string;
-  isRateLimit?: boolean; // Meta رجّعت 429
-  isTokenError?: boolean; // التوكن باظ
-}
 
 interface ProcessResult {
   processed: number;
   sent:      number;
   failed:    number;
-  skipped:   number; // تم تخطيها بسبب backoff أو حد يومي
+  skipped:   number;
 }
 
 // ─── Helper: delay ────────────────────────────────────────────────────────────
@@ -65,105 +38,6 @@ async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
     return 0;
   }
   return null;
-}
-
-// ─── Core: إرسال رسالة واحدة عبر Meta API ────────────────────────────────────
-async function sendOneMessage(item: {
-  toPhone:      string;
-  phoneNumberId: string;
-  accessToken:  string;
-  messageType:  string;
-  templateName: string | null;
-  templateLang: string;
-  templateVars: any;
-  content:      string | null;
-}): Promise<SendResult> {
-  let payload: object;
-
-  if (item.messageType === "template" && item.templateName) {
-    // ── قالب ──────────────────────────────────────────────────────────────────
-    const components: object[] = [];
-    if (item.templateVars && Array.isArray(item.templateVars.body)) {
-      components.push({
-        type: "body",
-        parameters: item.templateVars.body.map((v: string) => ({
-          type: "text", text: v,
-        })),
-      });
-    }
-
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "template",
-      template: {
-        name:       item.templateName,
-        language:   { code: item.templateLang },
-        components: components.length ? components : undefined,
-      },
-    };
-
-  } else if (item.messageType === "media" && item.content) {
-    // ── ميديا (image / video / audio / document) ──────────────────────────────
-    // content بيتخزن بصيغة "mediaType:mediaId"  مثلاً "image:12345678"
-    const colonIdx = item.content.indexOf(":");
-    const mediaType = colonIdx > -1 ? item.content.slice(0, colonIdx) : "document";
-    const mediaId   = colonIdx > -1 ? item.content.slice(colonIdx + 1) : item.content;
-
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              mediaType,
-      [mediaType]:       { id: mediaId },
-    };
-
-  } else {
-    // ── نص عادي ───────────────────────────────────────────────────────────────
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "text",
-      text:              { body: item.content ?? "" },
-    };
-  }
-
-  try {
-    const res = await fetch(
-      `https://graph.facebook.com/v20.0/${item.phoneNumberId}/messages`,
-      {
-        method:  "POST",
-        headers: {
-          Authorization:  `Bearer ${item.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    const data = await res.json();
-
-    // Rate limit (429)
-    if (res.status === 429 || data?.error?.code === 80007) {
-      return { ok: false, isRateLimit: true, error: "Rate limit — 429" };
-    }
-
-    // Token error
-    if (data?.error?.code === 190 || data?.error?.code === 200) {
-      return { ok: false, isTokenError: true, error: data.error.message };
-    }
-
-    // أي error آخر من Meta
-    if (data?.error) {
-      return { ok: false, error: data.error.message };
-    }
-
-    return {
-      ok:            true,
-      whatsappMsgId: data.messages?.[0]?.id,
-    };
-  } catch (err: any) {
-    return { ok: false, error: err.message ?? "Network error" };
-  }
 }
 
 // ─── handleRateLimit: تفعيل الـ Backoff على الرقم ───────────────────────────
@@ -316,15 +190,15 @@ export async function processQueue(): Promise<ProcessResult> {
         break;
       }
 
-      const sendResult = await sendOneMessage({
-        toPhone:         item.toPhone,
-        phoneNumberId:   item.phoneNumberId,
-        accessToken:     account.accessToken,
-        messageType:     item.messageType,
-        templateName:    item.templateName,
-        templateLang:    item.templateLang,
-        templateVars:    item.templateVars,
-        content:         item.content,
+      const sendResult = await sendWhatsAppMessage({
+        toPhone:       item.toPhone,
+        phoneNumberId: item.phoneNumberId,
+        accessToken:   account.accessToken,
+        messageType:   item.messageType,
+        templateName:  item.templateName,
+        templateLang:  item.templateLang,
+        templateVars:  item.templateVars,
+        content:       item.content,
       });
 
       if (sendResult.ok) {
@@ -448,9 +322,8 @@ export async function processQueue(): Promise<ProcessResult> {
       } else if (sendResult.isTokenError) {
         // ── Token Error: أوقف كل رسائل هذا الـ account ──
         result.failed++;
-        accountRateLimited = true; // يوقف الـ batch
+        accountRateLimited = true;
 
-        // فشل نهائي لهذه الرسالة
         await prisma.messageQueue.update({
           where: { id: item.id },
           data:  {
@@ -460,7 +333,18 @@ export async function processQueue(): Promise<ProcessResult> {
           },
         });
 
-        // TODO: إشعار العميل بأن التوكن انتهى صلاحيته
+        // ✅ إشعار العميل بأن التوكن انتهى صلاحيته
+        try {
+          const { createNotification } = await import("@/lib/notifications");
+          await createNotification({
+            userId: item.userId,
+            type:   "PLAN_LIMIT_REACHED" as any,
+            title:  "⚠️ توكن واتساب انتهت صلاحيته",
+            body:   "توقف إرسال الرسائل — يرجى تحديث توكن واتساب من إعدادات الحساب",
+            link:   "/dashboard?section=api",
+          });
+        } catch {}
+
         console.error(`[QUEUE] Token error for account ${account.id}: ${sendResult.error}`);
 
       } else {

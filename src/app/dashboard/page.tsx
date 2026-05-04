@@ -3,6 +3,7 @@
 import ChatPage    from "@/app/dashboard/chat/page";
 import TeamPage    from "@/app/dashboard/team/page";
 import { signOut, useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import "@/app/globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -23,16 +24,17 @@ import {
   Code, LogOut, Plus, TrendingUp, Calendar, ChevronLeft,
   MessageCircle, Bell, Search, Home, CheckCircle, Eye,
   Loader2, ArrowUpRight, Zap, Shield, Phone, Mail,
-  Lock, Wifi, RefreshCw, X, Star,
+  Lock, Wifi, RefreshCw, X, Star, Sun, Moon, Monitor,
 } from "lucide-react";
-import Contacts   from "@/components/dashboard/Contacts";
-import Templates  from "@/components/dashboard/Templates";
-import Campaigns  from "@/components/dashboard/Campaigns";
-import Reports    from "@/components/dashboard/Reports";
-import Automation from "@/components/dashboard/Automation";
+import Contacts        from "@/components/dashboard/Contacts";
+import Templates       from "@/components/dashboard/Templates";
+import Campaigns       from "@/components/dashboard/Campaigns";
+import Reports         from "@/components/dashboard/Reports";
+import Automation      from "@/components/dashboard/Automation";
 import API             from "@/components/dashboard/API";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
   user: { id: string; name: string | null; email: string; phone: string | null; role: string };
@@ -72,22 +74,21 @@ const sidebarItems = [
   { icon: Code,         label: "API",             id: "api"        },
 ];
 
-// الـ Admin item — بيتضاف ديناميكياً لو isSuper بس
 const adminItem = { icon: Shield, label: "Admin", id: "admin" };
 
 const PLAN_COLORS: Record<string, string> = {
-  free:       "bg-gray-100 text-gray-600",
-  starter:    "bg-blue-100 text-blue-700",
+  free:       "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  starter:    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   pro:        "bg-[#25D366]/10 text-[#25D366]",
-  enterprise: "bg-purple-100 text-purple-700",
+  enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  completed: "bg-green-100 text-green-700",
-  running:   "bg-blue-100 text-blue-700",
-  scheduled: "bg-yellow-100 text-yellow-700",
-  failed:    "bg-red-100 text-red-700",
-  draft:     "bg-gray-100 text-gray-600",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  running:   "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  scheduled: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  failed:    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  draft:     "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
 };
 const STATUS_LABEL: Record<string, string> = {
   completed: "مكتملة", running: "قيد التنفيذ",
@@ -100,25 +101,43 @@ function usagePct(used: number, limit: number) {
   return Math.min(Math.round((used / limit) * 100), 100);
 }
 
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+function ThemeToggle({ compact = false }: { compact?: boolean }) {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className={compact ? "w-9 h-9" : "w-full h-10"} />;
+
+  const cycle = () => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
+  const icon  = theme === "dark" ? <Moon className="w-4 h-4" /> : theme === "light" ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  const label = theme === "dark" ? "وضع داكن" : theme === "light" ? "وضع فاتح" : "تلقائي";
+
+  if (compact) return (
+    <button onClick={cycle} title={label}
+      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+      {icon}
+    </button>
+  );
+
+  return (
+    <button onClick={cycle}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
+      {icon}<span>{label}</span>
+    </button>
+  );
+}
+
 // ─── Settings Modal ───────────────────────────────────────────────────────────
-function SettingsModal({
-  open, onClose, data, onSaved,
-}: {
+function SettingsModal({ open, onClose, data, onSaved }: {
   open: boolean; onClose: () => void;
   data: DashboardData | null; onSaved: () => void;
 }) {
   const [saving, setSaving] = useState(false);
-
-  // profile
   const [name,  setName]  = useState("");
   const [phone, setPhone] = useState("");
-
-  // password
   const [curPw,  setCurPw]  = useState("");
   const [newPw,  setNewPw]  = useState("");
   const [confPw, setConfPw] = useState("");
-
-  // whatsapp
   const [wAccessToken,   setWAccessToken]   = useState("");
   const [wPhoneNumberId, setWPhoneNumberId] = useState("");
   const [wWabaId,        setWWabaId]        = useState("");
@@ -166,32 +185,27 @@ function SettingsModal({
           <TabsList className="w-full mb-4">
             <TabsTrigger value="profile"  className="flex-1 text-xs">الملف الشخصي</TabsTrigger>
             <TabsTrigger value="password" className="flex-1 text-xs">كلمة المرور</TabsTrigger>
-            {isOwner && (
-              <TabsTrigger value="whatsapp" className="flex-1 text-xs">واتساب API</TabsTrigger>
-            )}
+            {isOwner && <TabsTrigger value="whatsapp" className="flex-1 text-xs">واتساب API</TabsTrigger>}
           </TabsList>
 
           {/* ── Profile ── */}
           <TabsContent value="profile" className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl mb-2">
               <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold flex-shrink-0">
                 {(data.user.name ?? data.user.email).slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <p className="font-semibold text-sm text-gray-900">{data.user.name ?? "—"}</p>
+                <p className="font-semibold text-sm">{data.user.name ?? "—"}</p>
                 <p className="text-xs text-gray-400">{data.user.email}</p>
               </div>
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-sm">الاسم الكامل</Label>
               <div className="relative">
                 <Users className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
-                <Input value={name} onChange={e => setName(e.target.value)}
-                  className="pr-9 text-sm rounded-xl" />
+                <Input value={name} onChange={e => setName(e.target.value)} className="pr-9 text-sm rounded-xl" />
               </div>
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-sm">رقم الهاتف</Label>
               <div className="relative">
@@ -200,23 +214,18 @@ function SettingsModal({
                   placeholder="201234567890" className="pr-9 text-sm rounded-xl" />
               </div>
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-sm">البريد الإلكتروني</Label>
               <div className="relative">
                 <Mail className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
                 <Input value={data.user.email} disabled
-                  className="pr-9 text-sm rounded-xl bg-gray-50 cursor-not-allowed" />
+                  className="pr-9 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 cursor-not-allowed" />
               </div>
               <p className="text-xs text-gray-400">البريد لا يمكن تغييره</p>
             </div>
-
-            <Button
-              onClick={() => save("profile", { name, phone })}
-              disabled={saving}
-              className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
+            <Button onClick={() => save("profile", { name, phone })} disabled={saving}
+              className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+              {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
               حفظ التغييرات
             </Button>
           </TabsContent>
@@ -227,16 +236,14 @@ function SettingsModal({
               <Label className="text-sm">كلمة المرور الحالية</Label>
               <div className="relative">
                 <Lock className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
-                <Input type="password" value={curPw} onChange={e => setCurPw(e.target.value)}
-                  className="pr-9 text-sm rounded-xl" />
+                <Input type="password" value={curPw} onChange={e => setCurPw(e.target.value)} className="pr-9 text-sm rounded-xl" />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm">كلمة المرور الجديدة</Label>
               <div className="relative">
                 <Lock className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
-                <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
-                  className="pr-9 text-sm rounded-xl" />
+                <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className="pr-9 text-sm rounded-xl" />
               </div>
               {newPw && (
                 <div className="flex gap-1 mt-1">
@@ -244,7 +251,7 @@ function SettingsModal({
                     <div key={i} className={`h-1 flex-1 rounded-full ${
                       newPw.length >= t
                         ? i<1 ? "bg-red-400" : i<2 ? "bg-orange-400" : i<3 ? "bg-yellow-400" : "bg-green-400"
-                        : "bg-gray-200"
+                        : "bg-gray-200 dark:bg-gray-700"
                     }`} />
                   ))}
                 </div>
@@ -257,19 +264,13 @@ function SettingsModal({
                 <Input type="password" value={confPw} onChange={e => setConfPw(e.target.value)}
                   className={`pr-9 text-sm rounded-xl ${confPw && newPw !== confPw ? "border-red-400" : ""}`} />
               </div>
-              {confPw && newPw !== confPw && (
-                <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
-              )}
+              {confPw && newPw !== confPw && <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>}
             </div>
             <Button
-              onClick={() => {
-                if (newPw !== confPw) { toast.error("كلمتا المرور غير متطابقتين"); return; }
-                save("password", { currentPassword: curPw, newPassword: newPw });
-              }}
+              onClick={() => { if (newPw !== confPw) { toast.error("كلمتا المرور غير متطابقتين"); return; } save("password", { currentPassword: curPw, newPassword: newPw }); }}
               disabled={saving || !curPw || !newPw || newPw !== confPw}
-              className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
+              className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+              {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
               تغيير كلمة المرور
             </Button>
           </TabsContent>
@@ -277,36 +278,30 @@ function SettingsModal({
           {/* ── WhatsApp ── */}
           {isOwner && (
             <TabsContent value="whatsapp" className="space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300">
                 <Wifi className="w-4 h-4 inline ml-1" />
                 هذه البيانات تُستخدم للإرسال عبر واتساب Business API الرسمي
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Access Token</Label>
-                <Input dir="ltr" type="password" value={wAccessToken}
-                  onChange={e => setWAccessToken(e.target.value)}
+                <Input dir="ltr" type="password" value={wAccessToken} onChange={e => setWAccessToken(e.target.value)}
                   placeholder="EAAxxxxxx..." className="text-sm rounded-xl font-mono" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Phone Number ID</Label>
-                <Input dir="ltr" value={wPhoneNumberId}
-                  onChange={e => setWPhoneNumberId(e.target.value)}
+                <Input dir="ltr" value={wPhoneNumberId} onChange={e => setWPhoneNumberId(e.target.value)}
                   className="text-sm rounded-xl font-mono" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">WABA ID</Label>
-                <Input dir="ltr" value={wWabaId}
-                  onChange={e => setWWabaId(e.target.value)}
+                <Input dir="ltr" value={wWabaId} onChange={e => setWWabaId(e.target.value)}
                   className="text-sm rounded-xl font-mono" />
               </div>
               <Button
-                onClick={() => save("whatsapp", {
-                  accessToken: wAccessToken, phoneNumberId: wPhoneNumberId, wabaId: wWabaId,
-                })}
+                onClick={() => save("whatsapp", { accessToken: wAccessToken, phoneNumberId: wPhoneNumberId, wabaId: wWabaId })}
                 disabled={saving || !wAccessToken || !wPhoneNumberId || !wWabaId}
-                className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
+                className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+                {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
                 حفظ إعدادات واتساب
               </Button>
             </TabsContent>
@@ -319,28 +314,25 @@ function SettingsModal({
 
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
-  const contactsPct  = usagePct(plan.usage.contacts,          plan.limits.contacts);
+  const contactsPct  = usagePct(plan.usage.contacts,           plan.limits.contacts);
   const campaignsPct = usagePct(plan.usage.campaignsThisMonth, plan.limits.campaignsPerMonth);
   const teamPct      = usagePct(plan.usage.teamMembers,        plan.limits.teamMembers);
-
-  const isNearLimit = (pct: number) => pct >= 80;
+  const isNearLimit  = (pct: number) => pct >= 80;
 
   return (
-    <Card className="border border-gray-100 shadow-sm mb-6">
+    <Card className="border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Star className="w-4 h-4 text-amber-500" />
-              <span className="font-bold text-gray-900 text-sm">باقتك الحالية</span>
+              <span className="font-bold text-sm">باقتك الحالية</span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-bold px-3 py-1 rounded-full ${PLAN_COLORS[plan.plan] ?? "bg-gray-100 text-gray-600"}`}>
                 {plan.planName}
               </span>
-              <span className="text-xs text-gray-400">
-                {plan.status === "active" ? "✓ نشطة" : "منتهية"}
-              </span>
+              <span className="text-xs text-gray-400">{plan.status === "active" ? "✓ نشطة" : "منتهية"}</span>
             </div>
           </div>
           <div className="flex gap-2">
@@ -358,42 +350,24 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* Contacts */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-gray-500">جهات الاتصال</span>
-              <span className={`text-xs font-semibold ${isNearLimit(contactsPct) ? "text-orange-500" : "text-gray-700"}`}>
-                {plan.usage.contacts.toLocaleString("ar-EG")} / {limitLabel(plan.limits.contacts)}
-              </span>
+          {[
+            { label: "جهات الاتصال", used: plan.usage.contacts,           limit: plan.limits.contacts,          pct: contactsPct  },
+            { label: "الحملات / شهر", used: plan.usage.campaignsThisMonth, limit: plan.limits.campaignsPerMonth, pct: campaignsPct },
+            { label: "أعضاء الفريق", used: plan.usage.teamMembers,         limit: plan.limits.teamMembers,       pct: teamPct      },
+          ].map(item => (
+            <div key={item.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
+                <span className={`text-xs font-semibold ${isNearLimit(item.pct) ? "text-orange-500" : ""}`}>
+                  {item.used.toLocaleString("ar-EG")} / {limitLabel(item.limit)}
+                </span>
+              </div>
+              <Progress value={item.pct} className={`h-1.5 ${isNearLimit(item.pct) ? "[&>div]:bg-orange-400" : "[&>div]:bg-[#25D366]"}`} />
             </div>
-            <Progress value={contactsPct} className={`h-1.5 ${isNearLimit(contactsPct) ? "[&>div]:bg-orange-400" : "[&>div]:bg-[#25D366]"}`} />
-          </div>
-
-          {/* Campaigns */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-gray-500">الحملات / شهر</span>
-              <span className={`text-xs font-semibold ${isNearLimit(campaignsPct) ? "text-orange-500" : "text-gray-700"}`}>
-                {plan.usage.campaignsThisMonth.toLocaleString("ar-EG")} / {limitLabel(plan.limits.campaignsPerMonth)}
-              </span>
-            </div>
-            <Progress value={campaignsPct} className={`h-1.5 ${isNearLimit(campaignsPct) ? "[&>div]:bg-orange-400" : "[&>div]:bg-[#25D366]"}`} />
-          </div>
-
-          {/* Team */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-gray-500">أعضاء الفريق</span>
-              <span className={`text-xs font-semibold ${isNearLimit(teamPct) ? "text-orange-500" : "text-gray-700"}`}>
-                {plan.usage.teamMembers.toLocaleString("ar-EG")} / {limitLabel(plan.limits.teamMembers)}
-              </span>
-            </div>
-            <Progress value={teamPct} className={`h-1.5 ${isNearLimit(teamPct) ? "[&>div]:bg-orange-400" : "[&>div]:bg-[#25D366]"}`} />
-          </div>
+          ))}
         </div>
 
-        {/* Feature chips */}
-        <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-gray-50">
+        <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-gray-50 dark:border-gray-700">
           {[
             { key: "scheduledCampaigns", label: "جدولة" },
             { key: "advancedReports",    label: "تقارير متقدمة" },
@@ -404,10 +378,9 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
             const on = plan.limits[f.key as keyof typeof plan.limits] as boolean;
             return (
               <span key={f.key} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                on ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-400 line-through"
-              }`}>
-                {f.label}
-              </span>
+                on ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                   : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
+              }`}>{f.label}</span>
             );
           })}
         </div>
@@ -417,117 +390,62 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
 }
 
 // ─── Home Dashboard ───────────────────────────────────────────────────────────
-function HomeDashboard({
-  data, onCreateCampaign, onOpenSettings,
-}: {
-  data: DashboardData;
-  onCreateCampaign: () => void;
-  onOpenSettings: () => void;
+function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
+  data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void;
 }) {
   const { stats, recentCampaigns, user } = data;
   const firstName = (user.name ?? "").split(" ")[0] || "مرحباً";
 
   const kpis = [
-    {
-      label: "إجمالي المرسل",
-      value: stats.totalSent,
-      sub:   `نسبة وصول ${stats.deliveryRate}%`,
-      icon:  <Send className="w-5 h-5 text-blue-600" />,
-      bg:    "bg-blue-50",
-      trend: stats.totalSent > 0 ? "up" : null,
-    },
-    {
-      label: "تم التوصيل",
-      value: stats.totalDelivered,
-      sub:   `${stats.deliveryRate}% من المرسل`,
-      icon:  <CheckCircle className="w-5 h-5 text-green-600" />,
-      bg:    "bg-green-50",
-      trend: "up",
-    },
-    {
-      label: "إجمالي الردود",
-      value: stats.totalInbound,
-      sub:   `معدل رد ${stats.replyRate}%`,
-      icon:  <MessageSquare className="w-5 h-5 text-purple-600" />,
-      bg:    "bg-purple-50",
-      trend: stats.totalInbound > 0 ? "up" : null,
-    },
-    {
-      label: "الحملات",
-      value: stats.totalCampaigns,
-      sub:   `${data.plan.usage.campaignsThisMonth} هذا الشهر`,
-      icon:  <BarChart3 className="w-5 h-5 text-orange-600" />,
-      bg:    "bg-orange-50",
-      trend: null,
-    },
+    { label: "إجمالي المرسل",  value: stats.totalSent,      sub: `نسبة وصول ${stats.deliveryRate}%`,  icon: <Send className="w-5 h-5 text-blue-600" />,         bg: "bg-blue-50 dark:bg-blue-900/20",    trend: stats.totalSent > 0 ? "up" : null },
+    { label: "تم التوصيل",     value: stats.totalDelivered, sub: `${stats.deliveryRate}% من المرسل`,   icon: <CheckCircle className="w-5 h-5 text-green-600" />,  bg: "bg-green-50 dark:bg-green-900/20",  trend: "up" },
+    { label: "إجمالي الردود",  value: stats.totalInbound,   sub: `معدل رد ${stats.replyRate}%`,        icon: <MessageSquare className="w-5 h-5 text-purple-600" />, bg: "bg-purple-50 dark:bg-purple-900/20", trend: stats.totalInbound > 0 ? "up" : null },
+    { label: "الحملات",        value: stats.totalCampaigns, sub: `${data.plan.usage.campaignsThisMonth} هذا الشهر`, icon: <BarChart3 className="w-5 h-5 text-orange-600" />, bg: "bg-orange-50 dark:bg-orange-900/20", trend: null },
   ];
 
   return (
     <div dir="rtl">
-      {/* Welcome */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            مرحباً، {firstName} 👋
-          </h1>
-          <p className="text-gray-500 text-sm">إليك نظرة عامة على أداء حسابك</p>
+          <h1 className="text-2xl font-bold mb-1">مرحباً، {firstName} 👋</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">إليك نظرة عامة على أداء حسابك</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            size="sm" variant="outline"
-            onClick={onOpenSettings}
-            className="gap-1.5 text-sm"
-          >
+          <Button size="sm" variant="outline" onClick={onOpenSettings} className="gap-1.5 text-sm">
             <Settings className="w-4 h-4" /> الإعدادات
           </Button>
-          <Button
-            size="sm"
-            className="bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm"
-            onClick={onCreateCampaign}
-          >
+          <Button size="sm" className="bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm" onClick={onCreateCampaign}>
             <Plus className="w-4 h-4" /> حملة جديدة
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {kpis.map((k) => (
-          <Card key={k.label} className="border border-gray-100 shadow-sm">
+          <Card key={k.label} className="border border-gray-100 dark:border-gray-700 shadow-sm">
             <CardContent className="p-5 flex items-start justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">{k.label}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {k.value.toLocaleString("ar-EG")}
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{k.label}</p>
+                <p className="text-2xl font-bold">{k.value.toLocaleString("ar-EG")}</p>
                 {k.sub && (
-                  <p className={`text-xs mt-1 flex items-center gap-1 ${
-                    k.trend === "up" ? "text-green-600" : "text-gray-400"
-                  }`}>
+                  <p className={`text-xs mt-1 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-gray-400"}`}>
                     {k.trend === "up" && <TrendingUp className="w-3 h-3" />}
                     {k.sub}
                   </p>
                 )}
               </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.bg}`}>
-                {k.icon}
-              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.bg}`}>{k.icon}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Plan Card */}
       <PlanCard plan={data.plan} />
 
-      {/* Recent Campaigns */}
-      <Card className="border border-gray-100 shadow-sm">
+      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-5">
           <CardTitle className="text-base font-bold">آخر الحملات</CardTitle>
-          <button
-            onClick={onCreateCampaign}
-            className="text-xs text-[#25D366] hover:underline flex items-center gap-1"
-          >
+          <button onClick={onCreateCampaign} className="text-xs text-[#25D366] hover:underline flex items-center gap-1">
             عرض الكل <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         </CardHeader>
@@ -536,39 +454,29 @@ function HomeDashboard({
             <div className="text-center py-12 text-gray-400">
               <Send className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p className="text-sm">لا توجد حملات بعد</p>
-              <button
-                onClick={onCreateCampaign}
-                className="mt-3 text-xs text-[#25D366] hover:underline"
-              >
-                ابدأ أول حملة الآن
-              </button>
+              <button onClick={onCreateCampaign} className="mt-3 text-xs text-[#25D366] hover:underline">ابدأ أول حملة الآن</button>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">الحملة</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">التاريخ</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">مرسل</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">وصل</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">قُرئ</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500">الحالة</th>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                    {["الحملة","التاريخ","مرسل","وصل","قُرئ","الحالة"].map(h => (
+                      <th key={h} className="text-right py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {recentCampaigns.map((c) => (
-                    <tr key={c.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 px-4 font-medium text-gray-800 max-w-[160px] truncate">{c.name}</td>
+                    <tr key={c.id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                      <td className="py-3 px-4 font-medium max-w-[160px] truncate">{c.name}</td>
                       <td className="py-3 px-4 text-gray-400 text-xs whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
-                          {new Date(c.createdAt).toLocaleDateString("ar-EG", {
-                            month: "short", day: "numeric",
-                          })}
+                          {new Date(c.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700 font-medium">{c.sentCount.toLocaleString("ar-EG")}</td>
+                      <td className="py-3 px-4 font-medium">{c.sentCount.toLocaleString("ar-EG")}</td>
                       <td className="py-3 px-4 text-green-600 font-medium">{c.deliveredCount.toLocaleString("ar-EG")}</td>
                       <td className="py-3 px-4 text-blue-600 font-medium">{c.readCount.toLocaleString("ar-EG")}</td>
                       <td className="py-3 px-4">
@@ -591,10 +499,10 @@ function HomeDashboard({
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
-  const [activeSection,  setActiveSection]  = useState("home");
-  const [dashData,       setDashData]       = useState<DashboardData | null>(null);
-  const [loadingDash,    setLoadingDash]    = useState(true);
-  const [showSettings,   setShowSettings]   = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+  const [dashData,      setDashData]      = useState<DashboardData | null>(null);
+  const [loadingDash,   setLoadingDash]   = useState(true);
+  const [showSettings,  setShowSettings]  = useState(false);
 
   const fetchDash = useCallback(async () => {
     setLoadingDash(true);
@@ -604,11 +512,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     } finally { setLoadingDash(false); }
   }, []);
 
-  useEffect(() => {
-    fetchDash();
-  }, [fetchDash]);
+  useEffect(() => { fetchDash(); }, [fetchDash]);
 
-  // listen for navigate-to events (from chat page empty state)
   useEffect(() => {
     const h = (e: any) => { if (e.detail) setActiveSection(e.detail); };
     window.addEventListener("navigate-to", h);
@@ -639,12 +544,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200">
 
       {/* ── Desktop Sidebar ── */}
-      <aside className="w-64 bg-white border-l border-gray-200 fixed right-0 top-0 bottom-0 z-40 hidden lg:flex flex-col">
-        {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
+      <aside className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 fixed right-0 top-0 bottom-0 z-40 hidden lg:flex flex-col transition-colors duration-200">
+        <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
@@ -653,73 +557,61 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </span>
         </div>
 
-        {/* Nav */}
         <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto">
           {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
+            <button key={item.id} onClick={() => setActiveSection(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                 activeSection === item.id
                   ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <item.icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}>
+              <item.icon className="w-[18px] h-[18px]" />
               <span>{item.label}</span>
             </button>
           ))}
 
-          {/* Admin — مش شايفه غير Super Admin */}
           {session?.user?.isSuper && (
-            <button
-              onClick={() => setActiveSection("admin")}
+            <button onClick={() => setActiveSection("admin")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${
                 activeSection === "admin"
-                  ? "bg-red-50 text-red-600 font-semibold"
-                  : "text-red-400 hover:bg-red-50"
-              }`}
-            >
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
+                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+              }`}>
               <adminItem.icon className="w-[18px] h-[18px]" />
               <span>{adminItem.label}</span>
             </button>
           )}
         </nav>
 
-        {/* User + plan strip */}
-        <div className="border-t border-gray-100 p-4 flex-shrink-0">
-          <div className="flex items-center gap-2.5 mb-3">
+        <div className="border-t border-gray-100 dark:border-gray-700 p-4 flex-shrink-0 space-y-1">
+          {/* Theme toggle */}
+          <ThemeToggle />
+
+          <div className="flex items-center gap-2.5 py-2">
             <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>
-                {planName}
-              </span>
+              <p className="text-sm font-semibold truncate">{displayName}</p>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
             </div>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-all text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>تسجيل الخروج</span>
+
+          <button onClick={() => signOut({ callbackUrl: "/" })}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm">
+            <LogOut className="w-4 h-4" /><span>تسجيل الخروج</span>
           </button>
         </div>
       </aside>
 
       {/* ── Mobile Bottom Nav ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
         <div className="flex justify-around p-2">
           {sidebarItems.slice(0, 5).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
+            <button key={item.id} onClick={() => setActiveSection(item.id)}
               className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                activeSection === item.id ? "text-[#25D366]" : "text-gray-400"
-              }`}
-            >
+                activeSection === item.id ? "text-[#25D366]" : "text-gray-400 dark:text-gray-500"
+              }`}>
               <item.icon className="w-5 h-5" />
               <span className="text-[10px]">{item.label.slice(0, 5)}</span>
             </button>
@@ -729,33 +621,28 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       {/* ── Main ── */}
       <main className="flex-1 lg:mr-64 pb-20 lg:pb-0">
-        {/* Header */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
           <div className="hidden md:flex items-center flex-1 max-w-sm">
             <div className="relative w-full">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                placeholder="البحث..."
-                className="w-full bg-gray-50 pr-9 pl-4 py-1.5 rounded-xl border border-gray-100 focus:outline-none focus:border-[#25D366] text-sm"
-              />
+              <input placeholder="البحث..."
+                className="w-full bg-gray-50 dark:bg-gray-700 pr-9 pl-4 py-1.5 rounded-xl border border-gray-100 dark:border-gray-600 focus:outline-none focus:border-[#25D366] text-sm dark:text-gray-200 dark:placeholder-gray-400" />
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-2 rounded-xl hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <Settings className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+          <div className="flex items-center gap-2">
+            <ThemeToggle compact />
+
+            <button onClick={() => setShowSettings(true)}
+              className="p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+              <Settings className="w-[18px] h-[18px]" />
             </button>
 
-            {/* Notification Bell */}
             <NotificationBell onNavigate={(section) => setActiveSection(section)} />
 
-            {/* User chip */}
             <div className="flex items-center gap-2">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{displayName}</p>
+                <p className="text-sm font-semibold leading-tight">{displayName}</p>
                 <p className="text-[10px] text-gray-400">{planName}</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold">
@@ -765,19 +652,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        {/* Content */}
-        <div className="p-4 lg:p-6">
-          {renderContent()}
-        </div>
+        <div className="p-4 lg:p-6">{renderContent()}</div>
       </main>
 
-      {/* Settings Modal */}
-      <SettingsModal
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-        data={dashData}
-        onSaved={fetchDash}
-      />
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} onSaved={fetchDash} />
     </div>
   );
 }

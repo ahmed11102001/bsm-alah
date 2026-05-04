@@ -127,6 +127,7 @@ model User {
   messageQueues   MessageQueue[]
   notifications   Notification[]
   automationRules AutomationRule[]
+  shopifyStore    ShopifyStore?
 
   @@index([email])
   @@index([workspaceId])
@@ -437,6 +438,21 @@ model Coupon {
 
   @@index([code])
   @@index([active])
+}
+
+model ShopifyStore {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  shop          String   @unique // e.g. store.myshopify.com
+  accessToken   String   @db.Text
+  scope         String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([shop])
 }
 
 // ─── Automation ───────────────────────────────────────────────────────────────

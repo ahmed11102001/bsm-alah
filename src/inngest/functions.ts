@@ -6,103 +6,14 @@
 import { inngest }   from "./client";
 import prisma        from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 
-// ─── String literals بدل الـ enums (تعمل بدون prisma generate) ───────────────
-const QueueStatus    = { pending: "pending", processing: "processing", sent: "sent", failed: "failed" } as const;
-const CampaignStatus = { draft: "draft", scheduled: "scheduled", running: "running", completed: "completed" } as const;
-const MessageStatus  = { pending: "pending", sent: "sent", delivered: "delivered", read: "read", failed: "failed" } as const;
-const MessageDirection = { outbound: "outbound", inbound: "inbound" } as const;
-const MessageType    = { text: "text", template: "template", image: "image", audio: "audio", video: "video", document: "document" } as const;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface SendResult {
-  ok:             boolean;
-  whatsappMsgId?: string;
-  error?:         string;
-  isRateLimit?:   boolean;
-  isTokenError?:  boolean;
-}
-
-// ─── Core: إرسال رسالة واحدة عبر Meta API ────────────────────────────────────
-export async function sendWhatsAppMessage(item: {
-  toPhone:       string;
-  phoneNumberId: string;
-  accessToken:   string;
-  messageType:   string;
-  templateName:  string | null;
-  templateLang:  string;
-  templateVars:  any;
-  content:       string | null;
-}): Promise<SendResult> {
-  let payload: object;
-
-  if (item.messageType === "template" && item.templateName) {
-    const components: object[] = [];
-    if (item.templateVars && Array.isArray(item.templateVars.body)) {
-      components.push({
-        type: "body",
-        parameters: item.templateVars.body.map((v: string) => ({
-          type: "text", text: v,
-        })),
-      });
-    }
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "template",
-      template: {
-        name:       item.templateName,
-        language:   { code: item.templateLang },
-        components: components.length ? components : undefined,
-      },
-    };
-
-  } else if (item.messageType === "media" && item.content) {
-    const colonIdx  = item.content.indexOf(":");
-    const mediaType = colonIdx > -1 ? item.content.slice(0, colonIdx) : "document";
-    const mediaId   = colonIdx > -1 ? item.content.slice(colonIdx + 1) : item.content;
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              mediaType,
-      [mediaType]:       { id: mediaId },
-    };
-
-  } else {
-    payload = {
-      messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "text",
-      text:              { body: item.content ?? "" },
-    };
-  }
-
-  try {
-    const res  = await fetch(
-      `https://graph.facebook.com/v20.0/${item.phoneNumberId}/messages`,
-      {
-        method:  "POST",
-        headers: {
-          Authorization:  `Bearer ${item.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    const data = await res.json();
-
-    if (res.status === 429 || data?.error?.code === 80007)
-      return { ok: false, isRateLimit: true, error: "Rate limit — 429" };
-    if (data?.error?.code === 190 || data?.error?.code === 200)
-      return { ok: false, isTokenError: true, error: data.error.message };
-    if (data?.error)
-      return { ok: false, error: data.error.message };
-
-    return { ok: true, whatsappMsgId: data.messages?.[0]?.id };
-  } catch (err: any) {
-    return { ok: false, error: err.message ?? "Network error" };
-  }
-}
+// ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
+const QueueStatus      = { pending: "pending", sent: "sent", failed: "failed" } as const;
+const CampaignStatus   = { running: "running", completed: "completed", scheduled: "scheduled" } as const;
+const MessageStatus    = { sent: "sent", failed: "failed" } as const;
+const MessageDirection = { outbound: "outbound" } as const;
+const MessageType      = { template: "template" } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Function 1: processCampaign
@@ -296,7 +207,7 @@ export const processCampaign = inngest.createFunction(
           });
 
         } else if (result.isTokenError) {
-          // ── Token Error: وقف الحملة كلها ──
+          // ── Token Error: وقف الحملة + إشعار العميل ──
           await prisma.messageQueue.update({
             where: { id: msg.id },
             data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
@@ -305,6 +216,18 @@ export const processCampaign = inngest.createFunction(
             where: { id: campaignId },
             data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
           });
+
+          // ✅ إشعار فوري للعميل
+          try {
+            const { createNotification } = await import("@/lib/notifications");
+            await createNotification({
+              userId: campaign.userId,
+              type:   "PLAN_LIMIT_REACHED" as any,
+              title:  "⚠️ توكن واتساب انتهت صلاحيته",
+              body:   `توقف إرسال حملة "${campaign.name}" — يرجى تحديث توكن واتساب`,
+              link:   "/dashboard?section=api",
+            });
+          } catch {}
 
         } else if (result.isRateLimit) {
           // ── Rate Limit: ارجع الرسالة لـ pending وحاول بعد شوية ──
