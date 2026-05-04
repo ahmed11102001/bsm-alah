@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, CheckCircle, RefreshCw } from "lucide-react";
+import { Copy, CheckCircle, RefreshCw, ShoppingBag, Link as LinkIcon, Zap, CheckCircle2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 const endpoints = [
@@ -101,7 +101,10 @@ export default function API({ initialData }: { initialData?: any }) {
       <Tabs defaultValue="connect">
         <TabsList>
           <TabsTrigger value="connect">ربط الحساب</TabsTrigger>
-          <TabsTrigger value="docs">التوثيق</TabsTrigger>
+          <TabsTrigger value="shopify" className="gap-2">
+            <ShoppingBag className="w-4 h-4" />
+            ربط شوبيفاي
+          </TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
 
@@ -150,33 +153,79 @@ export default function API({ initialData }: { initialData?: any }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="docs">
+        <TabsContent value="shopify">
           <Card>
             <CardHeader>
-              <CardTitle>API Key</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="text-blue-600" />
+                ربط متجر شوبيفاي (Shopify Integration)
+              </CardTitle>
+              <p className="text-sm text-gray-500">قم بربط متجرك لتبدأ في أتمتة رسائل العملاء وزيادة مبيعاتك تلقائياً</p>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Input value={apiKey} readOnly />
-                <Button onClick={() => copyToClipboard(apiKey)}>
-                  {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Endpoints</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {endpoints.map((ep, i) => (
-                <div key={i} className="flex justify-between p-2 border-b">
-                  <span className="font-bold text-blue-600">{ep.method}</span>
-                  <code className="bg-gray-100 px-1 rounded">{ep.path}</code>
-                  <span className="text-gray-600 text-sm">{ep.description}</span>
+              <div className="grid gap-8 py-4">
+                {/* Flow Steps */}
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 relative">
+                  {/* Step 1 */}
+                  <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold border-2 border-blue-600">1</div>
+                    <h3 className="font-semibold">ربط المتجر</h3>
+                    <p className="text-xs text-gray-500 px-2">أدخل رابط متجرك في شوبيفاي للبدء</p>
+                  </div>
+                  
+                  <div className="hidden md:block flex-1 h-[2px] bg-gray-200 mt-5 -mx-4 relative top-0"></div>
+
+                  {/* Step 2 */}
+                  <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-bold border-2 border-gray-200">2</div>
+                    <h3 className="font-semibold">الموافقة</h3>
+                    <p className="text-xs text-gray-500 px-2">الموافقة على تثبيت التطبيق في شوبيفاي</p>
+                  </div>
+
+                  <div className="hidden md:block flex-1 h-[2px] bg-gray-200 mt-5 -mx-4 relative top-0"></div>
+
+                  {/* Step 3 */}
+                  <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-bold border-2 border-gray-200">3</div>
+                    <h3 className="font-semibold">تفعيل الأتمتة</h3>
+                    <p className="text-xs text-gray-500 px-2">استقبال الطلبات وإرسال الرسائل فوراً</p>
+                  </div>
                 </div>
-              ))}
+
+                {/* Connection Form */}
+                <div className="mt-6 p-6 border rounded-xl bg-slate-50 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="shop-url">رابط متجر شوبيفاي</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="shop-url" 
+                        placeholder="your-store.myshopify.com" 
+                        className="bg-white"
+                        dir="ltr"
+                      />
+                      <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+                        ربط الآن
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-gray-400">مثال: bsm-alah-store.myshopify.com</p>
+                  </div>
+
+                  <div className="pt-4 border-t flex items-start gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Zap className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold">ماذا سيحدث بعد الربط؟</h4>
+                      <ul className="text-xs text-gray-600 mt-1 space-y-1">
+                        <li>• سيتم سحب جميع بيانات العملاء والطلبات تلقائياً.</li>
+                        <li>• يمكنك تفعيل رسائل تأكيد الطلب فور حدوثها.</li>
+                        <li>• متابعة الشحن وإرسال التحديثات للعملاء عبر واتساب.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
