@@ -137,13 +137,12 @@ export default function Testimonials() {
             تجارب حقيقية من أصحاب مشاريع بيستخدموا واتس برو يومياً
           </p>
 
-          {isPaidUser && (
-            <button onClick={() => setShowForm(true)}
-              className="mt-6 inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#20b557] transition shadow-lg shadow-[#25D366]/20">
-              <PenLine className="w-4 h-4" />
-              أضف رأيك
-            </button>
-          )}
+          {/* Button now visible to everyone - removed isPaidUser condition */}
+          <button onClick={() => setShowForm(true)}
+            className="mt-6 inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#20b557] transition shadow-lg shadow-[#25D366]/20">
+            <PenLine className="w-4 h-4" />
+            أضف رأيك
+          </button>
         </div>
 
         {/* Testimonials */}
