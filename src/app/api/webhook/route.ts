@@ -324,9 +324,14 @@ async function handleAutomation(ctx: {
     }
   }
 
-  // 3. AI fallback — لو مفيش keyword match والمستخدم عنده businessDesc
+  // 3. AI fallback — بس لو القاعدة مش مربوطة بـ keyword محدد
+  //    يعني replyType=AI مع triggerType=ALL_MESSAGES أو triggerType=FIRST_MESSAGE
+  //    الـ KEYWORD+AI بيتعالج في Step 2 لو الكلمة اتكالت
   if (!matchedRule && owner.businessDesc?.trim()) {
-    matchedRule = rules.find(r => r.replyType === ReplyType.AI) ?? null;
+    matchedRule = rules.find(r =>
+      r.replyType === ReplyType.AI &&
+      r.triggerType !== TriggerType.KEYWORD // مش قاعدة keyword
+    ) ?? null;
   }
 
   if (!matchedRule) return;
@@ -338,6 +343,7 @@ async function handleAutomation(ctx: {
     replyText = matchedRule.replyContent;
 
   } else if (matchedRule.replyType === ReplyType.AI && owner.businessDesc) {
+    console.log(`[AUTOMATION] Calling Gemini for ${from}, rule: ${matchedRule.id}`);
     const geminiResult = await getSmartReply(messageText, {
       brandName:         owner.brandName,
       businessDesc:      owner.businessDesc,
@@ -348,8 +354,14 @@ async function handleAutomation(ctx: {
       extraInstructions: matchedRule.extraInstructions,
     });
 
-    if (!geminiResult.ok || geminiResult.offTopic) {
-      console.log(`[AUTOMATION] Gemini off-topic or error for ${from}:`, geminiResult.error ?? "off-topic");
+    console.log(`[AUTOMATION] Gemini result:`, JSON.stringify(geminiResult));
+
+    if (!geminiResult.ok) {
+      console.error(`[AUTOMATION] Gemini failed for ${from}:`, geminiResult.error);
+      return;
+    }
+    if (geminiResult.offTopic) {
+      console.log(`[AUTOMATION] Gemini off-topic for ${from}`);
       return;
     }
     replyText = geminiResult.reply ?? null;
