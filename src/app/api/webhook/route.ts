@@ -306,12 +306,7 @@ async function handleAutomation(ctx: {
   // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
   let matchedRule: (typeof rules)[0] | null = null;
 
-  // 1. FIRST_MESSAGE
-  if (isFirstMessage) {
-    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
-  }
-
-  // 2. KEYWORD — أول كلمة مفتاحية تطابق
+  // 1. KEYWORD — أول كلمة مفتاحية تطابق
   if (!matchedRule) {
     matchedRule = rules.find(r =>
       r.triggerType === TriggerType.KEYWORD &&
@@ -322,6 +317,11 @@ async function handleAutomation(ctx: {
     if (matchedRule) {
       console.log(`[AUTOMATION] Keyword matched: "${matchedRule.triggerValue}" for ${from}`);
     }
+  }
+
+  // 2. FIRST_MESSAGE
+  if (!matchedRule && isFirstMessage) {
+    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
   }
 
   // 3. AI fallback — بس لو القاعدة مش مربوطة بـ keyword محدد
