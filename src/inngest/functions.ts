@@ -367,7 +367,7 @@ export const sendDirectMessage = inngest.createFunction(
             },
           }),
           ...(item.existingMessageId ? [
-            prisma.message.update({
+            prisma.message.updateMany({
               where: { id: item.existingMessageId },
               data:  { status: MessageStatus.sent, whatsappId: result.whatsappMsgId, sentAt: new Date() },
             }),
@@ -379,7 +379,7 @@ export const sendDirectMessage = inngest.createFunction(
           data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
         });
         if (item.existingMessageId) {
-          await prisma.message.update({
+          await prisma.message.updateMany({
             where: { id: item.existingMessageId },
             data:  { status: MessageStatus.failed, error: result.error },
           });

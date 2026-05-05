@@ -249,7 +249,10 @@ async function handleAutomation(ctx: {
 
   // ── A: Human keywords — أي قاعدة فيها كلمة تحويل بشري ──────────
   const humanTriggered = rules.some(r =>
-    r.humanKeywords.some(kw => textLower.includes(kw.toLowerCase()))
+    r.humanKeywords.some(kw => {
+      const normalized = kw?.toLowerCase().trim();
+      return !!normalized && textLower.includes(normalized);
+    })
   );
   if (humanTriggered) {
     // بعت إشعار للمالك فقط بدون رد تلقائي
