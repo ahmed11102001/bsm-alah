@@ -200,9 +200,12 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
           where:  { phone_userId: { phone: from, userId } },
-          update: { lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+          // deletedAt: null عشان لو المحادثة كانت اتحذفت ترجع تظهر لما يبعت رسالة جديدة
+          update: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, deletedAt: null },
           create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
         });
+
+      
 
         await tx.message.create({
           data: {
