@@ -292,7 +292,7 @@ async function handleAutomation(ctx: {
         userId,
         toPhone:    from,
         campaignId: null,                        // مش حملة = رد يدوي
-        status:     { in: ["sent", "delivered"] },
+        status:     { in: ["sent", "failed"] }, // QueueStatus: pending | processing | sent | failed | cancelled
       },
       orderBy: { sentAt: "desc" },
       select:  { sentAt: true },
