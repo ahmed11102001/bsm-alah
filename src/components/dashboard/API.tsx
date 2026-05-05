@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, CheckCircle, RefreshCw, ShoppingBag, Link as LinkIcon, Zap, CheckCircle2, ArrowRight } from "lucide-react";
+import { Copy, CheckCircle, RefreshCw, ShoppingBag, Link as LinkIcon, Zap, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const endpoints = [
@@ -23,6 +23,9 @@ export default function API({ initialData }: { initialData?: any }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
+  const [shopUrl,     setShopUrl]     = useState("");
+  const [connecting,  setConnecting]  = useState(false);
+  const [shopError,   setShopError]   = useState("");
 
   useEffect(() => {
     fetch("/api/me/api-key")
@@ -56,6 +59,31 @@ export default function API({ initialData }: { initialData?: any }) {
       toast.error("حدث خطأ غير متوقع");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleShopifyConnect = async () => {
+    setShopError("");
+    const shop = shopUrl.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (!shop) { setShopError("أدخل رابط المتجر أولاً"); return; }
+    if (!shop.includes("myshopify.com") && !shop.match(/^[a-zA-Z0-9-]+$/)) {
+      setShopError("صيغة الرابط غير صحيحة"); return;
+    }
+    setConnecting(true);
+    try {
+      const r = await fetch("/api/shopify/install", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ shop }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setShopError(d.error ?? "حدث خطأ"); return; }
+      // فتح صفحة موافقة Shopify في نفس النافذة
+      window.location.href = d.authUrl;
+    } catch {
+      setShopError("تعذر الاتصال بالسيرفر");
+    } finally {
+      setConnecting(false);
     }
   };
 
@@ -197,18 +225,32 @@ export default function API({ initialData }: { initialData?: any }) {
                   <div className="space-y-2">
                     <Label htmlFor="shop-url">رابط متجر شوبيفاي</Label>
                     <div className="flex gap-2">
-                      <Input 
-                        id="shop-url" 
-                        placeholder="your-store.myshopify.com" 
+                      <Input
+                        id="shop-url"
+                        placeholder="your-store.myshopify.com"
                         className="bg-white"
                         dir="ltr"
+                        value={shopUrl}
+                        onChange={e => { setShopUrl(e.target.value); setShopError(""); }}
+                        onKeyDown={e => e.key === "Enter" && handleShopifyConnect()}
+                        disabled={connecting}
                       />
-                      <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
-                        ربط الآن
-                        <ArrowRight className="w-4 h-4" />
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 gap-2"
+                        onClick={handleShopifyConnect}
+                        disabled={connecting}
+                      >
+                        {connecting ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> جاري الربط...</>
+                        ) : (
+                          <>ربط الآن <ArrowRight className="w-4 h-4" /></>
+                        )}
                       </Button>
                     </div>
                     <p className="text-[10px] text-gray-400">مثال: bsm-alah-store.myshopify.com</p>
+                    {shopError && (
+                      <p className="text-xs text-red-500">{shopError}</p>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t flex items-start gap-3">
