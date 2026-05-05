@@ -283,20 +283,22 @@ async function handleAutomation(ctx: {
   }
 
   // ── B: pauseOnReply — لو البشري ردّ يدوياً خلال آخر 24 ساعة ────
+  // المهم: الأتمتة بترسل مباشر عبر Meta وما بتعملش MessageQueue record
+  // فالـ MessageQueue بيحتوي فقط الرسائل اليدوية — ده الفرق الصح
   const shouldPause = rules.some(r => r.pauseOnReply);
   if (shouldPause) {
-    const lastManualOutbound = await prisma.message.findFirst({
+    const lastManualOutbound = await prisma.messageQueue.findFirst({
       where: {
         userId,
-        contact:    { phone: from },
-        direction:  MessageDirection.outbound,
-        campaignId: null, // مش رسالة حملة = رد يدوي
+        toPhone:    from,
+        campaignId: null,                        // مش حملة = رد يدوي
+        status:     { in: ["sent", "delivered"] },
       },
-      orderBy: { createdAt: "desc" },
-      select:  { createdAt: true },
+      orderBy: { sentAt: "desc" },
+      select:  { sentAt: true },
     });
-    if (lastManualOutbound) {
-      const hoursSince = (Date.now() - lastManualOutbound.createdAt.getTime()) / 3_600_000;
+    if (lastManualOutbound?.sentAt) {
+      const hoursSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 3_600_000;
       if (hoursSince < 24) {
         console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
         return;
@@ -321,10 +323,11 @@ async function handleAutomation(ctx: {
       textLower.includes(r.triggerValue.toLowerCase().trim())
     );
 
+    // الأولوية: TEXT أولاً (الأكثر وضوحاً) → TEMPLATE → AI كـ fallback
     matchedRule =
-      keywordRules.find(r => r.replyType === ReplyType.AI) ||
-      keywordRules.find(r => r.replyType === ReplyType.TEMPLATE) ||
       keywordRules.find(r => r.replyType === ReplyType.TEXT) ||
+      keywordRules.find(r => r.replyType === ReplyType.TEMPLATE) ||
+      keywordRules.find(r => r.replyType === ReplyType.AI) ||
       null;
 
     console.log("[AUTOMATION] Selected rule:", {
@@ -406,7 +409,7 @@ async function handleAutomation(ctx: {
 
   // ── F: ابعت الرد عبر Meta API مباشرة ────────────────────────────
   const metaRes = await fetch(
-    `https://graph.facebook.com/v19.0/${accountOwner.phoneNumberId}/messages`,
+    `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
     {
       method: "POST",
       headers: {
