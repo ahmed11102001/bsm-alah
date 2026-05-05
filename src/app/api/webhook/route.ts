@@ -294,13 +294,24 @@ async function handleAutomation(ctx: {
     matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
   }
 
-  // 2. KEYWORD — أول كلمة مفتاحية تطابق (بغض النظر عن replyType)
+  // 2. KEYWORD — اجمع كل القواعد المطابقة ثم اختَر حسب أولوية نوع الرد
   if (!matchedRule) {
-    matchedRule = rules.find(r =>
+    const keywordRules = rules.filter(r =>
       r.triggerType === TriggerType.KEYWORD &&
       r.triggerValue?.trim() &&
       textLower.includes(r.triggerValue.toLowerCase().trim())
-    ) ?? null;
+    );
+
+    matchedRule =
+      keywordRules.find(r => r.replyType === ReplyType.AI) ||
+      keywordRules.find(r => r.replyType === ReplyType.TEMPLATE) ||
+      keywordRules.find(r => r.replyType === ReplyType.TEXT) ||
+      null;
+
+    console.log("[AUTOMATION] Selected rule:", {
+      name: matchedRule?.name,
+      type: matchedRule?.replyType,
+    });
 
     if (matchedRule) {
       console.log(`[AUTOMATION] Keyword matched rule "${matchedRule.name}" (replyType=${matchedRule.replyType}) for "${messageText}"`);
