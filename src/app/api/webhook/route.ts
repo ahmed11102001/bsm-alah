@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
 import { notifyNewMessage } from "@/lib/notifications";
 import { getSmartReply } from "@/lib/gemini";
+import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 
 // -------------------------------------------------------------------
 // HELPER: التحقق من توقيع Meta (HMAC-SHA256)
@@ -167,13 +168,33 @@ export async function POST(req: NextRequest) {
       let mediaUrl: string | null = null;
 
       if (msg.type === "image") {
-        type     = MessageType.image;
-        content  = msg.image?.caption || "📷 Image";
-        mediaUrl = msg.image?.id || null;
+        type    = MessageType.image;
+        content = msg.image?.caption || "📷 Image";
+        const metaImageId = msg.image?.id as string | undefined;
+        if (metaImageId) {
+          try {
+            mediaUrl = await downloadFromMetaAndUpload(metaImageId, accountOwner.accessToken, {
+              folder: "whatsapp-media/images",
+            });
+          } catch (uploadErr) {
+            console.error("[WEBHOOK] Cloudinary upload failed for image, falling back to Meta ID:", uploadErr);
+            mediaUrl = metaImageId;
+          }
+        }
       } else if (msg.type === "audio") {
-        type     = MessageType.audio;
-        content  = "🎵 Audio message";
-        mediaUrl = msg.audio?.id || null;
+        type    = MessageType.audio;
+        content = "🎵 Audio message";
+        const metaAudioId = msg.audio?.id as string | undefined;
+        if (metaAudioId) {
+          try {
+            mediaUrl = await downloadFromMetaAndUpload(metaAudioId, accountOwner.accessToken, {
+              folder: "whatsapp-media/audio",
+            });
+          } catch (uploadErr) {
+            console.error("[WEBHOOK] Cloudinary upload failed for audio, falling back to Meta ID:", uploadErr);
+            mediaUrl = metaAudioId;
+          }
+        }
       }
 
       await prisma.$transaction(async (tx) => {

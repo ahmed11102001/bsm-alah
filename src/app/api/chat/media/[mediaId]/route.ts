@@ -47,8 +47,25 @@ export async function GET(
     const { mediaId: rawMediaId } = await params;
     const mediaId = decodeURIComponent(rawMediaId);
 
-    // ── تحقق إن الـ mediaId رقمي (Meta media IDs أرقام فقط) ──────────
-    // لو مش رقمي — رسالة نصية اتبعتلها بالغلط لهنا
+    // ── الحالة 1: الـ mediaId هو Cloudinary URL مباشر ─────────────
+    // الرسائل الجديدة بتتحفظ كـ URL كامل يبدأ بـ https://
+    if (mediaId.startsWith("http")) {
+      // تحقق إن الرسالة موجودة وتابعة للمستخدم ده
+      const message = await prisma.message.findFirst({
+        where: { userId, mediaUrl: mediaId, deletedAt: null },
+        select: { id: true, type: true },
+      });
+      if (!message) {
+        return NextResponse.json({ error: "الوسيط غير موجود" }, { status: 404 });
+      }
+      if (message.type === "text") {
+        return NextResponse.json({ error: "الرسالة نصية وليست ميديا" }, { status: 400 });
+      }
+      // Redirect مباشر لـ Cloudinary — بدون proxy
+      return NextResponse.redirect(mediaId, { status: 302 });
+    }
+
+    // ── الحالة 2: Legacy — Meta media ID رقمي (رسائل قديمة) ────────
     if (!/^\d+$/.test(mediaId)) {
       console.warn(`[MEDIA] Non-numeric mediaId rejected: ${mediaId}`);
       return NextResponse.json({ error: "معرف الوسيط غير صالح" }, { status: 400 });

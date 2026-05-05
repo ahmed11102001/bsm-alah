@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
 import { inngest } from "@/inngest/client";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -405,6 +406,34 @@ async function sendMedia(userId: string, req: NextRequest) {
 
     const mediaId = uploadData.id as string;
 
+    // ── ارفع الملف على Cloudinary وخزّن الـ URL ─────────────────────────────
+    let cloudinaryUrl: string | null = null;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer      = Buffer.from(arrayBuffer);
+      const isImage     = file.type.startsWith("image/");
+      const isVideo     = file.type.startsWith("video/");
+      const isAudio     = file.type.startsWith("audio/");
+      const resource_type: "image" | "video" | "raw" =
+        isImage ? "image" : isVideo || isAudio ? "video" : "raw";
+      const folder = isImage
+        ? "whatsapp-media/images"
+        : isAudio
+        ? "whatsapp-media/audio"
+        : isVideo
+        ? "whatsapp-media/video"
+        : "whatsapp-media/documents";
+
+      cloudinaryUrl = await uploadToCloudinary(buffer, {
+        folder,
+        resource_type,
+        filename: file.name,
+      });
+    } catch (uploadErr) {
+      console.error("[CHAT] Cloudinary upload failed for outbound media:", uploadErr);
+      // fallback: نكمل بدون Cloudinary — الصورة هترسل بس مش هتتحفظ ف Cloudinary
+    }
+
     // map نوع الملف
     const msgTypeMap: Record<string, MessageType> = {
       image: MessageType.image,
@@ -424,7 +453,8 @@ async function sendMedia(userId: string, req: NextRequest) {
           type:      msgType,
           direction: MessageDirection.outbound,
           status:    MessageStatus.pending,
-          mediaUrl:  mediaId,
+          // لو الـ Cloudinary upload نجح → حفظ الـ URL، غيره → حفظ الـ Meta ID كـ fallback
+          mediaUrl:  cloudinaryUrl ?? mediaId,
         },
       });
 

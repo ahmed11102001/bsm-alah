@@ -35,6 +35,20 @@ const requiredEnvVars = {
     description: "Secret لحماية الـ Cron endpoint",
     optional: true,
   },
+
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: {
+    description: "Cloud Name من حساب Cloudinary",
+    optional: false,
+  },
+  CLOUDINARY_API_KEY: {
+    description: "API Key من حساب Cloudinary",
+    optional: false,
+  },
+  CLOUDINARY_API_SECRET: {
+    description: "API Secret من حساب Cloudinary",
+    optional: false,
+  },
 };
 
 /**
