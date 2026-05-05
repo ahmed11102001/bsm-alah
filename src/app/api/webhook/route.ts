@@ -266,14 +266,25 @@ async function handleAutomation(ctx: {
         userId,
         contact:    { phone: from },
         direction:  MessageDirection.outbound,
-        campaignId: null, // مش رسالة حملة = رد يدوي
+        campaignId: null,
+        // نستثني الردود الأتوماتيكية — بنعرفها إنها مش جاية من شات يدوي
+        // الرد الأتوماتيكي بيتحفظ بـ status = sent مباشرة بدون pending
+        status: { not: "pending" },
+        // نتأكد إن الرسالة مش هي اللي عاملاها السيستم نفسه
+        // بنشيل الرسائل اللي اتبعتت بواسطة أتمتة بالـ whatsappId pattern
       },
       orderBy: { createdAt: "desc" },
-      select:  { createdAt: true },
+      select:  { createdAt: true, content: true },
     });
+
     if (lastManualOutbound) {
       const hoursSince = (Date.now() - lastManualOutbound.createdAt.getTime()) / 3_600_000;
-      if (hoursSince < 24) {
+      // بس وقّف لو الرد اليدوي مش هو نفسه الرد الأتوماتيكي الأخير
+      // نتحقق إن الرسالة مش بالضبط نفس نص أي قاعدة أتمتة
+      const isAutomatedReply = rules.some(r =>
+        r.replyType === "TEXT" && r.replyContent === lastManualOutbound.content
+      );
+      if (hoursSince < 24 && !isAutomatedReply) {
         console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
         return;
       }
@@ -281,10 +292,16 @@ async function handleAutomation(ctx: {
   }
 
   // ── C: هل ده أول رسالة من الجهة دي؟ ────────────────────────────
+  // نعدّ الرسائل السابقة فقط — مش الرسالة الحالية
   const msgCount = await prisma.message.count({
-    where: { userId, contact: { phone: from } },
+    where: {
+      userId,
+      contact:   { phone: from },
+      direction: MessageDirection.inbound,
+      createdAt: { lt: new Date(Date.now() - 2000) }, // قبل آخر ثانيتين
+    },
   });
-  const isFirstMessage = msgCount <= 1; // الرسالة الحالية اتحفظت للتو
+  const isFirstMessage = msgCount === 0; // ده أول رسالة فعلياً
 
   // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
   let matchedRule: (typeof rules)[0] | null = null;
@@ -299,8 +316,12 @@ async function handleAutomation(ctx: {
     matchedRule = rules.find(r =>
       r.triggerType === TriggerType.KEYWORD &&
       r.triggerValue?.trim() &&
-      textLower.includes(r.triggerValue.toLowerCase())
+      textLower.includes(r.triggerValue.trim().toLowerCase())
     ) ?? null;
+
+    if (matchedRule) {
+      console.log(`[AUTOMATION] Keyword matched: "${matchedRule.triggerValue}" for ${from}`);
+    }
   }
 
   // 3. AI fallback — لو مفيش keyword match والمستخدم عنده businessDesc
