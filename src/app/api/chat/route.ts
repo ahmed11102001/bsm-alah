@@ -299,7 +299,7 @@ async function sendMessage(
   if (type === "text" && !content?.trim())
     return NextResponse.json({ error: "محتوى الرسالة مطلوب" }, { status: 400 });
 
-  // ── جيب الـ contact والـ account بالتوازي (بدل sequential) ──────────────
+  // ── جيب الـ contact والـ account بالتوازي (بدل sequential) ─────
   const [contact, account] = await Promise.all([
     prisma.contact.findFirst({ where: { id: contactId, userId } }),
     prisma.whatsAppAccount.findUnique({ where: { userId } }),
@@ -313,7 +313,7 @@ async function sendMessage(
   const msgContent = content ?? `[قالب] ${templateName}`;
 
   // ── احفظ الرسالة pending + ضيفها في الـ Queue في transaction واحدة ──────
-  const pending = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
       data: {
         userId, contactId,
@@ -325,13 +325,11 @@ async function sendMessage(
     });
 
     // ضيف في الـ Queue — الـ Cron هيبعتها خلال أقل من دقيقة
-    // نفس الـ rate-limit وbackoff وretry logic بتاع الحملات
-    await tx.messageQueue.create({
+    const queueItem = await tx.messageQueue.create({
       data: {
         userId,
         whatsappAccountId: account.id,
         phoneNumberId:     account.phoneNumberId,
-        // accessToken جاي من account مباشرة,
         toPhone:           contact.phone,
         contactId,
         messageType:       isTemplate ? "template" : "text",
@@ -341,7 +339,7 @@ async function sendMessage(
         scheduledAt:       new Date(),
         status:            "pending",
         maxAttempts:       3,
-        existingMessageId: msg.id, // ← الـ Cron هيعمل update للرسالة دي مش create جديدة
+        existingMessageId: msg.id,
       },
     });
 
@@ -351,23 +349,19 @@ async function sendMessage(
       data:  { lastMessageAt: new Date() },
     });
 
-    return msg;
+    return { msg, queueId: queueItem.id };
   });
 
-  // ✅ بعت event لـ Inngest — هيبعت الرسالة فوراً بدون Cron
+  // ✅ بعت event لـ Inngest — هيبعت الرسالة فوراً باستخدام queueId الصحيح
   await inngest.send({
     name: "message/send",
-    data: { queueId: pending.id },
+    data: { queueId: result.queueId },
   });
 
-  return NextResponse.json({ success: true, message: pending });
+  return NextResponse.json({ success: true, message: result.msg });
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
-// الـ flow:
-//   1. ارفع الملف على Meta فوراً عشان تجيب media_id  (~1-2 ثانية)
-//   2. احفظ pending message + ضيف في Queue
-//   3. ارجع للـ UI فوراً — الـ Cron يبعت رسالة الإرسال
 async function sendMedia(userId: string, req: NextRequest) {
   try {
     const formData  = await req.formData();
@@ -388,7 +382,6 @@ async function sendMedia(userId: string, req: NextRequest) {
     if (!account)  return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
     // ── Step 1: ارفع الملف على Meta عشان تجيب media_id ──────────────────────
-    // ده لازم يحصل في الـ request — مش ممكن ترفع File object في Queue
     const uploadForm = new FormData();
     uploadForm.append("file", file, file.name);
     uploadForm.append("messaging_product", "whatsapp");
@@ -415,15 +408,15 @@ async function sendMedia(userId: string, req: NextRequest) {
     // map نوع الملف
     const msgTypeMap: Record<string, MessageType> = {
       image: MessageType.image,
-      video: MessageType.image,   // مفيش video enum — بنستخدم image
+      video: MessageType.image,
       audio: MessageType.audio,
       document: MessageType.document,
     };
     const msgType = msgTypeMap[fileType] ?? MessageType.document;
-    const metaType = fileType === "video" ? "video" : fileType; // Meta بيقبل video
+    const metaType = fileType === "video" ? "video" : fileType;
 
     // ── Step 2: احفظ pending + ضيف في Queue في transaction واحدة ────────────
-    const pending = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const msg = await tx.message.create({
         data: {
           userId, contactId,
@@ -431,21 +424,20 @@ async function sendMedia(userId: string, req: NextRequest) {
           type:      msgType,
           direction: MessageDirection.outbound,
           status:    MessageStatus.pending,
-          mediaUrl:  mediaId,   // نحفظ الـ media_id هنا للـ preview في الـ UI
+          mediaUrl:  mediaId,
         },
       });
 
-      // ضيف في Queue — الـ Cron هيبعت رسالة الإرسال
-      await tx.messageQueue.create({
+      // ضيف في Queue
+      const queueItem = await tx.messageQueue.create({
         data: {
           userId,
           whatsappAccountId: account.id,
           phoneNumberId:     account.phoneNumberId,
-          // accessToken جاي من account مباشرة,
           toPhone:           contact.phone,
           contactId,
           messageType:       "media",
-          content:           `${metaType}:${mediaId}`, // نحتفظ بالنوع والـ ID معاً
+          content:           `${metaType}:${mediaId}`,
           scheduledAt:       new Date(),
           status:            "pending",
           maxAttempts:       3,
@@ -458,16 +450,16 @@ async function sendMedia(userId: string, req: NextRequest) {
         data:  { lastMessageAt: new Date() },
       });
 
-      return msg;
+      return { msg, queueId: queueItem.id };
     });
 
-    // ✅ بعت event لـ Inngest
+    // ✅ بعت event لـ Inngest باستخدام queueId الصحيح
     await inngest.send({
       name: "message/send",
-      data: { queueId: pending.id },
+      data: { queueId: result.queueId },
     });
 
-    return NextResponse.json({ success: true, message: pending });
+    return NextResponse.json({ success: true, message: result.msg });
 
   } catch (err: any) {
     console.error("sendMedia error:", err);
