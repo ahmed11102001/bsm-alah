@@ -266,25 +266,14 @@ async function handleAutomation(ctx: {
         userId,
         contact:    { phone: from },
         direction:  MessageDirection.outbound,
-        campaignId: null,
-        // نستثني الردود الأتوماتيكية — بنعرفها إنها مش جاية من شات يدوي
-        // الرد الأتوماتيكي بيتحفظ بـ status = sent مباشرة بدون pending
-        status: { not: "pending" },
-        // نتأكد إن الرسالة مش هي اللي عاملاها السيستم نفسه
-        // بنشيل الرسائل اللي اتبعتت بواسطة أتمتة بالـ whatsappId pattern
+        campaignId: null, // مش رسالة حملة = رد يدوي
       },
       orderBy: { createdAt: "desc" },
-      select:  { createdAt: true, content: true },
+      select:  { createdAt: true },
     });
-
     if (lastManualOutbound) {
       const hoursSince = (Date.now() - lastManualOutbound.createdAt.getTime()) / 3_600_000;
-      // بس وقّف لو الرد اليدوي مش هو نفسه الرد الأتوماتيكي الأخير
-      // نتحقق إن الرسالة مش بالضبط نفس نص أي قاعدة أتمتة
-      const isAutomatedReply = rules.some(r =>
-        r.replyType === "TEXT" && r.replyContent === lastManualOutbound.content
-      );
-      if (hoursSince < 24 && !isAutomatedReply) {
+      if (hoursSince < 24) {
         console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
         return;
       }
@@ -292,49 +281,49 @@ async function handleAutomation(ctx: {
   }
 
   // ── C: هل ده أول رسالة من الجهة دي؟ ────────────────────────────
-  // نعدّ الرسائل السابقة فقط — مش الرسالة الحالية
   const msgCount = await prisma.message.count({
-    where: {
-      userId,
-      contact:   { phone: from },
-      direction: MessageDirection.inbound,
-      createdAt: { lt: new Date(Date.now() - 2000) }, // قبل آخر ثانيتين
-    },
+    where: { userId, contact: { phone: from } },
   });
-  const isFirstMessage = msgCount === 0; // ده أول رسالة فعلياً
+  const isFirstMessage = msgCount <= 1; // الرسالة الحالية اتحفظت للتو
 
   // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
   let matchedRule: (typeof rules)[0] | null = null;
 
-  // 1. KEYWORD — أول كلمة مفتاحية تطابق
+  // 1. FIRST_MESSAGE
+  if (isFirstMessage) {
+    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
+  }
+
+  // 2. KEYWORD — أول كلمة مفتاحية تطابق (بغض النظر عن replyType)
   if (!matchedRule) {
     matchedRule = rules.find(r =>
       r.triggerType === TriggerType.KEYWORD &&
       r.triggerValue?.trim() &&
-      textLower.includes(r.triggerValue.trim().toLowerCase())
+      textLower.includes(r.triggerValue.toLowerCase().trim())
     ) ?? null;
 
     if (matchedRule) {
-      console.log(`[AUTOMATION] Keyword matched: "${matchedRule.triggerValue}" for ${from}`);
+      console.log(`[AUTOMATION] Keyword matched rule "${matchedRule.name}" (replyType=${matchedRule.replyType}) for "${messageText}"`);
     }
   }
 
-  // 2. FIRST_MESSAGE
-  if (!matchedRule && isFirstMessage) {
-    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
-  }
-
-  // 3. AI fallback — بس لو القاعدة مش مربوطة بـ keyword محدد
-  //    يعني replyType=AI مع triggerType=ALL_MESSAGES أو triggerType=FIRST_MESSAGE
-  //    الـ KEYWORD+AI بيتعالج في Step 2 لو الكلمة اتكالت
-  if (!matchedRule && owner.businessDesc?.trim()) {
+  // 3. AI catch-all — قاعدة نوعها AI بدون keyword مُحدد (تشتغل على أي رسالة)
+  // فقط لو مفيش keyword أو FIRST_MESSAGE rule اتطابق
+  if (!matchedRule) {
     matchedRule = rules.find(r =>
       r.replyType === ReplyType.AI &&
-      r.triggerType !== TriggerType.KEYWORD // مش قاعدة keyword
+      r.triggerType !== TriggerType.KEYWORD // مش keyword rule — catch-all فعلي
     ) ?? null;
+
+    if (matchedRule) {
+      console.log(`[AUTOMATION] AI catch-all rule "${matchedRule.name}" triggered for "${messageText}"`);
+    }
   }
 
-  if (!matchedRule) return;
+  if (!matchedRule) {
+    console.log(`[AUTOMATION] No matching rule for "${messageText}" from ${from}`);
+    return;
+  }
 
   // ── E: جهّز نص الرد ─────────────────────────────────────────────
   let replyText: string | null = null;
@@ -342,11 +331,18 @@ async function handleAutomation(ctx: {
   if (matchedRule.replyType === ReplyType.TEXT) {
     replyText = matchedRule.replyContent;
 
-  } else if (matchedRule.replyType === ReplyType.AI && owner.businessDesc) {
-    console.log(`[AUTOMATION] Calling Gemini for ${from}, rule: ${matchedRule.id}`);
+  } else if (matchedRule.replyType === ReplyType.AI) {
+    // ── Bug fix: businessDesc مش شرط لو القاعدة نفسها عندها extraInstructions ──
+    const businessContext = owner.businessDesc?.trim() || owner.brandName?.trim() || "";
+
+    if (!businessContext && !matchedRule.extraInstructions?.trim()) {
+      console.warn(`[AUTOMATION] AI rule "${matchedRule.name}" skipped — no brand context or instructions set`);
+      return;
+    }
+
     const geminiResult = await getSmartReply(messageText, {
       brandName:         owner.brandName,
-      businessDesc:      owner.businessDesc,
+      businessDesc:      businessContext || "مساعد عام",
       productsInfo:      owner.productsInfo,
       pricingInfo:       owner.pricingInfo,
       workingHours:      owner.workingHours,
@@ -354,20 +350,19 @@ async function handleAutomation(ctx: {
       extraInstructions: matchedRule.extraInstructions,
     });
 
-    console.log(`[AUTOMATION] Gemini result:`, JSON.stringify(geminiResult));
-
     if (!geminiResult.ok) {
-      console.error(`[AUTOMATION] Gemini failed for ${from}:`, geminiResult.error);
+      console.error(`[AUTOMATION] Gemini error for rule "${matchedRule.name}":`, geminiResult.error);
       return;
     }
+
     if (geminiResult.offTopic) {
-      console.log(`[AUTOMATION] Gemini off-topic for ${from}`);
+      console.log(`[AUTOMATION] Gemini marked off-topic for "${messageText}" — no reply sent`);
       return;
     }
+
     replyText = geminiResult.reply ?? null;
 
   } else if (matchedRule.replyType === ReplyType.TEMPLATE) {
-    // Template replies — هيتوسع في النسخة الجاية
     console.log(`[AUTOMATION] Template reply not yet implemented — rule: ${matchedRule.id}`);
     return;
   }

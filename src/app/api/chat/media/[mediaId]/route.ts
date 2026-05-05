@@ -47,6 +47,13 @@ export async function GET(
     const { mediaId: rawMediaId } = await params;
     const mediaId = decodeURIComponent(rawMediaId);
 
+    // ── تحقق إن الـ mediaId رقمي (Meta media IDs أرقام فقط) ──────────
+    // لو مش رقمي — رسالة نصية اتبعتلها بالغلط لهنا
+    if (!/^\d+$/.test(mediaId)) {
+      console.warn(`[MEDIA] Non-numeric mediaId rejected: ${mediaId}`);
+      return NextResponse.json({ error: "معرف الوسيط غير صالح" }, { status: 400 });
+    }
+
     const message = await prisma.message.findFirst({
       where: {
         userId,
@@ -56,11 +63,18 @@ export async function GET(
       select: {
         id: true,
         content: true,
+        type: true,
       },
     });
 
     if (!message) {
       return NextResponse.json({ error: "الوسيط غير موجود" }, { status: 404 });
+    }
+
+    // ── تحقق إن الرسالة فعلاً نوعها ميديا وليست نصية ───────────────
+    if (message.type === "text") {
+      console.warn(`[MEDIA] Text message mistakenly routed to media endpoint, id=${message.id}`);
+      return NextResponse.json({ error: "الرسالة نصية وليست ميديا" }, { status: 400 });
     }
 
     const account = await prisma.whatsAppAccount.findUnique({
