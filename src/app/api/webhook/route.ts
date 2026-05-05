@@ -289,13 +289,8 @@ async function handleAutomation(ctx: {
   // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
   let matchedRule: (typeof rules)[0] | null = null;
 
-  // 1. FIRST_MESSAGE
-  if (isFirstMessage) {
-    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
-  }
-
-  // 2. KEYWORD — اجمع كل القواعد المطابقة ثم اختَر حسب أولوية نوع الرد
-  if (!matchedRule) {
+  // 1. KEYWORD — اجمع كل القواعد المطابقة ثم اختَر حسب أولوية نوع الرد
+  {
     const keywordRules = rules.filter(r =>
       r.triggerType === TriggerType.KEYWORD &&
       r.triggerValue?.trim() &&
@@ -316,6 +311,11 @@ async function handleAutomation(ctx: {
     if (matchedRule) {
       console.log(`[AUTOMATION] Keyword matched rule "${matchedRule.name}" (replyType=${matchedRule.replyType}) for "${messageText}"`);
     }
+  }
+
+  // 2. FIRST_MESSAGE (fallback بعد keyword)
+  if (!matchedRule && isFirstMessage) {
+    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
   }
 
   // 3. AI catch-all — قاعدة نوعها AI بدون keyword مُحدد (تشتغل على أي رسالة)
