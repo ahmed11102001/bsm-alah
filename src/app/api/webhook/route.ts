@@ -282,40 +282,10 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  // ── B: pauseOnReply — لو البشري ردّ يدوياً خلال آخر 24 ساعة ────
-  // المهم: الأتمتة بترسل مباشر عبر Meta وما بتعملش MessageQueue record
-  // فالـ MessageQueue بيحتوي فقط الرسائل اليدوية — ده الفرق الصح
-  const shouldPause = rules.some(r => r.pauseOnReply);
-  if (shouldPause) {
-    const lastManualOutbound = await prisma.messageQueue.findFirst({
-      where: {
-        userId,
-        toPhone:    from,
-        campaignId: null,                        // مش حملة = رد يدوي
-        status:     { in: ["sent", "failed"] }, // QueueStatus: pending | processing | sent | failed | cancelled
-      },
-      orderBy: { sentAt: "desc" },
-      select:  { sentAt: true },
-    });
-    if (lastManualOutbound?.sentAt) {
-      const hoursSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 3_600_000;
-      if (hoursSince < 24) {
-        console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
-        return;
-      }
-    }
-  }
-
-  // ── C: هل ده أول رسالة من الجهة دي؟ ────────────────────────────
-  const msgCount = await prisma.message.count({
-    where: { userId, contact: { phone: from } },
-  });
-  const isFirstMessage = msgCount <= 1; // الرسالة الحالية اتحفظت للتو
-
-  // ── D: ابحث عن القاعدة المناسبة بالأولوية ───────────────────────
+  // ── B: دور على الـ keyword match أولاً — بيرد فوراً بغض النظر عن أي حاجة ──
+  // الـ keyword rules مش بتتأثر بـ pauseOnReply — المستخدم كتب الكلمة عشان يجيب رد
   let matchedRule: (typeof rules)[0] | null = null;
 
-  // 1. KEYWORD — اجمع كل القواعد المطابقة ثم اختَر حسب أولوية نوع الرد
   {
     const keywordRules = rules.filter(r =>
       r.triggerType === TriggerType.KEYWORD &&
@@ -330,31 +300,55 @@ async function handleAutomation(ctx: {
       keywordRules.find(r => r.replyType === ReplyType.AI) ||
       null;
 
-    console.log("[AUTOMATION] Selected rule:", {
-      name: matchedRule?.name,
-      type: matchedRule?.replyType,
-    });
-
     if (matchedRule) {
-      console.log(`[AUTOMATION] Keyword matched rule "${matchedRule.name}" (replyType=${matchedRule.replyType}) for "${messageText}"`);
+      console.log(`[AUTOMATION] Keyword matched → "${matchedRule.name}" (${matchedRule.replyType}) for "${messageText}"`);
     }
   }
 
-  // 2. FIRST_MESSAGE (fallback بعد keyword)
-  if (!matchedRule && isFirstMessage) {
-    matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
-  }
-
-  // 3. AI catch-all — قاعدة نوعها AI بدون keyword مُحدد (تشتغل على أي رسالة)
-  // فقط لو مفيش keyword أو FIRST_MESSAGE rule اتطابق
+  // ── C: لو مفيش keyword match — طبّق pauseOnReply قبل ما نكمل ────
+  // الـ pauseOnReply بيحمي الـ FIRST_MESSAGE والـ AI catch-all بس
   if (!matchedRule) {
-    matchedRule = rules.find(r =>
-      r.replyType === ReplyType.AI &&
-      r.triggerType !== TriggerType.KEYWORD // مش keyword rule — catch-all فعلي
-    ) ?? null;
+    const shouldPause = rules.some(r => r.pauseOnReply);
+    if (shouldPause) {
+      const lastManualOutbound = await prisma.messageQueue.findFirst({
+        where: {
+          userId,
+          toPhone:    from,
+          campaignId: null,
+          status:     { in: ["sent", "failed"] },
+        },
+        orderBy: { sentAt: "desc" },
+        select:  { sentAt: true },
+      });
+      if (lastManualOutbound?.sentAt) {
+        const minutesSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 60_000;
+        if (minutesSince < 10) {
+          console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
+          return;
+        }
+      }
+    }
 
-    if (matchedRule) {
-      console.log(`[AUTOMATION] AI catch-all rule "${matchedRule.name}" triggered for "${messageText}"`);
+    // ── D1: FIRST_MESSAGE ─────────────────────────────────────────
+    const msgCount = await prisma.message.count({
+      where: { userId, contact: { phone: from } },
+    });
+    const isFirstMessage = msgCount <= 1;
+
+    if (isFirstMessage) {
+      matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
+    }
+
+    // ── D2: AI catch-all ──────────────────────────────────────────
+    if (!matchedRule) {
+      matchedRule = rules.find(r =>
+        r.replyType === ReplyType.AI &&
+        r.triggerType !== TriggerType.KEYWORD
+      ) ?? null;
+
+      if (matchedRule) {
+        console.log(`[AUTOMATION] AI catch-all → "${matchedRule.name}" for "${messageText}"`);
+      }
     }
   }
 
