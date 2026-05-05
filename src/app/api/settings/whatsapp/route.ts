@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
     }
+    const ownerId = ((session.user as any).parentId as string | null) ?? (session.user as any).id;
 
     const { accessToken, phoneNumberId, wabaId } = await req.json();
 
@@ -18,14 +19,14 @@ export async function POST(req: NextRequest) {
 
     // حفظ أو تحديث بيانات واتساب الخاص باليوزر
     const account = await prisma.whatsAppAccount.upsert({
-      where: { userId: (session.user as any).id },
+      where: { userId: ownerId },
       update: {
         accessToken,
         phoneNumberId,
         wabaId,
       },
       create: {
-        userId: (session.user as any).id,
+        userId: ownerId,
         accessToken,
         phoneNumberId,
         wabaId,

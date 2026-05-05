@@ -15,11 +15,12 @@ export default async function Page() {
   if (!session?.user?.id) {
     redirect("/login");
   }
+  const ownerId = (session.user.parentId as string | null) ?? session.user.id;
 
   // جلب إعدادات واتساب مباشرة من الداتابيز
   const whatsappAccount = await prisma.whatsAppAccount.findUnique({
     where: {
-      userId: session.user.id,
+      userId: ownerId,
     },
   });
 

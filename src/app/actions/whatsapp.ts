@@ -13,16 +13,17 @@ export async function saveWhatsAppSettings(data: {
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("غير مصرح لك");
+  const ownerId = (session.user.parentId as string | null) ?? session.user.id;
 
   await prisma.whatsAppAccount.upsert({
-    where: { userId: session.user.id },
+    where: { userId: ownerId },
     update: {
       accessToken: data.accessToken,
       phoneNumberId: data.phoneNumberId,
       wabaId: data.wabaId,
     },
     create: {
-      userId: session.user.id,
+      userId: ownerId,
       accessToken: data.accessToken,
       phoneNumberId: data.phoneNumberId,
       wabaId: data.wabaId,
@@ -37,10 +38,11 @@ export async function saveWhatsAppSettings(data: {
 export async function syncWhatsAppTemplates() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("غير مصرح لك");
+  const ownerId = (session.user.parentId as string | null) ?? session.user.id;
 
   // جلب بيانات الربط الخاصة بالمستخدم
   const account = await prisma.whatsAppAccount.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: ownerId },
   });
 
   if (!account || !account.accessToken || !account.wabaId) {
@@ -74,7 +76,7 @@ export async function syncWhatsAppTemplates() {
           where: {
             metaId_userId: {
               metaId: temp.id,
-              userId: session.user.id,
+              userId: ownerId,
             },
           },
           update: {
@@ -86,7 +88,7 @@ export async function syncWhatsAppTemplates() {
           },
           create: {
             metaId: temp.id,
-            userId: session.user.id,
+            userId: ownerId,
             name: temp.name,
             content: content,
             language: temp.language,
