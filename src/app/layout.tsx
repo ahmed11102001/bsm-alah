@@ -28,11 +28,14 @@ export const metadata: Metadata = {
   },
   description: "المنصة الرائدة لإرسال رسائل واتساب جماعية وحملات تسويقية ذكية وموثوقة.",
   
-  // حل مشكلة أيقونة الشبكة الرمادية (تأكد من وجود favicon.ico في مجلد public)
+  // حل مشكلة أيقونة الشبكة الرمادية (لازم يكون في icon فعلي في public)
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: ["/favicon.svg", "/favicon.ico"],
+    apple: [{ url: "/apple-touch-icon.png" }],
   },
 
   // إعدادات المعاينة عند مشاركة الرابط على السوشيال ميديا أو واتساب
