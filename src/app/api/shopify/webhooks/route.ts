@@ -42,15 +42,25 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Step 5: Find the Shopify store in database ───────────────────────────
-    const shopifyStore = await prisma.shopifyStore.findUnique({
-      where: { shop: payload.shop?.myshopify_domain || shopId },
+    // الـ domain بييجي في header X-Shopify-Shop-Domain — أدق من الـ payload
+    const shopDomain =
+      req.headers.get("X-Shopify-Shop-Domain") ||
+      req.headers.get("x-shopify-shop-domain") ||
+      payload.shop?.myshopify_domain ||
+      "";
+
+    if (!shopDomain) {
+      console.warn("[Shopify Webhook] No shop domain found in headers or payload");
+      return NextResponse.json({ status: "ignored" });
+    }
+
+    const shopifyStore = await prisma.shopifyStore.findFirst({
+      where:  { shop: shopDomain },
       select: { userId: true, shop: true },
     });
 
     if (!shopifyStore) {
-      console.warn(
-        `[Shopify Webhook] Store not found for shop: ${payload.shop?.myshopify_domain || shopId}`
-      );
+      console.warn(`[Shopify Webhook] Store not found for domain: ${shopDomain}`);
       return NextResponse.json({ status: "ignored" });
     }
 

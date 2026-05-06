@@ -50,54 +50,17 @@ export const handleShopifyOrderCreated = inngest.createFunction(
       return { skipped: true };
     }
 
-    // ── Step 2: Check for automation rules ────────────────────────────────────
-    const automationRules = await step.run("get-automation-rules", async () => {
-      return await prisma.automationRule.findMany({
-        where: {
-          userId,
-          isEnabled: true,
-          triggerType: "KEYWORD", // For now, we'll use keyword-based rules
-        },
-        select: {
-          id: true,
-          replyType: true,
-          replyContent: true,
-          templateId: true,
-          template: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
-    });
-
-    if (!automationRules.length) {
-      console.log(`[Inngest] No automation rules found for user ${userId}`);
-      return { skipped: true };
-    }
-
-    // ── Step 3: Prepare message content ──────────────────────────────────────
-    const rule = automationRules[0]; // Use first rule for now
-
-    let messageContent = "";
-
-    if (rule.replyType === "TEXT" && rule.replyContent) {
-      // Replace placeholders with actual data
-      messageContent = rule.replyContent
-        .replace("{{customer_name}}", customerName || "العميل")
-        .replace("{{order_number}}", orderNumber)
-        .replace("{{total_price}}", totalPrice);
-    } else if (rule.replyType === "TEMPLATE" && rule.template) {
-      // For template messages, we'll send using template name
-      // This would be handled differently in the actual send function
-      messageContent = `[قالب] ${rule.template.name}`;
-    }
-
-    if (!messageContent) {
-      console.log(`[Inngest] No message content for order ${orderNumber}`);
-      return { skipped: true };
-    }
+    // ── Step 2: بناء رسالة تأكيد الأوردر ────────────────────────────────────
+    const messageContent = [
+      `مرحباً ${customerName || "عزيزنا"}! 👋`,
+      ``,
+      `✅ تم استلام طلبك بنجاح`,
+      `📦 رقم الطلب: #${orderNumber}`,
+      `💰 الإجمالي: ${totalPrice}`,
+      ``,
+      `سيتم التواصل معك قريباً لتأكيد التفاصيل.`,
+      `شكراً لثقتك بنا! 🙏`,
+    ].join("\n");
 
     // ── Step 4: Send WhatsApp message ────────────────────────────────────────
     const result = await step.run(`send-order-message-${orderId}`, async () => {

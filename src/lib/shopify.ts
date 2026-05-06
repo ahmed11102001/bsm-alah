@@ -60,10 +60,10 @@ export function verifyShopifyHmac(
     })
     .join("&");
 
-  // Generate the expected HMAC
+  // Generate the expected HMAC — Shopify OAuth يبعت hex مش base64
   const generated = createHmac("sha256", SHOPIFY_API_SECRET)
     .update(encoded, "utf8")
-    .digest("base64");
+    .digest("hex");
 
   return generated === hmac;
 }

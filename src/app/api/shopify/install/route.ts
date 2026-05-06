@@ -49,11 +49,21 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Step 4: Generate state token for CSRF protection ──────────────────────
+    // جيب الـ user ID الحقيقي من الـ DB عشان نقارنه في الـ callback صح
+    const dbUser = await (await import("@/lib/prisma")).default.user.findUnique({
+      where:  { email: session.user.email! },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+    }
+
     const state = Buffer.from(
       JSON.stringify({
-        userId: session.user.email,
+        userId:    dbUser.id,           // ← UUID الحقيقي مش الـ email
         timestamp: Date.now(),
-        random: Math.random().toString(36).substring(7),
+        random:    Math.random().toString(36).substring(7),
       })
     ).toString("base64");
 
