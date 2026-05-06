@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
@@ -228,11 +228,15 @@ export async function POST(req: NextRequest) {
       // إشعار رسالة واردة جديدة
       await notifyNewMessage(userId, from);
 
-      // ── Step 4: تشغيل الأتمتة (بدون await — Meta لازم تاخد 200 فوري) ──
+      // ── Step 4: تشغيل الأتمتة بعد إرسال الرد لـ Meta بشكل مضمون على Vercel ──
       if (type === MessageType.text && content.trim()) {
-        handleAutomation({ userId, from, messageText: content, accountOwner }).catch(
-          (err) => console.error("[AUTOMATION] Unhandled error:", err)
-        );
+        after(async () => {
+          try {
+            await handleAutomation({ userId, from, messageText: content, accountOwner });
+          } catch (err) {
+            console.error("[AUTOMATION] Unhandled error:", err);
+          }
+        });
       }
     }
 
