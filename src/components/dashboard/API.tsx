@@ -8,8 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, RefreshCw, ShoppingBag, Zap, CheckCircle2, ArrowRight, Loader2, Store, Key, Webhook, Trash2 } from "lucide-react";
+import { Copy, CheckCircle, RefreshCw, ShoppingBag, Link as LinkIcon, Zap, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+const endpoints = [
+  { method: "POST", path: "/v1/messages", description: "إرسال رسالة" },
+  { method: "GET", path: "/v1/messages/{id}", description: "حالة الرسالة" },
+  { method: "POST", path: "/v1/campaigns", description: "إنشاء حملة جديدة" },
+];
 
 export default function API({ initialData }: { initialData?: any }) {
   const [copied, setCopied] = useState(false);
@@ -17,18 +23,12 @@ export default function API({ initialData }: { initialData?: any }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
-  const [shopUrl,     setShopUrl]     = useState("");
-  const [connecting,  setConnecting]  = useState(false);
-  const [shopError,   setShopError]   = useState("");
-
-  // ─── Easy Orders State ────────────────────────────────────────────────────
-  const [eoStoreName,   setEoStoreName]   = useState("");
-  const [eoApiKey,      setEoApiKey]      = useState("");
-  const [eoWebhookUrl,  setEoWebhookUrl]  = useState("");
-  const [eoConnected,   setEoConnected]   = useState(false);
-  const [eoSaving,      setEoSaving]      = useState(false);
-  const [eoDeleting,    setEoDeleting]    = useState(false);
-  const [eoCopied,      setEoCopied]      = useState(false);
+  const [shopUrl,        setShopUrl]        = useState("");
+  const [connecting,     setConnecting]     = useState(false);
+  const [shopError,      setShopError]      = useState("");
+  const [easyOrderUrl,   setEasyOrderUrl]   = useState("");
+  const [easyUrlLoading, setEasyUrlLoading] = useState(false);
+  const [easyUrlCopied,  setEasyUrlCopied]  = useState(false);
 
   useEffect(() => {
     fetch("/api/me/api-key")
@@ -40,31 +40,12 @@ export default function API({ initialData }: { initialData?: any }) {
       .then((res) => res.json())
       .then((data) => setVerifyToken(data.verifyToken ?? ""))
       .catch(() => setVerifyToken(""));
-
-    // جيب إعدادات إيزي أوردرز الحالية
-    fetch("/api/easy-orders/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.store) {
-          setEoStoreName(data.store.storeName);
-          setEoApiKey(data.store.apiKey);
-          setEoConnected(true);
-        }
-        if (data.webhookUrl) setEoWebhookUrl(data.webhookUrl);
-      })
-      .catch(() => {});
   }, []);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const copyEoWebhook = () => {
-    navigator.clipboard.writeText(eoWebhookUrl);
-    setEoCopied(true);
-    setTimeout(() => setEoCopied(false), 2000);
   };
 
   // دالة مزامنة القوالب
@@ -84,6 +65,23 @@ export default function API({ initialData }: { initialData?: any }) {
     }
   };
 
+  const loadEasyOrderUrl = async () => {
+    if (easyOrderUrl) return; // already loaded
+    setEasyUrlLoading(true);
+    try {
+      const r = await fetch("/api/easyorder/url");
+      const d = await r.json();
+      if (d.url) setEasyOrderUrl(d.url);
+    } catch { /* ignore */ }
+    finally { setEasyUrlLoading(false); }
+  };
+
+  const copyEasyOrderUrl = () => {
+    navigator.clipboard.writeText(easyOrderUrl);
+    setEasyUrlCopied(true);
+    setTimeout(() => setEasyUrlCopied(false), 2000);
+  };
+
   const handleShopifyConnect = async () => {
     setShopError("");
     const shop = shopUrl.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -100,6 +98,7 @@ export default function API({ initialData }: { initialData?: any }) {
       });
       const d = await r.json();
       if (!r.ok) { setShopError(d.error ?? "حدث خطأ"); return; }
+      // فتح صفحة موافقة Shopify في نفس النافذة
       window.location.href = d.authUrl;
     } catch {
       setShopError("تعذر الاتصال بالسيرفر");
@@ -127,49 +126,6 @@ export default function API({ initialData }: { initialData?: any }) {
     }
   };
 
-  // ─── حفظ إعدادات إيزي أوردرز ─────────────────────────────────────────────
-  const handleEoSave = async () => {
-    if (!eoStoreName.trim() || !eoApiKey.trim()) {
-      toast.error("يرجى إدخال اسم المتجر ومفتاح الـ API");
-      return;
-    }
-    setEoSaving(true);
-    try {
-      const r = await fetch("/api/easy-orders/settings", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ storeName: eoStoreName, apiKey: eoApiKey }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "حدث خطأ");
-      if (d.webhookUrl) setEoWebhookUrl(d.webhookUrl);
-      setEoConnected(true);
-      toast.success("تم حفظ إعدادات إيزي أوردرز بنجاح ✅");
-    } catch (err: any) {
-      toast.error(err.message || "حدث خطأ أثناء الحفظ");
-    } finally {
-      setEoSaving(false);
-    }
-  };
-
-  // ─── إلغاء ربط إيزي أوردرز ───────────────────────────────────────────────
-  const handleEoDisconnect = async () => {
-    if (!confirm("هل أنت متأكد من إلغاء ربط إيزي أوردرز؟")) return;
-    setEoDeleting(true);
-    try {
-      const r = await fetch("/api/easy-orders/settings", { method: "DELETE" });
-      if (!r.ok) throw new Error("حدث خطأ");
-      setEoConnected(false);
-      setEoStoreName("");
-      setEoApiKey("");
-      toast.success("تم إلغاء ربط إيزي أوردرز");
-    } catch {
-      toast.error("حدث خطأ أثناء الإلغاء");
-    } finally {
-      setEoDeleting(false);
-    }
-  };
-
   return (
     <div className="p-4 lg:p-8">
       <div className="mb-6 flex justify-between items-center">
@@ -191,18 +147,15 @@ export default function API({ initialData }: { initialData?: any }) {
       </div>
 
       <Tabs defaultValue="connect">
-        <TabsList className="flex-wrap h-auto gap-1">
+        <TabsList>
           <TabsTrigger value="connect">ربط الحساب</TabsTrigger>
           <TabsTrigger value="shopify" className="gap-2">
             <ShoppingBag className="w-4 h-4" />
             ربط شوبيفاي
           </TabsTrigger>
-          <TabsTrigger value="easy-orders" className="gap-2">
-            <Store className="w-4 h-4" />
-            إيزي أوردرز
-            {eoConnected && (
-              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-            )}
+          <TabsTrigger value="easyorder" className="gap-2" onClick={loadEasyOrderUrl}>
+            <Zap className="w-4 h-4" />
+            ربط EasyOrder
           </TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
@@ -265,18 +218,25 @@ export default function API({ initialData }: { initialData?: any }) {
               <div className="grid gap-8 py-4">
                 {/* Flow Steps */}
                 <div className="flex flex-col md:flex-row justify-between items-start gap-4 relative">
+                  {/* Step 1 */}
                   <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
                     <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold border-2 border-blue-600">1</div>
                     <h3 className="font-semibold">ربط المتجر</h3>
                     <p className="text-xs text-gray-500 px-2">أدخل رابط متجرك في شوبيفاي للبدء</p>
                   </div>
+                  
                   <div className="hidden md:block flex-1 h-[2px] bg-gray-200 mt-5 -mx-4 relative top-0"></div>
+
+                  {/* Step 2 */}
                   <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
                     <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-bold border-2 border-gray-200">2</div>
                     <h3 className="font-semibold">الموافقة</h3>
                     <p className="text-xs text-gray-500 px-2">الموافقة على تثبيت التطبيق في شوبيفاي</p>
                   </div>
+
                   <div className="hidden md:block flex-1 h-[2px] bg-gray-200 mt-5 -mx-4 relative top-0"></div>
+
+                  {/* Step 3 */}
                   <div className="flex flex-col items-center text-center space-y-2 flex-1 z-10">
                     <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-bold border-2 border-gray-200">3</div>
                     <h3 className="font-semibold">تفعيل الأتمتة</h3>
@@ -284,6 +244,7 @@ export default function API({ initialData }: { initialData?: any }) {
                   </div>
                 </div>
 
+                {/* Connection Form */}
                 <div className="mt-6 p-6 border rounded-xl bg-slate-50 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="shop-url">رابط متجر شوبيفاي</Label>
@@ -311,7 +272,9 @@ export default function API({ initialData }: { initialData?: any }) {
                       </Button>
                     </div>
                     <p className="text-[10px] text-gray-400">مثال: bsm-alah-store.myshopify.com</p>
-                    {shopError && <p className="text-xs text-red-500">{shopError}</p>}
+                    {shopError && (
+                      <p className="text-xs text-red-500">{shopError}</p>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t flex items-start gap-3">
@@ -333,169 +296,81 @@ export default function API({ initialData }: { initialData?: any }) {
           </Card>
         </TabsContent>
 
-        {/* =========================================
-            تاب إيزي أوردرز الجديد
-            ========================================= */}
-        <TabsContent value="easy-orders">
+        {/* ══ EasyOrder Tab ══════════════════════════════════════════════════ */}
+        <TabsContent value="easyorder">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Store className="text-orange-500 w-5 h-5" />
-                ربط متجر إيزي أوردرز
-                {eoConnected && (
-                  <span className="flex items-center gap-1 text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                    <CheckCircle2 className="w-3 h-3" /> مرتبط
-                  </span>
-                )}
+                <Zap className="text-orange-500" />
+                ربط متجر EasyOrder
               </CardTitle>
-              <p className="text-sm text-gray-500">اربط متجرك على إيزي أوردرز لإرسال رسائل واتساب تلقائية عند كل طلب جديد أو تحديث شحن</p>
+              <p className="text-sm text-gray-500">انسخ الرابط وضعه في إعدادات Webhook في داشبورد EasyOrder</p>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-8 py-4">
+            <CardContent className="space-y-6">
 
-                {/* خطوات الربط */}
-                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                  {[
-                    { n: 1, label: "نسخ الـ API Key", desc: "من لوحة إيزي أوردرز ← الإعدادات ← API" },
-                    { n: 2, label: "الإعداد هنا", desc: "أدخل اسم المتجر ومفتاح الـ API ثم احفظ" },
-                    { n: 3, label: "تفعيل الويب هوك", desc: "انسخ رابط الويب هوك وضعه في إيزي أوردرز" },
-                  ].map((s) => (
-                    <div key={s.n} className="flex flex-col items-center text-center space-y-2 flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 ${
-                        eoConnected
-                          ? "bg-orange-100 text-orange-600 border-orange-400"
-                          : s.n === 1 ? "bg-orange-100 text-orange-600 border-orange-400" : "bg-gray-100 text-gray-400 border-gray-200"
-                      }`}>{s.n}</div>
-                      <h3 className="font-semibold text-sm">{s.label}</h3>
-                      <p className="text-xs text-gray-500 px-1">{s.desc}</p>
+              {/* Steps */}
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                {[
+                  { n: 1, title: "انسخ الرابط", desc: "انسخ رابط الـ Webhook من هنا" },
+                  { n: 2, title: "افتح EasyOrder", desc: "روح إعدادات المتجر ← Webhooks" },
+                  { n: 3, title: "الصق الرابط", desc: "ضيف الرابط واحفظ، خلاص!" },
+                ].map(s => (
+                  <div key={s.n} className="flex flex-col items-center text-center space-y-2 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold border-2 border-orange-400">{s.n}</div>
+                    <h3 className="font-semibold text-sm">{s.title}</h3>
+                    <p className="text-xs text-gray-500">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Webhook URL */}
+              <div className="p-5 border rounded-xl bg-orange-50 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-orange-700 font-bold">رابط الـ Webhook الخاص بك</Label>
+                  {easyUrlLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل...
                     </div>
-                  ))}
-                </div>
-
-                {/* نموذج الإدخال */}
-                <div className="p-6 border rounded-xl bg-orange-50/40 space-y-4">
-
-                  {/* اسم المتجر */}
-                  <div className="space-y-2">
-                    <Label htmlFor="eo-store-name" className="flex items-center gap-1.5">
-                      <Store className="w-3.5 h-3.5 text-orange-500" />
-                      اسم المتجر
-                    </Label>
-                    <Input
-                      id="eo-store-name"
-                      placeholder="مثال: متجر أحمد للأزياء"
-                      value={eoStoreName}
-                      onChange={e => setEoStoreName(e.target.value)}
-                      disabled={eoSaving}
-                    />
-                  </div>
-
-                  {/* مفتاح الـ API */}
-                  <div className="space-y-2">
-                    <Label htmlFor="eo-api-key" className="flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-orange-500" />
-                      مفتاح الربط (API Key)
-                    </Label>
-                    <Input
-                      id="eo-api-key"
-                      placeholder="eo_live_xxxxxxxxxxxx"
-                      dir="ltr"
-                      value={eoApiKey}
-                      onChange={e => setEoApiKey(e.target.value)}
-                      disabled={eoSaving}
-                      type="password"
-                    />
-                    <p className="text-[10px] text-gray-400">
-                      ستجد المفتاح في: لوحة إيزي أوردرز ← الإعدادات ← الربط التقني ← API
-                    </p>
-                  </div>
-
-                  {/* رابط الويب هوك (للعرض فقط) */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      <Webhook className="w-3.5 h-3.5 text-orange-500" />
-                      رابط الويب هوك الخاص بك
-                      <span className="text-[10px] text-gray-400 font-normal">(للقراءة فقط)</span>
-                    </Label>
+                  ) : (
                     <div className="flex gap-2">
                       <Input
                         readOnly
+                        value={easyOrderUrl}
+                        className="bg-white font-mono text-xs"
                         dir="ltr"
-                        value={eoWebhookUrl || (eoConnected ? "جاري التحميل..." : "سيظهر بعد الحفظ")}
-                        className="bg-white font-mono text-xs text-gray-600"
+                        onClick={loadEasyOrderUrl}
+                        placeholder="اضغط هنا لتحميل الرابط"
                       />
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={copyEoWebhook}
-                        disabled={!eoWebhookUrl}
-                        title="نسخ الرابط"
+                        onClick={easyOrderUrl ? copyEasyOrderUrl : loadEasyOrderUrl}
+                        disabled={!easyOrderUrl}
                       >
-                        {eoCopied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                        {easyUrlCopied
+                          ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
-                    {eoConnected && (
-                      <p className="text-[10px] text-gray-400">
-                        ضع هذا الرابط في إيزي أوردرز ← الويب هوك ← إضافة ويب هوك جديد
-                      </p>
-                    )}
-                  </div>
-
-                  {/* أزرار الحفظ والإلغاء */}
-                  <div className="flex gap-3 pt-2">
-                    <Button
-                      className="bg-orange-500 hover:bg-orange-600 gap-2 flex-1"
-                      onClick={handleEoSave}
-                      disabled={eoSaving}
-                    >
-                      {eoSaving ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
-                      ) : (
-                        <><CheckCircle2 className="w-4 h-4" /> حفظ واختبار الاتصال</>
-                      )}
-                    </Button>
-
-                    {eoConnected && (
-                      <Button
-                        variant="outline"
-                        className="gap-2 text-red-500 border-red-200 hover:bg-red-50"
-                        onClick={handleEoDisconnect}
-                        disabled={eoDeleting}
-                      >
-                        {eoDeleting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                        إلغاء الربط
-                      </Button>
-                    )}
-                  </div>
+                  )}
+                  <p className="text-xs text-orange-600">⚠️ الرابط خاص بك — لا تشاركه مع أحد</p>
                 </div>
 
-                {/* الأحداث المدعومة */}
-                <div className="p-4 border rounded-xl bg-white space-y-3">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-orange-500" />
-                    الأحداث التي يدعمها الربط
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {[
-                      { event: "Order Created", desc: "رسالة تأكيد فور إتمام الطلب" },
-                      { event: "Status Updated", desc: "تحديث حالة الشحن (تجهيز، شحن، توصيل)" },
-                    ].map((item) => (
-                      <div key={item.event} className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 border border-orange-100">
-                        <CheckCircle2 className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-semibold" dir="ltr">{item.event}</p>
-                          <p className="text-[11px] text-gray-500">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
+                <div className="pt-3 border-t border-orange-200 flex items-start gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                    <Zap className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">ماذا سيحدث؟</h4>
+                    <ul className="text-xs text-gray-600 mt-1 space-y-1">
+                      <li>• لما عميل يطلب — واتساب برو بيبعتله رسالة تأكيد فوراً</li>
+                      <li>• العميل بيتحفظ تلقائياً في قائمة جهات الاتصال</li>
+                      <li>• تقدر تبعتله رسائل متابعة من الداشبورد</li>
+                    </ul>
                   </div>
                 </div>
-
               </div>
+
             </CardContent>
           </Card>
         </TabsContent>
@@ -544,15 +419,15 @@ export default function API({ initialData }: { initialData?: any }) {
               </div>
 
               {/* تنبيه سريع للعميل */}
-              <div className="p-4 rounded-lg border border-dashed border-slate-200 bg-slate-50">
-                <p className="text-sm text-slate-700">
-                  استخدم هذا الرابط و Verify Token داخل إعدادات Webhook في Meta Developers.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
+                            <div className="p-4 rounded-lg border border-dashed border-slate-200 bg-slate-50">
+                              <p className="text-sm text-slate-700">
+                                استخدم هذا الرابط و Verify Token داخل إعدادات Webhook في Meta Developers.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                );
+              }
