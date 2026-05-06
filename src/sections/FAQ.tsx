@@ -28,7 +28,7 @@ export default function FAQ({ lang }: FAQProps) {
   const items = t.faq.items;
 
   // Group by category
-  const grouped: Record<string, typeof items> = {};
+  const grouped: Record<string, Array<(typeof items)[number]>> = {};
   items.forEach(item => {
     const cat = tr(item.category, lang);
     if (!grouped[cat]) grouped[cat] = [];
