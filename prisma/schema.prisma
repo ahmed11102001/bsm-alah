@@ -133,6 +133,7 @@ model User {
   notifications   Notification[]
   automationRules AutomationRule[]
   shopifyStore    ShopifyStore?
+  easyOrdersStore EasyOrdersStore?
   aiAgent         AIAgent?
 
   @@index([email])
@@ -459,6 +460,23 @@ model ShopifyStore {
   updatedAt     DateTime @updatedAt
 
   @@index([shop])
+}
+
+model EasyOrdersStore {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storeName   String                    // اسم المتجر كما يظهر للتاجر
+  apiKey      String   @db.Text        // مفتاح الـ API الخاص بإيزي أوردرز
+  webhookSecret String @db.Text        // سر التحقق من صحة الطلبات الواردة
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ─── Automation ───────────────────────────────────────────────────────────────
