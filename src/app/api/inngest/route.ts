@@ -11,7 +11,7 @@ import {
   handleShopifyOrderFulfilled,
   handleShopifyOrderUpdated,
 } from "@/inngest/shopify-functions";
-import { handleEasyOrderReceived } from "@/inngest/easyorder-functions";
+import { handleEasyOrderReceived } from "@/inngest/easy-orders-functions";
 
 export const { GET, POST, PUT } = serve({
   client:    inngest,
