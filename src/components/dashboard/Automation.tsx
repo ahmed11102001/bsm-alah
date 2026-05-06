@@ -17,115 +17,49 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Zap, Plus, MoreVertical, Trash2, Edit2, Loader2,
-  MessageSquare, Users, Clock, Bot, Key, CheckCircle,
-  ChevronRight, ChevronLeft, ToggleLeft, ToggleRight,
-  AlertCircle, X, Settings, Pencil, Save,
+  Bot, Plus, MoreVertical, Trash2, Edit2, Loader2,
+  MessageSquare, Zap, ToggleLeft, ToggleRight,
+  CheckCircle, Save, Sparkles, Key,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type TriggerType = "KEYWORD" | "FIRST_MESSAGE" | "NO_REPLY" | "TIME_BASED";
-type ReplyType   = "TEXT" | "TEMPLATE" | "AI";
-
-interface AutomationRule {
-  id:                string;
-  name:              string;
-  isEnabled:         boolean;
-  triggerType:       TriggerType;
-  triggerValue:      string | null;
-  replyType:         ReplyType;
-  replyContent:      string | null;
-  templateId:        string | null;
-  extraInstructions: string | null;
-  humanKeywords:     string[];
-  pauseOnReply:      boolean;
-  createdAt:         string;
+interface KeywordRule {
+  id: string; name: string; isEnabled: boolean;
+  triggerValue: string | null; replyContent: string | null; createdAt: string;
 }
-
-interface Template { id: string; name: string; status: string; }
-
-interface BrandSettings {
-  brandName:    string;
-  businessDesc: string;
-  productsInfo: string;
-  pricingInfo:  string;
-  workingHours: string;
-  aiTone:       string;
+interface AIAgent {
+  isEnabled: boolean; provider: "gemini" | "openai";
+  brandName: string; businessDesc: string; productsInfo: string;
+  pricingInfo: string; workingHours: string; tone: string;
+  systemPrompt: string; pauseMinutes: number;
 }
-
-const EMPTY_BRAND: BrandSettings = {
-  brandName:    "",
-  businessDesc: "",
-  productsInfo: "",
-  pricingInfo:  "",
-  workingHours: "",
-  aiTone:       "friendly",
+const EMPTY_AGENT: AIAgent = {
+  isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
+  productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
+  systemPrompt: "", pauseMinutes: 10,
 };
 
-// ─── Config maps ──────────────────────────────────────────────────────────────
-const TRIGGER_CONFIG: Record<TriggerType, { label: string; icon: React.ReactNode; desc: string }> = {
-  KEYWORD:       { label: "كلمة مفتاحية",     icon: <Key className="w-5 h-5" />,   desc: "يُشغَّل عندما تحتوي الرسالة الواردة على كلمة محددة" },
-  FIRST_MESSAGE: { label: "أول رسالة",         icon: <Users className="w-5 h-5" />, desc: "يُشغَّل عندما يتواصل عميل جديد لأول مرة" },
-  NO_REPLY:      { label: "بدون رد (متابعة)",  icon: <Clock className="w-5 h-5" />, desc: "يُشغَّل بعد X أيام من آخر رسالة بدون رد" },
-  TIME_BASED:    { label: "وقت محدد",          icon: <Clock className="w-5 h-5" />, desc: "قريباً" },
-};
-
-const REPLY_CONFIG: Record<ReplyType, { label: string; icon: React.ReactNode; desc: string }> = {
-  TEXT:     { label: "نص ثابت",     icon: <MessageSquare className="w-5 h-5" />, desc: "رد بنص تكتبه أنت بالكامل" },
-  TEMPLATE: { label: "قالب واتساب", icon: <CheckCircle className="w-5 h-5" />,   desc: "رد باستخدام أحد قوالب واتساب المعتمدة" },
-  AI:       { label: "رد ذكي AI",   icon: <Bot className="w-5 h-5" />,            desc: "يرد Gemini تلقائياً بناءً على بيانات براندك" },
-};
-
-// ─── Empty form ───────────────────────────────────────────────────────────────
-const EMPTY_FORM = {
-  name:              "",
-  triggerType:       "" as TriggerType | "",
-  triggerValue:      "",
-  replyType:         "" as ReplyType | "",
-  replyContent:      "",
-  templateId:        "",
-  extraInstructions: "",
-  humanKeywords:     [] as string[],
-  humanKwInput:      "",
-  pauseOnReply:      true,
-};
-
-// ─── Rule Card ────────────────────────────────────────────────────────────────
 function RuleCard({ rule, onToggle, onEdit, onDelete }: {
-  rule: AutomationRule;
-  onToggle: () => void;
-  onEdit:   () => void;
-  onDelete: () => void;
+  rule: KeywordRule; onToggle: () => void; onEdit: () => void; onDelete: () => void;
 }) {
-  const trigger = TRIGGER_CONFIG[rule.triggerType];
-  const reply   = REPLY_CONFIG[rule.replyType];
-
   return (
     <div className={`bg-white border rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all
       ${rule.isEnabled ? "border-gray-200 hover:shadow-md" : "border-gray-100 opacity-60"}`}>
-
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
             ${rule.isEnabled ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"}`}>
-            <Zap className="w-4 h-4" />
+            <Key className="w-4 h-4" />
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">{rule.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {new Date(rule.createdAt).toLocaleDateString("ar-EG")}
+            <p className="text-xs text-gray-400 mt-0.5 font-mono">
+              {rule.triggerValue ? `"${rule.triggerValue}"` : "—"}
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={onToggle}
-            className={`transition-colors ${rule.isEnabled ? "text-green-500" : "text-gray-300"}`}
-          >
-            {rule.isEnabled
-              ? <ToggleRight className="w-8 h-8" />
-              : <ToggleLeft className="w-8 h-8" />}
+          <button onClick={onToggle} className={`transition-colors ${rule.isEnabled ? "text-green-500" : "text-gray-300"}`}>
+            {rule.isEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -138,252 +72,111 @@ function RuleCard({ rule, onToggle, onEdit, onDelete }: {
                 <Edit2 className="w-4 h-4" /> تعديل
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
-                onClick={onDelete}
-              >
+              <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600" onClick={onDelete}>
                 <Trash2 className="w-4 h-4" /> حذف
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-
-      <div className="flex items-center gap-2 text-xs flex-wrap">
-        <span className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg font-medium">
-          {trigger.icon}
-          {trigger.label}
-          {rule.triggerValue && ` "${rule.triggerValue}"`}
-        </span>
-        <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
-        <span className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-lg font-medium">
-          {reply.icon}
-          {reply.label}
-        </span>
-      </div>
-
-      {rule.humanKeywords.length > 0 && (
-        <div className="flex flex-wrap gap-1 items-center">
-          <span className="text-[10px] text-gray-400">تحويل بشري:</span>
-          {rule.humanKeywords.map(kw => (
-            <span key={kw} className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md font-mono">
-              {kw}
-            </span>
-          ))}
-        </div>
+      {rule.replyContent && (
+        <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed">
+          {rule.replyContent}
+        </p>
       )}
     </div>
   );
 }
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
-function Steps({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-2 mb-6">
-      {Array.from({ length: total }, (_, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors
-            ${i + 1 < current  ? "bg-green-500 text-white"
-            : i + 1 === current ? "bg-gray-900 text-white"
-            : "bg-gray-100 text-gray-400"}`}>
-            {i + 1 < current ? <CheckCircle className="w-4 h-4" /> : i + 1}
-          </div>
-          {i < total - 1 && (
-            <div className={`h-0.5 w-8 transition-colors ${i + 1 < current ? "bg-green-400" : "bg-gray-200"}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Automation() {
-  const [rules,      setRules]      = useState<AutomationRule[]>([]);
-  const [templates,  setTemplates]  = useState<Template[]>([]);
-  const [hasBrand,   setHasBrand]   = useState<boolean | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [brand,      setBrand]      = useState<BrandSettings>({ ...EMPTY_BRAND });
-  const [showBrand,  setShowBrand]  = useState(false);
-  const [brandForm,  setBrandForm]  = useState<BrandSettings>({ ...EMPTY_BRAND });
-  const [savingBrand, setSavingBrand] = useState(false);
-  const [showWizard, setShowWizard] = useState(false);
-  const [editTarget, setEditTarget] = useState<AutomationRule | null>(null);
-  const [step,       setStep]       = useState(1);
-  const [saving,     setSaving]     = useState(false);
-  const [form,       setForm]       = useState({ ...EMPTY_FORM });
+  const [activeTab,   setActiveTab]   = useState<"bot" | "ai">("bot");
+  const [rules,       setRules]       = useState<KeywordRule[]>([]);
+  const [agent,       setAgent]       = useState<AIAgent>({ ...EMPTY_AGENT });
+  const [loading,     setLoading]     = useState(true);
+  const [savingAgent, setSavingAgent] = useState(false);
+  const [agentDirty,  setAgentDirty]  = useState(false);
+  const [showDialog,  setShowDialog]  = useState(false);
+  const [editTarget,  setEditTarget]  = useState<KeywordRule | null>(null);
+  const [saving,      setSaving]      = useState(false);
+  const [ruleForm,    setRuleForm]    = useState({ name: "", keyword: "", reply: "" });
 
-  // ── load ────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, settingsRes, templatesRes] = await Promise.all([
-        fetch("/api/automation"),
-        fetch("/api/me/settings"),
-        fetch("/api/templates"),
-      ]);
-      const rulesData    = await rulesRes.json();
-      const settingsData = await settingsRes.json();
-      const tplData      = await templatesRes.json();
-
-      setRules(Array.isArray(rulesData) ? rulesData : []);
-      const u = settingsData?.user;
-      const brandData: BrandSettings = {
-        brandName:    u?.brandName    ?? "",
-        businessDesc: u?.businessDesc ?? "",
-        productsInfo: u?.productsInfo ?? "",
-        pricingInfo:  u?.pricingInfo  ?? "",
-        workingHours: u?.workingHours ?? "",
-        aiTone:       u?.aiTone       ?? "friendly",
-      };
-      setBrand(brandData);
-      setBrandForm(brandData);
-      setHasBrand(!!u?.businessDesc?.trim());
-      setTemplates(
-        (Array.isArray(tplData) ? tplData : tplData?.templates ?? [])
-          .filter((t: Template) => t.status === "APPROVED")
+      const [rulesRes, agentRes] = await Promise.all([fetch("/api/automation"), fetch("/api/ai-agent")]);
+      const rulesData = await rulesRes.json();
+      const agentData = await agentRes.json();
+      const kwRules = (Array.isArray(rulesData) ? rulesData : []).filter(
+        (r: any) => r.triggerType === "KEYWORD" && r.replyType === "TEXT"
       );
+      setRules(kwRules);
+      setAgent({
+        isEnabled: agentData.isEnabled ?? false, provider: agentData.provider ?? "gemini",
+        brandName: agentData.brandName ?? "", businessDesc: agentData.businessDesc ?? "",
+        productsInfo: agentData.productsInfo ?? "", pricingInfo: agentData.pricingInfo ?? "",
+        workingHours: agentData.workingHours ?? "", tone: agentData.tone ?? "friendly",
+        systemPrompt: agentData.systemPrompt ?? "", pauseMinutes: agentData.pauseMinutes ?? 10,
+      });
     } catch { toast.error("خطأ في تحميل البيانات"); }
     finally  { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // ── open wizard ─────────────────────────────────────────────────
-  const openCreate = () => {
-    setEditTarget(null);
-    setForm({ ...EMPTY_FORM });
-    setStep(1);
-    setShowWizard(true);
-  };
-
-  const openEdit = (rule: AutomationRule) => {
+  const openCreate = () => { setEditTarget(null); setRuleForm({ name: "", keyword: "", reply: "" }); setShowDialog(true); };
+  const openEdit = (rule: KeywordRule) => {
     setEditTarget(rule);
-    setForm({
-      name:              rule.name,
-      triggerType:       rule.triggerType,
-      triggerValue:      rule.triggerValue ?? "",
-      replyType:         rule.replyType,
-      replyContent:      rule.replyContent ?? "",
-      templateId:        rule.templateId ?? "",
-      extraInstructions: rule.extraInstructions ?? "",
-      humanKeywords:     rule.humanKeywords,
-      humanKwInput:      "",
-      pauseOnReply:      rule.pauseOnReply,
-    });
-    setStep(1);
-    setShowWizard(true);
+    setRuleForm({ name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "" });
+    setShowDialog(true);
   };
 
-  // ── toggle ──────────────────────────────────────────────────────
-  const toggleRule = async (rule: AutomationRule) => {
+  const saveRule = async () => {
+    if (!ruleForm.name.trim() || !ruleForm.keyword.trim() || !ruleForm.reply.trim()) { toast.error("اكتب الاسم والكلمة والرد"); return; }
+    setSaving(true);
     try {
-      await fetch("/api/automation", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rule.id, isEnabled: !rule.isEnabled }),
-      });
+      const payload = { name: ruleForm.name.trim(), triggerType: "KEYWORD", replyType: "TEXT",
+        triggerValue: ruleForm.keyword.trim(), replyContent: ruleForm.reply.trim(), humanKeywords: [], pauseOnReply: false };
+      const method = editTarget ? "PATCH" : "POST";
+      const body = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
+      const r = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      if (editTarget) { toast.success("تم التعديل"); setRules(prev => prev.map(r => r.id === editTarget.id ? d : r)); }
+      else { toast.success("تم الإضافة"); setRules(prev => [...prev, d]); }
+      setShowDialog(false);
+    } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
+    finally { setSaving(false); }
+  };
+
+  const toggleRule = async (rule: KeywordRule) => {
+    try {
+      await fetch("/api/automation", { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: rule.id, isEnabled: !rule.isEnabled }) });
       setRules(prev => prev.map(r => r.id === rule.id ? { ...r, isEnabled: !r.isEnabled } : r));
     } catch { toast.error("خطأ في التحديث"); }
   };
 
-  // ── delete ──────────────────────────────────────────────────────
   const deleteRule = async (id: string) => {
     try {
-      const r = await fetch("/api/automation", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
+      const r = await fetch("/api/automation", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
       if (!r.ok) throw new Error();
-      toast.success("تم الحذف");
-      setRules(prev => prev.filter(r => r.id !== id));
+      toast.success("تم الحذف"); setRules(prev => prev.filter(r => r.id !== id));
     } catch { toast.error("خطأ في الحذف"); }
   };
 
-  // ── save ────────────────────────────────────────────────────────
-  const save = async () => {
-    setSaving(true);
+  const saveAgent = async () => {
+    setSavingAgent(true);
     try {
-      const payload = {
-        name:              form.name.trim(),
-        triggerType:       form.triggerType,
-        triggerValue:      form.triggerValue.trim() || null,
-        replyType:         form.replyType,
-        replyContent:      form.replyContent.trim() || null,
-        templateId:        form.templateId || null,
-        extraInstructions: form.extraInstructions.trim() || null,
-        humanKeywords:     form.humanKeywords,
-        pauseOnReply:      form.pauseOnReply,
-      };
-
-      const url    = "/api/automation";
-      const method = editTarget ? "PATCH" : "POST";
-      const body   = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
-
-      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
+      const r = await fetch("/api/ai-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(agent) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-
-      if (editTarget) {
-        toast.success("تم التعديل");
-        setRules(prev => prev.map(r => r.id === editTarget.id ? d : r));
-      } else {
-        toast.success("تم إنشاء القاعدة");
-        setRules(prev => [...prev, d]);
-      }
-      setShowWizard(false);
-    } catch (e: any) {
-      toast.error(e.message ?? "خطأ في الحفظ");
-    } finally {
-      setSaving(false);
-    }
+      toast.success("تم حفظ إعدادات الوكيل الذكي"); setAgentDirty(false);
+    } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
+    finally { setSavingAgent(false); }
   };
 
-  // ── save brand ─────────────────────────────────────────────────
-  const saveBrand = async () => {
-    if (!brandForm.businessDesc.trim()) {
-      toast.error("وصف النشاط مطلوب");
-      return;
-    }
-    setSavingBrand(true);
-    try {
-      const r = await fetch("/api/me/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "brand", ...brandForm }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setBrand({ ...brandForm });
-      setHasBrand(true);
-      setShowBrand(false);
-      toast.success("تم حفظ بيانات البراند");
-    } catch (e: any) {
-      toast.error(e.message ?? "خطأ في الحفظ");
-    } finally {
-      setSavingBrand(false);
-    }
-  };
+  const updateAgent = (patch: Partial<AIAgent>) => { setAgent(a => ({ ...a, ...patch })); setAgentDirty(true); };
 
-  // ── step validation ─────────────────────────────────────────────
-  const canGoNext = () => {
-    if (step === 1) return !!form.name.trim() && !!form.triggerType;
-    if (step === 2) {
-      if (form.triggerType === "KEYWORD" && !form.triggerValue.trim()) return false;
-      if (form.triggerType === "NO_REPLY" && (!form.triggerValue || isNaN(Number(form.triggerValue)))) return false;
-      return true;
-    }
-    if (step === 3) {
-      if (!form.replyType) return false;
-      if (form.replyType === "TEXT" && !form.replyContent.trim()) return false;
-      if (form.replyType === "TEMPLATE" && !form.templateId) return false;
-      return true;
-    }
-    return true;
-  };
-
-  // ── render ──────────────────────────────────────────────────────
   if (loading) return (
     <div className="flex justify-center items-center py-32">
       <Loader2 className="w-10 h-10 animate-spin text-gray-300" />
@@ -391,484 +184,225 @@ export default function Automation() {
   );
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto" dir="rtl">
+    <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir="rtl">
 
-      {/* ── Brand Settings Card ── */}
-      <div className={`rounded-2xl border p-4 mb-6 ${hasBrand ? "bg-white border-gray-200" : "bg-amber-50 border-amber-200"}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${hasBrand ? "bg-green-50 text-green-600" : "bg-amber-100 text-amber-600"}`}>
-              <Bot className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">إعدادات الرد الذكي (AI)</p>
-              {hasBrand ? (
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {brand.brandName ? `${brand.brandName} — ` : ""}{brand.aiTone === "friendly" ? "ودود" : brand.aiTone === "formal" ? "رسمي" : "عامية مصرية"}
-                </p>
-              ) : (
-                <p className="text-xs text-amber-600 mt-0.5">أدخل بيانات براندك لتفعيل الرد الذكي</p>
-              )}
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant={hasBrand ? "outline" : "default"}
-            className={hasBrand ? "gap-1.5 text-xs" : "gap-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white border-0"}
-            onClick={() => { setBrandForm({ ...brand }); setShowBrand(true); }}
-          >
-            <Pencil className="w-3 h-3" />
-            {hasBrand ? "تعديل" : "إعداد الآن"}
-          </Button>
-        </div>
-
-        {hasBrand && brand.businessDesc && (
-          <p className="text-xs text-gray-400 mt-3 pr-11 line-clamp-2">{brand.businessDesc}</p>
-        )}
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 mb-8 w-fit">
+        {(["bot", "ai"] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+              ${activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+            {tab === "bot" ? <Key className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+            {tab === "bot" ? "بوت الكلمات" : "الذكاء الاصطناعي"}
+            {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-green-500" />}
+          </button>
+        ))}
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">الأتمتة الذكية</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {rules.length > 0
-              ? `${rules.filter(r => r.isEnabled).length} قاعدة مفعّلة من ${rules.length}`
-              : "لا توجد قواعد بعد"}
-          </p>
-        </div>
-        <Button
-          className="bg-green-500 hover:bg-green-600 text-white gap-1.5 text-sm"
-          onClick={openCreate}
-        >
-          <Plus className="w-4 h-4" /> قاعدة جديدة
-        </Button>
-      </div>
-
-      {/* Empty state */}
-      {rules.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-green-50 flex items-center justify-center mb-5">
-            <Zap className="w-10 h-10 text-green-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">لا توجد قواعد أتمتة بعد</h3>
-          <p className="text-gray-400 text-sm mb-6 max-w-xs">
-            أنشئ أول قاعدة لترد تلقائياً على عملائك دون تدخل يدوي
-          </p>
-          <Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={openCreate}>
-            <Plus className="w-4 h-4" /> إنشاء أول قاعدة
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rules.map(rule => (
-            <RuleCard
-              key={rule.id}
-              rule={rule}
-              onToggle={() => toggleRule(rule)}
-              onEdit={() => openEdit(rule)}
-              onDelete={() => deleteRule(rule.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ══ BRAND SETTINGS DIALOG ══════════════════════════════════ */}
-      <Dialog open={showBrand} onOpenChange={v => { if (!v) setShowBrand(false); }}>
-        <DialogContent className="max-w-lg" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Bot className="w-5 h-5 text-green-500" /> إعدادات الرد الذكي
-            </DialogTitle>
-            <DialogDescription>
-              بيانات براندك هتتبعت لـ Gemini عشان يرد بشكل صح على عملائك
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pl-1">
-            {/* اسم البراند */}
+      {/* ══ Bot Tab ══ */}
+      {activeTab === "bot" && (
+        <>
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <Label className="text-sm mb-1.5 block">اسم البراند</Label>
-              <Input
-                value={brandForm.brandName}
-                onChange={e => setBrandForm(f => ({ ...f, brandName: e.target.value }))}
-                placeholder="مثال: متجر الأناقة"
-              />
+              <h2 className="text-xl font-bold text-gray-900">بوت الكلمات المفتاحية</h2>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {rules.length > 0 ? `${rules.filter(r => r.isEnabled).length} مفعّلة من ${rules.length}` : "ردود ثابتة فورية"}
+              </p>
             </div>
-
-            {/* وصف النشاط */}
-            <div>
-              <Label className="text-sm mb-1.5 block">
-                وصف النشاط <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                value={brandForm.businessDesc}
-                onChange={e => setBrandForm(f => ({ ...f, businessDesc: e.target.value }))}
-                placeholder="مثال: نحن متجر ملابس نسائية متخصص في الموضة العصرية، نوفر شحن سريع لجميع محافظات مصر"
-                className="min-h-[90px] resize-none text-sm"
-                dir="rtl"
-              />
-              <p className="text-xs text-gray-400 mt-1">الأهم — هذا ما سيعرفه الـ AI عن نشاطك</p>
-            </div>
-
-            {/* المنتجات والخدمات */}
-            <div>
-              <Label className="text-sm mb-1.5 block">المنتجات والخدمات (اختياري)</Label>
-              <Textarea
-                value={brandForm.productsInfo}
-                onChange={e => setBrandForm(f => ({ ...f, productsInfo: e.target.value }))}
-                placeholder="مثال: فساتين سهرة، عبايات، ملابس كاجوال، إكسسوارات"
-                className="min-h-[70px] resize-none text-sm"
-                dir="rtl"
-              />
-            </div>
-
-            {/* الأسعار */}
-            <div>
-              <Label className="text-sm mb-1.5 block">الأسعار (اختياري)</Label>
-              <Textarea
-                value={brandForm.pricingInfo}
-                onChange={e => setBrandForm(f => ({ ...f, pricingInfo: e.target.value }))}
-                placeholder="مثال: الأسعار من 200 لـ 2000 جنيه، الشحن 60 جنيه لأي محافظة"
-                className="min-h-[70px] resize-none text-sm"
-                dir="rtl"
-              />
-            </div>
-
-            {/* ساعات العمل */}
-            <div>
-              <Label className="text-sm mb-1.5 block">ساعات العمل (اختياري)</Label>
-              <Input
-                value={brandForm.workingHours}
-                onChange={e => setBrandForm(f => ({ ...f, workingHours: e.target.value }))}
-                placeholder="مثال: من السبت للخميس 9 صباحاً لـ 10 مساءً"
-              />
-            </div>
-
-            {/* لهجة الرد */}
-            <div>
-              <Label className="text-sm mb-1.5 block">لهجة الرد</Label>
-              <Select value={brandForm.aiTone} onValueChange={v => setBrandForm(f => ({ ...f, aiTone: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="friendly">ودود وقريب من العميل</SelectItem>
-                  <SelectItem value="formal">رسمي ومهني</SelectItem>
-                  <SelectItem value="egyptian">عامية مصرية طبيعية</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
-            <Button variant="outline" onClick={() => setShowBrand(false)}>إلغاء</Button>
-            <div className="flex-1" />
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
-              onClick={saveBrand}
-              disabled={savingBrand || !brandForm.businessDesc.trim()}
-            >
-              {savingBrand ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              حفظ
+            <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={openCreate}>
+              <Plus className="w-4 h-4" /> كلمة جديدة
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* ══ WIZARD ══════════════════════════════════════════════════ */}
-      <Dialog open={showWizard} onOpenChange={v => { if (!v) setShowWizard(false); }}>
-        <DialogContent className="max-w-lg" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold">
-              {editTarget ? "تعديل القاعدة" : "قاعدة أتمتة جديدة"}
-            </DialogTitle>
-            <DialogDescription>
-              {["اسم ونوع المُشغِّل", "تفاصيل المُشغِّل", "نوع الرد", "إعدادات متقدمة"][step - 1]}
-            </DialogDescription>
-          </DialogHeader>
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 text-sm text-blue-700">
+            <Zap className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
+            <span>لما عميل يكتب الكلمة — البوت يرد <strong>فوراً</strong> بغض النظر عن أي حاجة ثانية.</span>
+          </div>
 
-          <Steps current={step} total={4} />
-
-          {/* Step 1 — Name + Trigger type */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <div>
-                <Label className="text-sm mb-1.5 block">اسم القاعدة *</Label>
-                <Input
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="مثال: ترحيب بالعملاء الجدد"
-                />
+          {rules.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-20 h-20 rounded-3xl bg-green-50 flex items-center justify-center mb-5">
+                <MessageSquare className="w-10 h-10 text-green-300" />
               </div>
-              <div>
-                <Label className="text-sm mb-2 block">متى تُشغَّل هذه القاعدة؟ *</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {(Object.entries(TRIGGER_CONFIG) as [TriggerType, (typeof TRIGGER_CONFIG)[TriggerType]][]).map(([key, cfg]) => (
-                    <button
-                      key={key}
-                      disabled={key === "TIME_BASED"}
-                      onClick={() => setForm(f => ({ ...f, triggerType: key, triggerValue: "" }))}
-                      className={`flex items-center gap-3 p-3 rounded-xl border text-right transition-all
-                        ${form.triggerType === key ? "border-green-400 bg-green-50" : "border-gray-200 hover:border-gray-300 bg-white"}
-                        ${key === "TIME_BASED" ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-                        ${form.triggerType === key ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>
-                        {cfg.icon}
-                      </div>
-                      <div className="flex-1 text-right">
-                        <p className={`text-sm font-semibold ${form.triggerType === key ? "text-green-800" : "text-gray-700"}`}>
-                          {cfg.label}
-                          {key === "TIME_BASED" && <span className="text-xs font-normal text-gray-400 mr-1">(قريباً)</span>}
-                        </p>
-                        <p className="text-xs text-gray-400">{cfg.desc}</p>
-                      </div>
-                      {form.triggerType === key && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-1">لا توجد كلمات بعد</h3>
+              <p className="text-gray-400 text-sm mb-6 max-w-xs">أضف كلمة مفتاحية وردّها الثابت</p>
+              <Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={openCreate}>
+                <Plus className="w-4 h-4" /> أضف أول كلمة
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rules.map(rule => (
+                <RuleCard key={rule.id} rule={rule}
+                  onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule)} onDelete={() => deleteRule(rule.id)} />
+              ))}
             </div>
           )}
+        </>
+      )}
 
-          {/* Step 2 — Trigger details */}
-          {step === 2 && (
-            <div className="space-y-4">
-              {form.triggerType === "KEYWORD" && (
-                <div>
-                  <Label className="text-sm mb-1.5 block">الكلمة المفتاحية *</Label>
-                  <Input
-                    dir="rtl"
-                    value={form.triggerValue}
-                    onChange={e => setForm(f => ({ ...f, triggerValue: e.target.value }))}
-                    placeholder="مثال: سعر"
-                  />
-                  <p className="text-xs text-gray-400 mt-1.5">
-                    سيُفعَّل هذا الرد عندما تحتوي أي رسالة واردة على هذه الكلمة
-                  </p>
-                </div>
-              )}
-              {form.triggerType === "FIRST_MESSAGE" && (
-                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <Users className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-blue-800">ترحيب تلقائي بالعملاء الجدد</p>
-                    <p className="text-xs text-blue-600 mt-0.5">
-                      سيُرسَل الرد تلقائياً عندما تصلك أول رسالة من عميل لم يتواصل معك من قبل.
-                      لا يحتاج هذا المُشغِّل إلى إعداد إضافي.
-                    </p>
-                  </div>
-                </div>
-              )}
-              {form.triggerType === "NO_REPLY" && (
-                <div>
-                  <Label className="text-sm mb-1.5 block">عدد الأيام بدون رد *</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      dir="ltr"
-                      type="number"
-                      min={1} max={365}
-                      value={form.triggerValue}
-                      onChange={e => setForm(f => ({ ...f, triggerValue: e.target.value }))}
-                      placeholder="3"
-                      className="w-28 text-center font-mono"
-                    />
-                    <span className="text-sm text-gray-500">أيام</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1.5">
-                    سيُرسَل رسالة متابعة بعد هذه المدة من آخر رسالة بدون رد من العميل
-                  </p>
-                </div>
-              )}
+      {/* ══ AI Tab ══ */}
+      {activeTab === "ai" && (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">وكيل الذكاء الاصطناعي</h2>
+              <p className="text-sm text-gray-400 mt-0.5">يرد على أي رسالة مش عندها كلمة مفتاحية</p>
             </div>
-          )}
+            <button onClick={() => updateAgent({ isEnabled: !agent.isEnabled })}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm transition-all
+                ${agent.isEnabled ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
+              {agent.isEnabled ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
+              {agent.isEnabled ? "مفعّل" : "معطّل"}
+            </button>
+          </div>
 
-          {/* Step 3 — Reply type + content */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm mb-2 block">نوع الرد *</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {(Object.entries(REPLY_CONFIG) as [ReplyType, (typeof REPLY_CONFIG)[ReplyType]][]).map(([key, cfg]) => {
-                    const disabled = key === "AI" && !hasBrand;
-                    return (
-                      <button
-                        key={key}
-                        disabled={disabled}
-                        onClick={() => setForm(f => ({ ...f, replyType: key }))}
-                        className={`flex items-center gap-3 p-3 rounded-xl border text-right transition-all
-                          ${form.replyType === key ? "border-green-400 bg-green-50" : "border-gray-200 hover:border-gray-300 bg-white"}
-                          ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
-                      >
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-                          ${form.replyType === key ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>
-                          {cfg.icon}
-                        </div>
-                        <div className="flex-1 text-right">
-                          <p className={`text-sm font-semibold ${form.replyType === key ? "text-green-800" : "text-gray-700"}`}>
-                            {cfg.label}
-                            {disabled && <span className="text-xs font-normal text-amber-600 mr-1">(يتطلب بيانات البراند)</span>}
-                          </p>
-                          <p className="text-xs text-gray-400">{cfg.desc}</p>
-                        </div>
-                        {form.replyType === key && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="space-y-5">
 
-              {form.replyType === "TEXT" && (
-                <div>
-                  <Label className="text-sm mb-1.5 block">نص الرد *</Label>
-                  <Textarea
-                    value={form.replyContent}
-                    onChange={e => setForm(f => ({ ...f, replyContent: e.target.value }))}
-                    placeholder="اكتب الرد الذي سيُرسَل تلقائياً..."
-                    className="min-h-[100px] resize-none text-sm"
-                    dir="rtl"
-                  />
-                </div>
-              )}
-
-              {form.replyType === "TEMPLATE" && (
-                <div>
-                  <Label className="text-sm mb-1.5 block">اختر القالب *</Label>
-                  {templates.length === 0 ? (
-                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-3 text-sm text-gray-500">
-                      <AlertCircle className="w-4 h-4 text-amber-400" />
-                      لا توجد قوالب معتمدة. أضف قوالب من تاب القوالب أولاً.
+            {/* Provider */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Bot className="w-4 h-4 text-purple-500" /> مزوّد الذكاء الاصطناعي
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {(["gemini", "openai"] as const).map(p => (
+                  <button key={p} onClick={() => updateAgent({ provider: p })}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-right
+                      ${agent.provider === p ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-gray-300 bg-white"}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm
+                      ${agent.provider === p ? "bg-purple-500 text-white" : "bg-gray-100 text-gray-500"}`}>
+                      {p === "gemini" ? "G" : "AI"}
                     </div>
-                  ) : (
-                    <Select value={form.templateId} onValueChange={v => setForm(f => ({ ...f, templateId: v }))}>
-                      <SelectTrigger><SelectValue placeholder="اختر قالباً..." /></SelectTrigger>
+                    <div>
+                      <p className={`font-semibold text-sm ${agent.provider === p ? "text-purple-800" : "text-gray-700"}`}>
+                        {p === "gemini" ? "Google Gemini" : "ChatGPT (GPT-4o mini)"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {p === "gemini" ? "سريع ومجاني نسبياً" : "دقيق وقوي"}
+                      </p>
+                    </div>
+                    {agent.provider === p && <CheckCircle className="w-4 h-4 text-purple-500 mr-auto" />}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                <Key className="w-3.5 h-3.5 flex-shrink-0" />
+                {agent.provider === "gemini" ? "تأكد إن GEMINI_API_KEY موجود في Vercel" : "تأكد إن OPENAI_API_KEY موجود في Vercel"}
+              </div>
+            </div>
+
+            {/* Brand Context */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-500" /> بيانات البراند
+                <span className="text-xs font-normal text-gray-400">(بتتبعت للـ AI عشان يعرف يرد)</span>
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm mb-1.5 block">اسم البراند</Label>
+                    <Input value={agent.brandName} onChange={e => updateAgent({ brandName: e.target.value })} placeholder="مثال: متجر الأناقة" />
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">ساعات العمل</Label>
+                    <Input value={agent.workingHours} onChange={e => updateAgent({ workingHours: e.target.value })} placeholder="مثال: 9 ص – 10 م" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">وصف النشاط <span className="text-red-500">*</span></Label>
+                  <Textarea value={agent.businessDesc} onChange={e => updateAgent({ businessDesc: e.target.value })}
+                    placeholder="مثال: نحن متجر ملابس نسائية، نوفر شحن سريع لجميع محافظات مصر"
+                    className="min-h-[80px] resize-none text-sm" dir="rtl" />
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">المنتجات والخدمات</Label>
+                  <Textarea value={agent.productsInfo} onChange={e => updateAgent({ productsInfo: e.target.value })}
+                    placeholder="مثال: فساتين سهرة، عبايات، ملابس كاجوال"
+                    className="min-h-[60px] resize-none text-sm" dir="rtl" />
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">الأسعار</Label>
+                  <Textarea value={agent.pricingInfo} onChange={e => updateAgent({ pricingInfo: e.target.value })}
+                    placeholder="مثال: الأسعار من 200 لـ 2000 جنيه، الشحن 60 جنيه"
+                    className="min-h-[60px] resize-none text-sm" dir="rtl" />
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              <h3 className="font-semibold text-gray-900 mb-4">إعدادات متقدمة</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm mb-1.5 block">لهجة الرد</Label>
+                    <Select value={agent.tone} onValueChange={v => updateAgent({ tone: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {templates.map(t => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
+                        <SelectItem value="friendly">ودود وقريب</SelectItem>
+                        <SelectItem value="formal">رسمي ومهني</SelectItem>
+                        <SelectItem value="egyptian">عامية مصرية</SelectItem>
                       </SelectContent>
                     </Select>
-                  )}
-                </div>
-              )}
-
-              {form.replyType === "AI" && (
-                <div>
-                  <Label className="text-sm mb-1.5 block">تعليمات إضافية للـ AI (اختياري)</Label>
-                  <Textarea
-                    value={form.extraInstructions}
-                    onChange={e => setForm(f => ({ ...f, extraInstructions: e.target.value }))}
-                    placeholder="مثال: ركّز فقط على عروض رمضان في هذه القاعدة..."
-                    className="min-h-[80px] resize-none text-sm"
-                    dir="rtl"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">بيانات براندك من الإعدادات ستُضاف تلقائياً</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 4 — Advanced */}
-          {step === 4 && (
-            <div className="space-y-5">
-              {/* Human keywords */}
-              <div>
-                <Label className="text-sm mb-1.5 block">كلمات التحويل للبشري</Label>
-                <p className="text-xs text-gray-400 mb-2">
-                  لو العميل كتب أي كلمة من دول، الأتمتة بتوقف فوراً وبيوصلك إشعار
-                </p>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    value={form.humanKwInput}
-                    onChange={e => setForm(f => ({ ...f, humanKwInput: e.target.value }))}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" && form.humanKwInput.trim()) {
-                        setForm(f => ({ ...f, humanKeywords: [...f.humanKeywords, f.humanKwInput.trim()], humanKwInput: "" }));
-                      }
-                    }}
-                    placeholder="مثال: شكوى"
-                    className="flex-1 text-sm"
-                  />
-                  <Button size="sm" variant="outline"
-                    onClick={() => {
-                      if (!form.humanKwInput.trim()) return;
-                      setForm(f => ({ ...f, humanKeywords: [...f.humanKeywords, f.humanKwInput.trim()], humanKwInput: "" }));
-                    }}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                {form.humanKeywords.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {form.humanKeywords.map((kw, i) => (
-                      <span key={i} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded-lg">
-                        {kw}
-                        <button onClick={() => setForm(f => ({ ...f, humanKeywords: f.humanKeywords.filter((_, j) => j !== i) }))}>
-                          <X className="w-3 h-3 hover:text-red-800" />
-                        </button>
-                      </span>
-                    ))}
                   </div>
-                )}
-              </div>
-
-              {/* Pause on reply */}
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">وقف الأتمتة عند الرد اليدوي</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    لو أنت ردّيت يدوياً، الأتمتة بتوقف لمدة 24 ساعة
-                  </p>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">وقف الرد بعد ردك (دقائق)</Label>
+                    <Input type="number" min={1} max={1440} dir="ltr"
+                      value={agent.pauseMinutes} onChange={e => updateAgent({ pauseMinutes: Number(e.target.value) || 10 })} />
+                  </div>
                 </div>
-                <button
-                  onClick={() => setForm(f => ({ ...f, pauseOnReply: !f.pauseOnReply }))}
-                  className={`transition-colors ${form.pauseOnReply ? "text-green-500" : "text-gray-300"}`}
-                >
-                  {form.pauseOnReply ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-                </button>
-              </div>
-
-              {/* Summary */}
-              <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-xs text-gray-600 border border-gray-100">
-                <p className="font-semibold text-gray-700 text-sm mb-2">ملخص القاعدة</p>
-                <p>الاسم: <span className="font-medium text-gray-900">{form.name}</span></p>
-                <p>المُشغِّل: <span className="font-medium text-gray-900">
-                  {TRIGGER_CONFIG[form.triggerType as TriggerType]?.label}
-                  {form.triggerValue ? ` — "${form.triggerValue}"` : ""}
-                </span></p>
-                <p>الرد: <span className="font-medium text-gray-900">
-                  {REPLY_CONFIG[form.replyType as ReplyType]?.label}
-                </span></p>
+                <div>
+                  <Label className="text-sm mb-1.5 block">System Prompt إضافي (اختياري)</Label>
+                  <Textarea value={agent.systemPrompt} onChange={e => updateAgent({ systemPrompt: e.target.value })}
+                    placeholder="مثال: لا تذكر المنافسين. لو سألوا عن التوصيل الدولي قول مش متاح."
+                    className="min-h-[80px] resize-none text-sm" dir="rtl" />
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Navigation */}
-          <div className="flex gap-2 pt-2 border-t border-gray-100 mt-2">
-            {step > 1 && (
-              <Button variant="outline" className="gap-1.5" onClick={() => setStep(s => s - 1)}>
-                <ChevronRight className="w-4 h-4" /> السابق
-              </Button>
-            )}
+            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white gap-2 py-6 text-base font-semibold"
+              onClick={saveAgent} disabled={savingAgent || !agentDirty}>
+              {savingAgent ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              {agentDirty ? "حفظ الإعدادات" : "الإعدادات محفوظة"}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Keyword Dialog */}
+      <Dialog open={showDialog} onOpenChange={v => { if (!v) setShowDialog(false); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Key className="w-5 h-5 text-green-500" />
+              {editTarget ? "تعديل الكلمة" : "كلمة مفتاحية جديدة"}
+            </DialogTitle>
+            <DialogDescription>لما العميل يكتب الكلمة دي، البوت يرد فوراً</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm mb-1.5 block">اسم القاعدة *</Label>
+              <Input value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder="مثال: رد السعر" />
+            </div>
+            <div>
+              <Label className="text-sm mb-1.5 block">الكلمة المفتاحية *</Label>
+              <Input value={ruleForm.keyword} onChange={e => setRuleForm(f => ({ ...f, keyword: e.target.value }))} placeholder="مثال: سعر" dir="rtl" />
+              <p className="text-xs text-gray-400 mt-1">بيتفعّل لو الرسالة فيها الكلمة دي في أي مكان</p>
+            </div>
+            <div>
+              <Label className="text-sm mb-1.5 block">نص الرد *</Label>
+              <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))}
+                placeholder="اكتب الرد اللي هيتبعت تلقائياً..." className="min-h-[100px] resize-none text-sm" dir="rtl" />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2 border-t border-gray-100">
+            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
             <div className="flex-1" />
-            {step < 4 ? (
-              <Button
-                className="bg-gray-900 hover:bg-gray-800 text-white gap-1.5"
-                disabled={!canGoNext()}
-                onClick={() => setStep(s => s + 1)}
-              >
-                التالي <ChevronLeft className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button
-                className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
-                onClick={save}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {editTarget ? "حفظ التعديلات" : "إنشاء القاعدة"}
-              </Button>
-            )}
+            <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={saveRule}
+              disabled={saving || !ruleForm.name.trim() || !ruleForm.keyword.trim() || !ruleForm.reply.trim()}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              {editTarget ? "حفظ التعديلات" : "إضافة"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

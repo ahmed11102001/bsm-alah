@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
-import { getSmartReply }             from "@/lib/gemini";
+import { getSmartReply }             from "@/lib/ai-agent";
 import prisma                        from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {

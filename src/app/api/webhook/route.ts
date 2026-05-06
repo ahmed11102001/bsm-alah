@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
 import { notifyNewMessage } from "@/lib/notifications";
-import { getSmartReply } from "@/lib/gemini";
+import { getAIReply } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 
 // -------------------------------------------------------------------
@@ -205,7 +205,11 @@ export async function POST(req: NextRequest) {
           create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
         });
 
-      
+        // لو في رسائل قديمة للكونتاكت ده اتحذفت — ارجعها عشان المحادثة تكون متكاملة
+        await tx.message.updateMany({
+          where: { contactId: contact.id, userId, deletedAt: { not: null } },
+          data:  { deletedAt: null },
+        });
 
         await tx.message.create({
           data: {
@@ -253,162 +257,117 @@ async function handleAutomation(ctx: {
   const { userId, from, messageText, accountOwner } = ctx;
   const textLower = messageText.toLowerCase().trim();
 
-  // جيب كل القواعد المفعّلة مرتبة من الأقدم للأحدث
-  const rules = await prisma.automationRule.findMany({
-    where:   { userId, isEnabled: true },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (!rules.length) return;
-
-  // جيب بيانات البراند الخاصة بالمستخدم
-  const owner = await prisma.user.findUnique({
-    where:  { id: userId },
-    select: {
-      brandName: true, businessDesc: true, productsInfo: true,
-      pricingInfo: true, workingHours: true, aiTone: true,
+  // ── 1: Keyword Bot — جيب الكلمات المفتاحية المفعّلة ──────────────
+  const keywordRules = await prisma.automationRule.findMany({
+    where: {
+      userId,
+      isEnabled:   true,
+      triggerType: TriggerType.KEYWORD,
+      replyType:   ReplyType.TEXT,
     },
+    orderBy: { createdAt: "asc" },
+    select:  { id: true, name: true, triggerValue: true, replyContent: true, humanKeywords: true },
   });
-  if (!owner) return;
 
-  // ── A: Human keywords — أي قاعدة فيها كلمة تحويل بشري ──────────
-  const humanTriggered = rules.some(r =>
-    r.humanKeywords.some(kw => {
-      const normalized = kw?.toLowerCase().trim();
-      return !!normalized && textLower.includes(normalized);
+  // Human takeover keywords
+  const humanTriggered = keywordRules.some(r =>
+    r.humanKeywords?.some(kw => {
+      const kn = kw?.toLowerCase().trim();
+      return !!kn && textLower.includes(kn);
     })
   );
   if (humanTriggered) {
-    // بعت إشعار للمالك فقط بدون رد تلقائي
     await notifyNewMessage(userId, from);
-    console.log(`[AUTOMATION] Human takeover triggered for ${from}`);
+    console.log(`[BOT] Human takeover triggered for ${from}`);
     return;
   }
 
-  // ── B: دور على الـ keyword match أولاً — بيرد فوراً بغض النظر عن أي حاجة ──
-  // الـ keyword rules مش بتتأثر بـ pauseOnReply — المستخدم كتب الكلمة عشان يجيب رد
-  let matchedRule: (typeof rules)[0] | null = null;
+  // Keyword match — بيرد فوراً دايماً
+  const matched = keywordRules.find(r =>
+    r.triggerValue?.trim() &&
+    textLower.includes(r.triggerValue.toLowerCase().trim())
+  );
 
-  {
-    const keywordRules = rules.filter(r =>
-      r.triggerType === TriggerType.KEYWORD &&
-      r.triggerValue?.trim() &&
-      textLower.includes(r.triggerValue.toLowerCase().trim())
-    );
-
-    // الأولوية: TEXT أولاً (الأكثر وضوحاً) → TEMPLATE → AI كـ fallback
-    matchedRule =
-      keywordRules.find(r => r.replyType === ReplyType.TEXT) ||
-      keywordRules.find(r => r.replyType === ReplyType.TEMPLATE) ||
-      keywordRules.find(r => r.replyType === ReplyType.AI) ||
-      null;
-
-    if (matchedRule) {
-      console.log(`[AUTOMATION] Keyword matched → "${matchedRule.name}" (${matchedRule.replyType}) for "${messageText}"`);
-    }
-  }
-
-  // ── C: لو مفيش keyword match — طبّق pauseOnReply قبل ما نكمل ────
-  // الـ pauseOnReply بيحمي الـ FIRST_MESSAGE والـ AI catch-all بس
-  if (!matchedRule) {
-    const shouldPause = rules.some(r => r.pauseOnReply);
-    if (shouldPause) {
-      const lastManualOutbound = await prisma.messageQueue.findFirst({
-        where: {
-          userId,
-          toPhone:    from,
-          campaignId: null,
-          status:     { in: ["sent", "failed"] },
-        },
-        orderBy: { sentAt: "desc" },
-        select:  { sentAt: true },
-      });
-      if (lastManualOutbound?.sentAt) {
-        const minutesSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 60_000;
-        if (minutesSince < 10) {
-          console.log(`[AUTOMATION] Paused — human replied recently for ${from}`);
-          return;
-        }
-      }
-    }
-
-    // ── D1: FIRST_MESSAGE ─────────────────────────────────────────
-    const msgCount = await prisma.message.count({
-      where: { userId, contact: { phone: from } },
-    });
-    const isFirstMessage = msgCount <= 1;
-
-    if (isFirstMessage) {
-      matchedRule = rules.find(r => r.triggerType === TriggerType.FIRST_MESSAGE) ?? null;
-    }
-
-    // ── D2: AI catch-all ──────────────────────────────────────────
-    if (!matchedRule) {
-      matchedRule = rules.find(r =>
-        r.replyType === ReplyType.AI &&
-        r.triggerType !== TriggerType.KEYWORD
-      ) ?? null;
-
-      if (matchedRule) {
-        console.log(`[AUTOMATION] AI catch-all → "${matchedRule.name}" for "${messageText}"`);
-      }
-    }
-  }
-
-  if (!matchedRule) {
-    console.log(`[AUTOMATION] No matching rule for "${messageText}" from ${from}`);
+  if (matched) {
+    const replyText = matched.replyContent?.trim();
+    if (!replyText) return;
+    console.log(`[BOT] Keyword matched → "${matched.name}" for "${messageText}"`);
+    await sendReply({ userId, from, replyText, accountOwner, ruleName: matched.name });
     return;
   }
 
-  // ── E: جهّز نص الرد ─────────────────────────────────────────────
-  let replyText: string | null = null;
+  // ── 2: AI Agent — لو مفيش keyword match ──────────────────────────
+  const agent = await prisma.aIAgent.findUnique({
+    where:  { userId },
+    select: {
+      isEnabled: true, provider: true,
+      brandName: true, businessDesc: true, productsInfo: true,
+      pricingInfo: true, workingHours: true, tone: true,
+      systemPrompt: true, pauseMinutes: true,
+    },
+  });
 
-  if (matchedRule.replyType === ReplyType.TEXT) {
-    replyText = matchedRule.replyContent;
+  if (!agent?.isEnabled) return;
 
-  } else if (matchedRule.replyType === ReplyType.AI) {
-    // ── Bug fix: businessDesc مش شرط لو القاعدة نفسها عندها extraInstructions ──
-    const businessContext = owner.businessDesc?.trim() || owner.brandName?.trim() || "";
+  // Pause check — لو المستخدم ردّ يدوياً مؤخراً
+  const lastManualOutbound = await prisma.messageQueue.findFirst({
+    where:   { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
+    orderBy: { sentAt: "desc" },
+    select:  { sentAt: true },
+  });
 
-    if (!businessContext && !matchedRule.extraInstructions?.trim()) {
-      console.warn(`[AUTOMATION] AI rule "${matchedRule.name}" skipped — no brand context or instructions set`);
+  if (lastManualOutbound?.sentAt) {
+    const minsSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 60_000;
+    if (minsSince < (agent.pauseMinutes ?? 10)) {
+      console.log(`[AI-AGENT] Paused — human replied ${minsSince.toFixed(1)}m ago for ${from}`);
       return;
     }
+  }
 
-    const geminiResult = await getSmartReply(messageText, {
-      brandName:         owner.brandName,
-      businessDesc:      businessContext || "مساعد عام",
-      productsInfo:      owner.productsInfo,
-      pricingInfo:       owner.pricingInfo,
-      workingHours:      owner.workingHours,
-      aiTone:            owner.aiTone ?? "friendly",
-      extraInstructions: matchedRule.extraInstructions,
-    });
+  // Call AI
+  const result = await getAIReply(
+    messageText,
+    {
+      brandName:    agent.brandName,
+      businessDesc: agent.businessDesc,
+      productsInfo: agent.productsInfo,
+      pricingInfo:  agent.pricingInfo,
+      workingHours: agent.workingHours,
+      tone:         agent.tone,
+      systemPrompt: agent.systemPrompt,
+    },
+    agent.provider as "gemini" | "openai",
+  );
 
-    if (!geminiResult.ok) {
-      console.error(`[AUTOMATION] Gemini error for rule "${matchedRule.name}":`, geminiResult.error);
-      return;
-    }
-
-    if (geminiResult.offTopic) {
-      console.log(`[AUTOMATION] Gemini marked off-topic for "${messageText}" — no reply sent`);
-      return;
-    }
-
-    replyText = geminiResult.reply ?? null;
-
-  } else if (matchedRule.replyType === ReplyType.TEMPLATE) {
-    console.log(`[AUTOMATION] Template reply not yet implemented — rule: ${matchedRule.id}`);
+  if (!result.ok) {
+    console.error(`[AI-AGENT] Error:`, result.error);
     return;
   }
 
-  if (!replyText?.trim()) return;
+  if (result.offTopic) {
+    console.log(`[AI-AGENT] Off-topic — no reply sent for "${messageText}"`);
+    return;
+  }
 
-  // ── F: ابعت الرد عبر Meta API مباشرة ────────────────────────────
+  if (!result.reply?.trim()) return;
+
+  await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}` });
+}
+
+// ─── Helper: إرسال الرد عبر Meta وحفظه في الـ DB ─────────────────────────────
+async function sendReply(ctx: {
+  userId:       string;
+  from:         string;
+  replyText:    string;
+  accountOwner: { accessToken: string; phoneNumberId: string };
+  ruleName:     string;
+}) {
+  const { userId, from, replyText, accountOwner, ruleName } = ctx;
+
   const metaRes = await fetch(
     `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
     {
-      method: "POST",
+      method:  "POST",
       headers: {
         "Content-Type":  "application/json",
         "Authorization": `Bearer ${accountOwner.accessToken}`,
@@ -428,10 +387,9 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  const metaData = await metaRes.json();
-  const whatsappMsgId: string | undefined = metaData?.messages?.[0]?.id;
+  const metaData      = await metaRes.json();
+  const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
 
-  // ── G: احفظ الرد في الـ DB ───────────────────────────────────────
   const contact = await prisma.contact.findFirst({
     where:  { phone: from, userId },
     select: { id: true },
@@ -451,8 +409,9 @@ async function handleAutomation(ctx: {
     },
   });
 
-  console.log(`[AUTOMATION] ✓ Replied to ${from} via rule "${matchedRule.name}"`);
+  console.log(`[AUTOMATION] ✓ Replied to ${from} via "${ruleName}"`);
 }
+
 
 // -------------------------------------------------------------------
 // HELPER: تحويل حالات واتساب إلى Enums قاعدة البيانات

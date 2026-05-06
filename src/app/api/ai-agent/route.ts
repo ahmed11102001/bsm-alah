@@ -1,0 +1,74 @@
+// src/app/api/ai-agent/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+
+function uid(session: any): string {
+  return session?.user?.id ?? session?.user?.email ?? "";
+}
+
+// ── GET — جيب إعدادات الـ AI Agent ──────────────────────────────────────────
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = uid(session);
+
+  const agent = await prisma.aIAgent.findUnique({ where: { userId } });
+
+  // لو مفيش record → رجّع defaults
+  return NextResponse.json(agent ?? {
+    isEnabled:    false,
+    provider:     "gemini",
+    brandName:    "",
+    businessDesc: "",
+    productsInfo: "",
+    pricingInfo:  "",
+    workingHours: "",
+    tone:         "friendly",
+    systemPrompt: "",
+    pauseMinutes: 10,
+  });
+}
+
+// ── PUT — حفظ إعدادات الـ AI Agent (upsert) ─────────────────────────────────
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = uid(session);
+
+  const body = await req.json();
+  const {
+    isEnabled,
+    provider,
+    brandName,
+    businessDesc,
+    productsInfo,
+    pricingInfo,
+    workingHours,
+    tone,
+    systemPrompt,
+    pauseMinutes,
+  } = body;
+
+  const data = {
+    isEnabled:    typeof isEnabled    === "boolean" ? isEnabled    : false,
+    provider:     provider === "openai"             ? "openai"     : "gemini",
+    brandName:    brandName    ?? "",
+    businessDesc: businessDesc ?? "",
+    productsInfo: productsInfo ?? "",
+    pricingInfo:  pricingInfo  ?? "",
+    workingHours: workingHours ?? "",
+    tone:         tone         ?? "friendly",
+    systemPrompt: systemPrompt ?? "",
+    pauseMinutes: typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
+  } as any;
+
+  const agent = await prisma.aIAgent.upsert({
+    where:  { userId },
+    update: data,
+    create: { userId, ...data },
+  });
+
+  return NextResponse.json(agent);
+}

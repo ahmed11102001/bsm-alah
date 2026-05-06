@@ -87,6 +87,11 @@ enum ReplyType {
   AI
 }
 
+enum AIProvider {
+  gemini
+  openai
+}
+
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
@@ -128,6 +133,7 @@ model User {
   notifications   Notification[]
   automationRules AutomationRule[]
   shopifyStore    ShopifyStore?
+  aiAgent         AIAgent?
 
   @@index([email])
   @@index([workspaceId])
@@ -486,4 +492,30 @@ model AutomationRule {
   @@index([userId, isEnabled])
   @@index([triggerType])
   @@index([userId, triggerType])
+}
+
+model AIAgent {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  isEnabled Boolean    @default(false)
+  provider  AIProvider @default(gemini)
+
+  // ─── Brand context ────────────────────────────────────────────
+  brandName    String?
+  businessDesc String? @db.Text
+  productsInfo String? @db.Text
+  pricingInfo  String? @db.Text
+  workingHours String?
+  tone         String  @default("friendly")
+
+  // ─── Custom system prompt ─────────────────────────────────────
+  systemPrompt String? @db.Text
+
+  // ─── Human takeover pause (minutes) ──────────────────────────
+  pauseMinutes Int @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
