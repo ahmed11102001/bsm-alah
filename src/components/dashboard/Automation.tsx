@@ -95,6 +95,7 @@ export default function Automation() {
   const [loading,     setLoading]     = useState(true);
   const [savingAgent, setSavingAgent] = useState(false);
   const [agentDirty,  setAgentDirty]  = useState(false);
+  const [agentSaved,  setAgentSaved]  = useState(false);
   const [showDialog,  setShowDialog]  = useState(false);
   const [editTarget,  setEditTarget]  = useState<KeywordRule | null>(null);
   const [saving,      setSaving]      = useState(false);
@@ -170,12 +171,18 @@ export default function Automation() {
       const r = await fetch("/api/ai-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(agent) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      toast.success("تم حفظ إعدادات الوكيل الذكي"); setAgentDirty(false);
+      toast.success("تم حفظ إعدادات الوكيل الذكي");
+      setAgentDirty(false);
+      setAgentSaved(true);
     } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
     finally { setSavingAgent(false); }
   };
 
-  const updateAgent = (patch: Partial<AIAgent>) => { setAgent(a => ({ ...a, ...patch })); setAgentDirty(true); };
+  const updateAgent = (patch: Partial<AIAgent>) => {
+    setAgent(a => ({ ...a, ...patch }));
+    setAgentDirty(true);
+    setAgentSaved(false);
+  };
 
   if (loading) return (
     <div className="flex justify-center items-center py-32">
@@ -360,10 +367,13 @@ export default function Automation() {
               </div>
             </div>
 
-            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white gap-2 py-6 text-base font-semibold"
+            <Button className={`w-full text-white gap-2 py-6 text-base font-semibold transition-all duration-300
+              ${agentSaved && !agentDirty
+                ? "bg-green-500 hover:bg-green-600 shadow-[0_0_22px_rgba(34,197,94,0.6)]"
+                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_24px_rgba(16,185,129,0.65)]"}`}
               onClick={saveAgent} disabled={savingAgent || !agentDirty}>
               {savingAgent ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              {agentDirty ? "حفظ الإعدادات" : "الإعدادات محفوظة"}
+              {savingAgent ? "جاري الحفظ..." : agentDirty ? "حفظ الإعدادات" : "تم الحفظ"}
             </Button>
           </div>
         </>
