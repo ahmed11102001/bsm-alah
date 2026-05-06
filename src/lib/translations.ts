@@ -9,6 +9,7 @@ export const t = {
     logo:    { ar: "واتس برو",       en: "WhatsPro" },
     logoHighlight: { ar: "برو",      en: "Pro" },
     features:  { ar: "المميزات",     en: "Features" },
+    partners:  { ar: "شركاؤنا",      en: "Partners" },
     howItWorks:{ ar: "كيف يعمل",    en: "How It Works" },
     pricing:   { ar: "الأسعار",      en: "Pricing" },
     testimonials:{ ar: "آراء العملاء", en: "Testimonials" },
@@ -110,6 +111,14 @@ export const t = {
         desc:  { ar: "سجّل، اربط واتساب بيزنس API بمساعدة دليل خطوة بخطوة، ارفع جهات اتصالك، وابدأ أول حملة. كل ده في ربع ساعة.", en: "Sign up, connect WhatsApp Business API with a step-by-step guide, upload contacts, and launch your first campaign — all in 15 minutes." },
       },
     ],
+  },
+
+  // ── Partners ────────────────────────────────────────────────────────────────
+  partners: {
+    badge:    { ar: "شركاؤنا",        en: "Our Partners" },
+    h2a:      { ar: "نشتغل مع",       en: "We work with" },
+    h2b:      { ar: "أفضل الأسماء",   en: "the best names" },
+    subtitle: { ar: "تكاملات قوية مع المنصات والخدمات الموثوقة التي تعتمد عليها الشركات", en: "Strong integrations with trusted platforms and services that companies rely on." },
   },
 
   // ── HowItWorks ───────────────────────────────────────────────────────────────

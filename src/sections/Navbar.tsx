@@ -29,6 +29,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
 
   const navItems = [
     { label: tr(t.nav.features,     lang), href: "#features" },
+    { label: tr(t.nav.partners,     lang), href: "#partners" },
     { label: tr(t.nav.howItWorks,   lang), href: "#how-it-works" },
     { label: tr(t.nav.pricing,      lang), href: "#pricing" },
     { label: tr(t.nav.testimonials, lang), href: "#testimonials" },

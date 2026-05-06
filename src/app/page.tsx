@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Navbar       from "@/sections/Navbar";
 import Hero         from "@/sections/Hero";
 import Features     from "@/sections/Features";
+import Partners     from "@/sections/Partners";
 import HowItWorks   from "@/sections/HowItWorks";
 import Pricing      from "@/sections/Pricing";
 import Testimonials from "@/sections/Testimonials";
@@ -43,6 +44,7 @@ export default function Home() {
       />
       <Hero        onLoginClick={() => setIsLoginModalOpen(true)} lang={lang} />
       <Features    lang={lang} />
+      <Partners    lang={lang} />
       <HowItWorks  lang={lang} />
       <Pricing     lang={lang} />
       <Testimonials lang={lang} />
