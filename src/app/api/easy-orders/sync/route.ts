@@ -152,12 +152,12 @@ export async function POST(req: NextRequest) {
     // Upsert StoreOrder
     await prisma.storeOrder.upsert({
       where: {
-        userId_source_externalId: {
-          userId: user.id,
-          source: "easyorders",
-          externalId,
-        },
-      },
+  source_externalId_userId: {
+    source: "easyorders",
+    externalId,
+    userId: user.id,
+  },
+},
       update: { status },
       create: {
         userId:        user.id,
