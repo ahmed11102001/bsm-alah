@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     const externalId  = String(order.id);
     const orderNumber = String(order.order_number ?? order.id);
-    const total       = String(order.total ?? "");
+    const total = Number(order.total ?? 0);
     const currency    = order.currency ?? "EGP";
     const status      = order.status   ?? "pending";
 
