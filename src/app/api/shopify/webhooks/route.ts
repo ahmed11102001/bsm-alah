@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyShopifyWebhookSignature } from "@/lib/shopify";
 import { inngest } from "@/inngest/client";
+import { normalizePhone } from "@/lib/phone";
 
 /**
  * POST /api/shopify/webhooks
@@ -16,15 +17,15 @@ import { inngest } from "@/inngest/client";
  */
 export async function POST(req: NextRequest) {
   try {
-    // ── Step 1: Get raw body for signature verification ──────────────────────
+    // â”€â”€ Step 1: Get raw body for signature verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const rawBody = await req.text();
 
-    // ── Step 2: Extract headers ──────────────────────────────────────────────
+    // â”€â”€ Step 2: Extract headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const hmacHeader = req.headers.get("X-Shopify-Hmac-SHA256") || "";
     const shopId = req.headers.get("X-Shopify-Shop-Id") || "";
     const topic = req.headers.get("X-Shopify-Topic") || "";
 
-    // ── Step 3: Verify webhook signature ─────────────────────────────────────
+    // â”€â”€ Step 3: Verify webhook signature â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const isValid = await verifyShopifyWebhookSignature(rawBody, hmacHeader);
 
     if (!isValid) {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    // ── Step 4: Parse webhook payload ────────────────────────────────────────
+    // â”€â”€ Step 4: Parse webhook payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let payload: any;
     try {
       payload = JSON.parse(rawBody);
@@ -41,8 +42,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    // ── Step 5: Find the Shopify store in database ───────────────────────────
-    // الـ domain بييجي في header X-Shopify-Shop-Domain — أدق من الـ payload
+    // â”€â”€ Step 5: Find the Shopify store in database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ø§Ù„Ù€ domain Ø¨ÙŠÙŠØ¬ÙŠ ÙÙŠ header X-Shopify-Shop-Domain â€” Ø£Ø¯Ù‚ Ù…Ù† Ø§Ù„Ù€ payload
     const shopDomain =
       req.headers.get("X-Shopify-Shop-Domain") ||
       req.headers.get("x-shopify-shop-domain") ||
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const userId = shopifyStore.userId;
 
-    // ── Step 6: Route webhook based on topic ─────────────────────────────────
+    // â”€â”€ Step 6: Route webhook based on topic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     console.log(`[Shopify Webhook] Received ${topic} for shop: ${shopifyStore.shop}`);
 
     switch (topic) {
@@ -102,16 +103,17 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Webhook Handlers
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function handleOrderCreated(order: any, userId: string) {
   try {
     console.log(`[Shopify] Order created: ${order.id}`);
 
     // Get customer phone number
-    const customerPhone = order.customer?.phone || order.billing_address?.phone;
+    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
+    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
 
     if (!customerPhone) {
       console.warn(`[Shopify] Order ${order.id} has no customer phone`);
@@ -122,17 +124,17 @@ async function handleOrderCreated(order: any, userId: string) {
     const contact = await prisma.contact.upsert({
       where: {
         phone_userId: {
-          phone: customerPhone.replace(/\D/g, ""),
+          phone: customerPhone,
           userId,
         },
       },
       update: {
-        name: order.customer?.first_name || "عميل جديد",
+        name: order.customer?.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
       },
       create: {
-        phone: customerPhone.replace(/\D/g, ""),
+        phone: customerPhone,
         userId,
-        name: order.customer?.first_name || "عميل جديد",
+        name: order.customer?.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
       },
     });
 
@@ -159,7 +161,8 @@ async function handleOrderUpdated(order: any, userId: string) {
   try {
     console.log(`[Shopify] Order updated: ${order.id}`);
 
-    const customerPhone = order.customer?.phone || order.billing_address?.phone;
+    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
+    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
 
     if (!customerPhone) {
       return;
@@ -186,7 +189,8 @@ async function handleOrderFulfilled(order: any, userId: string) {
   try {
     console.log(`[Shopify] Order fulfilled: ${order.id}`);
 
-    const customerPhone = order.customer?.phone || order.billing_address?.phone;
+    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
+    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
 
     if (!customerPhone) {
       return;
@@ -219,9 +223,10 @@ async function handleCustomerCreated(customer: any, userId: string) {
   try {
     console.log(`[Shopify] Customer created: ${customer.id}`);
 
-    const phone = customer.phone || customer.default_address?.phone;
+    const phoneRaw = customer.phone || customer.default_address?.phone;
+    const phoneNormalized = phoneRaw ? normalizePhone(phoneRaw) : null;
 
-    if (!phone) {
+    if (!phoneNormalized) {
       console.warn(`[Shopify] Customer ${customer.id} has no phone`);
       return;
     }
@@ -230,15 +235,15 @@ async function handleCustomerCreated(customer: any, userId: string) {
     await prisma.contact.upsert({
       where: {
         phone_userId: {
-          phone: phone.replace(/\D/g, ""),
+          phone: phoneNormalized,
           userId,
         },
       },
       update: {},
       create: {
-        phone: phone.replace(/\D/g, ""),
+        phone: phoneNormalized,
         userId,
-        name: customer.first_name || "عميل جديد",
+        name: customer.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
       },
     });
 
@@ -252,16 +257,17 @@ async function handleCustomerUpdated(customer: any, userId: string) {
   try {
     console.log(`[Shopify] Customer updated: ${customer.id}`);
 
-    const phone = customer.phone || customer.default_address?.phone;
+    const phoneRaw = customer.phone || customer.default_address?.phone;
+    const phoneNormalized = phoneRaw ? normalizePhone(phoneRaw) : null;
 
-    if (!phone) {
+    if (!phoneNormalized) {
       return;
     }
 
     // Update contact
     await prisma.contact.updateMany({
       where: {
-        phone: phone.replace(/\D/g, ""),
+        phone: phoneNormalized,
         userId,
       },
       data: {
@@ -272,3 +278,4 @@ async function handleCustomerUpdated(customer: any, userId: string) {
     console.error("[Shopify] Error handling customer updated:", error);
   }
 }
+

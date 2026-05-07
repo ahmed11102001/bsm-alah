@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import {
   Phone, UserPlus, PenLine,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface ContactRow { id: string; phone: string; name: string | null; notes?: string | null }
 interface Audience {
   id: string;
@@ -33,8 +32,8 @@ interface Audience {
   createdAt: string;
 }
 
-// ─── Phone validation ─────────────────────────────────────────────────────────
-// accepts Egyptian (start 201…) and international (start with + or country code)
+// â”€â”€â”€ Phone validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// accepts Egyptian (start 201â€¦) and international (start with + or country code)
 const INTL_RE = /^\d{7,15}$/;   // digits only, 7-15 chars
 const EG_RE   = /^20[0-9]{10}$/; // Egyptian format
 
@@ -48,8 +47,33 @@ function normalizePhone(raw: string): string {
 function isValidPhone(n: string): boolean {
   return EG_RE.test(n) || INTL_RE.test(n);
 }
+async function readSpreadsheetRows(file: File): Promise<string[][]> {
+  if (file.name.toLowerCase().endsWith(".csv")) {
+    const text = await file.text();
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.split(",").map((cell) => cell.trim()))
+      .filter((row) => row.some((cell) => cell.length > 0));
+  }
 
-// ─── Drag-and-drop zone ───────────────────────────────────────────────────────
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await file.arrayBuffer());
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return [];
+
+  const rows: string[][] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    const values: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, col) => {
+      values[col - 1] = String(cell.text ?? cell.value ?? "").trim();
+    });
+    rows.push(values);
+  });
+  return rows;
+}
+
+// â”€â”€â”€ Drag-and-drop zone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DropZone({ onFile }: { onFile: (f: File) => void }) {
   const [over, setOver] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
@@ -58,7 +82,7 @@ function DropZone({ onFile }: { onFile: (f: File) => void }) {
     const f = files?.[0];
     if (!f) return;
     if (!/\.(xlsx|xls|csv)$/i.test(f.name)) {
-      toast.error("فقط ملفات Excel أو CSV"); return;
+      toast.error("ÙÙ‚Ø· Ù…Ù„ÙØ§Øª Excel Ø£Ùˆ CSV"); return;
     }
     onFile(f);
   };
@@ -75,8 +99,8 @@ function DropZone({ onFile }: { onFile: (f: File) => void }) {
     >
       <FileSpreadsheet className={`w-12 h-12 ${over ? "text-green-500" : "text-gray-300"}`} />
       <div className="text-center">
-        <p className="font-medium text-gray-700">اسحب الملف هنا أو انقر للاختيار</p>
-        <p className="text-xs text-gray-400 mt-1">يدعم .xlsx · .xls · .csv</p>
+        <p className="font-medium text-gray-700">Ø§Ø³Ø­Ø¨ Ø§Ù„Ù…Ù„Ù Ù‡Ù†Ø§ Ø£Ùˆ Ø§Ù†Ù‚Ø± Ù„Ù„Ø§Ø®ØªÙŠØ§Ø±</p>
+        <p className="text-xs text-gray-400 mt-1">ÙŠØ¯Ø¹Ù… .xlsx Â· .xls Â· .csv</p>
       </div>
       <input
         ref={ref} type="file" accept=".xlsx,.xls,.csv" className="hidden"
@@ -86,31 +110,31 @@ function DropZone({ onFile }: { onFile: (f: File) => void }) {
   );
 }
 
-// ─── Stats strip ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PhoneStats({ valid, invalid }: { valid: number; invalid: number }) {
   const total = valid + invalid;
   return (
     <div className="flex gap-4 p-3 bg-gray-50 rounded-xl text-sm">
       <div className="flex items-center gap-1.5 text-green-700">
         <CheckCircle className="w-4 h-4" />
-        <span className="font-semibold">{valid}</span> صحيح
+        <span className="font-semibold">{valid}</span> ØµØ­ÙŠØ­
       </div>
       <div className="flex items-center gap-1.5 text-red-500">
         <XCircle className="w-4 h-4" />
-        <span className="font-semibold">{invalid}</span> خاطئ
+        <span className="font-semibold">{invalid}</span> Ø®Ø§Ø·Ø¦
       </div>
       <div className="mr-auto text-gray-400 text-xs">
-        {total} إجمالي
+        {total} Ø¥Ø¬Ù…Ø§Ù„ÙŠ
       </div>
     </div>
   );
 }
 
-// ─── Audience Card ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Audience Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TYPE_CONFIG = {
   vip:         { bg: "bg-amber-50",  border: "border-amber-200",  icon: <Star className="w-5 h-5 text-amber-500" />,           badge: "VIP",     badgeColor: "bg-amber-100 text-amber-700" },
-  "no-response": { bg: "bg-red-50",  border: "border-red-200",    icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />, badge: "لم يردوا", badgeColor: "bg-red-100 text-red-600" },
-  custom:      { bg: "bg-purple-50", border: "border-purple-200", icon: <UserPlus className="w-5 h-5 text-purple-500" />,       badge: "مخصص",    badgeColor: "bg-purple-100 text-purple-700" },
+  "no-response": { bg: "bg-red-50",  border: "border-red-200",    icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />, badge: "Ù„Ù… ÙŠØ±Ø¯ÙˆØ§", badgeColor: "bg-red-100 text-red-600" },
+  custom:      { bg: "bg-purple-50", border: "border-purple-200", icon: <UserPlus className="w-5 h-5 text-purple-500" />,       badge: "Ù…Ø®ØµØµ",    badgeColor: "bg-purple-100 text-purple-700" },
   excel:       { bg: "bg-white",     border: "border-gray-200",   icon: <Users className="w-5 h-5 text-gray-500" />,            badge: "",         badgeColor: "" },
 };
 
@@ -148,17 +172,17 @@ function AudienceCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-40">
               <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onView}>
-                <Eye className="w-4 h-4" /> عرض التفاصيل
+                <Eye className="w-4 h-4" /> Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onEdit}>
-                <Edit2 className="w-4 h-4" /> تعديل الجمهور
+                <Edit2 className="w-4 h-4" /> ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
                 onClick={onDelete}
               >
-                <Trash2 className="w-4 h-4" /> حذف
+                <Trash2 className="w-4 h-4" /> Ø­Ø°Ù
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -173,7 +197,7 @@ function AudienceCard({
       {/* count */}
       <div className="flex items-center gap-1.5 text-2xl font-bold text-gray-800">
         {audience.contactCount.toLocaleString("ar-EG")}
-        <span className="text-sm font-normal text-gray-400">جهة اتصال</span>
+        <span className="text-sm font-normal text-gray-400">Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„</span>
       </div>
 
       {/* phone preview */}
@@ -192,13 +216,13 @@ function AudienceCard({
         onClick={onView}
         className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 mt-auto"
       >
-        عرض التفاصيل <ChevronRight className="w-3 h-3" />
+        Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„ <ChevronRight className="w-3 h-3" />
       </button>
     </div>
   );
 }
 
-// ─── Details / Edit Modal ─────────────────────────────────────────────────────
+// â”€â”€â”€ Details / Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AudienceDetailModal({
   audience, open, onClose, onSave,
 }: {
@@ -223,8 +247,8 @@ function AudienceDetailModal({
 
   const addContact = () => {
     const n = normalizePhone(addPhone);
-    if (!isValidPhone(n)) { toast.error("رقم غير صالح"); return; }
-    if (contacts.find(c => c.phone === n)) { toast.error("الرقم موجود بالفعل"); return; }
+    if (!isValidPhone(n)) { toast.error("Ø±Ù‚Ù… ØºÙŠØ± ØµØ§Ù„Ø­"); return; }
+    if (contacts.find(c => c.phone === n)) { toast.error("Ø§Ù„Ø±Ù‚Ù… Ù…ÙˆØ¬ÙˆØ¯ Ø¨Ø§Ù„ÙØ¹Ù„"); return; }
     setContacts(prev => [...prev, { id: crypto.randomUUID(), phone: n, name: addName || null }]);
     setAddPhone(""); setAddName("");
   };
@@ -232,7 +256,7 @@ function AudienceDetailModal({
   const removeContact = (id: string) => setContacts(prev => prev.filter(c => c.id !== id));
 
   const copyPhone = (phone: string) => {
-    navigator.clipboard.writeText(phone).then(() => toast.success("تم النسخ"));
+    navigator.clipboard.writeText(phone).then(() => toast.success("ØªÙ… Ø§Ù„Ù†Ø³Ø®"));
   };
 
   const saveChanges = async () => {
@@ -244,7 +268,7 @@ function AudienceDetailModal({
         body: JSON.stringify({ id: audience.id, contacts }),
       });
       if (!r.ok) throw new Error((await r.json()).error);
-      toast.success("تم الحفظ");
+      toast.success("ØªÙ… Ø§Ù„Ø­ÙØ¸");
       onSave({ ...audience, contacts, contactCount: contacts.length });
       setEditMode(false);
     } catch (e: any) { toast.error(e.message); }
@@ -258,7 +282,7 @@ function AudienceDetailModal({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-lg font-bold">{audience.name}</DialogTitle>
-              <DialogDescription>{audience.contactCount} جهة اتصال</DialogDescription>
+              <DialogDescription>{audience.contactCount} Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„</DialogDescription>
             </div>
             <div className="flex gap-1.5">
               {audience.type !== "vip" && audience.type !== "no-response" && (
@@ -268,18 +292,18 @@ function AudienceDetailModal({
                   className="gap-1.5"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                  {editMode ? "إلغاء" : "تعديل"}
+                  {editMode ? "Ø¥Ù„ØºØ§Ø¡" : "ØªØ¹Ø¯ÙŠÙ„"}
                 </Button>
               )}
             </div>
           </div>
         </DialogHeader>
 
-        {/* Add contact row — only in edit mode */}
+        {/* Add contact row â€” only in edit mode */}
         {editMode && (
           <div className="flex gap-2 bg-gray-50 p-3 rounded-xl">
             <Input
-              placeholder="الاسم (اختياري)"
+              placeholder="Ø§Ù„Ø§Ø³Ù… (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)"
               value={addName}
               onChange={e => setAddName(e.target.value)}
               className="flex-1 text-sm"
@@ -301,7 +325,7 @@ function AudienceDetailModal({
         {/* List */}
         <div className="overflow-y-auto max-h-72 space-y-1.5 pr-1">
           {contacts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">لا توجد جهات اتصال</p>
+            <p className="text-sm text-gray-400 text-center py-8">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù‡Ø§Øª Ø§ØªØµØ§Ù„</p>
           ) : (
             contacts.map(c => (
               <div
@@ -319,7 +343,7 @@ function AudienceDetailModal({
                   <button
                     onClick={() => copyPhone(c.phone)}
                     className="p-1 text-gray-400 hover:text-gray-600"
-                    title="نسخ"
+                    title="Ù†Ø³Ø®"
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
@@ -327,7 +351,7 @@ function AudienceDetailModal({
                     <button
                       onClick={() => removeContact(c.id)}
                       className="p-1 text-red-400 hover:text-red-600"
-                      title="حذف"
+                      title="Ø­Ø°Ù"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -340,25 +364,25 @@ function AudienceDetailModal({
 
         {editMode && (
           <div className="flex gap-2 pt-2 border-t border-gray-100">
-            <Button variant="outline" className="flex-1" onClick={onClose}>إغلاق</Button>
+            <Button variant="outline" className="flex-1" onClick={onClose}>Ø¥ØºÙ„Ø§Ù‚</Button>
             <Button
               className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-1.5"
               onClick={saveChanges} disabled={saving}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              حفظ التغييرات
+              Ø­ÙØ¸ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª
             </Button>
           </div>
         )}
         {!editMode && (
-          <Button variant="outline" className="w-full" onClick={onClose}>إغلاق</Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>Ø¥ØºÙ„Ø§Ù‚</Button>
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Contacts() {
   const [audiences,   setAudiences]   = useState<Audience[]>([]);
   const [vip,         setVip]         = useState<Audience | null>(null);
@@ -384,7 +408,7 @@ export default function Contacts() {
   const [custInput,   setCustInput]   = useState(""); // phone per line
   const [custSaving,  setCustSaving]  = useState(false);
 
-  // ── Fetch ──────────────────────────────────────────────────────
+  // â”€â”€ Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -399,55 +423,41 @@ export default function Contacts() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Parse Excel/CSV ────────────────────────────────────────────
-  const parseFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = evt => {
-      const wb = XLSX.read(evt.target?.result, { type: "binary" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1, raw: false });
+  // â”€â”€ Parse Excel/CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const parseFile = async (file: File) => {
+    const valid: { phone: string; name: string | null }[] = [];
+    let inv = 0;
 
-      const valid: { phone: string; name: string | null }[] = [];
-      let inv = 0;
+    try {
+      const rows = await readSpreadsheetRows(file);
 
-      rows.forEach(row => {
-        // try to find phone in any cell; also look for name column
+      rows.forEach((row) => {
         let phone = "";
         let name: string | null = null;
 
-        if (Array.isArray(row)) {
-          row.forEach((cell: any) => {
-            const s = String(cell ?? "").trim();
-            const norm = normalizePhone(s);
-            if (!phone && isValidPhone(norm)) { phone = norm; return; }
-            if (!name && s && !/^\d+$/.test(s)) name = s;
-          });
-        } else {
-          // object row — look for phone-like keys
-          const keys = Object.keys(row);
-          for (const k of keys) {
-            const s = String(row[k] ?? "").trim();
-            const norm = normalizePhone(s);
-            if (!phone && isValidPhone(norm)) phone = norm;
-            else if (!name && s && !/^\d+$/.test(s)) name = s;
-          }
-        }
+        row.forEach((cell) => {
+          const s = String(cell ?? "").trim();
+          const norm = normalizePhone(s);
+          if (!phone && isValidPhone(norm)) { phone = norm; return; }
+          if (!name && s && !/^\d+$/.test(s)) name = s;
+        });
 
-        if (phone) { valid.push({ phone, name }); }
-        else if (row.length || Object.keys(row).length) inv++;
+        if (phone) valid.push({ phone, name });
+        else if (row.length) inv++;
       });
 
       setParsed(valid);
       setInvalid(inv);
       setExStep(2);
-    };
-    reader.readAsBinaryString(file);
+    } catch {
+      toast.error("فشل في قراءة ملف الإكسل");
+    }
   };
 
-  // ── Save excel audience ─────────────────────────────────────────
+  // â”€â”€ Save excel audience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveExcel = async () => {
-    if (!audName.trim()) { toast.error("أدخل اسم الجمهور"); return; }
-    if (parsed.length === 0) { toast.error("لا توجد أرقام صالحة"); return; }
+    if (!audName.trim()) { toast.error("Ø£Ø¯Ø®Ù„ Ø§Ø³Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±"); return; }
+    if (parsed.length === 0) { toast.error("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø±Ù‚Ø§Ù… ØµØ§Ù„Ø­Ø©"); return; }
     setSaving(true);
     try {
       const r = await fetch("/api/audiences", {
@@ -460,7 +470,7 @@ export default function Contacts() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      toast.success(`تم حفظ ${parsed.length} جهة اتصال`);
+      toast.success(`ØªÙ… Ø­ÙØ¸ ${parsed.length} Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„`);
       setShowAdd(false);
       resetExcel();
       load();
@@ -468,10 +478,10 @@ export default function Contacts() {
     finally { setSaving(false); }
   };
 
-  // ── Save custom audience ────────────────────────────────────────
+  // â”€â”€ Save custom audience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveCustom = async () => {
-    if (!custName.trim()) { toast.error("أدخل اسم الجمهور"); return; }
-    const lines = custInput.split(/[\n,،]+/).map(s => s.trim()).filter(Boolean);
+    if (!custName.trim()) { toast.error("Ø£Ø¯Ø®Ù„ Ø§Ø³Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±"); return; }
+    const lines = custInput.split(/[\n,ØŒ]+/).map(s => s.trim()).filter(Boolean);
     const valid = lines.map(l => {
       // try to split "name phone" or "phone name"
       const parts = l.split(/\s+/);
@@ -484,7 +494,7 @@ export default function Contacts() {
       return phone ? { phone, name } : null;
     }).filter(Boolean) as { phone: string; name: string | null }[];
 
-    if (valid.length === 0) { toast.error("لا توجد أرقام صالحة"); return; }
+    if (valid.length === 0) { toast.error("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø±Ù‚Ø§Ù… ØµØ§Ù„Ø­Ø©"); return; }
     setCustSaving(true);
     try {
       const r = await fetch("/api/audiences", {
@@ -497,7 +507,7 @@ export default function Contacts() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      toast.success(`تم حفظ ${valid.length} جهة اتصال`);
+      toast.success(`ØªÙ… Ø­ÙØ¸ ${valid.length} Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„`);
       setShowCustom(false);
       setCustName(""); setCustInput("");
       load();
@@ -518,12 +528,12 @@ export default function Contacts() {
         body: JSON.stringify({ id }),
       });
       if (!r.ok) throw new Error((await r.json()).error);
-      toast.success("تم الحذف");
+      toast.success("ØªÙ… Ø§Ù„Ø­Ø°Ù");
       load();
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // ── Derived ─────────────────────────────────────────────────────
+  // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalContacts = audiences.reduce((s, a) => s + a.contactCount, 0)
     + (vip?.contactCount ?? 0) + (noResp?.contactCount ?? 0);
 
@@ -534,16 +544,16 @@ export default function Contacts() {
   const customCards = filtered.filter(a => a.type === "custom");
   const excelCards  = filtered.filter(a => a.type === "excel");
 
-  // ─────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: "إجمالي جهات الاتصال", value: totalContacts,                    icon: <Users className="w-5 h-5 text-blue-500" />,  bg: "bg-blue-50" },
-          { label: "العملاء المميزين VIP",  value: vip?.contactCount ?? 0,          icon: <Star className="w-5 h-5 text-amber-500" />,   bg: "bg-amber-50" },
-          { label: "لم يردوا",              value: noResp?.contactCount ?? 0,       icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />, bg: "bg-red-50" },
+          { label: "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„", value: totalContacts,                    icon: <Users className="w-5 h-5 text-blue-500" />,  bg: "bg-blue-50" },
+          { label: "Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…Ù…ÙŠØ²ÙŠÙ† VIP",  value: vip?.contactCount ?? 0,          icon: <Star className="w-5 h-5 text-amber-500" />,   bg: "bg-amber-50" },
+          { label: "Ù„Ù… ÙŠØ±Ø¯ÙˆØ§",              value: noResp?.contactCount ?? 0,       icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />, bg: "bg-red-50" },
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-4 flex items-center gap-3`}>
             {s.icon}
@@ -562,7 +572,7 @@ export default function Contacts() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="البحث باسم الجمهور..."
+            placeholder="Ø§Ù„Ø¨Ø­Ø« Ø¨Ø§Ø³Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±..."
             className="pr-9 text-sm"
           />
         </div>
@@ -572,13 +582,13 @@ export default function Contacts() {
             className="gap-1.5 text-sm"
             onClick={() => setShowCustom(true)}
           >
-            <PenLine className="w-4 h-4" /> إنشاء جمهور مخصص
+            <PenLine className="w-4 h-4" /> Ø¥Ù†Ø´Ø§Ø¡ Ø¬Ù…Ù‡ÙˆØ± Ù…Ø®ØµØµ
           </Button>
           <Button
             className="bg-green-500 hover:bg-green-600 text-white gap-1.5 text-sm"
             onClick={() => { resetExcel(); setShowAdd(true); }}
           >
-            <Plus className="w-4 h-4" /> إضافة جهات اتصال
+            <Plus className="w-4 h-4" /> Ø¥Ø¶Ø§ÙØ© Ø¬Ù‡Ø§Øª Ø§ØªØµØ§Ù„
           </Button>
         </div>
       </div>
@@ -593,7 +603,7 @@ export default function Contacts() {
           {/* Featured / smart cards */}
           {(vip || noResp) && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">قوائم ذكية</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ù‚ÙˆØ§Ø¦Ù… Ø°ÙƒÙŠØ©</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {vip && (
                   <AudienceCard
@@ -618,7 +628,7 @@ export default function Contacts() {
           {/* Custom audiences */}
           {customCards.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">جمهور مخصص</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ø¬Ù…Ù‡ÙˆØ± Ù…Ø®ØµØµ</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {customCards.map(a => (
                   <AudienceCard
@@ -635,7 +645,7 @@ export default function Contacts() {
           {/* Regular audiences */}
           {excelCards.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">جهات الاتصال</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {excelCards.map(a => (
                   <AudienceCard
@@ -655,23 +665,23 @@ export default function Contacts() {
               <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mb-5">
                 <Users className="w-10 h-10 text-gray-300" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-1">لا توجد جهات اتصال بعد</h3>
-              <p className="text-gray-400 text-sm mb-6 max-w-xs">أضف جمهورك الأول عبر رفع ملف Excel أو إنشاء جمهور مخصص</p>
+              <h3 className="text-lg font-semibold text-gray-700 mb-1">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù‡Ø§Øª Ø§ØªØµØ§Ù„ Ø¨Ø¹Ø¯</h3>
+              <p className="text-gray-400 text-sm mb-6 max-w-xs">Ø£Ø¶Ù Ø¬Ù…Ù‡ÙˆØ±Ùƒ Ø§Ù„Ø£ÙˆÙ„ Ø¹Ø¨Ø± Ø±ÙØ¹ Ù…Ù„Ù Excel Ø£Ùˆ Ø¥Ù†Ø´Ø§Ø¡ Ø¬Ù…Ù‡ÙˆØ± Ù…Ø®ØµØµ</p>
               <Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => setShowAdd(true)}>
-                <Plus className="w-4 h-4" /> إضافة جهات اتصال
+                <Plus className="w-4 h-4" /> Ø¥Ø¶Ø§ÙØ© Ø¬Ù‡Ø§Øª Ø§ØªØµØ§Ù„
               </Button>
             </div>
           )}
         </div>
       )}
 
-      {/* ═══ Excel Upload Dialog ═══ */}
+      {/* â•â•â• Excel Upload Dialog â•â•â• */}
       <Dialog open={showAdd} onOpenChange={v => { if (!v) { setShowAdd(false); resetExcel(); } }}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">إضافة جهات اتصال</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Ø¥Ø¶Ø§ÙØ© Ø¬Ù‡Ø§Øª Ø§ØªØµØ§Ù„</DialogTitle>
             <DialogDescription>
-              {exStep === 1 ? "ارفع ملف Excel أو CSV لاستخراج الأرقام" : "تأكيد البيانات وحفظ الجمهور"}
+              {exStep === 1 ? "Ø§Ø±ÙØ¹ Ù…Ù„Ù Excel Ø£Ùˆ CSV Ù„Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ø£Ø±Ù‚Ø§Ù…" : "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙˆØ­ÙØ¸ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±"}
             </DialogDescription>
           </DialogHeader>
 
@@ -684,7 +694,7 @@ export default function Contacts() {
                   {exStep > s ? <CheckCircle className="w-4 h-4" /> : s}
                 </div>
                 <span className={`text-xs ${exStep === s ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                  {s === 1 ? "رفع الملف" : "تأكيد الحفظ"}
+                  {s === 1 ? "Ø±ÙØ¹ Ø§Ù„Ù…Ù„Ù" : "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø­ÙØ¸"}
                 </span>
                 {s < 2 && <div className={`h-0.5 w-8 ${exStep > s ? "bg-green-400" : "bg-gray-200"}`} />}
               </div>
@@ -695,7 +705,7 @@ export default function Contacts() {
             <div className="space-y-4">
               <DropZone onFile={parseFile} />
               <p className="text-xs text-gray-400 text-center">
-                يقبل الأرقام المصرية (20×××) والدولية بالصيغة الدولية
+                ÙŠÙ‚Ø¨Ù„ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… Ø§Ù„Ù…ØµØ±ÙŠØ© (20Ã—Ã—Ã—) ÙˆØ§Ù„Ø¯ÙˆÙ„ÙŠØ© Ø¨Ø§Ù„ØµÙŠØºØ© Ø§Ù„Ø¯ÙˆÙ„ÙŠØ©
               </p>
             </div>
           )}
@@ -705,20 +715,20 @@ export default function Contacts() {
               <PhoneStats valid={parsed.length} invalid={invalid} />
 
               <div>
-                <Label className="text-sm mb-1 block">اسم الجمهور *</Label>
+                <Label className="text-sm mb-1 block">Ø§Ø³Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ± *</Label>
                 <Input
                   value={audName}
                   onChange={e => setAudName(e.target.value)}
-                  placeholder="مثال: عملاء رمضان 2025"
+                  placeholder="Ù…Ø«Ø§Ù„: Ø¹Ù…Ù„Ø§Ø¡ Ø±Ù…Ø¶Ø§Ù† 2025"
                 />
               </div>
 
               <div>
-                <Label className="text-sm mb-1 block">ملاحظة (اختياري)</Label>
+                <Label className="text-sm mb-1 block">Ù…Ù„Ø§Ø­Ø¸Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)</Label>
                 <Textarea
                   value={audNotes}
                   onChange={e => setAudNotes(e.target.value)}
-                  placeholder="أي ملاحظة عن هذا الجمهور..."
+                  placeholder="Ø£ÙŠ Ù…Ù„Ø§Ø­Ø¸Ø© Ø¹Ù† Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±..."
                   className="min-h-[70px] resize-none text-sm"
                 />
               </div>
@@ -728,23 +738,23 @@ export default function Contacts() {
                 {parsed.slice(0, 10).map((p, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="font-mono text-gray-600">{p.phone}</span>
-                    {p.name && <span className="text-gray-400">— {p.name}</span>}
+                    {p.name && <span className="text-gray-400">â€” {p.name}</span>}
                   </div>
                 ))}
                 {parsed.length > 10 && (
-                  <p className="text-xs text-gray-400">+{parsed.length - 10} أخرى</p>
+                  <p className="text-xs text-gray-400">+{parsed.length - 10} Ø£Ø®Ø±Ù‰</p>
                 )}
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setExStep(1)}>السابق</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setExStep(1)}>Ø§Ù„Ø³Ø§Ø¨Ù‚</Button>
                 <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-1.5"
                   onClick={saveExcel}
                   disabled={saving || !audName.trim() || parsed.length === 0}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  حفظ الجمهور
+                  Ø­ÙØ¸ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±
                 </Button>
               </div>
             </div>
@@ -752,41 +762,41 @@ export default function Contacts() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Custom Audience Dialog ═══ */}
+      {/* â•â•â• Custom Audience Dialog â•â•â• */}
       <Dialog open={showCustom} onOpenChange={v => { if (!v) { setShowCustom(false); setCustName(""); setCustInput(""); } }}>
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">إنشاء جمهور مخصص</DialogTitle>
-            <DialogDescription>أدخل الأرقام يدوياً أو بالنسخ واللصق</DialogDescription>
+            <DialogTitle className="text-lg font-bold">Ø¥Ù†Ø´Ø§Ø¡ Ø¬Ù…Ù‡ÙˆØ± Ù…Ø®ØµØµ</DialogTitle>
+            <DialogDescription>Ø£Ø¯Ø®Ù„ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ÙŠØ¯ÙˆÙŠØ§Ù‹ Ø£Ùˆ Ø¨Ø§Ù„Ù†Ø³Ø® ÙˆØ§Ù„Ù„ØµÙ‚</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-sm mb-1 block">اسم الجمهور *</Label>
+              <Label className="text-sm mb-1 block">Ø§Ø³Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ± *</Label>
               <Input
                 value={custName}
                 onChange={e => setCustName(e.target.value)}
-                placeholder="مثال: VIP خاص"
+                placeholder="Ù…Ø«Ø§Ù„: VIP Ø®Ø§Øµ"
               />
             </div>
 
             <div>
-              <Label className="text-sm mb-1 block">الأرقام (رقم في كل سطر)</Label>
+              <Label className="text-sm mb-1 block">Ø§Ù„Ø£Ø±Ù‚Ø§Ù… (Ø±Ù‚Ù… ÙÙŠ ÙƒÙ„ Ø³Ø·Ø±)</Label>
               <Textarea
                 dir="ltr"
                 value={custInput}
                 onChange={e => setCustInput(e.target.value)}
-                placeholder={"201234567890 أحمد\n447911123456\n9715551234"}
+                placeholder={"201234567890 Ø£Ø­Ù…Ø¯\n447911123456\n9715551234"}
                 className="font-mono text-sm min-h-[140px] resize-none"
               />
               <p className="text-xs text-gray-400 mt-1">
-                يمكنك كتابة الاسم ورقم الهاتف في نفس السطر — يُقبل النسخ واللصق
+                ÙŠÙ…ÙƒÙ†Ùƒ ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø§Ø³Ù… ÙˆØ±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ ÙÙŠ Ù†ÙØ³ Ø§Ù„Ø³Ø·Ø± â€” ÙŠÙÙ‚Ø¨Ù„ Ø§Ù„Ù†Ø³Ø® ÙˆØ§Ù„Ù„ØµÙ‚
               </p>
             </div>
 
             {/* live count */}
             {custInput.trim() && (() => {
-              const lines = custInput.split(/[\n,،]+/).map(s => s.trim()).filter(Boolean);
+              const lines = custInput.split(/[\n,ØŒ]+/).map(s => s.trim()).filter(Boolean);
               const v = lines.filter(l => {
                 const parts = l.split(/\s+/);
                 return parts.some(p => isValidPhone(normalizePhone(p)));
@@ -795,21 +805,21 @@ export default function Contacts() {
             })()}
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowCustom(false)}>إلغاء</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowCustom(false)}>Ø¥Ù„ØºØ§Ø¡</Button>
               <Button
                 className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-1.5"
                 onClick={saveCustom}
                 disabled={custSaving || !custName.trim() || !custInput.trim()}
               >
                 {custSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                حفظ الجمهور
+                Ø­ÙØ¸ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Detail / Edit Modal ═══ */}
+      {/* â•â•â• Detail / Edit Modal â•â•â• */}
       <AudienceDetailModal
         audience={detailAud}
         open={!!detailAud}

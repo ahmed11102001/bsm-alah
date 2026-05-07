@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,7 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Template {
   id: string;
   name: string;
@@ -80,7 +79,7 @@ interface AudienceOption {
   contactCount: number;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cleanNumber = (raw: string): string => {
   let n = raw.replace(/[^0-9]/g, "");
   if (n.startsWith("0")) n = "20" + n.slice(1);
@@ -90,22 +89,48 @@ const cleanNumber = (raw: string): string => {
 
 const isValidPhone = (n: string) => /^20\d{10}$/.test(n);
 
+async function readSpreadsheetRows(file: File): Promise<string[][]> {
+  if (file.name.toLowerCase().endsWith(".csv")) {
+    const text = await file.text();
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.split(",").map((cell) => cell.trim()))
+      .filter((row) => row.some((cell) => cell.length > 0));
+  }
+
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await file.arrayBuffer());
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return [];
+
+  const rows: string[][] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    const values: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, col) => {
+      values[col - 1] = String(cell.text ?? cell.value ?? "").trim();
+    });
+    rows.push(values);
+  });
+  return rows;
+}
+
 const statusConfig: Record<
   Campaign["status"],
   { label: string; color: string; icon: React.ReactNode }
 > = {
-  draft:     { label: "مسودة",       color: "bg-gray-100 text-gray-600",    icon: <Clock className="w-3 h-3" /> },
-  scheduled: { label: "مجدولة",      color: "bg-yellow-100 text-yellow-700", icon: <Calendar className="w-3 h-3" /> },
-  running:   { label: "قيد التنفيذ", color: "bg-blue-100 text-blue-700",    icon: <Loader2 className="w-3 h-3 animate-spin" /> },
-  completed: { label: "مكتملة",      color: "bg-green-100 text-green-700",  icon: <CheckCircle className="w-3 h-3" /> },
-  failed:    { label: "فشلت",        color: "bg-red-100 text-red-700",      icon: <XCircle className="w-3 h-3" /> },
+  draft:     { label: "Ù…Ø³ÙˆØ¯Ø©",       color: "bg-gray-100 text-gray-600",    icon: <Clock className="w-3 h-3" /> },
+  scheduled: { label: "Ù…Ø¬Ø¯ÙˆÙ„Ø©",      color: "bg-yellow-100 text-yellow-700", icon: <Calendar className="w-3 h-3" /> },
+  running:   { label: "Ù‚ÙŠØ¯ Ø§Ù„ØªÙ†ÙÙŠØ°", color: "bg-blue-100 text-blue-700",    icon: <Loader2 className="w-3 h-3 animate-spin" /> },
+  completed: { label: "Ù…ÙƒØªÙ…Ù„Ø©",      color: "bg-green-100 text-green-700",  icon: <CheckCircle className="w-3 h-3" /> },
+  failed:    { label: "ÙØ´Ù„Øª",        color: "bg-red-100 text-red-700",      icon: <XCircle className="w-3 h-3" /> },
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Step indicator */
 function StepBar({ step }: { step: number }) {
-  const steps = ["الجمهور", "القالب", "الإعدادات"];
+  const steps = ["Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±", "Ø§Ù„Ù‚Ø§Ù„Ø¨", "Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª"];
   return (
     <div className="flex items-center justify-center gap-0 mb-8">
       {steps.map((label, i) => {
@@ -194,11 +219,11 @@ function CampaignCard({
                 </span>
                 {campaign.template?.name && (
                   <span className="text-xs text-gray-400 truncate">
-                    قالب: {campaign.template.name}
+                    Ù‚Ø§Ù„Ø¨: {campaign.template.name}
                   </span>
                 )}
                 <span className="text-xs text-gray-500">
-                  {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")} مرسل
+                  {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")} Ù…Ø±Ø³Ù„
                 </span>
                 {campaign.scheduledAt && campaign.status === "scheduled" && (
                   <span className="text-xs text-yellow-600">
@@ -208,7 +233,7 @@ function CampaignCard({
                   </span>
                 )}
                 <span className="text-xs text-gray-400">
-                  توقيت الإرسال: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}
+                  ØªÙˆÙ‚ÙŠØª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}
                 </span>
               </div>
             </div>
@@ -219,7 +244,7 @@ function CampaignCard({
               size="sm" variant="ghost"
               className="h-8 px-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
               onClick={onDetails}
-              title="عرض التفاصيل"
+              title="Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„"
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -227,7 +252,7 @@ function CampaignCard({
               size="sm" variant="ghost"
               className="h-8 px-2 text-gray-500 hover:text-green-600 hover:bg-green-50 disabled:text-gray-300 disabled:hover:bg-transparent"
               onClick={onRepeat}
-              title={repeatBlocked ? repeatBlockedNote : "تكرار الحملة"}
+              title={repeatBlocked ? repeatBlockedNote : "ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ù…Ù„Ø©"}
               disabled={repeatBlocked}
             >
               <RefreshCw className="w-4 h-4" />
@@ -236,25 +261,25 @@ function CampaignCard({
               size="sm" variant="ghost"
               className="h-8 px-2 text-gray-500 hover:text-red-600 hover:bg-red-50"
               onClick={onDelete}
-              title="حذف"
+              title="Ø­Ø°Ù"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Stats row — only if sent at least 1 */}
+        {/* Stats row â€” only if sent at least 1 */}
         {campaign.sentCount > 0 && (
           <div className="border-t border-gray-50 px-4 py-3 flex items-center gap-5 flex-wrap">
-            <StatChip icon={<Send className="w-3.5 h-3.5" />}      value={campaign.sentCount}      label="مرسل"   color="text-blue-500" />
-            <StatChip icon={<CheckCircle className="w-3.5 h-3.5" />} value={campaign.deliveredCount} label="وصل"    color="text-green-500" />
-            <StatChip icon={<Eye className="w-3.5 h-3.5" />}        value={campaign.readCount}      label="قرأ"    color="text-purple-500" />
+            <StatChip icon={<Send className="w-3.5 h-3.5" />}      value={campaign.sentCount}      label="Ù…Ø±Ø³Ù„"   color="text-blue-500" />
+            <StatChip icon={<CheckCircle className="w-3.5 h-3.5" />} value={campaign.deliveredCount} label="ÙˆØµÙ„"    color="text-green-500" />
+            <StatChip icon={<Eye className="w-3.5 h-3.5" />}        value={campaign.readCount}      label="Ù‚Ø±Ø£"    color="text-purple-500" />
             {campaign.failedCount > 0 && (
-              <StatChip icon={<XCircle className="w-3.5 h-3.5" />}  value={campaign.failedCount}    label="فشل"    color="text-red-400" />
+              <StatChip icon={<XCircle className="w-3.5 h-3.5" />}  value={campaign.failedCount}    label="ÙØ´Ù„"    color="text-red-400" />
             )}
             {/* mini progress */}
             <div className="mr-auto flex items-center gap-2">
-              <span className="text-xs text-gray-400">وصول</span>
+              <span className="text-xs text-gray-400">ÙˆØµÙˆÙ„</span>
               <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-green-400 rounded-full"
@@ -270,7 +295,7 @@ function CampaignCard({
         {campaign.status === "scheduled" && campaign.scheduledAt && (
           <div className="border-t border-yellow-50 bg-yellow-50/50 px-4 py-2 text-xs text-yellow-700 flex items-center gap-1.5 rounded-b-lg">
             <Clock className="w-3.5 h-3.5" />
-            مجدولة للإرسال: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}
+            Ù…Ø¬Ø¯ÙˆÙ„Ø© Ù„Ù„Ø¥Ø±Ø³Ø§Ù„: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}
           </div>
         )}
 
@@ -303,10 +328,10 @@ function DetailsModal({
   const cfg = statusConfig[campaign.status] ?? statusConfig.draft;
 
   const stats = [
-    { label: "إجمالي المرسل",   value: campaign.sentCount,      icon: <Send className="w-5 h-5" />,         color: "bg-blue-50 text-blue-600" },
-    { label: "تم التوصيل",      value: campaign.deliveredCount, icon: <CheckCircle className="w-5 h-5" />,   color: "bg-green-50 text-green-600" },
-    { label: "تم القراءة",      value: campaign.readCount,      icon: <Eye className="w-5 h-5" />,           color: "bg-purple-50 text-purple-600" },
-    { label: "فشل الإرسال",     value: campaign.failedCount,    icon: <XCircle className="w-5 h-5" />,       color: "bg-red-50 text-red-500" },
+    { label: "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø±Ø³Ù„",   value: campaign.sentCount,      icon: <Send className="w-5 h-5" />,         color: "bg-blue-50 text-blue-600" },
+    { label: "ØªÙ… Ø§Ù„ØªÙˆØµÙŠÙ„",      value: campaign.deliveredCount, icon: <CheckCircle className="w-5 h-5" />,   color: "bg-green-50 text-green-600" },
+    { label: "ØªÙ… Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©",      value: campaign.readCount,      icon: <Eye className="w-5 h-5" />,           color: "bg-purple-50 text-purple-600" },
+    { label: "ÙØ´Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„",     value: campaign.failedCount,    icon: <XCircle className="w-5 h-5" />,       color: "bg-red-50 text-red-500" },
   ];
 
   return (
@@ -319,7 +344,7 @@ function DetailsModal({
               {cfg.icon} {cfg.label}
             </span>
             {campaign.template?.name && (
-              <span className="text-xs text-gray-500">قالب: {campaign.template.name}</span>
+              <span className="text-xs text-gray-500">Ù‚Ø§Ù„Ø¨: {campaign.template.name}</span>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -341,7 +366,7 @@ function DetailsModal({
         {campaign.sentCount > 0 && (
           <div className="space-y-2 bg-gray-50 rounded-xl p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">نسبة التوصيل</span>
+              <span className="text-gray-600">Ù†Ø³Ø¨Ø© Ø§Ù„ØªÙˆØµÙŠÙ„</span>
               <span className="font-semibold text-green-600">
                 {Math.round((campaign.deliveredCount / campaign.sentCount) * 100)}%
               </span>
@@ -353,7 +378,7 @@ function DetailsModal({
               />
             </div>
             <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-gray-600">نسبة القراءة</span>
+              <span className="text-gray-600">Ù†Ø³Ø¨Ø© Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©</span>
               <span className="font-semibold text-purple-600">
                 {Math.round((campaign.readCount / campaign.sentCount) * 100)}%
               </span>
@@ -369,14 +394,14 @@ function DetailsModal({
 
         {/* Meta */}
         <div className="text-xs text-gray-400 space-y-1 pt-1 border-t border-gray-100">
-          <p>المرسل: {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")}</p>
-          <p>توقيت الإرسال: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}</p>
-          <p>تاريخ الإنشاء: {new Date(campaign.createdAt).toLocaleString("ar-EG")}</p>
+          <p>Ø§Ù„Ù…Ø±Ø³Ù„: {campaign.sentCount.toLocaleString("ar-EG")} / {totalRecipients.toLocaleString("ar-EG")}</p>
+          <p>ØªÙˆÙ‚ÙŠØª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„: {(campaign.scheduledAt ? new Date(campaign.scheduledAt) : new Date(campaign.createdAt)).toLocaleString("ar-EG")}</p>
+          <p>ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡: {new Date(campaign.createdAt).toLocaleString("ar-EG")}</p>
           {campaign.completedAt && (
-            <p>تاريخ الاكتمال: {new Date(campaign.completedAt).toLocaleString("ar-EG")}</p>
+            <p>ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§ÙƒØªÙ…Ø§Ù„: {new Date(campaign.completedAt).toLocaleString("ar-EG")}</p>
           )}
           {campaign.scheduledAt && (
-            <p>موعد الجدولة: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}</p>
+            <p>Ù…ÙˆØ¹Ø¯ Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}</p>
           )}
         </div>
       </DialogContent>
@@ -384,36 +409,36 @@ function DetailsModal({
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Campaigns() {
-  // ── List state ──────────────────────────────────────────────────
+  // â”€â”€ List state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
-  // ── Dialog state ────────────────────────────────────────────────
+  // â”€â”€ Dialog state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Step 1: numbers ─────────────────────────────────────────────
+  // â”€â”€ Step 1: numbers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [numbers, setNumbers] = useState<string[]>([]);
   const [audiences, setAudiences] = useState<AudienceOption[]>([]);
   const [selectedAudienceId, setSelectedAudienceId] = useState("");
   const [importingAudience, setImportingAudience] = useState(false);
 
-  // ── Step 2: template ────────────────────────────────────────────
+  // â”€â”€ Step 2: template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
-  // ── Step 3: settings ────────────────────────────────────────────
+  // â”€â”€ Step 3: settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [campaignName, setCampaignName] = useState("");
   const [sendMode, setSendMode] = useState<"now" | "scheduled">("now");
   const [scheduledAt, setScheduledAt] = useState("");
 
-  // ── Details / repeat ────────────────────────────────────────────
+  // â”€â”€ Details / repeat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [detailsCampaign, setDetailsCampaign] = useState<Campaign | null>(null);
 
-  // ── Load ──────────────────────────────────────────────────────
+  // â”€â”€ Load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadCampaigns = useCallback(async () => {
     try {
       setLoadingList(true);
@@ -421,7 +446,7 @@ export default function Campaigns() {
       const data = await res.json();
       setCampaigns(Array.isArray(data) ? data : data.campaigns ?? data.data ?? []);
     } catch {
-      toast.error("فشل في تحميل الحملات");
+      toast.error("ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø­Ù…Ù„Ø§Øª");
     } finally {
       setLoadingList(false);
     }
@@ -438,7 +463,7 @@ export default function Campaigns() {
       setTemplates(approved);
       if (approved.length > 0) setSelectedTemplate(approved[0]);
     } catch {
-      toast.error("فشل في تحميل القوالب");
+      toast.error("ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨");
     }
   }, []);
 
@@ -456,7 +481,7 @@ export default function Campaigns() {
         }));
       setAudiences(list);
     } catch {
-      toast.error("فشل في تحميل جهات الاتصال");
+      toast.error("ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„");
     }
   }, []);
 
@@ -466,7 +491,7 @@ export default function Campaigns() {
     loadAudiences();
   }, [loadCampaigns, loadTemplates, loadAudiences]);
 
-  // ── Helpers ──────────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const resetDialog = () => {
     setStep(1);
     setNumbers([]);
@@ -482,15 +507,12 @@ export default function Campaigns() {
     setDialogOpen(true);
   };
 
-  // ── Step 1: Excel ────────────────────────────────────────────────
-  const handleExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // â”€â”€ Step 1: Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const handleExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const wb = XLSX.read(evt.target?.result, { type: "binary" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+    try {
+      const rows = await readSpreadsheetRows(file);
       const extracted = rows
         .flat()
         .map((v) => cleanNumber(String(v).trim()))
@@ -498,14 +520,15 @@ export default function Campaigns() {
       const unique = [...new Set([...numbers, ...extracted])];
       setNumbers(unique);
       toast.success(`تم استخراج ${extracted.length} رقم صالح`);
-    };
-    reader.readAsBinaryString(file);
+    } catch {
+      toast.error("فشل في قراءة ملف الإكسل");
+    }
     e.target.value = "";
   };
 
   const importAudienceContacts = async () => {
     if (!selectedAudienceId) {
-      toast.error("اختر جهة اتصال أولاً");
+      toast.error("Ø§Ø®ØªØ± Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„ Ø£ÙˆÙ„Ø§Ù‹");
       return;
     }
 
@@ -515,7 +538,7 @@ export default function Campaigns() {
         `/api/audiences?audienceId=${encodeURIComponent(selectedAudienceId)}&includeContacts=all`
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل في تحميل جهة الاتصال");
+      if (!res.ok) throw new Error(data.error || "ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„");
 
       const contacts: AudienceContact[] = Array.isArray(data.contacts) ? data.contacts : [];
       const extracted = contacts
@@ -523,13 +546,13 @@ export default function Campaigns() {
         .filter(isValidPhone);
 
       if (extracted.length === 0) {
-        toast.error("جهة الاتصال لا تحتوي على أرقام صالحة");
+        toast.error("Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„ Ù„Ø§ ØªØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø£Ø±Ù‚Ø§Ù… ØµØ§Ù„Ø­Ø©");
         return;
       }
 
       const unique = [...new Set([...numbers, ...extracted])];
       setNumbers(unique);
-      toast.success(`تم استيراد ${extracted.length} رقم`);
+      toast.success(`ØªÙ… Ø§Ø³ØªÙŠØ±Ø§Ø¯ ${extracted.length} Ø±Ù‚Ù…`);
     } catch (err: unknown) {
       toast.error((err as Error).message);
     } finally {
@@ -539,22 +562,22 @@ export default function Campaigns() {
 
   const goStep2 = () => {
     if (numbers.length === 0) {
-      toast.error("أضف أرقام جهات الاتصال أولاً");
+      toast.error("Ø£Ø¶Ù Ø£Ø±Ù‚Ø§Ù… Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„ Ø£ÙˆÙ„Ø§Ù‹");
       return;
     }
     setStep(2);
   };
 
-  // ── Step 3: submit ───────────────────────────────────────────────
+  // â”€â”€ Step 3: submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSubmit = async () => {
-    if (!campaignName.trim()) { toast.error("أدخل اسم الحملة"); return; }
-    if (!selectedTemplate)    { toast.error("اختر قالباً"); return; }
+    if (!campaignName.trim()) { toast.error("Ø£Ø¯Ø®Ù„ Ø§Ø³Ù… Ø§Ù„Ø­Ù…Ù„Ø©"); return; }
+    if (!selectedTemplate)    { toast.error("Ø§Ø®ØªØ± Ù‚Ø§Ù„Ø¨Ø§Ù‹"); return; }
     if (sendMode === "scheduled" && !scheduledAt) {
-      toast.error("حدد موعد الجدولة"); return;
+      toast.error("Ø­Ø¯Ø¯ Ù…ÙˆØ¹Ø¯ Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©"); return;
     }
 
     setSubmitting(true);
-    const toastId = toast.loading("جاري إنشاء الحملة...");
+    const toastId = toast.loading("Ø¬Ø§Ø±ÙŠ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ù…Ù„Ø©...");
 
     try {
       const res = await fetch("/api/campaigns", {
@@ -564,21 +587,21 @@ export default function Campaigns() {
           name: campaignName,
           templateName: selectedTemplate.name,
           numbers,
-          // تحويل التوقيت المحلي لـ UTC قبل الإرسال
+          // ØªØ­ÙˆÙŠÙ„ Ø§Ù„ØªÙˆÙ‚ÙŠØª Ø§Ù„Ù…Ø­Ù„ÙŠ Ù„Ù€ UTC Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
           scheduledAt: sendMode === "scheduled"
             ? new Date(scheduledAt).toISOString()
             : null,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل إنشاء الحملة");
+      if (!res.ok) throw new Error(data.error || "ÙØ´Ù„ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ù…Ù„Ø©");
 
       toast.dismiss(toastId);
       if (data.scheduledAt) {
-        toast.success("تم جدولة الحملة بنجاح ✅");
+        toast.success("ØªÙ… Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø­Ù…Ù„Ø© Ø¨Ù†Ø¬Ø§Ø­ âœ…");
       } else {
         toast.success(
-          `تم إرسال الحملة ✅ — ${data.sentCount} مرسلة${data.failedCount ? ` · ${data.failedCount} فشلت` : ""}`
+          `ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø­Ù…Ù„Ø© âœ… â€” ${data.sentCount} Ù…Ø±Ø³Ù„Ø©${data.failedCount ? ` Â· ${data.failedCount} ÙØ´Ù„Øª` : ""}`
         );
       }
       setDialogOpen(false);
@@ -592,9 +615,9 @@ export default function Campaigns() {
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────
+  // â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDelete = async (id: string) => {
-    const toastId = toast.loading("جاري الحذف...");
+    const toastId = toast.loading("Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­Ø°Ù...");
     try {
       const res = await fetch("/api/campaigns", {
         method: "DELETE",
@@ -602,9 +625,9 @@ export default function Campaigns() {
         body: JSON.stringify({ id }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل الحذف");
+      if (!res.ok) throw new Error(data.error || "ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù");
       toast.dismiss(toastId);
-      toast.success("تم حذف الحملة");
+      toast.success("ØªÙ… Ø­Ø°Ù Ø§Ù„Ø­Ù…Ù„Ø©");
       await loadCampaigns();
     } catch (err: unknown) {
       toast.dismiss(toastId);
@@ -612,18 +635,18 @@ export default function Campaigns() {
     }
   };
 
-  // ── Repeat ────────────────────────────────────────────────────────
+  // â”€â”€ Repeat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleRepeat = async (campaign: Campaign) => {
     const createdAt = new Date(campaign.createdAt).getTime();
     const elapsedMs = Date.now() - createdAt;
     const min48Hours = 48 * 60 * 60 * 1000;
     if (elapsedMs < min48Hours) {
       const hoursLeft = Math.ceil((min48Hours - elapsedMs) / (60 * 60 * 1000));
-      toast.error(`تكرار الحملة متاح بعد 48 ساعة من إنشائها. متبقي حوالي ${hoursLeft} ساعة.`);
+      toast.error(`ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ù…Ù„Ø© Ù…ØªØ§Ø­ Ø¨Ø¹Ø¯ 48 Ø³Ø§Ø¹Ø© Ù…Ù† Ø¥Ù†Ø´Ø§Ø¦Ù‡Ø§. Ù…ØªØ¨Ù‚ÙŠ Ø­ÙˆØ§Ù„ÙŠ ${hoursLeft} Ø³Ø§Ø¹Ø©.`);
       return;
     }
 
-    const toastId = toast.loading("جاري تكرار الحملة...");
+    const toastId = toast.loading("Ø¬Ø§Ø±ÙŠ ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ù…Ù„Ø©...");
     try {
       const res = await fetch("/api/campaigns", {
         method: "POST",
@@ -634,10 +657,10 @@ export default function Campaigns() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل التكرار");
+      if (!res.ok) throw new Error(data.error || "ÙØ´Ù„ Ø§Ù„ØªÙƒØ±Ø§Ø±");
       toast.dismiss(toastId);
       toast.success(
-        `تم تكرار الحملة ✅ — ${data.sentCount} مرسلة${data.failedCount ? ` · ${data.failedCount} فشلت` : ""}`
+        `ØªÙ… ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ù…Ù„Ø© âœ… â€” ${data.sentCount} Ù…Ø±Ø³Ù„Ø©${data.failedCount ? ` Â· ${data.failedCount} ÙØ´Ù„Øª` : ""}`
       );
       await loadCampaigns();
     } catch (err: unknown) {
@@ -646,36 +669,36 @@ export default function Campaigns() {
     }
   };
 
-  // ── Stats summary ──────────────────────────────────────────────────
+  // â”€â”€ Stats summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalSent      = campaigns.reduce((a, c) => a + c.sentCount, 0);
   const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount, 0);
   const totalRead      = campaigns.reduce((a, c) => a + c.readCount, 0);
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir="rtl">
 
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">الحملات التسويقية</h1>
-          <p className="text-gray-500 text-sm mt-0.5">إنشاء وإدارة حملات واتساب</p>
+          <h1 className="text-2xl font-bold text-gray-900">Ø§Ù„Ø­Ù…Ù„Ø§Øª Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠØ©</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Ø¥Ù†Ø´Ø§Ø¡ ÙˆØ¥Ø¯Ø§Ø±Ø© Ø­Ù…Ù„Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨</p>
         </div>
         <Button
           onClick={openNew}
           className="bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2"
         >
-          <Plus className="w-4 h-4" /> حملة جديدة
+          <Plus className="w-4 h-4" /> Ø­Ù…Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©
         </Button>
       </div>
 
-      {/* ── Summary stats (only when there's data) ── */}
+      {/* â”€â”€ Summary stats (only when there's data) â”€â”€ */}
       {campaigns.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: "إجمالي المرسل", value: totalSent,      color: "text-blue-600",   bg: "bg-blue-50",   icon: <Send className="w-5 h-5 text-blue-400" /> },
-            { label: "تم التوصيل",    value: totalDelivered, color: "text-green-600",  bg: "bg-green-50",  icon: <CheckCircle className="w-5 h-5 text-green-400" /> },
-            { label: "تم القراءة",    value: totalRead,      color: "text-purple-600", bg: "bg-purple-50", icon: <Eye className="w-5 h-5 text-purple-400" /> },
+            { label: "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø±Ø³Ù„", value: totalSent,      color: "text-blue-600",   bg: "bg-blue-50",   icon: <Send className="w-5 h-5 text-blue-400" /> },
+            { label: "ØªÙ… Ø§Ù„ØªÙˆØµÙŠÙ„",    value: totalDelivered, color: "text-green-600",  bg: "bg-green-50",  icon: <CheckCircle className="w-5 h-5 text-green-400" /> },
+            { label: "ØªÙ… Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©",    value: totalRead,      color: "text-purple-600", bg: "bg-purple-50", icon: <Eye className="w-5 h-5 text-purple-400" /> },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} rounded-2xl p-4 flex items-center gap-3`}>
               {s.icon}
@@ -688,7 +711,7 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* ── Campaign list ── */}
+      {/* â”€â”€ Campaign list â”€â”€ */}
       {loadingList ? (
         <div className="flex justify-center py-20">
           <Loader2 className="w-10 h-10 text-green-400 animate-spin" />
@@ -698,12 +721,12 @@ export default function Campaigns() {
           <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mb-5">
             <Megaphone className="w-10 h-10 text-gray-300" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">لا توجد حملات بعد</h3>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ù…Ù„Ø§Øª Ø¨Ø¹Ø¯</h3>
           <p className="text-gray-400 text-sm mb-6 max-w-xs">
-            ابدأ أول حملة تسويقية وراقب نتائجها مباشرة
+            Ø§Ø¨Ø¯Ø£ Ø£ÙˆÙ„ Ø­Ù…Ù„Ø© ØªØ³ÙˆÙŠÙ‚ÙŠØ© ÙˆØ±Ø§Ù‚Ø¨ Ù†ØªØ§Ø¦Ø¬Ù‡Ø§ Ù…Ø¨Ø§Ø´Ø±Ø©
           </p>
           <Button onClick={openNew} className="bg-green-500 hover:bg-green-600 text-white gap-2">
-            <Plus className="w-4 h-4" /> ابدأ أول حملة
+            <Plus className="w-4 h-4" /> Ø§Ø¨Ø¯Ø£ Ø£ÙˆÙ„ Ø­Ù…Ù„Ø©
           </Button>
         </div>
       ) : (
@@ -715,7 +738,7 @@ export default function Campaigns() {
             const repeatBlocked = elapsedMs < min48Hours;
             const hoursLeft = Math.ceil((min48Hours - elapsedMs) / (60 * 60 * 1000));
             const repeatBlockedNote = repeatBlocked
-              ? `يمكن تكرار الحملة بعد مرور 48 ساعة من إنشائها (المتبقي تقريبًا ${hoursLeft} ساعة).`
+              ? `ÙŠÙ…ÙƒÙ† ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ù…Ù„Ø© Ø¨Ø¹Ø¯ Ù…Ø±ÙˆØ± 48 Ø³Ø§Ø¹Ø© Ù…Ù† Ø¥Ù†Ø´Ø§Ø¦Ù‡Ø§ (Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ ØªÙ‚Ø±ÙŠØ¨Ù‹Ø§ ${hoursLeft} Ø³Ø§Ø¹Ø©).`
               : "";
 
             return (
@@ -733,34 +756,34 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* ─────────────────────── Create Dialog ─────────────────────── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Create Dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Dialog
         open={dialogOpen}
         onOpenChange={(v) => { if (!v) { setDialogOpen(false); resetDialog(); } }}
       >
         <DialogContent className="max-w-2xl w-full" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">إنشاء حملة جديدة</DialogTitle>
-            <DialogDescription>أرسل رسائل واتساب لجمهورك في خطوات بسيطة</DialogDescription>
+            <DialogTitle className="text-xl font-bold">Ø¥Ù†Ø´Ø§Ø¡ Ø­Ù…Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©</DialogTitle>
+            <DialogDescription>Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ø¦Ù„ ÙˆØ§ØªØ³Ø§Ø¨ Ù„Ø¬Ù…Ù‡ÙˆØ±Ùƒ ÙÙŠ Ø®Ø·ÙˆØ§Øª Ø¨Ø³ÙŠØ·Ø©</DialogDescription>
           </DialogHeader>
 
           <StepBar step={step} />
 
-          {/* ── Step 1: Audience ─────────────────────────────────────── */}
+          {/* â”€â”€ Step 1: Audience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 1 && (
             <div className="space-y-5">
               {/* Excel upload */}
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  رفع شيت إكسيل من جهات الاتصال
+                  Ø±ÙØ¹ Ø´ÙŠØª Ø¥ÙƒØ³ÙŠÙ„ Ù…Ù† Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„
                 </Label>
                 <label
                   htmlFor="excel-input"
                   className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl p-8 cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-all"
                 >
                   <FileSpreadsheet className="w-10 h-10 text-green-500" />
-                  <span className="font-medium text-gray-700">اسحب الملف هنا أو انقر للاختيار</span>
-                  <span className="text-xs text-gray-400">.xlsx أو .xls</span>
+                  <span className="font-medium text-gray-700">Ø§Ø³Ø­Ø¨ Ø§Ù„Ù…Ù„Ù Ù‡Ù†Ø§ Ø£Ùˆ Ø§Ù†Ù‚Ø± Ù„Ù„Ø§Ø®ØªÙŠØ§Ø±</span>
+                  <span className="text-xs text-gray-400">.xlsx Ø£Ùˆ .xls</span>
                   <input
                     id="excel-input"
                     type="file"
@@ -774,17 +797,17 @@ export default function Campaigns() {
               {/* Import audience */}
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  أو استيراد جهة اتصال
+                  Ø£Ùˆ Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø¬Ù‡Ø© Ø§ØªØµØ§Ù„
                 </Label>
                 <div className="rounded-xl border border-gray-200 p-4 space-y-3">
                   <Select value={selectedAudienceId} onValueChange={setSelectedAudienceId}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="اختر قائمة من جهات الاتصال..." />
+                      <SelectValue placeholder="Ø§Ø®ØªØ± Ù‚Ø§Ø¦Ù…Ø© Ù…Ù† Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„..." />
                     </SelectTrigger>
                     <SelectContent>
                       {audiences.length === 0 ? (
                         <SelectItem value="no-audiences" disabled>
-                          لا توجد قوائم متاحة
+                          Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ø¦Ù… Ù…ØªØ§Ø­Ø©
                         </SelectItem>
                       ) : (
                         audiences.map((audience) => (
@@ -806,7 +829,7 @@ export default function Campaigns() {
                     ) : (
                       <Users className="w-4 h-4" />
                     )}
-                    استيراد جهة الاتصال
+                    Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„
                   </Button>
                 </div>
               </div>
@@ -816,14 +839,14 @@ export default function Campaigns() {
                 <div className="bg-green-50 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
-                      <Users className="w-4 h-4" /> {numbers.length} رقم محمل
+                      <Users className="w-4 h-4" /> {numbers.length} Ø±Ù‚Ù… Ù…Ø­Ù…Ù„
                     </span>
                     <Button
                       size="sm" variant="ghost"
                       className="text-red-500 h-7 px-2 hover:bg-red-50"
                       onClick={() => setNumbers([])}
                     >
-                      <X className="w-3.5 h-3.5 ml-1" /> مسح الكل
+                      <X className="w-3.5 h-3.5 ml-1" /> Ù…Ø³Ø­ Ø§Ù„ÙƒÙ„
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
@@ -843,7 +866,7 @@ export default function Campaigns() {
                     ))}
                     {numbers.length > 15 && (
                       <span className="text-xs text-gray-400 self-center">
-                        +{numbers.length - 15} أخرى
+                        +{numbers.length - 15} Ø£Ø®Ø±Ù‰
                       </span>
                     )}
                   </div>
@@ -855,24 +878,24 @@ export default function Campaigns() {
                 className="w-full bg-green-500 hover:bg-green-600 text-white gap-2"
                 disabled={numbers.length === 0}
               >
-                التالي: اختر القالب <ChevronLeft className="w-4 h-4" />
+                Ø§Ù„ØªØ§Ù„ÙŠ: Ø§Ø®ØªØ± Ø§Ù„Ù‚Ø§Ù„Ø¨ <ChevronLeft className="w-4 h-4" />
               </Button>
             </div>
           )}
 
-          {/* ── Step 2: Template ─────────────────────────────────────── */}
+          {/* â”€â”€ Step 2: Template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 2 && (
             <div className="space-y-5">
               {templates.length === 0 ? (
                 <div className="text-center py-10 text-gray-400">
                   <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">لا توجد قوالب معتمدة</p>
-                  <p className="text-xs mt-1">أضف قوالبك من صفحة القوالب وانتظر اعتمادها</p>
+                  <p className="text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯Ø©</p>
+                  <p className="text-xs mt-1">Ø£Ø¶Ù Ù‚ÙˆØ§Ù„Ø¨Ùƒ Ù…Ù† ØµÙØ­Ø© Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨ ÙˆØ§Ù†ØªØ¸Ø± Ø§Ø¹ØªÙ…Ø§Ø¯Ù‡Ø§</p>
                 </div>
               ) : (
                 <>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">اختر القالب</Label>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Ø§Ø®ØªØ± Ø§Ù„Ù‚Ø§Ù„Ø¨</Label>
                     <Select
                       value={selectedTemplate?.name ?? ""}
                       onValueChange={(v) => {
@@ -881,7 +904,7 @@ export default function Campaigns() {
                       }}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="اختر قالباً..." />
+                        <SelectValue placeholder="Ø§Ø®ØªØ± Ù‚Ø§Ù„Ø¨Ø§Ù‹..." />
                       </SelectTrigger>
                       <SelectContent>
                         {templates.map((t) => (
@@ -899,10 +922,10 @@ export default function Campaigns() {
                   {/* Preview */}
                   {selectedTemplate && (
                     <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-xs text-gray-500 mb-2 font-medium">معاينة القالب</p>
+                      <p className="text-xs text-gray-500 mb-2 font-medium">Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù‚Ø§Ù„Ø¨</p>
                       {/* WhatsApp bubble style */}
                       <div className="bg-white rounded-xl rounded-tl-sm shadow-sm border border-gray-100 p-3 max-w-xs text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {selectedTemplate.content || "لا يوجد محتوى للمعاينة"}
+                        {selectedTemplate.content || "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø­ØªÙˆÙ‰ Ù„Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©"}
                       </div>
                       <div className="flex items-center gap-3 mt-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -910,7 +933,7 @@ export default function Campaigns() {
                             ? "bg-green-100 text-green-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}>
-                          {["approved","APPROVED"].includes(selectedTemplate.status) ? "معتمد" : "قيد المراجعة"}
+                          {["approved","APPROVED"].includes(selectedTemplate.status) ? "Ù…Ø¹ØªÙ…Ø¯" : "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©"}
                         </span>
                         {selectedTemplate.category && (
                           <span className="text-xs text-gray-400">{selectedTemplate.category}</span>
@@ -923,27 +946,27 @@ export default function Campaigns() {
 
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1 gap-2" onClick={() => setStep(1)}>
-                  <ChevronRight className="w-4 h-4" /> السابق
+                  <ChevronRight className="w-4 h-4" /> Ø§Ù„Ø³Ø§Ø¨Ù‚
                 </Button>
                 <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-2"
                   onClick={() => setStep(3)}
                   disabled={!selectedTemplate}
                 >
-                  التالي: الإعدادات <ChevronLeft className="w-4 h-4" />
+                  Ø§Ù„ØªØ§Ù„ÙŠ: Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª <ChevronLeft className="w-4 h-4" />
                 </Button>
               </div>
             </div>
           )}
 
-          {/* ── Step 3: Settings ─────────────────────────────────────── */}
+          {/* â”€â”€ Step 3: Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 3 && (
             <div className="space-y-5">
               {/* Campaign name */}
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">اسم الحملة</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Ø§Ø³Ù… Ø§Ù„Ø­Ù…Ù„Ø©</Label>
                 <Input
-                  placeholder="مثال: عروض رمضان 2025"
+                  placeholder="Ù…Ø«Ø§Ù„: Ø¹Ø±ÙˆØ¶ Ø±Ù…Ø¶Ø§Ù† 2025"
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
                 />
@@ -951,7 +974,7 @@ export default function Campaigns() {
 
               {/* Send mode */}
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">موعد الإرسال</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Ù…ÙˆØ¹Ø¯ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {(["now", "scheduled"] as const).map((mode) => (
                     <button
@@ -964,8 +987,8 @@ export default function Campaigns() {
                       }`}
                     >
                       {mode === "now"
-                        ? <><Send className="w-4 h-4" /> إرسال فوري</>
-                        : <><Calendar className="w-4 h-4" /> جدولة لاحقاً</>}
+                        ? <><Send className="w-4 h-4" /> Ø¥Ø±Ø³Ø§Ù„ ÙÙˆØ±ÙŠ</>
+                        : <><Calendar className="w-4 h-4" /> Ø¬Ø¯ÙˆÙ„Ø© Ù„Ø§Ø­Ù‚Ø§Ù‹</>}
                     </button>
                   ))}
                 </div>
@@ -974,12 +997,12 @@ export default function Campaigns() {
               {/* Datetime picker */}
               {sendMode === "scheduled" && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">موعد الإرسال</Label>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Ù…ÙˆØ¹Ø¯ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„</Label>
                   <Input
                     type="datetime-local"
                     value={scheduledAt}
                     min={(() => {
-                      // datetime-local بيحتاج التوقيت المحلي مش UTC
+                      // datetime-local Ø¨ÙŠØ­ØªØ§Ø¬ Ø§Ù„ØªÙˆÙ‚ÙŠØª Ø§Ù„Ù…Ø­Ù„ÙŠ Ù…Ø´ UTC
                       const local = new Date(Date.now() + 60_000);
                       local.setSeconds(0, 0);
                       return new Date(local.getTime() - local.getTimezoneOffset() * 60_000)
@@ -993,12 +1016,12 @@ export default function Campaigns() {
 
               {/* Summary */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <p className="text-sm font-semibold text-gray-700 mb-3">ملخص الحملة</p>
+                <p className="text-sm font-semibold text-gray-700 mb-3">Ù…Ù„Ø®Øµ Ø§Ù„Ø­Ù…Ù„Ø©</p>
                 {[
-                  { label: "الاسم",         value: campaignName || "—" },
-                  { label: "عدد المستلمين", value: `${numbers.length} رقم` },
-                  { label: "القالب",        value: selectedTemplate?.name || "—" },
-                  { label: "الإرسال",       value: sendMode === "now" ? "فوري" : scheduledAt ? new Date(scheduledAt).toLocaleString("ar-EG") : "—" },
+                  { label: "Ø§Ù„Ø§Ø³Ù…",         value: campaignName || "â€”" },
+                  { label: "Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø³ØªÙ„Ù…ÙŠÙ†", value: `${numbers.length} Ø±Ù‚Ù…` },
+                  { label: "Ø§Ù„Ù‚Ø§Ù„Ø¨",        value: selectedTemplate?.name || "â€”" },
+                  { label: "Ø§Ù„Ø¥Ø±Ø³Ø§Ù„",       value: sendMode === "now" ? "ÙÙˆØ±ÙŠ" : scheduledAt ? new Date(scheduledAt).toLocaleString("ar-EG") : "â€”" },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">{row.label}</span>
@@ -1009,7 +1032,7 @@ export default function Campaigns() {
 
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1 gap-2" onClick={() => setStep(2)}>
-                  <ChevronRight className="w-4 h-4" /> السابق
+                  <ChevronRight className="w-4 h-4" /> Ø§Ù„Ø³Ø§Ø¨Ù‚
                 </Button>
                 <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-2"
@@ -1017,10 +1040,10 @@ export default function Campaigns() {
                   disabled={submitting || !campaignName.trim() || !selectedTemplate}
                 >
                   {submitting
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الإرسال...</>
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„...</>
                     : sendMode === "now"
-                      ? <><Send className="w-4 h-4" /> إرسال الحملة</>
-                      : <><Calendar className="w-4 h-4" /> جدولة الحملة</>}
+                      ? <><Send className="w-4 h-4" /> Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø­Ù…Ù„Ø©</>
+                      : <><Calendar className="w-4 h-4" /> Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø­Ù…Ù„Ø©</>}
                 </Button>
               </div>
             </div>
@@ -1037,3 +1060,4 @@ export default function Campaigns() {
     </div>
   );
 }
+

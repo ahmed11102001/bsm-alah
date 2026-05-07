@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import * as XLSX from "xlsx";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -27,7 +26,7 @@ import {
   RefreshCw, Shield,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Overview {
   totals: {
     sent: number; delivered: number; read: number; failed: number;
@@ -59,7 +58,7 @@ interface LogRow {
 
 interface LogsData { total: number; page: number; limit: number; messages: LogRow[] }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TODAY = new Date().toISOString().slice(0, 10);
 const MONTH_AGO = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
 
@@ -72,12 +71,12 @@ const statusColor: Record<string, string> = {
 };
 
 const statusLabel: Record<string, string> = {
-  sent: "مرسل", delivered: "وصل", read: "قُرئ", failed: "فشل", pending: "انتظار",
+  sent: "Ù…Ø±Ø³Ù„", delivered: "ÙˆØµÙ„", read: "Ù‚ÙØ±Ø¦", failed: "ÙØ´Ù„", pending: "Ø§Ù†ØªØ¸Ø§Ø±",
 };
 
-const dirLabel: Record<string, string> = { outbound: "صادر", inbound: "وارد" };
+const dirLabel: Record<string, string> = { outbound: "ØµØ§Ø¯Ø±", inbound: "ÙˆØ§Ø±Ø¯" };
 const typeLabel: Record<string, string> = {
-  text: "نص", image: "صورة", audio: "صوت", document: "مستند", template: "قالب",
+  text: "Ù†Øµ", image: "ØµÙˆØ±Ø©", audio: "ØµÙˆØª", document: "Ù…Ø³ØªÙ†Ø¯", template: "Ù‚Ø§Ù„Ø¨",
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) =>
@@ -108,39 +107,57 @@ function StatCard({
   );
 }
 
-// ─── Export helpers ────────────────────────────────────────────────────────────
-function exportExcel(data: object[], filename: string) {
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "تقرير");
-  XLSX.writeFile(wb, `${filename}.xlsx`);
+// â”€â”€â”€ Export helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+async function exportExcel(data: object[], filename: string) {
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("تقرير");
+
+  if (data.length > 0) {
+    const headers = Object.keys(data[0]);
+    sheet.columns = headers.map((h) => ({ header: h, key: h, width: 22 }));
+    data.forEach((row) => sheet.addRow(row));
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${filename}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function printPage() {
   window.print();
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Reports() {
-  // ── Filters ─────────────────────────────────────────────────────
+  // â”€â”€ Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [from, setFrom]   = useState(MONTH_AGO);
   const [to,   setTo]     = useState(TODAY);
   const [tab,  setTab]    = useState("overview");
 
-  // ── Overview ─────────────────────────────────────────────────────
+  // â”€â”€ Overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [overview, setOverview]       = useState<Overview | null>(null);
   const [loadingOverview, setLO]       = useState(false);
 
-  // ── Customers ────────────────────────────────────────────────────
+  // â”€â”€ Customers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [custSegment, setCustSegment] = useState("engaged");
   const [customers, setCustomers]     = useState<CustomerRow[]>([]);
   const [loadingCust, setLC]          = useState(false);
 
-  // ── Team ─────────────────────────────────────────────────────────
+  // â”€â”€ Team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [team, setTeam]               = useState<TeamRow[]>([]);
   const [loadingTeam, setLT]          = useState(false);
 
-  // ── Logs ─────────────────────────────────────────────────────────
+  // â”€â”€ Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [logs, setLogs]               = useState<LogsData | null>(null);
   const [loadingLogs, setLL]          = useState(false);
   const [logPage, setLogPage]         = useState(1);
@@ -148,7 +165,7 @@ export default function Reports() {
   const [logSearch, setLogSearch]     = useState("");
   const [logType,   setLogType]       = useState("all");
 
-  // ── Fetchers ─────────────────────────────────────────────────────
+  // â”€â”€ Fetchers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchOverview = useCallback(async () => {
     setLO(true);
     try {
@@ -196,7 +213,7 @@ export default function Reports() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // ── Chart colors ─────────────────────────────────────────────────
+  // â”€â”€ Chart colors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const hourlyData = useMemo(() => {
     if (!overview?.hourly) return [];
     const map = new Map(overview.hourly.map((h) => [h.hour, h.cnt]));
@@ -207,47 +224,50 @@ export default function Reports() {
   }, [overview]);
 
   const maxHour = useMemo(() =>
-    hourlyData.reduce((a, b) => (b.cnt > a.cnt ? b : a), { hour: "—", cnt: 0 }),
+    hourlyData.reduce((a, b) => (b.cnt > a.cnt ? b : a), { hour: "â€”", cnt: 0 }),
   [hourlyData]);
 
-  // ─────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">التقارير والإحصائيات</h1>
-          <p className="text-sm text-gray-500 mt-0.5">نظرة شاملة على أداء عملياتك</p>
+          <h1 className="text-2xl font-bold text-gray-900">Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ± ÙˆØ§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Ù†Ø¸Ø±Ø© Ø´Ø§Ù…Ù„Ø© Ø¹Ù„Ù‰ Ø£Ø¯Ø§Ø¡ Ø¹Ù…Ù„ÙŠØ§ØªÙƒ</p>
         </div>
         {/* Export */}
         <div className="flex gap-2">
           <Button
             size="sm" variant="outline" className="gap-1.5"
-            onClick={() => {
+            onClick={async () => {
               if (tab === "overview" && overview)
-                exportExcel(overview.daily, "تقرير-الرسائل");
+                exportExcel(overview.daily, "ØªÙ‚Ø±ÙŠØ±-Ø§Ù„Ø±Ø³Ø§Ø¦Ù„");
               else if (tab === "customers")
-                exportExcel(customers, "تقرير-العملاء");
+                exportExcel(customers, "ØªÙ‚Ø±ÙŠØ±-Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡");
               else if (tab === "team")
-                exportExcel(team, "تقرير-الفريق");
+                exportExcel(team, "ØªÙ‚Ø±ÙŠØ±-Ø§Ù„ÙØ±ÙŠÙ‚");
               else if (tab === "logs" && logs)
-                exportExcel(logs.messages.map((m) => ({
-                  الهاتف:    m.contact?.phone,
-                  العميل:    m.contact?.name ?? "—",
-                  الحالة:    statusLabel[m.status] ?? m.status,
-                  النوع:     typeLabel[m.type] ?? m.type,
-                  الاتجاه:   dirLabel[m.direction] ?? m.direction,
-                  الحملة:    m.campaign?.name ?? "—",
-                  المستخدم:  m.user?.name ?? m.user?.email ?? "—",
-                  التاريخ:   new Date(m.createdAt).toLocaleString("ar-EG"),
-                })), "سجل-النشاط");
+                exportExcel(
+                  logs.messages.map((m) => ({
+                    phone: m.contact?.phone ?? "—",
+                    customer: m.contact?.name ?? "—",
+                    status: statusLabel[m.status] ?? m.status,
+                    type: typeLabel[m.type] ?? m.type,
+                    direction: dirLabel[m.direction] ?? m.direction,
+                    campaign: m.campaign?.name ?? "—",
+                    user: m.user?.name ?? m.user?.email ?? "—",
+                    date: new Date(m.createdAt).toLocaleString("ar-EG"),
+                  })),
+                  "سجل-النشاط"
+                );
             }}
           >
             <FileSpreadsheet className="w-4 h-4" /> Excel
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={printPage}>
-            <Printer className="w-4 h-4" /> طباعة
+            <Printer className="w-4 h-4" /> Ø·Ø¨Ø§Ø¹Ø©
           </Button>
         </div>
       </div>
@@ -256,14 +276,14 @@ export default function Reports() {
       <Card className="border border-gray-100 shadow-sm mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500">من</Label>
+            <Label className="text-xs text-gray-500">Ù…Ù†</Label>
             <Input type="date" value={from} max={to}
               onChange={(e) => setFrom(e.target.value)}
               className="w-36 text-sm"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500">إلى</Label>
+            <Label className="text-xs text-gray-500">Ø¥Ù„Ù‰</Label>
             <Input type="date" value={to} min={from} max={TODAY}
               onChange={(e) => setTo(e.target.value)}
               className="w-36 text-sm"
@@ -278,13 +298,13 @@ export default function Reports() {
               if (tab === "logs")      fetchLogs(1);
             }}
           >
-            <RefreshCw className="w-3.5 h-3.5" /> تحديث
+            <RefreshCw className="w-3.5 h-3.5" /> ØªØ­Ø¯ÙŠØ«
           </Button>
           {/* Quick ranges */}
           {[
-            { label: "7 أيام",  days: 7  },
-            { label: "30 يوم",  days: 30 },
-            { label: "90 يوم",  days: 90 },
+            { label: "7 Ø£ÙŠØ§Ù…",  days: 7  },
+            { label: "30 ÙŠÙˆÙ…",  days: 30 },
+            { label: "90 ÙŠÙˆÙ…",  days: 90 },
           ].map((r) => (
             <button
               key={r.days}
@@ -304,10 +324,10 @@ export default function Reports() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6 bg-gray-100 p-1 rounded-xl h-auto flex-wrap gap-1">
           {[
-            { value: "overview",  label: "نظرة عامة",      icon: <BarChart3 className="w-4 h-4" /> },
-            { value: "customers", label: "العملاء",          icon: <Users className="w-4 h-4" /> },
-            { value: "team",      label: "الفريق",           icon: <Shield className="w-4 h-4" /> },
-            { value: "logs",      label: "سجل النشاط",      icon: <Activity className="w-4 h-4" /> },
+            { value: "overview",  label: "Ù†Ø¸Ø±Ø© Ø¹Ø§Ù…Ø©",      icon: <BarChart3 className="w-4 h-4" /> },
+            { value: "customers", label: "Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡",          icon: <Users className="w-4 h-4" /> },
+            { value: "team",      label: "Ø§Ù„ÙØ±ÙŠÙ‚",           icon: <Shield className="w-4 h-4" /> },
+            { value: "logs",      label: "Ø³Ø¬Ù„ Ø§Ù„Ù†Ø´Ø§Ø·",      icon: <Activity className="w-4 h-4" /> },
           ].map((t) => (
             <TabsTrigger
               key={t.value} value={t.value}
@@ -318,7 +338,7 @@ export default function Reports() {
           ))}
         </TabsList>
 
-        {/* ══════════════ OVERVIEW ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• OVERVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <TabsContent value="overview">
           {loadingOverview ? (
             <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-green-400" /></div>
@@ -326,20 +346,20 @@ export default function Reports() {
             <div className="space-y-6">
               {/* KPI cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="إجمالي المرسل"   value={overview.totals.sent}         sub={`نسبة وصول ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />}   color="bg-blue-50" />
-                <StatCard label="تم التوصيل"       value={overview.totals.delivered}    sub={`${overview.totals.deliveryRate}% من المرسل`}   icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" />
-                <StatCard label="تم القراءة"       value={overview.totals.read}         sub={`${overview.totals.readRate}% قرأوا`}            icon={<Eye className="w-5 h-5 text-purple-600" />}  color="bg-purple-50" />
-                <StatCard label="فشل الإرسال"      value={overview.totals.failed}       icon={<XCircle className="w-5 h-5 text-red-500" />}   color="bg-red-50" />
-                <StatCard label="رسائل واردة"      value={overview.totals.inbound}      sub={`معدل رد ${overview.totals.replyRate}%`}          icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" />
-                <StatCard label="عملاء جدد"        value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" />
-                <StatCard label="أفضل وقت للإرسال" value={maxHour.hour}                sub={`${maxHour.cnt} رسالة`}                          icon={<Clock className="w-5 h-5 text-indigo-600" />}  color="bg-indigo-50" />
-                <StatCard label="معدل الردود"      value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" />
+                <StatCard label="Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø±Ø³Ù„"   value={overview.totals.sent}         sub={`Ù†Ø³Ø¨Ø© ÙˆØµÙˆÙ„ ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />}   color="bg-blue-50" />
+                <StatCard label="ØªÙ… Ø§Ù„ØªÙˆØµÙŠÙ„"       value={overview.totals.delivered}    sub={`${overview.totals.deliveryRate}% Ù…Ù† Ø§Ù„Ù…Ø±Ø³Ù„`}   icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" />
+                <StatCard label="ØªÙ… Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©"       value={overview.totals.read}         sub={`${overview.totals.readRate}% Ù‚Ø±Ø£ÙˆØ§`}            icon={<Eye className="w-5 h-5 text-purple-600" />}  color="bg-purple-50" />
+                <StatCard label="ÙØ´Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„"      value={overview.totals.failed}       icon={<XCircle className="w-5 h-5 text-red-500" />}   color="bg-red-50" />
+                <StatCard label="Ø±Ø³Ø§Ø¦Ù„ ÙˆØ§Ø±Ø¯Ø©"      value={overview.totals.inbound}      sub={`Ù…Ø¹Ø¯Ù„ Ø±Ø¯ ${overview.totals.replyRate}%`}          icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" />
+                <StatCard label="Ø¹Ù…Ù„Ø§Ø¡ Ø¬Ø¯Ø¯"        value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" />
+                <StatCard label="Ø£ÙØ¶Ù„ ÙˆÙ‚Øª Ù„Ù„Ø¥Ø±Ø³Ø§Ù„" value={maxHour.hour}                sub={`${maxHour.cnt} Ø±Ø³Ø§Ù„Ø©`}                          icon={<Clock className="w-5 h-5 text-indigo-600" />}  color="bg-indigo-50" />
+                <StatCard label="Ù…Ø¹Ø¯Ù„ Ø§Ù„Ø±Ø¯ÙˆØ¯"      value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" />
               </div>
 
               {/* Daily chart */}
               <Card className="border border-gray-100 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">الرسائل يومياً</CardTitle>
+                  <CardTitle className="text-base font-semibold">Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ ÙŠÙˆÙ…ÙŠØ§Ù‹</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={240}>
@@ -351,17 +371,17 @@ export default function Reports() {
                       <Tooltip
                         formatter={(value,name) => [
                           value,("ar-EG"),
-                          name === "sent" ? "مرسل" : "وارد",
+                          name === "sent" ? "Ù…Ø±Ø³Ù„" : "ÙˆØ§Ø±Ø¯",
                         ]}
-                        labelFormatter={(l) => `يوم ${l}`}
+                        labelFormatter={(l) => `ÙŠÙˆÙ… ${l}`}
                       />
                       <Line type="monotone" dataKey="sent"     stroke="#22c55e" strokeWidth={2} dot={false} name="sent" />
                       <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" />
                     </LineChart>
                   </ResponsiveContainer>
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> رسائل مرسلة</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> رسائل واردة</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> Ø±Ø³Ø§Ø¦Ù„ Ù…Ø±Ø³Ù„Ø©</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> Ø±Ø³Ø§Ø¦Ù„ ÙˆØ§Ø±Ø¯Ø©</span>
                   </div>
                 </CardContent>
               </Card>
@@ -370,7 +390,7 @@ export default function Reports() {
                 {/* Hourly heatmap */}
                 <Card className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-semibold">أفضل أوقات الإرسال</CardTitle>
+                    <CardTitle className="text-base font-semibold">Ø£ÙØ¶Ù„ Ø£ÙˆÙ‚Ø§Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={200}>
@@ -383,7 +403,7 @@ export default function Reports() {
                          <Tooltip
                           formatter={(value: any, name: any) => [
                          value != null ? Number(value).toLocaleString("ar-EG") : "0",
-                         name === "sent" ? "مرسل" : "رد"
+                         name === "sent" ? "Ù…Ø±Ø³Ù„" : "Ø±Ø¯"
                          ]}
 />
                         <Bar dataKey="cnt" radius={[3, 3, 0, 0]}>
@@ -402,11 +422,11 @@ export default function Reports() {
                 {/* Best campaigns */}
                 <Card className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-semibold">أفضل الحملات أداءً</CardTitle>
+                    <CardTitle className="text-base font-semibold">Ø£ÙØ¶Ù„ Ø§Ù„Ø­Ù…Ù„Ø§Øª Ø£Ø¯Ø§Ø¡Ù‹</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {overview.bestCampaigns.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات</p>
+                      <p className="text-sm text-gray-400 text-center py-8">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª</p>
                     ) : (
                       <div className="space-y-3">
                         {overview.bestCampaigns.map((c, i) => (
@@ -432,17 +452,17 @@ export default function Reports() {
           )}
         </TabsContent>
 
-        {/* ══════════════ CUSTOMERS ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• CUSTOMERS â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <TabsContent value="customers">
           <div className="space-y-5">
             {/* Segment selector */}
             <div className="flex flex-wrap gap-2">
               {[
-                { value: "engaged",    label: "الأكثر تفاعلاً",     icon: <TrendingUp className="w-4 h-4" /> },
-                { value: "no-response",label: "لم يردوا",            icon: <AlertCircle className="w-4 h-4" /> },
-                { value: "new",        label: "العملاء الجدد",       icon: <UserCheck className="w-4 h-4" /> },
-                { value: "archived",   label: "المحظورين/المؤرشفين", icon: <Archive className="w-4 h-4" /> },
-                { value: "followup",   label: "يحتاجون متابعة",      icon: <RefreshCw className="w-4 h-4" /> },
+                { value: "engaged",    label: "Ø§Ù„Ø£ÙƒØ«Ø± ØªÙØ§Ø¹Ù„Ø§Ù‹",     icon: <TrendingUp className="w-4 h-4" /> },
+                { value: "no-response",label: "Ù„Ù… ÙŠØ±Ø¯ÙˆØ§",            icon: <AlertCircle className="w-4 h-4" /> },
+                { value: "new",        label: "Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ø¬Ø¯Ø¯",       icon: <UserCheck className="w-4 h-4" /> },
+                { value: "archived",   label: "Ø§Ù„Ù…Ø­Ø¸ÙˆØ±ÙŠÙ†/Ø§Ù„Ù…Ø¤Ø±Ø´ÙÙŠÙ†", icon: <Archive className="w-4 h-4" /> },
+                { value: "followup",   label: "ÙŠØ­ØªØ§Ø¬ÙˆÙ† Ù…ØªØ§Ø¨Ø¹Ø©",      icon: <RefreshCw className="w-4 h-4" /> },
               ].map((s) => (
                 <button
                   key={s.value}
@@ -466,26 +486,26 @@ export default function Reports() {
                 {loadingCust ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
                 ) : customers.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 text-sm">لا توجد نتائج</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="border-b border-gray-100">
                         <tr>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">الهاتف</th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">الاسم</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ù‡Ø§ØªÙ</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ø§Ø³Ù…</th>
                           {custSegment === "engaged" && (
-                            <><th className="text-right py-3 px-4 font-medium text-gray-500">الرسائل</th>
-                              <th className="text-right py-3 px-4 font-medium text-gray-500">غير مقروء</th></>
+                            <><th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ø±Ø³Ø§Ø¦Ù„</th>
+                              <th className="text-right py-3 px-4 font-medium text-gray-500">ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡</th></>
                           )}
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">آخر تواصل</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500">Ø¢Ø®Ø± ØªÙˆØ§ØµÙ„</th>
                         </tr>
                       </thead>
                       <tbody>
                         {customers.map((c) => (
                           <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                             <td className="py-3 px-4 font-mono text-gray-700">{c.phone}</td>
-                            <td className="py-3 px-4 text-gray-600">{c.name ?? "—"}</td>
+                            <td className="py-3 px-4 text-gray-600">{c.name ?? "â€”"}</td>
                             {custSegment === "engaged" && (
                               <><td className="py-3 px-4 text-gray-700 font-medium">{c.totalMessages?.toLocaleString("ar-EG")}</td>
                                 <td className="py-3 px-4">
@@ -499,7 +519,7 @@ export default function Reports() {
                             <td className="py-3 px-4 text-gray-400 text-xs">
                               {c.lastMessageAt
                                 ? new Date(c.lastMessageAt).toLocaleString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                                : "—"}
+                                : "â€”"}
                             </td>
                           </tr>
                         ))}
@@ -512,21 +532,21 @@ export default function Reports() {
           </div>
         </TabsContent>
 
-        {/* ══════════════ TEAM ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• TEAM â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <TabsContent value="team">
           {loadingTeam ? (
             <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-green-400" /></div>
           ) : team.length === 0 ? (
             <div className="text-center py-20">
               <Shield className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">لا يوجد أعضاء فريق حتى الآن</p>
+              <p className="text-gray-400 text-sm">Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ ÙØ±ÙŠÙ‚ Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†</p>
             </div>
           ) : (
             <div className="space-y-5">
               {/* Team chart */}
               <Card className="border border-gray-100 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">نشاط الفريق</CardTitle>
+                  <CardTitle className="text-base font-semibold">Ù†Ø´Ø§Ø· Ø§Ù„ÙØ±ÙŠÙ‚</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={220}>
@@ -537,7 +557,7 @@ export default function Reports() {
                        <Tooltip
                        formatter={(value: any, name: any) => [
                        value != null ? Number(value).toLocaleString("ar-EG") : "0",
-                       name === "sent" ? "مرسل" : "رد"
+                       name === "sent" ? "Ù…Ø±Ø³Ù„" : "Ø±Ø¯"
                        ]}
 />
                       <Bar dataKey="sent"    fill="#22c55e" radius={[0, 3, 3, 0]} name="sent"    />
@@ -545,8 +565,8 @@ export default function Reports() {
                     </BarChart>
                   </ResponsiveContainer>
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> رسائل مرسلة</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> ردود</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> Ø±Ø³Ø§Ø¦Ù„ Ù…Ø±Ø³Ù„Ø©</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> Ø±Ø¯ÙˆØ¯</span>
                   </div>
                 </CardContent>
               </Card>
@@ -557,11 +577,11 @@ export default function Reports() {
                   <table className="w-full text-sm">
                     <thead className="border-b border-gray-100">
                       <tr>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الاسم</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الصلاحية</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الرسائل المرسلة</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الردود</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">معدل الرد</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ø§Ø³Ù…</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ©</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø±Ø³Ù„Ø©</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500">Ø§Ù„Ø±Ø¯ÙˆØ¯</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500">Ù…Ø¹Ø¯Ù„ Ø§Ù„Ø±Ø¯</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -576,7 +596,7 @@ export default function Reports() {
                                 m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700"    :
                                                            "bg-gray-100 text-gray-600"
                               }`}>
-                                {m.role === "OWNER" ? "مالك" : m.role === "FULL_ACCESS" ? "وصول كامل" : "دردشة فقط"}
+                                {m.role === "OWNER" ? "Ù…Ø§Ù„Ùƒ" : m.role === "FULL_ACCESS" ? "ÙˆØµÙˆÙ„ ÙƒØ§Ù…Ù„" : "Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø·"}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-gray-700 font-medium">{m.sent.toLocaleString("ar-EG")}</td>
@@ -600,40 +620,40 @@ export default function Reports() {
           )}
         </TabsContent>
 
-        {/* ══════════════ LOGS ══════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• LOGS â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <TabsContent value="logs">
           <div className="space-y-4">
             {/* Log filters */}
             <Card className="border border-gray-100 shadow-sm">
               <CardContent className="p-4 flex flex-wrap gap-3 items-end">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">الحالة</Label>
+                  <Label className="text-xs text-gray-500">Ø§Ù„Ø­Ø§Ù„Ø©</Label>
                   <Select value={logStatus} onValueChange={setLogStatus}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      <SelectItem value="sent">مرسل</SelectItem>
-                      <SelectItem value="delivered">وصل</SelectItem>
-                      <SelectItem value="read">قُرئ</SelectItem>
-                      <SelectItem value="failed">فشل</SelectItem>
+                      <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
+                      <SelectItem value="sent">Ù…Ø±Ø³Ù„</SelectItem>
+                      <SelectItem value="delivered">ÙˆØµÙ„</SelectItem>
+                      <SelectItem value="read">Ù‚ÙØ±Ø¦</SelectItem>
+                      <SelectItem value="failed">ÙØ´Ù„</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">نوع الرسالة</Label>
+                  <Label className="text-xs text-gray-500">Ù†ÙˆØ¹ Ø§Ù„Ø±Ø³Ø§Ù„Ø©</Label>
                   <Select value={logType} onValueChange={setLogType}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      <SelectItem value="text">نص</SelectItem>
-                      <SelectItem value="template">قالب</SelectItem>
-                      <SelectItem value="image">صورة</SelectItem>
-                      <SelectItem value="audio">صوت</SelectItem>
+                      <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
+                      <SelectItem value="text">Ù†Øµ</SelectItem>
+                      <SelectItem value="template">Ù‚Ø§Ù„Ø¨</SelectItem>
+                      <SelectItem value="image">ØµÙˆØ±Ø©</SelectItem>
+                      <SelectItem value="audio">ØµÙˆØª</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">بحث بالرقم</Label>
+                  <Label className="text-xs text-gray-500">Ø¨Ø­Ø« Ø¨Ø§Ù„Ø±Ù‚Ù…</Label>
                   <Input
                     className="w-40 text-sm" placeholder="201234..."
                     value={logSearch}
@@ -646,7 +666,7 @@ export default function Reports() {
                   className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
                   onClick={() => fetchLogs(1)}
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> بحث
+                  <RefreshCw className="w-3.5 h-3.5" /> Ø¨Ø­Ø«
                 </Button>
               </CardContent>
             </Card>
@@ -657,28 +677,28 @@ export default function Reports() {
                 {loadingLogs ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
                 ) : !logs || logs.messages.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 text-sm">لا توجد سجلات</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø³Ø¬Ù„Ø§Øª</div>
                 ) : (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead className="border-b border-gray-100 bg-gray-50/50">
                           <tr>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الهاتف</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">العميل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الحالة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">النوع</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الاتجاه</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الحملة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">المرسِل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">التوقيت</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ù‡Ø§ØªÙ</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ø¹Ù…ÙŠÙ„</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ù†ÙˆØ¹</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ø§ØªØ¬Ø§Ù‡</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ø­Ù…Ù„Ø©</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„Ù…Ø±Ø³ÙÙ„</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500">Ø§Ù„ØªÙˆÙ‚ÙŠØª</th>
                           </tr>
                         </thead>
                         <tbody>
                           {logs.messages.map((m) => (
                             <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                              <td className="py-2.5 px-3 font-mono text-gray-600">{m.contact?.phone ?? "—"}</td>
-                              <td className="py-2.5 px-3 text-gray-600">{m.contact?.name ?? "—"}</td>
+                              <td className="py-2.5 px-3 font-mono text-gray-600">{m.contact?.phone ?? "â€”"}</td>
+                              <td className="py-2.5 px-3 text-gray-600">{m.contact?.name ?? "â€”"}</td>
                               <td className="py-2.5 px-3">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[m.status] ?? "bg-gray-100 text-gray-600"}`}>
                                   {statusLabel[m.status] ?? m.status}
@@ -690,8 +710,8 @@ export default function Reports() {
                                   {dirLabel[m.direction]}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-gray-500 truncate max-w-[100px]">{m.campaign?.name ?? "—"}</td>
-                              <td className="py-2.5 px-3 text-gray-500">{m.user?.name ?? m.user?.email ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-gray-500 truncate max-w-[100px]">{m.campaign?.name ?? "â€”"}</td>
+                              <td className="py-2.5 px-3 text-gray-500">{m.user?.name ?? m.user?.email ?? "â€”"}</td>
                               <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
                                 {new Date(m.createdAt).toLocaleString("ar-EG", {
                                   month: "short", day: "numeric",
@@ -707,8 +727,8 @@ export default function Reports() {
                     {/* Pagination */}
                     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                       <span className="text-xs text-gray-400">
-                        {((logs.page - 1) * logs.limit + 1).toLocaleString("ar-EG")} –{" "}
-                        {Math.min(logs.page * logs.limit, logs.total).toLocaleString("ar-EG")} من{" "}
+                        {((logs.page - 1) * logs.limit + 1).toLocaleString("ar-EG")} â€“{" "}
+                        {Math.min(logs.page * logs.limit, logs.total).toLocaleString("ar-EG")} Ù…Ù†{" "}
                         {logs.total.toLocaleString("ar-EG")}
                       </span>
                       <div className="flex gap-1">
@@ -738,3 +758,6 @@ export default function Reports() {
     </div>
   );
 }
+
+
+

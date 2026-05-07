@@ -1,12 +1,12 @@
-// src/app/api/register/route.ts
+﻿// src/app/api/register/route.ts
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(req: Request) {
-  // ── Rate Limit: 5 تسجيلات كل ساعة لنفس الـ IP ────────────────────────────
-  const ip     = getIP(req);
+  const ip = getIP(req);
   const result = rateLimit(`register:${ip}`, { limit: 5, windowSecs: 60 * 60 });
 
   if (!result.success) {
@@ -19,7 +19,6 @@ export async function POST(req: Request) {
   try {
     const { email, password, name, phone } = await req.json();
 
-    // ── Validation ────────────────────────────────────────────────────────────
     if (!email || !password) {
       return NextResponse.json(
         { error: "البريد الإلكتروني وكلمة المرور مطلوبان" },
@@ -42,15 +41,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
     }
 
-    // ── التأكد إن البريد مش موجود ─────────────────────────────────────────────
-    // ⚠️ نرجع نفس الرسالة سواء الإيميل موجود أو لأ — بنمنع user enumeration
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
+    }
+
     const existing = await prisma.user.findUnique({
-      where:  { email: email.toLowerCase().trim() },
+      where: { email: email.toLowerCase().trim() },
       select: { id: true },
     });
 
     if (existing) {
-      // نفس رسالة النجاح — مش بنكشف إن الإيميل موجود
       return NextResponse.json(
         { message: "تم إنشاء الحساب بنجاح" },
         { status: 201 }
@@ -59,27 +60,26 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ── إنشاء المستخدم + اشتراك مجاني في transaction واحدة ───────────────────
     const user = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
-          email:    email.toLowerCase().trim(),
-          name:     name.trim(),
-          phone:    phone.trim(),
+          email: email.toLowerCase().trim(),
+          name: name.trim(),
+          phone: normalizedPhone,
           password: hashedPassword,
-          role:     "OWNER",
+          role: "OWNER",
         },
       });
 
       await tx.subscription.create({
         data: {
-          userId:                 newUser.id,
-          plan:                   "free",
-          status:                 "active",
+          userId: newUser.id,
+          plan: "free",
+          status: "active",
           campaignsUsedThisMonth: 0,
-          periodResetAt:          new Date(),
-          currentPeriodStart:     new Date(),
-          currentPeriodEnd:       new Date("2099-12-31"),
+          periodResetAt: new Date(),
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date("2099-12-31"),
         },
       });
 

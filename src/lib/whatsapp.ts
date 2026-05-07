@@ -1,4 +1,5 @@
-import prisma from "@/lib/prisma";
+﻿import prisma from "@/lib/prisma";
+import { normalizePhone } from "@/lib/phone";
 
 export async function sendMessage(
   userId: string,
@@ -11,10 +12,13 @@ export async function sendMessage(
     });
 
     if (!whatsappAccount || !whatsappAccount.accessToken || !whatsappAccount.phoneNumberId) {
-      throw new Error("إعدادات واتساب غير مكتملة لهذا الحساب");
+      throw new Error("Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø­Ø³Ø§Ø¨");
     }
 
-    const normalizedPhone = phone.replace(/\D/g, "");
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      throw new Error("رقم الهاتف غير صالح");
+    }
 
     const response = await fetch(
       `https://graph.facebook.com/v21.0/${whatsappAccount.phoneNumberId}/messages`,
@@ -36,27 +40,27 @@ export async function sendMessage(
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error?.message || "فشل إرسال الرسالة");
+      throw new Error(data.error?.message || "ÙØ´Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø©");
     }
 
-    // ✅ التحسين: ابحث عن الكونتاكت أو أنشئه لو مش موجود
+    // âœ… Ø§Ù„ØªØ­Ø³ÙŠÙ†: Ø§Ø¨Ø­Ø« Ø¹Ù† Ø§Ù„ÙƒÙˆÙ†ØªØ§ÙƒØª Ø£Ùˆ Ø£Ù†Ø´Ø¦Ù‡ Ù„Ùˆ Ù…Ø´ Ù…ÙˆØ¬ÙˆØ¯
     const contact = await prisma.contact.upsert({
       where: { phone_userId: { phone: normalizedPhone, userId } },
-      update: {}, // لا تغير شيء لو موجود
+      update: {}, // Ù„Ø§ ØªØºÙŠØ± Ø´ÙŠØ¡ Ù„Ùˆ Ù…ÙˆØ¬ÙˆØ¯
       create: {
         phone: normalizedPhone,
         userId: userId,
-        name: "عميل جديد", // اسم افتراضي
+        name: "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯", // Ø§Ø³Ù… Ø§ÙØªØ±Ø§Ø¶ÙŠ
       },
     });
 
-    // ✅ تسجيل الرسالة دايماً
+    // âœ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¯Ø§ÙŠÙ…Ø§Ù‹
     await prisma.message.create({
       data: {
         content: message,
         direction: "outbound",
         status: "sent",
-        whatsappId: data.messages?.[0]?.id, // مهم جداً للربط مع الويب هوك
+        whatsappId: data.messages?.[0]?.id, // Ù…Ù‡Ù… Ø¬Ø¯Ø§Ù‹ Ù„Ù„Ø±Ø¨Ø· Ù…Ø¹ Ø§Ù„ÙˆÙŠØ¨ Ù‡ÙˆÙƒ
         userId,
         contactId: contact.id,
       },
@@ -67,3 +71,4 @@ export async function sendMessage(
     throw error;
   }
 }
+
