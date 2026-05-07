@@ -37,7 +37,7 @@ export const handleEasyOrderReceived = inngest.createFunction(
     const order = await step.run("save-order", async () => {
       return prisma.storeOrder.upsert({
         where: {
-          userId_source_externalId: {
+          source_externalId_userId: {
             userId,
             source:     "easyorders",
             externalId: String(externalId || orderNumber || Date.now()),
@@ -51,7 +51,7 @@ export const handleEasyOrderReceived = inngest.createFunction(
           orderNumber:   orderNumber ? String(orderNumber) : undefined,
           customerName:  name,
           customerPhone: phone,
-          total:         total ? String(total) : undefined,
+          total:         total != null ? Number(total) : undefined,
           currency:      currency || "EGP",
           status:        status  || "pending",
           rawData:       rawData ?? undefined,

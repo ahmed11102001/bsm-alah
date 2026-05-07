@@ -51,7 +51,7 @@ export const handleShopifyOrderCreated = inngest.createFunction(
     const order = await step.run("save-order", async () => {
       return prisma.storeOrder.upsert({
         where: {
-          userId_source_externalId: {
+          source_externalId_userId: {
             userId,
             source:     "shopify",
             externalId: String(orderId),
@@ -65,22 +65,11 @@ export const handleShopifyOrderCreated = inngest.createFunction(
           orderNumber:   orderNumber ? String(orderNumber) : undefined,
           customerName:  customerName,
           customerPhone: phone,
-          total:         totalPrice ? String(totalPrice) : undefined,
+          total:         totalPrice != null ? Number(totalPrice) : undefined,
           currency:      currency || "USD",
           status:        "pending",
           rawData:       rawData ?? undefined,
           contactId:     contact.id,
-        },
-      });
-    });
-
-    // ── Step 3: تحديث عداد المزامنة ──────────────────────────────────────
-    await step.run("update-sync-count", async () => {
-      await prisma.shopifyStore.updateMany({
-        where: { userId },
-        data:  {
-          lastSyncAt:  new Date(),
-          totalSynced: { increment: 1 },
         },
       });
     });
