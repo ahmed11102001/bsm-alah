@@ -1,237 +1,160 @@
 // src/inngest/shopify-functions.ts
-// ─── Inngest Functions for Shopify Events ────────────────────────────────────
-// Handles order events from Shopify and triggers WhatsApp automations
+// ─── حفظ بيانات أوردرات Shopify فقط — بدون إرسال تلقائي ─────────────────────
+// الإرسال بيحصل من صفحة الأتمتة عبر قوالب ميتا المعتمدة
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
-import type { Prisma } from "@prisma/client";
+
+// ─── Helper: تنظيف رقم الهاتف ───────────────────────────────────────────────
+function cleanPhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Function 1: Handle Order Created Event
+// Function 1: Order Created — حفظ الأوردر + الـ Contact
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const handleShopifyOrderCreated = inngest.createFunction(
   {
-    id: "shopify-order-created",
+    id:      "shopify-order-created",
     retries: 2,
     triggers: [{ event: "shopify/order.created" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
     const {
       userId,
-      contactId,
       orderId,
       orderNumber,
       totalPrice,
+      currency,
       customerName,
       customerPhone,
+      rawData,
     } = event.data;
 
-    console.log(`[Inngest] Processing order created: ${orderNumber}`);
+    if (!customerPhone) {
+      console.warn(`[Shopify] Order ${orderNumber} has no phone — skipping`);
+      return { skipped: true, reason: "no_phone" };
+    }
 
-    // ── Step 1: Get user and WhatsApp account ────────────────────────────────
-    const user = await step.run("get-user-data", async () => {
-      return await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          whatsappAccount: {
-            select: {
-              accessToken: true,
-              phoneNumberId: true,
-            },
+    const phone = cleanPhone(customerPhone);
+
+    // ── Step 1: Upsert Contact ─────────────────────────────────────────────
+    const contact = await step.run("upsert-contact", async () => {
+      return prisma.contact.upsert({
+        where:  { phone_userId: { phone, userId } },
+        update: { name: customerName || undefined },
+        create: { phone, userId, name: customerName || "عميل شوبيفاي" },
+      });
+    });
+
+    // ── Step 2: Save StoreOrder ────────────────────────────────────────────
+    const order = await step.run("save-order", async () => {
+      return prisma.storeOrder.upsert({
+        where: {
+          userId_source_externalId: {
+            userId,
+            source:     "shopify",
+            externalId: String(orderId),
           },
+        },
+        update: { status: "pending" },
+        create: {
+          userId,
+          source:        "shopify",
+          externalId:    String(orderId),
+          orderNumber:   orderNumber ? String(orderNumber) : undefined,
+          customerName:  customerName,
+          customerPhone: phone,
+          total:         totalPrice ? String(totalPrice) : undefined,
+          currency:      currency || "USD",
+          status:        "pending",
+          rawData:       rawData ?? undefined,
+          contactId:     contact.id,
         },
       });
     });
 
-    if (!user?.whatsappAccount) {
-      console.log(`[Inngest] User ${userId} has no WhatsApp account configured`);
-      return { skipped: true };
-    }
-
-    // ── Step 2: بناء رسالة تأكيد الأوردر ────────────────────────────────────
-    const messageContent = [
-      `مرحباً ${customerName || "عزيزنا"}! 👋`,
-      ``,
-      `✅ تم استلام طلبك بنجاح`,
-      `📦 رقم الطلب: #${orderNumber}`,
-      `💰 الإجمالي: ${totalPrice}`,
-      ``,
-      `سيتم التواصل معك قريباً لتأكيد التفاصيل.`,
-      `شكراً لثقتك بنا! 🙏`,
-    ].join("\n");
-
-    // ── Step 4: Send WhatsApp message ────────────────────────────────────────
-    const result = await step.run(`send-order-message-${orderId}`, async () => {
-      return await sendWhatsAppMessage({
-        toPhone: customerPhone,
-        phoneNumberId: user.whatsappAccount.phoneNumberId,
-        accessToken: user.whatsappAccount.accessToken,
-        messageType: "text",
-        templateName: null,
-        templateLang: "ar",
-        templateVars: null,
-        content: messageContent,
+    // ── Step 3: تحديث عداد المزامنة ──────────────────────────────────────
+    await step.run("update-sync-count", async () => {
+      await prisma.shopifyStore.updateMany({
+        where: { userId },
+        data:  {
+          lastSyncAt:  new Date(),
+          totalSynced: { increment: 1 },
+        },
       });
     });
 
-    // ── Step 5: Log message in database ──────────────────────────────────────
-    if (result.ok) {
-      await step.run("log-message", async () => {
-        await prisma.message.create({
-          data: {
-            userId,
-            contactId,
-            content: messageContent,
-            type: "text",
-            direction: "outbound",
-            status: "sent",
-            whatsappId: result.whatsappMsgId,
-            sentAt: new Date(),
-          },
-        });
-      });
-
-      console.log(`[Inngest] Message sent for order ${orderNumber}`);
-      return { success: true, messageId: result.whatsappMsgId };
-    } else {
-      console.error(
-        `[Inngest] Failed to send message for order ${orderNumber}:`,
-        result.error
-      );
-      return { success: false, error: result.error };
-    }
+    console.log(`[Shopify] ✓ Order #${orderNumber} saved — contact: ${contact.id}`);
+    return { success: true, orderId: order.id, contactId: contact.id };
   }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Function 2: Handle Order Fulfilled Event
+// Function 2: Order Fulfilled — تحديث حالة الشحن
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const handleShopifyOrderFulfilled = inngest.createFunction(
   {
-    id: "shopify-order-fulfilled",
+    id:      "shopify-order-fulfilled",
     retries: 2,
     triggers: [{ event: "shopify/order.fulfilled" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { userId, orderId, orderNumber, customerPhone, trackingUrl } = event.data;
+    const { userId, orderId, orderNumber, trackingUrl, trackingNumber } = event.data;
 
-    console.log(`[Inngest] Processing order fulfilled: ${orderNumber}`);
-
-    // ── Step 1: Get user and WhatsApp account ────────────────────────────────
-    const user = await step.run("get-user-data", async () => {
-      return await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          whatsappAccount: {
-            select: {
-              accessToken: true,
-              phoneNumberId: true,
-            },
-          },
-        },
-      });
-    });
-
-    if (!user?.whatsappAccount) {
-      return { skipped: true };
-    }
-
-    // ── Step 2: Get or create contact ────────────────────────────────────────
-    const contact = await step.run("get-contact", async () => {
-      return await prisma.contact.findFirst({
+    await step.run("update-order-status", async () => {
+      await prisma.storeOrder.updateMany({
         where: {
-          phone: customerPhone.replace(/\D/g, ""),
           userId,
+          source:     "shopify",
+          externalId: String(orderId),
+        },
+        data: {
+          status:  "fulfilled",
+          rawData: trackingUrl || trackingNumber
+            ? { trackingUrl, trackingNumber }
+            : undefined,
         },
       });
     });
 
-    if (!contact) {
-      console.log(`[Inngest] Contact not found for phone ${customerPhone}`);
-      return { skipped: true };
-    }
-
-    // ── Step 3: Prepare fulfillment message ──────────────────────────────────
-    let messageContent = `تم شحن طلبك #${orderNumber}`;
-
-    if (trackingUrl) {
-      messageContent += `\n\nرابط التتبع: ${trackingUrl}`;
-    }
-
-    messageContent += "\n\nشكراً لتعاملك معنا! 📦";
-
-    // ── Step 4: Send WhatsApp message ────────────────────────────────────────
-    const result = await step.run(`send-fulfillment-message-${orderId}`, async () => {
-      return await sendWhatsAppMessage({
-        toPhone: customerPhone,
-        phoneNumberId: user.whatsappAccount.phoneNumberId,
-        accessToken: user.whatsappAccount.accessToken,
-        messageType: "text",
-        templateName: null,
-        templateLang: "ar",
-        templateVars: null,
-        content: messageContent,
-      });
-    });
-
-    // ── Step 5: Log message in database ──────────────────────────────────────
-    if (result.ok) {
-      await step.run("log-message", async () => {
-        await prisma.message.create({
-          data: {
-            userId,
-            contactId: contact.id,
-            content: messageContent,
-            type: "text",
-            direction: "outbound",
-            status: "sent",
-            whatsappId: result.whatsappMsgId,
-            sentAt: new Date(),
-          },
-        });
-      });
-
-      console.log(`[Inngest] Fulfillment message sent for order ${orderNumber}`);
-      return { success: true };
-    } else {
-      console.error(
-        `[Inngest] Failed to send fulfillment message for order ${orderNumber}`
-      );
-      return { success: false, error: result.error };
-    }
+    console.log(`[Shopify] ✓ Order #${orderNumber} marked fulfilled`);
+    return { success: true };
   }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Function 3: Handle Order Updated Event
+// Function 3: Order Updated — تحديث الحالة العامة
 // ─────────────────────────────────────────────────────────────────────────────
-
 export const handleShopifyOrderUpdated = inngest.createFunction(
   {
-    id: "shopify-order-updated",
+    id:      "shopify-order-updated",
     retries: 2,
     triggers: [{ event: "shopify/order.updated" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { userId, orderId, orderNumber, status, fulfillmentStatus, customerPhone } =
-      event.data;
+    const { userId, orderId, orderNumber, status, fulfillmentStatus } = event.data;
 
-    console.log(`[Inngest] Processing order updated: ${orderNumber}`);
+    await step.run("update-order-status", async () => {
+      await prisma.storeOrder.updateMany({
+        where: {
+          userId,
+          source:     "shopify",
+          externalId: String(orderId),
+        },
+        data: { status: fulfillmentStatus || status || "updated" },
+      });
+    });
 
-    // For now, we'll just log the update
-    // In a production system, you might want to send status updates to the customer
-
+    // لو اتشحن، بعت event مخصوص عشان يتعامل معه الـ automation
     if (fulfillmentStatus === "fulfilled") {
-      // Trigger the fulfilled event if it hasn't been triggered yet
       await inngest.send({
         name: "shopify/order.fulfilled",
         data: event.data,
       });
     }
 
+    console.log(`[Shopify] ✓ Order #${orderNumber} status updated`);
     return { processed: true };
   }
 );

@@ -1,6 +1,4 @@
-// src/app/api/easy-orders/URL/route.ts
-// ─── إرجاع Webhook URL الخاص بالمستخدم ──────────────────────────────────────
-
+// src/app/api/easy-orders/url/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -26,9 +24,7 @@ export async function GET(req: NextRequest) {
 
   const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
   const token = userToken(user.id);
-
-  // المسار الصحيح: /api/easy-orders/webhooks
-  const url = `${base}/api/easy-orders/webhooks?uid=${user.id}&token=${token}`;
+  const url   = `${base}/api/easy-orders/webhook?uid=${user.id}&token=${token}`;
 
   return NextResponse.json({ url });
 }

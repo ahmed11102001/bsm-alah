@@ -1,10 +1,9 @@
-// src/inngest/easy-order-functions.ts
+// src/inngest/easy-orders-functions.ts
+// ─── حفظ بيانات أوردرات EasyOrders فقط — بدون إرسال تلقائي ──────────────────
+// الإرسال بيحصل من صفحة الأتمتة عبر قوالب ميتا المعتمدة
+
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Function 4: Handle Easy-Order Order Received
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const handleEasyOrderReceived = inngest.createFunction(
   {
@@ -13,68 +12,65 @@ export const handleEasyOrderReceived = inngest.createFunction(
     triggers: [{ event: "easyorder/order.received" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { userId, contactId, phone, name, orderNumber, total, status } = event.data;
+    const {
+      userId,
+      phone,
+      name,
+      orderNumber,
+      externalId,
+      total,
+      currency,
+      status,
+      rawData,
+    } = event.data;
 
-    const user = await step.run("get-user", async () => {
-      return prisma.user.findUnique({
-        where:  { id: userId },
-        select: { whatsappAccount: { select: { accessToken: true, phoneNumberId: true } } },
+    // ── Step 1: Upsert Contact ─────────────────────────────────────────────
+    const contact = await step.run("upsert-contact", async () => {
+      return prisma.contact.upsert({
+        where:  { phone_userId: { phone, userId } },
+        update: { name: name && name !== "العميل" ? name : undefined },
+        create: { phone, userId, name: name || "عميل" },
       });
     });
 
-    if (!user?.whatsappAccount) return { skipped: true, reason: "no_whatsapp" };
-
-    const lines = [
-      `مرحباً ${name}! 👋`,
-      ``,
-      `✅ تم استلام طلبك بنجاح`,
-    ];
-    if (orderNumber) lines.push(`📦 رقم الطلب: #${orderNumber}`);
-    if (total)       lines.push(`💰 الإجمالي: ${total}`);
-    if (status)      lines.push(`📋 الحالة: ${status}`);
-    lines.push(``, `سيتم التواصل معك قريباً لتأكيد التفاصيل.`, `شكراً لثقتك بنا! 🙏`);
-
-    const content = lines.join("\n");
-
-    const result = await step.run("send-whatsapp", async () => {
-      const res = await fetch(
-        `https://graph.facebook.com/v20.0/${user.whatsappAccount!.phoneNumberId}/messages`,
-        {
-          method:  "POST",
-          headers: {
-            "Content-Type":  "application/json",
-            "Authorization": `Bearer ${user.whatsappAccount!.accessToken}`,
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to:   phone,
-            type: "text",
-            text: { body: content },
-          }),
-        }
-      );
-      const data = await res.json();
-      return { ok: res.ok, whatsappMsgId: data?.messages?.[0]?.id };
-    });
-
-    if (result.ok) {
-      await step.run("log-message", async () => {
-        await prisma.message.create({
-          data: {
+    // ── Step 2: Save StoreOrder ────────────────────────────────────────────
+    const order = await step.run("save-order", async () => {
+      return prisma.storeOrder.upsert({
+        where: {
+          userId_source_externalId: {
             userId,
-            contactId,
-            content,
-            type:      "text",
-            direction: "outbound",
-            status:    "sent",
-            whatsappId: result.whatsappMsgId,
-            sentAt:     new Date(),
+            source:     "easyorders",
+            externalId: String(externalId || orderNumber || Date.now()),
           },
-        });
+        },
+        update: { status, total },
+        create: {
+          userId,
+          source:        "easyorders",
+          externalId:    String(externalId || orderNumber || Date.now()),
+          orderNumber:   orderNumber ? String(orderNumber) : undefined,
+          customerName:  name,
+          customerPhone: phone,
+          total:         total ? String(total) : undefined,
+          currency:      currency || "EGP",
+          status:        status  || "pending",
+          rawData:       rawData ?? undefined,
+          contactId:     contact.id,
+        },
       });
-      return { success: true };
-    }
+    });
 
-    return { success: false };
+    // ── Step 3: تحديث عداد المزامنة في EasyOrdersStore ───────────────────
+    await step.run("update-sync-count", async () => {
+      await prisma.easyOrdersStore.updateMany({
+        where: { userId },
+        data:  {
+          lastSyncAt:  new Date(),
+          totalSynced: { increment: 1 },
+        },
+      });
+    });
+
+    return { success: true, orderId: order.id, contactId: contact.id };
   }
 );

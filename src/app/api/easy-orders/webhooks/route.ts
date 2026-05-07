@@ -1,14 +1,12 @@
-﻿// src/app/api/easy-orders/webhook/route.ts
-// â”€â”€â”€ Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø£ÙˆØ±Ø¯Ø±Ø§Øª EasyOrder ÙˆØ¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„Ø© ÙˆØ§ØªØ³Ø§Ø¨ Ù„Ù„Ø¹Ù…ÙŠÙ„ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// src/app/api/easy-orders/webhooks/route.ts
+// ─── استقبال أوردرات EasyOrders وحفظها في قاعدة البيانات ─────────────────────
+// بدون إرسال رسائل تلقائي — الإرسال يتم من صفحة الأتمتة فقط
 
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import prisma from "@/lib/prisma";
-import { inngest } from "@/inngest/client";
-import { normalizePhone } from "@/lib/phone";
 
-// â”€â”€â”€ ØªÙˆÙ„ÙŠØ¯/Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† token Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Ø¨Ù†Ø¹Ù…Ù„ HMAC(userId, NEXTAUTH_SECRET) â€” Ø¨Ø¯ÙˆÙ† Ù…Ø§ Ù†Ø­ØªØ§Ø¬ field Ø¬Ø¯ÙŠØ¯ ÙÙŠ Ø§Ù„Ù€ DB
+// ─── توليد/التحقق من token المستخدم (HMAC بدون field جديد في DB) ──────────────
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
     .update(userId)
@@ -17,123 +15,119 @@ function userToken(userId: string): string {
 }
 
 export function generateEasyOrderWebhookUrl(userId: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
   const token = userToken(userId);
-  return `${base}/api/easy-orders/webhook?uid=${userId}&token=${token}`;
+  return `${base}/api/easy-orders/webhooks?uid=${userId}&token=${token}`;
 }
 
-// â”€â”€â”€ GET â€” Ù„Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù€ endpoint (Ø¨Ø¹Ø¶ Ø§Ù„Ù…Ù†ØµØ§Øª Ø¨ØªØ¹Ù…Ù„ GET verification) â”€â”€â”€â”€â”€â”€â”€
-export async function GET(req: NextRequest) {
-  return NextResponse.json({ status: "ok", service: "easy-orders Webhook" });
+// ─── GET — للتحقق من الـ endpoint ────────────────────────────────────────────
+export async function GET() {
+  return NextResponse.json({ status: "ok", service: "EasyOrders Webhook" });
 }
 
-// â”€â”€â”€ POST â€” Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø£ÙˆØ±Ø¯Ø± â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── POST — استقبال الأوردر وحفظه ───────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("uid");
     const token  = searchParams.get("token");
 
-    // â”€â”€ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù€ token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── التحقق من الـ token ───────────────────────────────────────────────
     if (!userId || !token || token !== userToken(userId)) {
       console.warn("[EASYORDER] Invalid token for uid:", userId);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // â”€â”€ Parse Ø§Ù„Ù€ body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Parse الـ body ────────────────────────────────────────────────────
     let payload: any;
-    try {
-      payload = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    try { payload = await req.json(); }
+    catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-    console.log("[EASY-ORDER] Received payload:", JSON.stringify(payload).slice(0, 300));
+    console.log("[EASY-ORDER] Received:", JSON.stringify(payload).slice(0, 200));
 
-    // â”€â”€ Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£ÙˆØ±Ø¯Ø± â€” Ø¨ÙŠØ¯Ø¹Ù… ØµÙŠØº Ù…Ø®ØªÙ„ÙØ© Ù„Ù€ EasyOrder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── استخراج بيانات الأوردر — بيدعم صيغ مختلفة ──────────────────────
     const order = payload?.order ?? payload;
 
-    const phone: string =
-      order?.phone                   ??
-      order?.customer_phone          ??
-      order?.client_phone            ??
-      order?.billing_phone           ??
-      order?.customer?.phone         ??
-      order?.billing_address?.phone  ??
-      "";
+    const rawPhone: string =
+      order?.phone               ??
+      order?.customer_phone      ??
+      order?.client_phone        ??
+      order?.billing_phone       ??
+      order?.customer?.phone     ??
+      order?.billing_address?.phone ?? "";
 
     const name: string =
-      order?.name                    ??
-      order?.customer_name           ??
-      order?.client_name             ??
-      order?.customer?.name          ??
-      order?.customer?.first_name    ??
-      "Ø§Ù„Ø¹Ù…ÙŠÙ„";
+      order?.name                ??
+      order?.customer_name       ??
+      order?.client_name         ??
+      order?.customer?.name      ??
+      order?.customer?.first_name ?? "عميل";
+
+    const externalId: string =
+      String(order?.id ?? order?.order_id ?? Date.now());
 
     const orderNumber: string =
-      String(order?.order_number ?? order?.id ?? order?.order_id ?? "");
+      String(order?.order_number ?? order?.id ?? "");
 
     const total: string =
       String(order?.total ?? order?.total_price ?? order?.amount ?? "");
 
-    const status: string =
-      order?.status ?? order?.order_status ?? "Ø¬Ø¯ÙŠØ¯";
+    const currency: string =
+      order?.currency ?? "EGP";
 
-    if (!phone) {
-      console.warn("[EASYORDER] No phone number found in payload");
+    const status: string =
+      order?.status ?? order?.order_status ?? "pending";
+
+    if (!rawPhone) {
+      console.warn("[EASYORDER] No phone in payload");
       return NextResponse.json({ status: "ignored", reason: "no_phone" });
     }
 
-    // ØªÙ†Ø¸ÙŠÙ Ø§Ù„Ø±Ù‚Ù… â€” Ø´ÙŠÙ„ ÙƒÙ„ Ø­Ø§Ø¬Ø© ØºÙŠØ± Ø±Ù‚Ù…
-    const cleanPhone = normalizePhone(phone);
-    if (!cleanPhone) {
-      console.warn("[EASY-ORDER] Invalid phone:", phone);
+    const phone = rawPhone.replace(/\D/g, "");
+    if (phone.length < 9) {
       return NextResponse.json({ status: "ignored", reason: "invalid_phone" });
     }
 
-    // â”€â”€ Ø¬ÙŠØ¨ Ø­Ø³Ø§Ø¨ ÙˆØ§ØªØ³Ø§Ø¨ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const user = await prisma.user.findUnique({
-      where:  { id: userId },
-      select: {
-        whatsappAccount: {
-          select: { accessToken: true, phoneNumberId: true },
-        },
-      },
-    });
-
-    if (!user?.whatsappAccount) {
-      console.warn("[EASY-ORDER] No WhatsApp account for user:", userId);
-      return NextResponse.json({ status: "ignored", reason: "no_whatsapp" });
-    }
-
-    // â”€â”€ Upsert Ø§Ù„Ù€ contact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Upsert Contact ────────────────────────────────────────────────────
     const contact = await prisma.contact.upsert({
-      where:  { phone_userId: { phone: cleanPhone, userId } },
-      update: { name: name !== "Ø§Ù„Ø¹Ù…ÙŠÙ„" ? name : undefined },
-      create: { phone: cleanPhone, userId, name },
+      where:  { phone_userId: { phone, userId } },
+      update: { name: name !== "عميل" ? name : undefined },
+      create: { phone, userId, name },
     });
 
-    // â”€â”€ Ø§Ø¨Ø¹Øª Inngest event Ø¹Ø´Ø§Ù† ÙŠØ¨Ø¹Øª Ø§Ù„Ø±Ø³Ø§Ù„Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    await inngest.send({
-      name: "easyorder/order.received",
-      data: {
+    // ── Upsert StoreOrder ─────────────────────────────────────────────────
+    await prisma.storeOrder.upsert({
+      where: {
+        userId_source_externalId: { userId, source: "easyorders", externalId },
+      },
+      update: { status, total },
+      create: {
         userId,
-        contactId: contact.id,
-        phone:      cleanPhone,
-        name,
+        source:        "easyorders",
+        externalId,
         orderNumber,
+        customerName:  name,
+        customerPhone: phone,
         total,
+        currency,
         status,
+        rawData:       payload,
+        contactId:     contact.id,
       },
     });
 
-    console.log(`[EASYORDER] âœ“ Order #${orderNumber} queued for WhatsApp to ${cleanPhone}`);
+    // ── تحديث عداد المزامنة ───────────────────────────────────────────────
+    await prisma.easyOrdersStore.updateMany({
+      where: { userId },
+      data:  { lastSyncAt: new Date(), totalSynced: { increment: 1 } },
+    });
+
+    console.log(`[EASYORDER] ✓ Order #${orderNumber} saved for user ${userId}`);
+    // دايماً 200 عشان EasyOrders ما يعيدش المحاولة
     return NextResponse.json({ status: "success" });
 
   } catch (err) {
     console.error("[EASYORDER] Unexpected error:", err);
-    // Ø¯Ø§ÙŠÙ…Ø§Ù‹ Ø±Ø¬Ù‘Ø¹ 200 Ø¹Ø´Ø§Ù† Easy-Order Ù…Ø§ ÙŠØ¹ÙŠØ¯Ø´ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }
-
