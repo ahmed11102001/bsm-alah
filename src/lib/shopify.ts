@@ -222,7 +222,7 @@ export async function registerShopifyWebhooks(
     "customers/update",
   ];
 
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/shopify/webhooks`;
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://whatsprosystem.vercel.app"}/api/shopify/webhooks`;
 
   try {
     for (const topic of webhookTopics) {
