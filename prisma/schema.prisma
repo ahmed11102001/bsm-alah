@@ -592,6 +592,7 @@ model StoreOrder {
   currency      String   @default("EGP")
   status        String   @default("pending")
     rawData Json? 
+    contactId String? 
   // العلاقة بالمتجر — واحد من الاتنين بس بيكون موجود
   shopifyStoreId    String?
   shopifyStore      ShopifyStore?    @relation(fields: [shopifyStoreId], references: [id], onDelete: SetNull)
