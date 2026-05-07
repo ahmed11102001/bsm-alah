@@ -134,6 +134,7 @@ model User {
   automationRules AutomationRule[]
   shopifyStore    ShopifyStore?
   easyOrdersStore EasyOrdersStore?
+  storeOrders     StoreOrder[]
   aiAgent         AIAgent?
 
   @@index([email])
@@ -289,6 +290,7 @@ model Contact {
   audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
 
   messages Message[]
+  storeOrders StoreOrder[]
 
   isPinned      Boolean   @default(false)
   isArchived    Boolean   @default(false)
@@ -455,6 +457,10 @@ model ShopifyStore {
   shop          String   @unique // e.g. store.myshopify.com
   accessToken   String   @db.Text
   scope         String?
+
+  // ─── Sync tracking ────────────────────────────────────────────
+  lastSyncAt    DateTime?
+  totalSynced   Int       @default(0)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -463,20 +469,57 @@ model ShopifyStore {
 }
 
 model EasyOrdersStore {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  storeName   String                    // اسم المتجر كما يظهر للتاجر
-  apiKey      String   @db.Text        // مفتاح الـ API الخاص بإيزي أوردرز
-  webhookSecret String @db.Text        // سر التحقق من صحة الطلبات الواردة
+  storeName     String                    // اسم المتجر كما يظهر للتاجر
+  apiKey        String    @db.Text        // مفتاح الـ API الخاص بإيزي أوردرز
+  webhookSecret String    @db.Text        // سر التحقق من صحة الطلبات الواردة
 
-  isActive    Boolean  @default(true)
+  isActive      Boolean   @default(true)
+
+  // ─── Sync tracking ────────────────────────────────────────────
+  lastSyncAt    DateTime?               // آخر مرة تمت المزامنة
+  totalSynced   Int       @default(0)  // إجمالي الطلبات المزامَنة
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// ─── Store Orders ─────────────────────────────────────────────────────────────
+// حفظ بيانات الطلبات القادمة من Shopify و EasyOrders
+
+model StoreOrder {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  source      String  // "shopify" | "easyorders"
+  externalId  String  // رقم الأوردر في المنصة الخارجية
+
+  orderNumber   String?
+  customerName  String?
+  customerPhone String?
+  total         String?
+  currency      String? @default("EGP")
+  status        String? @default("pending")
+
+  rawData     Json?   // الـ payload الكامل للأوردر
+
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([userId, source, externalId])
   @@index([userId])
+  @@index([source])
+  @@index([contactId])
+  @@index([createdAt])
 }
 
 // ─── Automation ───────────────────────────────────────────────────────────────
