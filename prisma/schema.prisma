@@ -72,6 +72,24 @@ enum NotificationType {
   NEW_MESSAGE
 }
 
+// ─── Store Enums ──────────────────────────────────────────────────────────────
+
+enum StoreType {
+  shopify
+  easyorders
+}
+
+enum StoreAutomationType {
+  order_confirm
+  order_shipped
+  promo
+}
+
+enum OrderSource {
+  shopify
+  easyorders
+}
+
 // ─── Automation Enums ─────────────────────────────────────────────────────────
 
 enum TriggerType {
@@ -134,8 +152,11 @@ model User {
   automationRules AutomationRule[]
   shopifyStore    ShopifyStore?
   easyOrdersStore EasyOrdersStore?
-  storeOrders     StoreOrder[]
   aiAgent         AIAgent?
+
+  storeOrders      StoreOrder[]
+  trackedClicks    TrackedClick[]
+  storeAutomations StoreAutomation[]
 
   @@index([email])
   @@index([workspaceId])
@@ -290,7 +311,6 @@ model Contact {
   audience   Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
 
   messages Message[]
-  storeOrders StoreOrder[]
 
   isPinned      Boolean   @default(false)
   isArchived    Boolean   @default(false)
@@ -322,6 +342,7 @@ model Template {
 
   campaigns      Campaign[]
   automationRules AutomationRule[]
+  storeAutomations StoreAutomation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -350,6 +371,13 @@ model Campaign {
   failedCount    Int @default(0)
   totalQueued    Int @default(0)
   queuedCount    Int @default(0)
+
+  // ─── Revenue Attribution ───────────────────────────────────────
+  trackedUrl   String? @db.Text  // الرابط الأصلي اللي حطه العميل
+  revenue      Float   @default(0)
+  ordersCount  Int     @default(0)
+
+  campaignOrders CampaignOrder[]
 
   startedAt   DateTime?
   completedAt DateTime?
@@ -454,72 +482,37 @@ model ShopifyStore {
   userId        String   @unique
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  shop          String   @unique // e.g. store.myshopify.com
+  shop          String   @unique
   accessToken   String   @db.Text
   scope         String?
-
-  // ─── Sync tracking ────────────────────────────────────────────
-  lastSyncAt    DateTime?
-  totalSynced   Int       @default(0)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  orders         StoreOrder[]
+  automations    StoreAutomation[]
 
   @@index([shop])
 }
 
 model EasyOrdersStore {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  storeName     String                    // اسم المتجر كما يظهر للتاجر
-  apiKey        String    @db.Text        // مفتاح الـ API الخاص بإيزي أوردرز
-  webhookSecret String    @db.Text        // سر التحقق من صحة الطلبات الواردة
+  storeName     String
+  apiKey        String   @db.Text
+  webhookSecret String   @db.Text
 
-  isActive      Boolean   @default(true)
+  isActive      Boolean  @default(true)
 
-  // ─── Sync tracking ────────────────────────────────────────────
-  lastSyncAt    DateTime?               // آخر مرة تمت المزامنة
-  totalSynced   Int       @default(0)  // إجمالي الطلبات المزامَنة
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  orders        StoreOrder[]
+  automations   StoreAutomation[]
 
   @@index([userId])
-}
-
-// ─── Store Orders ─────────────────────────────────────────────────────────────
-// حفظ بيانات الطلبات القادمة من Shopify و EasyOrders
-
-model StoreOrder {
-  id          String  @id @default(cuid())
-  userId      String
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  source      String  // "shopify" | "easyorders"
-  externalId  String  // رقم الأوردر في المنصة الخارجية
-
-  orderNumber   String?
-  customerName  String?
-  customerPhone String?
-  total         String?
-  currency      String? @default("EGP")
-  status        String? @default("pending")
-
-  rawData     Json?   // الـ payload الكامل للأوردر
-
-  contactId   String?
-  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([userId, source, externalId])
-  @@index([userId])
-  @@index([source])
-  @@index([contactId])
-  @@index([createdAt])
 }
 
 // ─── Automation ───────────────────────────────────────────────────────────────
@@ -579,4 +572,123 @@ model AIAgent {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Store Orders ─────────────────────────────────────────────────────────────
+// كل أوردر بييجي من Shopify أو EasyOrders يتحفظ هنا
+
+model StoreOrder {
+  id     String      @id @default(cuid())
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  source      OrderSource
+  externalId  String       // order id في Shopify أو EasyOrders
+  orderNumber String?      // رقم الأوردر المعروض للعميل
+
+  customerPhone String
+  customerName  String?
+  total         Float    @default(0)
+  currency      String   @default("EGP")
+  status        String   @default("pending")
+
+  // العلاقة بالمتجر — واحد من الاتنين بس بيكون موجود
+  shopifyStoreId    String?
+  shopifyStore      ShopifyStore?    @relation(fields: [shopifyStoreId], references: [id], onDelete: SetNull)
+  easyOrdersStoreId String?
+  easyOrdersStore   EasyOrdersStore? @relation(fields: [easyOrdersStoreId], references: [id], onDelete: SetNull)
+
+  // لو الأوردر ده اتنسب لحملة
+  campaignOrder CampaignOrder?
+
+  orderedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([source, externalId, userId])
+  @@index([userId])
+  @@index([customerPhone, userId])
+  @@index([source, userId])
+  @@index([orderedAt])
+}
+
+// ─── Tracked Clicks ───────────────────────────────────────────────────────────
+// كل ضغطة على رابط متتبع في حملة
+
+model TrackedClick {
+  id String @id @default(cuid())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId String
+  contactId  String?
+
+  // الـ token الفريد اللي بيتولد لكل كونتاكت في كل حملة
+  token     String   @unique
+  // الرابط الأصلي اللي هيتحول إليه
+  targetUrl String   @db.Text
+
+  clickedAt DateTime?
+  isClicked Boolean   @default(false)
+
+  // attribution window: 48 ساعة من الكليك
+  attributionExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([userId, isClicked])
+  @@index([attributionExpiresAt])
+}
+
+// ─── Campaign Orders ──────────────────────────────────────────────────────────
+// الأوردرات اللي اتنسبت لحملة معينة (نتيجة Attribution)
+
+model CampaignOrder {
+  id String @id @default(cuid())
+
+  campaignId   String
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  storeOrderId String     @unique
+  storeOrder   StoreOrder @relation(fields: [storeOrderId], references: [id], onDelete: Cascade)
+
+  revenue Float @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([campaignId])
+}
+
+// ─── Store Automations ────────────────────────────────────────────────────────
+// إعدادات الأتمتة لكل متجر (تأكيد أوردر / شحن / عروض)
+
+model StoreAutomation {
+  id     String              @id @default(cuid())
+  userId String
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      StoreAutomationType
+  isEnabled Boolean             @default(false)
+
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // إحصائية: كم رسالة اتبعتت من خلال الأتمتة دي
+  sentCount Int @default(0)
+
+  // العلاقة بالمتجر — واحد من الاتنين
+  shopifyStoreId    String?
+  shopifyStore      ShopifyStore?    @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+  easyOrdersStoreId String?
+  easyOrdersStore   EasyOrdersStore? @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // كل متجر ما يكونش عنده أكتر من automation من نفس النوع
+  @@unique([shopifyStoreId, type])
+  @@unique([easyOrdersStoreId, type])
+  @@index([userId])
+  @@index([shopifyStoreId])
+  @@index([easyOrdersStoreId])
 }

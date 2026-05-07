@@ -1,4 +1,4 @@
-﻿import { after, NextRequest, NextResponse } from "next/server";
+﻿﻿import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
@@ -433,5 +433,3 @@ function mapStatus(waStatus: string): MessageStatus {
   };
   return map[waStatus] || MessageStatus.pending;
 }
-
-

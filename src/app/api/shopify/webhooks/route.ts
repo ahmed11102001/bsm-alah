@@ -1,49 +1,29 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+﻿// src/app/api/shopify/webhooks/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyShopifyWebhookSignature } from "@/lib/shopify";
 import { inngest } from "@/inngest/client";
-import { normalizePhone } from "@/lib/phone";
+import { attributeOrderToCampaign } from "@/lib/attribution";
 
-/**
- * POST /api/shopify/webhooks
- * 
- * Receives webhook events from Shopify.
- * Handles orders, customers, and fulfillment events.
- * 
- * Headers:
- * - X-Shopify-Hmac-SHA256: HMAC signature
- * - X-Shopify-Shop-Id: Shop ID
- * - X-Shopify-Topic: Webhook topic
- */
 export async function POST(req: NextRequest) {
   try {
-    // â”€â”€ Step 1: Get raw body for signature verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const rawBody = await req.text();
-
-    // â”€â”€ Step 2: Extract headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const rawBody    = await req.text();
     const hmacHeader = req.headers.get("X-Shopify-Hmac-SHA256") || "";
-    const shopId = req.headers.get("X-Shopify-Shop-Id") || "";
-    const topic = req.headers.get("X-Shopify-Topic") || "";
+    const topic      = req.headers.get("X-Shopify-Topic")       || "";
 
-    // â”€â”€ Step 3: Verify webhook signature â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const isValid = await verifyShopifyWebhookSignature(rawBody, hmacHeader);
-
     if (!isValid) {
-      console.warn("[Shopify Webhook] Invalid signature - rejecting request");
+      console.warn("[Shopify Webhook] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    // â”€â”€ Step 4: Parse webhook payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let payload: any;
     try {
       payload = JSON.parse(rawBody);
-    } catch (error) {
-      console.error("[Shopify Webhook] Failed to parse JSON:", error);
+    } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    // â”€â”€ Step 5: Find the Shopify store in database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // Ø§Ù„Ù€ domain Ø¨ÙŠÙŠØ¬ÙŠ ÙÙŠ header X-Shopify-Shop-Domain â€” Ø£Ø¯Ù‚ Ù…Ù† Ø§Ù„Ù€ payload
     const shopDomain =
       req.headers.get("X-Shopify-Shop-Domain") ||
       req.headers.get("x-shopify-shop-domain") ||
@@ -51,231 +31,205 @@ export async function POST(req: NextRequest) {
       "";
 
     if (!shopDomain) {
-      console.warn("[Shopify Webhook] No shop domain found in headers or payload");
+      console.warn("[Shopify Webhook] No shop domain");
       return NextResponse.json({ status: "ignored" });
     }
 
     const shopifyStore = await prisma.shopifyStore.findFirst({
       where:  { shop: shopDomain },
-      select: { userId: true, shop: true },
+      select: { id: true, userId: true, shop: true },
     });
 
     if (!shopifyStore) {
-      console.warn(`[Shopify Webhook] Store not found for domain: ${shopDomain}`);
+      console.warn(`[Shopify Webhook] Store not found: ${shopDomain}`);
       return NextResponse.json({ status: "ignored" });
     }
 
-    const userId = shopifyStore.userId;
-
-    // â”€â”€ Step 6: Route webhook based on topic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    console.log(`[Shopify Webhook] Received ${topic} for shop: ${shopifyStore.shop}`);
+    console.log(`[Shopify Webhook] ${topic} — shop: ${shopifyStore.shop}`);
 
     switch (topic) {
       case "orders/create":
-        await handleOrderCreated(payload, userId);
+        await handleOrderCreated(payload, shopifyStore.userId, shopifyStore.id);
         break;
-
       case "orders/updated":
-        await handleOrderUpdated(payload, userId);
+        await handleOrderUpdated(payload, shopifyStore.userId);
         break;
-
       case "orders/fulfilled":
-        await handleOrderFulfilled(payload, userId);
+        await handleOrderFulfilled(payload, shopifyStore.userId, shopifyStore.id);
         break;
-
       case "customers/create":
-        await handleCustomerCreated(payload, userId);
+        await handleCustomerCreated(payload, shopifyStore.userId);
         break;
-
       case "customers/update":
-        await handleCustomerUpdated(payload, userId);
+        await handleCustomerUpdated(payload, shopifyStore.userId);
         break;
-
       default:
         console.log(`[Shopify Webhook] Unhandled topic: ${topic}`);
     }
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
-    console.error("[Shopify Webhook] Error processing webhook:", error);
-    // Always return 200 to prevent Shopify from retrying
+    console.error("[Shopify Webhook] Unexpected error:", error);
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Webhook Handlers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async function handleOrderCreated(order: any, userId: string) {
+async function handleOrderCreated(order: any, userId: string, shopifyStoreId: string) {
   try {
-    console.log(`[Shopify] Order created: ${order.id}`);
+    const rawPhone: string =
+      order.customer?.phone || order.billing_address?.phone || "";
 
-    // Get customer phone number
-    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
-    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
-
-    if (!customerPhone) {
-      console.warn(`[Shopify] Order ${order.id} has no customer phone`);
+    if (!rawPhone) {
+      console.warn(`[Shopify] Order ${order.id} — no phone, skipping`);
       return;
     }
 
+    const cleanPhone   = rawPhone.replace(/\D/g, "");
+    const customerName = [order.customer?.first_name, order.customer?.last_name]
+      .filter(Boolean).join(" ") || "عميل";
+    const revenue    = parseFloat(order.total_price ?? "0") || 0;
+    const externalId = String(order.id);
+
     // Upsert contact
     const contact = await prisma.contact.upsert({
-      where: {
-        phone_userId: {
-          phone: customerPhone,
-          userId,
-        },
-      },
-      update: {
-        name: order.customer?.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
-      },
+      where:  { phone_userId: { phone: cleanPhone, userId } },
+      update: { name: customerName },
+      create: { phone: cleanPhone, userId, name: customerName },
+    });
+
+    // حفظ StoreOrder
+    const storeOrder = await prisma.storeOrder.upsert({
+      where:  { source_externalId_userId: { source: "shopify", externalId, userId } },
+      update: { status: order.financial_status ?? "pending", total: revenue },
       create: {
-        phone: customerPhone,
         userId,
-        name: order.customer?.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
+        source:        "shopify",
+        externalId,
+        orderNumber:   String(order.order_number ?? ""),
+        customerPhone: cleanPhone,
+        customerName,
+        total:         revenue,
+        currency:      order.currency ?? "EGP",
+        status:        order.financial_status ?? "pending",
+        shopifyStoreId,
+        orderedAt:     order.created_at ? new Date(order.created_at) : new Date(),
       },
     });
 
-    // Trigger Inngest event for order creation
+    // Revenue Attribution
+    await attributeOrderToCampaign({
+      userId,
+      customerPhone: cleanPhone,
+      storeOrderId:  storeOrder.id,
+      revenue,
+    });
+
+    // Inngest: رسالة تأكيد الأوردر
     await inngest.send({
       name: "shopify/order.created",
       data: {
         userId,
-        contactId: contact.id,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        totalPrice: order.total_price,
-        customerName: order.customer?.first_name,
+        contactId:     contact.id,
+        orderId:       order.id,
+        orderNumber:   order.order_number,
+        totalPrice:    order.total_price,
+        customerName,
         customerEmail: order.customer?.email,
-        customerPhone,
+        customerPhone: cleanPhone,
+        shopifyStoreId,
       },
     });
   } catch (error) {
-    console.error("[Shopify] Error handling order created:", error);
+    console.error("[Shopify] handleOrderCreated error:", error);
   }
 }
 
 async function handleOrderUpdated(order: any, userId: string) {
   try {
-    console.log(`[Shopify] Order updated: ${order.id}`);
-
-    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
-    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
-
-    if (!customerPhone) {
-      return;
-    }
-
-    // Trigger Inngest event for order update
-    await inngest.send({
-      name: "shopify/order.updated",
-      data: {
-        userId,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        status: order.financial_status,
-        fulfillmentStatus: order.fulfillment_status,
-        customerPhone,
-      },
+    await prisma.storeOrder.updateMany({
+      where: { source: "shopify", externalId: String(order.id), userId },
+      data:  { status: order.financial_status ?? "pending" },
     });
+
+    // لو اتشحن من orders/updated — بعت fulfilled event
+    if (order.fulfillment_status === "fulfilled") {
+      const rawPhone = order.customer?.phone || order.billing_address?.phone || "";
+      if (!rawPhone) return;
+      await inngest.send({
+        name: "shopify/order.fulfilled",
+        data: {
+          userId,
+          orderId:           order.id,
+          orderNumber:       order.order_number,
+          customerPhone:     rawPhone.replace(/\D/g, ""),
+          trackingUrl:       order.fulfillments?.[0]?.tracking_url ?? null,
+          fulfillmentStatus: order.fulfillment_status,
+        },
+      });
+    }
   } catch (error) {
-    console.error("[Shopify] Error handling order updated:", error);
+    console.error("[Shopify] handleOrderUpdated error:", error);
   }
 }
 
-async function handleOrderFulfilled(order: any, userId: string) {
+async function handleOrderFulfilled(order: any, userId: string, shopifyStoreId: string) {
   try {
-    console.log(`[Shopify] Order fulfilled: ${order.id}`);
+    const rawPhone = order.customer?.phone || order.billing_address?.phone || "";
+    if (!rawPhone) return;
 
-    const customerPhoneRaw = order.customer?.phone || order.billing_address?.phone;
-    const customerPhone = customerPhoneRaw ? normalizePhone(customerPhoneRaw) : null;
+    const cleanPhone = rawPhone.replace(/\D/g, "");
 
-    if (!customerPhone) {
-      return;
-    }
+    await prisma.storeOrder.updateMany({
+      where: { source: "shopify", externalId: String(order.id), userId },
+      data:  { status: "fulfilled" },
+    });
 
-    // Get tracking information if available
-    const fulfillments = order.fulfillments || [];
-    const trackingInfo = fulfillments
-      .flatMap((f: any) => f.tracking_info?.url || [])
-      .filter(Boolean);
+    const trackingUrl: string | null =
+      order.fulfillments
+        ?.flatMap((f: any) => f.tracking_urls ?? [f.tracking_url].filter(Boolean))
+        ?.[0] ?? null;
 
-    // Trigger Inngest event for order fulfillment
     await inngest.send({
       name: "shopify/order.fulfilled",
       data: {
         userId,
-        orderId: order.id,
-        orderNumber: order.order_number,
-        customerPhone,
-        trackingUrl: trackingInfo[0] || null,
+        orderId:           order.id,
+        orderNumber:       order.order_number,
+        customerPhone:     cleanPhone,
+        trackingUrl,
         fulfillmentStatus: order.fulfillment_status,
+        shopifyStoreId,
       },
     });
   } catch (error) {
-    console.error("[Shopify] Error handling order fulfilled:", error);
+    console.error("[Shopify] handleOrderFulfilled error:", error);
   }
 }
 
 async function handleCustomerCreated(customer: any, userId: string) {
   try {
-    console.log(`[Shopify] Customer created: ${customer.id}`);
-
-    const phoneRaw = customer.phone || customer.default_address?.phone;
-    const phoneNormalized = phoneRaw ? normalizePhone(phoneRaw) : null;
-
-    if (!phoneNormalized) {
-      console.warn(`[Shopify] Customer ${customer.id} has no phone`);
-      return;
-    }
-
-    // Upsert contact
+    const phone = customer.phone || customer.default_address?.phone;
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, "");
     await prisma.contact.upsert({
-      where: {
-        phone_userId: {
-          phone: phoneNormalized,
-          userId,
-        },
-      },
+      where:  { phone_userId: { phone: cleanPhone, userId } },
       update: {},
-      create: {
-        phone: phoneNormalized,
-        userId,
-        name: customer.first_name || "Ø¹Ù…ÙŠÙ„ Ø¬Ø¯ÙŠØ¯",
-      },
+      create: { phone: cleanPhone, userId, name: customer.first_name || "عميل" },
     });
-
-    console.log(`[Shopify] Customer ${customer.id} saved to contacts`);
   } catch (error) {
-    console.error("[Shopify] Error handling customer created:", error);
+    console.error("[Shopify] handleCustomerCreated error:", error);
   }
 }
 
 async function handleCustomerUpdated(customer: any, userId: string) {
   try {
-    console.log(`[Shopify] Customer updated: ${customer.id}`);
-
-    const phoneRaw = customer.phone || customer.default_address?.phone;
-    const phoneNormalized = phoneRaw ? normalizePhone(phoneRaw) : null;
-
-    if (!phoneNormalized) {
-      return;
-    }
-
-    // Update contact
+    const phone = customer.phone || customer.default_address?.phone;
+    if (!phone) return;
     await prisma.contact.updateMany({
-      where: {
-        phone: phoneNormalized,
-        userId,
-      },
-      data: {
-        name: customer.first_name || undefined,
-      },
+      where: { phone: phone.replace(/\D/g, ""), userId },
+      data:  { name: customer.first_name || undefined },
     });
   } catch (error) {
-    console.error("[Shopify] Error handling customer updated:", error);
+    console.error("[Shopify] handleCustomerUpdated error:", error);
   }
 }
-

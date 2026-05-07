@@ -1,12 +1,10 @@
 // src/app/api/easy-orders/webhooks/route.ts
-// ─── استقبال أوردرات EasyOrders وحفظها في قاعدة البيانات ─────────────────────
-// بدون إرسال رسائل تلقائي — الإرسال يتم من صفحة الأتمتة فقط
-
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import prisma from "@/lib/prisma";
+import { inngest } from "@/inngest/client";
+import { attributeOrderToCampaign } from "@/lib/attribution";
 
-// ─── توليد/التحقق من token المستخدم (HMAC بدون field جديد في DB) ──────────────
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
     .update(userId)
@@ -20,112 +18,122 @@ export function generateEasyOrderWebhookUrl(userId: string): string {
   return `${base}/api/easy-orders/webhooks?uid=${userId}&token=${token}`;
 }
 
-// ─── GET — للتحقق من الـ endpoint ────────────────────────────────────────────
 export async function GET() {
-  return NextResponse.json({ status: "ok", service: "EasyOrders Webhook" });
+  return NextResponse.json({ status: "ok", service: "EasyOrder Webhook" });
 }
 
-// ─── POST — استقبال الأوردر وحفظه ───────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("uid");
     const token  = searchParams.get("token");
 
-    // ── التحقق من الـ token ───────────────────────────────────────────────
     if (!userId || !token || token !== userToken(userId)) {
       console.warn("[EASYORDER] Invalid token for uid:", userId);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Parse الـ body ────────────────────────────────────────────────────
     let payload: any;
-    try { payload = await req.json(); }
-    catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
+    try {
+      payload = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
-    console.log("[EASY-ORDER] Received:", JSON.stringify(payload).slice(0, 200));
+    console.log("[EASYORDER] Payload:", JSON.stringify(payload).slice(0, 300));
 
-    // ── استخراج بيانات الأوردر — بيدعم صيغ مختلفة ──────────────────────
+    // ── استخراج بيانات الأوردر — بيدعم صيغ مختلفة ───────────────────────────
     const order = payload?.order ?? payload;
 
     const rawPhone: string =
-      order?.phone               ??
-      order?.customer_phone      ??
-      order?.client_phone        ??
-      order?.billing_phone       ??
-      order?.customer?.phone     ??
+      order?.phone              ??
+      order?.customer_phone     ??
+      order?.client_phone       ??
+      order?.billing_phone      ??
+      order?.customer?.phone    ??
       order?.billing_address?.phone ?? "";
 
-    const name: string =
-      order?.name                ??
-      order?.customer_name       ??
-      order?.client_name         ??
-      order?.customer?.name      ??
-      order?.customer?.first_name ?? "عميل";
+    const customerName: string =
+      order?.name               ??
+      order?.customer_name      ??
+      order?.client_name        ??
+      order?.customer?.name     ??
+      order?.customer?.first_name ?? "العميل";
 
-    const externalId: string =
-      String(order?.id ?? order?.order_id ?? Date.now());
-
-    const orderNumber: string =
-      String(order?.order_number ?? order?.id ?? "");
-
-    const total: string =
-      String(order?.total ?? order?.total_price ?? order?.amount ?? "");
-
-    const currency: string =
-      order?.currency ?? "EGP";
-
-    const status: string =
-      order?.status ?? order?.order_status ?? "pending";
+    const orderNumber = String(order?.order_number ?? order?.id ?? order?.order_id ?? "");
+    const totalStr    = String(order?.total ?? order?.total_price ?? order?.amount ?? "0");
+    const revenue     = parseFloat(totalStr) || 0;
+    const status      = order?.status ?? order?.order_status ?? "جديد";
+    const externalId  = String(order?.id ?? order?.order_id ?? orderNumber);
 
     if (!rawPhone) {
       console.warn("[EASYORDER] No phone in payload");
       return NextResponse.json({ status: "ignored", reason: "no_phone" });
     }
 
-    const phone = rawPhone.replace(/\D/g, "");
-    if (phone.length < 9) {
+    const cleanPhone = rawPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 9) {
+      console.warn("[EASYORDER] Phone too short:", cleanPhone);
       return NextResponse.json({ status: "ignored", reason: "invalid_phone" });
     }
 
-    // ── Upsert Contact ────────────────────────────────────────────────────
-    const contact = await prisma.contact.upsert({
-      where:  { phone_userId: { phone, userId } },
-      update: { name: name !== "عميل" ? name : undefined },
-      create: { phone, userId, name },
+    // ── جيب المتجر ────────────────────────────────────────────────────────────
+    const easyStore = await prisma.easyOrdersStore.findUnique({
+      where:  { userId },
+      select: { id: true },
     });
 
-    // ── Upsert StoreOrder ─────────────────────────────────────────────────
-    await prisma.storeOrder.upsert({
-      where: {
-        userId_source_externalId: { userId, source: "easyorders", externalId },
-      },
-      update: { status, total },
+    // ── Upsert contact ────────────────────────────────────────────────────────
+    const contact = await prisma.contact.upsert({
+      where:  { phone_userId: { phone: cleanPhone, userId } },
+      update: { name: customerName !== "العميل" ? customerName : undefined },
+      create: { phone: cleanPhone, userId, name: customerName },
+    });
+
+    // ── حفظ StoreOrder ────────────────────────────────────────────────────────
+    const storeOrder = await prisma.storeOrder.upsert({
+      where:  { source_externalId_userId: { source: "easyorders", externalId, userId } },
+      update: { status, total: revenue },
       create: {
         userId,
-        source:        "easyorders",
+        source:           "easyorders",
         externalId,
         orderNumber,
-        customerName:  name,
-        customerPhone: phone,
-        total,
-        currency,
+        customerPhone:    cleanPhone,
+        customerName,
+        total:            revenue,
+        currency:         "EGP",
         status,
-        rawData:       payload,
-        contactId:     contact.id,
+        easyOrdersStoreId: easyStore?.id ?? null,
+        orderedAt:        new Date(),
       },
     });
 
-    // ── تحديث عداد المزامنة ───────────────────────────────────────────────
-    await prisma.easyOrdersStore.updateMany({
-      where: { userId },
-      data:  { lastSyncAt: new Date(), totalSynced: { increment: 1 } },
+    // ── Revenue Attribution ───────────────────────────────────────────────────
+    await attributeOrderToCampaign({
+      userId,
+      customerPhone: cleanPhone,
+      storeOrderId:  storeOrder.id,
+      revenue,
     });
 
-    console.log(`[EASYORDER] ✓ Order #${orderNumber} saved for user ${userId}`);
-    // دايماً 200 عشان EasyOrders ما يعيدش المحاولة
-    return NextResponse.json({ status: "success" });
+    // ── Inngest: رسالة تأكيد الأوردر ─────────────────────────────────────────
+    await inngest.send({
+      name: "easyorder/order.received",
+      data: {
+        userId,
+        contactId:        contact.id,
+        phone:            cleanPhone,
+        name:             customerName,
+        orderNumber,
+        total:            totalStr,
+        status,
+        easyOrdersStoreId: easyStore?.id ?? null,
+      },
+    });
 
+    console.log(`[EASYORDER] ✓ Order #${orderNumber} processed for ${cleanPhone}`);
+    return NextResponse.json({ status: "success" });
   } catch (err) {
     console.error("[EASYORDER] Unexpected error:", err);
     return NextResponse.json({ status: "error" }, { status: 200 });
