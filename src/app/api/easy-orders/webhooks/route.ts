@@ -1,4 +1,4 @@
-// src/app/api/easyorder/webhook/route.ts
+// src/app/api/easy-orders/webhook/route.ts
 // ─── استقبال أوردرات EasyOrder وإرسال رسالة واتساب للعميل ─────────────────
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,12 +18,12 @@ function userToken(userId: string): string {
 export function generateEasyOrderWebhookUrl(userId: string): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
   const token = userToken(userId);
-  return `${base}/api/easyorder/webhook?uid=${userId}&token=${token}`;
+  return `${base}/api/easy-orders/webhook?uid=${userId}&token=${token}`;
 }
 
 // ─── GET — للتحقق من الـ endpoint (بعض المنصات بتعمل GET verification) ───────
 export async function GET(req: NextRequest) {
-  return NextResponse.json({ status: "ok", service: "EasyOrder Webhook" });
+  return NextResponse.json({ status: "ok", service: "easy-orders Webhook" });
 }
 
 // ─── POST — استقبال الأوردر ──────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    console.log("[EASYORDER] Received payload:", JSON.stringify(payload).slice(0, 300));
+    console.log("[EASY-ORDER] Received payload:", JSON.stringify(payload).slice(0, 300));
 
     // ── استخراج بيانات الأوردر — بيدعم صيغ مختلفة لـ EasyOrder ──────────
     const order = payload?.order ?? payload;
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // تنظيف الرقم — شيل كل حاجة غير رقم
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length < 9) {
-      console.warn("[EASYORDER] Phone too short:", cleanPhone);
+      console.warn("[EASY-ORDER] Phone too short:", cleanPhone);
       return NextResponse.json({ status: "ignored", reason: "invalid_phone" });
     }
 
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user?.whatsappAccount) {
-      console.warn("[EASYORDER] No WhatsApp account for user:", userId);
+      console.warn("[EASY-ORDER] No WhatsApp account for user:", userId);
       return NextResponse.json({ status: "ignored", reason: "no_whatsapp" });
     }
 
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("[EASYORDER] Unexpected error:", err);
-    // دايماً رجّع 200 عشان EasyOrder ما يعيدش المحاولة
+    // دايماً رجّع 200 عشان Easy-Order ما يعيدش المحاولة
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }

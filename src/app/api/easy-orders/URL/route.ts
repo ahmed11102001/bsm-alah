@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
   const token = userToken(user.id);
-  const url   = `${base}/api/easyorder/webhook?uid=${user.id}&token=${token}`;
+  const url   = `${base}/api/easy-orders/webhook?uid=${user.id}&token=${token}`;
 
   return NextResponse.json({ url });
 }

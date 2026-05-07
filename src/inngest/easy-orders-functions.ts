@@ -1,14 +1,14 @@
-// src/inngest/easyorder-functions.ts
+// src/inngest/easy-order-functions.ts
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Function 4: Handle EasyOrder Order Received
+// Function 4: Handle Easy-Order Order Received
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const handleEasyOrderReceived = inngest.createFunction(
   {
-    id:      "easyorder-order-received",
+    id:      "easy-order-order-received",
     retries: 2,
     triggers: [{ event: "easyorder/order.received" }],
   },
