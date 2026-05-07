@@ -1,4 +1,4 @@
-// src/app/api/easyorder/url/route.ts
+// src/app/api/easy-orders/URL/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
