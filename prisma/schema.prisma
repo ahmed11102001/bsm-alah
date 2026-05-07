@@ -506,6 +506,9 @@ model EasyOrdersStore {
 
   isActive      Boolean  @default(true)
 
+  lastSyncAt    DateTime?
+  totalSynced   Int      @default(0)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
