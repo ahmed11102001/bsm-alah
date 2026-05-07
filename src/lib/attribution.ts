@@ -45,21 +45,31 @@ export async function attributeOrderToCampaign(params: {
 
   const now = new Date();
 
+  // ابص هل في ContactId لهذا الرقم
+  const contact = await prisma.contact.findFirst({
+    where: {
+      phone:  cleanPhone,
+      userId,
+    },
+    select: { id: true },
+  });
+
+  if (!contact) {
+    return { attributed: false };
+  }
+
   // ابص هل في TrackedClick:
   // - نفس الـ userId
-  // - نفس الرقم (عن طريق contactId)
+  // - نفس الـ contactId
   // - اتضغط فعلاً (isClicked = true)
   // - لسه في الـ attribution window (attributionExpiresAt > now)
   // رتب من الأحدث لأن هناخد الحملة الأخيرة اللي الشخص ده ضغط عليها
   const click = await prisma.trackedClick.findFirst({
     where: {
       userId,
+      contactId:            contact.id,
       isClicked:            true,
       attributionExpiresAt: { gt: now },
-      contact: {
-        phone: cleanPhone,
-        userId,
-      },
     },
     orderBy: { clickedAt: "desc" },
     select: {
