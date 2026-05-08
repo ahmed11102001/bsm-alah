@@ -6,9 +6,10 @@ import { Calendar, ArrowRight } from "lucide-react";
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const article = await prisma.article.findUnique({
-    where: { slug: params.slug, published: true },
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const article = await prisma.article.findFirst({
+    where: { slug, published: true },
     select: { title: true, excerpt: true, coverImage: true },
   });
   if (!article) return { title: "مقال غير موجود" };
@@ -19,9 +20,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
-  const article = await prisma.article.findUnique({
-    where: { slug: params.slug, published: true },
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const article = await prisma.article.findFirst({
+    where: { slug, published: true },
   });
 
   if (!article) notFound();
