@@ -23,8 +23,8 @@ const geistMono = Geist_Mono({
 // إعدادات الـ Metadata لحل مشكلة ظهور الرابط كنص وتفعيل المعاينة (Preview)
 export const metadata: Metadata = {
   title: {
-    default: "WhatsProf - واتس برو",
-    template: "%s | WhatsProf",
+    default: "WhatsPro - واتس برو",
+    template: "%s | WhatsPro",
   },
   description: "المنصة الرائدة لإرسال رسائل واتساب جماعية وحملات تسويقية ذكية وموثوقة.",
   
@@ -40,10 +40,10 @@ export const metadata: Metadata = {
 
   // إعدادات المعاينة عند مشاركة الرابط على السوشيال ميديا أو واتساب
   openGraph: {
-    title: "WhatsProf - واتس برو لإرسال رسائل الواتساب",
+    title: "WhatsPro -  واتس برو ",
     description: "أرسل آلاف الرسائل لعملائك بنقرة واحدة مع تقارير مفصلة وأتمتة كاملة.",
-    url: "https://whatsprof.com", // استبدله برابط موقعك الحقيقي
-    siteName: "WhatsProf",
+    url: "https://whatsprosystem.vercel.app", // استبدله برابط موقعك الحقيقي
+    siteName: "WhatsPro",
     locale: "ar_EG",
     type: "website",
     images: [
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
         url: "/og-image.png", // تأكد من وضع صورة بهذا الاسم في مجلد public بمقاس 1200x630
         width: 1200,
         height: 630,
-        alt: "WhatsProf Dashboard Preview",
+        alt: "WhatsPro Dashboard Preview",
       },
     ],
   },
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   // إعدادات تويتر
   twitter: {
     card: "summary_large_image",
-    title: "WhatsProf - واتس برو",
+    title: "WhatsPro - واتس برو",
     description: "نظام إرسال رسائل واتساب جماعية احترافي",
     images: ["/og-image.png"],
   },
