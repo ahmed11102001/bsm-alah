@@ -371,8 +371,8 @@ export const t = {
     ],
     resources: [
       { ar: "مركز المساعدة",   en: "Help Center", href: "#" },
-      { ar: "المدونة",          en: "Blog",        href: "#" },
-      { ar: "الشروحات",         en: "Tutorials",   href: "#" },
+      { ar: "المدونة",          en: "Blog",        href: "/articles" },
+      { ar: "الشروحات",         en: "Tutorials",   href: "#how-it-works" },
       { ar: "الأسئلة الشائعة",  en: "FAQ",         href: "#faq" },
     ],
     legal: [
