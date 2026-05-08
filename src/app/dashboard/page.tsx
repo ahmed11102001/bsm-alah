@@ -24,7 +24,7 @@ import {
   Code, LogOut, Plus, TrendingUp, Calendar, ChevronLeft,
   MessageCircle, Bell, Search, Home, CheckCircle, Eye,
   Loader2, ArrowUpRight, Zap, Shield, Phone, Mail,
-  Lock, Wifi, RefreshCw, X, Star, Sun, Moon, Monitor,
+  Lock, Wifi, RefreshCw, X, Star, Sun, Moon, Monitor, ShoppingBag,
 } from "lucide-react";
 import Contacts        from "@/components/dashboard/Contacts";
 import Templates       from "@/components/dashboard/Templates";
@@ -32,6 +32,7 @@ import Campaigns       from "@/components/dashboard/Campaigns";
 import Reports         from "@/components/dashboard/Reports";
 import Automation      from "@/components/dashboard/Automation";
 import API             from "@/components/dashboard/API";
+import Store           from "@/components/dashboard/store";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 
@@ -70,8 +71,7 @@ const sidebarItems = [
   { icon: FileText,     label: "القوالب",         id: "templates"  },
   { icon: MessageSquare,label: "المحادثات",       id: "chat"       },
   { icon: BarChart3,    label: "التقارير",        id: "reports"    },
-  { icon: Settings,     label: "الأتمتة الذكية", id: "automation" },
-  { icon: Code,         label: "API",             id: "api"        },
+  { icon: Settings,     label: "الأتمتة الذكية", id: "automation" },  { icon: ShoppingBag,  label: "المتجر",         id: "store"      },  { icon: Code,         label: "API",             id: "api"        },
 ];
 
 const adminItem = { icon: Shield, label: "Admin", id: "admin" };
@@ -537,6 +537,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       case "campaigns":  return <Campaigns />;
       case "reports":    return <Reports />;
       case "automation": return <Automation />;
+      case "store":      return <Store />;
       case "api":        return <API />;
       case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
