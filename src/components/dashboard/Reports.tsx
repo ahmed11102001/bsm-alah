@@ -24,7 +24,8 @@ import {
   Eye, XCircle, MessageSquare, Clock, Download,
   Printer, FileSpreadsheet, Loader2, ChevronLeft,
   ChevronRight, AlertCircle, UserCheck, Archive,
-  RefreshCw, Shield,
+  RefreshCw, Shield, ShoppingBag, DollarSign,
+  Package, Star, Zap, Store, ArrowUpRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,6 +59,28 @@ interface LogRow {
 }
 
 interface LogsData { total: number; page: number; limit: number; messages: LogRow[] }
+
+// ─── Store Report Types ───────────────────────────────────────────────────────
+interface StoreReportSummary {
+  totalOrders: number; totalRevenue: number;
+  totalCampaignRevenue: number; campaignRevenueShare: number;
+  totalUniqueCustomers: number; storesConnected: number;
+}
+interface CampaignRevenueRow {
+  id: string; name: string; revenue: number; ordersCount: number;
+  sentCount: number; readCount: number; completedAt: string | null; createdAt: string;
+}
+interface TopCustomerRow {
+  phone: string; name: string | null; ordersCount: number; totalSpent: number; currency: string;
+}
+interface OrderStatusRow { status: string; count: number; revenue: number; }
+interface DailyTrendRow  { day: string; orders: number; revenue: number; }
+interface StoreInfoRow   { source: string; name: string; connectedAt: string | null; isActive: boolean; }
+interface StoreReportData {
+  summary: StoreReportSummary; stores: StoreInfoRow[];
+  campaignRevenue: CampaignRevenueRow[]; topCustomers: TopCustomerRow[];
+  ordersByStatus: OrderStatusRow[]; dailyTrend: DailyTrendRow[];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -166,6 +189,10 @@ export default function Reports() {
   const [logSearch, setLogSearch]     = useState("");
   const [logType,   setLogType]       = useState("all");
 
+  // ── Store Report ──────────────────────────────────────────────────
+  const [storeReport, setStoreReport] = useState<StoreReportData | null>(null);
+  const [loadingStore, setLS]         = useState(false);
+
   // ── Fetchers ─────────────────────────────────────────────────────
   const fetchOverview = useCallback(async () => {
     setLO(true);
@@ -205,12 +232,21 @@ export default function Reports() {
     } finally { setLL(false); }
   }, [from, to, logPage, logStatus, logSearch, logType]);
 
+  const fetchStoreReport = useCallback(async () => {
+    setLS(true);
+    try {
+      const r = await fetch(`/api/reports/store?from=${from}&to=${to}`);
+      if (r.ok) setStoreReport(await r.json());
+    } finally { setLS(false); }
+  }, [from, to]);
+
   // Initial load per tab
   useEffect(() => {
     if (tab === "overview")  fetchOverview();
     if (tab === "customers") fetchCustomers();
     if (tab === "team")      fetchTeam();
     if (tab === "logs")      fetchLogs(1);
+    if (tab === "store")     fetchStoreReport();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -326,6 +362,7 @@ export default function Reports() {
             { value: "customers", label: "العملاء",          icon: <Users className="w-4 h-4" /> },
             { value: "team",      label: "الفريق",           icon: <Shield className="w-4 h-4" /> },
             { value: "logs",      label: "سجل النشاط",      icon: <Activity className="w-4 h-4" /> },
+            { value: "store",     label: "تقرير المتجر",    icon: <ShoppingBag className="w-4 h-4" /> },
           ].map((t) => (
             <TabsTrigger
               key={t.value} value={t.value}
@@ -751,6 +788,385 @@ export default function Reports() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ══════════════ STORE REPORT ══════════════ */}
+        <TabsContent value="store">
+          {loadingStore ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-10 h-10 animate-spin text-green-400" />
+            </div>
+          ) : !storeReport ? (
+            <Card className="border border-gray-100 shadow-sm">
+              <CardContent className="p-12 text-center text-gray-400">
+                <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">لا يوجد بيانات متجر متاحة</p>
+                <p className="text-xs mt-1">تأكد من ربط متجر Shopify أو EasyOrders أولاً</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+
+              {/* ── Connected Stores ── */}
+              {storeReport.stores.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-2">
+                  {storeReport.stores.map((s) => (
+                    <div key={s.name}
+                      className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm text-sm">
+                      <Store className="w-4 h-4 text-green-500" />
+                      <span className="font-medium text-gray-700">{s.name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        s.source === "shopify"
+                          ? "bg-green-50 text-green-600"
+                          : "bg-blue-50 text-blue-600"
+                      }`}>
+                        {s.source === "shopify" ? "Shopify" : "EasyOrders"}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        s.isActive ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
+                      }`}>
+                        {s.isActive ? "نشط" : "غير نشط"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── KPIs ── */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Card className="border border-gray-100 shadow-sm col-span-1">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <Package className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">إجمالي الطلبات</p>
+                      <p className="text-xl font-bold text-gray-800">
+                        {storeReport.summary.totalOrders.toLocaleString("ar-EG")}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-gray-100 shadow-sm col-span-1">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                      <DollarSign className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">إجمالي الإيرادات</p>
+                      <p className="text-xl font-bold text-gray-800">
+                        {storeReport.summary.totalRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-gray-100 shadow-sm col-span-1 border-l-4 border-l-[#25D366]">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
+                      <Zap className="w-4 h-4 text-[#25D366]" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">إيرادات الحملات</p>
+                      <p className="text-xl font-bold text-[#25D366]">
+                        {storeReport.summary.totalCampaignRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-gray-100 shadow-sm col-span-1">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                      <TrendingUp className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">نسبة الحملات</p>
+                      <p className="text-xl font-bold text-purple-700">
+                        {storeReport.summary.campaignRevenueShare}%
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-gray-100 shadow-sm col-span-1">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-orange-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">العملاء الفريدون</p>
+                      <p className="text-xl font-bold text-gray-800">
+                        {storeReport.summary.totalUniqueCustomers.toLocaleString("ar-EG")}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-gray-100 shadow-sm col-span-1">
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+                      <Store className="w-4 h-4 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">المتاجر المربوطة</p>
+                      <p className="text-xl font-bold text-gray-800">
+                        {storeReport.summary.storesConnected}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Revenue Attribution — Campaign Bar ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Campaign Revenue Share Visual */}
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-[#25D366]" />
+                      نسبة إيرادات حملات واتساب
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-500">حملات واتساب</span>
+                        <span className="font-bold text-[#25D366]">{storeReport.summary.campaignRevenueShare}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="h-4 rounded-full bg-gradient-to-r from-[#25D366] to-emerald-400 transition-all duration-700"
+                          style={{ width: `${Math.min(storeReport.summary.campaignRevenueShare, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-gray-400">
+                        <span>
+                          إيرادات الحملات: {storeReport.summary.totalCampaignRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                        </span>
+                        <span>
+                          إجمالي: {storeReport.summary.totalRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Orders by Status */}
+                    {storeReport.ordersByStatus.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 mb-2">الطلبات حسب الحالة</p>
+                        {storeReport.ordersByStatus.map((s) => {
+                          const total = storeReport.summary.totalOrders || 1;
+                          const pct = Math.round((s.count / total) * 100);
+                          const colors: Record<string, string> = {
+                            pending:   "bg-yellow-400",
+                            fulfilled: "bg-green-400",
+                            shipped:   "bg-blue-400",
+                            cancelled: "bg-red-400",
+                          };
+                          const labels: Record<string, string> = {
+                            pending: "انتظار", fulfilled: "مكتمل",
+                            shipped: "تم الشحن", cancelled: "ملغي",
+                          };
+                          return (
+                            <div key={s.status}>
+                              <div className="flex justify-between text-xs mb-0.5">
+                                <span className="text-gray-600">{labels[s.status] ?? s.status}</span>
+                                <span className="text-gray-500">{s.count} طلب ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${colors[s.status] ?? "bg-gray-400"}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Daily Revenue Trend Chart */}
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-blue-500" />
+                      اتجاه الطلبات والإيرادات اليومي
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {storeReport.dailyTrend.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات في هذه الفترة</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={storeReport.dailyTrend}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="day" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip
+                            formatter={(val, name) => {
+                              const value = typeof val === "number" ? val : Number(val ?? 0);
+                              return [
+                                name === "revenue"
+                                  ? `${value.toLocaleString("ar-EG")} EGP`
+                                  : value,
+                                name === "revenue" ? "الإيرادات" : "الطلبات",
+                              ];
+                            }}
+                            labelFormatter={(l) => `يوم: ${l}`}
+                          />
+                          <Line type="monotone" dataKey="orders"  stroke="#3b82f6" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="revenue" stroke="#25D366" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Revenue Attribution per Campaign ── */}
+              {storeReport.campaignRevenue.length > 0 && (
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <ArrowUpRight className="w-4 h-4 text-[#25D366]" />
+                      Revenue Attribution — الإيرادات المنسوبة للحملات
+                    </CardTitle>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      كل حملة واتساب وقيمة الطلبات الناتجة عنها مباشرة
+                    </p>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-xs text-gray-400">
+                          <th className="text-right py-2 pr-2">الحملة</th>
+                          <th className="text-center py-2">الإيراد المنسوب</th>
+                          <th className="text-center py-2">الطلبات</th>
+                          <th className="text-center py-2">مرسل</th>
+                          <th className="text-center py-2">قُرئ</th>
+                          <th className="text-center py-2">معدل التحويل</th>
+                          <th className="text-center py-2">الإيراد/رسالة</th>
+                          <th className="text-right py-2 pl-2">التاريخ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {storeReport.campaignRevenue.map((c) => {
+                          const convRate = c.sentCount > 0
+                            ? ((c.ordersCount / c.sentCount) * 100).toFixed(1)
+                            : "0";
+                          const revPerMsg = c.sentCount > 0
+                            ? (c.revenue / c.sentCount).toFixed(1)
+                            : "0";
+                          return (
+                            <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                              <td className="py-3 pr-2">
+                                <div className="font-medium text-gray-800 max-w-[180px] truncate">{c.name}</div>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className="font-bold text-[#25D366]">
+                                  {c.revenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                                </span>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className="bg-blue-50 text-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold">
+                                  {c.ordersCount}
+                                </span>
+                              </td>
+                              <td className="py-3 text-center text-gray-600">{c.sentCount.toLocaleString("ar-EG")}</td>
+                              <td className="py-3 text-center text-gray-600">{c.readCount.toLocaleString("ar-EG")}</td>
+                              <td className="py-3 text-center">
+                                <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${
+                                  parseFloat(convRate) >= 5 ? "bg-green-50 text-green-600"
+                                  : parseFloat(convRate) >= 2 ? "bg-yellow-50 text-yellow-600"
+                                  : "bg-gray-100 text-gray-500"
+                                }`}>
+                                  {convRate}%
+                                </span>
+                              </td>
+                              <td className="py-3 text-center text-gray-500 text-xs">{revPerMsg} EGP</td>
+                              <td className="py-3 pl-2 text-right text-xs text-gray-400">
+                                {c.completedAt
+                                  ? new Date(c.completedAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })
+                                  : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* Revenue Bar Chart */}
+                    <div className="mt-6">
+                      <p className="text-xs font-semibold text-gray-500 mb-3">مقارنة إيرادات الحملات</p>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <BarChart data={storeReport.campaignRevenue.slice(0, 8)} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10 }}
+                            tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100}
+                            tickFormatter={(v) => v.length > 14 ? v.slice(0, 14) + "…" : v} />
+                          <Tooltip
+                            formatter={(val: number) => [`${val.toLocaleString("ar-EG")} EGP`, "الإيراد"]}
+                          />
+                          <Bar dataKey="revenue" fill="#25D366" radius={[0, 4, 4, 0]}>
+                            {storeReport.campaignRevenue.slice(0, 8).map((_, i) => (
+                              <Cell key={i}
+                                fill={i === 0 ? "#25D366" : i === 1 ? "#34d399" : "#6ee7b7"}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* ── Top Customers ── */}
+              {storeReport.topCustomers.length > 0 && (
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Star className="w-4 h-4 text-amber-500" />
+                      أفضل العملاء بالإنفاق (في الفترة المحددة)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-xs text-gray-400">
+                          <th className="text-right py-2 pr-2">#</th>
+                          <th className="text-right py-2">العميل</th>
+                          <th className="text-center py-2">الهاتف</th>
+                          <th className="text-center py-2">الطلبات</th>
+                          <th className="text-left py-2 pl-2">إجمالي الإنفاق</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {storeReport.topCustomers.map((c, i) => (
+                          <tr key={c.phone} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <td className="py-3 pr-2 text-gray-400 text-xs">{i + 1}</td>
+                            <td className="py-3">
+                              <div className="font-medium text-gray-800">{c.name ?? "—"}</div>
+                            </td>
+                            <td className="py-3 text-center text-gray-500 text-xs font-mono">{c.phone}</td>
+                            <td className="py-3 text-center">
+                              <span className="bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs">
+                                {c.ordersCount}
+                              </span>
+                            </td>
+                            <td className="py-3 pl-2 text-left font-bold text-green-600">
+                              {c.totalSpent.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} {c.currency}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
+
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
