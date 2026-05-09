@@ -1,4 +1,4 @@
-﻿// src/app/api/campaigns/route.ts
+// src/app/api/campaigns/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -9,13 +9,13 @@ import {
   incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
 import { enqueueCampaign } from "@/lib/queue";
-import { inngest } from "@/inngest/client";
-import { normalizePhone } from "@/lib/phone";
+import { inngest }         from "@/inngest/client";
 
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
 
+// ─── GET /api/campaigns ───────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,23 +27,66 @@ export async function GET(req: NextRequest) {
 
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const page = Math.max(parseInt(searchParams.get("page") || "1"), 1);
+    const limit  = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const page   = Math.max(parseInt(searchParams.get("page")  || "1"),  1);
 
     const where: any = { userId };
     if (status && status !== "all") where.status = status;
     if (search) where.name = { contains: search, mode: "insensitive" };
 
-    const [campaigns, total] = await Promise.all([
+    const [rawCampaigns, total] = await Promise.all([
       prisma.campaign.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: { template: { select: { name: true, content: true } } },
+        skip:    (page - 1) * limit,
+        take:    limit,
+        include: {
+          template: { select: { name: true, content: true } },
+          // ── عدد الرسائل في الـ Queue لكل حملة ──
+          _count: {
+            select: {
+              messageQueue: true,   // إجمالي كل الـ queue entries
+            },
+          },
+        },
       }),
       prisma.campaign.count({ where }),
     ]);
+
+    // ── احسب queuedCount (الرسائل اللي لسه pending) لكل حملة ─────────────────
+    const campaignIds = rawCampaigns.map(c => c.id);
+
+    const pendingCounts = await prisma.messageQueue.groupBy({
+      by:    ["campaignId"],
+      where: { campaignId: { in: campaignIds }, status: QueueStatus.pending },
+      _count: { id: true },
+    });
+
+    const pendingMap = new Map(
+      pendingCounts.map(p => [p.campaignId, p._count.id])
+    );
+
+    // ── شكّل الـ response بكل البيانات الحقيقية ──────────────────────────────
+    const campaigns = rawCampaigns.map(c => {
+      const totalQueued  = c._count.messageQueue;            // إجمالي الـ queue
+      const queuedCount  = pendingMap.get(c.id) ?? 0;       // الـ pending فعلاً
+
+      return {
+        id:             c.id,
+        name:           c.name,
+        status:         c.status,
+        sentCount:      c.sentCount,
+        deliveredCount: c.deliveredCount,
+        readCount:      c.readCount,
+        failedCount:    c.failedCount,
+        totalQueued,                                          // ✅ من الـ DB
+        queuedCount,                                          // ✅ من الـ DB
+        scheduledAt:    c.scheduledAt,
+        createdAt:      c.createdAt,
+        completedAt:    c.completedAt,
+        template:       c.template,
+      };
+    });
 
     return NextResponse.json({ campaigns, total, page, limit });
   } catch (err) {
@@ -52,6 +95,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ─── POST /api/campaigns ──────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -59,7 +103,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
 
     const userId = resolveUserId(session);
-    const body = await req.json();
+    const body   = await req.json();
 
     if (body._action === "repeat" && body.campaignId)
       return handleRepeat(userId, body.campaignId);
@@ -71,6 +115,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// ─── DELETE /api/campaigns ────────────────────────────────────────────────────
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -88,7 +133,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction([
       prisma.messageQueue.updateMany({
         where: { campaignId: id, status: QueueStatus.pending },
-        data: { status: QueueStatus.cancelled },
+        data:  { status: QueueStatus.cancelled },
       }),
       prisma.message.deleteMany({ where: { campaignId: id } }),
       prisma.campaign.delete({ where: { id } }),
@@ -101,6 +146,7 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
+// ─── handleCreate ─────────────────────────────────────────────────────────────
 async function handleCreate(userId: string, body: any) {
   const { name, templateName, numbers, scheduledAt, templateVars } = body;
 
@@ -111,23 +157,12 @@ async function handleCreate(userId: string, body: any) {
   if (!Array.isArray(numbers) || numbers.length === 0)
     return NextResponse.json({ error: "قائمة الأرقام مطلوبة" }, { status: 400 });
 
-  const normalizedNumbers = [
-    ...new Set(
-      numbers
-        .map((n: unknown) => normalizePhone(String(n ?? "")))
-        .filter((n): n is string => Boolean(n))
-    ),
-  ];
-
-  if (normalizedNumbers.length === 0)
-    return NextResponse.json({ error: "لا توجد أرقام صالحة للإرسال" }, { status: 400 });
-
   const campaignCheck = await checkCampaignsLimit(userId);
   const campaignBlock = guardResponse(campaignCheck);
   if (campaignBlock) return campaignBlock;
 
   const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
-  const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
+  const isScheduled   = scheduledDate ? scheduledDate > new Date() : false;
 
   if (isScheduled) {
     const scheduleCheck = await checkFeature(userId, "scheduledCampaigns");
@@ -161,24 +196,24 @@ async function handleCreate(userId: string, body: any) {
 
   const campaign = await prisma.campaign.create({
     data: {
-      name: name.trim(),
+      name:       name.trim(),
       userId,
       templateId: template.id,
-      status: CampaignStatus.draft,
+      status:     CampaignStatus.draft,
     },
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId: campaign.id,
+    campaignId:        campaign.id,
     userId,
-    numbers: normalizedNumbers,
-    templateName: template.name,
-    templateLang: template.language ?? "ar",
-    templateVars: templateVars ?? null,
-    scheduledAt: isScheduled ? scheduledDate : null,
+    numbers,
+    templateName:      template.name,
+    templateLang:      template.language ?? "ar",
+    templateVars:      templateVars ?? null,
+    scheduledAt:       isScheduled ? scheduledDate : null,
     whatsappAccountId: account.id,
-    phoneNumberId: account.phoneNumberId,
-    accessToken: account.accessToken,
+    phoneNumberId:     account.phoneNumberId,
+    accessToken:       account.accessToken,
   });
 
   await incrementCampaignUsage(userId);
@@ -186,35 +221,36 @@ async function handleCreate(userId: string, body: any) {
   await inngest.send({
     name: "campaign/send",
     data: {
-      campaignId: campaign.id,
+      campaignId:  campaign.id,
       scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
     },
   });
 
   return NextResponse.json({
-    success: true,
+    success:    true,
     campaignId: campaign.id,
     queued,
-    scheduled: isScheduled,
-    message: isScheduled
+    scheduled:  isScheduled,
+    message:    isScheduled
       ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
       : `تم إنشاء الحملة — جاري الإرسال`,
   });
 }
 
+// ─── handleRepeat ─────────────────────────────────────────────────────────────
 async function handleRepeat(userId: string, campaignId: string) {
   const check = await checkCampaignsLimit(userId);
   const block = guardResponse(check);
   if (block) return block;
 
   const original = await prisma.campaign.findFirst({
-    where: { id: campaignId, userId },
+    where:   { id: campaignId, userId },
     include: {
       template: true,
       messages: {
-        where: { direction: MessageDirection.outbound },
+        where:  { direction: MessageDirection.outbound },
         select: { contact: { select: { phone: true } } },
-        take: 10000,
+        take:   10_000,
       },
     },
   });
@@ -246,23 +282,23 @@ async function handleRepeat(userId: string, campaignId: string) {
 
   const newCampaign = await prisma.campaign.create({
     data: {
-      name: `${original.name} (تكرار)`,
+      name:       `${original.name} (تكرار)`,
       userId,
       templateId: original.template.id,
-      status: CampaignStatus.draft,
+      status:     CampaignStatus.draft,
     },
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId: newCampaign.id,
+    campaignId:        newCampaign.id,
     userId,
     numbers,
-    templateName: original.template.name,
-    templateLang: original.template.language ?? "ar",
-    scheduledAt: null,
+    templateName:      original.template.name,
+    templateLang:      original.template.language ?? "ar",
+    scheduledAt:       null,
     whatsappAccountId: account.id,
-    phoneNumberId: account.phoneNumberId,
-    accessToken: account.accessToken,
+    phoneNumberId:     account.phoneNumberId,
+    accessToken:       account.accessToken,
   });
 
   await incrementCampaignUsage(userId);
@@ -273,9 +309,9 @@ async function handleRepeat(userId: string, campaignId: string) {
   });
 
   return NextResponse.json({
-    success: true,
+    success:    true,
     campaignId: newCampaign.id,
     queued,
-    message: "تم تكرار الحملة — جاري الإرسال",
+    message:    `تم تكرار الحملة — جاري الإرسال`,
   });
 }
