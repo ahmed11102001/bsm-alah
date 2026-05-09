@@ -42,19 +42,19 @@ export async function GET(req: NextRequest) {
         take:    limit,
         include: {
           template: { select: { name: true, content: true } },
-          // ── عدد الرسائل في الـ Queue لكل حملة ──
-          _count: {
-            select: {
-              messageQueue: true,   // إجمالي كل الـ queue entries
-            },
-          },
         },
       }),
       prisma.campaign.count({ where }),
     ]);
 
-    // ── احسب queuedCount (الرسائل اللي لسه pending) لكل حملة ─────────────────
+    // ── احسب totalQueued + queuedCount (الـ pending) لكل حملة ────────────────
     const campaignIds = rawCampaigns.map(c => c.id);
+
+    const totalQueueCounts = await prisma.messageQueue.groupBy({
+      by:    ["campaignId"],
+      where: { campaignId: { in: campaignIds } },
+      _count: { id: true },
+    });
 
     const pendingCounts = await prisma.messageQueue.groupBy({
       by:    ["campaignId"],
@@ -62,13 +62,17 @@ export async function GET(req: NextRequest) {
       _count: { id: true },
     });
 
+    const totalMap = new Map(
+      totalQueueCounts.map(p => [p.campaignId, p._count.id])
+    );
+
     const pendingMap = new Map(
       pendingCounts.map(p => [p.campaignId, p._count.id])
     );
 
     // ── شكّل الـ response بكل البيانات الحقيقية ──────────────────────────────
     const campaigns = rawCampaigns.map(c => {
-      const totalQueued  = c._count.messageQueue;            // إجمالي الـ queue
+      const totalQueued  = totalMap.get(c.id) ?? 0;          // إجمالي الـ queue
       const queuedCount  = pendingMap.get(c.id) ?? 0;       // الـ pending فعلاً
 
       return {
