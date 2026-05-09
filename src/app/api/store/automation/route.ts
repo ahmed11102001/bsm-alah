@@ -14,6 +14,11 @@ const VALID_TYPES: StoreAutomationType[] = [
   StoreAutomationType.promo,
 ];
 
+// ── أعضاء الفريق يشاركون متجر الـ owner ─────────────────────────────────────
+function resolveOwnerId(session: any): string {
+  return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
+
 // ── GET — جلب أتمتات المتجر + القوالب المعتمدة ──────────────────────────────
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
@@ -21,8 +26,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const ownerId = resolveOwnerId(session);
+
   const user = await prisma.user.findUnique({
-    where:  { email: session.user.email },
+    where:  { id: ownerId },
     select: {
       id:              true,
       shopifyStore:    { select: { id: true } },
@@ -61,7 +68,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     }),
     prisma.template.findMany({
-      where:   { userId: user.id, status: "APPROVED" },
+      where:   { userId: ownerId, status: "APPROVED" },
       select:  { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -90,8 +97,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const ownerId = resolveOwnerId(session);
+
   const user = await prisma.user.findUnique({
-    where:  { email: session.user.email },
+    where:  { id: ownerId },
     select: {
       id:              true,
       shopifyStore:    { select: { id: true } },
@@ -156,10 +165,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         updatedAt:  new Date(),
       },
       create: {
-        userId:        user.id,
-        type:          autoType,
+        userId:         ownerId,
+        type:           autoType,
         isEnabled,
-        templateId:    templateId ?? null,
+        templateId:     templateId ?? null,
         shopifyStoreId: storeId,
       },
       include: {
@@ -182,7 +191,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         updatedAt:  new Date(),
       },
       create: {
-        userId:            user.id,
+        userId:            ownerId,
         type:              autoType,
         isEnabled,
         templateId:        templateId ?? null,

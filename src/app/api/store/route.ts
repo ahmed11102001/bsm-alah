@@ -6,14 +6,21 @@ import { getServerSession } from "next-auth";
 import { authOptions }      from "@/lib/auth";
 import prisma               from "@/lib/prisma";
 
+// ── أعضاء الفريق يشاركون متجر الـ owner ─────────────────────────────────────
+function resolveOwnerId(session: any): string {
+  return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
+
 export async function GET(): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const ownerId = resolveOwnerId(session);
+
   const user = await prisma.user.findUnique({
-    where:  { email: session.user.email },
+    where:  { id: ownerId },
     select: {
       id: true,
       shopifyStore: {

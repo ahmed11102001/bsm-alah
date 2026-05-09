@@ -7,7 +7,7 @@
 // كلاهما يستخدم sendWhatsAppMessage مباشرة (مش عبر campaign queue)
 // لأنهما أتمتة فردية وليست حملة جماعية.
 
-import { inngest }              from "@/inngest/client";
+import { inngest }              from "./client";
 import prisma                   from "@/lib/prisma";
 import { sendWhatsAppMessage }  from "@/lib/whatsapp-api";
 
