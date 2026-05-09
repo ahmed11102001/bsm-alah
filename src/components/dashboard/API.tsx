@@ -186,13 +186,29 @@ function ShopifyContent({ shopUrl, setShopUrl, shopError, setShopError, loading,
 }
 
 // ─── EasyOrders Content ───────────────────────────────────────────────────────
+interface EasyOrdersLabels {
+  storeLabel: string;
+  storePlaceholder: string;
+  apiKeyLabel: string;
+  webhookLabel: string;
+  webhookWarning: string;
+  syncingBtn: string;
+  syncBtn: string;
+  apiKeyErr: string;
+  syncSuccess: (synced: number, hasMore: boolean) => string;
+  syncErr: string;
+  connectedBadge: (store: string, total: number) => string;
+  lastSync: (date: string) => string;
+  loading: string;
+}
+
 function EasyOrdersContent({ apiKey, setApiKey, storeName, setStoreName, webhookUrl, syncing, status, onSync, labels, locale }: {
   apiKey: string; setApiKey: (v: string) => void;
   storeName: string; setStoreName: (v: string) => void;
   webhookUrl: string; syncing: boolean;
   status: { connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string } | null;
   onSync: () => void;
-  labels: typeof import("@/lib/i18n").translations.ar.api.cards.easyorders;
+  labels: EasyOrdersLabels;
   locale: string;
 }) {
   const dateStr = status?.lastSyncAt
