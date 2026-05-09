@@ -1105,7 +1105,12 @@ export default function Reports() {
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100}
                             tickFormatter={(v) => v.length > 14 ? v.slice(0, 14) + "…" : v} />
                           <Tooltip
-                            formatter={(val: number) => [`${val.toLocaleString("ar-EG")} EGP`, "الإيراد"]}
+                            formatter={(value: any) => {
+                              const num = typeof value === "number" ? value : Number(value);
+                              return !isNaN(num)
+                                ? [`${num.toLocaleString("ar-EG")} EGP`, "الإيراد"]
+                                : ["", ""];
+                            }}
                           />
                           <Bar dataKey="revenue" fill="#25D366" radius={[0, 4, 4, 0]}>
                             {storeReport.campaignRevenue.slice(0, 8).map((_, i) => (
