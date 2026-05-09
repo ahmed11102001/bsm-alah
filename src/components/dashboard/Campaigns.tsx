@@ -168,129 +168,130 @@ function CampaignCard({
   repeatBlocked: boolean;
   repeatBlockedNote: string;
 }) {
-  const cfg = statusConfig[campaign.status] ?? statusConfig.draft;
+  const cfg   = statusConfig[campaign.status] ?? statusConfig.draft;
+  const total = campaign.totalQueued || campaign.sentCount || 0;
+  const pct   = safeRate(campaign.sentCount, total);
+  const isLive = campaign.status === "running";
 
   return (
-    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group">
       <CardContent className="p-0">
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between p-4 pb-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Megaphone className="w-5 h-5 text-green-600" />
+        <div className="px-4 pt-3.5 pb-3">
+
+          {/* ── Row 1: icon + name + status + actions ── */}
+          <div className="flex items-center gap-3">
+            {/* Icon */}
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+              <Megaphone className="w-4 h-4 text-green-600" />
             </div>
-            <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 text-sm truncate">{campaign.name}</h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {/* Status badge */}
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${campaign.status === "running" ? "animate-pulse" : ""}`} />
+
+            {/* Name + status */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-gray-900 text-sm truncate max-w-[200px]">
+                  {campaign.name}
+                </h3>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.color}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${isLive ? "animate-pulse" : ""}`} />
                   {cfg.label}
                 </span>
+              </div>
+              {/* template name + date — subtle */}
+              <div className="flex items-center gap-2 mt-0.5">
                 {campaign.template?.name && (
-                  <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] text-gray-400 truncate max-w-[140px]">
                     {campaign.template.name}
                   </span>
                 )}
-                {campaign.scheduledAt && campaign.status === "scheduled" && (
-                  <span className="text-xs text-yellow-600">
-                    {new Date(campaign.scheduledAt).toLocaleString("ar-EG", {
-                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                    })}
-                  </span>
-                )}
+                <span className="text-[10px] text-gray-300">
+                  {new Date(campaign.createdAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}
+                </span>
               </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-0.5 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                onClick={onDetails} title="تفاصيل"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+              <button
+                className={`p-1.5 rounded-lg transition ${
+                  repeatBlocked
+                    ? "text-gray-200 cursor-not-allowed"
+                    : "text-gray-400 hover:text-green-600 hover:bg-green-50"
+                }`}
+                onClick={onRepeat} disabled={repeatBlocked}
+                title={repeatBlocked ? repeatBlockedNote : "تكرار"}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                onClick={onDelete} title="حذف"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
-              onClick={onDetails} title="تفاصيل"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-            <button
-              className={`p-1.5 rounded-lg transition ${repeatBlocked ? "text-gray-200 cursor-not-allowed" : "text-gray-400 hover:text-green-600 hover:bg-green-50"}`}
-              onClick={onRepeat} disabled={repeatBlocked} title={repeatBlocked ? repeatBlockedNote : "تكرار"}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
-              onClick={onDelete} title="حذف"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {/* ── Row 2: progress bar + sent / failed chips ── */}
+          {total > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {/* Bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      isLive ? "bg-blue-400" : campaign.status === "completed" ? "bg-green-400" : "bg-blue-300"
+                    }`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="text-[11px] font-semibold text-gray-500 w-8 text-left">{pct}%</span>
+              </div>
+
+              {/* Mini stats row */}
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="flex items-center gap-1 text-blue-600 font-medium">
+                  <Send className="w-3 h-3" />
+                  {campaign.sentCount.toLocaleString("ar-EG")}
+                </span>
+                {campaign.failedCount > 0 && (
+                  <span className="flex items-center gap-1 text-red-500 font-medium">
+                    <XCircle className="w-3 h-3" />
+                    {campaign.failedCount.toLocaleString("ar-EG")}
+                  </span>
+                )}
+                {campaign.queuedCount > 0 && (
+                  <span className="flex items-center gap-1 text-amber-500">
+                    <Hourglass className="w-3 h-3" />
+                    {campaign.queuedCount.toLocaleString("ar-EG")} انتظار
+                  </span>
+                )}
+                <span className="text-gray-300 mr-auto text-[10px]">
+                  {total.toLocaleString("ar-EG")} إجمالي
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Scheduled */}
+          {campaign.status === "scheduled" && campaign.scheduledAt && (
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-yellow-600">
+              <Clock className="w-3 h-3" />
+              {new Date(campaign.scheduledAt).toLocaleString("ar-EG", {
+                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+              })}
+            </div>
+          )}
         </div>
 
-        {/* ── Stats + Progress ── */}
-        {(campaign.totalQueued > 0 || campaign.sentCount > 0) && (
-          <div className="border-t border-gray-50 px-4 py-3 space-y-3">
-
-            {/* شريط تقدم الإرسال */}
-            <SendProgress campaign={campaign} />
-
-            {/* Stats row */}
-            {campaign.sentCount > 0 && (
-              <div className="grid grid-cols-4 gap-2 pt-1">
-                {[
-                  { icon: <Send className="w-3 h-3" />,         val: campaign.sentCount,      label: "مرسل",   color: "text-blue-600",   bg: "bg-blue-50"   },
-                  { icon: <CheckCircle className="w-3 h-3" />,  val: campaign.deliveredCount, label: "وصل",    color: "text-green-600",  bg: "bg-green-50"  },
-                  { icon: <Eye className="w-3 h-3" />,          val: campaign.readCount,      label: "قرأ",    color: "text-purple-600", bg: "bg-purple-50" },
-                  { icon: <XCircle className="w-3 h-3" />,      val: campaign.failedCount,    label: "فشل",    color: "text-red-500",    bg: "bg-red-50"    },
-                ].map(s => (
-                  <div key={s.label} className={`${s.bg} rounded-lg p-2 text-center`}>
-                    <div className={`flex justify-center mb-0.5 ${s.color}`}>{s.icon}</div>
-                    <p className={`text-sm font-bold ${s.color}`}>{s.val.toLocaleString("ar-EG")}</p>
-                    <p className="text-[9px] text-gray-400">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* شريط الوصول + القراءة */}
-            {campaign.sentCount > 0 && (
-              <div className="space-y-2 pt-1">
-                <ProgressBar
-                  label="نسبة التوصيل"
-                  value={campaign.deliveredCount}
-                  max={campaign.sentCount}
-                  color="bg-green-400"
-                  textColor="text-green-600"
-                />
-                <ProgressBar
-                  label="نسبة القراءة"
-                  value={campaign.readCount}
-                  max={campaign.sentCount}
-                  color="bg-purple-400"
-                  textColor="text-purple-600"
-                />
-              </div>
-            )}
-
-            {/* pending count */}
-            {campaign.queuedCount > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
-                <Hourglass className="w-3.5 h-3.5" />
-                {campaign.queuedCount.toLocaleString("ar-EG")} رسالة في الانتظار
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Scheduled banner */}
-        {campaign.status === "scheduled" && campaign.scheduledAt && (
-          <div className="border-t border-yellow-100 bg-yellow-50/60 px-4 py-2 text-xs text-yellow-700 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            مجدولة: {new Date(campaign.scheduledAt).toLocaleString("ar-EG")}
-          </div>
-        )}
-
+        {/* Repeat blocked notice — subtle bottom strip */}
         {repeatBlocked && (
-          <div className="border-t border-amber-100 bg-amber-50/70 px-4 py-2 text-xs text-amber-700 rounded-b-lg">
+          <div className="border-t border-amber-100 bg-amber-50/60 px-4 py-1.5 text-[10px] text-amber-600">
             {repeatBlockedNote}
           </div>
         )}
