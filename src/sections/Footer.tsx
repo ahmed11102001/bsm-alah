@@ -72,7 +72,7 @@ export default function Footer({ lang }: FooterProps) {
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">{tr(f.copyright, lang)}</p>
+          <p className="text-gray-400 text-sm">{tr(f.copyright, lang)}</p>
           <div className="flex items-center gap-3">
             {socialLinks.map((social, i) => (
               <a key={i} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label}

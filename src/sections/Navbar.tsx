@@ -98,6 +98,8 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
           {/* Mobile menu btn */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-expanded={isMobileMenuOpen}
             className={`lg:hidden p-2 rounded-lg ${isScrolled ? "text-gray-900" : "text-white"}`}
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

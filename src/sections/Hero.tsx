@@ -28,13 +28,13 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
     <section className="relative min-h-screen flex items-center overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#075E54] via-[#128C7E] to-[#25D366]">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/3 rounded-full blur-3xl" />
+        {/* Static blobs — no animate-pulse to reduce TBT */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-32">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
 
           {/* Content */}
           <div className={`text-center ${isAr ? "lg:text-right" : "lg:text-left"}`}>
@@ -91,10 +91,10 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
             </div>
           </div>
 
-          {/* Phone Mockup */}
-          <div className="relative hidden lg:block">
-            <div className="relative">
-              <div className="relative bg-white rounded-[3rem] p-3 shadow-2xl max-w-sm mx-auto transform rotate-[-3deg] hover:rotate-0 transition-all duration-700 hover:scale-105">
+          {/* Phone Mockup — visible on all screens, smaller on mobile */}
+          <div className="relative flex justify-center lg:block mt-6 lg:mt-0">
+            <div className="relative w-[240px] sm:w-[280px] lg:w-auto">
+              <div className="relative bg-white rounded-[2.5rem] lg:rounded-[3rem] p-2.5 lg:p-3 shadow-2xl max-w-sm mx-auto lg:hover:scale-105 transition-transform duration-700">
                 <div className="bg-[#ECE5DD] rounded-[2.5rem] overflow-hidden">
                   {/* Chat header */}
                   <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
@@ -116,7 +116,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                   </div>
 
                   {/* Chat area */}
-                  <div className="h-[420px] overflow-y-auto p-4 space-y-3 bg-[#ECE5DD] relative">
+                  <div className="h-[280px] sm:h-[340px] lg:h-[420px] overflow-y-auto p-3 lg:p-4 space-y-3 bg-[#ECE5DD] relative">
                     <div className="flex justify-start">
                       <div className="bg-white rounded-2xl rounded-tr-none px-4 py-2 max-w-[85%] shadow-sm">
                         <p className="text-gray-800 text-sm">{tr(t.hero.msg1, lang)}</p>
@@ -180,8 +180,8 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                 </div>
               </div>
 
-              {/* Floating cards */}
-              <div className="absolute -top-8 -right-8 bg-white rounded-2xl p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s" }}>
+              {/* Floating cards — hidden on small phones, visible sm+ */}
+              <div className="hidden sm:block absolute -top-6 -right-6 lg:-top-8 lg:-right-8 bg-white rounded-2xl p-3 lg:p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s" }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                     <CheckCheck className="w-5 h-5 text-[#25D366]" />
@@ -193,7 +193,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                 </div>
               </div>
 
-              <div className="absolute -bottom-8 -left-8 bg-white rounded-2xl p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s", animationDelay: "1s" }}>
+              <div className="hidden sm:block absolute -bottom-6 -left-6 lg:-bottom-8 lg:-left-8 bg-white rounded-2xl p-3 lg:p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s", animationDelay: "1s" }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                     <Users className="w-5 h-5 text-blue-500" />
@@ -205,7 +205,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                 </div>
               </div>
 
-              <div className="absolute top-1/2 -right-12 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-xl">
+              <div className="hidden sm:block absolute top-1/2 -right-10 lg:-right-12 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-xl">
                 <div className="text-center">
                   <div className="text-[#25D366] font-bold text-xl">98%</div>
                   <div className="text-xs text-gray-500">{tr(t.hero.floatRate, lang)}</div>

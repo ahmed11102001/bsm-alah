@@ -123,6 +123,8 @@ function PartnerCard({
             <img
               src={partner.logoSrc}
               alt={partner.name}
+              width={140}
+              height={40}
               className="h-10 w-auto max-w-[140px] object-contain"
               loading="lazy"
             />

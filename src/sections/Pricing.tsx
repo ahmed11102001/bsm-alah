@@ -84,7 +84,7 @@ export default function Pricing({ lang }: PricingProps) {
                     </div>
                   )}
                   {price > 0 && (
-                    <p className="text-[11px] text-[#25D366] mt-0.5 font-medium">
+                    <p className="text-[11px] text-[#1a9e50] mt-0.5 font-semibold">
                       {tr(t.pricing.annualSave, lang)} {annualSaving(price).toLocaleString("ar-EG")} {tr(t.pricing.annualSaveSuffix, lang)}
                     </p>
                   )}
