@@ -7,18 +7,18 @@ import { getAIReply } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
 
-// -------------------------------------------------------------------
-// HELPER: Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØªÙˆÙ‚ÙŠØ¹ Meta (HMAC-SHA256)
-// Meta Ø¨ØªØ¨Ø¹Øª header: x-hub-signature-256 = "sha256=<hex>"
-// Ù„Ø§Ø²Ù… Ù†ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡ Ù‚Ø¨Ù„ Ø£ÙŠ Ù…Ø¹Ø§Ù„Ø¬Ø© Ù„Ù…Ù†Ø¹ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø²ÙŠÙØ©
-// -------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: التحقق من توقيع Meta (HMAC-SHA256)
+// Meta بتبعت header: x-hub-signature-256 = "sha256=<hex>"
+// لازم نتحقق منه قبل أي معالجة لمنع الطلبات المزيفة
+// ─────────────────────────────────────────────────────────────────────────────
 async function verifyMetaSignature(
   req: NextRequest
 ): Promise<{ valid: boolean; rawBody: string }> {
   const appSecret = process.env.WHATSAPP_APP_SECRET;
 
   if (!appSecret) {
-    console.error("[WEBHOOK] WHATSAPP_APP_SECRET is not set â€” rejecting all requests");
+    console.error("[WEBHOOK] WHATSAPP_APP_SECRET is not set — rejecting all requests");
     return { valid: false, rawBody: "" };
   }
 
@@ -36,7 +36,6 @@ async function verifyMetaSignature(
   const expected = Buffer.from(`sha256=${expectedHex}`, "utf8");
   const received = Buffer.from(signature, "utf8");
 
-  // timingSafeEqual ÙŠÙ…Ù†Ø¹ Timing Attacks
   if (expected.length !== received.length) {
     return { valid: false, rawBody };
   }
@@ -44,9 +43,9 @@ async function verifyMetaSignature(
   return { valid: timingSafeEqual(expected, received), rawBody };
 }
 
-// -------------------------------------------------------------------
-// GET: Webhook Verification (Ù„Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø£ÙˆÙ„ Ù…Ø¹ Ù…ÙŠØªØ§)
-// -------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// GET: التحقق من الـ Webhook (للتفعيل الأول مع Meta)
+// ─────────────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -67,15 +66,15 @@ export async function GET(req: NextRequest) {
   return new NextResponse("Forbidden", { status: 403 });
 }
 
-// -------------------------------------------------------------------
-// POST: Incoming Webhook Events (Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ ÙˆØ§Ù„Ø­Ø§Ù„Ø§Øª)
-// -------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// POST: معالجة الرسائل والأحداث الواردة من Meta
+// ─────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  // â”€â”€ Step 1: Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØªÙˆÙ‚ÙŠØ¹ Ø£ÙˆÙ„Ø§Ù‹ Ù‚Ø¨Ù„ Ø£ÙŠ Ù…Ø¹Ø§Ù„Ø¬Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Step 1: التحقق من التوقيع أولاً قبل أي معالجة
   const { valid, rawBody } = await verifyMetaSignature(req);
 
   if (!valid) {
-    console.warn("[WEBHOOK] Invalid or missing signature â€” request rejected");
+    console.warn("[WEBHOOK] Invalid or missing signature — request rejected");
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -103,13 +102,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (!accountOwner) {
-      // Ù†Ø±Ø¬Ø¹ 200 Ø¹Ø´Ø§Ù† Meta Ù…Ø§ ØªØ¹ÙŠØ¯Ø´ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©
       return NextResponse.json({ status: "ignored" });
     }
 
     const userId = accountOwner.userId;
 
-    // â”€â”€ Step 2: ØªØ­Ø¯ÙŠØ«Ø§Øª Ø§Ù„Ø­Ø§Ù„Ø© (Delivered / Read / Failed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Step 2: تحديثات الحالة (Delivered / Read / Failed)
     if (value?.statuses?.length) {
       const status = value.statuses[0];
       await prisma.message.updateMany({
@@ -122,7 +120,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // â”€â”€ Step 3: Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„ÙˆØ§Ø±Ø¯Ø© (Inbound Messages) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Step 3: الرسائل الواردة (Inbound Messages)
     if (value?.messages?.length) {
       const msg  = value.messages[0];
       const from = normalizePhone(msg.from);
@@ -130,10 +128,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "invalid_phone_ignored" });
       }
 
-      // â”€â”€ Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ù€ Reaction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // معالجة الـ Reaction
       if (msg.type === "reaction") {
-        const reactionEmoji  = msg.reaction?.emoji ?? "";
-        const reactedMsgId   = msg.reaction?.message_id ?? "";
+        const reactionEmoji = msg.reaction?.emoji ?? "";
+        const reactedMsgId  = msg.reaction?.message_id ?? "";
 
         if (reactedMsgId) {
           const original = await prisma.message.findFirst({
@@ -144,7 +142,7 @@ export async function POST(req: NextRequest) {
           if (original) {
             const existingReactions = (original.reactions as any[] ?? []);
             const filtered = existingReactions.filter((r: any) => r.senderId !== from);
-            const updated = reactionEmoji
+            const updated  = reactionEmoji
               ? [...filtered, { emoji: reactionEmoji, senderId: from }]
               : filtered;
 
@@ -157,7 +155,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "reaction_processed" });
       }
 
-      // Ù…Ù†Ø¹ Ø§Ù„ØªÙƒØ±Ø§Ø± Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ù…Ø¹Ø±Ù ÙˆØ§ØªØ³Ø§Ø¨
+      // منع التكرار بناءً على معرّف واتساب
       const existing = await prisma.message.findFirst({
         where: { whatsappId: msg.id, userId },
       });
@@ -166,14 +164,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "duplicate_ignored" });
       }
 
-      // ØªØ­Ø¯ÙŠØ¯ Ù†ÙˆØ¹ Ø§Ù„Ù…Ø­ØªÙˆÙ‰
+      // تحديد نوع المحتوى
       let type: MessageType       = MessageType.text;
       let content                 = msg.text?.body || "";
       let mediaUrl: string | null = null;
 
       if (msg.type === "image") {
         type    = MessageType.image;
-        content = msg.image?.caption || "ðŸ“· Image";
+        content = msg.image?.caption || "Image";
         const metaImageId = msg.image?.id as string | undefined;
         if (metaImageId) {
           try {
@@ -181,13 +179,13 @@ export async function POST(req: NextRequest) {
               folder: "whatsapp-media/images",
             });
           } catch (uploadErr) {
-            console.error("[WEBHOOK] Cloudinary upload failed for image, falling back to Meta ID:", uploadErr);
+            console.error("[WEBHOOK] Cloudinary upload failed for image:", uploadErr);
             mediaUrl = metaImageId;
           }
         }
       } else if (msg.type === "audio") {
         type    = MessageType.audio;
-        content = "ðŸŽµ Audio message";
+        content = "Audio message";
         const metaAudioId = msg.audio?.id as string | undefined;
         if (metaAudioId) {
           try {
@@ -195,7 +193,7 @@ export async function POST(req: NextRequest) {
               folder: "whatsapp-media/audio",
             });
           } catch (uploadErr) {
-            console.error("[WEBHOOK] Cloudinary upload failed for audio, falling back to Meta ID:", uploadErr);
+            console.error("[WEBHOOK] Cloudinary upload failed for audio:", uploadErr);
             mediaUrl = metaAudioId;
           }
         }
@@ -204,12 +202,12 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
           where:  { phone_userId: { phone: from, userId } },
-          // deletedAt: null Ø¹Ø´Ø§Ù† Ù„Ùˆ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ÙƒØ§Ù†Øª Ø§ØªØ­Ø°ÙØª ØªØ±Ø¬Ø¹ ØªØ¸Ù‡Ø± Ù„Ù…Ø§ ÙŠØ¨Ø¹Øª Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©
+          // deletedAt: null عشان لو المحادثة كانت اتحذفت ترجع تظهر لما يبعت رسالة جديدة
           update: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, deletedAt: null },
           create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
         });
 
-        // Ù„Ùˆ ÙÙŠ Ø±Ø³Ø§Ø¦Ù„ Ù‚Ø¯ÙŠÙ…Ø© Ù„Ù„ÙƒÙˆÙ†ØªØ§ÙƒØª Ø¯Ù‡ Ø§ØªØ­Ø°ÙØª â€” Ø§Ø±Ø¬Ø¹Ù‡Ø§ Ø¹Ø´Ø§Ù† Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØªÙƒÙˆÙ† Ù…ØªÙƒØ§Ù…Ù„Ø©
+        // لو في رسائل قديمة للكونتاكت ده اتحذفت — ارجعها عشان المحادثة تكون متكاملة
         await tx.message.updateMany({
           where: { contactId: contact.id, userId, deletedAt: { not: null } },
           data:  { deletedAt: null },
@@ -229,10 +227,10 @@ export async function POST(req: NextRequest) {
         });
       });
 
-      // Ø¥Ø´Ø¹Ø§Ø± Ø±Ø³Ø§Ù„Ø© ÙˆØ§Ø±Ø¯Ø© Ø¬Ø¯ÙŠØ¯Ø©
+      // إشعار رسالة واردة جديدة
       await notifyNewMessage(userId, from);
 
-      // â”€â”€ Step 4: ØªØ´ØºÙŠÙ„ Ø§Ù„Ø£ØªÙ…ØªØ© Ø¨Ø¹Ø¯ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø¯ Ù„Ù€ Meta Ø¨Ø´ÙƒÙ„ Ù…Ø¶Ù…ÙˆÙ† Ø¹Ù„Ù‰ Vercel â”€â”€
+      // Step 4: تشغيل الأتمتة بعد إرسال الرد لـ Meta — مضمون على Vercel
       if (type === MessageType.text && content.trim()) {
         after(async () => {
           try {
@@ -248,14 +246,19 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error("[WEBHOOK] Processing error:", error);
-    // Ù†Ø±Ø¬Ø¹ 200 Ø¯Ø§ÙŠÙ…Ø§Ù‹ Ø¹Ø´Ø§Ù† Meta Ù…Ø§ ØªØ¹ÙŠØ¯Ø´ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© ÙˆØªØ¹Ù…Ù„ flood
+    // نرجع 200 دايماً عشان Meta ما تعيدش المحاولة وتعمل flood
     return NextResponse.json({ error: "Internal error" }, { status: 200 });
   }
 }
 
-// -------------------------------------------------------------------
-// AUTOMATION: Ù…Ù†Ø·Ù‚ Ø§Ù„Ø£ØªÙ…ØªØ© â€” ÙŠÙØ´ØºÙŽÙ‘Ù„ Ø¨Ø¹Ø¯ Ø­ÙØ¸ Ø§Ù„Ø±Ø³Ø§Ù„Ø© ÙˆØ¥Ø±Ø³Ø§Ù„ 200 Ù„Ù€ Meta
-// -------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMATION: منطق الأتمتة — يُشغَّل بعد حفظ الرسالة وإرسال 200 لـ Meta
+//
+// الترتيب:
+//   0. FIRST_MESSAGE  — رسالة ترحيب لأول تواصل من العميل
+//   1. Keyword Bot    — رد ثابت فوري على كلمة مفتاحية
+//   2. AI Agent       — رد ذكي لو مفيش keyword match
+// ─────────────────────────────────────────────────────────────────────────────
 async function handleAutomation(ctx: {
   userId:       string;
   from:         string;
@@ -265,7 +268,40 @@ async function handleAutomation(ctx: {
   const { userId, from, messageText, accountOwner } = ctx;
   const textLower = messageText.toLowerCase().trim();
 
-  // â”€â”€ 1: Keyword Bot â€” Ø¬ÙŠØ¨ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ© Ø§Ù„Ù…ÙØ¹Ù‘Ù„Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── 0: FIRST_MESSAGE — رسالة الترحيب لأول تواصل ─────────────────────────
+  // الرسالة اتحفظت في الـ DB قبل ما handleAutomation تشتغل
+  // فلو عدد الرسائل = 1 يبقى ده أول تواصل من العميل ده
+  const contactForFirst = await prisma.contact.findFirst({
+    where:  { phone: from, userId },
+    select: { id: true },
+  });
+
+  if (contactForFirst) {
+    const msgCount = await prisma.message.count({
+      where: { contactId: contactForFirst.id, userId },
+    });
+
+    if (msgCount === 1) {
+      const welcomeRule = await prisma.automationRule.findFirst({
+        where:   { userId, triggerType: TriggerType.FIRST_MESSAGE, isEnabled: true },
+        orderBy: { createdAt: "asc" },
+        select:  { id: true, name: true, replyContent: true },
+      });
+
+      if (welcomeRule?.replyContent?.trim()) {
+        console.log(`[BOT] FIRST_MESSAGE → "${welcomeRule.name}" for ${from}`);
+        await sendReply({
+          userId, from,
+          replyText:    welcomeRule.replyContent.trim(),
+          accountOwner,
+          ruleName:     welcomeRule.name,
+        });
+        return; // لا نكمل للـ keyword أو الـ AI
+      }
+    }
+  }
+
+  // ── 1: Keyword Bot — جيب الكلمات المفتاحية المفعّلة ─────────────────────
   const keywordRules = await prisma.automationRule.findMany({
     where: {
       userId,
@@ -277,7 +313,7 @@ async function handleAutomation(ctx: {
     select:  { id: true, name: true, triggerValue: true, replyContent: true, humanKeywords: true },
   });
 
-  // Human takeover keywords
+  // Human takeover — لو الكلمة دي معناها إن الأونر هيرد بنفسه
   const humanTriggered = keywordRules.some(r =>
     r.humanKeywords?.some(kw => {
       const kn = kw?.toLowerCase().trim();
@@ -290,7 +326,7 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  // Keyword match â€” Ø¨ÙŠØ±Ø¯ ÙÙˆØ±Ø§Ù‹ Ø¯Ø§ÙŠÙ…Ø§Ù‹
+  // Keyword match — يرد فوراً
   const matched = keywordRules.find(r =>
     r.triggerValue?.trim() &&
     textLower.includes(r.triggerValue.toLowerCase().trim())
@@ -299,12 +335,12 @@ async function handleAutomation(ctx: {
   if (matched) {
     const replyText = matched.replyContent?.trim();
     if (!replyText) return;
-    console.log(`[BOT] Keyword matched â†’ "${matched.name}" for "${messageText}"`);
+    console.log(`[BOT] Keyword matched → "${matched.name}" for "${messageText}"`);
     await sendReply({ userId, from, replyText, accountOwner, ruleName: matched.name });
     return;
   }
 
-  // â”€â”€ 2: AI Agent â€” Ù„Ùˆ Ù…ÙÙŠØ´ keyword match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── 2: AI Agent — لو مفيش keyword match ─────────────────────────────────
   const agent = await prisma.aIAgent.findUnique({
     where:  { userId },
     select: {
@@ -317,7 +353,7 @@ async function handleAutomation(ctx: {
 
   if (!agent?.isEnabled) return;
 
-  // Pause check â€” Ù„Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø±Ø¯Ù‘ ÙŠØ¯ÙˆÙŠØ§Ù‹ Ù…Ø¤Ø®Ø±Ø§Ù‹
+  // Pause check — لو المستخدم ردّ يدوياً مؤخراً، الـ AI يوقف
   const lastManualOutbound = await prisma.messageQueue.findFirst({
     where:   { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
     orderBy: { sentAt: "desc" },
@@ -327,12 +363,11 @@ async function handleAutomation(ctx: {
   if (lastManualOutbound?.sentAt) {
     const minsSince = (Date.now() - lastManualOutbound.sentAt.getTime()) / 60_000;
     if (minsSince < (agent.pauseMinutes ?? 10)) {
-      console.log(`[AI-AGENT] Paused â€” human replied ${minsSince.toFixed(1)}m ago for ${from}`);
+      console.log(`[AI-AGENT] Paused — human replied ${minsSince.toFixed(1)}m ago for ${from}`);
       return;
     }
   }
 
-  // Call AI
   const result = await getAIReply(
     messageText,
     {
@@ -353,7 +388,7 @@ async function handleAutomation(ctx: {
   }
 
   if (result.offTopic) {
-    console.log(`[AI-AGENT] Off-topic â€” no reply sent for "${messageText}"`);
+    console.log(`[AI-AGENT] Off-topic — no reply sent for "${messageText}"`);
     return;
   }
 
@@ -362,7 +397,9 @@ async function handleAutomation(ctx: {
   await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}` });
 }
 
-// â”€â”€â”€ Helper: Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø¯ Ø¹Ø¨Ø± Meta ÙˆØ­ÙØ¸Ù‡ ÙÙŠ Ø§Ù„Ù€ DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: إرسال الرد عبر Meta API وحفظه في الـ DB
+// ─────────────────────────────────────────────────────────────────────────────
 async function sendReply(ctx: {
   userId:       string;
   from:         string;
@@ -417,13 +454,12 @@ async function sendReply(ctx: {
     },
   });
 
-  console.log(`[AUTOMATION] âœ“ Replied to ${from} via "${ruleName}"`);
+  console.log(`[AUTOMATION] Done — replied to ${from} via "${ruleName}"`);
 }
 
-
-// -------------------------------------------------------------------
-// HELPER: ØªØ­ÙˆÙŠÙ„ Ø­Ø§Ù„Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨ Ø¥Ù„Ù‰ Enums Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
-// -------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: تحويل حالات واتساب إلى Enums قاعدة البيانات
+// ─────────────────────────────────────────────────────────────────────────────
 function mapStatus(waStatus: string): MessageStatus {
   const map: Record<string, MessageStatus> = {
     sent:      MessageStatus.sent,
