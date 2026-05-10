@@ -7,6 +7,7 @@ import {
   Loader2, CreditCard, Tag, ArrowRight,
   Sparkles, Bot, Store, Brain, CheckCircle2,
 } from "lucide-react";
+import { usePixel } from "@/hooks/usePixel";
 
 // ─── Plan config (must match Pricing) ────────────────────────────────────────
 const PLANS: Record<string, {
@@ -80,8 +81,33 @@ function CheckoutContent() {
   const [showFeatures,  setShowFeatures]  = useState(false);
   const [paying,        setPaying]        = useState(false);
   const [success,       setSuccess]       = useState(false);
+  const [cardFocused,   setCardFocused]   = useState(false);
 
-  // ── fake coupon check ──
+  const { track } = usePixel();
+
+  // ── InitiateCheckout عند دخول الصفحة ──
+  useEffect(() => {
+    track("InitiateCheckout", {
+      content_name: plan.name,
+      content_ids:  [planSlug],
+      content_type: "product",
+      value:        totalDue,
+      currency:     "EGP",
+      num_items:    1,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── AddPaymentInfo عند أول focus على البطاقة ──
+  const handleCardFocus = () => {
+    if (cardFocused) return;
+    setCardFocused(true);
+    track("AddPaymentInfo", {
+      content_name: plan.name,
+      value:        finalTotal,
+      currency:     "EGP",
+    });
+  };
   const applyCoupon = () => {
     if (coupon.trim().toUpperCase() === "WHATSPRO20") {
       setCouponApplied(true); setCouponError("");
@@ -99,6 +125,14 @@ function CheckoutContent() {
     setPaying(true);
     // TODO: استبدل بـ PayMob iframe/API call هنا
     await new Promise(r => setTimeout(r, 2000));
+    track("Purchase", {
+      content_name: plan.name,
+      content_ids:  [planSlug],
+      content_type: "product",
+      value:        finalTotal,
+      currency:     "EGP",
+      num_items:    1,
+    });
     setPaying(false);
     setSuccess(true);
     setTimeout(() => router.push("/dashboard"), 2500);
@@ -268,7 +302,14 @@ function CheckoutContent() {
 
             {/* TODO: استبدل بـ PayMob iFrame بعد ما تجيب الـ API Keys */}
             <div className="space-y-3">
-              <CardField label="رقم البطاقة" placeholder="•••• •••• •••• ••••" maxLength={19} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500">رقم البطاقة</label>
+                <input
+                  type="text" placeholder="•••• •••• •••• ••••" maxLength={19}
+                  onFocus={handleCardFocus}
+                  className="h-10 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25D366]/40 focus:border-[#25D366] transition-all placeholder-gray-400"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <CardField label="تاريخ الانتهاء" placeholder="MM / YY" maxLength={5} />
                 <CardField label="CVV" placeholder="•••" type="password" maxLength={4} />

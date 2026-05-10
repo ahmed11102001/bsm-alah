@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
+import MetaPixel      from "@/components/metapixel";
 
 // خط القاهرة هو الأفضل للمشاريع العربية الاحترافية
 const cairo = Cairo({
@@ -76,8 +77,8 @@ export default function RootLayout({
       suppressHydrationWarning // لمنع أخطاء التداخل مع Dark Mode
     >
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
+        <MetaPixel />
         <ClientProvider>
-          {/* تأكد أن ClientProvider يحتوي على ThemeProvider إذا كنت تستخدم Dark Mode */}
           {children}
         </ClientProvider>
       </body>

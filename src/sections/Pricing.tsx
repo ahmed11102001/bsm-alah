@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Minus, Sparkles, Zap, Shield, Bot, Store, Brain } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
+import { usePixel } from "@/hooks/usePixel";
 
 // ─── config ──────────────────────────────────────────────────────────────────
 const BASE_PRICES = [0, 249, 499, 850];
@@ -40,12 +41,28 @@ interface PricingProps { lang: Lang }
 export default function Pricing({ lang }: PricingProps) {
   const isAr   = lang === "ar";
   const router = useRouter();
+  const { track } = usePixel();
   const plans  = t.pricing.plans;
 
   const [cycle, setCycle] = useState<Cycle>("monthly");
 
-  const handleCTA = (slug: string, isFree: boolean) => {
-    if (isFree) { router.push("/register"); return; }
+  // track ViewContent عند أول render للـ Pricing section
+  useEffect(() => { track("ViewContent", { content_name: "Pricing Section" }); }, []);
+
+  const handleCTA = (slug: string, isFree: boolean, price: number) => {
+    if (isFree) {
+      track("CompleteRegistration", { content_name: "Free Plan" });
+      router.push("/register");
+      return;
+    }
+    track("InitiateCheckout", {
+      content_name: slug,
+      content_ids:  [slug],
+      content_type: "product",
+      value:        price,
+      currency:     "EGP",
+      num_items:    1,
+    });
     router.push(`/checkout?plan=${slug}&cycle=${cycle}`);
   };
 
@@ -162,7 +179,7 @@ export default function Pricing({ lang }: PricingProps) {
 
                 {/* CTA */}
                 <button
-                  onClick={() => handleCTA(slug, isFree)}
+                  onClick={() => handleCTA(slug, isFree, price)}
                   className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
                 >
                   {tr(plan.cta, lang)}
@@ -173,7 +190,7 @@ export default function Pricing({ lang }: PricingProps) {
 
                 {/* features */}
                 <ul className="space-y-2.5 flex-1">
-                  {(plan.features as ReadonlyArray<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
+                  {(plan.features as Array<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
                     <li key={fi} className="flex items-start gap-2.5">
                       {f.ok ? (
                         <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
