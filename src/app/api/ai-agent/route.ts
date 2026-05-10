@@ -40,6 +40,9 @@ export async function GET(req: NextRequest) {
     tone:         "friendly",
     systemPrompt: "",
     pauseMinutes: 10,
+    elevenLabsEnabled: false,
+    elevenLabsApiKey:  null,
+    elevenLabsAgentId: null,
   });
 }
 
@@ -63,7 +66,15 @@ export async function PUT(req: NextRequest) {
       tone,
       systemPrompt,
       pauseMinutes,
+      elevenLabsEnabled,
+      elevenLabsApiKey,
+      elevenLabsAgentId,
     } = body;
+
+    const apiKeyTrim =
+      typeof elevenLabsApiKey === "string" ? elevenLabsApiKey.trim() : "";
+    const agentIdTrim =
+      typeof elevenLabsAgentId === "string" ? elevenLabsAgentId.trim() : "";
 
     const data = {
       isEnabled:    typeof isEnabled    === "boolean" ? isEnabled    : false,
@@ -76,7 +87,11 @@ export async function PUT(req: NextRequest) {
       tone:         tone         ?? "friendly",
       systemPrompt: systemPrompt ?? "",
       pauseMinutes: typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
-    } as any;
+      elevenLabsEnabled:
+        typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : false,
+      elevenLabsApiKey:  apiKeyTrim || null,
+      elevenLabsAgentId: agentIdTrim || null,
+    };
 
     const agent = await prisma.aIAgent.upsert({
       where:  { userId },

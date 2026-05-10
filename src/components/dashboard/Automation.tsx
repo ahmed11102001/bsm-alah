@@ -50,11 +50,15 @@ interface AIAgent {
   brandName: string; businessDesc: string; productsInfo: string;
   pricingInfo: string; workingHours: string; tone: string;
   systemPrompt: string; pauseMinutes: number;
+  elevenLabsEnabled: boolean;
+  elevenLabsApiKey: string;
+  elevenLabsAgentId: string;
 }
 const EMPTY_AGENT: AIAgent = {
   isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
   systemPrompt: "", pauseMinutes: 10,
+  elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
 };
 type AutoSubTab = "keywords" | "welcome" | "noreply" | "timebased" | "ab";
 
@@ -236,6 +240,9 @@ export default function Automation() {
         tone:         agentData.tone         ?? "friendly",
         systemPrompt: agentData.systemPrompt ?? "",
         pauseMinutes: agentData.pauseMinutes ?? 10,
+        elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
+        elevenLabsApiKey:  agentData.elevenLabsApiKey  ?? "",
+        elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
       });
     } catch { toast.error("خطأ في تحميل البيانات"); }
     finally  { setLoading(false); }
@@ -790,17 +797,17 @@ export default function Automation() {
                     <p className="text-xs text-gray-400">كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا</p>
                   </div>
                 </div>
-                <button onClick={() => updateAgent({ elevenLabsEnabled: !agent.elevenLabsEnabled } as any)}
+                <button onClick={() => updateAgent({ elevenLabsEnabled: !agent.elevenLabsEnabled })}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all
-                    ${(agent as any).elevenLabsEnabled
+                    ${agent.elevenLabsEnabled
                       ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
                       : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"}`}>
-                  {(agent as any).elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
-                  {(agent as any).elevenLabsEnabled ? "مفعّل" : "معطّل"}
+                  {agent.elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+                  {agent.elevenLabsEnabled ? "مفعّل" : "معطّل"}
                 </button>
               </div>
 
-              {(agent as any).elevenLabsEnabled && (
+              {agent.elevenLabsEnabled && (
                 <div className="space-y-3">
                   <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
                     <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -810,8 +817,8 @@ export default function Automation() {
                     <Label className="text-sm mb-1.5 block">ElevenLabs API Key *</Label>
                     <Input
                       type="password"
-                      value={(agent as any).elevenLabsApiKey ?? ""}
-                      onChange={e => updateAgent({ elevenLabsApiKey: e.target.value } as any)}
+                      value={agent.elevenLabsApiKey}
+                      onChange={e => updateAgent({ elevenLabsApiKey: e.target.value })}
                       placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       dir="ltr"
                     />
@@ -819,8 +826,8 @@ export default function Automation() {
                   <div>
                     <Label className="text-sm mb-1.5 block">Agent ID *</Label>
                     <Input
-                      value={(agent as any).elevenLabsAgentId ?? ""}
-                      onChange={e => updateAgent({ elevenLabsAgentId: e.target.value } as any)}
+                      value={agent.elevenLabsAgentId}
+                      onChange={e => updateAgent({ elevenLabsAgentId: e.target.value })}
                       placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       dir="ltr"
                     />
