@@ -1,6 +1,7 @@
 // src/app/api/ai-agent/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { AIProvider } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -76,17 +77,21 @@ export async function PUT(req: NextRequest) {
     const agentIdTrim =
       typeof elevenLabsAgentId === "string" ? elevenLabsAgentId.trim() : "";
 
-    const data = {
-      isEnabled:    typeof isEnabled    === "boolean" ? isEnabled    : false,
-      provider:     provider === "openai"             ? "openai"     : "gemini",
-      brandName:    brandName    ?? "",
-      businessDesc: businessDesc ?? "",
-      productsInfo: productsInfo ?? "",
-      pricingInfo:  pricingInfo  ?? "",
-      workingHours: workingHours ?? "",
-      tone:         tone         ?? "friendly",
-      systemPrompt: systemPrompt ?? "",
-      pauseMinutes: typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
+    const providerEnum: AIProvider =
+      provider === "openai" ? AIProvider.openai : AIProvider.gemini;
+
+    const payload = {
+      isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
+      provider:  providerEnum,
+      brandName:        String(brandName ?? ""),
+      businessDesc:     String(businessDesc ?? ""),
+      productsInfo:     String(productsInfo ?? ""),
+      pricingInfo:      String(pricingInfo ?? ""),
+      workingHours:     String(workingHours ?? ""),
+      tone:             String(tone ?? "friendly"),
+      systemPrompt:     String(systemPrompt ?? ""),
+      pauseMinutes:
+        typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
       elevenLabsEnabled:
         typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : false,
       elevenLabsApiKey:  apiKeyTrim || null,
@@ -95,8 +100,8 @@ export async function PUT(req: NextRequest) {
 
     const agent = await prisma.aIAgent.upsert({
       where:  { userId },
-      update: data,
-      create: { userId, ...data },
+      update: payload,
+      create: { userId, ...payload },
     });
 
     return NextResponse.json(agent);
