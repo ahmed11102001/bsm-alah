@@ -228,7 +228,8 @@ export async function uploadAudioToCloudinary(
     }
 
     const formData = new FormData();
-    const blob     = new Blob([audioBuffer], { type: "audio/mpeg" });
+    const bytes    = new Uint8Array(audioBuffer);
+    const blob     = new Blob([bytes], { type: "audio/mpeg" });
     formData.append("file", blob, `voice-${Date.now()}.mp3`);
     formData.append("upload_preset", uploadPreset);
     formData.append("folder", folder);
