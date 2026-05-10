@@ -30,6 +30,7 @@ export interface AgentResult {
   reply?:   string;
   action?:  "handoff" | null;  // handoff = حوّل للبشر
   error?:   string;
+  offTopic?: boolean;
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -218,12 +219,15 @@ function parseAgentJSON(raw: string): AgentResult {
 
     const parsed = JSON.parse(cleaned);
 
-    const reply  = typeof parsed.reply  === "string" ? parsed.reply.trim() : null;
+    const offTopic = parsed.offTopic === true;
+    const reply =
+      typeof parsed.reply === "string" ? parsed.reply.trim() : null;
     const action = parsed.action === "handoff" ? "handoff" : null;
 
-    if (!reply) return { ok: false, error: "reply field missing in AI response" };
+    if (!reply && !offTopic)
+      return { ok: false, error: "reply field missing in AI response" };
 
-    return { ok: true, reply, action };
+    return { ok: true, reply: reply ?? "", action, offTopic: offTopic || undefined };
   } catch {
     // لو الـ AI فشل يرجع JSON صح، نعامل الـ raw كـ reply عادي
     const fallback = raw.trim();

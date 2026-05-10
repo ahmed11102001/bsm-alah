@@ -1,4 +1,4 @@
-﻿﻿import { after, NextRequest, NextResponse } from "next/server";
+﻿import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
@@ -469,7 +469,7 @@ async function handleAutomation(ctx: {
   }
 
   const result = await getAIReply(
-    messageText,
+    [{ role: "user", content: messageText }],
     {
       brandName:    agent.brandName,
       businessDesc: agent.businessDesc,
