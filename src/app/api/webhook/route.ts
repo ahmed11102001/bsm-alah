@@ -1,8 +1,8 @@
 ﻿﻿import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
-import { notifyNewMessage } from "@/lib/notifications";
+import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType, NotificationType } from "@prisma/client";
+import { notifyNewMessage, createNotification } from "@/lib/notifications";
 import { getAIReply } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
@@ -257,7 +257,7 @@ export async function POST(req: NextRequest) {
 // الترتيب:
 //   0. FIRST_MESSAGE  — رسالة ترحيب لأول تواصل من العميل
 //   1. Keyword Bot    — رد ثابت فوري على كلمة مفتاحية
-//   2. AI Agent       — رد ذكي لو مفيش keyword match
+//   2. AI Agent       — مساعد مبيعات ذكي بذاكرة المحادثة + تحويل للبشر
 // ─────────────────────────────────────────────────────────────────────────────
 async function handleAutomation(ctx: {
   userId:       string;
@@ -340,7 +340,7 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  // ── 2: AI Agent — لو مفيش keyword match ─────────────────────────────────
+  // ── 2: AI Agent — مساعد مبيعات ذكي بذاكرة المحادثة ─────────────────────
   const agent = await prisma.aIAgent.findUnique({
     where:  { userId },
     select: {
@@ -353,7 +353,7 @@ async function handleAutomation(ctx: {
 
   if (!agent?.isEnabled) return;
 
-  // Pause check — لو المستخدم ردّ يدوياً مؤخراً، الـ AI يوقف
+  // ── Pause check: لو البراند ردّ يدوياً مؤخراً، الـ AI يوقف ──────────────
   const lastManualOutbound = await prisma.messageQueue.findFirst({
     where:   { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
     orderBy: { sentAt: "desc" },
@@ -368,8 +368,36 @@ async function handleAutomation(ctx: {
     }
   }
 
+  // ── جيب تاريخ المحادثة لهذا العميل مع هذا البراند فقط ───────────────────
+  // كل براند معزول — الـ contactForFirst مربوط بـ userId هذا البراند
+  const contactId = contactForFirst?.id;
+
+  const historyRows = contactId
+    ? await prisma.message.findMany({
+        where:   { contactId, userId },
+        orderBy: { createdAt: "desc" },
+        take:    10,                        // آخر 10 رسائل كافية للسياق
+        select:  { content: true, direction: true },
+      })
+    : [];
+
+  // نعكس الترتيب عشان يكون من الأقدم للأحدث
+  const conversationHistory = historyRows
+    .reverse()
+    .filter((m) => m.content?.trim())
+    .map((m) => ({
+      role:    m.direction === "inbound" ? "user" as const : "assistant" as const,
+      content: m.content!.trim(),
+    }));
+
+  // لو ما فيش تاريخ خالص، استخدم الرسالة الحالية بس
+  if (conversationHistory.length === 0) {
+    conversationHistory.push({ role: "user", content: messageText });
+  }
+
+  // ── استدعاء الـ AI بسياق هذا البراند فقط ────────────────────────────────
   const result = await getAIReply(
-    messageText,
+    conversationHistory,
     {
       brandName:    agent.brandName,
       businessDesc: agent.businessDesc,
@@ -383,18 +411,45 @@ async function handleAutomation(ctx: {
   );
 
   if (!result.ok) {
-    console.error(`[AI-AGENT] Error:`, result.error);
-    return;
-  }
-
-  if (result.offTopic) {
-    console.log(`[AI-AGENT] Off-topic — no reply sent for "${messageText}"`);
+    console.error(`[AI-AGENT] Error for brand ${userId}:`, result.error);
     return;
   }
 
   if (!result.reply?.trim()) return;
 
-  await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}` });
+  // ── تنفيذ الـ action ──────────────────────────────────────────────────────
+  if (result.action === "handoff") {
+    // ١. ابعت رد للعميل (الـ AI شرحله إن حد متخصص هيتواصل معاه)
+    await sendReply({
+      userId,
+      from,
+      replyText:    result.reply,
+      accountOwner,
+      ruleName:     `AI/${agent.provider}/handoff`,
+    });
+
+    // ٢. بعت notification لصاحب البراند عشان يتابع بنفسه
+    await createNotification({
+      userId,
+      type:  NotificationType.NEW_MESSAGE,
+      title: "🤝 عميل محتاج متابعة شخصية",
+      body:  `الـ AI طلب تدخلك مع العميل ${from} — المحادثة جاهزة في الشات`,
+      link:  `/dashboard?section=chat`,
+      meta:  { fromPhone: from, triggeredBy: "ai-handoff" },
+    });
+
+    console.log(`[AI-AGENT] Handoff triggered for ${from} → brand ${userId}`);
+    return;
+  }
+
+  // ── رد عادي ──────────────────────────────────────────────────────────────
+  await sendReply({
+    userId,
+    from,
+    replyText:    result.reply,
+    accountOwner,
+    ruleName:     `AI/${agent.provider}`,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

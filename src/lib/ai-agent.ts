@@ -1,59 +1,104 @@
 // src/lib/ai-agent.ts
-// Unified AI Agent - supports Gemini and OpenAI
+// ─── AI Sales Agent — يدعم Gemini و OpenAI ───────────────────────────────────
+//
+// التغييرات عن النسخة القديمة:
+//   1. بياخد تاريخ المحادثة كاملاً (مش رسالة واحدة) → يتذكر السياق
+//   2. System Prompt موجّه للبيع لعملاء البراند (مش FAQ بس)
+//   3. بيرجع JSON منظم { reply, action } بدل نص عادي
+//   4. كل براند معزول تماماً — الـ context بييجي من إعداداته هو بس
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AgentContext {
-  brandName?: string | null;
+  brandName?:    string | null;
   businessDesc?: string | null;
   productsInfo?: string | null;
-  pricingInfo?: string | null;
+  pricingInfo?:  string | null;
   workingHours?: string | null;
-  tone?: string | null;
+  tone?:         string | null;
   systemPrompt?: string | null;
 }
 
-export interface AgentResult {
-  ok: boolean;
-  reply?: string;
-  offTopic?: boolean;
-  error?: string;
+// رسالة واحدة في تاريخ المحادثة
+export interface ConversationMessage {
+  role:    "user" | "assistant";
+  content: string;
 }
+
+export interface AgentResult {
+  ok:       boolean;
+  reply?:   string;
+  action?:  "handoff" | null;  // handoff = حوّل للبشر
+  error?:   string;
+}
+
+// ─── System Prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(ctx: AgentContext): string {
   const toneMap: Record<string, string> = {
-    friendly: "friendly and helpful",
-    formal: "formal and professional",
-    egyptian: "Egyptian Arabic style",
+    friendly: "ودود ومساعد",
+    formal:   "رسمي واحترافي",
+    egyptian: "عامية مصرية خفيفة",
   };
-
   const toneLabel = toneMap[ctx.tone ?? "friendly"] ?? toneMap.friendly;
-  const lines: string[] = [
-    `You are a smart assistant${ctx.brandName ? ` for \"${ctx.brandName}\"` : ""}.`,
-  ];
 
-  if (ctx.businessDesc?.trim()) lines.push(`\nBusiness: ${ctx.businessDesc}`);
-  if (ctx.productsInfo?.trim()) lines.push(`\nProducts and services:\n${ctx.productsInfo}`);
-  if (ctx.pricingInfo?.trim()) lines.push(`\nPricing:\n${ctx.pricingInfo}`);
-  if (ctx.workingHours?.trim()) lines.push(`\nWorking hours: ${ctx.workingHours}`);
-  if (ctx.systemPrompt?.trim()) lines.push(`\n-- Extra instructions --\n${ctx.systemPrompt}`);
+  const lines: string[] = [];
 
   lines.push(
+    `أنت مساعد مبيعات ذكي${ctx.brandName ? ` لـ "${ctx.brandName}"` : ""}.`,
+    `مهمتك الأساسية: تفهم احتياج العميل وتساعده يوصل للمنتج أو الخدمة المناسبة له.`,
     "",
-    "-- Reply rules --",
-    `- Always reply in a ${toneLabel} tone.`,
-    "- Keep replies short and direct (max 3 lines).",
-    "- Do not invent prices or facts not present in context.",
-    "- If question is fully off-topic, reply exactly: __OFF_TOPIC__",
-    "- Do not mention that you are AI.",
+  );
+
+  if (ctx.businessDesc?.trim())
+    lines.push(`── عن البيزنس ──\n${ctx.businessDesc.trim()}`, "");
+
+  if (ctx.productsInfo?.trim())
+    lines.push(`── المنتجات والخدمات ──\n${ctx.productsInfo.trim()}`, "");
+
+  if (ctx.pricingInfo?.trim())
+    lines.push(`── الأسعار ──\n${ctx.pricingInfo.trim()}`, "");
+
+  if (ctx.workingHours?.trim())
+    lines.push(`── ساعات العمل ──\n${ctx.workingHours.trim()}`, "");
+
+  if (ctx.systemPrompt?.trim())
+    lines.push(`── تعليمات إضافية ──\n${ctx.systemPrompt.trim()}`, "");
+
+  lines.push(
+    "── قواعد الرد ──",
+    `- تكلم بأسلوب ${toneLabel}.`,
+    "- ردودك قصيرة ومباشرة (3 سطور بحد أقصى).",
+    "- لا تخترع أسعاراً أو معلومات مش موجودة في السياق أعلاه.",
+    "- لا تذكر إنك AI أو مساعد آلي.",
+    "- لو العميل سأل عن منتج مش موجود في قائمتك، قوله بأدب إنه مش متاح.",
+    "- لو الموضوع خرج تماماً عن نطاق البيزنس أو العميل محتاج دعم بشري متخصص، حدد action: handoff.",
+    "",
+    "── صيغة الرد المطلوبة ──",
+    "ردّ دايماً بـ JSON صحيح فقط، بدون أي نص خارجه:",
+    `{`,
+    `  "reply": "نص الرد للعميل",`,
+    `  "action": null`,
+    `}`,
+    "",
+    `قيم action المتاحة:`,
+    `  null     → رد عادي`,
+    `  "handoff" → حوّل للبشر (استخدمه لو الموضوع تقيل أو العميل محتاج متخصص)`,
   );
 
   return lines.join("\n");
 }
 
-async function callGemini(message: string, ctx: AgentContext): Promise<AgentResult> {
+// ─── Gemini ───────────────────────────────────────────────────────────────────
+
+async function callGemini(
+  messages: ConversationMessage[],
+  ctx: AgentContext,
+): Promise<AgentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing" };
 
-  const systemPrompt = buildSystemPrompt(ctx);
+  const systemPrompt   = buildSystemPrompt(ctx);
   const configuredModel = process.env.GEMINI_MODEL?.trim();
   const modelsToTry = [
     configuredModel,
@@ -62,20 +107,30 @@ async function callGemini(message: string, ctx: AgentContext): Promise<AgentResu
     "gemini-1.5-flash",
   ].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
 
+  // Gemini بيستخدم "model" مش "assistant"
+  const contents = messages.map((m) => ({
+    role:  m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
   try {
     for (const model of modelsToTry) {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
-          method: "POST",
+          method:  "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: message }] }],
-            generationConfig: { maxOutputTokens: 300, temperature: 0.4, topP: 0.8 },
+            contents,
+            generationConfig: {
+              maxOutputTokens: 400,
+              temperature:     0.4,
+              topP:            0.8,
+            },
             safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
               { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
               { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
             ],
@@ -91,10 +146,9 @@ async function callGemini(message: string, ctx: AgentContext): Promise<AgentResu
       }
 
       const data = await res.json();
-      const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      if (!text.trim()) return { ok: false, error: "Empty response from Gemini" };
-      if (text.trim() === "__OFF_TOPIC__") return { ok: true, offTopic: true };
-      return { ok: true, reply: text.trim() };
+      const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (!raw.trim()) return { ok: false, error: "Empty response from Gemini" };
+      return parseAgentJSON(raw);
     }
 
     return { ok: false, error: "No supported Gemini model found" };
@@ -104,27 +158,34 @@ async function callGemini(message: string, ctx: AgentContext): Promise<AgentResu
   }
 }
 
-async function callOpenAI(message: string, ctx: AgentContext): Promise<AgentResult> {
+// ─── OpenAI ───────────────────────────────────────────────────────────────────
+
+async function callOpenAI(
+  messages: ConversationMessage[],
+  ctx: AgentContext,
+): Promise<AgentResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "OPENAI_API_KEY is missing" };
 
   const systemPrompt = buildSystemPrompt(ctx);
 
+  const chatMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
+
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+      method:  "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization:  `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 300,
+        model:       "gpt-4o-mini",
+        max_tokens:  400,
         temperature: 0.4,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message },
-        ],
+        messages:    chatMessages,
       }),
     });
 
@@ -135,21 +196,49 @@ async function callOpenAI(message: string, ctx: AgentContext): Promise<AgentResu
     }
 
     const data = await res.json();
-    const text: string = data?.choices?.[0]?.message?.content ?? "";
-    if (!text.trim()) return { ok: false, error: "Empty response from OpenAI" };
-    if (text.trim() === "__OFF_TOPIC__") return { ok: true, offTopic: true };
-    return { ok: true, reply: text.trim() };
+    const raw: string = data?.choices?.[0]?.message?.content ?? "";
+    if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" };
+    return parseAgentJSON(raw);
   } catch (err: any) {
     console.error("[AI-AGENT/OPENAI] Network error:", err);
     return { ok: false, error: err.message ?? "Network error" };
   }
 }
 
+// ─── JSON Parser ──────────────────────────────────────────────────────────────
+// بيعالج لو الـ AI حاط الـ JSON جوه ```json ... ``` أو في نص إضافي
+
+function parseAgentJSON(raw: string): AgentResult {
+  try {
+    // نظّف أي markdown code fences
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/, "")
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+
+    const reply  = typeof parsed.reply  === "string" ? parsed.reply.trim() : null;
+    const action = parsed.action === "handoff" ? "handoff" : null;
+
+    if (!reply) return { ok: false, error: "reply field missing in AI response" };
+
+    return { ok: true, reply, action };
+  } catch {
+    // لو الـ AI فشل يرجع JSON صح، نعامل الـ raw كـ reply عادي
+    const fallback = raw.trim();
+    if (fallback) return { ok: true, reply: fallback, action: null };
+    return { ok: false, error: "Failed to parse AI response as JSON" };
+  }
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 export async function getAIReply(
-  message: string,
-  ctx: AgentContext,
-  provider: "gemini" | "openai" = "gemini",
+  messages:  ConversationMessage[],
+  ctx:       AgentContext,
+  provider:  "gemini" | "openai" = "gemini",
 ): Promise<AgentResult> {
-  if (provider === "openai") return callOpenAI(message, ctx);
-  return callGemini(message, ctx);
+  if (provider === "openai") return callOpenAI(messages, ctx);
+  return callGemini(messages, ctx);
 }
