@@ -173,7 +173,7 @@ export default function Pricing({ lang }: PricingProps) {
 
                 {/* features */}
                 <ul className="space-y-2.5 flex-1">
-                  {(plan.features as Array<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
+                  {(plan.features as ReadonlyArray<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
                     <li key={fi} className="flex items-start gap-2.5">
                       {f.ok ? (
                         <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
