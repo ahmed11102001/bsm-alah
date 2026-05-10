@@ -224,11 +224,15 @@ export const timeBasedCron = inngest.createFunction(
     for (const rule of rules) {
       // ─── parse triggerValue ─────────────────────────────────────────────
       let schedDays: string[] = [];
-      let schedHour = -1;
+      let schedHour    = -1;
+      let audienceId   = "";
+      let maxContacts  = 1000;
       try {
         const parsed = JSON.parse(rule.triggerValue ?? "{}");
-        schedDays = parsed.days ?? [];
-        schedHour = parseInt(parsed.hour ?? "-1", 10);
+        schedDays   = parsed.days        ?? [];
+        schedHour   = parseInt(parsed.hour ?? "-1", 10);
+        audienceId  = parsed.audienceId  ?? "";
+        maxContacts = parseInt(parsed.maxContacts ?? "1000", 10) || 1000;
       } catch { continue; }
 
       // ─── تحقق من التطابق ────────────────────────────────────────────────
@@ -250,7 +254,7 @@ export const timeBasedCron = inngest.createFunction(
 
       if (!template || template.status?.toLowerCase() !== "approved") continue;
 
-      // ─── جيب كل جهات الاتصال للمستخدم ─────────────────────────────────
+      // ─── جيب جهات الاتصال من الجمهور المحدد ────────────────────────────
       const contacts = await step.run(`get-contacts-tb-${rule.id}`, async () => {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -267,15 +271,40 @@ export const timeBasedCron = inngest.createFunction(
         });
         const excludeIds = alreadySentToday.map(m => m.contactId).filter(Boolean) as string[];
 
-        return await prisma.contact.findMany({
+        // لو في audienceId محدد — جيب الكونتاكتس منه فقط
+        if (audienceId) {
+          const audience = await prisma.audience.findFirst({
+            where:  { id: audienceId, userId: rule.userId },
+            select: {
+              contacts: {
+                where:  {
+                  deletedAt: null,
+                  ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
+                },
+                select: { id: true, phone: true },
+              },
+            },
+          });
+
+          const all = audience?.contacts ?? [];
+          // عشوائي + حد أقصى
+          return all
+            .sort(() => Math.random() - 0.5)
+            .slice(0, maxContacts);
+        }
+
+        // fallback لو مفيش audienceId (قواعد قديمة) — كل الكونتاكتس مع الحد الأقصى
+        const all = await prisma.contact.findMany({
           where: {
             userId:    rule.userId,
             deletedAt: null,
-            id:        excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
+            ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
           },
           select: { id: true, phone: true },
-          take: 1000,
         });
+        return all
+          .sort(() => Math.random() - 0.5)
+          .slice(0, maxContacts);
       });
 
       if (contacts.length === 0) continue;

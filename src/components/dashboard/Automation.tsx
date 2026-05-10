@@ -200,6 +200,7 @@ export default function Automation() {
   const [ruleForm, setRuleForm] = useState({
     name: "", keyword: "", reply: "", templateId: "",
     noReplyDays: "3", days: [] as string[], hour: "09", minute: "00",
+    tbAudienceId: "", tbMaxContacts: "500",
   });
 
   const [abForm, setAbForm] = useState({
@@ -250,27 +251,28 @@ export default function Automation() {
   // ─── Dialog open ──────────────────────────────────────────────────────────
   const openCreate = (mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(null);
-    setRuleForm({ name: "", keyword: "", reply: "", templateId: "", noReplyDays: "3", days: [], hour: "09", minute: "00" });
+    setRuleForm({ name: "", keyword: "", reply: "", templateId: "", noReplyDays: "3", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
     setShowDialog(true);
   };
 
   const openEdit = (rule: AutomationRule, mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(rule);
     let days: string[] = []; let hour = "09"; let minute = "00";
+    let tbAudienceId = ""; let tbMaxContacts = "500";
     if (rule.triggerType === "TIME_BASED" && rule.triggerValue) {
-      try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; } catch {}
+      try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch {}
     }
     setRuleForm({
       name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "",
       templateId: rule.templateId ?? "", noReplyDays: rule.triggerType === "NO_REPLY" ? (rule.triggerValue ?? "3") : "3",
-      days, hour, minute,
+      days, hour, minute, tbAudienceId, tbMaxContacts,
     });
     setShowDialog(true);
   };
 
   // ─── Save rule ────────────────────────────────────────────────────────────
   const saveRule = async () => {
-    const { name, keyword, reply, templateId, noReplyDays, days, hour, minute } = ruleForm;
+    const { name, keyword, reply, templateId, noReplyDays, days, hour, minute, tbAudienceId, tbMaxContacts } = ruleForm;
     if (!name.trim()) { toast.error("اسم القاعدة مطلوب"); return; }
 
     let triggerType = "KEYWORD"; let triggerValue: string | null = null;
@@ -291,8 +293,12 @@ export default function Automation() {
       triggerType = "NO_REPLY"; triggerValue = String(d); replyType = "TEMPLATE"; tplId = templateId;
     } else if (dialogMode === "timebased") {
       if (days.length === 0) { toast.error("اختر يوماً واحداً على الأقل"); return; }
+      if (!tbAudienceId)     { toast.error("اختر الجمهور المستهدف"); return; }
       if (!templateId)       { toast.error("اختر قالباً معتمداً"); return; }
-      triggerType = "TIME_BASED"; triggerValue = JSON.stringify({ days, hour, minute });
+      const maxN = Number(tbMaxContacts);
+      if (!maxN || maxN < 1) { toast.error("عدد جهات الاتصال يجب أن يكون أكبر من 0"); return; }
+      triggerType = "TIME_BASED";
+      triggerValue = JSON.stringify({ days, hour, minute, audienceId: tbAudienceId, maxContacts: maxN });
       replyType = "TEMPLATE"; tplId = templateId;
     }
 
@@ -511,7 +517,14 @@ export default function Automation() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             {timeRules.map(rule => {
               let schedLabel = "";
-              try { const p = JSON.parse(rule.triggerValue ?? "{}"); const daysAr = (p.days ?? []).map((d: string) => DAYS_AR.find(x => x.key === d)?.label ?? d).join("، "); schedLabel = `${daysAr} — ${p.hour}:${p.minute}`; } catch {}
+              try {
+                const p = JSON.parse(rule.triggerValue ?? "{}");
+                const daysAr = (p.days ?? []).map((d: string) => DAYS_AR.find(x => x.key === d)?.label ?? d).join("، ");
+                const aud = audiences.find(a => a.id === p.audienceId);
+                schedLabel = `${daysAr} — ${p.hour}:${p.minute}`;
+                if (aud) schedLabel += ` · ${aud.name}`;
+                if (p.maxContacts) schedLabel += ` (${p.maxContacts.toLocaleString()} كحد أقصى)`;
+              } catch {}
               return (
                 <div key={rule.id} className={`bg-white dark:bg-gray-800 border rounded-2xl p-4 shadow-sm ${rule.isEnabled ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-700/50 opacity-60"}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -860,6 +873,36 @@ export default function Automation() {
                       <SelectContent>{["00", "15", "30", "45"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">الجمهور المستهدف *</Label>
+                  <Select value={ruleForm.tbAudienceId} onValueChange={v => setRuleForm(f => ({ ...f, tbAudienceId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="اختر جمهوراً..." /></SelectTrigger>
+                    <SelectContent>
+                      {audiences.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} {a._count ? `(${a._count.contacts} جهة اتصال)` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block flex items-center justify-between">
+                    <span>الحد الأقصى لعدد المُرسَل إليهم *</span>
+                    {ruleForm.tbAudienceId && (() => {
+                      const aud = audiences.find(a => a.id === ruleForm.tbAudienceId);
+                      const total = aud?._count?.contacts ?? 0;
+                      return total > 0 ? <span className="text-xs text-gray-400 font-normal">إجمالي الجمهور: {total.toLocaleString()}</span> : null;
+                    })()}
+                  </Label>
+                  <Input type="number" min={1} max={100000} dir="ltr"
+                    value={ruleForm.tbMaxContacts}
+                    onChange={e => setRuleForm(f => ({ ...f, tbMaxContacts: e.target.value }))}
+                    placeholder="مثال: 500" />
+                  <p className="text-xs text-gray-400 mt-1">
+                    لو الجمهور أكبر من العدد ده، يتاختار منهم عشوائياً
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm mb-1.5 block">القالب المعتمد *</Label>
