@@ -777,6 +777,60 @@ export default function Automation() {
               {savingAgent ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               {savingAgent ? "جاري الحفظ..." : agentDirty ? "حفظ الإعدادات" : "تم الحفظ"}
             </Button>
+
+            {/* ElevenLabs Voice Agent */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">ElevenLabs Voice Agent</h3>
+                    <p className="text-xs text-gray-400">كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا</p>
+                  </div>
+                </div>
+                <button onClick={() => updateAgent({ elevenLabsEnabled: !agent.elevenLabsEnabled } as any)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all
+                    ${(agent as any).elevenLabsEnabled
+                      ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
+                      : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"}`}>
+                  {(agent as any).elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+                  {(agent as any).elevenLabsEnabled ? "مفعّل" : "معطّل"}
+                </button>
+              </div>
+
+              {(agent as any).elevenLabsEnabled && (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
+                    <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    اعمل Agent على ElevenLabs وحط الـ API Key والـ Agent ID هنا. لما تفعّل Voice Agent في محادثة معينة، هيرد بصوت الـ Agent على كل الرسائل.
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">ElevenLabs API Key *</Label>
+                    <Input
+                      type="password"
+                      value={(agent as any).elevenLabsApiKey ?? ""}
+                      onChange={e => updateAgent({ elevenLabsApiKey: e.target.value } as any)}
+                      placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">Agent ID *</Label>
+                    <Input
+                      value={(agent as any).elevenLabsAgentId ?? ""}
+                      onChange={e => updateAgent({ elevenLabsAgentId: e.target.value } as any)}
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

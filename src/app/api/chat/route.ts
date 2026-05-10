@@ -230,6 +230,30 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  // ── Toggle Voice Agent ──────────────────────────────────────────────────────
+  if (action === "toggleVoiceAgent") {
+    const enable = body.enable as boolean;
+
+    // تأكد إن اليوزر عنده ElevenLabs مربوط
+    const agentSettings = await prisma.aIAgent.findUnique({
+      where:  { userId },
+      select: { elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true },
+    });
+
+    if (enable && (!agentSettings?.elevenLabsEnabled || !agentSettings?.elevenLabsApiKey || !agentSettings?.elevenLabsAgentId)) {
+      return NextResponse.json(
+        { error: "فعّل وأضف ElevenLabs API Key و Agent ID في إعدادات الذكاء الاصطناعي أولاً" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.contact.update({
+      where: { id: contactId, userId },
+      data:  { voiceAgentEnabled: enable },
+    });
+    return NextResponse.json({ success: true });
+  }
+
   // ── React to message ───────────────────────────────────────────────────────
   if (action === "react") {
     if (!messageId || !emoji)

@@ -8,7 +8,7 @@ import {
   Search, Send, Paperclip, Mic, X, MoreVertical, Check, CheckCheck,
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
-  MicOff, Loader2, Megaphone, Filter, Circle,
+  MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -32,6 +32,7 @@ interface Conversation {
   unreadCount: number;
   lastMessageAt: string | null;
   isArchived: boolean;
+  voiceAgentEnabled?: boolean;
 }
 
 interface Message {
@@ -498,6 +499,25 @@ export default function ChatPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const toggleVoiceAgent = async (contactId: string, enable: boolean) => {
+    try {
+      const r = await fetch("/api/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggleVoiceAgent", contactId, enable }),
+      });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      // حدّث الـ state محلياً
+      setConvs(prev => prev.map(c =>
+        c.contact.id === contactId ? { ...c, voiceAgentEnabled: enable } : c
+      ));
+      if (selected?.contact.id === contactId) {
+        setSelected(prev => prev ? { ...prev, voiceAgentEnabled: enable } : prev);
+      }
+      toast.success(enable ? "🎙️ Voice Agent مفعّل" : "Voice Agent موقوف");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   // ── Filtered convs ────────────────────────────────────────────────
   const filteredConvs = useMemo(() => {
     const q = search.toLowerCase();
@@ -661,6 +681,19 @@ export default function ChatPage() {
 
               {/* Header actions */}
               <div className="flex items-center gap-1">
+
+                {/* زر Voice Agent */}
+                <button
+                  onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
+                  title={selected.voiceAgentEnabled ? "Voice Agent مفعّل — اضغط لإيقافه" : "تفعيل Voice Agent"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all
+                    ${selected.voiceAgentEnabled
+                      ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                >
+                  <Mic2 className="w-3.5 h-3.5" />
+                  {selected.voiceAgentEnabled ? "Voice ON" : "Voice"}
+                </button>
                 {/* زر X — إغلاق المحادثة */}
                 <button
                   onClick={() => { setSelected(null); setMessages([]); }}

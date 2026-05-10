@@ -318,6 +318,9 @@ model Contact {
   lastMessageAt DateTime?
   deletedAt     DateTime?
 
+  // ─── Voice Agent ──────────────────────────────────────────────
+  voiceAgentEnabled Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -572,6 +575,11 @@ model AIAgent {
 
   // ─── Human takeover pause (minutes) ──────────────────────────
   pauseMinutes Int @default(10)
+
+  // ─── ElevenLabs Voice Agent ───────────────────────────────────
+  elevenLabsEnabled  Boolean @default(false)
+  elevenLabsApiKey   String? @db.Text
+  elevenLabsAgentId  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
