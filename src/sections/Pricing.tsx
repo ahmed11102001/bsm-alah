@@ -1,54 +1,113 @@
-import { Check, Minus, Sparkles, Zap, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, Minus, Sparkles, Zap, Shield, Bot, Store, Brain } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
+// ─── config ──────────────────────────────────────────────────────────────────
+const BASE_PRICES = [0, 249, 499, 850];
+
+const CYCLES = [
+  { key: "monthly",   label: { ar: "شهري",        en: "Monthly"   }, discount: 0    },
+  { key: "quarterly", label: { ar: "ربع سنوي",    en: "Quarterly" }, discount: 0.15 },
+  { key: "annual",    label: { ar: "سنوي",         en: "Annual"    }, discount: 0.25 },
+] as const;
+type Cycle = typeof CYCLES[number]["key"];
+
 const PLAN_STYLES = [
-  { ctaStyle: "border border-gray-300 text-gray-700 hover:border-[#25D366] hover:text-[#25D366]", card: "bg-white border border-gray-200",                           highlight: false, dark: false },
-  { ctaStyle: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white",          card: "bg-white border border-gray-200",                           highlight: false, dark: false },
-  { ctaStyle: "bg-[#25D366] text-white hover:bg-[#20bb5a]",                                       card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", highlight: true,  dark: false },
-  { ctaStyle: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white",          card: "bg-gray-950 border border-gray-800",                        highlight: false, dark: true  },
+  { card: "bg-white border border-gray-200",                              dark: false, highlight: false, cta: "border border-gray-300 text-gray-700 hover:border-[#25D366] hover:text-[#25D366]" },
+  { card: "bg-white border border-gray-200",                              dark: false, highlight: false, cta: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white" },
+  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", dark: false, highlight: true,  cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]" },
+  { card: "bg-gray-950 border border-gray-800",                           dark: true,  highlight: false, cta: "bg-white text-gray-900 hover:bg-gray-100" },
 ];
 
-const annualSaving = (price: number) => price > 0 ? Math.round(price * 12 * 0.2) : 0;
+// أيقونة مميزة لكل plan
+const PLAN_ICONS = [Sparkles, Bot, Store, Brain];
 
-const PRICES = [0, 249, 499, 999];
+function computePrice(base: number, cycle: Cycle) {
+  const disc = CYCLES.find(c => c.key === cycle)!.discount;
+  return Math.round(base * (1 - disc));
+}
+
+function annualTotal(base: number, cycle: Cycle) {
+  const months = cycle === "monthly" ? 1 : cycle === "quarterly" ? 3 : 12;
+  return computePrice(base, cycle) * months;
+}
 
 interface PricingProps { lang: Lang }
 
 export default function Pricing({ lang }: PricingProps) {
-  const isAr = lang === "ar";
-  const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
-  const plans = t.pricing.plans;
+  const isAr   = lang === "ar";
+  const router = useRouter();
+  const plans  = t.pricing.plans;
+
+  const [cycle, setCycle] = useState<Cycle>("monthly");
+
+  const handleCTA = (slug: string, isFree: boolean) => {
+    if (isFree) { router.push("/register"); return; }
+    router.push(`/checkout?plan=${slug}&cycle=${cycle}`);
+  };
 
   return (
     <section id="pricing" className="py-20 lg:py-32 bg-white" dir={isAr ? "rtl" : "ltr"}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Header */}
-        <div className="text-center mb-14">
+        {/* ── Header ── */}
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-4 py-2 mb-4">
             <Sparkles className="w-4 h-4 text-[#25D366]" />
             <span className="text-[#25D366] text-sm font-medium">{tr(t.pricing.badge, lang)}</span>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
             {tr(t.pricing.h2a, lang)}{" "}
             <span className="text-gradient">{tr(t.pricing.h2b, lang)}</span>
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto text-base">{tr(t.pricing.subtitle, lang)}</p>
-          <div className="mt-4 inline-flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-full px-4 py-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-amber-700 text-xs font-semibold">{tr(t.pricing.saveBadge, lang)}</span>
+          <p className="text-gray-500 max-w-xl mx-auto text-base mb-6">{tr(t.pricing.subtitle, lang)}</p>
+
+          {/* ── Billing cycle toggle ── */}
+          <div className="inline-flex items-center bg-gray-100 rounded-2xl p-1 gap-1">
+            {CYCLES.map(c => (
+              <button
+                key={c.key}
+                onClick={() => setCycle(c.key)}
+                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  cycle === c.key
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tr(c.label, lang)}
+                {c.discount > 0 && (
+                  <span className={`absolute -top-2 ${isAr ? "-left-2" : "-right-2"} bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full`}>
+                    -{Math.round(c.discount * 100)}%
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* ── Cards ── */}
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
           {plans.map((plan, i) => {
-            const s     = PLAN_STYLES[i];
-            const price = PRICES[i];
-            return (
-              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-5 ${s.card}`}>
+            const s       = PLAN_STYLES[i];
+            const base    = BASE_PRICES[i];
+            const price   = computePrice(base, cycle);
+            const slug    = (plan as any).slug as string;
+            const isFree  = base === 0;
+            const Icon    = PLAN_ICONS[i];
 
-                {/* Popular badge */}
+            // savings label
+            const disc    = CYCLES.find(c => c.key === cycle)!.discount;
+            const saving  = base > 0 && disc > 0
+              ? Math.round(base * disc * (cycle === "quarterly" ? 3 : 12))
+              : 0;
+
+            return (
+              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-4 ${s.card}`}>
+
+                {/* popular badge */}
                 {"badge" in plan && plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-[#25D366] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
@@ -57,74 +116,90 @@ export default function Pricing({ lang }: PricingProps) {
                   </div>
                 )}
 
-                {/* Name & tagline */}
-                <div>
-                  <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
-                    {tr(plan.name as { ar: string; en: string }, lang)}
-                  </p>
-                  <p className={`text-sm leading-snug ${s.dark ? "text-gray-300" : "text-gray-600"}`}>
-                    {tr(plan.tagline, lang)}
-                  </p>
+                {/* plan icon + name */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    s.dark ? "bg-white/10" : s.highlight ? "bg-green-50" : "bg-gray-100"
+                  }`}>
+                    <Icon className={`w-4 h-4 ${s.dark ? "text-white" : s.highlight ? "text-[#25D366]" : "text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-widest ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
+                      {tr(plan.name as { ar: string; en: string }, lang)}
+                    </p>
+                    <p className={`text-[11px] leading-tight ${s.dark ? "text-gray-400" : "text-gray-500"}`}>
+                      {tr(plan.tagline, lang)}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Price */}
-                <div>
-                  {price === 0 ? (
+                {/* price */}
+                <div className="py-1">
+                  {isFree ? (
                     <p className={`text-4xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
                       {tr(t.pricing.free, lang)}
                     </p>
                   ) : (
-                    <div className="flex items-end gap-1.5">
-                      <span className={`text-4xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
-                        {price.toLocaleString("ar-EG")}
-                      </span>
-                      <span className={`text-sm mb-1.5 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
-                        {tr(t.pricing.currency, lang)}
-                      </span>
-                    </div>
-                  )}
-                  {price > 0 && (
-                    <p className="text-[11px] text-[#1a9e50] mt-0.5 font-semibold">
-                      {tr(t.pricing.annualSave, lang)} {annualSaving(price).toLocaleString("ar-EG")} {tr(t.pricing.annualSaveSuffix, lang)}
-                    </p>
+                    <>
+                      <div className="flex items-end gap-1.5">
+                        <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
+                          {price.toLocaleString("ar-EG")}
+                        </span>
+                        <span className={`text-sm mb-1.5 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
+                          {tr(t.pricing.currency, lang)}
+                        </span>
+                      </div>
+                      {saving > 0 ? (
+                        <p className="text-[11px] text-[#1a9e50] font-semibold mt-0.5">
+                          {tr(t.pricing.annualSave, lang)} {saving.toLocaleString("ar-EG")} {tr(t.pricing.annualSaveSuffix, lang)}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 mt-0.5 h-4" />
+                      )}
+                    </>
                   )}
                 </div>
 
                 {/* CTA */}
-                <a href="#" className={`w-full py-3 rounded-xl text-sm font-bold text-center transition-all flex items-center justify-center gap-1.5 ${s.ctaStyle}`}>
+                <button
+                  onClick={() => handleCTA(slug, isFree)}
+                  className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
+                >
                   {tr(plan.cta, lang)}
-                  <ArrowIcon className="w-3.5 h-3.5" />
-                </a>
+                </button>
 
-                {/* Divider */}
+                {/* divider */}
                 <div className={`h-px ${s.dark ? "bg-gray-800" : "bg-gray-100"}`} />
 
-                {/* Features */}
+                {/* features */}
                 <ul className="space-y-2.5 flex-1">
-                  {plan.features.map((f, fi) => {
-                    // الـ features الأولى ok=true والباقي ok=false حسب كل plan
-                    const okCount = i === 0 ? 5 : i === 1 ? 6 : i === 2 ? 10 : 10;
-                    const ok = fi < okCount;
-                    return (
-                      <li key={fi} className="flex items-center gap-2.5">
-                        {ok ? (
-                          <Check className={`w-4 h-4 flex-shrink-0 ${s.highlight ? "text-[#25D366]" : s.dark ? "text-green-400" : "text-gray-500"}`} />
-                        ) : (
-                          <Minus className="w-4 h-4 flex-shrink-0 text-gray-300" />
-                        )}
-                        <span className={`text-sm ${!ok ? "text-gray-300" : s.dark ? "text-gray-200" : "text-gray-700"}`}>
-                          {tr(f as { ar: string; en: string }, lang)}
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {(plan.features as Array<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
+                    <li key={fi} className="flex items-start gap-2.5">
+                      {f.ok ? (
+                        <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                          s.highlight ? "text-[#25D366]" : s.dark ? "text-green-400" : "text-gray-400"
+                        }`} />
+                      ) : (
+                        <Minus className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-300" />
+                      )}
+                      <span className={`text-sm leading-snug ${
+                        !f.ok
+                          ? "text-gray-300"
+                          : s.dark
+                          ? "text-gray-200"
+                          : "text-gray-700"
+                      }`}>
+                        {tr(f, lang)}
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             );
           })}
         </div>
 
-        {/* Guarantee strip */}
+        {/* ── Guarantee strip ── */}
         <div className="mt-12 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
           {[
             { icon: <Shield className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar1, lang) },
@@ -132,20 +207,9 @@ export default function Pricing({ lang }: PricingProps) {
             { icon: <Zap    className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-sm text-gray-500">
-              {item.icon}
-              {item.text}
+              {item.icon}{item.text}
             </div>
           ))}
-        </div>
-
-        {/* Enterprise */}
-        <div className="mt-10 text-center">
-          <p className="text-sm text-gray-400">
-            {tr(t.pricing.enterprise, lang)}{" "}
-            <a href="#" className="text-[#25D366] font-semibold hover:underline">
-              {tr(t.pricing.enterpriseLink, lang)}
-            </a>
-          </p>
         </div>
 
       </div>
