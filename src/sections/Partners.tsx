@@ -37,6 +37,12 @@ const PARTNERS = [
     color: "from-cyan-500 to-cyan-600",
     description: { ar: "معالجة اللغة", en: "Language AI" },
   },
+  {
+    name: "Elevenlabs",
+    logoSrc: "/partners/elevenlabs.svg",
+    color: "from-cyan-500 to-cyan-600",
+    description: { ar: "Voice AI", en: "Voice AI" },
+  },
 ];
 
 export default function Partners({ lang }: PartnersProps) {
@@ -75,7 +81,7 @@ export default function Partners({ lang }: PartnersProps) {
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 pt-16 border-t border-gray-100">
           <div className="text-center">
             <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700 mb-2">
-              500+
+              99+
             </div>
             <p className="text-gray-600 text-sm">
               {lang === "ar" ? "شركة تثق بنا" : "Companies Trust Us"}
