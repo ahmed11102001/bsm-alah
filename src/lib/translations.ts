@@ -358,7 +358,89 @@ export const t = {
             en: `Per campaign:\n✓ Delivery rate\n✓ Open rate\n✓ Reply rate\n✓ Campaign comparison\n✓ Best sending time\n✓ Excel export with one click` },
       },
       {
-        category: { ar: "التقارير والنتائج", en: "Reports & Results" },
+        category: { ar: "الأتمتة والذكاء الاصطناعي", en: "Automation & AI" },
+        q: { ar: "الأتمتة دي بتعمل إيه بالظبط؟", en: "What exactly does the automation do?" },
+        a: { ar: `الأتمتة بتشتغل من غير ما تتدخل خالص — ٢٤/٧.
+
+كل ما وصلك أوردر جديد من متجرك (Shopify أو EasyOrders)، النظام بيبعت:
+→ رسالة تأكيد فورية للعميل بتفاصيل الطلب
+→ رسالة شحن لما الأوردر يتشحن مع رقم التتبع
+→ متابعة بعد الاستلام لطلب تقييم أو عرض منتجات مشابهة
+
+كل ده بيحصل تلقائياً بقوالب واتساب معتمدة من Meta — مش بيتعطل، مش بيتأخر.`,
+            en: `Automation runs without any intervention — 24/7.
+
+Every time a new order arrives from your store (Shopify or EasyOrders), the system sends:
+→ Instant confirmation message with order details
+→ Shipping notification with tracking number
+→ Post-delivery follow-up for reviews or related product offers
+
+All of this happens automatically with Meta-approved WhatsApp templates — no delays, no downtime.` },
+      },
+      {
+        category: { ar: "الأتمتة والذكاء الاصطناعي", en: "Automation & AI" },
+        q: { ar: "AI Sales Assistant ده بيعمل إيه وبيتكلم بأسلوبي؟", en: "What does the AI Sales Assistant do and does it talk in my style?" },
+        a: { ar: `الـ AI Sales Assistant مش مجرد رد تلقائي — ده موظف مبيعات بيشتغل على بياناتك.
+
+بيعمل إيه:\\n→ بيرد على استفسارات العملاء بذكاء بناءً على Catalog منتجاتك
+→ بيقترح منتجات بناءً على تاريخ الشراء
+→ بيتابع السلة المتروكة ويعمل follow-up بعد فترة
+→ بيحول الاستفسار لأوردر من غير تدخل بشري
+
+بخصوص الأسلوب — إنت بتحدد tone المحادثة وبتضيف معلومات منتجاتك، والـ AI بيتكيف معاها. مش هيكتب بأسلوب غريب.`,
+            en: `The AI Sales Assistant isn't just auto-reply — it's a sales employee running on your data.
+
+What it does:
+→ Responds to customer inquiries intelligently based on your product catalog
+→ Suggests products based on purchase history
+→ Follows up on abandoned carts after a set period
+→ Converts inquiries into orders without human intervention
+
+As for style — you define the conversation tone and add your product info, and the AI adapts. It won't sound generic or off-brand.` },
+      },
+      {
+        category: { ar: "الأتمتة والذكاء الاصطناعي", en: "Automation & AI" },
+        q: { ar: "الـ AI ممكن يقول معلومة غلط لعميل؟", en: "Can the AI give a customer wrong information?" },
+        a: { ar: `السؤال ده وجيه — والإجابة فيها شفافية كاملة.
+
+الـ AI بيشتغل بس على المعلومات اللي إنت بتحطها: Catalog، أسعار، سياسة شحن. مش بيخترع معلومات.
+
+الضمانات:\\n✓ لو العميل سأل عن حاجة مش في الـ Catalog — بيحوّله لموظف بشري فوراً
+✓ ممكن تحدد نطاق الردود بالظبط
+✓ كل المحادثات موجودة في صندوق الوارد للمراجعة
+
+الـ AI عندنا مش موجود عشان يستبدل فريقك — موجود عشان يتعامل مع الأسئلة المتكررة ويوفر وقتهم للحالات الصعبة.`,
+            en: `That's a fair question — and the honest answer is full transparency.
+
+The AI only works with the information you provide: catalog, prices, shipping policy. It doesn't invent information.
+
+Safeguards:
+✓ If a customer asks about something not in the catalog — it immediately routes to a human
+✓ You can define the exact scope of replies
+✓ All conversations are available in the inbox for review
+
+Our AI isn't there to replace your team — it handles repetitive questions so your team can focus on complex cases.` },
+      },
+      {
+        category: { ar: "الأتمتة والذكاء الاصطناعي", en: "Automation & AI" },
+        q: { ar: "لو ربطت متجري — هيبان للعميل إن في نظام بيرد عنيا؟", en: "If I connect my store — will customers know a system is replying for me?" },
+        a: { ar: `ده بيرجع لإنت — وعندك تحكم كامل.
+
+الـ AI بيرد بالاسم اللي إنت تحدده — "خدمة عملاء [اسم متجرك]" مثلاً — مش بيعرّف نفسه كـ AI لو إنت ما طلبتش كده.
+
+بس الحقيقة؟ معظم العملاء ما بيسألوش "هل إنت AI؟" — بيهتموا بالرد السريع والمعلومة الصحيحة. والـ AI بيديهم الاتنين.
+
+لو العميل سأل مباشرة — بنوصي بالشفافية، وفي إعدادات بتحدد فيها كيفية الرد على السؤال ده.`,
+            en: `That's entirely up to you — you have full control.
+
+The AI replies under whatever name you set — "Customer Service [Your Store Name]" for example — it doesn't identify itself as AI unless you want it to.
+
+But honestly? Most customers don't ask "are you AI?" — they care about fast replies and accurate info. The AI delivers both.
+
+If a customer asks directly — we recommend transparency, and there's a setting where you define how that question gets handled.` },
+      },
+      {
+        category: { ar: "التجربة والاشتراك", en: "Trial & Subscription" },
         q: { ar: "هل أقدر أوقف الاشتراك وأرجع وقتما أشاء؟", en: "Can I cancel and return whenever I want?" },
         a: { ar: `نعم — بدون أي عقوبة.\n\nإلغاء بضغطة زرار من الإعدادات.\nبياناتك موجودة 30 يوم بعد الإلغاء.\nمفيش رسوم إلغاء مسبق.\nلو رجعت — كل حاجاتك في مكانها.`,
             en: `Yes — no penalty whatsoever.\n\nCancel with one click from settings.\nYour data stays for 30 days after cancellation.\nNo early cancellation fees.\nIf you return — everything is right where you left it.` },
