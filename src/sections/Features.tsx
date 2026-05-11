@@ -32,12 +32,7 @@ interface FeaturesProps { lang: Lang }
 
 export default function Features({ lang }: FeaturesProps) {
   const isAr  = lang === "ar";
-  const items = t.features.items as Array<{
-    tag:   { ar: string; en: string };
-    hook:  { ar: string; en: string };
-    title: { ar: string; en: string };
-    desc:  { ar: string; en: string };
-  }>;
+  const items = t.features.items;
 
   return (
     <section id="features" className="py-20 lg:py-28 bg-gray-50" dir={isAr ? "rtl" : "ltr"}>
