@@ -31,12 +31,9 @@ export const metadata: Metadata = {
   
   // حل مشكلة أيقونة الشبكة الرمادية (لازم يكون في icon فعلي في public)
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
-    ],
-    shortcut: ["/favicon.svg", "/favicon.ico"],
-    apple: [{ url: "/apple-touch-icon.png" }],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon.svg"],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "192x192", type: "image/png" }],
   },
 
   // إعدادات المعاينة عند مشاركة الرابط على السوشيال ميديا أو واتساب
