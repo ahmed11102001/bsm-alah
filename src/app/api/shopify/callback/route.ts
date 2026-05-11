@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (!code || !hmac || !shop || !state || !timestamp) {
       console.error("[Shopify Callback] Missing required parameters");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=missing_params`
+        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=missing_params`
       );
     }
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     if (!verifyShopifyHmac(queryParams, hmac)) {
       console.error("[Shopify Callback] HMAC verification failed");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=invalid_hmac`
+        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=invalid_hmac`
       );
     }
 
@@ -65,13 +65,13 @@ export async function GET(req: NextRequest) {
       if (Date.now() - stateData.timestamp > 30 * 60 * 1000) {
         console.error("[Shopify Callback] State token expired");
         return NextResponse.redirect(
-          `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=state_expired`
+          `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=state_expired`
         );
       }
     } catch (error) {
       console.error("[Shopify Callback] Invalid state token:", error);
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=invalid_state`
+        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=invalid_state`
       );
     }
 
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     if (!session?.user?.email) {
       console.error("[Shopify Callback] User not authenticated");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=not_authenticated`
+        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=not_authenticated`
       );
     }
 
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
     if (!user || user.id !== stateData.userId) {
       console.error("[Shopify Callback] State user mismatch");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=user_mismatch`
+        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=user_mismatch`
       );
     }
 
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
     if (!tokenData) {
       console.error("[Shopify Callback] Failed to exchange code for token");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=token_exchange_failed`
+        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=token_exchange_failed`
       );
     }
 
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     if (!shopInfo) {
       console.error("[Shopify Callback] Failed to fetch shop info");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=shop_info_failed`
+        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=shop_info_failed`
       );
     }
 
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
     if (!saveResult.success) {
       console.error("[Shopify Callback] Failed to save store:", saveResult.error);
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=save_failed`
+        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=save_failed`
       );
     }
 
@@ -145,12 +145,12 @@ export async function GET(req: NextRequest) {
     console.log(`[Shopify Callback] Successfully connected store: ${shop}`);
 
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?success=true&shop=${encodeURIComponent(shop)}`
+      `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?success=true&shop=${encodeURIComponent(shop)}`
     );
   } catch (error) {
     console.error("[Shopify Callback] Unexpected error:", error);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/api?error=unexpected`
+      `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=unexpected`
     );
   }
 }
