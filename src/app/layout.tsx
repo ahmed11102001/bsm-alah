@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: ["/favicon.svg"],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
   },
 
   // إعدادات المعاينة عند مشاركة الرابط على السوشيال ميديا أو واتساب
