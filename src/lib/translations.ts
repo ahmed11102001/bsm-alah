@@ -151,9 +151,9 @@ export const t = {
         time:  { ar: "دقيقة واحدة", en: "1 minute" },
       },
       {
-        title: { ar: "اختار أو اعمل قالبك",    en: "Choose or create your template" },
-        what:  { ar: "قوالب جاهزة أو مخصصة",   en: "Ready-made or custom templates" },
-        desc:  { ar: "اختار من قوالبك المعتمدة أو اعمل رسالة جديدة. القوالب بتترسل عبر واتساب API الرسمي — مش هترفض.", en: "Pick from your approved templates or write a new message. Templates go through the official WhatsApp API — won't get rejected." },
+        title: { ar: "اختار قالبك",              en: "Choose your template"        },
+        what:  { ar: "قوالب جاهزة ومعتمدة",      en: "Ready & approved templates"  },
+        desc:  { ar: "اختار من مكتبة قوالبك المعتمدة من Meta. كل قالب جاهز للإرسال فوراً — مش محتاج تعيد الاعتماد مرة تانية.", en: "Pick from your Meta-approved template library. Every template is ready to send immediately — no re-approval needed." },
         time:  { ar: "دقيقتين", en: "2 minutes" },
       },
       {

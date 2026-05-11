@@ -45,7 +45,7 @@ export default function Home() {
       <Hero        onLoginClick={() => setIsLoginModalOpen(true)} lang={lang} />
       <Features    lang={lang} />
       <Partners    lang={lang} />
-      <HowItWorks  lang={lang} />
+      <HowItWorks  lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} />
       <Pricing     lang={lang} />
       <Testimonials lang={lang} />
       <FAQ         lang={lang} />
@@ -58,7 +58,7 @@ export default function Home() {
 
       {/* ── WhatsApp Floating Button ── */}
       <a
-        href="https://wa.me/201203088959?text=اخبرني بالمزبد عن خدمات واتس برو"
+        href="https://wa.me/201000000000"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="تواصل معنا على واتساب"
