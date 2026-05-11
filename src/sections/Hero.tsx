@@ -1,215 +1,253 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Play, Sparkles, Zap, Shield, Send, Paperclip, Smile, MoreVertical, Phone, Video, CheckCheck } from "lucide-react";
+import {
+  ArrowLeft, ArrowRight, Play, Sparkles, Zap, Brain,
+  Send, Paperclip, Smile, MoreVertical, Phone, Video,
+  CheckCheck, Store, Bot, TrendingUp,
+} from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
-interface HeroProps {
-  onLoginClick: () => void;
-  lang: Lang;
-}
-
-const Users = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-  </svg>
-);
+interface HeroProps { onLoginClick: () => void; lang: Lang; }
 
 export default function Hero({ onLoginClick, lang }: HeroProps) {
-  const isAr = lang === "ar";
-
-  const scrollToSection = (href: string) => {
-    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  const isAr     = lang === "ar";
   const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
+
+  const scrollTo = (href: string) =>
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#075E54] via-[#128C7E] to-[#25D366]">
-        {/* Static blobs — no animate-pulse to reduce TBT */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+
+      {/* ── Background ── */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#064e45] via-[#075E54] to-[#0a7a6a]">
+        {/* grid overlay */}
+        <div className="absolute inset-0 opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(white 1px,transparent 1px),linear-gradient(90deg,white 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
+        {/* glow blobs */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#25D366]/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-300/10 rounded-full blur-[80px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-28">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
-          {/* Content */}
+          {/* ══ Content ══ */}
           <div className={`text-center ${isAr ? "lg:text-right" : "lg:text-left"}`}>
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-6">
-              <Sparkles className="w-4 h-4 text-[#25D366] animate-pulse" />
+
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-6">
+              <span className="w-2 h-2 bg-[#25D366] rounded-full animate-pulse" />
               <span className="text-white/90 text-sm font-medium">{tr(t.hero.badge, lang)}</span>
             </div>
 
-            <h1 className="text-4xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              {tr(t.hero.h1a, lang)}
-              <span className="block text-[#25D366] drop-shadow-lg">{tr(t.hero.h1highlight, lang)}</span>
-              {tr(t.hero.h1b, lang)}
+            {/* H1 */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.1] mb-5 tracking-tight">
+              {tr(t.hero.h1a, lang)}{" "}
+              <span className="relative inline-block">
+                <span className="text-[#25D366] drop-shadow-[0_0_30px_rgba(37,211,102,0.5)]">
+                  {tr(t.hero.h1highlight, lang)}
+                </span>
+                {/* underline decoration */}
+                <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 8" preserveAspectRatio="none">
+                  <path d="M0 6 Q50 0 100 4 Q150 8 200 2" stroke="#25D366" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.6" />
+                </svg>
+              </span>
+              <br />
+              <span className="text-white/90 text-3xl sm:text-4xl lg:text-5xl font-bold">
+                {tr(t.hero.h1b, lang)}
+              </span>
             </h1>
 
-            <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            {/* Subtitle */}
+            <p className="text-base lg:text-lg text-white/75 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
               {tr(t.hero.subtitle, lang)}
             </p>
 
-            {/* Stats */}
-            <div className={`flex flex-wrap justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} gap-6 mb-8`}>
+            {/* Feature pills */}
+            <div className={`flex flex-wrap gap-2.5 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} mb-8`}>
               {[
-                { icon: Zap,    label: tr(t.hero.stat1, lang) },
-                { icon: Shield, label: tr(t.hero.stat2, lang) },
-                { icon: CheckCheck, label: tr(t.hero.stat3, lang) },
+                { icon: Brain,    label: tr(t.hero.stat2, lang) },
+                { icon: Store,    label: tr(t.hero.stat3, lang) },
+                { icon: Zap,      label: tr(t.hero.stat1, lang) },
               ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 text-white/90 group hover:scale-105 transition-transform duration-300">
-                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
-                    <Icon className="w-4 h-4 text-[#25D366]" />
-                  </div>
-                  <span className="text-sm">{label}</span>
+                <div key={label}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full px-3.5 py-1.5 transition-colors">
+                  <Icon className="w-3.5 h-3.5 text-[#25D366]" />
+                  <span className="text-white/90 text-sm font-medium">{label}</span>
                 </div>
               ))}
             </div>
 
             {/* CTAs */}
-            <div className={`flex flex-col sm:flex-row gap-4 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"}`}>
+            <div className={`flex flex-col sm:flex-row gap-3 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} mb-8`}>
               <Button
-                onClick={onLoginClick}
-                size="lg"
-                className="bg-white text-[#128C7E] hover:bg-white/90 px-8 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={onLoginClick} size="lg"
+                className="bg-[#25D366] hover:bg-[#20bb5a] text-white px-8 font-bold shadow-lg shadow-green-900/40 hover:shadow-green-800/50 hover:scale-[1.02] transition-all duration-200 text-base h-12"
               >
                 {tr(t.hero.cta, lang)}
                 <ArrowIcon className="w-5 h-5 mr-2" />
               </Button>
               <Button
-                onClick={() => scrollToSection("#how-it-works")}
-                size="lg"
-                variant="outline"
-                className="border-white/30 text-white hover:bg-white/10 px-8 group"
+                onClick={() => scrollTo("#how-it-works")} size="lg" variant="outline"
+                className="border-white/25 text-white hover:bg-white/10 hover:border-white/40 px-8 h-12 group text-base"
               >
-                <Play className="w-5 h-5 ml-2 group-hover:scale-110 transition-transform duration-300" />
+                <Play className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform" />
                 {tr(t.hero.ctaWatch, lang)}
               </Button>
             </div>
+
+            {/* Trust strip */}
+            <div className={`flex flex-wrap items-center gap-x-5 gap-y-2 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"}`}>
+              {[
+                tr(t.hero.trust1, lang),
+                tr(t.hero.trust2, lang),
+                tr(t.hero.trust3, lang),
+              ].map((item, i) => (
+                <span key={i} className="flex items-center gap-1.5 text-xs text-white/50">
+                  <CheckCheck className="w-3.5 h-3.5 text-[#25D366]/70" />
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Phone Mockup — visible on all screens, smaller on mobile */}
-          <div className="relative flex justify-center lg:block mt-6 lg:mt-0">
-            <div className="relative w-[240px] sm:w-[280px] lg:w-auto">
-              <div className="relative bg-white rounded-[2.5rem] lg:rounded-[3rem] p-2.5 lg:p-3 shadow-2xl max-w-sm mx-auto lg:hover:scale-105 transition-transform duration-700">
-                <div className="bg-[#ECE5DD] rounded-[2.5rem] overflow-hidden">
+          {/* ══ Phone Mockup ══ */}
+          <div className="relative flex justify-center lg:block mt-8 lg:mt-0">
+            <div className="relative w-[250px] sm:w-[290px] lg:w-[340px] mx-auto">
+
+              {/* Glow behind phone */}
+              <div className="absolute inset-0 scale-110 bg-[#25D366]/20 rounded-[3rem] blur-2xl" />
+
+              {/* Phone frame */}
+              <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl ring-1 ring-white/10">
+                <div className="bg-[#ECE5DD] rounded-[2rem] overflow-hidden">
+
                   {/* Chat header */}
                   <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg">
-                      <span className="text-white text-xl font-bold">و</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-white">{tr(t.hero.chatHeader, lang)}</div>
-                      <div className="text-xs text-green-300 flex items-center gap-1">
-                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                        {tr(t.hero.chatOnline, lang)}
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shadow-md">
+                        <Bot className="w-5 h-5 text-white" />
                       </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-[#075E54] rounded-full" />
                     </div>
-                    <div className="flex gap-4 text-white/80">
-                      <Phone className="w-5 h-5" />
-                      <Video className="w-5 h-5" />
-                      <MoreVertical className="w-5 h-5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white text-sm leading-tight">{tr(t.hero.chatHeader, lang)}</p>
+                      <p className="text-[11px] text-green-300 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                        {tr(t.hero.chatOnline, lang)}
+                      </p>
+                    </div>
+                    <div className="flex gap-3 text-white/70">
+                      <Phone className="w-4 h-4" />
+                      <Video className="w-4 h-4" />
+                      <MoreVertical className="w-4 h-4" />
                     </div>
                   </div>
 
                   {/* Chat area */}
-                  <div className="h-[280px] sm:h-[340px] lg:h-[420px] overflow-y-auto p-3 lg:p-4 space-y-3 bg-[#ECE5DD] relative">
+                  <div className="h-[260px] sm:h-[320px] lg:h-[370px] p-3 space-y-2.5 bg-[#ECE5DD] overflow-hidden">
+
+                    {/* msg1 — customer */}
                     <div className="flex justify-start">
-                      <div className="bg-white rounded-2xl rounded-tr-none px-4 py-2 max-w-[85%] shadow-sm">
-                        <p className="text-gray-800 text-sm">{tr(t.hero.msg1, lang)}</p>
-                        <span className="text-[10px] text-gray-400 float-left mt-1">10:30</span>
+                      <div className="bg-white rounded-2xl rounded-tl-none px-3.5 py-2 max-w-[82%] shadow-sm">
+                        <p className="text-gray-800 text-xs leading-relaxed">{tr(t.hero.msg1, lang)}</p>
+                        <span className="text-[9px] text-gray-400 block text-left mt-0.5">10:30</span>
                       </div>
                     </div>
+
+                    {/* AI typing indicator */}
+                    <div className="flex justify-end items-end gap-1.5">
+                      <div className="flex items-center gap-1 bg-white/70 rounded-full px-2.5 py-1">
+                        <Brain className="w-3 h-3 text-[#25D366]" />
+                        <span className="text-[10px] text-gray-500">{tr(t.hero.typing, lang)}</span>
+                      </div>
+                    </div>
+
+                    {/* msg2 — AI reply */}
                     <div className="flex justify-end">
-                      <div className="bg-[#DCF8C6] rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] shadow-sm">
-                        <p className="text-gray-800 text-sm">{tr(t.hero.msg2, lang)}</p>
+                      <div className="bg-[#DCF8C6] rounded-2xl rounded-tr-none px-3.5 py-2 max-w-[88%] shadow-sm">
+                        <p className="text-gray-800 text-xs leading-relaxed">{tr(t.hero.msg2, lang)}</p>
                         <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className="text-[10px] text-gray-500">10:31</span>
-                          <CheckCheck className="w-3.5 h-3.5 text-[#25D366]" />
+                          <span className="text-[9px] text-gray-500">10:30</span>
+                          <CheckCheck className="w-3 h-3 text-[#25D366]" />
                         </div>
                       </div>
                     </div>
+
+                    {/* msg3 — auto order confirm */}
                     <div className="flex justify-end">
-                      <div className="bg-[#DCF8C6] rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] shadow-sm">
-                        <p className="text-gray-800 text-sm">{tr(t.hero.msg3, lang)}</p>
+                      <div className="bg-[#DCF8C6] rounded-2xl rounded-tr-none px-3.5 py-2 max-w-[88%] shadow-sm">
+                        <p className="text-gray-800 text-xs leading-relaxed">{tr(t.hero.msg3, lang)}</p>
                         <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className="text-[10px] text-gray-500">10:32</span>
-                          <CheckCheck className="w-3.5 h-3.5 text-[#25D366]" />
+                          <span className="text-[9px] text-gray-500">10:31</span>
+                          <CheckCheck className="w-3 h-3 text-[#25D366]" />
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-start">
-                      <div className="bg-white rounded-2xl rounded-tr-none px-4 py-2 shadow-sm">
-                        <div className="flex gap-1 items-center">
-                          <span className="w-2 h-2 bg-[#25D366] rounded-full animate-bounce"></span>
-                          <span className="w-2 h-2 bg-[#25D366] rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                          <span className="w-2 h-2 bg-[#25D366] rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                          <span className="text-xs text-gray-500 mr-2">{tr(t.hero.typing, lang)}</span>
+
+                    {/* Live stats card */}
+                    <div className="bg-white/95 rounded-xl p-2.5 border border-green-100 shadow-sm mx-1">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <TrendingUp className="w-3 h-3 text-[#25D366]" />
+                        <span className="text-[10px] font-bold text-gray-700">AI Performance</span>
+                        <span className="mr-auto text-[9px] text-green-600 font-semibold bg-green-50 px-1.5 rounded-full">LIVE</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="bg-gray-50 rounded-lg p-1.5 text-center">
+                          <p className="text-sm font-black text-[#25D366]">98%</p>
+                          <p className="text-[9px] text-gray-500">{tr(t.hero.statMsg, lang)}</p>
                         </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 bg-white/90 rounded-xl p-3 border border-green-200 shadow-md">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">📨 {tr(t.hero.statMsg, lang)}</span>
-                        <span className="text-[#25D366] font-bold">5,678</span>
-                      </div>
-                      <div className="flex justify-between text-sm mt-2">
-                        <span className="text-gray-600">👥 {tr(t.hero.statCont, lang)}</span>
-                        <span className="text-[#25D366] font-bold">8</span>
-                      </div>
-                      <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#25D366] rounded-full animate-pulse" style={{ width: "75%" }}></div>
+                        <div className="bg-gray-50 rounded-lg p-1.5 text-center">
+                          <p className="text-sm font-black text-[#25D366]">+247</p>
+                          <p className="text-[9px] text-gray-500">{tr(t.hero.statCont, lang)}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Input bar */}
-                  <div className="bg-[#F0F0F0] p-3 flex items-center gap-2">
-                    <Smile className="w-6 h-6 text-gray-500" />
-                    <Paperclip className="w-5 h-5 text-gray-500" />
-                    <div className="flex-1 bg-white rounded-full px-4 py-2 text-sm text-gray-500">
+                  <div className="bg-[#F0F2F5] px-3 py-2.5 flex items-center gap-2">
+                    <Smile className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 bg-white rounded-full px-3 py-1.5 text-xs text-gray-400">
                       {tr(t.hero.chatInput, lang)}
                     </div>
-                    <div className="bg-[#25D366] text-white rounded-full p-2">
-                      <Send className="w-5 h-5" />
+                    <div className="bg-[#25D366] rounded-full p-1.5 flex-shrink-0">
+                      <Send className="w-4 h-4 text-white" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Floating cards — hidden on small phones, visible sm+ */}
-              <div className="hidden sm:block absolute -top-6 -right-6 lg:-top-8 lg:-right-8 bg-white rounded-2xl p-3 lg:p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s" }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCheck className="w-5 h-5 text-[#25D366]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{tr(t.hero.floatSent, lang)}</p>
-                    <p className="text-xs text-gray-500">{tr(t.hero.floatSentSub, lang)}</p>
-                  </div>
+              {/* ── Floating cards ── */}
+              {/* top */}
+              <div className="hidden sm:flex absolute -top-4 -right-10 lg:-right-14 bg-white rounded-2xl p-3 shadow-xl items-center gap-2.5 animate-bounce" style={{ animationDuration: "3s" }}>
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-[#25D366]" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 leading-tight">{tr(t.hero.floatSent, lang)}</p>
+                  <p className="text-[10px] text-gray-400">{tr(t.hero.floatSentSub, lang)}</p>
                 </div>
               </div>
 
-              <div className="hidden sm:block absolute -bottom-6 -left-6 lg:-bottom-8 lg:-left-8 bg-white rounded-2xl p-3 lg:p-4 shadow-xl animate-bounce" style={{ animationDuration: "3s", animationDelay: "1s" }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{tr(t.hero.floatConts, lang)}</p>
-                    <p className="text-xs text-gray-500">{tr(t.hero.floatContsSub, lang)}</p>
-                  </div>
+              {/* bottom */}
+              <div className="hidden sm:flex absolute -bottom-4 -left-10 lg:-left-14 bg-white rounded-2xl p-3 shadow-xl items-center gap-2.5 animate-bounce" style={{ animationDuration: "3.5s", animationDelay: "1s" }}>
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 leading-tight">{tr(t.hero.floatConts, lang)}</p>
+                  <p className="text-[10px] text-gray-400">{tr(t.hero.floatContsSub, lang)}</p>
                 </div>
               </div>
 
-              <div className="hidden sm:block absolute top-1/2 -right-10 lg:-right-12 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-xl">
-                <div className="text-center">
-                  <div className="text-[#25D366] font-bold text-xl">98%</div>
-                  <div className="text-xs text-gray-500">{tr(t.hero.floatRate, lang)}</div>
-                </div>
+              {/* side */}
+              <div className="hidden sm:block absolute top-1/2 -left-8 lg:-left-12 -translate-y-1/2 bg-white rounded-xl p-2.5 shadow-xl text-center">
+                <p className="text-base font-black text-[#25D366]">98%</p>
+                <p className="text-[9px] text-gray-400 leading-tight">{tr(t.hero.floatRate, lang)}</p>
               </div>
             </div>
           </div>
@@ -219,8 +257,8 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
 
       {/* Wave */}
       <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H0Z" fill="white" />
+        <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <path d="M0 80L60 72C120 64 240 48 360 44C480 40 600 48 720 52C840 56 960 56 1080 54C1200 52 1320 48 1380 46L1440 44V80H0Z" fill="white" />
         </svg>
       </div>
     </section>
