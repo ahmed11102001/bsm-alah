@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@prisma/client";
 import { notifyNewMessage } from "@/lib/notifications";
-import { getAIReply } from "@/lib/ai-agent";
+import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
@@ -491,8 +491,26 @@ async function handleAutomation(ctx: {
     }
   }
 
+  let aiMessages: ConversationMessage[] = [{ role: "user", content: messageText }];
+  if (contactRecord) {
+    const recentMsgs = await prisma.message.findMany({
+      where:   { contactId: contactRecord.id, userId, type: MessageType.text },
+      orderBy: { createdAt: "desc" },
+      take:    20,
+      select:  { content: true, direction: true },
+    });
+    const fromDb = recentMsgs
+      .reverse()
+      .filter(m => m.content?.trim())
+      .map(m => ({
+        role:    m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
+        content: m.content!.trim(),
+      }));
+    if (fromDb.length) aiMessages = fromDb;
+  }
+
   const result = await getAIReply(
-    messageText,
+    aiMessages,
     {
       brandName:    agent.brandName,
       businessDesc: agent.businessDesc,
