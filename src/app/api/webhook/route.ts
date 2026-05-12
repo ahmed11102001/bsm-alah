@@ -111,6 +111,13 @@ export async function POST(req: NextRequest) {
     // Step 2: تحديثات الحالة (Delivered / Read / Failed)
     if (value?.statuses?.length) {
       const status = value.statuses[0];
+
+      // جيب الرسالة الأول عشان نعرف الـ campaignId
+      const relatedMsg = await prisma.message.findFirst({
+        where:  { whatsappId: status.id, userId },
+        select: { id: true, campaignId: true },
+      });
+
       await prisma.message.updateMany({
         where: { whatsappId: status.id, userId },
         data: {
@@ -119,6 +126,22 @@ export async function POST(req: NextRequest) {
           ...(status.status === "read"      && { readAt:      new Date() }),
         },
       });
+
+      // لو الرسالة دي من حملة — حدّث عدادات الحملة
+      if (relatedMsg?.campaignId) {
+        const campaignId = relatedMsg.campaignId;
+        if (status.status === "delivered") {
+          await prisma.campaign.update({
+            where: { id: campaignId },
+            data:  { deliveredCount: { increment: 1 } },
+          });
+        } else if (status.status === "read") {
+          await prisma.campaign.update({
+            where: { id: campaignId },
+            data:  { readCount: { increment: 1 } },
+          });
+        }
+      }
     }
 
     // Step 3: الرسائل الواردة (Inbound Messages)
@@ -469,7 +492,7 @@ async function handleAutomation(ctx: {
   }
 
   const result = await getAIReply(
-    [{ role: "user", content: messageText }],
+    messageText,
     {
       brandName:    agent.brandName,
       businessDesc: agent.businessDesc,

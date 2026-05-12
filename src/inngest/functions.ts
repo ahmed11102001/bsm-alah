@@ -10,7 +10,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
 const QueueStatus      = { pending: "pending", sent: "sent", failed: "failed" } as const;
-const CampaignStatus   = { running: "running", completed: "completed", scheduled: "scheduled" } as const;
+const CampaignStatus   = { running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
 const MessageStatus    = { sent: "sent", failed: "failed" } as const;
 const MessageDirection = { outbound: "outbound" } as const;
 const MessageType      = { template: "template" } as const;
@@ -277,9 +277,14 @@ export const processCampaign = inngest.createFunction(
 
     // ── Step 5: اكمل الحملة وابعت إشعار ──────────────────────────────────────
     await step.run("complete-campaign", async () => {
+      // لو مفيش ولا رسالة اتبعتت بنجاح → الحملة فشلت كلها
+      const finalStatus = sent === 0
+        ? CampaignStatus.failed
+        : CampaignStatus.completed;
+
       await prisma.campaign.update({
         where: { id: campaignId },
-        data:  { status: CampaignStatus.completed, completedAt: new Date() },
+        data:  { status: finalStatus, completedAt: new Date() },
       });
 
       try {
