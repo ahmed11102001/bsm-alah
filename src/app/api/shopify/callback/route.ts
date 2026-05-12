@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+
 import {
   verifyShopifyHmac,
   exchangeCodeForToken,
@@ -9,148 +11,168 @@ import {
   registerShopifyWebhooks,
 } from "@/lib/shopify";
 
-/**
- * GET /api/shopify/callback
- * 
- * Shopify OAuth callback endpoint.
- * Handles the authorization code and exchanges it for an access token.
- * 
- * Query parameters:
- * - code: Authorization code from Shopify
- * - hmac: HMAC signature for verification
- * - shop: Shop domain
- * - state: State token for CSRF protection
- * - timestamp: Request timestamp
- */
 export async function GET(req: NextRequest) {
   try {
-    // ── Step 1: Extract query parameters ─────────────────────────────────────
+    // ── Parse params ────────────────────────────────────────────────────────
     const { searchParams } = new URL(req.url);
+
     const code = searchParams.get("code");
     const hmac = searchParams.get("hmac");
     const shop = searchParams.get("shop");
     const state = searchParams.get("state");
-    const timestamp = searchParams.get("timestamp");
 
-    // ── Step 2: Validate required parameters ─────────────────────────────────
-    if (!code || !hmac || !shop || !state || !timestamp) {
-      console.error("[Shopify Callback] Missing required parameters");
+    // ── Validate params ─────────────────────────────────────────────────────
+    if (!code || !hmac || !shop || !state) {
+      console.error("[Shopify Callback] Missing required params");
+
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=missing_params`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=missing_params`
       );
     }
 
-    // ── Step 3: Verify HMAC signature ────────────────────────────────────────
+    // ── Verify HMAC ─────────────────────────────────────────────────────────
     const queryParams = {
       code,
       shop,
       state,
-      timestamp,
     };
 
-    if (!verifyShopifyHmac(queryParams, hmac)) {
-      console.error("[Shopify Callback] HMAC verification failed");
+    const validHmac = verifyShopifyHmac(queryParams, hmac);
+
+    if (!validHmac) {
+      console.error("[Shopify Callback] Invalid HMAC");
+
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=invalid_hmac`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=invalid_hmac`
       );
     }
 
-    // ── Step 4: Verify state token for CSRF protection ──────────────────────
-    let stateData: { userId: string; timestamp: number };
+    // ── Decode state ────────────────────────────────────────────────────────
+    let stateData: {
+      userId: string;
+      timestamp: number;
+      random: string;
+    };
+
     try {
       const decoded = Buffer.from(state, "base64").toString("utf8");
+
       stateData = JSON.parse(decoded);
 
-      // Check if state is not too old (30 minutes)
+      // 30 mins expiration
       if (Date.now() - stateData.timestamp > 30 * 60 * 1000) {
-        console.error("[Shopify Callback] State token expired");
         return NextResponse.redirect(
-          `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=state_expired`
+          `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=state_expired`
         );
       }
     } catch (error) {
-      console.error("[Shopify Callback] Invalid state token:", error);
+      console.error("[Shopify Callback] Invalid state", error);
+
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=invalid_state`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=invalid_state`
       );
     }
 
-    // ── Step 5: Get current session ──────────────────────────────────────────
-    const session = await getServerSession();
+    // ── Verify session ──────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      console.error("[Shopify Callback] User not authenticated");
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=not_authenticated`
+        `${process.env.SHOPIFY_APP_URL}/login`
       );
     }
 
-    // ── Step 6: Verify state matches current user ────────────────────────────
+    // ── Get current user ────────────────────────────────────────────────────
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
+      where: {
+        email: session.user.email,
+      },
+      select: {
+        id: true,
+        parentId: true,
+      },
     });
 
-    if (!user || user.id !== stateData.userId) {
-      console.error("[Shopify Callback] State user mismatch");
+    if (!user) {
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=user_mismatch`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=user_not_found`
       );
     }
 
-    // ── Step 7: Exchange authorization code for access token ─────────────────
+    const currentUserId = user.parentId ?? user.id;
+
+    // ── Verify state user ───────────────────────────────────────────────────
+    if (currentUserId !== stateData.userId) {
+      return NextResponse.redirect(
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=user_mismatch`
+      );
+    }
+
+    // ── Exchange token ──────────────────────────────────────────────────────
     const tokenData = await exchangeCodeForToken(shop, code);
 
-    if (!tokenData) {
-      console.error("[Shopify Callback] Failed to exchange code for token");
+    if (!tokenData?.accessToken) {
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL|| "https://whatsprosystem.vercel.app"}/dashboard/api?error=token_exchange_failed`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=token_exchange_failed`
       );
     }
 
-    // ── Step 8: Fetch shop information ───────────────────────────────────────
-    const shopInfo = await fetchShopifyShopInfo(shop, tokenData.accessToken);
+    // ── Fetch shop info ─────────────────────────────────────────────────────
+    const shopInfo = await fetchShopifyShopInfo(
+      shop,
+      tokenData.accessToken
+    );
 
     if (!shopInfo) {
-      console.error("[Shopify Callback] Failed to fetch shop info");
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=shop_info_failed`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=shop_info_failed`
       );
     }
 
-    // ── Step 9: Save Shopify store to database ───────────────────────────────
+    // ── Save store ──────────────────────────────────────────────────────────
     const saveResult = await saveShopifyStore(
-      user.id,
+      currentUserId,
       shop,
       tokenData.accessToken,
       tokenData.scope
     );
 
     if (!saveResult.success) {
-      console.error("[Shopify Callback] Failed to save store:", saveResult.error);
+      console.error(saveResult.error);
+
       return NextResponse.redirect(
-        `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=save_failed`
+        `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=save_failed`
       );
     }
 
-    // ── Step 10: Register webhooks with Shopify ──────────────────────────────
-    const webhookResult = await registerShopifyWebhooks(shop, tokenData.accessToken);
+    // ── Register webhooks ───────────────────────────────────────────────────
+    const webhookResult = await registerShopifyWebhooks(
+      shop,
+      tokenData.accessToken
+    );
 
     if (!webhookResult.success) {
-      console.warn("[Shopify Callback] Failed to register webhooks:", webhookResult.error);
-      // Don't fail the entire flow, just warn
+      console.warn(
+        "[Shopify Webhooks]",
+        webhookResult.error
+      );
     }
 
-    // ── Step 11: Redirect to success page ────────────────────────────────────
-    console.log(`[Shopify Callback] Successfully connected store: ${shop}`);
+    console.log(
+      `[Shopify Callback] Connected: ${shop}`
+    );
 
+    // ── Success ─────────────────────────────────────────────────────────────
     return NextResponse.redirect(
-      `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?success=true&shop=${encodeURIComponent(shop)}`
+      `${process.env.SHOPIFY_APP_URL}/dashboard/api?success=true&shop=${encodeURIComponent(
+        shop
+      )}`
     );
   } catch (error) {
-    console.error("[Shopify Callback] Unexpected error:", error);
+    console.error("[Shopify Callback] Error:", error);
+
     return NextResponse.redirect(
-      `${process.env.SHOPIFY_APP_URL || "https://whatsprosystem.vercel.app"}/dashboard/api?error=unexpected`
+      `${process.env.SHOPIFY_APP_URL}/dashboard/api?error=unexpected`
     );
   }
 }

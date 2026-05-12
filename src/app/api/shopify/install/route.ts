@@ -1,74 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { generateShopifyAuthUrl } from "@/lib/shopify";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
-/**
- * POST /api/shopify/install
- * 
- * Initiates the Shopify OAuth flow.
- * 
- * Request body:
- * {
- *   "shop": "store.myshopify.com" or "store"
- * }
- */
 export async function POST(req: NextRequest) {
   try {
-    // ── Step 1: Verify user is authenticated ─────────────────────────────────
-    const session = await getServerSession();
+    // ── Verify session ───────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return NextResponse.json(
-        { error: "غير مصرح - يجب تسجيل الدخول أولاً" },
+        { error: "يجب تسجيل الدخول أولاً" },
         { status: 401 }
       );
     }
 
-    // ── Step 2: Parse request body ───────────────────────────────────────────
+    // ── Parse body ───────────────────────────────────────────────────────────
     const body = await req.json();
     const { shop } = body;
 
     if (!shop || typeof shop !== "string") {
       return NextResponse.json(
-        { error: "رابط المتجر مطلوب (shop)" },
+        { error: "رابط المتجر مطلوب" },
         { status: 400 }
       );
     }
 
-    // ── Step 3: Validate shop format ─────────────────────────────────────────
-    const normalizedShop = shop.includes("myshopify.com")
+    // ── Normalize shop domain ───────────────────────────────────────────────
+    const normalizedShop = shop.includes(".myshopify.com")
       ? shop
       : `${shop}.myshopify.com`;
 
-    // Basic validation
-    if (!normalizedShop.match(/^[a-zA-Z0-9-]+\.myshopify\.com$/)) {
+    if (!/^[a-zA-Z0-9-]+\.myshopify\.com$/.test(normalizedShop)) {
       return NextResponse.json(
-        { error: "صيغة رابط المتجر غير صحيحة" },
+        { error: "رابط المتجر غير صالح" },
         { status: 400 }
       );
     }
 
-    // ── Step 4: Generate state token for CSRF protection ──────────────────────
-    // جيب الـ user ID الحقيقي من الـ DB عشان نقارنه في الـ callback صح
-    const dbUser = await (await import("@/lib/prisma")).default.user.findUnique({
-      where:  { email: session.user.email! },
-      select: { id: true },
+    // ── Get DB user ─────────────────────────────────────────────────────────
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, parentId: true },
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+      return NextResponse.json(
+        { error: "المستخدم غير موجود" },
+        { status: 404 }
+      );
     }
 
+    const userId = dbUser.parentId ?? dbUser.id;
+
+    // ── Create state ────────────────────────────────────────────────────────
     const state = Buffer.from(
       JSON.stringify({
-        userId:    dbUser.id,           // ← UUID الحقيقي مش الـ email
+        userId,
         timestamp: Date.now(),
-        random:    Math.random().toString(36).substring(7),
+        random: crypto.randomUUID(),
       })
     ).toString("base64");
 
-    // ── Step 5: Generate authorization URL ───────────────────────────────────
-    const authUrl = generateShopifyAuthUrl(normalizedShop, state);
+    // ── Shopify OAuth URL ───────────────────────────────────────────────────
+    const apiKey = process.env.SHOPIFY_API_KEY!;
+    const appUrl = process.env.SHOPIFY_APP_URL!;
+
+    const redirectUri = `${appUrl}/api/shopify/callback`;
+
+    const scopes = [
+      "read_products",
+      "write_products",
+      "read_orders",
+      "write_orders",
+      "read_customers",
+      "write_customers",
+    ].join(",");
+
+    const authUrl =
+      `https://${normalizedShop}/admin/oauth/authorize` +
+      `?client_id=${apiKey}` +
+      `&scope=${encodeURIComponent(scopes)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${encodeURIComponent(state)}`;
 
     return NextResponse.json({
       success: true,
@@ -77,8 +91,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[Shopify Install] Error:", error);
+
     return NextResponse.json(
-      { error: "حدث خطأ أثناء بدء عملية الربط" },
+      { error: "حدث خطأ أثناء الربط" },
       { status: 500 }
     );
   }
