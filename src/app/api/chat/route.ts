@@ -74,8 +74,10 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       id: true, name: true, phone: true,
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
+      // آخر رسالة من العميل (inbound) — مش رسالة الأتمتة أو الكامبين
       messages: {
         take: 1,
+        where: { direction: MessageDirection.inbound },
         orderBy: { createdAt: "desc" },
         select: {
           id: true, content: true, type: true,

@@ -39,7 +39,7 @@ async function sendTemplateToContact({
     content:       null,
   });
 
-  // سجّل النتيجة في جدول الرسائل
+  // سجّل النتيجة في جدول الرسائل — بدون تحديث lastMessageAt (بيتحدّث بس لما العميل يرد)
   await prisma.message.create({
     data: {
       userId,

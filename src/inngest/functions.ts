@@ -171,8 +171,9 @@ export const processCampaign = inngest.createFunction(
               ? await tx.contact.findFirst({ where: { id: msg.contactId }, select: { id: true } })
               : await tx.contact.upsert({
                   where:  { phone_userId: { phone: msg.toPhone, userId: msg.userId } },
-                  update: { lastMessageAt: new Date() },
-                  create: { phone: msg.toPhone, userId: msg.userId, lastMessageAt: new Date() },
+                  // لا نحدّث lastMessageAt عند الإرسال — بيتحدّث بس لما العميل يرد (inbound)
+                  update: {},
+                  create: { phone: msg.toPhone, userId: msg.userId },
                 });
 
             if (contact) {
@@ -189,10 +190,7 @@ export const processCampaign = inngest.createFunction(
                   sentAt:     new Date(),
                 },
               });
-              await tx.contact.update({
-                where: { id: contact.id },
-                data:  { lastMessageAt: new Date() },
-              });
+              // ❌ لا نحدّث lastMessageAt هنا — بيتحدّث بس لما العميل يرد من الـ webhook
             }
 
             await tx.campaign.update({
