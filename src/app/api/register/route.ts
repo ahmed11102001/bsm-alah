@@ -7,7 +7,7 @@ import { normalizePhone } from "@/lib/phone";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
-  const result = rateLimit(`register:${ip}`, { limit: 5, windowSecs: 60 * 60 });
+  const result = await rateLimit(`register:${ip}`, { limit: 5, windowSecs: 60 * 60 });
 
   if (!result.success) {
     return NextResponse.json(

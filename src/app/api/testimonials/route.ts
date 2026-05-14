@@ -29,7 +29,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   // Rate limit: 2 محاولات كل ساعة لنفس الـ IP
   const ip     = getIP(req);
-  const rl     = rateLimit(`testimonial:${ip}`, { limit: 2, windowSecs: 60 * 60 });
+  const rl     = await rateLimit(`testimonial:${ip}`, { limit: 2, windowSecs: 60 * 60 });
   if (!rl.success) {
     return NextResponse.json(
       { error: `حاول بعد ${rl.retryAfter} ثانية` },

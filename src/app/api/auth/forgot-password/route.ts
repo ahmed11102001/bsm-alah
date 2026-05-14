@@ -8,7 +8,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 export async function POST(req: NextRequest) {
   // ── Rate Limit: 3 طلبات كل 15 دقيقة لنفس الـ IP ──────────────────────────
   const ip     = getIP(req);
-  const result = rateLimit(`forgot:${ip}`, { limit: 3, windowSecs: 15 * 60 });
+  const result = await rateLimit(`forgot:${ip}`, { limit: 3, windowSecs: 15 * 60 });
 
   if (!result.success) {
     return NextResponse.json(

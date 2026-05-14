@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
 
         // ── Rate Limit: 10 محاولات كل 15 دقيقة لنفس الإيميل ─────────────────
         const key    = `login:${credentials.email.toLowerCase()}`;
-        const result = rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
+        const result = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
         if (!result.success) {
           throw new Error(`كثير من المحاولات. حاول بعد ${result.retryAfter} ثانية.`);
         }
