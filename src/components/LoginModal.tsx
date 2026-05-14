@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -186,6 +186,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       const d = await r.json();
       if (!r.ok) { setErr(d.error); return; }
       toast.success("تم إنشاء الحساب بنجاح!");
+      // تأكد إن مفيش session قديمة عالقة قبل auto-login
+      await signOut({ redirect: false });
       // auto-login
       await signIn("credentials", {
         email: regEmail.toLowerCase(), password: regPass, redirect: false,

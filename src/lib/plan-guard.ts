@@ -66,6 +66,12 @@ async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date)
   return null; // لم يتم التصفير
 }
 
+// ─── Helper: هل اليوزر ده superadmin؟ ───────────────────────────────────────
+async function isSuperAdmin(userId: string): Promise<boolean> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { isSuper: true } });
+  return u?.isSuper ?? false;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. checkContactsLimit — قبل إضافة جهة اتصال أو جمهور
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -73,6 +79,9 @@ export async function checkContactsLimit(
   ownerId: string,
   addingCount = 1
 ): Promise<GuardResult> {
+  // ✅ السوبر أدمن مفيش عليه قيود
+  if (await isSuperAdmin(ownerId)) return { allowed: true };
+
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
   const limit = PLANS[plan].contacts;
@@ -103,6 +112,9 @@ export async function checkContactsLimit(
 // 2. checkCampaignsLimit — قبل إنشاء حملة
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function checkCampaignsLimit(ownerId: string): Promise<GuardResult> {
+  // ✅ السوبر أدمن مفيش عليه قيود
+  if (await isSuperAdmin(ownerId)) return { allowed: true };
+
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
   const limit = PLANS[plan].campaignsPerMonth;
@@ -149,6 +161,9 @@ export async function incrementCampaignUsage(ownerId: string): Promise<void> {
 // 3. checkTeamLimit — قبل إضافة عضو فريق
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function checkTeamLimit(ownerId: string): Promise<GuardResult> {
+  // ✅ السوبر أدمن مفيش عليه قيود
+  if (await isSuperAdmin(ownerId)) return { allowed: true };
+
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
   const limit = PLANS[plan].teamMembers;
@@ -196,6 +211,9 @@ export async function checkFeature(
   ownerId: string,
   feature: BooleanFeature
 ): Promise<GuardResult> {
+  // ✅ السوبر أدمن مفيش عليه قيود
+  if (await isSuperAdmin(ownerId)) return { allowed: true };
+
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
 

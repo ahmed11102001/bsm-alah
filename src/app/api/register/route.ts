@@ -53,8 +53,8 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { message: "تم إنشاء الحساب بنجاح" },
-        { status: 201 }
+        { error: "هذا البريد الإلكتروني مسجل بالفعل، يرجى تسجيل الدخول أو استخدام بريد آخر" },
+        { status: 409 }
       );
     }
 
