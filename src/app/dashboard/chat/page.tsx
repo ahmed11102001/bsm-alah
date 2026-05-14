@@ -9,6 +9,7 @@ import {
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
+  Moon, Sun, Globe, ArrowLeft, ChevronLeft,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -17,10 +18,101 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+type Lang = "ar" | "en";
+
+const t: Record<Lang, Record<string, string>> = {
+  ar: {
+    search: "بحث بالاسم أو الرقم",
+    all: "الكل", replied: "تم الرد", today: "اليوم",
+    unread: "غير مقروءة", archived: "الأرشيف",
+    noConvs: "لا توجد محادثات حتى الآن",
+    noConvsHint: "ستظهر المحادثات هنا بعد رد العملاء",
+    startCampaign: "ابدأ حملة الآن",
+    noMsgs: "لا توجد رسائل بعد",
+    pickConv: "اختر محادثة للبدء",
+    pickConvHint: "ستظهر محادثات العملاء هنا بعد ردودهم على رسائلك",
+    typeMsg: "اكتب رسالة...",
+    you: "أنت: ",
+    image: "📷 صورة", video: "🎥 فيديو",
+    audio: "🎙 رسالة صوتية", document: "📄 ملف",
+    saveImage: "حفظ الصورة", downloadFile: "تحميل الملف",
+    emoji: "إيموجي", chooseTemplate: "اختر قالباً",
+    noTemplates: "لا توجد قوالب معتمدة",
+    templateSent: "تم إرسال القالب",
+    locationSent: "تم إرسال الموقع",
+    locationFailed: "فشل إرسال الموقع",
+    locationDenied: "لم يتم السماح بالوصول للموقع",
+    noGeolocation: "المتصفح لا يدعم الموقع",
+    fileSent: "تم إرسال الملف",
+    micError: "لا يمكن الوصول للميكروفون",
+    archived_ok: "تم الأرشفة",
+    unarchived_ok: "تم إلغاء الأرشفة",
+    deleted: "تم الحذف",
+    deleteFailed: "فشل الحذف",
+    addedToAudience: "تمت الإضافة للقائمة",
+    noAudiences: "لا توجد قوائم — أنشئها من جهات الاتصال",
+    voiceOn: "Voice ON", voice: "Voice",
+    voiceOnMsg: "🎙️ Voice Agent مفعّل",
+    voiceOffMsg: "Voice Agent موقوف",
+    archiveConv: "أرشفة المحادثة",
+    unarchiveConv: "إلغاء الأرشفة",
+    deleteConv: "حذف المحادثة",
+    addToList: "إضافة لقائمة",
+    closeConv: "إغلاق المحادثة",
+    photoLabel: "صورة", videoLabel: "فيديو",
+    docLabel: "ملف / مستند", locationLabel: "الموقع",
+    templateLabel: "قالب رسمي",
+    today_label: "اليوم", yesterday: "أمس",
+    reactions: "ردود الفعل", close: "إغلاق",
+  },
+  en: {
+    search: "Search by name or number",
+    all: "All", replied: "Replied", today: "Today",
+    unread: "Unread", archived: "Archived",
+    noConvs: "No conversations yet",
+    noConvsHint: "Conversations will appear here after customers reply",
+    startCampaign: "Start a Campaign",
+    noMsgs: "No messages yet",
+    pickConv: "Select a conversation",
+    pickConvHint: "Customer conversations will appear here after they reply",
+    typeMsg: "Type a message...",
+    you: "You: ",
+    image: "📷 Image", video: "🎥 Video",
+    audio: "🎙 Voice message", document: "📄 File",
+    saveImage: "Save image", downloadFile: "Download file",
+    emoji: "Emoji", chooseTemplate: "Choose a template",
+    noTemplates: "No approved templates",
+    templateSent: "Template sent",
+    locationSent: "Location sent",
+    locationFailed: "Failed to send location",
+    locationDenied: "Location access denied",
+    noGeolocation: "Browser doesn't support geolocation",
+    fileSent: "File sent",
+    micError: "Cannot access microphone",
+    archived_ok: "Archived", unarchived_ok: "Unarchived",
+    deleted: "Deleted", deleteFailed: "Delete failed",
+    addedToAudience: "Added to list",
+    noAudiences: "No lists — create them from contacts",
+    voiceOn: "Voice ON", voice: "Voice",
+    voiceOnMsg: "🎙️ Voice Agent enabled",
+    voiceOffMsg: "Voice Agent disabled",
+    archiveConv: "Archive conversation",
+    unarchiveConv: "Unarchive",
+    deleteConv: "Delete conversation",
+    addToList: "Add to list",
+    closeConv: "Close conversation",
+    photoLabel: "Photo", videoLabel: "Video",
+    docLabel: "File / Document", locationLabel: "Location",
+    templateLabel: "Official template",
+    today_label: "Today", yesterday: "Yesterday",
+    reactions: "Reactions", close: "Close",
+  },
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Audience { id: string; name: string }
 interface Template { id: string; name: string; content: string; status: string }
-
 interface Contact { id: string; name: string | null; phone: string }
 interface LastMsg {
   id: string; content: string | null; type: string;
@@ -34,39 +126,23 @@ interface Conversation {
   isArchived: boolean;
   voiceAgentEnabled?: boolean;
 }
-
 interface Message {
   id: string; content: string | null; type: string;
   direction: string; status: string; mediaUrl: string | null; createdAt: string;
   reactions?: { emoji: string; senderId: string }[];
 }
-
-type Filter = "all" | "replied" | "today" | "unread" | "archived";
+type FilterType = "all" | "replied" | "today" | "unread" | "archived";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const initials = (c: Contact) =>
-  (c.name ?? c.phone).slice(0, 2).toUpperCase();
+const initials = (c: Contact) => (c.name ?? c.phone).slice(0, 2).toUpperCase();
 
 const avatarColor = (id: string) => {
   const colors = [
-    "bg-teal-500", "bg-green-500", "bg-blue-500",
-    "bg-purple-500", "bg-pink-500", "bg-orange-500", "bg-cyan-500",
+    "bg-teal-500","bg-green-500","bg-blue-500",
+    "bg-purple-500","bg-pink-500","bg-orange-500","bg-cyan-500",
   ];
   const n = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return colors[n % colors.length];
-};
-
-const typeIcon: Record<string, React.ReactNode> = {
-  image:    <ImageIcon className="w-3.5 h-3.5 inline ml-1" />,
-  video:    <Video className="w-3.5 h-3.5 inline ml-1" />,
-  audio:    <Mic className="w-3.5 h-3.5 inline ml-1" />,
-  document: <FileText className="w-3.5 h-3.5 inline ml-1" />,
-  template: <FileText className="w-3.5 h-3.5 inline ml-1" />,
-};
-
-const typePreview: Record<string, string> = {
-  image: "📷 صورة", video: "🎥 فيديو",
-  audio: "🎙 رسالة صوتية", document: "📄 ملف",
 };
 
 function mediaSrc(mediaUrl: string, opts?: { download?: boolean }) {
@@ -86,85 +162,84 @@ function MsgTick({ status, isMe }: { status: string; isMe: boolean }) {
 }
 
 function timeStr(iso: string) {
-  return new Date(iso).toLocaleTimeString("ar-EG", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  return new Date(iso).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
 }
 
-function dateStr(iso: string) {
+function dateStr(iso: string, lang: Lang) {
   const d = new Date(iso);
   const today = new Date();
-  if (d.toDateString() === today.toDateString()) return "اليوم";
+  if (d.toDateString() === today.toDateString()) return t[lang].today_label;
   const yest = new Date(today); yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === yest.toDateString()) return "أمس";
-  return d.toLocaleDateString("ar-EG", { month: "short", day: "numeric" });
+  if (d.toDateString() === yest.toDateString()) return t[lang].yesterday;
+  return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" });
 }
 
-// ─── Quick reactions ──────────────────────────────────────────────────────────
-const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
+const QUICK_REACTIONS = ["❤️","😂","😮","😢","🙏","👍"];
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
-function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoji: string) => void }) {
+function Bubble({
+  msg, onReact, lang, dark,
+}: {
+  msg: Message;
+  onReact?: (msgId: string, emoji: string) => void;
+  lang: Lang;
+  dark: boolean;
+}) {
   const isMe = msg.direction === "outbound";
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
   const [showReactions, setShowReactions] = useState(false);
   const resolvedMediaSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl) : null;
-  const resolvedMediaDownloadSrc = msg.mediaUrl
-    ? mediaSrc(msg.mediaUrl, { download: true })
-    : null;
+  const resolvedMediaDownloadSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl, { download: true }) : null;
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, msg.id]);
 
-  // تجميع الـ reactions
   const reactionCounts = (msg.reactions ?? []).reduce<Record<string, number>>((acc, r) => {
     acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
     return acc;
   }, {});
 
+  const bubbleBg = isMe
+    ? (dark ? "bg-[#005c4b]" : "bg-[#d9fdd3]")
+    : (dark ? "bg-[#1f2c34]" : "bg-white");
+
+  const textColor = dark ? "text-[#e9edef]" : "text-[#111b21]";
+
   return (
     <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`}>
-      {/* الـ bubble نفسها + زر reactions */}
-      <div className="relative inline-block max-w-[68%]">
-
-        {/* Reaction bar — يظهر عند الضغط على الرسالة */}
+      <div className="relative inline-block max-w-[80%] sm:max-w-[68%]">
         {showReactions && onReact && (
-          <div className={`absolute -top-10 z-20 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-2 py-1
+          <div className={`absolute -top-10 z-20 flex items-center gap-1 rounded-full shadow-lg border px-2 py-1
+            ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
             ${isMe ? "right-0" : "left-0"}`}>
             {QUICK_REACTIONS.map(emoji => (
-              <button
-                key={emoji}
-                onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowReactions(false); }}
-                className="text-lg hover:scale-125 transition-transform leading-none"
-              >
+              <button key={emoji}
+                onClick={e => { e.stopPropagation(); onReact(msg.id, emoji); setShowReactions(false); }}
+                className="text-lg hover:scale-125 transition-transform leading-none">
                 {emoji}
               </button>
             ))}
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowReactions(false); }}
-              className="text-gray-400 hover:text-gray-600 text-xs mr-1"
-            >✕</button>
+            <button onClick={e => { e.stopPropagation(); setShowReactions(false); }}
+              className="text-gray-400 hover:text-gray-600 text-xs mr-1">✕</button>
           </div>
         )}
 
-        {/* الـ bubble */}
         <div
           onClick={() => onReact && setShowReactions(p => !p)}
           className={`rounded-xl px-3 py-2 text-sm shadow-sm cursor-pointer
-            ${isMe ? "bg-[#d9fdd3] rounded-tr-none" : "bg-white rounded-tl-none"}`}
+            ${isMe ? "rounded-tr-none" : "rounded-tl-none"} ${bubbleBg}`}
         >
-          {/* media */}
           {msg.type === "image" && resolvedMediaSrc && (
             <>
               <a href={resolvedMediaSrc} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-                <img src={resolvedMediaSrc} alt="صورة واردة" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
+                <img src={resolvedMediaSrc} alt="" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
               </a>
               {resolvedMediaDownloadSrc && (
                 <a href={resolvedMediaDownloadSrc} download onClick={e => e.stopPropagation()}
-                  className="inline-flex items-center text-[11px] text-blue-600 hover:underline mb-1">
-                  حفظ الصورة
+                  className="inline-flex items-center text-[11px] text-blue-400 hover:underline mb-1">
+                  {t[lang].saveImage}
                 </a>
               )}
             </>
@@ -176,47 +251,43 @@ function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoj
           {msg.type === "audio" && resolvedMediaSrc && (
             <>
               <audio ref={audioRef} src={resolvedMediaSrc} controls onClick={e => e.stopPropagation()}
-                className="mb-1 w-56" />
+                className="mb-1 w-full max-w-[200px]" />
               <div className="flex items-center gap-1 mb-1">
-                {[1, 1.5, 2].map((r) => (
+                {([1, 1.5, 2] as const).map(r => (
                   <button key={r} type="button"
-                    onClick={(e) => { e.stopPropagation(); setSpeed(r as 1 | 1.5 | 2); }}
+                    onClick={e => { e.stopPropagation(); setSpeed(r); }}
                     className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${
                       speed === r ? "bg-[#25d366] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}>
-                    {r}x
-                  </button>
+                    }`}>{r}x</button>
                 ))}
               </div>
             </>
           )}
           {msg.type === "document" && resolvedMediaSrc && (
             <a href={resolvedMediaSrc} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-              className="flex items-center gap-2 text-blue-600 text-xs mb-1 hover:underline">
-              <FileText className="w-4 h-4" /> تحميل الملف
+              className="flex items-center gap-2 text-blue-400 text-xs mb-1 hover:underline">
+              <FileText className="w-4 h-4" /> {t[lang].downloadFile}
             </a>
           )}
 
           {msg.content && (
-            <p className="leading-relaxed whitespace-pre-wrap break-words text-[#111b21]">
+            <p className={`leading-relaxed whitespace-pre-wrap break-words ${textColor}`}>
               {msg.content}
             </p>
           )}
 
-          {/* الوقت + علامات الصح */}
           <div className={`flex items-center gap-0.5 mt-0.5 text-[10px] text-gray-400
             ${isMe ? "justify-end" : "justify-start"}`}>
             {timeStr(msg.createdAt)}
             <MsgTick status={msg.status} isMe={isMe} />
           </div>
 
-          {/* Reactions — جوه الـ bubble */}
           {Object.keys(reactionCounts).length > 0 && (
-            <div className={`flex gap-1 flex-wrap mt-1.5 pt-1.5 border-t border-black/5 ${isMe ? "justify-end" : "justify-start"}`}>
+            <div className={`flex gap-1 flex-wrap mt-1.5 pt-1.5 border-t border-black/10 ${isMe ? "justify-end" : "justify-start"}`}>
               {Object.entries(reactionCounts).map(([emoji, count]) => (
                 <span key={emoji}
-                  className="inline-flex items-center gap-0.5 bg-black/5 rounded-full px-1.5 py-0.5 text-xs">
-                  {emoji}{count > 1 && <span className="text-gray-600 text-[10px]">{count}</span>}
+                  className="inline-flex items-center gap-0.5 bg-black/10 rounded-full px-1.5 py-0.5 text-xs">
+                  {emoji}{count > 1 && <span className="text-gray-500 text-[10px]">{count}</span>}
                 </span>
               ))}
             </div>
@@ -227,43 +298,55 @@ function Bubble({ msg, onReact }: { msg: Message; onReact?: (msgId: string, emoj
   );
 }
 
-// ─── Attach menu options ──────────────────────────────────────────────────────
-const ATTACH = [
-  { key: "image",    label: "صورة",           icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                  color: "bg-purple-500" },
-  { key: "video",    label: "فيديو",           icon: <Video className="w-4 h-4" />,      accept: "video/*",                  color: "bg-red-500", disabled: true },
-  { key: "document", label: "ملف / مستند",    icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
-];
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
-  // conversations
-  const [convs,       setConvs]        = useState<Conversation[]>([]);
-  const [loadingConvs,setLoadingConvs] = useState(true);
-  const [search,      setSearch]       = useState("");
-  const [filter,      setFilter]       = useState<Filter>("all");
+  const [dark, setDark] = useState(false);
+  const [lang, setLang] = useState<Lang>("ar");
 
-  // selected
-  const [selected,    setSelected]     = useState<Conversation | null>(null);
-  const [messages,    setMessages]     = useState<Message[]>([]);
-  const [loadingMsgs, setLoadingMsgs]  = useState(false);
+  const [convs, setConvs]               = useState<Conversation[]>([]);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+  const [search, setSearch]             = useState("");
+  const [filter, setFilter]             = useState<FilterType>("all");
 
-  // input
-  const [text,        setText]         = useState("");
-  const [sending,     setSending]      = useState(false);
-  const [showAttach,  setShowAttach]   = useState(false);
-  const [showEmoji,   setShowEmoji]    = useState(false);
-  const [recording,   setRecording]    = useState(false);
-  const [showTpl,     setShowTpl]      = useState(false);
-  const [templates,   setTemplates]    = useState<Template[]>([]);
-  const [audiences,   setAudiences]    = useState<Audience[]>([]);
+  const [selected, setSelected]         = useState<Conversation | null>(null);
+  const [messages, setMessages]         = useState<Message[]>([]);
+  const [loadingMsgs, setLoadingMsgs]   = useState(false);
 
-  const endRef     = useRef<HTMLDivElement>(null);
-  const fileRef    = useRef<HTMLInputElement>(null);
-  const mediaRecRef= useRef<MediaRecorder | null>(null);
-  const chunksRef  = useRef<Blob[]>([]);
-  const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  // mobile: show chat panel over sidebar
+  const [mobileShowChat, setMobileShowChat] = useState(false);
 
-  // ── Fetch conversations ──────────────────────────────────────────
+  const [text, setText]                 = useState("");
+  const [sending, setSending]           = useState(false);
+  const [showAttach, setShowAttach]     = useState(false);
+  const [showEmoji, setShowEmoji]       = useState(false);
+  const [recording, setRecording]       = useState(false);
+  const [showTpl, setShowTpl]           = useState(false);
+  const [templates, setTemplates]       = useState<Template[]>([]);
+  const [audiences, setAudiences]       = useState<Audience[]>([]);
+
+  const endRef      = useRef<HTMLDivElement>(null);
+  const fileRef     = useRef<HTMLInputElement>(null);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const chunksRef   = useRef<Blob[]>([]);
+  const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const dir = lang === "ar" ? "rtl" : "ltr";
+
+  // ── Theme classes ────────────────────────────────────────────────
+  const bg       = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
+  const sidebarBg = dark ? "bg-[#1f2c34]" : "bg-white";
+  const headerBg  = dark ? "bg-[#202c33]" : "bg-[#f0f2f5]";
+  const inputBg   = dark ? "bg-[#2a3942]" : "bg-white";
+  const textMain  = dark ? "text-[#e9edef]" : "text-[#111b21]";
+  const textSub   = dark ? "text-[#8696a0]" : "text-gray-400";
+  const border    = dark ? "border-[#2a3942]" : "border-gray-200";
+  const borderLight = dark ? "border-[#2a3942]" : "border-gray-100";
+  const searchBg  = dark ? "bg-[#2a3942] text-[#d1d7db] placeholder-[#8696a0]" : "bg-[#f0f2f5] text-gray-800 placeholder-gray-400";
+  const hoverRow  = dark ? "hover:bg-[#2a3942]" : "hover:bg-[#f5f6f6]";
+  const selectedRow = dark ? "bg-[#2a3942]" : "bg-[#e8f5e9]";
+  const msgAreaBg = dark ? "#0b141a" : "#efeae2";
+
+  // ── Fetch helpers ────────────────────────────────────────────────
   const fetchConvs = useCallback(async () => {
     try {
       const q = new URLSearchParams({ type: "conversations", filter, search });
@@ -274,31 +357,27 @@ export default function ChatPage() {
     finally { setLoadingConvs(false); }
   }, [filter, search]);
 
-  // ── Fetch messages ────────────────────────────────────────────────
   const fetchMsgs = useCallback(async (contactId: string) => {
     setLoadingMsgs(true);
     try {
       const r = await fetch(`/api/chat?type=messages&contactId=${contactId}`);
       const d = await r.json();
       setMessages(d.messages ?? []);
-      // mark as read locally
       setConvs(prev => prev.map(c =>
         c.contact.id === contactId ? { ...c, unreadCount: 0 } : c
       ));
     } finally { setLoadingMsgs(false); }
   }, []);
 
-  // ── Select conversation ───────────────────────────────────────────
   const selectConv = useCallback((conv: Conversation) => {
     setSelected(conv);
     fetchMsgs(conv.contact.id);
-    setShowTpl(false);
-    setShowAttach(false);
+    setShowTpl(false); setShowAttach(false);
+    setMobileShowChat(true);
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => fetchMsgs(conv.contact.id), 8000);
   }, [fetchMsgs]);
 
-  // ── Misc fetches ──────────────────────────────────────────────────
   const fetchTemplates = useCallback(async () => {
     const r = await fetch("/api/templates");
     const d = await r.json();
@@ -313,9 +392,7 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    fetchConvs();
-    fetchTemplates();
-    fetchAudiences();
+    fetchConvs(); fetchTemplates(); fetchAudiences();
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
 
@@ -323,7 +400,7 @@ export default function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Send text ─────────────────────────────────────────────────────
+  // ── Actions ──────────────────────────────────────────────────────
   const sendText = async () => {
     if (!text.trim() || !selected || sending) return;
     const body = text; setText(""); setSending(true);
@@ -339,10 +416,8 @@ export default function ChatPage() {
     finally { setSending(false); }
   };
 
-  // ── Send reaction ─────────────────────────────────────────────────
   const sendReaction = async (msgId: string, emoji: string) => {
     if (!selected) return;
-    // حدّث الـ UI فوراً (optimistic)
     setMessages(prev => prev.map(m =>
       m.id === msgId
         ? { ...m, reactions: [...(m.reactions ?? []), { emoji, senderId: "me" }] }
@@ -350,19 +425,13 @@ export default function ChatPage() {
     ));
     try {
       await fetch("/api/chat", {
-        method:  "PATCH",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action:    "react",
-          contactId: selected.contact.id,
-          messageId: msgId,
-          emoji,
-        }),
+        body: JSON.stringify({ action:"react", contactId: selected.contact.id, messageId: msgId, emoji }),
       });
-    } catch { /* silent — الـ UI اتحدث فعلاً */ }
+    } catch { /* silent */ }
   };
 
-  // ── Send template ─────────────────────────────────────────────────
   const sendTemplate = async (tpl: Template) => {
     if (!selected || sending) return;
     setSending(true); setShowTpl(false);
@@ -370,23 +439,18 @@ export default function ChatPage() {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action:"send", contactId: selected.contact.id,
-          type:"template", templateName: tpl.name,
-          content: `[قالب] ${tpl.name}`,
-        }),
+        body: JSON.stringify({ action:"send", contactId: selected.contact.id, type:"template", templateName: tpl.name, content: `[Template] ${tpl.name}` }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
-      toast.success("تم إرسال القالب");
+      toast.success(t[lang].templateSent);
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }
   };
 
-  // ── Send location ─────────────────────────────────────────────────
   const sendLocation = () => {
     if (!selected) return;
-    if (!navigator.geolocation) { toast.error("المتصفح لا يدعم الموقع"); return; }
+    if (!navigator.geolocation) { toast.error(t[lang].noGeolocation); return; }
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude: lat, longitude: lng } = pos.coords;
       setSending(true);
@@ -394,84 +458,63 @@ export default function ChatPage() {
         const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action:"send", contactId: selected.contact.id,
-            type:"text", content: `📍 الموقع: https://maps.google.com/?q=${lat},${lng}`,
-          }),
+          body: JSON.stringify({ action:"send", contactId: selected.contact.id, type:"text", content: `📍 Location: https://maps.google.com/?q=${lat},${lng}` }),
         });
         if (!r.ok) throw new Error();
-        toast.success("تم إرسال الموقع");
+        toast.success(t[lang].locationSent);
         fetchMsgs(selected.contact.id);
-      } catch { toast.error("فشل إرسال الموقع"); }
+      } catch { toast.error(t[lang].locationFailed); }
       finally { setSending(false); }
-    }, () => toast.error("لم يتم السماح بالوصول للموقع"));
+    }, () => toast.error(t[lang].locationDenied));
   };
 
-  // ── Send file ─────────────────────────────────────────────────────
   const sendFile = async (file: File, mediaType: string) => {
     if (!selected) return;
     setSending(true);
     try {
-      // 1. Upload to Meta or your storage (here we use a base64 approach for demo)
       const formData = new FormData();
       formData.append("file", file);
       formData.append("contactId", selected.contact.id);
       formData.append("type", mediaType);
-
-      const r = await fetch("/api/chat", {
-        method: "POST",
-        body: formData,
-      });
-      if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? "فشل الإرسال"); }
-      toast.success("تم إرسال الملف");
+      const r = await fetch("/api/chat", { method: "POST", body: formData });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? t[lang].locationFailed); }
+      toast.success(t[lang].fileSent);
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }
   };
 
-  // ── Voice note ────────────────────────────────────────────────────
   const toggleRecord = async () => {
     if (recording) {
-      mediaRecRef.current?.stop();
-      setRecording(false);
+      mediaRecRef.current?.stop(); setRecording(false);
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunksRef.current = [];
         const mr = new MediaRecorder(stream);
         mediaRecRef.current = mr;
-        mr.ondataavailable = (e) => chunksRef.current.push(e.data);
+        mr.ondataavailable = e => chunksRef.current.push(e.data);
         mr.onstop = async () => {
           stream.getTracks().forEach(t => t.stop());
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-          const file = new File([blob], `voice_${Date.now()}.webm`, { type: "audio/webm" });
-          await sendFile(file, "audio");
+          await sendFile(new File([blob], `voice_${Date.now()}.webm`, { type: "audio/webm" }), "audio");
         };
-        mr.start();
-        setRecording(true);
-      } catch { toast.error("لا يمكن الوصول للميكروفون"); }
+        mr.start(); setRecording(true);
+      } catch { toast.error(t[lang].micError); }
     }
   };
 
-  // ── Contact actions ───────────────────────────────────────────────
   const setConversationArchived = async (contactId: string, shouldArchive: boolean) => {
     try {
       const r = await fetch("/api/chat", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: shouldArchive ? "archive" : "unarchive",
-          contactId,
-        }),
+        body: JSON.stringify({ action: shouldArchive ? "archive" : "unarchive", contactId }),
       });
-      if (!r.ok) {
-        const d = await r.json();
-        throw new Error(d.error ?? "فشلت العملية");
-      }
-      toast.success(shouldArchive ? "تم الأرشفة" : "تم إلغاء الأرشفة");
-      setSelected(null);
-      fetchConvs();
-    } catch (e: any) { toast.error(e.message ?? "فشلت العملية"); }
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      toast.success(shouldArchive ? t[lang].archived_ok : t[lang].unarchived_ok);
+      setSelected(null); setMobileShowChat(false); fetchConvs();
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const deleteConversation = async (contactId: string) => {
@@ -481,10 +524,9 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", contactId }),
       });
-      toast.success("تم الحذف");
-      setSelected(null);
-      fetchConvs();
-    } catch { toast.error("فشل الحذف"); }
+      toast.success(t[lang].deleted);
+      setSelected(null); setMobileShowChat(false); fetchConvs();
+    } catch { toast.error(t[lang].deleteFailed); }
   };
 
   const addToAudience = async (contactId: string, audienceId: string) => {
@@ -495,7 +537,7 @@ export default function ChatPage() {
         body: JSON.stringify({ action: "addToAudience", contactId, audienceId }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
-      toast.success("تمت الإضافة للقائمة");
+      toast.success(t[lang].addedToAudience);
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -507,18 +549,16 @@ export default function ChatPage() {
         body: JSON.stringify({ action: "toggleVoiceAgent", contactId, enable }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
-      // حدّث الـ state محلياً
       setConvs(prev => prev.map(c =>
         c.contact.id === contactId ? { ...c, voiceAgentEnabled: enable } : c
       ));
       if (selected?.contact.id === contactId) {
         setSelected(prev => prev ? { ...prev, voiceAgentEnabled: enable } : prev);
       }
-      toast.success(enable ? "🎙️ Voice Agent مفعّل" : "Voice Agent موقوف");
+      toast.success(enable ? t[lang].voiceOnMsg : t[lang].voiceOffMsg);
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // ── Filtered convs ────────────────────────────────────────────────
   const filteredConvs = useMemo(() => {
     const q = search.toLowerCase();
     return convs.filter(c => {
@@ -528,28 +568,67 @@ export default function ChatPage() {
     });
   }, [convs, search]);
 
+  const ATTACH_OPTIONS = [
+    { key: "image",    label: t[lang].photoLabel,   icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                       color: "bg-purple-500" },
+    { key: "video",    label: t[lang].videoLabel,   icon: <Video className="w-4 h-4" />,      accept: "video/*",                       color: "bg-red-500", disabled: true },
+    { key: "document", label: t[lang].docLabel,     icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
+  ];
+
   // ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="flex h-[calc(100vh-64px)] bg-[#f0f2f5] overflow-hidden"
-      style={{ direction: "rtl" }}
+      className={`flex h-[calc(100vh-64px)] ${bg} overflow-hidden relative`}
+      style={{ direction: dir }}
     >
       {/* ══════════ SIDEBAR ══════════ */}
-      <aside className="w-[340px] flex-shrink-0 bg-white flex flex-col border-l border-gray-200">
+      {/* On mobile: hidden when chat is open */}
+      <aside className={`
+        ${sidebarBg} flex flex-col border-r ${border}
+        flex-shrink-0
+        w-full sm:w-[340px]
+        ${mobileShowChat ? "hidden sm:flex" : "flex"}
+      `}>
 
-        {/* Search */}
-        <div className="p-3 bg-white border-b border-gray-100">
+        {/* Top bar — search + theme/lang toggles */}
+        <div className={`px-3 pt-3 pb-2 ${sidebarBg} border-b ${borderLight}`}>
+          {/* Controls row */}
+          <div className="flex items-center justify-between mb-2.5">
+            <span className={`text-base font-semibold ${textMain}`}>
+              {lang === "ar" ? "المحادثات" : "Chats"}
+            </span>
+            <div className="flex items-center gap-1.5">
+              {/* Language toggle */}
+              <button
+                onClick={() => setLang(l => l === "ar" ? "en" : "ar")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all
+                  ${dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                {lang === "ar" ? "EN" : "عر"}
+              </button>
+              {/* Dark mode toggle */}
+              <button
+                onClick={() => setDark(d => !d)}
+                className={`p-1.5 rounded-full transition-all
+                  ${dark ? "bg-[#2a3942] text-yellow-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          {/* Search */}
           <div className="relative">
-            <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+            <Search className={`absolute top-2.5 w-4 h-4 ${textSub} ${dir === "rtl" ? "right-3" : "left-3"}`} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="بحث بالاسم أو الرقم"
-              className="w-full bg-[#f0f2f5] rounded-xl py-2 pr-9 pl-4 text-sm outline-none placeholder-gray-400 text-gray-800"
+              placeholder={t[lang].search}
+              className={`w-full ${searchBg} rounded-xl py-2 text-sm outline-none
+                ${dir === "rtl" ? "pr-9 pl-4" : "pl-9 pr-4"}`}
             />
             {search && (
               <button onClick={() => setSearch("")}
-                className="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600">
+                className={`absolute top-2.5 ${textSub} hover:text-gray-600 ${dir === "rtl" ? "left-3" : "right-3"}`}>
                 <X className="w-4 h-4" />
               </button>
             )}
@@ -557,24 +636,18 @@ export default function ChatPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-1.5 px-3 py-2 border-b border-gray-100 overflow-x-auto">
-          {([
-            { value: "all",      label: "الكل" },
-            { value: "replied",  label: "تم الرد" },
-            { value: "today",    label: "اليوم" },
-            { value: "unread",   label: "غير مقروءة" },
-            { value: "archived", label: "الأرشيف" },
-          ] as { value: Filter; label: string }[]).map(f => (
-            <button
-              key={f.value}
-              onClick={() => { setFilter(f.value); }}
+        <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto`}>
+          {(["all","replied","today","unread","archived"] as FilterType[]).map(f => (
+            <button key={f}
+              onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                filter === f.value
+                filter === f
                   ? "bg-[#25d366] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {f.label}
+                  : dark
+                    ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}>
+              {t[lang][f]}
             </button>
           ))}
         </div>
@@ -587,180 +660,153 @@ export default function ChatPage() {
             </div>
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <MessageSquare className="w-12 h-12 text-gray-200 mb-3" />
-              <p className="text-sm text-gray-400 mb-1">لا توجد محادثات حتى الآن</p>
-              <p className="text-xs text-gray-300 mb-5">ستظهر المحادثات هنا بعد رد العملاء</p>
-              <Button
-                size="sm"
+              <MessageSquare className={`w-12 h-12 mb-3 ${dark ? "text-[#2a3942]" : "text-gray-200"}`} />
+              <p className={`text-sm mb-1 ${textSub}`}>{t[lang].noConvs}</p>
+              <p className={`text-xs mb-5 ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>{t[lang].noConvsHint}</p>
+              <Button size="sm"
                 className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-1.5"
-                onClick={() => {
-                  // navigate to campaigns via parent state — send a custom event
-                  window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }));
-                }}
-              >
-                <Megaphone className="w-4 h-4" /> ابدأ حملة الآن
+                onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
+                <Megaphone className="w-4 h-4" /> {t[lang].startCampaign}
               </Button>
             </div>
-          ) : (
-            filteredConvs.map(conv => {
-              const isSelected = selected?.contact.id === conv.contact.id;
-              const last = conv.lastMessage;
-              const isUnread = conv.unreadCount > 0;
-              return (
-                <div
-                  key={conv.contact.id}
-                  onClick={() => selectConv(conv)}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-50
-                    transition-colors hover:bg-[#f5f6f6]
-                    ${isSelected ? "bg-[#e8f5e9]" : "bg-white"}`}
-                >
-                  {/* Avatar */}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center
-                    text-white font-semibold text-base flex-shrink-0
-                    ${avatarColor(conv.contact.id)}`}>
-                    {initials(conv.contact)}
+          ) : filteredConvs.map(conv => {
+            const isSelected = selected?.contact.id === conv.contact.id;
+            const last = conv.lastMessage;
+            const isUnread = conv.unreadCount > 0;
+            const typePreviewMap: Record<string, string> = {
+              image: t[lang].image, video: t[lang].video,
+              audio: t[lang].audio, document: t[lang].document,
+            };
+            return (
+              <div key={conv.contact.id}
+                onClick={() => selectConv(conv)}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b ${borderLight}
+                  transition-colors ${isSelected ? selectedRow : `${sidebarBg} ${hoverRow}`}`}>
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center
+                  text-white font-semibold text-sm flex-shrink-0 ${avatarColor(conv.contact.id)}`}>
+                  {initials(conv.contact)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-sm truncate ${isUnread ? "font-bold" : "font-medium"} ${textMain}`}>
+                      {conv.contact.name ?? conv.contact.phone}
+                    </span>
+                    <span className={`text-[11px] flex-shrink-0 mx-2 ${isUnread ? "text-[#25d366] font-medium" : textSub}`}>
+                      {conv.lastMessageAt ? dateStr(conv.lastMessageAt, lang) : ""}
+                    </span>
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className={`text-sm truncate ${isUnread ? "font-bold text-[#111b21]" : "font-medium text-[#111b21]"}`}>
-                        {conv.contact.name ?? conv.contact.phone}
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs truncate ${isUnread ? textMain : textSub}`}>
+                      {last
+                        ? <>
+                            {last.direction === "outbound" && <span className={textSub}>{t[lang].you}</span>}
+                            {typePreviewMap[last.type] ?? last.content ?? ""}
+                          </>
+                        : <span className={`italic ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>
+                            {t[lang].noMsgs}
+                          </span>}
+                    </p>
+                    {isUnread ? (
+                      <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold ${dir === "rtl" ? "mr-2" : "ml-2"}`}>
+                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                       </span>
-                      <span className={`text-[11px] flex-shrink-0 mr-2 ${isUnread ? "text-[#25d366] font-medium" : "text-gray-400"}`}>
-                        {conv.lastMessageAt ? dateStr(conv.lastMessageAt) : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className={`text-xs truncate ${isUnread ? "text-[#111b21]" : "text-gray-400"}`}>
-                        {last
-                          ? <>
-                              {last.direction === "outbound" && <span className="text-gray-400">أنت: </span>}
-                              {typeIcon[last.type]}
-                              {typePreview[last.type] ?? last.content ?? ""}
-                            </>
-                          : <span className="italic text-gray-300">لا توجد رسائل</span>
-                        }
-                      </p>
-                      {/* Unread badge */}
-                      {isUnread ? (
-                        <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold">
-                          {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                        </span>
-                      ) : (
-                        <Circle className="w-2 h-2 text-transparent flex-shrink-0 ml-2" />
-                      )}
-                    </div>
+                    ) : <span className={`w-2 ${dir === "rtl" ? "mr-2" : "ml-2"}`} />}
                   </div>
                 </div>
-              );
-            })
-          )}
+              </div>
+            );
+          })}
         </div>
       </aside>
 
-      {/* ══════════ CHAT ══════════ */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
-
+      {/* ══════════ CHAT PANEL ══════════ */}
+      <main className={`
+        flex-1 flex flex-col relative overflow-hidden
+        ${!mobileShowChat ? "hidden sm:flex" : "flex"}
+        w-full
+      `}>
         {selected ? (
           <>
             {/* Chat header */}
-            <header className="bg-[#f0f2f5] px-4 py-2.5 flex items-center justify-between z-10 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center
-                  text-white font-semibold ${avatarColor(selected.contact.id)}`}>
+            <header className={`${headerBg} px-3 py-2 flex items-center justify-between z-10 border-b ${border}`}>
+              <div className="flex items-center gap-2">
+                {/* Back button on mobile */}
+                <button
+                  onClick={() => { setMobileShowChat(false); }}
+                  className={`sm:hidden p-1.5 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                >
+                  {dir === "rtl" ? <ChevronDown className="w-5 h-5 rotate-90" /> : <ChevronLeft className="w-5 h-5" />}
+                </button>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${avatarColor(selected.contact.id)}`}>
                   {initials(selected.contact)}
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-[#111b21]">
-                    {selected.contact.name ?? selected.contact.phone}
-                  </p>
-                  <p className="text-xs text-gray-500">{selected.contact.phone}</p>
+                  <p className={`font-semibold text-sm ${textMain}`}>{selected.contact.name ?? selected.contact.phone}</p>
+                  <p className={`text-xs ${textSub}`}>{selected.contact.phone}</p>
                 </div>
               </div>
 
-              {/* Header actions */}
               <div className="flex items-center gap-1">
-
-                {/* زر Voice Agent */}
                 <button
                   onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
-                  title={selected.voiceAgentEnabled ? "Voice Agent مفعّل — اضغط لإيقافه" : "تفعيل Voice Agent"}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all
+                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                     ${selected.voiceAgentEnabled
                       ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                      : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                 >
                   <Mic2 className="w-3.5 h-3.5" />
-                  {selected.voiceAgentEnabled ? "Voice ON" : "Voice"}
+                  {selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}
                 </button>
-                {/* زر X — إغلاق المحادثة */}
                 <button
-                  onClick={() => { setSelected(null); setMessages([]); }}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-500"
-                  title="إغلاق المحادثة"
+                  onClick={() => { setSelected(null); setMessages([]); setMobileShowChat(false); }}
+                  className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
                 >
                   <X className="w-5 h-5" />
                 </button>
-
-                {/* Three-dot menu */}
                 <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-600">
-                    <MoreVertical className="w-5 h-5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {/* Add to audience */}
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="gap-2 text-sm">
-                      <Plus className="w-4 h-4" /> إضافة لقائمة
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-48">
-                      {audiences.length === 0 ? (
-                        <div className="text-xs text-gray-400 px-3 py-2">
-                          لا توجد قوائم — أنشئها من جهات الاتصال
-                        </div>
-                      ) : (
-                        audiences.map(a => (
-                          <DropdownMenuItem
-                            key={a.id}
-                            className="text-sm gap-2 cursor-pointer"
-                            onClick={() => addToAudience(selected.contact.id, a.id)}
-                          >
-                            <Users className="w-3.5 h-3.5" /> {a.name}
-                          </DropdownMenuItem>
-                        ))
-                      )}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    className="gap-2 text-sm cursor-pointer"
-                    onClick={() => setConversationArchived(selected.contact.id, !selected.isArchived)}
-                  >
-                    <Archive className="w-4 h-4" /> {selected.isArchived ? "إلغاء الأرشفة" : "أرشفة المحادثة"}
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
-                    onClick={() => deleteConversation(selected.contact.id)}
-                  >
-                    <Trash2 className="w-4 h-4" /> حذف المحادثة
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}>
+                      <MoreVertical className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="gap-2 text-sm">
+                        <Plus className="w-4 h-4" /> {t[lang].addToList}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-48">
+                        {audiences.length === 0
+                          ? <div className="text-xs text-gray-400 px-3 py-2">{t[lang].noAudiences}</div>
+                          : audiences.map(a => (
+                            <DropdownMenuItem key={a.id} className="text-sm gap-2 cursor-pointer"
+                              onClick={() => addToAudience(selected.contact.id, a.id)}>
+                              <Users className="w-3.5 h-3.5" /> {a.name}
+                            </DropdownMenuItem>
+                          ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2 text-sm cursor-pointer"
+                      onClick={() => setConversationArchived(selected.contact.id, !selected.isArchived)}>
+                      <Archive className="w-4 h-4" /> {selected.isArchived ? t[lang].unarchiveConv : t[lang].archiveConv}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
+                      onClick={() => deleteConversation(selected.contact.id)}>
+                      <Trash2 className="w-4 h-4" /> {t[lang].deleteConv}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </header>
 
             {/* Messages area */}
             <div
-              className="flex-1 overflow-y-auto px-6 py-4"
+              className="flex-1 overflow-y-auto px-3 sm:px-6 py-4"
               style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                backgroundColor: "#efeae2",
+                backgroundImage: dark
+                  ? "none"
+                  : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                backgroundColor: msgAreaBg,
               }}
             >
               {loadingMsgs ? (
@@ -769,26 +815,25 @@ export default function ChatPage() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex justify-center">
-                  <p className="text-xs text-gray-400 bg-white/60 px-4 py-1.5 rounded-full">
-                    لا توجد رسائل بعد
+                  <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
+                    {t[lang].noMsgs}
                   </p>
                 </div>
               ) : (
                 <>
                   {messages.map((msg, i) => {
-                    const showDate =
-                      i === 0 ||
-                      dateStr(messages[i - 1].createdAt) !== dateStr(msg.createdAt);
+                    const showDate = i === 0 || dateStr(messages[i-1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                     return (
                       <div key={msg.id}>
                         {showDate && (
                           <div className="flex justify-center my-3">
-                            <span className="text-[11px] text-gray-500 bg-white/70 px-3 py-0.5 rounded-full shadow-sm">
-                              {dateStr(msg.createdAt)}
+                            <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
+                              ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/70 text-gray-500"}`}>
+                              {dateStr(msg.createdAt, lang)}
                             </span>
                           </div>
                         )}
-                        <Bubble msg={msg} onReact={sendReaction} />
+                        <Bubble msg={msg} onReact={sendReaction} lang={lang} dark={dark} />
                       </div>
                     );
                   })}
@@ -799,143 +844,106 @@ export default function ChatPage() {
 
             {/* Template picker */}
             {showTpl && (
-              <div className="bg-white border-t border-gray-200 max-h-56 overflow-y-auto z-10">
-                <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-gray-100">
-                  <p className="text-xs text-gray-400 font-medium">اختر قالباً</p>
-                  <button
-                    onClick={() => setShowTpl(false)}
-                    className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                    aria-label="إغلاق القوالب"
-                  >
+              <div className={`${sidebarBg} border-t ${border} max-h-56 overflow-y-auto z-10`}>
+                <div className={`flex items-center justify-between px-4 pt-3 pb-2 border-b ${borderLight}`}>
+                  <p className={`text-xs font-medium ${textSub}`}>{t[lang].chooseTemplate}</p>
+                  <button onClick={() => setShowTpl(false)} className={`p-1 rounded-full ${textSub} hover:bg-gray-100`}>
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                {templates.length === 0 ? (
-                  <p className="text-sm text-gray-400 px-4 pb-3">لا توجد قوالب معتمدة</p>
-                ) : templates.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => sendTemplate(t)}
-                    className="w-full text-right px-4 py-3 hover:bg-gray-50 border-b border-gray-50 transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-800">{t.name}</p>
-                  </button>
-                ))}
+                {templates.length === 0
+                  ? <p className={`text-sm ${textSub} px-4 pb-3`}>{t[lang].noTemplates}</p>
+                  : templates.map(tp => (
+                    <button key={tp.id} onClick={() => sendTemplate(tp)}
+                      className={`w-full text-right px-4 py-3 border-b ${borderLight} transition-colors ${hoverRow}`}>
+                      <p className={`text-sm font-medium ${textMain}`}>{tp.name}</p>
+                    </button>
+                  ))}
               </div>
             )}
 
             {/* Input bar */}
-            <footer className="bg-[#f0f2f5] px-3 py-2.5 flex items-end gap-2 z-10 border-t border-gray-200">
-
-              {/* Attach menu */}
+            <footer className={`${headerBg} px-2 sm:px-3 py-2.5 flex items-end gap-1.5 sm:gap-2 z-10 border-t ${border}`}>
+              {/* Attach */}
               <div className="relative">
                 <button
                   onClick={() => { setShowAttach(p => !p); setShowTpl(false); setShowEmoji(false); }}
-                  className={`p-2 rounded-full transition-colors ${showAttach ? "bg-gray-300 text-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
+                  className={`p-2 rounded-full transition-colors ${showAttach
+                    ? dark ? "bg-[#2a3942] text-[#e9edef]" : "bg-gray-300 text-gray-700"
+                    : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}
                 >
                   {showAttach ? <X className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
                 </button>
-
                 {showAttach && (
-                  <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 w-44">
-                    {ATTACH.map(a => {
+                  <div className={`absolute bottom-12 ${dir === "rtl" ? "right-0" : "left-0"}
+                    ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
+                    rounded-2xl shadow-xl overflow-hidden border w-44`}>
+                    {ATTACH_OPTIONS.map(a => {
                       const isDisabled = Boolean(a.disabled);
                       return (
-                        <label
-                          key={a.key}
-                          onClick={(e) => { if (isDisabled) e.preventDefault(); }}
+                        <label key={a.key}
+                          onClick={e => { if (isDisabled) e.preventDefault(); }}
                           className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-                            isDisabled
-                              ? "opacity-50 cursor-not-allowed bg-gray-50"
-                              : "hover:bg-gray-50 cursor-pointer"
-                          }`}
-                        >
+                            isDisabled ? "opacity-50 cursor-not-allowed" : `cursor-pointer ${hoverRow}`
+                          }`}>
                           <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
                             {a.icon}
                           </span>
-                          <span className={`text-sm ${isDisabled ? "text-gray-400" : "text-gray-700"}`}>{a.label}</span>
-                          <input type="file" accept={a.accept} className="hidden"
-                            ref={fileRef}
-                            disabled={isDisabled}
-                            onChange={async (e) => {
+                          <span className={`text-sm ${isDisabled ? textSub : textMain}`}>{a.label}</span>
+                          <input type="file" accept={a.accept} className="hidden" disabled={isDisabled}
+                            onChange={async e => {
                               if (isDisabled) return;
                               const f = e.target.files?.[0];
                               if (!f) return;
                               await sendFile(f, a.key);
                               setShowAttach(false);
                               e.target.value = "";
-                            }}
-                          />
+                            }} />
                         </label>
                       );
                     })}
-                    {/* Location */}
-                    <button
-                      onClick={() => { sendLocation(); setShowAttach(false); }}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 w-full transition-colors"
-                    >
+                    <button onClick={() => { sendLocation(); setShowAttach(false); }}
+                      className={`flex items-center gap-3 px-4 py-3 w-full transition-colors ${hoverRow}`}>
                       <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white flex-shrink-0">
                         <MapPin className="w-4 h-4" />
                       </span>
-                      <span className="text-sm text-gray-700">الموقع</span>
+                      <span className={`text-sm ${textMain}`}>{t[lang].locationLabel}</span>
                     </button>
-                    {/* Template */}
-                    <button
-                      onClick={() => { setShowTpl(p => !p); setShowAttach(false); }}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 w-full transition-colors"
-                    >
+                    <button onClick={() => { setShowTpl(p => !p); setShowAttach(false); }}
+                      className={`flex items-center gap-3 px-4 py-3 w-full transition-colors ${hoverRow}`}>
                       <span className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white flex-shrink-0">
                         <FileText className="w-4 h-4" />
                       </span>
-                      <span className="text-sm text-gray-700">قالب رسمي</span>
+                      <span className={`text-sm ${textMain}`}>{t[lang].templateLabel}</span>
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Emoji picker */}
+              {/* Emoji */}
               <div className="relative">
                 <button
                   onClick={() => { setShowEmoji(p => !p); setShowAttach(false); setShowTpl(false); }}
-                  className={`p-2 rounded-full transition-colors ${showEmoji ? "bg-gray-300 text-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
+                  className={`p-2 rounded-full transition-colors ${showEmoji
+                    ? dark ? "bg-[#2a3942] text-[#e9edef]" : "bg-gray-300 text-gray-700"
+                    : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}
                 >
                   <Smile className="w-5 h-5" />
                 </button>
                 {showEmoji && (
-                  <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-72 z-20">
+                  <div className={`absolute bottom-12 ${dir === "rtl" ? "right-0" : "left-0"}
+                    ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
+                    rounded-2xl shadow-xl border p-3 w-64 sm:w-72 z-20`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-400 font-medium">إيموجي</span>
-                      <button onClick={() => setShowEmoji(false)} className="text-gray-400 hover:text-gray-600">
+                      <span className={`text-xs font-medium ${textSub}`}>{t[lang].emoji}</span>
+                      <button onClick={() => setShowEmoji(false)} className={textSub}>
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-                      {[
-                        "😀","😃","😄","😁","😆","😅","😂","🤣",
-                        "😊","😇","🙂","🙃","😉","😌","😍","🥰",
-                        "😘","😗","😙","😚","😋","😛","😝","😜",
-                        "🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳",
-                        "😏","😒","😞","😔","😟","😕","🙁","☹️",
-                        "😣","😖","😫","😩","🥺","😢","😭","😤",
-                        "😠","😡","🤬","🤯","😳","🥵","🥶","😱",
-                        "😨","😰","😥","😓","🤗","🤔","🫣","🤭",
-                        "🤫","🤥","😶","😑","😬","🙄","😯","😦",
-                        "😧","😮","😲","🥱","😴","🤤","😪","😵",
-                        "🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕",
-                        "🤑","🤠","😈","👿","👹","👺","💀","☠️",
-                        "👻","👽","🤖","💩","😺","😸","😹","😻",
-                        "❤️","🧡","💛","💚","💙","💜","🖤","🤍",
-                        "💔","❣️","💕","💞","💓","💗","💖","💘",
-                        "💝","💟","👍","👎","👏","🙌","🤝","🙏",
-                        "✌️","🤞","🤟","🤘","🤙","👈","👉","👆",
-                        "🖕","👇","☝️","👋","🤚","🖐","✋","🖖",
-                        "💪","🦾","🦿","🦵","🦶","👂","🦻","👃",
-                        "🔥","⭐","✨","💥","💫","🎉","🎊","🎈",
-                      ].map(em => (
-                        <button key={em}
-                          onClick={() => { setText(t => t + em); }}
-                          className="text-xl hover:bg-gray-100 rounded-lg p-0.5 transition-colors"
-                        >
+                    <div className="grid grid-cols-7 sm:grid-cols-8 gap-1 max-h-44 overflow-y-auto">
+                      {["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🫣","🤭","🤫","🤥","😶","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","💀","☠️","👻","👽","🤖","💩","❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","👍","👎","👏","🙌","🤝","🙏","✌️","🤞","🤟","🤘","🤙","👋","🤚","🖐","✋","🖖","💪","🔥","⭐","✨","💥","💫","🎉","🎊","🎈"].map(em => (
+                        <button key={em} onClick={() => setText(t => t + em)}
+                          className={`text-xl rounded-lg p-0.5 transition-colors ${dark ? "hover:bg-[#2a3942]" : "hover:bg-gray-100"}`}>
                           {em}
                         </button>
                       ))}
@@ -949,39 +957,30 @@ export default function ChatPage() {
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault(); sendText();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); }
                 }}
-                placeholder="اكتب رسالة..."
+                placeholder={t[lang].typeMsg}
                 rows={1}
-                className="flex-1 bg-white rounded-xl px-4 py-2.5 text-sm outline-none resize-none
-                  max-h-28 overflow-y-auto text-[#111b21] placeholder-gray-400
-                  border border-transparent focus:border-gray-200 transition-colors"
+                className={`flex-1 ${inputBg} rounded-xl px-3 py-2.5 text-sm outline-none resize-none
+                  max-h-28 overflow-y-auto border border-transparent
+                  ${dark
+                    ? "text-[#e9edef] placeholder-[#8696a0] focus:border-[#2a3942]"
+                    : "text-[#111b21] placeholder-gray-400 focus:border-gray-200"}
+                  transition-colors`}
                 style={{ lineHeight: "1.5" }}
               />
 
               {/* Send or Mic */}
               {text.trim() ? (
-                <button
-                  onClick={sendText}
-                  disabled={sending}
+                <button onClick={sendText} disabled={sending}
                   className="w-10 h-10 rounded-full bg-[#25d366] flex items-center justify-center
-                    text-white flex-shrink-0 hover:bg-[#20bb5a] transition-colors disabled:opacity-50"
-                >
-                  {sending
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Send className="w-4 h-4" />}
+                    text-white flex-shrink-0 hover:bg-[#20bb5a] transition-colors disabled:opacity-50">
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               ) : (
-                <button
-                  onClick={toggleRecord}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center
-                    text-white flex-shrink-0 transition-all
-                    ${recording
-                      ? "bg-red-500 animate-pulse"
-                      : "bg-[#25d366] hover:bg-[#20bb5a]"}`}
-                >
+                <button onClick={toggleRecord}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-all
+                    ${recording ? "bg-red-500 animate-pulse" : "bg-[#25d366] hover:bg-[#20bb5a]"}`}>
                   {recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </button>
               )}
@@ -989,25 +988,18 @@ export default function ChatPage() {
           </>
         ) : (
           /* Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#f0f2f5]">
-            <div className="text-center max-w-xs">
-              <div className="w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center mx-auto mb-6">
+          <div className={`flex-1 flex flex-col items-center justify-center ${bg}`}>
+            <div className="text-center max-w-xs px-6">
+              <div className={`w-24 h-24 rounded-full shadow-sm flex items-center justify-center mx-auto mb-6
+                ${dark ? "bg-[#1f2c34]" : "bg-white"}`}>
                 <MessageSquare className="w-12 h-12 text-[#25d366]" />
               </div>
-              <h2 className="text-xl font-light text-[#41525d] mb-2">
-                اختر محادثة للبدء
-              </h2>
-              <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                ستظهر محادثات العملاء هنا بعد ردودهم على رسائلك
-              </p>
+              <h2 className={`text-xl font-light mb-2 ${textMain}`}>{t[lang].pickConv}</h2>
+              <p className={`text-sm mb-6 leading-relaxed ${textSub}`}>{t[lang].pickConvHint}</p>
               {filteredConvs.length === 0 && (
-                <Button
-                  className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-2"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }));
-                  }}
-                >
-                  <Megaphone className="w-4 h-4" /> ابدأ حملة الآن
+                <Button className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-2"
+                  onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
+                  <Megaphone className="w-4 h-4" /> {t[lang].startCampaign}
                 </Button>
               )}
             </div>
