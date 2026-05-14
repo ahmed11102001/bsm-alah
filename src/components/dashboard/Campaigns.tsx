@@ -215,84 +215,74 @@ function SendProgress({ campaign, lang }: { campaign: Campaign; lang: Lang }) {
   );
 }
 
-// ─── CampaignCard ──────────────────────────────────────────────────────────────
-function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBlocked, repeatBlockedNote, lang }: {
+// ─── CampaignCard (compact) ────────────────────────────────────────────────────
+function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBlocked, lang }: {
   campaign: Campaign; onDelete: () => void; onRepeat: () => void; onDetails: () => void;
   repeatBlocked: boolean; repeatBlockedNote: string; lang: Lang;
 }) {
   const cfg = statusConfig(lang)[campaign.status] ?? statusConfig(lang).draft;
   return (
     <Card className="border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-      <CardContent className="p-0">
-        <div className="flex items-start justify-between p-4 pb-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Megaphone className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{campaign.name}</h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${campaign.status === "running" ? "animate-pulse" : ""}`} />
-                  {cfg.label}
+      <CardContent className="p-3 sm:p-4">
+
+        {/* ── Header row ── */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-green-600 dark:text-green-400" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{campaign.name}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.color}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${campaign.status === "running" ? "animate-pulse" : ""}`} />
+                {cfg.label}
+              </span>
+              {campaign.template?.name && (
+                <span className="text-[11px] text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                  {campaign.template.name}
                 </span>
-                {campaign.template?.name && (
-                  <span className="text-xs text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-0.5 rounded-full">{campaign.template.name}</span>
-                )}
-              </div>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition" onClick={onDetails} title={tr("details",lang)}>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button
+              onClick={onDetails}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+              title={tr("details", lang)}
+            >
               <Eye className="w-4 h-4" />
             </button>
-            <button className={`p-1.5 rounded-lg transition ${repeatBlocked ? "text-gray-200 dark:text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"}`} onClick={onRepeat} disabled={repeatBlocked}>
+            <button
+              onClick={onRepeat}
+              disabled={repeatBlocked}
+              className={`p-1.5 rounded-lg transition ${repeatBlocked ? "text-gray-200 dark:text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"}`}
+            >
               <RefreshCw className="w-4 h-4" />
             </button>
-            <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition" onClick={onDelete}>
+            <button
+              onClick={onDelete}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {(campaign.totalQueued > 0 || campaign.sentCount > 0) && (
-          <div className="border-t border-gray-50 dark:border-gray-700 px-4 py-3 space-y-3">
+        {/* ── Send progress bar (only) ── */}
+        {campaign.totalQueued > 0 && (
+          <div className="mt-3 border-t border-gray-50 dark:border-gray-700 pt-3">
             <SendProgress campaign={campaign} lang={lang} />
-            {campaign.sentCount > 0 && (
-              <div className="grid grid-cols-4 gap-2 pt-1">
-                {[
-                  { icon: <Send className="w-3 h-3"/>,        val: campaign.sentCount,      label: tr("sent",lang),      color: "text-blue-600 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-900/20"   },
-                  { icon: <CheckCircle className="w-3 h-3"/>, val: campaign.deliveredCount, label: tr("delivered",lang), color: "text-green-600 dark:text-green-400",  bg: "bg-green-50 dark:bg-green-900/20"  },
-                  { icon: <Eye className="w-3 h-3"/>,         val: campaign.readCount,      label: tr("read",lang),      color: "text-purple-600 dark:text-purple-400",bg: "bg-purple-50 dark:bg-purple-900/20"},
-                  { icon: <XCircle className="w-3 h-3"/>,     val: campaign.failedCount,    label: tr("failed",lang),    color: "text-red-500 dark:text-red-400",      bg: "bg-red-50 dark:bg-red-900/20"      },
-                ].map(s => (
-                  <div key={s.label} className={`${s.bg} rounded-lg p-2 text-center`}>
-                    <div className={`flex justify-center mb-0.5 ${s.color}`}>{s.icon}</div>
-                    <p className={`text-sm font-bold ${s.color}`}>{s.val.toLocaleString()}</p>
-                    <p className="text-[9px] text-gray-400">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            {campaign.sentCount > 0 && (
-              <div className="space-y-2 pt-1">
-                <ProgressBar label={tr("deliveryRateL",lang)} value={campaign.deliveredCount} max={campaign.sentCount} color="bg-green-400"  textColor="text-green-600 dark:text-green-400" />
-                <ProgressBar label={tr("readRateL",lang)}     value={campaign.readCount}      max={campaign.sentCount} color="bg-purple-400" textColor="text-purple-600 dark:text-purple-400" />
-              </div>
-            )}
-            {campaign.queuedCount > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg">
-                <Hourglass className="w-3.5 h-3.5" />
-                {campaign.queuedCount.toLocaleString()} {tr("msgWaiting",lang)}
-              </div>
-            )}
           </div>
         )}
 
+        {/* ── Scheduled badge ── */}
         {campaign.status === "scheduled" && campaign.scheduledAt && (
-          <div className="border-t border-yellow-100 dark:border-yellow-900/30 bg-yellow-50/60 dark:bg-yellow-900/10 px-4 py-2 text-xs text-yellow-700 dark:text-yellow-300 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            {tr("scheduled",lang)}: {new Date(campaign.scheduledAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-lg">
+            <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+            {tr("scheduled", lang)}: {new Date(campaign.scheduledAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
           </div>
         )}
       </CardContent>
@@ -410,6 +400,28 @@ export default function Campaigns() {
       const res  = await fetch(`/api/campaigns?${params}`);
       const data = await res.json();
       const list: Campaign[] = Array.isArray(data) ? data : (data.campaigns ?? data.data ?? []);
+
+      // ── Fetch read counts from messages API ──────────────────────────────
+      // WhatsApp marks messages "read" in the chat; merge that count here
+      try {
+        const msgRes = await fetch("/api/messages?status=read&limit=1000");
+        if (msgRes.ok) {
+          const msgData = await msgRes.json();
+          const messages: any[] = Array.isArray(msgData) ? msgData : (msgData.messages ?? msgData.data ?? []);
+          // Group by campaignId
+          const readMap: Record<string, number> = {};
+          for (const m of messages) {
+            if (m.campaignId) readMap[m.campaignId] = (readMap[m.campaignId] ?? 0) + 1;
+          }
+          // Merge into campaign list — take max of API value vs message count
+          for (const c of list) {
+            if (readMap[c.id] && readMap[c.id] > c.readCount) {
+              c.readCount = readMap[c.id];
+            }
+          }
+        }
+      } catch {/* silent — fallback to API value */}
+
       setCampaigns(list);
       setTotal(data.total ?? list.length);
     } catch { toast.error("فشل في تحميل الحملات"); }
@@ -554,12 +566,12 @@ export default function Campaigns() {
   ];
 
   return (
-    <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div className="max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{tr("title",lang)}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{tr("title",lang)}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{total} {lang === "ar" ? "حملة إجمالاً" : "total campaigns"}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -572,7 +584,7 @@ export default function Campaigns() {
             className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
-          <Button onClick={() => { resetDialog(); setDialogOpen(true); }} className="bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2">
+          <Button onClick={() => { resetDialog(); setDialogOpen(true); }} className="bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2 flex-1 sm:flex-none justify-center">
             <Plus className="w-4 h-4" /> {tr("newCampaign",lang)}
           </Button>
         </div>
@@ -580,18 +592,18 @@ export default function Campaigns() {
 
       {/* Summary Cards */}
       {campaigns.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
           {[
-            { label: tr("totalCampaigns",lang), value: total,         icon: <Megaphone className="w-5 h-5"/>,    color: "text-gray-600 dark:text-gray-300",   bg: "bg-gray-50 dark:bg-gray-800"   },
-            { label: tr("totalSent",lang),      value: totalSent,     icon: <Send className="w-5 h-5"/>,         color: "text-blue-600 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-900/20"   },
-            { label: tr("totalDelivered",lang), value: totalDelivered,icon: <CheckCircle className="w-5 h-5"/>, color: "text-green-600 dark:text-green-400",  bg: "bg-green-50 dark:bg-green-900/20"  },
-            { label: tr("totalRead",lang),      value: totalRead,     icon: <Eye className="w-5 h-5"/>,          color: "text-purple-600 dark:text-purple-400",bg: "bg-purple-50 dark:bg-purple-900/20" },
+            { label: tr("totalCampaigns",lang), value: total,         icon: <Megaphone className="w-4 h-4 sm:w-5 sm:h-5"/>,    color: "text-gray-600 dark:text-gray-300",    bg: "bg-gray-50 dark:bg-gray-800"    },
+            { label: tr("totalSent",lang),      value: totalSent,     icon: <Send className="w-4 h-4 sm:w-5 sm:h-5"/>,         color: "text-blue-600 dark:text-blue-400",    bg: "bg-blue-50 dark:bg-blue-900/20"    },
+            { label: tr("totalDelivered",lang), value: totalDelivered,icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5"/>, color: "text-green-600 dark:text-green-400",  bg: "bg-green-50 dark:bg-green-900/20"  },
+            { label: tr("totalRead",lang),      value: totalRead,     icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5"/>,          color: "text-purple-600 dark:text-purple-400",bg: "bg-purple-50 dark:bg-purple-900/20" },
           ].map(s => (
-            <div key={s.label} className={`${s.bg} rounded-2xl p-4 flex items-center gap-3`}>
-              <span className={s.color}>{s.icon}</span>
-              <div>
-                <p className={`text-xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{s.label}</p>
+            <div key={s.label} className={`${s.bg} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3`}>
+              <span className={`${s.color} flex-shrink-0`}>{s.icon}</span>
+              <div className="min-w-0">
+                <p className={`text-lg sm:text-xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{s.label}</p>
               </div>
             </div>
           ))}
@@ -600,7 +612,7 @@ export default function Campaigns() {
 
       {/* Overall rates */}
       {totalSent > 0 && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 mb-5 space-y-3 shadow-sm">
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
             <BarChart3 className="w-4 h-4 text-gray-400" /> {tr("overallPerf",lang)}
           </p>
@@ -609,8 +621,8 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-5 flex-nowrap">
+      {/* Filter pills */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 flex-nowrap scrollbar-hide">
         {STATUS_FILTERS.map(f => (
           <button key={f.value} onClick={() => setFilterStatus(f.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0
