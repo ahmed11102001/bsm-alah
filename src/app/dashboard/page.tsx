@@ -38,6 +38,7 @@ import Store           from "@/components/dashboard/store";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate         from "@/components/dashboard/PlanGate";
+import type { PlanLimits } from "@/lib/plans";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
@@ -50,11 +51,7 @@ interface DashboardData {
   };
   plan: {
     plan: string; planName: string; status: string;
-    limits: {
-      contacts: number; teamMembers: number; campaignsPerMonth: number;
-      scheduledCampaigns: boolean; advancedReports: boolean;
-      apiAccess: boolean; mediaMessages: boolean; customAudiences: boolean;
-    };
+    limits: PlanLimits;
     usage: { contacts: number; teamMembers: number; campaignsThisMonth: number };
   };
   recentCampaigns: {
