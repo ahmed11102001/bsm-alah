@@ -188,6 +188,8 @@ const FEATURE_LABELS: Record<BooleanFeature, string> = {
   apiAccess:          "الوصول عبر API",
   mediaMessages:      "إرسال الوسائط (صور / ملفات / صوت)",
   customAudiences:    "الجمهور المخصص",
+  storeIntegration:   "ربط المتجر والأتمتة",
+  aiAgent:            "AI Sales Assistant",
 };
 
 export async function checkFeature(

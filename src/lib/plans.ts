@@ -15,6 +15,8 @@ export interface PlanLimits {
   apiAccess:           boolean;
   mediaMessages:       boolean;  // صور / فيديو / ملفات / صوت
   customAudiences:     boolean;
+  storeIntegration:    boolean;  // ربط Shopify / EasyOrders + أتمتة المتجر
+  aiAgent:             boolean;  // AI Sales Assistant — enterprise فقط
 }
 
 export const PLANS: Record<PlanTier, PlanLimits> = {
@@ -27,6 +29,8 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     apiAccess:          false,
     mediaMessages:      false,
     customAudiences:    false,
+    storeIntegration:   false,
+    aiAgent:            false,
   },
   starter: {
     contacts:           2_000,
@@ -37,9 +41,11 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     apiAccess:          false,
     mediaMessages:      true,
     customAudiences:    true,
+    storeIntegration:   false,
+    aiAgent:            false,
   },
   pro: {
-    contacts:           15_000,
+    contacts:           20_000,   // ← مزامنة مع صفحة الأسعار
     teamMembers:        5,
     campaignsPerMonth:  -1,
     scheduledCampaigns: true,
@@ -47,6 +53,8 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     apiAccess:          false,
     mediaMessages:      true,
     customAudiences:    true,
+    storeIntegration:   true,
+    aiAgent:            false,
   },
   enterprise: {
     contacts:           -1,
@@ -57,6 +65,8 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     apiAccess:          true,
     mediaMessages:      true,
     customAudiences:    true,
+    storeIntegration:   true,
+    aiAgent:            true,    // ← AI Sales Assistant
   },
   beta: {
     contacts:           -1,
@@ -67,6 +77,8 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     apiAccess:          true,
     mediaMessages:      true,
     customAudiences:    true,
+    storeIntegration:   true,
+    aiAgent:            true,
   },
 } as const;
 
@@ -81,13 +93,21 @@ export const PLAN_NAMES: Record<PlanTier, string> = {
 
 // ─── الباقة اللي بتفتح ميزة معينة ────────────────────────────────────────────
 export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
-  "scheduledCampaigns" | "advancedReports" | "apiAccess" | "mediaMessages" | "customAudiences"
+  | "scheduledCampaigns"
+  | "advancedReports"
+  | "apiAccess"
+  | "mediaMessages"
+  | "customAudiences"
+  | "storeIntegration"
+  | "aiAgent"
 >, PlanTier> = {
   scheduledCampaigns: "starter",
   advancedReports:    "pro",
   apiAccess:          "enterprise",
   mediaMessages:      "starter",
   customAudiences:    "starter",
+  storeIntegration:   "pro",
+  aiAgent:            "enterprise",
 };
 
 // ─── ترتيب الباقات للمقارنة ───────────────────────────────────────────────────

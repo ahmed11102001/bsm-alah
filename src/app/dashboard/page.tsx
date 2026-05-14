@@ -37,6 +37,7 @@ import API             from "@/components/dashboard/API";
 import Store           from "@/components/dashboard/store";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+import PlanGate         from "@/components/dashboard/PlanGate";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
@@ -605,6 +606,15 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const planName    = dashData?.plan.planName ?? "—";
   const planColor   = PLAN_COLORS[dashData?.plan.plan ?? "free"];
 
+  // ── اختصارات لحالة الباقة ────────────────────────────────────────────────
+  const planLimits   = dashData?.plan.limits;
+  const isStarter    = planLimits != null; // starter+ = أي باقة مدفوعة (للـ team)
+  const canReports   = planLimits?.advancedReports   ?? false;
+  const canAPI       = planLimits?.apiAccess          ?? false;
+  const canTeam      = (planLimits?.teamMembers ?? 1) > 1;
+  const canStore     = planLimits?.storeIntegration   ?? false;
+  const canAI        = planLimits?.aiAgent             ?? false;
+
   const renderContent = () => {
     switch (activeSection) {
       case "home":       return dashData
@@ -612,13 +622,33 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
-      case "team":       return <TeamPage />;
+      case "team":
+        return (
+          <PlanGate allowed={canTeam} featureName="إدارة الفريق" requiredPlan="Starter">
+            <TeamPage />
+          </PlanGate>
+        );
       case "templates":  return <Templates />;
       case "campaigns":  return <Campaigns />;
-      case "reports":    return <Reports />;
+      case "reports":
+        return (
+          <PlanGate allowed={canReports} featureName="التقارير المتقدمة" requiredPlan="Professional">
+            <Reports />
+          </PlanGate>
+        );
       case "automation": return <Automation />;
-      case "store":      return <Store />;
-      case "api":        return <API />;
+      case "store":
+        return (
+          <PlanGate allowed={canStore} featureName="ربط المتجر والأتمتة" requiredPlan="Professional">
+            <Store />
+          </PlanGate>
+        );
+      case "api":
+        return (
+          <PlanGate allowed={canAPI} featureName="الوصول عبر API" requiredPlan="Enterprise">
+            <API />
+          </PlanGate>
+        );
       case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
     }
