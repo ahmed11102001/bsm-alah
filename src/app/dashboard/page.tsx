@@ -524,175 +524,15 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
   );
 }
 
-// ─── Mobile Nav ───────────────────────────────────────────────────────────────
-function MobileNav({
-  sidebarItems, activeSection, setActiveSection,
-  session, displayName, initials, planName, planColor,
-  onOpenSettings, dir,
-}: {
-  sidebarItems: { icon: any; id: string; label: string }[];
-  activeSection: string;
-  setActiveSection: (s: string) => void;
-  session: any;
-  displayName: string;
-  initials: string;
-  planName: string;
-  planColor: string;
-  onOpenSettings: () => void;
-  dir: string;
-}) {
-  const { t, locale } = useLanguage();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // First 4 items in bottom bar, rest in drawer
-  const primaryItems = sidebarItems.slice(0, 4);
-  const secondaryItems = sidebarItems.slice(4);
-
-  const handleNav = (id: string) => {
-    setActiveSection(id);
-    setDrawerOpen(false);
-  };
-
-  return (
-    <>
-      {/* Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-inset-bottom">
-        <div className="flex justify-around items-center px-1 py-1">
-          {primaryItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
-                activeSection === item.id
-                  ? "text-[#25D366]"
-                  : "text-gray-400 dark:text-gray-500"
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          ))}
-
-          {/* More button */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
-              drawerOpen || secondaryItems.some(i => i.id === activeSection)
-                ? "text-[#25D366]"
-                : "text-gray-400 dark:text-gray-500"
-            }`}
-          >
-            <div className="w-5 h-5 flex flex-col justify-center items-center gap-[3px]">
-              <span className="block w-4 h-0.5 bg-current rounded-full" />
-              <span className="block w-4 h-0.5 bg-current rounded-full" />
-              <span className="block w-4 h-0.5 bg-current rounded-full" />
-            </div>
-            <span className="text-[10px] font-medium">{locale === "ar" ? "المزيد" : "More"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Drawer Overlay */}
-      {drawerOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/40 z-50 backdrop-blur-sm"
-          onClick={() => setDrawerOpen(false)}
-        />
-      )}
-
-      {/* Drawer Panel */}
-      <div
-        dir={dir}
-        className={`lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 z-[60] rounded-t-2xl shadow-2xl transition-transform duration-300 ${
-          drawerOpen ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-200 dark:bg-gray-600 rounded-full" />
-        </div>
-
-        {/* User info */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-          <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm truncate">{displayName}</p>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
-          </div>
-        </div>
-
-        {/* Secondary nav items */}
-        <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
-          {secondaryItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNav(item.id)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
-                activeSection === item.id
-                  ? "bg-[#25D366]/10 text-[#25D366]"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
-            </button>
-          ))}
-
-          {session?.user?.isSuper && (
-            <button
-              onClick={() => handleNav("admin")}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
-                activeSection === "admin"
-                  ? "bg-red-50 dark:bg-red-900/20 text-red-600"
-                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
-              }`}
-            >
-              <Shield className="w-5 h-5" />
-              <span className="text-[11px] font-medium">{t.sidebar.admin}</span>
-            </button>
-          )}
-        </div>
-
-        {/* Utilities */}
-        <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700 mt-1 pt-3 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => { onOpenSettings(); setDrawerOpen(false); }}
-            className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-sm">{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-          </button>
-
-          <ThemeToggle />
-
-          <LanguageToggle />
-
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm">{t.signOut}</span>
-          </button>
-        </div>
-
-        {/* safe area spacing */}
-        <div className="h-safe-area-inset-bottom pb-16" />
-      </div>
-    </>
-  );
-}
-
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
   const { t, dir, locale } = useLanguage();
-  const [activeSection, setActiveSection] = useState("home");
-  const [dashData,      setDashData]      = useState<DashboardData | null>(null);
-  const [loadingDash,   setLoadingDash]   = useState(true);
-  const [showSettings,  setShowSettings]  = useState(false);
+  const [activeSection,  setActiveSection]  = useState("home");
+  const [dashData,       setDashData]       = useState<DashboardData | null>(null);
+  const [loadingDash,    setLoadingDash]    = useState(true);
+  const [showSettings,   setShowSettings]   = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const fetchDash = useCallback(async () => {
     setLoadingDash(true);
@@ -801,34 +641,129 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         </div>
       </aside>
 
-      {/* ── Mobile Bottom Nav ── */}
-      <MobileNav
-        sidebarItems={sidebarItems}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        session={session}
-        displayName={displayName}
-        initials={initials}
-        planName={planName}
-        planColor={planColor}
-        onOpenSettings={() => setShowSettings(true)}
+      {/* ── Mobile Side Drawer Overlay ── */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile Side Drawer Panel ── */}
+      <div
         dir={dir}
-      />
+        className={`lg:hidden fixed top-0 bottom-0 w-72 bg-white dark:bg-gray-800 z-50 flex flex-col shadow-2xl transition-transform duration-300
+          ${dir === "rtl"
+            ? `right-0 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`
+            : `left-0  ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
+          }`}
+      >
+        {/* Drawer Header */}
+        <div className="h-14 flex items-center justify-between px-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-base font-bold">
+              {locale === "ar"
+                ? <>واتس <span className="text-[#25D366]">برو</span></>
+                : <>Whats<span className="text-[#25D366]">Pro</span></>}
+            </span>
+          </div>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <ChevronLeft className={`w-5 h-5 ${dir === "rtl" ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        {/* Nav Items */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
+                activeSection === item.id
+                  ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
+            >
+              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              <span className="flex-1 text-start">{item.label}</span>
+            </button>
+          ))}
+
+          {session?.user?.isSuper && (
+            <button
+              onClick={() => { setActiveSection("admin"); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mt-1 ${
+                activeSection === "admin"
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
+                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+              }`}
+            >
+              <Shield className="w-[18px] h-[18px] flex-shrink-0" />
+              <span className="flex-1 text-start">{t.sidebar.admin}</span>
+            </button>
+          )}
+        </nav>
+
+        {/* Drawer Footer */}
+        <div className="border-t border-gray-100 dark:border-gray-700 p-4 flex-shrink-0 space-y-1">
+          <ThemeToggle />
+          <LanguageToggle />
+
+          <div className="flex items-center gap-2.5 px-3 py-2">
+            <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{displayName}</p>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{t.signOut}</span>
+          </button>
+        </div>
+      </div>
 
       {/* ── Main ── */}
-      <main className={`flex-1 pb-24 lg:pb-0 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
-        {/* Header — search removed, language + theme toggles added */}
+      <main className={`flex-1 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
+        {/* Header */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
-          {/* Left/Right side — empty placeholder for flex balance */}
-          <div className="flex-1" />
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+            aria-label="Open menu"
+          >
+            <div className="flex flex-col gap-[5px]">
+              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+            </div>
+          </button>
+
+          {/* Desktop spacer */}
+          <div className="flex-1 hidden lg:block" />
 
           <div className="flex items-center gap-1">
-            {/* Language toggle — left of theme toggle */}
             <LanguageToggle compact />
             <ThemeToggle compact />
 
-            <button onClick={() => setShowSettings(true)}
-              className="p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+            >
               <Settings className="w-[18px] h-[18px]" />
             </button>
 
