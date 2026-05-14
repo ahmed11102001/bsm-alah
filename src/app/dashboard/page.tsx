@@ -641,99 +641,102 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         </div>
       </aside>
 
-      {/* ── Mobile Side Drawer Overlay ── */}
+      {/* ── Mobile Full-Screen Menu ── */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* ── Mobile Side Drawer Panel ── */}
-      <div
-        dir={dir}
-        className={`lg:hidden fixed top-0 bottom-0 w-72 bg-white dark:bg-gray-800 z-50 flex flex-col shadow-2xl transition-transform duration-300
-          ${dir === "rtl"
-            ? `right-0 ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`
-            : `left-0  ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
-          }`}
-      >
-        {/* Drawer Header */}
-        <div className="h-14 flex items-center justify-between px-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center">
-              <MessageCircle className="w-4 h-4 text-white" />
+          dir={dir}
+          className="lg:hidden fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col overflow-y-auto"
+        >
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-base font-bold">
+                {locale === "ar"
+                  ? <>واتس <span className="text-[#25D366]">برو</span></>
+                  : <>Whats<span className="text-[#25D366]">Pro</span></>}
+              </span>
             </div>
-            <span className="text-base font-bold">
-              {locale === "ar"
-                ? <>واتس <span className="text-[#25D366]">برو</span></>
-                : <>Whats<span className="text-[#25D366]">Pro</span></>}
-            </span>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl leading-none"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            onClick={() => setMobileMenuOpen(false)}
-            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <ChevronLeft className={`w-5 h-5 ${dir === "rtl" ? "rotate-180" : ""}`} />
-          </button>
-        </div>
 
-        {/* Nav Items */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
-                activeSection === item.id
-                  ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              }`}
-            >
-              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-              <span className="flex-1 text-start">{item.label}</span>
-            </button>
-          ))}
-
-          {session?.user?.isSuper && (
-            <button
-              onClick={() => { setActiveSection("admin"); setMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mt-1 ${
-                activeSection === "admin"
-                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
-                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
-              }`}
-            >
-              <Shield className="w-[18px] h-[18px] flex-shrink-0" />
-              <span className="flex-1 text-start">{t.sidebar.admin}</span>
-            </button>
-          )}
-        </nav>
-
-        {/* Drawer Footer */}
-        <div className="border-t border-gray-100 dark:border-gray-700 p-4 flex-shrink-0 space-y-1">
-          <ThemeToggle />
-          <LanguageToggle />
-
-          <div className="flex items-center gap-2.5 px-3 py-2">
-            <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+          {/* User info */}
+          <div className="flex items-center gap-3 mx-4 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{displayName}</p>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+              <p className="font-semibold text-sm truncate">{displayName}</p>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
             </div>
           </div>
 
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>{t.signOut}</span>
-          </button>
+          {/* Nav items */}
+          <nav className="px-4 mt-4 space-y-1.5">
+            {sidebarItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${
+                  activeSection === item.id
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                }`}
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+
+            {session?.user?.isSuper && (
+              <button
+                onClick={() => { setActiveSection("admin"); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${
+                  activeSection === "admin"
+                    ? "bg-red-500 text-white shadow-sm"
+                    : "bg-white dark:bg-gray-800 text-red-500"
+                }`}
+              >
+                <Shield className="w-5 h-5 flex-shrink-0" />
+                <span>{t.sidebar.admin}</span>
+              </button>
+            )}
+          </nav>
+
+          {/* Footer actions */}
+          <div className="px-4 mt-4 mb-6 space-y-1.5">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <ThemeToggle />
+              </div>
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <LanguageToggle />
+              </div>
+              <button
+                onClick={() => { setShowSettings(true); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
+              >
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-red-500"
+              >
+                <LogOut className="w-5 h-5 flex-shrink-0" />
+                <span>{t.signOut}</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Main ── */}
       <main className={`flex-1 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
