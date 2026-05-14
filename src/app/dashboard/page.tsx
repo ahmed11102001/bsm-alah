@@ -364,9 +364,9 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
               <span className="text-xs text-gray-400">{plan.status === "active" ? p.active : p.expired}</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Button size="sm" variant="outline"
-              className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366]"
+              className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
               onClick={() => toast.info("قريباً — نظام الدفع")}>
               <RefreshCw className="w-3 h-3" /> {p.changePlan}
             </Button>
@@ -378,7 +378,7 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: p.contacts,       used: plan.usage.contacts,           limit: plan.limits.contacts,          pct: contactsPct  },
             { label: p.campaignsMonth, used: plan.usage.campaignsThisMonth, limit: plan.limits.campaignsPerMonth, pct: campaignsPct },
@@ -433,13 +433,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
 
   return (
     <div dir={dir}>
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold mb-1">{h.greeting(firstName)}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold mb-1">{h.greeting(firstName)}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">{h.subtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onOpenSettings} className="gap-1.5 text-sm">
+        <div className="flex gap-2 flex-shrink-0">
+          <Button size="sm" variant="outline" onClick={onOpenSettings} className="gap-1.5 text-sm hidden sm:flex">
             <Settings className="w-4 h-4" /> {h.settingsBtn}
           </Button>
           <Button size="sm" className="bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm" onClick={onCreateCampaign}>
@@ -521,6 +521,167 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ─── Mobile Nav ───────────────────────────────────────────────────────────────
+function MobileNav({
+  sidebarItems, activeSection, setActiveSection,
+  session, displayName, initials, planName, planColor,
+  onOpenSettings, dir,
+}: {
+  sidebarItems: { icon: any; id: string; label: string }[];
+  activeSection: string;
+  setActiveSection: (s: string) => void;
+  session: any;
+  displayName: string;
+  initials: string;
+  planName: string;
+  planColor: string;
+  onOpenSettings: () => void;
+  dir: string;
+}) {
+  const { t, locale } = useLanguage();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // First 4 items in bottom bar, rest in drawer
+  const primaryItems = sidebarItems.slice(0, 4);
+  const secondaryItems = sidebarItems.slice(4);
+
+  const handleNav = (id: string) => {
+    setActiveSection(id);
+    setDrawerOpen(false);
+  };
+
+  return (
+    <>
+      {/* Bottom Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-inset-bottom">
+        <div className="flex justify-around items-center px-1 py-1">
+          {primaryItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
+                activeSection === item.id
+                  ? "text-[#25D366]"
+                  : "text-gray-400 dark:text-gray-500"
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
+
+          {/* More button */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
+              drawerOpen || secondaryItems.some(i => i.id === activeSection)
+                ? "text-[#25D366]"
+                : "text-gray-400 dark:text-gray-500"
+            }`}
+          >
+            <div className="w-5 h-5 flex flex-col justify-center items-center gap-[3px]">
+              <span className="block w-4 h-0.5 bg-current rounded-full" />
+              <span className="block w-4 h-0.5 bg-current rounded-full" />
+              <span className="block w-4 h-0.5 bg-current rounded-full" />
+            </div>
+            <span className="text-[10px] font-medium">{locale === "ar" ? "المزيد" : "More"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Drawer Overlay */}
+      {drawerOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/40 z-50 backdrop-blur-sm"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Drawer Panel */}
+      <div
+        dir={dir}
+        className={`lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 z-[60] rounded-t-2xl shadow-2xl transition-transform duration-300 ${
+          drawerOpen ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-gray-200 dark:bg-gray-600 rounded-full" />
+        </div>
+
+        {/* User info */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm truncate">{displayName}</p>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+          </div>
+        </div>
+
+        {/* Secondary nav items */}
+        <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
+          {secondaryItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.id)}
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
+                activeSection === item.id
+                  ? "bg-[#25D366]/10 text-[#25D366]"
+                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
+            </button>
+          ))}
+
+          {session?.user?.isSuper && (
+            <button
+              onClick={() => handleNav("admin")}
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
+                activeSection === "admin"
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600"
+                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+              }`}
+            >
+              <Shield className="w-5 h-5" />
+              <span className="text-[11px] font-medium">{t.sidebar.admin}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Utilities */}
+        <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700 mt-1 pt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => { onOpenSettings(); setDrawerOpen(false); }}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm">{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+          </button>
+
+          <ThemeToggle />
+
+          <LanguageToggle />
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm">{t.signOut}</span>
+          </button>
+        </div>
+
+        {/* safe area spacing */}
+        <div className="h-safe-area-inset-bottom pb-16" />
+      </div>
+    </>
   );
 }
 
@@ -641,22 +802,21 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       </aside>
 
       {/* ── Mobile Bottom Nav ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
-        <div className="flex justify-around p-2">
-          {sidebarItems.slice(0, 5).map((item) => (
-            <button key={item.id} onClick={() => setActiveSection(item.id)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                activeSection === item.id ? "text-[#25D366]" : "text-gray-400 dark:text-gray-500"
-              }`}>
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px]">{item.label.slice(0, 5)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <MobileNav
+        sidebarItems={sidebarItems}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        session={session}
+        displayName={displayName}
+        initials={initials}
+        planName={planName}
+        planColor={planColor}
+        onOpenSettings={() => setShowSettings(true)}
+        dir={dir}
+      />
 
       {/* ── Main ── */}
-      <main className={`flex-1 pb-20 lg:pb-0 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
+      <main className={`flex-1 pb-24 lg:pb-0 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
         {/* Header — search removed, language + theme toggles added */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
           {/* Left/Right side — empty placeholder for flex balance */}
