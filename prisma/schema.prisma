@@ -38,6 +38,7 @@ model User {
   messageQueues    MessageQueue[]
   notifications    Notification[]
   shopifyStore     ShopifyStore?
+  wooCommerceStore WooCommerceStore?
   storeAutomations StoreAutomation[]
   storeOrders      StoreOrder[]
   subscription     Subscription?
@@ -316,8 +317,9 @@ model ShopifyStore {
   id          String            @id @default(cuid())
   userId      String            @unique
   shop        String            @unique
-  accessToken String
+  accessToken String?
   scope       String?
+  isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -338,6 +340,23 @@ model EasyOrdersStore {
   updatedAt     DateTime          @updatedAt
   lastSyncAt    DateTime?
   totalSynced   Int               @default(0)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  automations   StoreAutomation[]
+  orders        StoreOrder[]
+
+  @@index([userId])
+}
+
+model WooCommerceStore {
+  id            String            @id @default(cuid())
+  userId        String            @unique
+  storeName     String
+  storeUrl      String?
+  isActive      Boolean           @default(true)
+  lastSyncAt    DateTime?
+  totalSynced   Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   automations   StoreAutomation[]
   orders        StoreOrder[]
@@ -401,21 +420,24 @@ model StoreOrder {
   rawData           Json?
   contactId         String?
   createdAt         DateTime         @default(now())
-  easyOrdersStoreId String?
-  orderedAt         DateTime         @default(now())
-  shopifyStoreId    String?
-  source            OrderSource
-  total             Float            @default(0)
-  campaignOrder     CampaignOrder?
-  easyOrdersStore   EasyOrdersStore? @relation(fields: [easyOrdersStoreId], references: [id])
-  shopifyStore      ShopifyStore?    @relation(fields: [shopifyStoreId], references: [id])
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  easyOrdersStoreId    String?
+  orderedAt            DateTime          @default(now())
+  shopifyStoreId       String?
+  wooCommerceStoreId   String?
+  source               OrderSource
+  total                Float             @default(0)
+  campaignOrder        CampaignOrder?
+  easyOrdersStore      EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
+  shopifyStore         ShopifyStore?     @relation(fields: [shopifyStoreId], references: [id])
+  wooCommerceStore     WooCommerceStore? @relation(fields: [wooCommerceStoreId], references: [id])
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([source, externalId, userId])
   @@index([userId])
   @@index([customerPhone, userId])
   @@index([source, userId])
   @@index([orderedAt])
+  @@index([wooCommerceStoreId])
 }
 
 model TrackedClick {
@@ -456,20 +478,24 @@ model StoreAutomation {
   isEnabled         Boolean             @default(false)
   templateId        String?
   sentCount         Int                 @default(0)
-  shopifyStoreId    String?
-  easyOrdersStoreId String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  easyOrdersStore   EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
-  shopifyStore      ShopifyStore?       @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
-  template          Template?           @relation(fields: [templateId], references: [id])
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopifyStoreId       String?
+  easyOrdersStoreId    String?
+  wooCommerceStoreId   String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  easyOrdersStore      EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
+  shopifyStore         ShopifyStore?       @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+  wooCommerceStore     WooCommerceStore?   @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
+  template             Template?           @relation(fields: [templateId], references: [id])
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([shopifyStoreId, type])
   @@unique([easyOrdersStoreId, type])
+  @@unique([wooCommerceStoreId, type])
   @@index([userId])
   @@index([shopifyStoreId])
   @@index([easyOrdersStoreId])
+  @@index([wooCommerceStoreId])
 }
 
 model Article {
@@ -553,6 +579,7 @@ enum NotificationType {
 enum StoreType {
   shopify
   easyorders
+  woocommerce
 }
 
 enum StoreAutomationType {
@@ -564,6 +591,7 @@ enum StoreAutomationType {
 enum OrderSource {
   shopify
   easyorders
+  woocommerce
 }
 
 enum TriggerType {
