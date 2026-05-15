@@ -4,25 +4,15 @@ import { validateEnv } from "./env-utils";
 // التحقق من الـ env vars عند الـ build — لو في حاجة ناقصة يوقف فوراً
 validateEnv();
 
+// ─── Security Headers الثابتة ─────────────────────────────────────────────────
+// ملاحظة: Content-Security-Policy بيتولد في src/middleware.ts مع nonce لكل request
+// الـ headers دي ثابتة وما بتحتاجش nonce
 const securityHeaders = [
-  { key: "X-Frame-Options",                  value: "DENY" },
-  { key: "X-Content-Type-Options",           value: "nosniff" },
-  { key: "Referrer-Policy",                  value: "strict-origin-when-cross-origin" },
-  { key: "Cross-Origin-Opener-Policy",       value: "same-origin" },
-  { key: "Permissions-Policy",               value: "camera=(), microphone=(), geolocation=()" },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "img-src 'self' data: https: blob:",
-      "media-src 'self' blob:",
-      "font-src 'self' https://fonts.gstatic.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "connect-src 'self' https: wss:",
-      "frame-ancestors 'none'",
-    ].join("; "),
-  },
+  { key: "X-Frame-Options",            value: "DENY" },
+  { key: "X-Content-Type-Options",     value: "nosniff" },
+  { key: "Referrer-Policy",            value: "strict-origin-when-cross-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Permissions-Policy",         value: "camera=(), microphone=(), geolocation=()" },
 ];
 
 const nextConfig: NextConfig = {

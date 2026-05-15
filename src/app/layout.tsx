@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Cairo, Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
 import MetaPixel      from "@/components/metapixel";
 
-// خط القاهرة هو الأفضل للمشاريع العربية الاحترافية
 const cairo = Cairo({
   subsets: ["arabic"],
   weight: ["400", "500", "600", "700"],
@@ -21,40 +21,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// إعدادات الـ Metadata لحل مشكلة ظهور الرابط كنص وتفعيل المعاينة (Preview)
 export const metadata: Metadata = {
   title: {
     default: "WhatsPro - واتس برو",
     template: "%s | WhatsPro",
   },
   description: "المنصة الرائدة لإرسال رسائل واتساب جماعية وحملات تسويقية ذكية وموثوقة.",
-  
-  // حل مشكلة أيقونة الشبكة الرمادية (لازم يكون في icon فعلي في public)
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: ["/favicon.svg"],
     apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
   },
-
-  // إعدادات المعاينة عند مشاركة الرابط على السوشيال ميديا أو واتساب
   openGraph: {
-    title: "WhatsPro -  واتس برو ",
+    title: "WhatsPro - واتس برو",
     description: "أرسل آلاف الرسائل لعملائك بنقرة واحدة مع تقارير مفصلة وأتمتة كاملة.",
-    url: "https://whatsprosystem.vercel.app", // استبدله برابط موقعك الحقيقي
+    url: "https://whatsprosystem.vercel.app",
     siteName: "WhatsPro",
     locale: "ar_EG",
     type: "website",
     images: [
       {
-        url: "/og-image.png", // تأكد من وضع صورة بهذا الاسم في مجلد public بمقاس 1200x630
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "WhatsPro Dashboard Preview",
       },
     ],
   },
-  
-  // إعدادات تويتر
   twitter: {
     card: "summary_large_image",
     title: "WhatsPro - واتس برو",
@@ -63,18 +56,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // ── اقرأ الـ nonce اللي الـ middleware ولّده لهذا الـ request ──────────────
+  // بنمرره للـ MetaPixel عشان الـ inline script بتاعها تشتغل مع الـ CSP
+  const nonce = (await headers()).get("x-nonce") ?? "";
+
   return (
-    <html 
-      lang="ar" 
-      dir="rtl" 
+    <html
+      lang="ar"
+      dir="rtl"
       className={`${cairo.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
-      suppressHydrationWarning // لمنع أخطاء التداخل مع Dark Mode
+      suppressHydrationWarning
     >
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
-        <MetaPixel />
+        <MetaPixel nonce={nonce} />
         <ClientProvider>
           {children}
         </ClientProvider>

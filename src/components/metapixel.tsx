@@ -1,8 +1,13 @@
 "use client";
 
 // ─── MetaPixel Component ──────────────────────────────────────────────────────
-// يتحط مرة واحدة في layout.tsx داخل <head>
+// يتحط مرة واحدة في layout.tsx داخل <body>
 // PageView بيتبعت تلقائياً مع كل navigation
+//
+// nonce prop:
+//   بييجي من layout.tsx ← middleware ← request
+//   مطلوب عشان الـ inline script تشتغل مع الـ nonce-based CSP
+//   لو مش موجود (مثلاً في test env) بيشتغل عادي بدونه
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -15,7 +20,7 @@ declare global {
   }
 }
 
-// ─── الـ hook اللي بيبعت الـ events ──────────────────────────────────────────
+// ─── Hook: بيبعت PageView مع كل route change ─────────────────────────────────
 function usePageView() {
   const pathname     = usePathname();
   const searchParams = useSearchParams();
@@ -32,14 +37,19 @@ function PageViewTracker() {
 }
 
 // ─── المكون الرئيسي ───────────────────────────────────────────────────────────
-export default function MetaPixel() {
+export default function MetaPixel({ nonce }: { nonce?: string }) {
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
   if (!pixelId) return null;
 
   return (
     <>
+      {/*
+        nonce بيخلي الـ inline script دي موثوقة مع الـ CSP
+        بدونه، الـ CSP كانت هترفضها لأن unsafe-inline اتشالت
+      */}
       <Script
         id="meta-pixel"
+        nonce={nonce}
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
@@ -56,7 +66,6 @@ export default function MetaPixel() {
           `,
         }}
       />
-      {/* noscript fallback */}
       <noscript>
         <img
           height="1" width="1" style={{ display: "none" }}
@@ -64,7 +73,6 @@ export default function MetaPixel() {
           alt=""
         />
       </noscript>
-      {/* PageView مع كل route change */}
       <Suspense fallback={null}>
         <PageViewTracker />
       </Suspense>
