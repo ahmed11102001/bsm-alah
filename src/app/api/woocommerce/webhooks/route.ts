@@ -61,8 +61,7 @@ export async function POST(req: NextRequest) {
     const lastName:  string = order?.billing?.last_name  ?? order?.last_name  ?? "";
     const customerName: string =
       [firstName, lastName].filter(Boolean).join(" ") ||
-      order?.customer_name    ??
-      order?.billing?.company ?? "العميل";
+      (order?.customer_name ?? order?.billing?.company ?? "العميل");
 
     const orderNumber = String(order?.number ?? order?.order_number ?? order?.id ?? "");
     const totalStr    = String(order?.total  ?? order?.total_price  ?? "0");
