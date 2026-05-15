@@ -51,7 +51,7 @@ export const t = {
     // trust strip
     trust1: { ar: "بدون كودينج",       en: "No coding"       },
     trust2: { ar: "إعداد في ١٥ دقيقة", en: "Setup in 15 min" },
-    trust3: { ar: "ربط Shopify فوري",  en: "Instant Shopify" },
+    trust3: { ar: "ربط متجرك فوراً",  en: "Instant Store Connection" },
   },
 
   // ── Features ────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ export const t = {
   // ── Partners ────────────────────────────────────────────────────────────────
   partners: {
     badge:    { ar: "شركاؤنا",        en: "Our Partners" },
-    h2a:      { ar: "نشتغل مع",       en: "We work with" },
+    h2a:      { ar: "نعمل مع",       en: "We work with" },
     h2b:      { ar: "أفضل الأسماء",   en: "the best names" },
     subtitle: { ar: "تكاملات قوية مع المنصات والخدمات الموثوقة التي تعتمد عليها الشركات", en: "Strong integrations with trusted platforms and services that companies rely on." },
   },
