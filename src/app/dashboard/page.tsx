@@ -54,6 +54,7 @@ interface DashboardData {
       contacts: number; teamMembers: number; campaignsPerMonth: number;
       scheduledCampaigns: boolean; advancedReports: boolean;
       apiAccess: boolean; mediaMessages: boolean; customAudiences: boolean;
+      storeIntegration: boolean; aiAgent: boolean;
     };
     usage: { contacts: number; teamMembers: number; campaignsThisMonth: number };
   };
