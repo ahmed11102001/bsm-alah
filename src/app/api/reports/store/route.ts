@@ -42,8 +42,9 @@ export async function GET(req: NextRequest) {
 
     if (!user) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
 
-    const sh = user.shopifyStore;
-    const eo = user.easyOrdersStore;
+    const sh  = user.shopifyStore;
+    const eo  = user.easyOrdersStore;
+    const woo = user.wooCommerceStore;
 
     // ── Revenue Attribution per Campaign ─────────────────────────────
     const campaignRevenue = await prisma.campaign.findMany({
@@ -132,7 +133,6 @@ export async function GET(req: NextRequest) {
       : 0;
 
     // ── Store info summary ────────────────────────────────────────────
-    const woo = (user as any).wooCommerceStore as { id: string; storeName: string; isActive: boolean; lastSyncAt: Date | null } | null;
     const stores = [];
     if (sh)  stores.push({ source: "shopify",     name: sh.shop,       connectedAt: sh.createdAt,          isActive: true });
     if (eo)  stores.push({ source: "easyorders",  name: eo.storeName,  connectedAt: eo.lastSyncAt ?? null, isActive: eo.isActive });
