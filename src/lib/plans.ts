@@ -2,7 +2,7 @@
 // ─── ثوابت الباقات — المرجع الوحيد لكل حدود النظام ──────────────────────────
 // أي تعديل في الحدود يتم هنا فقط، وكل الكود بيقرأ منه.
 
-export type PlanTier = "free" | "starter" | "pro" | "enterprise" | "beta";
+export type PlanTier = "free" | "starter" | "pro" | "enterprise";
 
 // ─── حدود كل باقة ─────────────────────────────────────────────────────────────
 export interface PlanLimits {
@@ -68,18 +68,6 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     storeIntegration:   true,
     aiAgent:            true,    // ← AI Sales Assistant
   },
-  beta: {
-    contacts:           -1,
-    teamMembers:        -1,
-    campaignsPerMonth:  -1,
-    scheduledCampaigns: true,
-    advancedReports:    true,
-    apiAccess:          true,
-    mediaMessages:      true,
-    customAudiences:    true,
-    storeIntegration:   true,
-    aiAgent:            true,
-  },
 } as const;
 
 // ─── أسماء الباقات بالعربي ─────────────────────────────────────────────────────
@@ -88,7 +76,6 @@ export const PLAN_NAMES: Record<PlanTier, string> = {
   starter:    "Starter",
   pro:        "Professional",
   enterprise: "Enterprise",
-  beta:       "Beta ✨",
 };
 
 // ─── الباقة اللي بتفتح ميزة معينة ────────────────────────────────────────────
@@ -111,7 +98,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
 };
 
 // ─── ترتيب الباقات للمقارنة ───────────────────────────────────────────────────
-export const PLAN_ORDER: PlanTier[] = ["free", "starter", "pro", "enterprise", "beta"];
+export const PLAN_ORDER: PlanTier[] = ["free", "starter", "pro", "enterprise"];
 
 /** هل الباقة الحالية >= الباقة المطلوبة؟ */
 export function planAtLeast(current: PlanTier, required: PlanTier): boolean {

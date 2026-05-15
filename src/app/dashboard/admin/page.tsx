@@ -11,7 +11,7 @@ import {
 import { useLanguage } from "@/lib/language-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-const PLANS = ["free", "starter", "pro", "enterprise", "beta"] as const;
+const PLANS = ["free", "starter", "pro", "enterprise"] as const;
 type Plan = typeof PLANS[number];
 
 const PLAN_COLORS: Record<Plan, string> = {
@@ -19,13 +19,12 @@ const PLAN_COLORS: Record<Plan, string> = {
   starter:    "bg-blue-100   text-blue-700   dark:bg-blue-900/40  dark:text-blue-300",
   pro:        "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   enterprise: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  beta:       "bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-300",
 };
 
 interface User {
   id: string; name: string | null; email: string;
   isSuper: boolean; createdAt: string;
-  subscription: { plan: Plan; status: string } | null;
+  subscription: { plan: Plan; status: string; isBetaUser: boolean } | null;
 }
 interface Testimonial {
   id: string; name: string; brandName: string; phone: string;
@@ -77,7 +76,7 @@ export default function AdminPage() {
   const [editPlan,   setEditPlan]   = useState<Plan>("free");
   const [saving,     setSaving]     = useState(false);
   const [deleting,   setDeleting]   = useState<string | null>(null);
-  const [form,       setForm]       = useState({ name: "", email: "", password: "", plan: "beta" as Plan });
+  const [form,       setForm]       = useState({ name: "", email: "", password: "", plan: "enterprise" as Plan });
   // pagination + search
   const [cursors,    setCursors]    = useState<(string | null)[]>([null]);
   const [pageIdx,    setPageIdx]    = useState(0);
@@ -171,7 +170,7 @@ export default function AdminPage() {
     setSaving(false);
     if (r.ok) {
       setShowForm(false);
-      setForm({ name: "", email: "", password: "", plan: "beta" });
+      setForm({ name: "", email: "", password: "", plan: "enterprise" });
       // reset to first page after creating
       setCursors([null]);
       setPageIdx(0);
@@ -399,28 +398,56 @@ export default function AdminPage() {
                         <p className="text-xs text-gray-400 dark:text-gray-500">{user.email}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {editId === user.id ? (
-                          <div className="flex items-center gap-2">
-                            <select value={editPlan} onChange={e => setEditPlan(e.target.value as Plan)}
-                              className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366]">
-                              {PLANS.map(p => <option key={p} value={p}>{(PLAN_LABELS as any)[p]}</option>)}
-                            </select>
-                            <button onClick={() => handlePlanSave(user.id)} disabled={saving} className="text-green-600 hover:text-green-500">
-                              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                            </button>
-                            <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                          </div>
-                        ) : (
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${PLAN_COLORS[user.subscription?.plan ?? "free"]}`}>
-                            {(PLAN_LABELS as any)[user.subscription?.plan ?? "free"]}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {editId === user.id ? (
+                            <div className="flex items-center gap-2">
+                              <select value={editPlan} onChange={e => setEditPlan(e.target.value as Plan)}
+                                className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366]">
+                                {PLANS.map(p => <option key={p} value={p}>{(PLAN_LABELS as any)[p]}</option>)}
+                              </select>
+                              <button onClick={() => handlePlanSave(user.id)} disabled={saving} className="text-green-600 hover:text-green-500">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                              </button>
+                              <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                            </div>
+                          ) : (
+                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${PLAN_COLORS[user.subscription?.plan ?? "free"]}`}>
+                              {(PLAN_LABELS as any)[user.subscription?.plan ?? "free"]}
+                            </span>
+                          )}
+                          {/* Beta badge — internal only, مش جزء من plan dropdown */}
+                          {user.subscription?.isBetaUser && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              β Beta
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-400 dark:text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString(dateLocale)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 justify-end">
+                          {/* toggle beta flag */}
+                          <button
+                            onClick={async () => {
+                              const next = !user.subscription?.isBetaUser;
+                              await fetch(`/api/admin/users/${user.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ isBetaUser: next }),
+                              });
+                              fetchUsers(cursors[pageIdx], userSearch);
+                            }}
+                            title={user.subscription?.isBetaUser ? "إلغاء Beta" : "تفعيل Beta"}
+                            className={`text-xs px-2 py-0.5 rounded-full border font-medium transition ${
+                              user.subscription?.isBetaUser
+                                ? "border-emerald-400 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                : "border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 dark:border-gray-600"
+                            }`}
+                          >
+                            β
+                          </button>
                           <button onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
                             className="text-gray-400 hover:text-blue-600 transition" title={adm.users.editPlanTitle}>
                             <Pencil className="w-4 h-4" />

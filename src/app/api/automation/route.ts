@@ -63,12 +63,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "اختر قالباً" }, { status: 400 });
 
   if (replyType === ReplyType.AI) {
-    // تحقق إن المستخدم عنده بيانات البراند
-    const owner = await prisma.user.findUnique({
-      where:  { id: ownerId(session) },
+    // تحقق إن المستخدم عنده بيانات البراند في AIAgent (المصدر الحقيقي)
+    const agent = await prisma.aIAgent.findUnique({
+      where:  { userId: ownerId(session) },
       select: { businessDesc: true },
     });
-    if (!owner?.businessDesc?.trim())
+    if (!agent?.businessDesc?.trim())
       return NextResponse.json({
         error: "يجب إدخال وصف النشاط في إعدادات البراند أولاً قبل استخدام الرد الذكي",
       }, { status: 400 });

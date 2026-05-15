@@ -9,7 +9,7 @@ async function guardSuper() {
   return session;
 }
 
-// ─── PATCH /api/admin/users/[id] — تعديل الـ plan ────────────────────────────
+// ─── PATCH /api/admin/users/[id] — تعديل الـ plan أو isBetaUser flag ─────────
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,9 +18,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
   const { id } = await params;
-  const { plan } = await req.json();
+  const body = await req.json();
+
+  // لو الـ body جاي بـ isBetaUser بس → toggle الـ flag فقط
+  if (typeof body.isBetaUser === "boolean" && !body.plan) {
+    await prisma.subscription.upsert({
+      where:  { userId: id },
+      update: { isBetaUser: body.isBetaUser },
+      create: {
+        userId:                 id,
+        plan:                   "free",
+        status:                 "active",
+        isBetaUser:             body.isBetaUser,
+        periodResetAt:          new Date(),
+        campaignsUsedThisMonth: 0,
+      },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // غير ذلك → تعديل الـ plan العادي
+  const { plan } = body;
   if (!plan)
-    return NextResponse.json({ error: "plan مطلوب" }, { status: 400 });
+    return NextResponse.json({ error: "plan أو isBetaUser مطلوب" }, { status: 400 });
 
   await prisma.subscription.upsert({
     where:  { userId: id },

@@ -30,8 +30,9 @@ async function getSubscription(ownerId: string) {
   return prisma.subscription.findUnique({
     where: { userId: ownerId },
     select: {
-      plan:                  true,
-      status:                true,
+      plan:                   true,
+      status:                 true,
+      isBetaUser:             true,  // ← internal flag
       campaignsUsedThisMonth: true,
       periodResetAt:          true,
     },
@@ -66,10 +67,19 @@ async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date)
   return null; // لم يتم التصفير
 }
 
-// ─── Helper: هل اليوزر ده superadmin؟ ───────────────────────────────────────
+// ─── Helper: هل اليوزر ده superadmin أو beta user؟ ───────────────────────────
 async function isSuperAdmin(userId: string): Promise<boolean> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { isSuper: true } });
   return u?.isSuper ?? false;
+}
+
+/** Beta users يحصلوا على enterprise-level access بدون ما plan بتاعهم يتغير */
+async function isBetaBypass(ownerId: string): Promise<boolean> {
+  const sub = await prisma.subscription.findUnique({
+    where:  { userId: ownerId },
+    select: { isBetaUser: true },
+  });
+  return sub?.isBetaUser ?? false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -79,8 +89,8 @@ export async function checkContactsLimit(
   ownerId: string,
   addingCount = 1
 ): Promise<GuardResult> {
-  // ✅ السوبر أدمن مفيش عليه قيود
-  if (await isSuperAdmin(ownerId)) return { allowed: true };
+  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
 
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
@@ -112,8 +122,8 @@ export async function checkContactsLimit(
 // 2. checkCampaignsLimit — قبل إنشاء حملة
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function checkCampaignsLimit(ownerId: string): Promise<GuardResult> {
-  // ✅ السوبر أدمن مفيش عليه قيود
-  if (await isSuperAdmin(ownerId)) return { allowed: true };
+  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
 
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
@@ -161,8 +171,8 @@ export async function incrementCampaignUsage(ownerId: string): Promise<void> {
 // 3. checkTeamLimit — قبل إضافة عضو فريق
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function checkTeamLimit(ownerId: string): Promise<GuardResult> {
-  // ✅ السوبر أدمن مفيش عليه قيود
-  if (await isSuperAdmin(ownerId)) return { allowed: true };
+  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
 
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
@@ -211,8 +221,8 @@ export async function checkFeature(
   ownerId: string,
   feature: BooleanFeature
 ): Promise<GuardResult> {
-  // ✅ السوبر أدمن مفيش عليه قيود
-  if (await isSuperAdmin(ownerId)) return { allowed: true };
+  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
 
   const sub  = await getSubscription(ownerId);
   const plan = safePlan(sub);
@@ -260,6 +270,7 @@ export async function getPlanStatus(ownerId: string) {
   return {
     plan,
     planName:      PLAN_NAMES[plan],
+    isBetaUser:    sub?.isBetaUser ?? false,   // ← internal flag للـ UI
     status:        sub?.status ?? "active",
     limits,
     usage: {

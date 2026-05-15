@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       isSuper:   true,
       createdAt: true,
       subscription: {
-        select: { plan: true, status: true },
+        select: { plan: true, status: true, isBetaUser: true },
       },
     },
   });

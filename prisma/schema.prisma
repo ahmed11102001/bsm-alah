@@ -22,12 +22,6 @@ model User {
   parentId         String?
   workspaceId      String?
   isSuper          Boolean           @default(false)
-  brandName        String?
-  businessDesc     String?
-  productsInfo     String?
-  pricingInfo      String?
-  workingHours     String?
-  aiTone           String            @default("friendly")
   aiAgent          AIAgent?
   audiences        Audience[]
   automationRules  AutomationRule[]
@@ -58,6 +52,7 @@ model Subscription {
   userId                 String             @unique
   plan                   PlanTier           @default(free)
   status                 SubscriptionStatus @default(active)
+  isBetaUser             Boolean            @default(false) // internal flag — مش plan رسمي، بيديه enterprise limits بدون ما يظهر في الـ UI
   campaignsUsedThisMonth Int                @default(0)
   periodResetAt          DateTime           @default(now())
   currentPeriodStart     DateTime           @default(now())
@@ -409,17 +404,17 @@ model AIAgent {
 }
 
 model StoreOrder {
-  id                String           @id @default(cuid())
-  userId            String
-  externalId        String
-  orderNumber       String?
-  customerName      String?
-  customerPhone     String
-  currency          String           @default("EGP")
-  status            String           @default("pending")
-  rawData           Json?
-  contactId         String?
-  createdAt         DateTime         @default(now())
+  id                   String            @id @default(cuid())
+  userId               String
+  externalId           String
+  orderNumber          String?
+  customerName         String?
+  customerPhone        String
+  currency             String            @default("EGP")
+  status               String            @default("pending")
+  rawData              Json?
+  contactId            String?
+  createdAt            DateTime          @default(now())
   easyOrdersStoreId    String?
   orderedAt            DateTime          @default(now())
   shopifyStoreId       String?
@@ -472,12 +467,12 @@ model CampaignOrder {
 }
 
 model StoreAutomation {
-  id                String              @id @default(cuid())
-  userId            String
-  type              StoreAutomationType
-  isEnabled         Boolean             @default(false)
-  templateId        String?
-  sentCount         Int                 @default(0)
+  id                   String              @id @default(cuid())
+  userId               String
+  type                 StoreAutomationType
+  isEnabled            Boolean             @default(false)
+  templateId           String?
+  sentCount            Int                 @default(0)
   shopifyStoreId       String?
   easyOrdersStoreId    String?
   wooCommerceStoreId   String?
@@ -551,7 +546,6 @@ enum PlanTier {
   starter
   pro
   enterprise
-  beta
 }
 
 enum SubscriptionStatus {
