@@ -28,26 +28,26 @@ const PARTNERS = [
   {
     name: "woocommerce",
     logoSrc: "/partners/woocommerce.svg",
-    color: "from-orange-500 to-orange-600",
+    color: "from-purple-500 to-purple-600",
     description: { ar: "ارسال عروض", en: "Send Offers" },
   },
   {
     name: "ChatGPT",
     logoSrc: "/partners/chatgpt.svg",
-    color: "from-purple-500 to-purple-600",
+    color: "from-cyan-500 to-cyan-600",
     description: { ar: "ذكاء اصطناعي", en: "AI Assistant" },
   },
    {
     name: "Elevenlabs",
     logoSrc: "/partners/elevenlabs.svg",
-    color: "from-cyan-500 to-cyan-600",
+    color: "from-yellow-500 to-yellow-600",
     description: { ar: "Voice AI", en: "Voice AI" },
   },
   {
     name: "Gemini",
     logoSrc: "/partners/gemini.svg",
     color: "from-cyan-500 to-cyan-600",
-    description: { ar: "معالجة اللغة", en: "Language AI" },
+    description: { ar: "سيلز AI", en: "AI Sales" },
   },
  
 ];
