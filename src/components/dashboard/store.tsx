@@ -5,20 +5,20 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  ShoppingBag, Zap, Users, Package, TrendingUp, RefreshCw,
+  ShoppingBag, Zap, Globe, Users, Package, TrendingUp, RefreshCw,
   MessageSquare, ChevronDown, ChevronUp, Search, Loader2,
   ToggleLeft, ToggleRight, CheckCircle, ChevronRight, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn }   from "@/lib/utils";
-import { StoreAutomationType } from "@prisma/client";
+type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface StoreInfo {
   id:              string;
   storeName:       string;
-  source:          "shopify" | "easyorders";
+  source:          "shopify" | "easyorders" | "woocommerce";
   totalOrders:     number;
   totalCustomers:  number;
   campaignRevenue: number;
@@ -59,8 +59,9 @@ interface AutomationItem {
 }
 
 interface StoreData {
-  shopify:    StoreInfo | null;
-  easyorders: StoreInfo | null;
+  shopify:     StoreInfo | null;
+  easyorders:  StoreInfo | null;
+  woocommerce: StoreInfo | null;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -614,6 +615,28 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
           </button>
         </div>
       )}
+
+      {/* ── WooCommerce Webhook Info ───────────────────────────────────────── */}
+      {store.source === "woocommerce" && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="font-semibold text-sm text-gray-800 dark:text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-purple-500" />
+                الطلبات تصل تلقائياً عبر Webhook
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">كل أوردر جديد في WooCommerce بيوصل فوراً</p>
+            </div>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200 dark:border-green-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+              نشط
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            لو محتاج تضيف الـ Webhook من جديد، روح صفحة <strong>API</strong> وانسخ الرابط من قسم WooCommerce.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -627,7 +650,7 @@ interface StoreProps {
 export default function Store({ onOpenChat }: StoreProps) {
   const [storeData,  setStoreData]  = useState<StoreData | null>(null);
   const [loading,    setLoading]    = useState(true);
-  const [activeTab,  setActiveTab]  = useState<"shopify" | "easyorders">("shopify");
+  const [activeTab,  setActiveTab]  = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
 
   useEffect(() => {
     fetch("/api/store")
@@ -635,6 +658,7 @@ export default function Store({ onOpenChat }: StoreProps) {
       .then((d: StoreData) => {
         setStoreData(d);
         if (!d.shopify && d.easyorders) setActiveTab("easyorders");
+        else if (!d.shopify && !d.easyorders && d.woocommerce) setActiveTab("woocommerce");
       })
       .catch(() => toast.error("تعذر تحميل بيانات المتجر"))
       .finally(() => setLoading(false));
@@ -650,21 +674,25 @@ export default function Store({ onOpenChat }: StoreProps) {
   }
 
   // ── No Store ─────────────────────────────────────────────────────────────
-  const hasStore = storeData?.shopify || storeData?.easyorders;
+  const hasStore = storeData?.shopify || storeData?.easyorders || storeData?.woocommerce;
   if (!hasStore) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-4">
         <ShoppingBag className="w-16 h-16 text-gray-200 dark:text-gray-700" />
         <p className="text-gray-600 dark:text-gray-400 font-medium">لم يتم ربط أي متجر بعد</p>
         <p className="text-gray-400 dark:text-gray-500 text-sm">
-          اذهب إلى صفحة <strong>API</strong> لربط متجر Shopify أو EasyOrders
+          اذهب إلى صفحة <strong>API</strong> لربط متجر Shopify أو EasyOrders أو WooCommerce
         </p>
       </div>
     );
   }
 
-  const activeStore = activeTab === "shopify" ? storeData?.shopify : storeData?.easyorders;
-  const hasBoth     = !!(storeData?.shopify && storeData?.easyorders);
+  const activeStore =
+    activeTab === "shopify"     ? storeData?.shopify    :
+    activeTab === "easyorders"  ? storeData?.easyorders :
+                                  storeData?.woocommerce;
+  const storeCount  = [storeData?.shopify, storeData?.easyorders, storeData?.woocommerce].filter(Boolean).length;
+  const hasBoth     = storeCount > 1;
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
@@ -681,7 +709,9 @@ export default function Store({ onOpenChat }: StoreProps) {
               متصل
             </span>
             <span className="text-xs text-gray-400">
-              {activeStore?.source === "shopify" ? "Shopify" : "إيزي أوردرز"}
+              {activeStore?.source === "shopify" ? "Shopify"
+                : activeStore?.source === "easyorders" ? "إيزي أوردرز"
+                : "WooCommerce"}
             </span>
           </div>
         </div>
@@ -690,7 +720,7 @@ export default function Store({ onOpenChat }: StoreProps) {
       {/* ── Tabs (لو في متجرين) ────────────────────────────────────────────── */}
       {hasBoth && (
         <div className="flex gap-1.5 mb-6 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl w-fit">
-          {(["shopify", "easyorders"] as const).map((src) => {
+          {(["shopify", "easyorders", "woocommerce"] as const).map((src) => {
             const info = storeData?.[src];
             if (!info) return null;
             return (
@@ -706,7 +736,9 @@ export default function Store({ onOpenChat }: StoreProps) {
               >
                 {src === "shopify"
                   ? <ShoppingBag className="w-4 h-4" />
-                  : <Zap         className="w-4 h-4" />}
+                  : src === "easyorders"
+                    ? <Zap   className="w-4 h-4" />
+                    : <Globe className="w-4 h-4" />}
                 {info.storeName}
               </button>
             );

@@ -7,15 +7,15 @@ import { Input }    from "@/components/ui/input";
 import { Label }    from "@/components/ui/label";
 import {
   Copy, CheckCircle2, RefreshCw, ShoppingBag, Zap,
-  ArrowRight, Loader2, CheckCircle, ChevronDown,
+  Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
-  Database, Link as LinkIcon,
+  Database, Link as LinkIcon, Globe, Key, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 
-type CardId = "whatsapp" | "shopify" | "easyorders" | "webhook";
+type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook";
 
 // ─── CopyInput ────────────────────────────────────────────────────────────────
 function CopyInput({ value, placeholder }: { value: string; placeholder?: string }) {
@@ -42,27 +42,25 @@ interface CardVisual {
   id: CardId;
   icon: React.ReactNode;
   accentColor: string;
-  bgLight: string;
-  bgDark: string;
-  borderLight: string;
-  borderDark: string;
+  bgLight: string; bgDark: string;
+  borderLight: string; borderDark: string;
 }
 
 const CARD_VISUALS: CardVisual[] = [
-  { id: "whatsapp",   icon: <MessageSquare className="w-6 h-6" />, accentColor: "text-green-600 dark:text-green-400",  bgLight: "bg-green-50",  bgDark: "dark:bg-green-900/20",  borderLight: "border-green-200",  borderDark: "dark:border-green-800"  },
-  { id: "shopify",    icon: <ShoppingBag   className="w-6 h-6" />, accentColor: "text-blue-600 dark:text-blue-400",    bgLight: "bg-blue-50",   bgDark: "dark:bg-blue-900/20",   borderLight: "border-blue-200",   borderDark: "dark:border-blue-800"   },
-  { id: "easyorders", icon: <Zap          className="w-6 h-6" />, accentColor: "text-orange-600 dark:text-orange-400",bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
-  { id: "webhook",    icon: <Webhook       className="w-6 h-6" />, accentColor: "text-purple-600 dark:text-purple-400",bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
+  { id: "whatsapp",    icon: <MessageSquare className="w-6 h-6" />, accentColor: "text-green-600 dark:text-green-400",   bgLight: "bg-green-50",   bgDark: "dark:bg-green-900/20",   borderLight: "border-green-200",   borderDark: "dark:border-green-800"   },
+  { id: "shopify",     icon: <ShoppingBag   className="w-6 h-6" />, accentColor: "text-blue-600 dark:text-blue-400",     bgLight: "bg-blue-50",    bgDark: "dark:bg-blue-900/20",    borderLight: "border-blue-200",    borderDark: "dark:border-blue-800"    },
+  { id: "easyorders",  icon: <Zap           className="w-6 h-6" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
+  { id: "woocommerce", icon: <Globe         className="w-6 h-6" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50",  bgDark: "dark:bg-purple-900/20",  borderLight: "border-purple-200",  borderDark: "dark:border-purple-800"  },
+  { id: "webhook",     icon: <Webhook       className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
 ];
 
-function IntegrationCard({ id, title, subtitle, steps, videoLabel, isOpen, onToggle, children }: {
+function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children }: {
   id: CardId; title: string; subtitle: string;
   steps: { title: string; desc: string }[];
-  videoLabel: string; isOpen: boolean; onToggle: () => void;
+  isOpen: boolean; onToggle: () => void;
   children: React.ReactNode;
 }) {
   const v = CARD_VISUALS.find(c => c.id === id)!;
-
   return (
     <div className={cn(
       "rounded-2xl border transition-all duration-300",
@@ -106,19 +104,9 @@ function IntegrationCard({ id, title, subtitle, steps, videoLabel, isOpen, onTog
               </div>
             ))}
           </div>
-
           <div className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 border border-white dark:border-gray-700">
             {children}
           </div>
-
-          <Button variant="ghost" size="sm"
-            className={cn("gap-2 text-xs w-full justify-center border border-dashed",
-              v.accentColor.replace("text-", "border-").split(" ")[0],
-              v.accentColor.split(" ")[0]
-            )}
-            onClick={() => toast.info(videoLabel)}>
-            <ExternalLink className="w-3 h-3" /> {videoLabel}
-          </Button>
         </div>
       )}
     </div>
@@ -157,44 +145,93 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels }: {
   );
 }
 
-// ─── Shopify Content ──────────────────────────────────────────────────────────
-function ShopifyContent({ shopUrl, setShopUrl, shopError, setShopError, loading, onConnect, labels }: {
-  shopUrl: string; setShopUrl: (v: string) => void;
-  shopError: string; setShopError: (v: string) => void;
-  loading: boolean; onConnect: () => void;
-  labels: { urlLabel: string; urlPlaceholder: string; urlExample: string; connectBtn: string };
+// ─── Shopify Content — Webhook فقط زي EasyOrders ────────────────────────────
+interface ShopifyStatus {
+  connected:   boolean;
+  storeName?:  string;
+  connectedAt?: string | null;
+  webhookUrl?:  string;
+}
+
+function ShopifyContent({
+  storeName, setStoreName, webhookUrl, status, onConnect, onRefresh, loading,
+}: {
+  storeName:   string;
+  setStoreName:(v: string) => void;
+  webhookUrl:  string;
+  status:      ShopifyStatus | null;
+  onConnect:   () => void;
+  onRefresh:   () => void;
+  loading:     boolean;
 }) {
+  async function handleDisconnect() {
+    if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
+    const r = await fetch("/api/shopify/install", { method: "DELETE" });
+    if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
+    else       toast.error("فشل فك الربط");
+  }
+
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-xs dark:text-gray-400">{labels.urlLabel}</Label>
-        <div className="flex gap-2 mt-1">
-          <Input placeholder={labels.urlPlaceholder} dir="ltr" value={shopUrl}
-            onChange={e => { setShopUrl(e.target.value); setShopError(""); }}
-            onKeyDown={e => e.key === "Enter" && onConnect()} disabled={loading}
-            className="dark:bg-gray-700 dark:border-gray-600" />
-          <Button size="sm" onClick={onConnect} disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 gap-2 whitespace-nowrap">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ArrowRight className="w-4 h-4" /> {labels.connectBtn}</>}
-          </Button>
+      {/* Connected Badge */}
+      {status?.connected && (
+        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs text-green-700 dark:text-green-300 font-medium">{status.storeName}</p>
+          </div>
+          <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{labels.urlExample}</p>
-        {shopError && <p className="text-xs text-red-500 mt-1">{shopError}</p>}
+      )}
+
+      {/* Store Name */}
+      {!status?.connected && (
+        <div>
+          <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
+          <Input
+            placeholder="مثال: متجر العلاء"
+            value={storeName}
+            onChange={e => setStoreName(e.target.value)}
+            className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+          />
+        </div>
+      )}
+
+      {/* Webhook URL */}
+      <div>
+        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+          <Webhook className="w-3 h-3" /> Webhook URL
+        </Label>
+        <div className="mt-1"><CopyInput value={webhookUrl} placeholder="جاري التحميل..." /></div>
+        <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
+          ⚠️ روح Shopify Admin → Settings → Notifications → Webhooks → Create webhook
+          → اختر الحدث (Order creation / Order fulfillment) والصق الرابط ده
+        </p>
       </div>
+
+      {!status?.connected && (
+        <Button
+          size="sm"
+          onClick={onConnect}
+          disabled={loading || !storeName.trim()}
+          className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+        >
+          {loading
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
+            : <><ShoppingBag className="w-4 h-4" /> حفظ وتفعيل المتجر</>}
+        </Button>
+      )}
     </div>
   );
 }
 
 // ─── EasyOrders Content ───────────────────────────────────────────────────────
 interface EasyOrdersLabels {
-  storeLabel: string;
-  storePlaceholder: string;
-  apiKeyLabel: string;
-  webhookLabel: string;
-  webhookWarning: string;
-  syncingBtn: string;
-  syncBtn: string;
-  apiKeyErr: string;
+  storeLabel: string; storePlaceholder: string;
+  apiKeyLabel: string; webhookLabel: string; webhookWarning: string;
+  syncingBtn: string; syncBtn: string; apiKeyErr: string;
   syncSuccess: (synced: number, hasMore: boolean) => string;
   syncErr: string;
   connectedBadge: (store: string, total: number) => string;
@@ -242,9 +279,7 @@ function EasyOrdersContent({ apiKey, setApiKey, storeName, setStoreName, webhook
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
           <LinkIcon className="w-3 h-3" /> {labels.webhookLabel}
         </Label>
-        <div className="mt-1">
-          <CopyInput value={webhookUrl} placeholder={labels.loading} />
-        </div>
+        <div className="mt-1"><CopyInput value={webhookUrl} placeholder={labels.loading} /></div>
         <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1">{labels.webhookWarning}</p>
       </div>
       <Button onClick={onSync} disabled={syncing || !apiKey.trim()} size="sm"
@@ -260,6 +295,143 @@ function EasyOrdersContent({ apiKey, setApiKey, storeName, setStoreName, webhook
   );
 }
 
+// ─── WooCommerce Content ──────────────────────────────────────────────────────
+interface WooStatus {
+  connected:   boolean;
+  storeName?:  string;
+  totalSynced?: number;
+  lastSyncAt?:  string | null;
+}
+
+function WooCommerceContent({ status, onRefresh, locale }: {
+  status: WooStatus | null;
+  onRefresh: () => void;
+  locale: string;
+}) {
+  const [storeName, setStoreName] = useState("");
+  const [storeUrl,  setStoreUrl]  = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [loading,   setLoading]   = useState(false);
+  const [urlLoaded, setUrlLoaded] = useState(false);
+  const [error,     setError]     = useState("");
+
+  const loadWebhookUrl = useCallback(async () => {
+    if (urlLoaded) return;
+    try {
+      const r = await fetch("/api/woocommerce/URL");
+      const d = await r.json();
+      if (d.url) { setWebhookUrl(d.url); setUrlLoaded(true); }
+    } catch {}
+  }, [urlLoaded]);
+
+  useEffect(() => { loadWebhookUrl(); }, [loadWebhookUrl]);
+
+  async function handleConnect() {
+    setError("");
+    if (!storeName.trim()) { setError("أدخل اسم المتجر"); return; }
+    setLoading(true);
+    try {
+      const r = await fetch("/api/woocommerce/connect", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ storeName: storeName.trim(), storeUrl: storeUrl.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setError(d.error ?? "فشل الحفظ"); return; }
+      toast.success("✅ تم حفظ بيانات المتجر — افتح WooCommerce وأضف الـ Webhook URL");
+      onRefresh();
+    } catch { setError("خطأ في الاتصال"); }
+    finally  { setLoading(false); }
+  }
+
+  async function handleDisconnect() {
+    if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
+    const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
+    if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
+    else       toast.error("فشل فك الربط");
+  }
+
+  const dateStr = status?.lastSyncAt
+    ? new Date(status.lastSyncAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-US")
+    : "";
+
+  return (
+    <div className="space-y-3">
+      {/* Connected Badge */}
+      {status?.connected && (
+        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+              {status.storeName} — {(status.totalSynced ?? 0).toLocaleString("ar-EG")} طلب مستلم
+            </p>
+            {dateStr && <p className="text-[10px] text-green-600/70 dark:text-green-400/70">آخر طلب: {dateStr}</p>}
+          </div>
+          <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Store Name */}
+      <div>
+        <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
+        <Input
+          placeholder="متجر WooCommerce"
+          value={status?.connected ? (status.storeName ?? "") : storeName}
+          onChange={e => setStoreName(e.target.value)}
+          disabled={status?.connected}
+          className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+        />
+      </div>
+
+      {/* Store URL */}
+      {!status?.connected && (
+        <div>
+          <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+            <Globe className="w-3 h-3" /> رابط المتجر (اختياري)
+          </Label>
+          <Input
+            placeholder="https://mystore.com"
+            dir="ltr"
+            value={storeUrl}
+            onChange={e => setStoreUrl(e.target.value)}
+            className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+          />
+        </div>
+      )}
+
+      {/* Webhook URL */}
+      <div>
+        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+          <LinkIcon className="w-3 h-3" /> Webhook URL
+        </Label>
+        <div className="mt-1">
+          <CopyInput value={webhookUrl} placeholder="جاري التحميل..." />
+        </div>
+        <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1">
+          ⚠️ افتح WooCommerce → Settings → Advanced → Webhooks → أضف هذا الرابط لحدث &quot;Order created&quot; و &quot;Order updated&quot;
+        </p>
+      </div>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      {!status?.connected && (
+        <Button
+          onClick={handleConnect}
+          disabled={loading}
+          size="sm"
+          className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+        >
+          {loading
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
+            : <><Globe className="w-4 h-4" /> حفظ وتفعيل المتجر</>}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // ─── Webhook Content ──────────────────────────────────────────────────────────
 function WebhookContent({ webhookUrl, verifyToken, hint }: {
   webhookUrl: string; verifyToken: string; hint: string;
@@ -267,15 +439,15 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
   return (
     <div className="space-y-3">
       <div>
-        <Label className="text-xs text-purple-600 dark:text-purple-400 font-bold">Callback URL</Label>
+        <Label className="text-xs text-gray-600 dark:text-gray-400 font-bold">Callback URL</Label>
         <div className="mt-1"><CopyInput value={webhookUrl} /></div>
       </div>
       <div>
-        <Label className="text-xs text-purple-600 dark:text-purple-400 font-bold">Verify Token</Label>
+        <Label className="text-xs text-gray-600 dark:text-gray-400 font-bold">Verify Token</Label>
         <div className="mt-1"><CopyInput value={verifyToken} placeholder="..." /></div>
       </div>
-      <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-        <p className="text-xs text-purple-700 dark:text-purple-300">{hint}</p>
+      <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-700 dark:text-gray-300">{hint}</p>
       </div>
     </div>
   );
@@ -286,28 +458,74 @@ export default function API({ initialData }: { initialData?: any }) {
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 
-  const [openCard,    setOpenCard]    = useState<CardId | null>(null);
-  const [isSyncing,   setIsSyncing]   = useState(false);
-  const [waLoading,   setWaLoading]   = useState(false);
-  const [shopUrl,     setShopUrl]     = useState("");
-  const [shopLoading, setShopLoading] = useState(false);
-  const [shopError,   setShopError]   = useState("");
-  const [eoApiKey,    setEoApiKey]    = useState("");
-  const [eoStoreName, setEoStoreName] = useState("");
-  const [eoWebhookUrl,setEoWebhookUrl]= useState("");
-  const [eoUrlLoaded, setEoUrlLoaded] = useState(false);
-  const [eoSyncing,   setEoSyncing]   = useState(false);
-  const [eoStatus,    setEoStatus]    = useState<{
+  const [openCard,     setOpenCard]     = useState<CardId | null>(null);
+  const [isSyncing,    setIsSyncing]    = useState(false);
+  const [waLoading,    setWaLoading]    = useState(false);
+  const [eoApiKey,     setEoApiKey]     = useState("");
+  const [eoStoreName,  setEoStoreName]  = useState("");
+  const [eoWebhookUrl, setEoWebhookUrl] = useState("");
+  const [eoUrlLoaded,  setEoUrlLoaded]  = useState(false);
+  const [eoSyncing,    setEoSyncing]    = useState(false);
+  const [eoStatus,     setEoStatus]     = useState<{
     connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string;
   } | null>(null);
-  const [verifyToken, setVerifyToken] = useState("");
-  const [webhookUrl,  setWebhookUrl]  = useState("");
+  const [shopifyStatus,    setShopifyStatus]    = useState<{
+    connected: boolean; storeName?: string; connectedAt?: string | null; webhookUrl?: string;
+  } | null>(null);
+  const [shStoreName,      setShStoreName]      = useState("");
+  const [shWebhookUrl,     setShWebhookUrl]     = useState("");
+  const [shUrlLoaded,      setShUrlLoaded]      = useState(false);
+  const [shConnecting,     setShConnecting]     = useState(false);
+  const [wooStatus,    setWooStatus]    = useState<{
+    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string | null;
+  } | null>(null);
+  const [verifyToken,  setVerifyToken]  = useState("");
+  const [webhookUrl,   setWebhookUrl]   = useState("");
+
+  // ── Load initial data ───────────────────────────────────────────────────────
+  const loadShopifyStatus = useCallback(async () => {
+    try {
+      // جيب بيانات المتاجر
+      const [storeRes, shUrlRes] = await Promise.all([
+        fetch("/api/store"),
+        fetch("/api/shopify/URL"),
+      ]);
+      const d     = await storeRes.json();
+      const shUrl = await shUrlRes.json();
+
+      setShWebhookUrl(shUrl.url ?? "");
+      setShUrlLoaded(true);
+
+      if (d.shopify) {
+        setShopifyStatus({
+          connected:   true,
+          storeName:   d.shopify.storeName,
+          connectedAt: d.shopify.connectedAt,
+          webhookUrl:  shUrl.url ?? "",
+        });
+      } else {
+        setShopifyStatus({ connected: false, webhookUrl: shUrl.url ?? "" });
+      }
+
+      if (d.woocommerce) {
+        setWooStatus({
+          connected:   true,
+          storeName:   d.woocommerce.storeName,
+          totalSynced: d.woocommerce.totalSynced,
+          lastSyncAt:  d.woocommerce.lastSyncAt,
+        });
+      } else {
+        setWooStatus({ connected: false });
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
     fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => {});
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
-  }, []);
+    loadShopifyStatus();
+  }, [loadShopifyStatus]);
 
   const loadEoWebhookUrl = useCallback(async () => {
     if (eoUrlLoaded) return;
@@ -330,7 +548,7 @@ export default function API({ initialData }: { initialData?: any }) {
       if (result.success) toast.success(api.syncSuccess(result.count ?? 0));
       else toast.error(result.error || api.syncError);
     } catch { toast.error(api.syncError); }
-    finally { setIsSyncing(false); }
+    finally  { setIsSyncing(false); }
   };
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -344,24 +562,7 @@ export default function API({ initialData }: { initialData?: any }) {
       });
       toast.success(api.cards.whatsapp.savedMsg);
     } catch { toast.error(api.cards.whatsapp.saveErr); }
-    finally { setWaLoading(false); }
-  };
-
-  const handleShopifyConnect = async () => {
-    setShopError("");
-    const shop = shopUrl.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
-    if (!shop) { setShopError(api.cards.shopify.urlErr); return; }
-    setShopLoading(true);
-    try {
-      const r = await fetch("/api/shopify/install", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop }),
-      });
-      const d = await r.json();
-      if (!r.ok) { setShopError(d.error ?? api.cards.shopify.serverErr); return; }
-      window.location.href = d.authUrl;
-    } catch { setShopError(api.cards.shopify.serverErr); }
-    finally { setShopLoading(false); }
+    finally  { setWaLoading(false); }
   };
 
   const handleEoSync = async () => {
@@ -377,19 +578,73 @@ export default function API({ initialData }: { initialData?: any }) {
       toast.success(api.cards.easyorders.syncSuccess(d.synced, d.hasMore));
       setEoStatus({ connected: true, storeName: d.storeName, totalSynced: d.totalSynced, lastSyncAt: new Date().toISOString() });
     } catch { toast.error(api.cards.easyorders.syncErr); }
-    finally { setEoSyncing(false); }
+    finally  { setEoSyncing(false); }
   };
 
-  const CARD_DEFS: { id: CardId; title: string; subtitle: string; steps: { title: string; desc: string }[]; videoLabel: string }[] = [
-    { id: "whatsapp",   title: api.cards.whatsapp.title,   subtitle: api.cards.whatsapp.subtitle,   steps: api.cards.whatsapp.steps.map((s,i) => ({ title: (s as any).title, desc: (s as any).desc })),   videoLabel: api.cards.whatsapp.video   },
-    { id: "shopify",    title: api.cards.shopify.title,    subtitle: api.cards.shopify.subtitle,    steps: api.cards.shopify.steps.map(s    => ({ title: (s as any).title, desc: (s as any).desc })),    videoLabel: api.cards.shopify.video    },
-    { id: "easyorders", title: api.cards.easyorders.title, subtitle: api.cards.easyorders.subtitle, steps: api.cards.easyorders.steps.map(s => ({ title: (s as any).title, desc: (s as any).desc })), videoLabel: api.cards.easyorders.video },
-    { id: "webhook",    title: api.cards.webhook.title,    subtitle: api.cards.webhook.subtitle,    steps: api.cards.webhook.steps.map(s    => ({ title: (s as any).title, desc: (s as any).desc })),    videoLabel: api.cards.webhook.video    },
+  const handleShConnect = async () => {
+    if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
+    setShConnecting(true);
+    try {
+      const r = await fetch("/api/shopify/install", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ storeName: shStoreName.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) { toast.error(d.error ?? "فشل الحفظ"); return; }
+      toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify`);
+      setShStoreName("");
+      loadShopifyStatus();
+    } catch { toast.error("خطأ في الاتصال"); }
+    finally  { setShConnecting(false); }
+  };
+
+  const CARD_DEFS: {
+    id: CardId; title: string; subtitle: string;
+    steps: { title: string; desc: string }[];
+  }[] = [
+    {
+      id: "whatsapp",
+      title:    api.cards.whatsapp.title,
+      subtitle: api.cards.whatsapp.subtitle,
+      steps:    api.cards.whatsapp.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+    },
+    {
+      id: "shopify",
+      title:    "ربط Shopify",
+      subtitle: "عن طريق Custom App & Webhook",
+      steps: [
+        { title: "أنشئ Custom App",    desc: "من Shopify Admin → Apps → Develop apps → Create custom app" },
+        { title: "اجمع الصلاحيات",    desc: "فعّل: read/write orders, customers, products, fulfillments" },
+        { title: "انسخ الـ Token",     desc: "من Admin API access tokens — انسخه والصقه هنا" },
+      ],
+    },
+    {
+      id: "easyorders",
+      title:    api.cards.easyorders.title,
+      subtitle: api.cards.easyorders.subtitle,
+      steps:    api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+    },
+    {
+      id: "woocommerce",
+      title:    "ربط WooCommerce",
+      subtitle: "عن طريق Webhook تلقائي",
+      steps: [
+        { title: "احفظ اسم المتجر",    desc: "أدخل اسم متجرك واضغط حفظ للحصول على الـ Webhook URL" },
+        { title: "أضف الـ Webhook",    desc: "WooCommerce → Settings → Advanced → Webhooks → Add webhook" },
+        { title: "اختر الحدث",         desc: "اختر 'Order created' + 'Order updated' وألصق الـ URL" },
+      ],
+    },
+    {
+      id: "webhook",
+      title:    api.cards.webhook.title,
+      subtitle: api.cards.webhook.subtitle,
+      steps:    api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+    },
   ];
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
-
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -405,21 +660,41 @@ export default function API({ initialData }: { initialData?: any }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {CARD_DEFS.map(card => (
-          <IntegrationCard key={card.id} {...card} isOpen={openCard === card.id} onToggle={() => handleCardClick(card.id)}>
+          <IntegrationCard
+            key={card.id}
+            {...card}
+            isOpen={openCard === card.id}
+            onToggle={() => handleCardClick(card.id)}
+          >
             {card.id === "whatsapp" && (
-              <WhatsAppContent initialData={initialData} loading={waLoading} onSubmit={handleSaveWhatsApp}
-                labels={{ savingBtn: api.cards.whatsapp.savingBtn, saveBtn: api.cards.whatsapp.saveBtn }} />
+              <WhatsAppContent
+                initialData={initialData}
+                loading={waLoading}
+                onSubmit={handleSaveWhatsApp}
+                labels={{ savingBtn: api.cards.whatsapp.savingBtn, saveBtn: api.cards.whatsapp.saveBtn }}
+              />
             )}
             {card.id === "shopify" && (
-              <ShopifyContent shopUrl={shopUrl} setShopUrl={setShopUrl} shopError={shopError}
-                setShopError={setShopError} loading={shopLoading} onConnect={handleShopifyConnect}
-                labels={api.cards.shopify} />
+              <ShopifyContent
+                storeName={shStoreName}
+                setStoreName={setShStoreName}
+                webhookUrl={shWebhookUrl}
+                status={shopifyStatus}
+                onConnect={handleShConnect}
+                onRefresh={loadShopifyStatus}
+                loading={shConnecting}
+              />
             )}
             {card.id === "easyorders" && (
-              <EasyOrdersContent apiKey={eoApiKey} setApiKey={setEoApiKey}
+              <EasyOrdersContent
+                apiKey={eoApiKey} setApiKey={setEoApiKey}
                 storeName={eoStoreName} setStoreName={setEoStoreName}
                 webhookUrl={eoWebhookUrl} syncing={eoSyncing} status={eoStatus}
-                onSync={handleEoSync} labels={api.cards.easyorders} locale={locale} />
+                onSync={handleEoSync} labels={api.cards.easyorders} locale={locale}
+              />
+            )}
+            {card.id === "woocommerce" && (
+              <WooCommerceContent status={wooStatus} onRefresh={loadShopifyStatus} locale={locale} />
             )}
             {card.id === "webhook" && (
               <WebhookContent webhookUrl={webhookUrl} verifyToken={verifyToken} hint={api.cards.webhook.hint} />

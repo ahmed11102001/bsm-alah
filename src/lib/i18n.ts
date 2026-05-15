@@ -262,12 +262,12 @@ export const translations = {
         },
         shopify: {
           title:    "شوبيفاي",
-          subtitle: "ربط متجر Shopify",
+          subtitle: "ربط عبر Custom App & Webhook",
           video:    "مشاهدة طريقة ربط شوبيفاي",
           steps: [
-            { title: "أدخل رابط متجرك",  desc: "الرابط بيكون على الشكل: your-store.myshopify.com" },
-            { title: "وافق على التثبيت", desc: "هيتفتحلك صفحة شوبيفاي — وافق على صلاحيات التطبيق" },
-            { title: "بدء سحب البيانات", desc: "بعد الموافقة هيتم سحب بيانات العملاء والطلبات تلقائياً" },
+            { title: "أنشئ Custom App",    desc: "Shopify Admin ← Apps ← Develop apps ← Create custom app" },
+            { title: "اجمع الصلاحيات",    desc: "فعّل: read/write orders, customers, products, fulfillments" },
+            { title: "انسخ الـ Token",     desc: "من Admin API access tokens — انسخه والصقه هنا" },
           ],
           urlLabel:       "رابط المتجر",
           urlPlaceholder: "your-store.myshopify.com",
@@ -275,6 +275,15 @@ export const translations = {
           connectBtn:     "ربط",
           urlErr:         "أدخل رابط المتجر أولاً",
           serverErr:      "تعذر الاتصال بالسيرفر",
+        },
+        woocommerce: {
+          title:    "ووكوميرس",
+          subtitle: "ربط عبر Webhook تلقائي",
+          steps: [
+            { title: "احفظ اسم المتجر",    desc: "أدخل اسم متجرك واضغط حفظ للحصول على الـ Webhook URL" },
+            { title: "أضف الـ Webhook",    desc: "WooCommerce ← Settings ← Advanced ← Webhooks ← Add webhook" },
+            { title: "اختر الحدث",         desc: "اختر Order created + Order updated وألصق الـ URL" },
+          ],
         },
         easyorders: {
           title:    "إيزي أوردرز",
@@ -716,12 +725,12 @@ export const translations = {
         },
         shopify: {
           title:    "Shopify",
-          subtitle: "Connect Shopify store",
+          subtitle: "Connect via Custom App & Webhook",
           video:    "Watch how to connect Shopify",
           steps: [
-            { title: "Enter your store URL", desc: "Format: your-store.myshopify.com" },
-            { title: "Approve installation", desc: "A Shopify page will open — approve the app permissions" },
-            { title: "Data sync starts",     desc: "Customer and order data will be pulled automatically" },
+            { title: "Create a Custom App",  desc: "Shopify Admin ← Apps ← Develop apps ← Create custom app" },
+            { title: "Set permissions",      desc: "Enable: read/write orders, customers, products, fulfillments" },
+            { title: "Copy the Token",       desc: "From Admin API access tokens — paste it below" },
           ],
           urlLabel:       "Store URL",
           urlPlaceholder: "your-store.myshopify.com",
@@ -752,6 +761,15 @@ export const translations = {
           connectedBadge:   (store: string, total: number) => `${store} — ${total.toLocaleString()} orders saved`,
           lastSync:         (date: string) => `Last sync: ${date}`,
           loading:          "Loading...",
+        },
+        woocommerce: {
+          title:    "WooCommerce",
+          subtitle: "Connect via Webhook",
+          steps: [
+            { title: "Save store name",      desc: "Enter your store name and save to get your Webhook URL" },
+            { title: "Add the Webhook",      desc: "WooCommerce ← Settings ← Advanced ← Webhooks ← Add webhook" },
+            { title: "Choose events",        desc: "Select Order created + Order updated and paste the URL" },
+          ],
         },
         webhook: {
           title:    "Webhook",

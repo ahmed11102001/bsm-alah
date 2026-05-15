@@ -1,0 +1,36 @@
+// src/app/api/shopify/URL/route.ts
+import { NextResponse }     from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions }      from "@/lib/auth";
+import prisma               from "@/lib/prisma";
+import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where:  { email: session.user.email },
+    select: { id: true, parentId: true },
+  });
+  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const userId = dbUser.parentId ?? dbUser.id;
+  const url    = generateShopifyWebhookUrl(userId);
+
+  // جيب بيانات المتجر لو موجود
+  const store = await prisma.shopifyStore.findUnique({
+    where:  { userId },
+    select: { shop: true, isActive: true, createdAt: true },
+  });
+
+  return NextResponse.json({
+    url,
+    connected:  !!store,
+    storeName:  store?.shop ?? null,
+    isActive:   store?.isActive ?? false,
+    connectedAt: store?.createdAt ?? null,
+  });
+}

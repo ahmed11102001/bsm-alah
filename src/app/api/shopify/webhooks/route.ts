@@ -1,83 +1,97 @@
 ﻿// src/app/api/shopify/webhooks/route.ts
+// ─── ويب هوك Shopify — نظام uid+token زي EasyOrders ─────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { verifyShopifyWebhookSignature } from "@/lib/shopify";
-import { inngest } from "@/inngest/client";
-import { attributeOrderToCampaign } from "@/lib/attribution";
+import { createHmac }                from "crypto";
+import prisma                        from "@/lib/prisma";
+import { inngest }                   from "@/inngest/client";
+import { attributeOrderToCampaign }  from "@/lib/attribution";
+
+// ── Token helper — نفس WooCommerce و EasyOrders ───────────────────────────────
+function userToken(userId: string): string {
+  return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
+    .update(userId)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+export function generateShopifyWebhookUrl(userId: string): string {
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const token = userToken(userId);
+  return `${base}/api/shopify/webhooks?uid=${userId}&token=${token}`;
+}
+
+export async function GET() {
+  return NextResponse.json({ status: "ok", service: "Shopify Webhook" });
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const rawBody    = await req.text();
-    const hmacHeader = req.headers.get("X-Shopify-Hmac-SHA256") || "";
-    const topic      = req.headers.get("X-Shopify-Topic")       || "";
+    // ── Auth بـ uid + token ───────────────────────────────────────────────────
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("uid");
+    const token  = searchParams.get("token");
 
-    const isValid = await verifyShopifyWebhookSignature(rawBody, hmacHeader);
-    if (!isValid) {
-      console.warn("[Shopify Webhook] Invalid signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    if (!userId || !token || token !== userToken(userId)) {
+      console.warn("[Shopify WH] Invalid token for uid:", userId);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const topic = req.headers.get("X-Shopify-Topic") || req.headers.get("x-shopify-topic") || "";
 
     let payload: any;
-    try {
-      payload = JSON.parse(rawBody);
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    try { payload = await req.json(); }
+    catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-    const shopDomain =
-      req.headers.get("X-Shopify-Shop-Domain") ||
-      req.headers.get("x-shopify-shop-domain") ||
-      payload.shop?.myshopify_domain ||
-      "";
-
-    if (!shopDomain) {
-      console.warn("[Shopify Webhook] No shop domain");
-      return NextResponse.json({ status: "ignored" });
-    }
-
-    const shopifyStore = await prisma.shopifyStore.findFirst({
-      where:  { shop: shopDomain },
+    // ── جيب المتجر ───────────────────────────────────────────────────────────
+    const shopifyStore = await prisma.shopifyStore.findUnique({
+      where:  { userId },
       select: { id: true, userId: true, shop: true },
     });
 
     if (!shopifyStore) {
-      console.warn(`[Shopify Webhook] Store not found: ${shopDomain}`);
+      console.warn(`[Shopify WH] Store not found for userId: ${userId}`);
       return NextResponse.json({ status: "ignored" });
     }
 
-    console.log(`[Shopify Webhook] ${topic} — shop: ${shopifyStore.shop}`);
+    console.log(`[Shopify WH] ${topic || "order"} — store: ${shopifyStore.shop}`);
 
+    // ── Route by topic ────────────────────────────────────────────────────────
     switch (topic) {
       case "orders/create":
-        await handleOrderCreated(payload, shopifyStore.userId, shopifyStore.id);
+      case "":   // لو مفيش topic بيتعامل معاه كـ order created
+        await handleOrderCreated(payload, userId, shopifyStore.id);
         break;
       case "orders/updated":
-        await handleOrderUpdated(payload, shopifyStore.userId);
+        await handleOrderUpdated(payload, userId, shopifyStore.id);
         break;
       case "orders/fulfilled":
-        await handleOrderFulfilled(payload, shopifyStore.userId, shopifyStore.id);
+        await handleOrderFulfilled(payload, userId, shopifyStore.id);
         break;
       case "customers/create":
-        await handleCustomerCreated(payload, shopifyStore.userId);
+        await handleCustomerCreated(payload, userId);
         break;
       case "customers/update":
-        await handleCustomerUpdated(payload, shopifyStore.userId);
+        await handleCustomerUpdated(payload, userId);
         break;
       default:
-        console.log(`[Shopify Webhook] Unhandled topic: ${topic}`);
+        console.log(`[Shopify WH] Unhandled topic: ${topic}`);
     }
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
-    console.error("[Shopify Webhook] Unexpected error:", error);
+    console.error("[Shopify WH] Unexpected error:", error);
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }
 
+// ── Handlers ──────────────────────────────────────────────────────────────────
+
 async function handleOrderCreated(order: any, userId: string, shopifyStoreId: string) {
   try {
     const rawPhone: string =
-      order.customer?.phone || order.billing_address?.phone || "";
+      order.customer?.phone      ||
+      order.billing_address?.phone ||
+      order.phone                || "";
 
     if (!rawPhone) {
       console.warn(`[Shopify] Order ${order.id} — no phone, skipping`);
@@ -90,10 +104,10 @@ async function handleOrderCreated(order: any, userId: string, shopifyStoreId: st
     const revenue    = parseFloat(order.total_price ?? "0") || 0;
     const externalId = String(order.id);
 
-    // Upsert contact
+    // Upsert Contact
     const contact = await prisma.contact.upsert({
       where:  { phone_userId: { phone: cleanPhone, userId } },
-      update: { name: customerName },
+      update: { name: customerName !== "عميل" ? customerName : undefined },
       create: { phone: cleanPhone, userId, name: customerName },
     });
 
@@ -105,7 +119,7 @@ async function handleOrderCreated(order: any, userId: string, shopifyStoreId: st
         userId,
         source:        "shopify",
         externalId,
-        orderNumber:   String(order.order_number ?? ""),
+        orderNumber:   String(order.order_number ?? order.id),
         customerPhone: cleanPhone,
         customerName,
         total:         revenue,
@@ -124,7 +138,7 @@ async function handleOrderCreated(order: any, userId: string, shopifyStoreId: st
       revenue,
     });
 
-    // Inngest: رسالة تأكيد الأوردر
+    // Inngest → أتمتة تأكيد الأوردر
     await inngest.send({
       name: "shopify/order.created",
       data: {
@@ -139,19 +153,26 @@ async function handleOrderCreated(order: any, userId: string, shopifyStoreId: st
         shopifyStoreId,
       },
     });
+
+    // تحديث عداد المزامنة
+    await prisma.shopifyStore.update({
+      where: { id: shopifyStoreId },
+      data:  { updatedAt: new Date() },
+    });
+
+    console.log(`[Shopify] ✓ Order #${order.order_number} — ${cleanPhone}`);
   } catch (error) {
     console.error("[Shopify] handleOrderCreated error:", error);
   }
 }
 
-async function handleOrderUpdated(order: any, userId: string) {
+async function handleOrderUpdated(order: any, userId: string, shopifyStoreId: string) {
   try {
     await prisma.storeOrder.updateMany({
       where: { source: "shopify", externalId: String(order.id), userId },
       data:  { status: order.financial_status ?? "pending" },
     });
 
-    // لو اتشحن من orders/updated — بعت fulfilled event
     if (order.fulfillment_status === "fulfilled") {
       const rawPhone = order.customer?.phone || order.billing_address?.phone || "";
       if (!rawPhone) return;
@@ -164,6 +185,7 @@ async function handleOrderUpdated(order: any, userId: string) {
           customerPhone:     rawPhone.replace(/\D/g, ""),
           trackingUrl:       order.fulfillments?.[0]?.tracking_url ?? null,
           fulfillmentStatus: order.fulfillment_status,
+          shopifyStoreId,
         },
       });
     }

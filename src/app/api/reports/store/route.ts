@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       select: {
         shopifyStore:    { select: { id: true, shop: true, createdAt: true } },
         easyOrdersStore: { select: { id: true, storeName: true, isActive: true, lastSyncAt: true } },
+        wooCommerceStore: { select: { id: true, storeName: true, isActive: true, lastSyncAt: true } },
       },
     });
 
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
 
         prisma.storeOrder
           .groupBy({ by: ["customerPhone"], where: { userId, orderedAt: range } })
-          .then((r) => r.length),
+          .then((r: any[]) => r.length),
       ]);
 
     const totalRevenue        = totalRevenueAgg._sum.total        ?? 0;
@@ -131,9 +132,11 @@ export async function GET(req: NextRequest) {
       : 0;
 
     // ── Store info summary ────────────────────────────────────────────
+    const woo = (user as any).wooCommerceStore as { id: string; storeName: string; isActive: boolean; lastSyncAt: Date | null } | null;
     const stores = [];
-    if (sh) stores.push({ source: "shopify",    name: sh.shop,       connectedAt: sh.createdAt, isActive: true });
-    if (eo) stores.push({ source: "easyorders", name: eo.storeName,  connectedAt: eo.lastSyncAt ?? null, isActive: eo.isActive });
+    if (sh)  stores.push({ source: "shopify",     name: sh.shop,       connectedAt: sh.createdAt,          isActive: true });
+    if (eo)  stores.push({ source: "easyorders",  name: eo.storeName,  connectedAt: eo.lastSyncAt ?? null, isActive: eo.isActive });
+    if (woo) stores.push({ source: "woocommerce", name: woo.storeName, connectedAt: woo.lastSyncAt ?? null, isActive: woo.isActive });
 
     return NextResponse.json({
       summary: {
@@ -146,14 +149,14 @@ export async function GET(req: NextRequest) {
       },
       stores,
       campaignRevenue,
-      topCustomers: topCustomers.map((c) => ({
+      topCustomers: topCustomers.map((c: any) => ({
         phone:       c.customerPhone,
         name:        c.customerName ?? null,
         ordersCount: c._count.id,
         totalSpent:  c._sum.total ?? 0,
         currency:    c.currency,
       })),
-      ordersByStatus: ordersByStatus.map((s) => ({
+      ordersByStatus: ordersByStatus.map((s: any) => ({
         status:  s.status,
         count:   s._count.id,
         revenue: s._sum.total ?? 0,

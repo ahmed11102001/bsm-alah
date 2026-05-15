@@ -1,25 +1,22 @@
 // src/app/api/store/automation/route.ts
-// ─── أتمتات المتجر: جلب وحفظ إعدادات التأكيد / الشحن / العروض ───────────────
+// ─── أتمتات المتجر: Shopify + EasyOrders + WooCommerce ───────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
-import { StoreAutomationType }       from "@prisma/client";
+// StoreAutomationType defined locally to avoid Prisma client generation dependency
 
-// مطابق تماماً لـ enum StoreAutomationType في schema.prisma
-const VALID_TYPES: StoreAutomationType[] = [
-  StoreAutomationType.order_confirm,
-  StoreAutomationType.order_shipped,
-  StoreAutomationType.promo,
-];
+type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
+const VALID_TYPES: StoreAutomationType[] = ["order_confirm", "order_shipped", "promo"];
 
-// ── أعضاء الفريق يشاركون متجر الـ owner ─────────────────────────────────────
+type StoreSource = "shopify" | "easyorders" | "woocommerce";
+
 function resolveOwnerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
 
-// ── GET — جلب أتمتات المتجر + القوالب المعتمدة ──────────────────────────────
+// ── GET ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -31,41 +28,31 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await prisma.user.findUnique({
     where:  { id: ownerId },
     select: {
-      id:              true,
-      shopifyStore:    { select: { id: true } },
-      easyOrdersStore: { select: { id: true } },
+      id:               true,
+      shopifyStore:     { select: { id: true } },
+      easyOrdersStore:  { select: { id: true } },
+      wooCommerceStore: { select: { id: true } },
     },
   });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const source = new URL(req.url).searchParams.get("source") as StoreSource | null;
+  if (!source || !["shopify", "easyorders", "woocommerce"].includes(source)) {
+    return NextResponse.json(
+      { error: "source مطلوب: shopify أو easyorders أو woocommerce" },
+      { status: 400 }
+    );
   }
 
-  const source = new URL(req.url).searchParams.get("source");
-  if (!source || !["shopify", "easyorders"].includes(source)) {
-    return NextResponse.json({ error: "source مطلوب: shopify أو easyorders" }, { status: 400 });
-  }
+  const storeId = getStoreId(user, source);
+  if (!storeId) return NextResponse.json({ error: "المتجر غير مربوط" }, { status: 404 });
 
-  const storeId =
-    source === "shopify"
-      ? user.shopifyStore?.id
-      : user.easyOrdersStore?.id;
-
-  if (!storeId) {
-    return NextResponse.json({ error: "المتجر غير مربوط" }, { status: 404 });
-  }
-
-  // ── نبحث بالـ store ID مش source ────────────────────────────────────────
-  const storeFilter =
-    source === "shopify"
-      ? { shopifyStoreId: storeId }
-      : { easyOrdersStoreId: storeId };
+  const storeFilter = buildStoreFilter(source, storeId);
 
   const [existing, templates] = await Promise.all([
     prisma.storeAutomation.findMany({
       where:   storeFilter,
-      include: {
-        template: { select: { id: true, name: true, status: true } },
-      },
+      include: { template: { select: { id: true, name: true, status: true } } },
     }),
     prisma.template.findMany({
       where:   { userId: ownerId, status: "APPROVED" },
@@ -74,9 +61,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }),
   ]);
 
-  // ── ضمان وجود الـ 3 أنواع حتى لو ما اتحفظتش بعد ──────────────────────
   const automations = VALID_TYPES.map((type) => {
-    const found = existing.find((a) => a.type === type);
+    const found = existing.find((a: any) => a.type === type);
     return {
       id:         found?.id          ?? null,
       type,
@@ -90,7 +76,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({ automations, templates });
 }
 
-// ── POST — حفظ أو تحديث إعداد أتمتة ────────────────────────────────────────
+// ── POST ──────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -102,41 +88,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const user = await prisma.user.findUnique({
     where:  { id: ownerId },
     select: {
-      id:              true,
-      shopifyStore:    { select: { id: true } },
-      easyOrdersStore: { select: { id: true } },
+      id:               true,
+      shopifyStore:     { select: { id: true } },
+      easyOrdersStore:  { select: { id: true } },
+      wooCommerceStore: { select: { id: true } },
     },
   });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  let body: {
-    source?:     string;
-    type?:       string;
-    isEnabled?:  boolean;
-    templateId?: string | null;
-  };
-
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  let body: { source?: string; type?: string; isEnabled?: boolean; templateId?: string | null };
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   const { source, type, isEnabled = false, templateId = null } = body;
 
   if (!source || !type) {
     return NextResponse.json({ error: "source و type مطلوبين" }, { status: 400 });
   }
-
+  if (!["shopify", "easyorders", "woocommerce"].includes(source)) {
+    return NextResponse.json({ error: "source غير صحيح" }, { status: 400 });
+  }
   if (!VALID_TYPES.includes(type as StoreAutomationType)) {
     return NextResponse.json(
       { error: `type غير صحيح، القيم المتاحة: ${VALID_TYPES.join(", ")}` },
       { status: 400 }
     );
   }
-
   if (isEnabled && !templateId) {
     return NextResponse.json(
       { error: "اختر قالباً معتمداً من ميتا قبل تفعيل الأتمتة" },
@@ -144,66 +121,55 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const autoType = type as StoreAutomationType;
-
-  // ── upsert باستخدام الـ unique constraint الصح ──────────────────────────
-  let automation;
-
-  if (source === "shopify") {
-    const storeId = user.shopifyStore?.id;
-    if (!storeId) {
-      return NextResponse.json({ error: "Shopify غير مربوط" }, { status: 404 });
-    }
-
-    automation = await prisma.storeAutomation.upsert({
-      where: {
-        shopifyStoreId_type: { shopifyStoreId: storeId, type: autoType },
-      },
-      update: {
-        isEnabled,
-        templateId: templateId ?? null,
-        updatedAt:  new Date(),
-      },
-      create: {
-        userId:         ownerId,
-        type:           autoType,
-        isEnabled,
-        templateId:     templateId ?? null,
-        shopifyStoreId: storeId,
-      },
-      include: {
-        template: { select: { id: true, name: true } },
-      },
-    });
-  } else if (source === "easyorders") {
-    const storeId = user.easyOrdersStore?.id;
-    if (!storeId) {
-      return NextResponse.json({ error: "EasyOrders غير مربوط" }, { status: 404 });
-    }
-
-    automation = await prisma.storeAutomation.upsert({
-      where: {
-        easyOrdersStoreId_type: { easyOrdersStoreId: storeId, type: autoType },
-      },
-      update: {
-        isEnabled,
-        templateId: templateId ?? null,
-        updatedAt:  new Date(),
-      },
-      create: {
-        userId:            ownerId,
-        type:              autoType,
-        isEnabled,
-        templateId:        templateId ?? null,
-        easyOrdersStoreId: storeId,
-      },
-      include: {
-        template: { select: { id: true, name: true } },
-      },
-    });
-  } else {
-    return NextResponse.json({ error: "source غير صحيح" }, { status: 400 });
+  const storeId = getStoreId(user, source as StoreSource);
+  if (!storeId) {
+    return NextResponse.json({ error: `${source} غير مربوط` }, { status: 404 });
   }
 
+  const autoType      = type as StoreAutomationType;
+  const whereUnique   = buildUniqueWhere(source as StoreSource, storeId, autoType);
+  const createPayload = buildCreatePayload(source as StoreSource, storeId, ownerId, autoType, isEnabled, templateId);
+
+  const automation = await prisma.storeAutomation.upsert({
+    where:  whereUnique,
+    update: { isEnabled, templateId: templateId ?? null, updatedAt: new Date() },
+    create: createPayload,
+    include: { template: { select: { id: true, name: true } } },
+  });
+
   return NextResponse.json({ success: true, automation });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getStoreId(user: any, source: StoreSource): string | undefined {
+  if (source === "shopify")     return user.shopifyStore?.id;
+  if (source === "easyorders")  return user.easyOrdersStore?.id;
+  if (source === "woocommerce") return user.wooCommerceStore?.id;
+}
+
+function buildStoreFilter(source: StoreSource, storeId: string) {
+  if (source === "shopify")     return { shopifyStoreId:     storeId };
+  if (source === "easyorders")  return { easyOrdersStoreId:  storeId };
+  return                               { wooCommerceStoreId: storeId };
+}
+
+function buildUniqueWhere(source: StoreSource, storeId: string, type: StoreAutomationType) {
+  if (source === "shopify")     return { shopifyStoreId_type:     { shopifyStoreId:     storeId, type } };
+  if (source === "easyorders")  return { easyOrdersStoreId_type:  { easyOrdersStoreId:  storeId, type } };
+  return                               { wooCommerceStoreId_type: { wooCommerceStoreId: storeId, type } };
+}
+
+function buildCreatePayload(
+  source:     StoreSource,
+  storeId:    string,
+  userId:     string,
+  type:       StoreAutomationType,
+  isEnabled:  boolean,
+  templateId: string | null
+) {
+  const base = { userId, type, isEnabled, templateId: templateId ?? null };
+  if (source === "shopify")     return { ...base, shopifyStoreId:     storeId };
+  if (source === "easyorders")  return { ...base, easyOrdersStoreId:  storeId };
+  return                               { ...base, wooCommerceStoreId: storeId };
 }

@@ -24,9 +24,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await prisma.user.findUnique({
     where:  { id: ownerId },
     select: {
-      id:              true,
-      shopifyStore:    { select: { id: true } },
-      easyOrdersStore: { select: { id: true } },
+      id:               true,
+      shopifyStore:     { select: { id: true } },
+      easyOrdersStore:  { select: { id: true } },
+      wooCommerceStore: { select: { id: true } },
     },
   });
   if (!user) {
@@ -38,23 +39,25 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const page   = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
   const search = sp.get("search")?.trim() ?? "";
 
-  if (!source || !["shopify", "easyorders"].includes(source)) {
+  if (!source || !["shopify", "easyorders", "woocommerce"].includes(source)) {
     return NextResponse.json(
-      { error: "source مطلوب: shopify أو easyorders" },
+      { error: "source مطلوب: shopify أو easyorders أو woocommerce" },
       { status: 400 }
     );
   }
 
   // ── الـ where الأساسي باستخدام storeId مش source string ─────────────────
-  const storeFilter =
+  const storeFilter: Record<string, string> =
     source === "shopify"
       ? { shopifyStoreId: user.shopifyStore?.id ?? "" }
-      : { easyOrdersStoreId: user.easyOrdersStore?.id ?? "" };
+      : source === "easyorders"
+        ? { easyOrdersStoreId: user.easyOrdersStore?.id ?? "" }
+        : { wooCommerceStoreId: (user as any).wooCommerceStore?.id ?? "" };
 
   const storeId =
-    source === "shopify"
-      ? user.shopifyStore?.id
-      : user.easyOrdersStore?.id;
+    source === "shopify"     ? user.shopifyStore?.id :
+    source === "easyorders"  ? user.easyOrdersStore?.id :
+                                (user as any).wooCommerceStore?.id;
 
   if (!storeId) {
     return NextResponse.json(
@@ -90,18 +93,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }),
     prisma.storeOrder
       .groupBy({ by: ["customerPhone"], where, _count: { id: true } })
-      .then((r) => r.length),
+      .then((r: any[]) => r.length),
   ]);
 
   if (rawGroups.length === 0) {
     return NextResponse.json({ customers: [], total: totalCustomers, page, hasMore: false });
   }
 
-  const phones = rawGroups.map((c) => c.customerPhone);
+  const phones = rawGroups.map((c: any) => c.customerPhone);
 
   // ── آخر أوردر لكل عميل ───────────────────────────────────────────────────
-  const lastOrders = await prisma.storeOrder.findMany({
-    where:    { ...storeFilter, customerPhone: { in: phones } },
+  const lastOrders: any[] = await prisma.storeOrder.findMany({
+    where:    { ...(storeFilter as any), customerPhone: { in: phones } },
     orderBy:  { orderedAt: "desc" },
     distinct: ["customerPhone"],
     select: {
@@ -115,9 +118,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 
-  const lastMap = new Map(lastOrders.map((o) => [o.customerPhone, o]));
+  const lastMap = new Map(lastOrders.map((o: any) => [o.customerPhone, o]));
 
-  const customers = rawGroups.map((c) => {
+  const customers = rawGroups.map((c: any) => {
     const last = lastMap.get(c.customerPhone);
     return {
       phone:       c.customerPhone,

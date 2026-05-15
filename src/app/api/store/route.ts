@@ -1,12 +1,11 @@
 // src/app/api/store/route.ts
-// ─── إحصائيات المتاجر المربوطة (Shopify + EasyOrders) ────────────────────────
+// ─── إحصائيات المتاجر المربوطة (Shopify + EasyOrders + WooCommerce) ───────────
 
 import { NextResponse }     from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions }      from "@/lib/auth";
 import prisma               from "@/lib/prisma";
 
-// ── أعضاء الفريق يشاركون متجر الـ owner ─────────────────────────────────────
 function resolveOwnerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
@@ -25,21 +24,22 @@ export async function GET(): Promise<NextResponse> {
       id: true,
       shopifyStore: {
         select: {
-          id:        true,
-          shop:      true,
-          createdAt: true,
-          _count:    { select: { orders: true } },
+          id: true, shop: true, createdAt: true,
+          _count: { select: { orders: true } },
         },
       },
       easyOrdersStore: {
         select: {
-          id:          true,
-          storeName:   true,
-          isActive:    true,
-          lastSyncAt:  true,
-          totalSynced: true,
-          createdAt:   true,
-          _count:      { select: { orders: true } },
+          id: true, storeName: true, isActive: true,
+          lastSyncAt: true, totalSynced: true, createdAt: true,
+          _count: { select: { orders: true } },
+        },
+      },
+      wooCommerceStore: {
+        select: {
+          id: true, storeName: true, storeUrl: true, isActive: true,
+          lastSyncAt: true, totalSynced: true, createdAt: true,
+          _count: { select: { orders: true } },
         },
       },
     },
@@ -49,42 +49,57 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const sh = user.shopifyStore;
-  const eo = user.easyOrdersStore;
+  const sh  = user.shopifyStore;
+  const eo  = user.easyOrdersStore;
+  const woo = user.wooCommerceStore;
 
-  // ── إحصائيات موازية ──────────────────────────────────────────────────────
-  const [shCustomers, eoCustomers, shRevenue, eoRevenue] = await Promise.all([
+  const [shCustomers, eoCustomers, wooCustomers, shRevenue, eoRevenue, wooRevenue] =
+    await Promise.all([
+      sh
+        ? prisma.storeOrder
+            .groupBy({ by: ["customerPhone"], where: { shopifyStoreId: sh.id } })
+            .then((r: any[]) => r.length)
+        : Promise.resolve(0),
 
-    sh
-      ? prisma.storeOrder
-          .groupBy({ by: ["customerPhone"], where: { shopifyStoreId: sh.id } })
-          .then((r) => r.length)
-      : Promise.resolve(0),
+      eo
+        ? prisma.storeOrder
+            .groupBy({ by: ["customerPhone"], where: { easyOrdersStoreId: eo.id } })
+            .then((r: any[]) => r.length)
+        : Promise.resolve(0),
 
-    eo
-      ? prisma.storeOrder
-          .groupBy({ by: ["customerPhone"], where: { easyOrdersStoreId: eo.id } })
-          .then((r) => r.length)
-      : Promise.resolve(0),
+      woo
+        ? prisma.storeOrder
+            .groupBy({ by: ["customerPhone"], where: { wooCommerceStoreId: woo.id } })
+            .then((r: any[]) => r.length)
+        : Promise.resolve(0),
 
-    sh
-      ? prisma.campaignOrder
-          .aggregate({
-            _sum:  { revenue: true },
-            where: { storeOrder: { shopifyStoreId: sh.id } },
-          })
-          .then((r) => r._sum.revenue ?? 0)
-      : Promise.resolve(0),
+      sh
+        ? prisma.campaignOrder
+            .aggregate({
+              _sum:  { revenue: true },
+              where: { storeOrder: { shopifyStoreId: sh.id } },
+            })
+            .then((r: any) => r._sum.revenue ?? 0)
+        : Promise.resolve(0),
 
-    eo
-      ? prisma.campaignOrder
-          .aggregate({
-            _sum:  { revenue: true },
-            where: { storeOrder: { easyOrdersStoreId: eo.id } },
-          })
-          .then((r) => r._sum.revenue ?? 0)
-      : Promise.resolve(0),
-  ]);
+      eo
+        ? prisma.campaignOrder
+            .aggregate({
+              _sum:  { revenue: true },
+              where: { storeOrder: { easyOrdersStoreId: eo.id } },
+            })
+            .then((r: any) => r._sum.revenue ?? 0)
+        : Promise.resolve(0),
+
+      woo
+        ? prisma.campaignOrder
+            .aggregate({
+              _sum:  { revenue: true },
+              where: { storeOrder: { wooCommerceStoreId: woo.id } },
+            })
+            .then((r: any) => r._sum.revenue ?? 0)
+        : Promise.resolve(0),
+    ]);
 
   return NextResponse.json({
     shopify: sh
@@ -111,6 +126,21 @@ export async function GET(): Promise<NextResponse> {
           totalCustomers:  eoCustomers,
           campaignRevenue: eoRevenue,
           connectedAt:     eo.createdAt,
+        }
+      : null,
+
+    woocommerce: woo
+      ? {
+          id:              woo.id,
+          storeName:       woo.storeName,
+          source:          "woocommerce" as const,
+          isActive:        woo.isActive,
+          lastSyncAt:      woo.lastSyncAt,
+          totalSynced:     woo.totalSynced,
+          totalOrders:     woo._count.orders,
+          totalCustomers:  wooCustomers,
+          campaignRevenue: wooRevenue,
+          connectedAt:     woo.createdAt,
         }
       : null,
   });
