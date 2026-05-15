@@ -145,10 +145,10 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels }: {
   );
 }
 
-// ─── Shopify Content — Webhook فقط زي EasyOrders ────────────────────────────
+// ─── Shopify Content — Webhook فقط، زي EasyOrders بالظبط ────────────────────
 interface ShopifyStatus {
-  connected:   boolean;
-  storeName?:  string;
+  connected:    boolean;
+  storeName?:   string;
   connectedAt?: string | null;
   webhookUrl?:  string;
 }
@@ -156,13 +156,13 @@ interface ShopifyStatus {
 function ShopifyContent({
   storeName, setStoreName, webhookUrl, status, onConnect, onRefresh, loading,
 }: {
-  storeName:   string;
-  setStoreName:(v: string) => void;
-  webhookUrl:  string;
-  status:      ShopifyStatus | null;
-  onConnect:   () => void;
-  onRefresh:   () => void;
-  loading:     boolean;
+  storeName:    string;
+  setStoreName: (v: string) => void;
+  webhookUrl:   string;
+  status:       ShopifyStatus | null;
+  onConnect:    () => void;
+  onRefresh:    () => void;
+  loading:      boolean;
 }) {
   async function handleDisconnect() {
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
@@ -173,20 +173,26 @@ function ShopifyContent({
 
   return (
     <div className="space-y-3">
-      {/* Connected Badge */}
+
+      {/* ── متجر مربوط ─────────────────────────────────────────────────────── */}
       {status?.connected && (
-        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20
+                        rounded-lg border border-green-200 dark:border-green-800">
           <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-xs text-green-700 dark:text-green-300 font-medium">{status.storeName}</p>
-          </div>
-          <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
+            {status.storeName} — متصل ✅
+          </p>
+          <button
+            onClick={handleDisconnect}
+            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
+                       dark:hover:bg-red-900/20 transition-colors"
+          >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Store Name */}
+      {/* ── اسم المتجر (قبل الربط فقط) ──────────────────────────────────────── */}
       {!status?.connected && (
         <div>
           <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
@@ -199,30 +205,38 @@ function ShopifyContent({
         </div>
       )}
 
-      {/* Webhook URL */}
+      {/* ── Webhook URL — يتعرض دايماً ───────────────────────────────────────── */}
       <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <Webhook className="w-3 h-3" /> Webhook URL
+        <Label className="text-xs dark:text-gray-400 flex items-center gap-1 mb-1">
+          <LinkIcon className="w-3 h-3" /> Webhook URL — انسخه وحطه في Shopify
         </Label>
-        <div className="mt-1"><CopyInput value={webhookUrl} placeholder="جاري التحميل..." /></div>
-        <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
-          ⚠️ روح Shopify Admin → Settings → Notifications → Webhooks → Create webhook
-          → اختر الحدث (Order creation / Order fulfillment) والصق الرابط ده
-        </p>
+        <CopyInput
+          value={webhookUrl}
+          placeholder={webhookUrl ? "" : "جاري التحميل..."}
+        />
+        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+          <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-5">
+            📌 <strong>Settings → Notifications → Webhooks → Create webhook</strong>
+            <br />
+            اختر <strong>Order creation</strong> والصق الـ URL — كرر لـ <strong>Order fulfillment</strong>
+          </p>
+        </div>
       </div>
 
+      {/* ── زر الحفظ (قبل الربط فقط) ──────────────────────────────────────── */}
       {!status?.connected && (
         <Button
           size="sm"
           onClick={onConnect}
           disabled={loading || !storeName.trim()}
-          className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+          className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
         >
           {loading
             ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
             : <><ShoppingBag className="w-4 h-4" /> حفظ وتفعيل المتجر</>}
         </Button>
       )}
+
     </div>
   );
 }
@@ -485,27 +499,29 @@ export default function API({ initialData }: { initialData?: any }) {
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
     try {
-      // جيب بيانات المتاجر
-      const [storeRes, shUrlRes] = await Promise.all([
-        fetch("/api/store"),
-        fetch("/api/shopify/URL"),
-      ]);
-      const d     = await storeRes.json();
-      const shUrl = await shUrlRes.json();
+      // جيب الـ Webhook URL أول حاجة وحده عشان مش يأثرش على باقي الداتا لو فشل
+      const shUrlRes  = await fetch("/api/shopify/URL").catch(() => null);
+      const shUrl     = shUrlRes?.ok ? await shUrlRes.json() : {};
+      const webhookUrl = shUrl?.url ?? "";
 
-      setShWebhookUrl(shUrl.url ?? "");
+      setShWebhookUrl(webhookUrl);
       setShUrlLoaded(true);
 
-      if (d.shopify) {
+      if (shUrl?.connected) {
         setShopifyStatus({
           connected:   true,
-          storeName:   d.shopify.storeName,
-          connectedAt: d.shopify.connectedAt,
-          webhookUrl:  shUrl.url ?? "",
+          storeName:   shUrl.storeName,
+          connectedAt: shUrl.connectedAt,
+          webhookUrl,
         });
       } else {
-        setShopifyStatus({ connected: false, webhookUrl: shUrl.url ?? "" });
+        setShopifyStatus({ connected: false, webhookUrl });
       }
+
+      // جيب WooCommerce من store route
+      const storeRes = await fetch("/api/store").catch(() => null);
+      if (!storeRes?.ok) return;
+      const d = await storeRes.json();
 
       if (d.woocommerce) {
         setWooStatus({
@@ -517,7 +533,9 @@ export default function API({ initialData }: { initialData?: any }) {
       } else {
         setWooStatus({ connected: false });
       }
-    } catch {}
+    } catch (e) {
+      console.error("[loadShopifyStatus]", e);
+    }
   }, []);
 
   useEffect(() => {
@@ -612,11 +630,11 @@ export default function API({ initialData }: { initialData?: any }) {
     {
       id: "shopify",
       title:    "ربط Shopify",
-      subtitle: "عن طريق Custom App & Webhook",
+      subtitle: "عن طريق Webhook مباشرة",
       steps: [
-        { title: "أنشئ Custom App",    desc: "من Shopify Admin → Apps → Develop apps → Create custom app" },
-        { title: "اجمع الصلاحيات",    desc: "فعّل: read/write orders, customers, products, fulfillments" },
-        { title: "انسخ الـ Token",     desc: "من Admin API access tokens — انسخه والصقه هنا" },
+        { title: "احفظ اسم المتجر",  desc: "أدخل اسم متجرك واضغط حفظ عشان تاخد الـ Webhook URL" },
+        { title: "افتح Shopify",      desc: "Settings → Notifications → Webhooks → Create webhook" },
+        { title: "الصق الـ URL",      desc: "اختر الحدث (Order creation) وألصق الـ Webhook URL" },
       ],
     },
     {

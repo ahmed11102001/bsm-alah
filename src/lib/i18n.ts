@@ -262,12 +262,12 @@ export const translations = {
         },
         shopify: {
           title:    "شوبيفاي",
-          subtitle: "ربط عبر Custom App & Webhook",
+          subtitle: "ربط عبر Webhook مباشرة",
           video:    "مشاهدة طريقة ربط شوبيفاي",
           steps: [
-            { title: "أنشئ Custom App",    desc: "Shopify Admin ← Apps ← Develop apps ← Create custom app" },
-            { title: "اجمع الصلاحيات",    desc: "فعّل: read/write orders, customers, products, fulfillments" },
-            { title: "انسخ الـ Token",     desc: "من Admin API access tokens — انسخه والصقه هنا" },
+            { title: "احفظ اسم المتجر",  desc: "أدخل اسم متجرك واضغط حفظ عشان تاخد الـ Webhook URL" },
+            { title: "افتح Shopify",      desc: "Settings → Notifications → Webhooks → Create webhook" },
+            { title: "الصق الـ URL",      desc: "اختر Order creation وألصق الـ Webhook URL — كرر لـ Order fulfillment" },
           ],
           urlLabel:       "رابط المتجر",
           urlPlaceholder: "your-store.myshopify.com",
@@ -725,12 +725,12 @@ export const translations = {
         },
         shopify: {
           title:    "Shopify",
-          subtitle: "Connect via Custom App & Webhook",
+          subtitle: "Connect via Webhook",
           video:    "Watch how to connect Shopify",
           steps: [
-            { title: "Create a Custom App",  desc: "Shopify Admin ← Apps ← Develop apps ← Create custom app" },
-            { title: "Set permissions",      desc: "Enable: read/write orders, customers, products, fulfillments" },
-            { title: "Copy the Token",       desc: "From Admin API access tokens — paste it below" },
+            { title: "Save store name",    desc: "Enter your store name and save to get the Webhook URL" },
+            { title: "Open Shopify",       desc: "Settings → Notifications → Webhooks → Create webhook" },
+            { title: "Paste the URL",      desc: "Select Order creation and paste the Webhook URL — repeat for Order fulfillment" },
           ],
           urlLabel:       "Store URL",
           urlPlaceholder: "your-store.myshopify.com",

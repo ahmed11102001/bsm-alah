@@ -6,31 +6,34 @@ import prisma               from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where:  { email: session.user.email },
+      select: { id: true, parentId: true },
+    });
+    if (!dbUser) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const userId = dbUser.parentId ?? dbUser.id;
+    const url    = generateShopifyWebhookUrl(userId);
+
+    const store = await prisma.shopifyStore.findUnique({
+      where:  { userId },
+      select: { shop: true, createdAt: true },
+    }).catch(() => null);
+
+    return NextResponse.json({
+      url,
+      connected:   !!store,
+      storeName:   store?.shop  ?? null,
+      connectedAt: store?.createdAt ?? null,
+    });
+  } catch (e) {
+    console.error("[Shopify URL]", e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-
-  const dbUser = await prisma.user.findUnique({
-    where:  { email: session.user.email },
-    select: { id: true, parentId: true },
-  });
-  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  const userId = dbUser.parentId ?? dbUser.id;
-  const url    = generateShopifyWebhookUrl(userId);
-
-  // جيب بيانات المتجر لو موجود
-  const store = await prisma.shopifyStore.findUnique({
-    where:  { userId },
-    select: { shop: true, isActive: true, createdAt: true },
-  });
-
-  return NextResponse.json({
-    url,
-    connected:  !!store,
-    storeName:  store?.shop ?? null,
-    isActive:   store?.isActive ?? false,
-    connectedAt: store?.createdAt ?? null,
-  });
 }
