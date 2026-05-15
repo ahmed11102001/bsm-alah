@@ -26,10 +26,22 @@ const PARTNERS = [
     description: { ar: "إدارة الطلبات", en: "Order Management" },
   },
   {
+    name: "woocommerce",
+    logoSrc: "/partners/woocommerce.svg",
+    color: "from-orange-500 to-orange-600",
+    description: { ar: "ارسال عروض", en: "Send Offers" },
+  },
+  {
     name: "ChatGPT",
     logoSrc: "/partners/chatgpt.svg",
     color: "from-purple-500 to-purple-600",
     description: { ar: "ذكاء اصطناعي", en: "AI Assistant" },
+  },
+   {
+    name: "Elevenlabs",
+    logoSrc: "/partners/elevenlabs.svg",
+    color: "from-cyan-500 to-cyan-600",
+    description: { ar: "Voice AI", en: "Voice AI" },
   },
   {
     name: "Gemini",
@@ -37,12 +49,7 @@ const PARTNERS = [
     color: "from-cyan-500 to-cyan-600",
     description: { ar: "معالجة اللغة", en: "Language AI" },
   },
-  {
-    name: "Elevenlabs",
-    logoSrc: "/partners/elevenlabs.svg",
-    color: "from-cyan-500 to-cyan-600",
-    description: { ar: "Voice AI", en: "Voice AI" },
-  },
+ 
 ];
 
 export default function Partners({ lang }: PartnersProps) {
