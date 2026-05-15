@@ -46,7 +46,7 @@ const PARTNERS = [
   {
     name: "Gemini",
     logoSrc: "/partners/gemini.svg",
-    color: "from-cyan-500 to-cyan-600",
+    color: "from-pink-500 to-pink-600",
     description: { ar: "سيلز AI", en: "AI Sales" },
   },
  
