@@ -38,7 +38,6 @@ import Store           from "@/components/dashboard/store";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate         from "@/components/dashboard/PlanGate";
-import type { PlanLimits } from "@/lib/plans";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
@@ -51,7 +50,11 @@ interface DashboardData {
   };
   plan: {
     plan: string; planName: string; status: string;
-    limits: PlanLimits;
+    limits: {
+      contacts: number; teamMembers: number; campaignsPerMonth: number;
+      scheduledCampaigns: boolean; advancedReports: boolean;
+      apiAccess: boolean; mediaMessages: boolean; customAudiences: boolean;
+    };
     usage: { contacts: number; teamMembers: number; campaignsThisMonth: number };
   };
   recentCampaigns: {
@@ -608,7 +611,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const isStarter    = planLimits != null; // starter+ = أي باقة مدفوعة (للـ team)
   const canReports   = planLimits?.advancedReports   ?? false;
   const canAPI       = planLimits?.apiAccess          ?? false;
-  const canTeam      = (planLimits?.teamMembers ?? 1) > 1;
+  const canTeam      = planLimits != null && (planLimits.teamMembers === -1 || planLimits.teamMembers > 1);
   const canStore     = planLimits?.storeIntegration   ?? false;
   const canAI        = planLimits?.aiAgent             ?? false;
 
