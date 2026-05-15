@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhatsPro — منصة تسويق واتساب
 
-## Getting Started
+منصة SaaS متكاملة لإرسال حملات واتساب جماعية، إدارة المحادثات، وأتمتة الردود بالذكاء الاصطناعي.
 
-First, run the development server:
+---
+
+## المتطلبات
+
+- Node.js 20+
+- PostgreSQL (أو حساب [Neon](https://neon.tech) مجاني)
+- حساب [Meta for Developers](https://developers.facebook.com) مع WhatsApp Business API
+
+---
+
+## تشغيل المشروع محلياً
+
+**1. نسخ المشروع وتثبيت الحزم**
+
+```bash
+git clone <repo-url>
+cd bsm-alah
+npm install
+```
+
+**2. إعداد متغيرات البيئة**
+
+```bash
+cp .env.example .env.local
+```
+
+افتح `.env.local` واعبي المتغيرات المطلوبة — كلها موثقة في `.env.example`.
+
+**3. إعداد قاعدة البيانات**
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+**4. تشغيل السيرفر**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+الموقع على [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## بناء وتشغيل Production
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+> `npm run build` بيعمل `prisma generate` تلقائياً قبل البناء.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## الـ Services المطلوبة
 
-## Deploy on Vercel
+| Service | الاستخدام | رابط |
+|---|---|---|
+| PostgreSQL / Neon | قاعدة البيانات | [neon.tech](https://neon.tech) |
+| Meta WhatsApp API | إرسال واستقبال الرسائل | [developers.facebook.com](https://developers.facebook.com) |
+| Cloudinary | رفع الصور والملفات | [cloudinary.com](https://cloudinary.com) |
+| Resend | إرسال الإيميلات | [resend.com](https://resend.com) |
+| Upstash Redis | Rate Limiting | [upstash.com](https://upstash.com) |
+| Inngest | Background Jobs | [inngest.com](https://inngest.com) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## إعداد WhatsApp Webhook
+
+بعد تشغيل المشروع على سيرفر عام:
+
+1. افتح Meta for Developers → WhatsApp → Configuration
+2. Webhook URL: `https://yourdomain.com/api/webhook`
+3. Verify Token: نفس قيمة `WHATSAPP_VERIFY_TOKEN` في الـ `.env`
+4. اشترك في: `messages`, `message_deliveries`, `message_reads`
+
+---
+
+## هيكل المشروع
+
+```
+src/
+├── app/
+│   ├── api/          — API routes (webhook, campaigns, auth...)
+│   ├── dashboard/    — صفحات الـ dashboard
+│   └── (public)/     — الصفحات العامة (landing, pricing...)
+├── components/
+│   ├── dashboard/    — مكونات الـ dashboard الكبيرة
+│   └── ui/           — مكونات shadcn/ui
+├── lib/              — utilities (auth, queue, AI agent, plans...)
+├── inngest/          — background jobs (campaigns, automations)
+└── hooks/            — custom React hooks
+prisma/
+├── schema.prisma     — DB schema
+└── migrations/       — migration history
+```
+
+---
+
+## الـ Scripts
+
+```bash
+npm run dev      # تشغيل dev server
+npm run build    # بناء production (prisma generate + next build)
+npm start        # تشغيل production server
+npm run lint     # فحص الكود
+```
+
+---
+
+## النشر على Vercel
+
+1. اربط الـ repo بـ Vercel
+2. أضف كل متغيرات البيئة من `.env.example` في Vercel Dashboard → Settings → Environment Variables
+3. تأكد من إضافة `INNGEST_EVENT_KEY` و `INNGEST_SIGNING_KEY` — مطلوبين للـ background jobs
+4. اربط Inngest بـ Vercel من [app.inngest.com](https://app.inngest.com)
