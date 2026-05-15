@@ -181,7 +181,7 @@ export async function checkTeamLimit(ownerId: string): Promise<GuardResult> {
   if (isUnlimited(limit)) return { allowed: true };
 
   const currentMembers = await prisma.user.count({
-    where: { parentId: ownerId },
+    where: { parentId: ownerId, deletedAt: null },
   });
 
   // الـ limit يشمل المالك نفسه — لذلك نقارن بـ (limit - 1)
@@ -264,7 +264,7 @@ export async function getPlanStatus(ownerId: string) {
 
   const [contactsCount, teamCount] = await Promise.all([
     prisma.contact.count({ where: { userId: ownerId, deletedAt: null } }),
-    prisma.user.count({ where: { parentId: ownerId } }),
+    prisma.user.count({ where: { parentId: ownerId, deletedAt: null } }),
   ]);
 
   return {

@@ -57,15 +57,71 @@ export async function PATCH(
   return NextResponse.json({ success: true });
 }
 
+// ─── DELETE /api/admin/users/[id] — soft delete (مش hard delete) ─────────────
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!await guardSuper())
+  const session = await guardSuper();
+  if (!session)
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
   const { id } = await params;
-  await prisma.user.delete({ where: { id } });
+
+  // منع حذف الـ super admin نفسه
+  if (id === session.user.id)
+    return NextResponse.json({ error: "لا يمكنك حذف حسابك الخاص" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({
+    where:  { id },
+    select: { isSuper: true, deletedAt: true },
+  });
+  if (!target)
+    return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+  if (target.isSuper)
+    return NextResponse.json({ error: "لا يمكن حذف super admin" }, { status: 400 });
+  if (target.deletedAt)
+    return NextResponse.json({ error: "المستخدم محذوف بالفعل" }, { status: 409 });
+
+  await prisma.user.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+      deletedBy: session.user.id,
+    },
+  });
+
+  return NextResponse.json({ success: true });
+}
+
+// ─── PUT /api/admin/users/[id] — restore يوزر محذوف ──────────────────────────
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await guardSuper();
+  if (!session)
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
+
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+
+  if (!body.restore)
+    return NextResponse.json({ error: "أرسل { restore: true }" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({
+    where:  { id },
+    select: { deletedAt: true },
+  });
+  if (!target)
+    return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+  if (!target.deletedAt)
+    return NextResponse.json({ error: "المستخدم غير محذوف" }, { status: 409 });
+
+  await prisma.user.update({
+    where: { id },
+    data: { deletedAt: null, deletedBy: null },
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter }  from "next/navigation";
 import {
-  Shield, Plus, Pencil, Trash2, X, Check, Loader2,
+  Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
 } from "lucide-react";
@@ -76,6 +76,8 @@ export default function AdminPage() {
   const [editPlan,   setEditPlan]   = useState<Plan>("free");
   const [saving,     setSaving]     = useState(false);
   const [deleting,   setDeleting]   = useState<string | null>(null);
+  const [restoring,  setRestoring]  = useState<string | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [form,       setForm]       = useState({ name: "", email: "", password: "", plan: "enterprise" as Plan });
   // pagination + search
   const [cursors,    setCursors]    = useState<(string | null)[]>([null]);
@@ -116,11 +118,12 @@ export default function AdminPage() {
   }, [session, status, router]);
 
   // fetchers
-  const fetchUsers = async (cursor: string | null = null, search = "") => {
+  const fetchUsers = async (cursor: string | null = null, search = "", deleted = false) => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (cursor) params.set("cursor", cursor);
-    if (search) params.set("search", search);
+    if (cursor)  params.set("cursor", cursor);
+    if (search)  params.set("search", search);
+    if (deleted) params.set("deleted", "true");
     const r = await fetch(`/api/admin/users?${params}`);
     if (r.ok) {
       const data = await r.json();
@@ -150,9 +153,9 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    fetchUsers(cursors[pageIdx], userSearch);
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageIdx, cursors, userSearch]);
+  }, [pageIdx, cursors, userSearch, showDeleted]);
   useEffect(() => {
     if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")      fetchCoupons();
@@ -184,14 +187,25 @@ export default function AdminPage() {
       body: JSON.stringify({ plan: editPlan }),
     });
     setSaving(false); setEditId(null);
-    fetchUsers(cursors[pageIdx], userSearch);
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
   const handleDelete = async (userId: string, email: string) => {
-    if (!confirm(adm.users.deleteConfirm(email))) return;
+    if (!confirm(`حذف ناعم للمستخدم: ${email}\nهيتحذف من الـ dashboard لكن بياناته هتفضل في الـ DB.\nممكن تسترجعه لاحقاً.`)) return;
     setDeleting(userId);
     await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
     setDeleting(null);
-    fetchUsers(cursors[pageIdx], userSearch);
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
+  };
+
+  const handleRestore = async (userId: string) => {
+    setRestoring(userId);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restore: true }),
+    });
+    setRestoring(null);
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
 
   // ── testimonial actions ───────────────────────────────────────────────────
@@ -359,12 +373,26 @@ export default function AdminPage() {
           )}
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            {/* Header: count + search */}
+            {/* Header: count + search + deleted toggle */}
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4 flex-wrap">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {totalUsers} {totalUsers === 1 ? "مستخدم" : "مستخدم"}
-                {userSearch && ` — نتائج البحث عن "${userSearch}"`}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {totalUsers} {totalUsers === 1 ? "مستخدم" : "مستخدم"}
+                  {userSearch && ` — "${userSearch}"`}
+                </p>
+                {/* toggle عرض المحذوفين */}
+                <button
+                  onClick={() => { setShowDeleted(v => !v); setCursors([null]); setPageIdx(0); }}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-medium transition ${
+                    showDeleted
+                      ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                      : "border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-gray-600"
+                  }`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {showDeleted ? "عرض الـ active" : "عرض المحذوفين"}
+                </button>
+              </div>
               <input
                 value={userSearch}
                 onChange={e => {
@@ -437,7 +465,7 @@ export default function AdminPage() {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ isBetaUser: next }),
                               });
-                              fetchUsers(cursors[pageIdx], userSearch);
+                              fetchUsers(cursors[pageIdx], userSearch, showDeleted);
                             }}
                             title={user.subscription?.isBetaUser ? "إلغاء Beta" : "تفعيل Beta"}
                             className={`text-xs px-2 py-0.5 rounded-full border font-medium transition ${
@@ -448,15 +476,26 @@ export default function AdminPage() {
                           >
                             β
                           </button>
-                          <button onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
-                            className="text-gray-400 hover:text-blue-600 transition" title={adm.users.editPlanTitle}>
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          {!user.isSuper && (
-                            <button onClick={() => handleDelete(user.id, user.email)} disabled={deleting === user.id}
-                              className="text-gray-400 hover:text-red-500 transition">
-                              {deleting === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          {/* edit plan — مش موجود في وضع المحذوفين */}
+                          {!showDeleted && (
+                            <button onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
+                              className="text-gray-400 hover:text-blue-600 transition" title={adm.users.editPlanTitle}>
+                              <Pencil className="w-4 h-4" />
                             </button>
+                          )}
+                          {/* soft delete أو restore حسب الوضع */}
+                          {!user.isSuper && (
+                            showDeleted ? (
+                              <button onClick={() => handleRestore(user.id)} disabled={restoring === user.id}
+                                className="text-gray-400 hover:text-emerald-600 transition" title="استرجاع المستخدم">
+                                {restoring === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                              </button>
+                            ) : (
+                              <button onClick={() => handleDelete(user.id, user.email)} disabled={deleting === user.id}
+                                className="text-gray-400 hover:text-red-500 transition" title="حذف ناعم">
+                                {deleting === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            )
                           )}
                         </div>
                       </td>

@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
 
   const team = await prisma.user.findMany({
-    where:   { parentId: session.user.id },
+    where:   { parentId: session.user.id, deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(team);
@@ -68,6 +68,9 @@ export async function DELETE(req: Request) {
   if (userToDelete.parentId !== session.user.id)
     return NextResponse.json({ error: "لا تملك صلاحية حذف هذا المستخدم" }, { status: 403 });
 
-  await prisma.user.delete({ where: { id } });
+  await prisma.user.update({
+    where: { id },
+    data:  { deletedAt: new Date(), deletedBy: session.user.id },
+  });
   return NextResponse.json({ success: true });
 }

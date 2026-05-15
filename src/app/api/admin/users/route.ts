@@ -19,11 +19,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
-  const cursor = searchParams.get("cursor") ?? undefined; // آخر id في الصفحة السابقة
-  const search = searchParams.get("search")?.trim() ?? "";
+  const cursor      = searchParams.get("cursor") ?? undefined;
+  const search      = searchParams.get("search")?.trim() ?? "";
+  const showDeleted = searchParams.get("deleted") === "true"; // للـ admin: عرض المحذوفين
 
   const where = {
-    parentId: null, // الـ owners بس مش sub-accounts
+    parentId:  null,                                          // الـ owners بس مش sub-accounts
+    deletedAt: showDeleted ? { not: null } : null,           // active by default
     ...(search
       ? {
           OR: [

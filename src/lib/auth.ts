@@ -58,18 +58,46 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: { 
+  session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 يوم
   },
   callbacks: {
     async jwt({ token, user }) {
+      // ── أول مرة: وقت الـ login — احفظ البيانات في الـ token ────────────────
       if (user) {
-        token.id       = user.id;
-        token.role     = user.role;
-        token.parentId = user.parentId;
-        token.isSuper  = user.isSuper ?? false;  // ← احفظ isSuper في الـ JWT
+        token.id                = user.id;
+        token.role              = user.role;
+        token.parentId          = user.parentId;
+        token.isSuper           = user.isSuper ?? false;
+        token.isSuperVerifiedAt = Date.now();   // وقت آخر تحقق من الـ DB
+        return token;
       }
+
+      // ── كل request بعد كده: تحقق من isSuper كل 5 دقائق فقط ────────────────
+      // بيضمن إن سحب صلاحية isSuper يسري خلال 5 دقائق كحد أقصى،
+      // بدل 30 يوم — من غير DB query على كل request.
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      const lastVerified  = (token.isSuperVerifiedAt as number) ?? 0;
+
+      if (Date.now() - lastVerified > FIVE_MINUTES) {
+        const freshUser = await prisma.user.findUnique({
+          where:  { id: token.id as string },
+          select: { isSuper: true, role: true },
+        });
+
+        // لو اليوزر اتحذف من الـ DB → اشيل الصلاحيات فوراً
+        if (!freshUser) {
+          token.isSuper = false;
+          token.role    = "OWNER";
+        } else {
+          token.isSuper = freshUser.isSuper;
+          token.role    = freshUser.role;
+        }
+
+        token.isSuperVerifiedAt = Date.now();
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -77,7 +105,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id       = token.id as string;
         session.user.role     = token.role as string;
         session.user.parentId = token.parentId as string | null;
-        session.user.isSuper  = token.isSuper as boolean;  // ← مرره للـ session
+        session.user.isSuper  = token.isSuper as boolean;
       }
       return session;
     },

@@ -22,6 +22,14 @@ model User {
   parentId         String?
   workspaceId      String?
   isSuper          Boolean           @default(false)
+  deletedAt        DateTime?                          // null = active, not null = soft-deleted
+  deletedBy        String?                            // id الـ admin اللي عمل الحذف
+  brandName        String?
+  businessDesc     String?
+  productsInfo     String?
+  pricingInfo      String?
+  workingHours     String?
+  aiTone           String            @default("friendly")
   aiAgent          AIAgent?
   audiences        Audience[]
   automationRules  AutomationRule[]
@@ -45,6 +53,7 @@ model User {
   @@index([email])
   @@index([workspaceId])
   @@index([parentId])
+  @@index([deletedAt])   // بيسرّع فلترة الـ active users
 }
 
 model Subscription {
@@ -404,17 +413,17 @@ model AIAgent {
 }
 
 model StoreOrder {
-  id                   String            @id @default(cuid())
-  userId               String
-  externalId           String
-  orderNumber          String?
-  customerName         String?
-  customerPhone        String
-  currency             String            @default("EGP")
-  status               String            @default("pending")
-  rawData              Json?
-  contactId            String?
-  createdAt            DateTime          @default(now())
+  id                String           @id @default(cuid())
+  userId            String
+  externalId        String
+  orderNumber       String?
+  customerName      String?
+  customerPhone     String
+  currency          String           @default("EGP")
+  status            String           @default("pending")
+  rawData           Json?
+  contactId         String?
+  createdAt         DateTime         @default(now())
   easyOrdersStoreId    String?
   orderedAt            DateTime          @default(now())
   shopifyStoreId       String?
@@ -467,12 +476,12 @@ model CampaignOrder {
 }
 
 model StoreAutomation {
-  id                   String              @id @default(cuid())
-  userId               String
-  type                 StoreAutomationType
-  isEnabled            Boolean             @default(false)
-  templateId           String?
-  sentCount            Int                 @default(0)
+  id                String              @id @default(cuid())
+  userId            String
+  type              StoreAutomationType
+  isEnabled         Boolean             @default(false)
+  templateId        String?
+  sentCount         Int                 @default(0)
   shopifyStoreId       String?
   easyOrdersStoreId    String?
   wooCommerceStoreId   String?
