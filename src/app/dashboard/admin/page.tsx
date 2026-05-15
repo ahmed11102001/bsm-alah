@@ -70,14 +70,20 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("users");
 
   // users
-  const [users,    setUsers]    = useState<User[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editId,   setEditId]   = useState<string | null>(null);
-  const [editPlan, setEditPlan] = useState<Plan>("free");
-  const [saving,   setSaving]   = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", password: "", plan: "beta" as Plan });
+  const [users,      setUsers]      = useState<User[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showForm,   setShowForm]   = useState(false);
+  const [editId,     setEditId]     = useState<string | null>(null);
+  const [editPlan,   setEditPlan]   = useState<Plan>("free");
+  const [saving,     setSaving]     = useState(false);
+  const [deleting,   setDeleting]   = useState<string | null>(null);
+  const [form,       setForm]       = useState({ name: "", email: "", password: "", plan: "beta" as Plan });
+  // pagination + search
+  const [cursors,    setCursors]    = useState<(string | null)[]>([null]);
+  const [pageIdx,    setPageIdx]    = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [userSearch, setUserSearch] = useState("");
 
   // testimonials
   const [testimonials,    setTestimonials]    = useState<Testimonial[]>([]);
@@ -111,10 +117,18 @@ export default function AdminPage() {
   }, [session, status, router]);
 
   // fetchers
-  const fetchUsers = async () => {
+  const fetchUsers = async (cursor: string | null = null, search = "") => {
     setLoading(true);
-    const r = await fetch("/api/admin/users");
-    if (r.ok) setUsers(await r.json());
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    if (search) params.set("search", search);
+    const r = await fetch(`/api/admin/users?${params}`);
+    if (r.ok) {
+      const data = await r.json();
+      setUsers(data.users);
+      setNextCursor(data.nextCursor);
+      setTotalUsers(data.total);
+    }
     setLoading(false);
   };
   const fetchTestimonials = async (filter: "pending" | "approved") => {
@@ -136,7 +150,10 @@ export default function AdminPage() {
     setLoadingA(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers(cursors[pageIdx], userSearch);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIdx, cursors, userSearch]);
   useEffect(() => {
     if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")      fetchCoupons();
@@ -152,7 +169,13 @@ export default function AdminPage() {
       body: JSON.stringify(form),
     });
     setSaving(false);
-    if (r.ok) { setShowForm(false); setForm({ name: "", email: "", password: "", plan: "beta" }); fetchUsers(); }
+    if (r.ok) {
+      setShowForm(false);
+      setForm({ name: "", email: "", password: "", plan: "beta" });
+      // reset to first page after creating
+      setCursors([null]);
+      setPageIdx(0);
+    }
     else { const d = await r.json(); alert(d.error); }
   };
   const handlePlanSave = async (userId: string) => {
@@ -161,13 +184,15 @@ export default function AdminPage() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: editPlan }),
     });
-    setSaving(false); setEditId(null); fetchUsers();
+    setSaving(false); setEditId(null);
+    fetchUsers(cursors[pageIdx], userSearch);
   };
   const handleDelete = async (userId: string, email: string) => {
     if (!confirm(adm.users.deleteConfirm(email))) return;
     setDeleting(userId);
     await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-    setDeleting(null); fetchUsers();
+    setDeleting(null);
+    fetchUsers(cursors[pageIdx], userSearch);
   };
 
   // ── testimonial actions ───────────────────────────────────────────────────
@@ -335,8 +360,22 @@ export default function AdminPage() {
           )}
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{adm.users.count(users.length)}</p>
+            {/* Header: count + search */}
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {totalUsers} {totalUsers === 1 ? "مستخدم" : "مستخدم"}
+                {userSearch && ` — نتائج البحث عن "${userSearch}"`}
+              </p>
+              <input
+                value={userSearch}
+                onChange={e => {
+                  setUserSearch(e.target.value);
+                  setCursors([null]);
+                  setPageIdx(0);
+                }}
+                placeholder="ابحث بالإيميل أو الاسم..."
+                className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#25D366] bg-white w-56"
+              />
             </div>
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
@@ -398,6 +437,37 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            )}
+            {/* Pagination footer */}
+            {!loading && (pageIdx > 0 || nextCursor) && (
+              <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setPageIdx(i => i - 1)}
+                  disabled={pageIdx === 0}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  ← السابق
+                </button>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  صفحة {pageIdx + 1}
+                </span>
+                <button
+                  onClick={() => {
+                    if (nextCursor) {
+                      setCursors(prev => {
+                        const updated = [...prev];
+                        updated[pageIdx + 1] = nextCursor;
+                        return updated;
+                      });
+                      setPageIdx(i => i + 1);
+                    }
+                  }}
+                  disabled={!nextCursor}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  التالي →
+                </button>
+              </div>
             )}
           </div>
         </>)}
