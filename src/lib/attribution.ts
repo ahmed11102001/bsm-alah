@@ -8,8 +8,8 @@
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 
-// ─── Attribution Window: 48 ساعة ─────────────────────────────────────────────
-export const ATTRIBUTION_HOURS = 48;
+// Attribution window بيتحدد per campaign (attributionHours) — default 48h
+// الـ expiry بيتسجل في TrackedClick.attributionExpiresAt عند الضغط
 
 // ─── توليد token فريد للـ tracked link ───────────────────────────────────────
 export function generateClickToken(

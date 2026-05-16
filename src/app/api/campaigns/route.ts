@@ -152,7 +152,14 @@ export async function DELETE(req: NextRequest) {
 
 // ─── handleCreate ─────────────────────────────────────────────────────────────
 async function handleCreate(userId: string, body: any) {
-  const { name, templateName, numbers, scheduledAt, templateVars } = body;
+  const { name, templateName, numbers, scheduledAt, templateVars, attributionHours } = body;
+
+  // Validate attributionHours (1–168 ساعة = أسبوع)
+  if (attributionHours !== undefined) {
+    const h = Number(attributionHours);
+    if (!Number.isInteger(h) || h < 1 || h > 168)
+      return NextResponse.json({ error: "attributionHours يجب أن يكون بين 1 و 168 ساعة" }, { status: 400 });
+  }
 
   if (!name?.trim())
     return NextResponse.json({ error: "اسم الحملة مطلوب" }, { status: 400 });
@@ -202,7 +209,8 @@ async function handleCreate(userId: string, body: any) {
     data: {
       name:       name.trim(),
       userId,
-      templateId: template.id,
+      templateId:       template.id,
+      attributionHours: attributionHours ? Number(attributionHours) : 48,
       status:     CampaignStatus.draft,
     },
   });

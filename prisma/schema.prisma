@@ -233,7 +233,8 @@ model Campaign {
   totalQueued    Int             @default(0)
   ordersCount    Int             @default(0)
   revenue        Float           @default(0)
-  trackedUrl     String?
+  trackedUrl        String?
+  attributionHours  Int     @default(48) // قابل للتخصيص per campaign (1–168 ساعة)
   template       Template?       @relation(fields: [templateId], references: [id])
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaignOrders CampaignOrder[]

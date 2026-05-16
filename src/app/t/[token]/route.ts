@@ -7,8 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// ─── Attribution Window: 48 ساعة ─────────────────────────────────────────────
-const ATTRIBUTION_HOURS = 48;
 
 export async function GET(
   req: NextRequest,
@@ -24,12 +22,12 @@ export async function GET(
     trackedClick = await prisma.trackedClick.findUnique({
       where: { token },
       select: {
-        id: true,
+        id:         true,
         campaignId: true,
-        contactId: true,
-        userId: true,
-        targetUrl: true,
-        isClicked: true,
+        contactId:  true,
+        userId:     true,
+        targetUrl:  true,
+        isClicked:  true,
       },
     });
   } catch (err) {
@@ -64,9 +62,16 @@ export async function GET(
   if (!trackedClick.isClicked) {
     const now = new Date();
 
-    const attributionExpiry = new Date(
-      now.getTime() + ATTRIBUTION_HOURS * 60 * 60 * 1000
-    );
+    // اقرأ الـ attribution window من الـ campaign — default 48 ساعة
+    const campaign = trackedClick.campaignId
+      ? await prisma.campaign.findUnique({
+          where:  { id: trackedClick.campaignId },
+          select: { attributionHours: true },
+        }).catch(() => null)
+      : null;
+
+    const hours = campaign?.attributionHours ?? 48;
+    const attributionExpiry = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
     try {
       await prisma.trackedClick.update({
