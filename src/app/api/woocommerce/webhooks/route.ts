@@ -5,6 +5,7 @@ import { createHmac }                from "crypto";
 import prisma                        from "@/lib/prisma";
 import { inngest }                   from "@/inngest/client";
 import { attributeOrderToCampaign }  from "@/lib/attribution";
+import { Prisma } from "@prisma/client";
 import {
   type WooOrder,
   type WooCustomer,
@@ -150,7 +151,7 @@ async function handleOrderCreated(
         status:             order.status ?? "pending",
         contactId:          contact.id,
         wooCommerceStoreId: woocommerceStoreId,
-        rawData:            couponCodes.length ? { couponCodes } : order,
+        rawData: (couponCodes.length ? { couponCodes } : order) as Prisma.InputJsonValue,
         orderedAt:          order.date_created ? new Date(order.date_created) : new Date(),
       },
     });
