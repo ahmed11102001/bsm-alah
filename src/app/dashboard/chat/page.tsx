@@ -9,9 +9,10 @@ import {
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
-  Globe, ArrowLeft, ChevronLeft,
+  ArrowLeft, ChevronLeft,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useLanguage } from "@/lib/language-context";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
@@ -302,8 +303,9 @@ function Bubble({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { resolvedTheme } = useTheme();
+  const { locale, dir } = useLanguage();
   const dark = resolvedTheme === "dark";
-  const [lang, setLang] = useState<Lang>("ar");
+  const lang: Lang = locale === "en" ? "en" : "ar";
 
   const [convs, setConvs]               = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -331,8 +333,6 @@ export default function ChatPage() {
   const mediaRecRef = useRef<MediaRecorder | null>(null);
   const chunksRef   = useRef<Blob[]>([]);
   const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const dir = lang === "ar" ? "rtl" : "ltr";
 
   // ── Theme classes ────────────────────────────────────────────────
   const bg       = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
@@ -599,15 +599,6 @@ export default function ChatPage() {
               {lang === "ar" ? "المحادثات" : "Chats"}
             </span>
             <div className="flex items-center gap-1.5">
-              {/* Language toggle */}
-              <button
-                onClick={() => setLang(l => l === "ar" ? "en" : "ar")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all
-                  ${dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                {lang === "ar" ? "EN" : "عر"}
-              </button>
             </div>
           </div>
           {/* Search */}
