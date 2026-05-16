@@ -175,6 +175,7 @@ model Contact {
   createdAt         DateTime  @default(now())
   name              String?
   userId            String
+  storeOrders          StoreOrder[]
   deletedAt         DateTime?
   isArchived        Boolean   @default(false)
   isPinned          Boolean   @default(false)
@@ -424,7 +425,9 @@ model StoreOrder {
   currency             String            @default("EGP")
   status               String            @default("pending")
   rawData              Json?
-  contactId            String?
+ contactId            String?
+contact              Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+@@index([contactId])
   createdAt            DateTime          @default(now())
   easyOrdersStoreId    String?
   orderedAt            DateTime          @default(now())

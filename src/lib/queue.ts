@@ -13,6 +13,7 @@ import {
 } from "@/types/enums";
 import { sendWhatsAppMessage, QUEUE_CONSTANTS } from "@/lib/whatsapp-api";
 import { notifyPlanLimitReached } from "@/lib/notifications";
+import { inngest }                from "@/inngest/client";
 
 const { DELAY_BETWEEN_MSGS, BACKOFF_STEPS_SEC, TIER_DAILY_LIMIT, TIER_BATCH_SIZE } = QUEUE_CONSTANTS;
 
@@ -78,325 +79,45 @@ export async function processQueue(): Promise<ProcessResult> {
   const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0 };
   const now = new Date();
 
-  // ── حد زمني: نرجع قبل Vercel يقتل الـ function ──────────────────────────────
-  // Free plan = 10s، Pro = 300s — بنحسب من startTime ونوقف عند 8s أماناً
-  const BUDGET_MS  = Number(process.env.QUEUE_BUDGET_MS ?? 8000);
-  const deadline   = Date.now() + BUDGET_MS;
+  // ── Fan-out: بنجيب الـ pending items ونبعت Inngest event لكل واحدة ──────────
+  // كل رسالة بتشتغل independently على Inngest — مفيش delays هنا على Vercel
+  const BATCH_LIMIT = 200; // max per cron run
 
-  // ── Step 1: جيب كل الـ accounts النشطة (مش في backoff) ─────────────────────
-  const accounts = await prisma.whatsAppAccount.findMany({
+
+
+  // جيب الـ pending items (غير محجوزة) مع account info
+  const pendingItems = await prisma.messageQueue.findMany({
     where: {
+      status:      QueueStatus.pending,
+      scheduledAt: { lte: now },
       OR: [
-        { backoffUntil: null },
-        { backoffUntil: { lte: now } }, // انتهى الـ backoff
+        { nextRetryAt: null },
+        { nextRetryAt: { lte: now } },
       ],
     },
+    orderBy: { scheduledAt: "asc" },
+    take:    BATCH_LIMIT,
     select: {
-      id:             true,
-      phoneNumberId:  true,
-      accessToken:    true,
-      messagingTier:  true,
-      dailySentCount: true,
-      dailyResetAt:   true,
-      backoffCount:   true,
+      id:            true,
+      phoneNumberId: true,
     },
   });
 
-  if (accounts.length === 0) return result;
+  if (pendingItems.length === 0) return result;
 
-  // ── Step 2: لكل account، خذ batch من الـ pending messages ───────────────────
-  for (const account of accounts) {
-    // تصفير العداد اليومي لو لزم
-    let dailySent = account.dailySentCount;
-    const resetResult = await resetDailyCounterIfNeeded(account.id, account.dailyResetAt);
-    if (resetResult !== null) dailySent = 0;
-
-    // حد يومي
-    const dailyLimit = TIER_DAILY_LIMIT[account.messagingTier] ?? 1000;
-    if (dailySent >= dailyLimit) {
-      result.skipped++;
-      console.log(`[QUEUE] Account ${account.id} reached daily limit (${dailySent}/${dailyLimit})`);
-      continue;
-    }
-
-    const batchSize = Math.min(
-      TIER_BATCH_SIZE[account.messagingTier] ?? 10,
-      dailyLimit - dailySent
-    );
-
-    // ── Atomic: احجز الـ batch ────────────────────────────────────────────────
-    const batch = await prisma.$transaction(async (tx) => {
-      const items = await tx.messageQueue.findMany({
-        where: {
-          phoneNumberId: account.phoneNumberId,
-          status:        QueueStatus.pending,
-          scheduledAt:   { lte: now },
-          OR: [
-            { nextRetryAt: null },
-            { nextRetryAt: { lte: now } },
-          ],
-        },
-        orderBy: { scheduledAt: "asc" },
-        take:    batchSize,
-        select: {
-          id:                true,
-          userId:            true,
-          whatsappAccountId: true,
-          toPhone:           true,
-          contactId:         true,
-          messageType:       true,
-          templateName:      true,
-          templateLang:      true,
-          templateVars:      true,
-          content:           true,
-          campaignId:        true,
-          attempts:          true,
-          maxAttempts:       true,
-          phoneNumberId:     true,
-          existingMessageId: true,
-        },
-      });
-
-      if (items.length === 0) return [];
-
-      // غير الحالة لـ processing فوراً (يمنع التكرار)
-      await tx.messageQueue.updateMany({
-        where: { id: { in: items.map((i) => i.id) } },
-        data:  { status: QueueStatus.processing, processedAt: now },
-      });
-
-      return items;
-    });
-
-    if (batch.length === 0) continue;
-
-    let accountRateLimited = false;
-
-    // ── إرسال كل رسالة في الـ batch ──────────────────────────────────────────
-    for (const item of batch) {
-      result.processed++;
-
-      if (accountRateLimited) {
-        // لو الرقم تبلك — ارجع باقي الرسائل لـ pending
-        await prisma.messageQueue.update({
-          where: { id: item.id },
-          data:  {
-            status:      QueueStatus.pending,
-            processedAt: null,
-            nextRetryAt: new Date(Date.now() + 60_000),
-          },
-        });
-        result.skipped++;
-        continue;
-      }
-
-      // ── توقف لو اقتربنا من نهاية الـ budget ─────────────────────────────────
-      if (Date.now() > deadline) {
-        console.log(`[QUEUE] Budget exhausted after ${result.sent} sent — will resume next cron`);
-        break;
-      }
-
-      const sendResult = await sendWhatsAppMessage({
-        toPhone:       item.toPhone,
+  // Fan-out: بعت event لكل رسالة
+  await inngest.send(
+    pendingItems.map((item) => ({
+      name: "queue/process-item",
+      data: {
+        queueId:       item.id,
         phoneNumberId: item.phoneNumberId,
-        accessToken:   account.accessToken,
-        messageType:   item.messageType,
-        templateName:  item.templateName,
-        templateLang:  item.templateLang,
-        templateVars:  item.templateVars,
-        content:       item.content,
-      });
+      },
+    }))
+  );
 
-      if (sendResult.ok) {
-        // ── نجاح ──
-        result.sent++;
-
-        await prisma.$transaction(async (tx) => {
-          // 1. حدّث الـ queue record
-          await tx.messageQueue.update({
-            where: { id: item.id },
-            data:  {
-              status:        QueueStatus.sent,
-              whatsappMsgId: sendResult.whatsappMsgId,
-              sentAt:        new Date(),
-              attempts:      { increment: 1 },
-            },
-          });
-
-          // 2. أنشئ أو حدّث Message record للمحادثات
-          const contact = item.contactId
-            ? await tx.contact.findFirst({ where: { id: item.contactId }, select: { id: true } })
-            : await tx.contact.upsert({
-                where:  { phone_userId: { phone: item.toPhone, userId: item.userId } },
-                update: { lastMessageAt: new Date() },
-                create: { phone: item.toPhone, userId: item.userId, lastMessageAt: new Date() },
-              });
-
-          if (contact) {
-            if (item.existingMessageId) {
-              // رسالة Chat فردية — حدّث الـ pending record الموجود
-              await tx.message.update({
-                where: { id: item.existingMessageId },
-                data: {
-                  status:     MessageStatus.sent,
-                  whatsappId: sendResult.whatsappMsgId,
-                  sentAt:     new Date(),
-                },
-              });
-            } else {
-              // رسالة حملة — أنشئ record جديد
-              await tx.message.create({
-                data: {
-                  userId:     item.userId,
-                  contactId:  contact.id,
-                  campaignId: item.campaignId ?? undefined,
-                  content:    item.templateName ? `[قالب] ${item.templateName}` : item.content,
-                  type:       MessageType.template,
-                  direction:  MessageDirection.outbound,
-                  status:     MessageStatus.sent,
-                  whatsappId: sendResult.whatsappMsgId,
-                  sentAt:     new Date(),
-                },
-              });
-            }
-
-            // تحديث آخر رسالة للكونتاكت
-            await tx.contact.update({
-              where: { id: contact.id },
-              data:  { lastMessageAt: new Date() },
-            });
-          }
-
-          // 3. تحديث عداد الحملة + تحقق من اكتمالها فوراً
-          if (item.campaignId) {
-            const updated = await tx.campaign.update({
-              where: { id: item.campaignId },
-              data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
-              select: { queuedCount: true, status: true },
-            });
-
-            // تحقق فعلي من الداتابيز — أأمن من الاعتماد على queuedCount
-            const remaining = await tx.messageQueue.count({
-              where: {
-                campaignId: item.campaignId,
-                status: { in: [QueueStatus.pending, QueueStatus.processing] },
-              },
-            });
-
-            if (remaining === 0 && updated.status === CampaignStatus.running) {
-              await tx.campaign.update({
-                where: { id: item.campaignId },
-                data:  { status: CampaignStatus.completed, completedAt: new Date() },
-              });
-            }
-          }
-
-          // 4. تحديث العداد اليومي للـ account
-          await tx.whatsAppAccount.update({
-            where: { id: item.whatsappAccountId },
-            data:  { dailySentCount: { increment: 1 } },
-          });
-        });
-
-        // تصفير الـ backoff بعد نجاح
-        if (account.backoffCount > 0) {
-          await clearBackoff(account.id);
-        }
-
-      } else if (sendResult.isRateLimit) {
-        // ── Rate Limited ──
-        result.skipped++;
-        accountRateLimited = true;
-
-        await applyBackoff(account.id, account.backoffCount);
-
-        // ارجع الرسالة لـ pending مع nextRetryAt
-        const retryAfter = BACKOFF_STEPS_SEC[
-          Math.min(account.backoffCount, BACKOFF_STEPS_SEC.length - 1)
-        ] * 1000;
-
-        await prisma.messageQueue.update({
-          where: { id: item.id },
-          data:  {
-            status:      QueueStatus.pending,
-            processedAt: null,
-            nextRetryAt: new Date(Date.now() + retryAfter),
-            attempts:    { increment: 1 },
-          },
-        });
-
-      } else if (sendResult.isTokenError) {
-        // ── Token Error: أوقف كل رسائل هذا الـ account ──
-        result.failed++;
-        accountRateLimited = true;
-
-        await prisma.messageQueue.update({
-          where: { id: item.id },
-          data:  {
-            status:   QueueStatus.failed,
-            error:    sendResult.error,
-            attempts: { increment: 1 },
-          },
-        });
-
-        // ✅ إشعار العميل بأن التوكن انتهى صلاحيته
-        try {
-          const { createNotification } = await import("@/lib/notifications");
-          await createNotification({
-            userId: item.userId,
-            type:   "PLAN_LIMIT_REACHED" as any,
-            title:  "⚠️ توكن واتساب انتهت صلاحيته",
-            body:   "توقف إرسال الرسائل — يرجى تحديث توكن واتساب من إعدادات الحساب",
-            link:   "/dashboard?section=api",
-          });
-        } catch {}
-
-        console.error(`[QUEUE] Token error for account ${account.id}: ${sendResult.error}`);
-
-      } else {
-        // ── فشل عادي (قابل للإعادة) ──
-        result.failed++;
-        const newAttempts = item.attempts + 1;
-        const isFinal     = newAttempts >= item.maxAttempts;
-
-        await prisma.$transaction(async (tx) => {
-          await tx.messageQueue.update({
-            where: { id: item.id },
-            data: {
-              status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
-              error:       sendResult.error,
-              attempts:    { increment: 1 },
-              nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000), // retry بعد 5 دقائق
-              processedAt: null,
-            },
-          });
-
-          // لو فشل نهائي → حدّث الـ Message بحالة failed
-          if (isFinal) {
-            if (item.existingMessageId) {
-              // رسالة Chat — حدّث الـ pending record
-              await tx.message.update({
-                where: { id: item.existingMessageId },
-                data:  { status: MessageStatus.failed, error: sendResult.error },
-              });
-            } else if (item.contactId && item.campaignId) {
-              // رسالة حملة — حدّث عداد الفشل
-              await tx.campaign.update({
-                where: { id: item.campaignId },
-                data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
-              });
-            }
-          }
-        });
-      }
-
-      // delay بين الرسائل (يحاكي السلوك البشري)
-      if (!accountRateLimited) {
-        await delay(DELAY_BETWEEN_MSGS);
-      }
-    }
-
-  }
+  result.processed = pendingItems.length;
+  console.log(`[QUEUE] Fan-out: dispatched ${pendingItems.length} items to Inngest`);
 
   return result;
 }

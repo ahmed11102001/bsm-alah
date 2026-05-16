@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
-const QueueStatus      = { pending: "pending", sent: "sent", failed: "failed" } as const;
+const QueueStatus      = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
 const CampaignStatus   = { running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
 const MessageStatus    = { sent: "sent", failed: "failed" } as const;
 const MessageDirection = { outbound: "outbound" } as const;
@@ -392,5 +392,217 @@ export const sendDirectMessage = inngest.createFunction(
     });
 
     return { ok: result.ok };
+  }
+);
+// ═══════════════════════════════════════════════════════════════════════════════
+// Function 3: processQueueItem — معالجة رسالة واحدة من الـ Queue
+// بيتستدعى من processQueue (fan-out) بدل الـ inline loop
+// ═══════════════════════════════════════════════════════════════════════════════
+export const processQueueItem = inngest.createFunction(
+  {
+    id:      "process-queue-item",
+    retries: 2,
+    triggers: [{ event: "queue/process-item" }],
+    // حد الـ concurrency لكل phoneNumberId → مش بنفلود WhatsApp API
+    concurrency: {
+      limit: 3,
+      key:   "event.data.phoneNumberId",
+    },
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { queueId } = event.data as { queueId: string };
+
+    // ── Step 1: جيب الـ item وتحقق إنه لسه pending ────────────────────────────
+    const item = await step.run("get-item", async () => {
+      return prisma.messageQueue.findUnique({
+        where:  { id: queueId },
+        select: {
+          id:               true,
+          userId:           true,
+          toPhone:          true,
+          contactId:        true,
+          phoneNumberId:    true,
+          messageType:      true,
+          templateName:     true,
+          templateLang:     true,
+          templateVars:     true,
+          content:          true,
+          campaignId:       true,
+          attempts:         true,
+          maxAttempts:      true,
+          existingMessageId: true,
+          status:           true,
+          whatsappAccount: {
+            select: {
+              id:            true,
+              accessToken:   true,
+              phoneNumberId: true,
+              backoffCount:  true,
+              backoffUntil:  true,
+              dailySentCount: true,
+              dailyResetAt:  true,
+              messagingTier: true,
+            },
+          },
+        },
+      });
+    });
+
+    // مش موجود أو اتأخذ بالفعل → تجاهل
+    if (!item || item.status !== QueueStatus.pending) {
+      return { skipped: true, reason: item?.status ?? "not_found" };
+    }
+
+    if (!item.whatsappAccount) {
+      await prisma.messageQueue.update({
+        where: { id: item.id },
+        data:  { status: QueueStatus.failed, error: "WhatsApp account not found" },
+      });
+      return { skipped: true, reason: "no_account" };
+    }
+
+    const account = item.whatsappAccount;
+
+    // ── تحقق من backoff ────────────────────────────────────────────────────────
+    if (account.backoffUntil && account.backoffUntil > new Date()) {
+      await prisma.messageQueue.update({
+        where: { id: item.id },
+        data:  { nextRetryAt: account.backoffUntil },
+      });
+      return { skipped: true, reason: "backoff" };
+    }
+
+    // ── Mark as processing (atomic — يمنع التكرار) ────────────────────────────
+    const claimed = await step.run("claim-item", async () => {
+      const res = await prisma.messageQueue.updateMany({
+        where: { id: item.id, status: QueueStatus.pending },
+        data:  { status: QueueStatus.processing, processedAt: new Date() },
+      });
+      return res.count === 1;
+    });
+
+    if (!claimed) return { skipped: true, reason: "already_claimed" };
+
+    // ── Step 2: إرسال الرسالة ──────────────────────────────────────────────────
+    const sendResult = await step.run("send-message", async () => {
+      return sendWhatsAppMessage({
+        toPhone:       item.toPhone,
+        phoneNumberId: account.phoneNumberId,
+        accessToken:   account.accessToken,
+        messageType:   item.messageType,
+        templateName:  item.templateName,
+        templateLang:  item.templateLang,
+        templateVars:  item.templateVars,
+        content:       item.content,
+      });
+    });
+
+    // ── Step 3: معالجة النتيجة ─────────────────────────────────────────────────
+    await step.run("handle-result", async () => {
+      if (sendResult.ok) {
+        // ── نجاح ────────────────────────────────────────────────────────────────
+        await prisma.$transaction(async (tx) => {
+          await tx.messageQueue.update({
+            where: { id: item.id },
+            data: {
+              status:        QueueStatus.sent,
+              whatsappMsgId: sendResult.whatsappMsgId,
+              sentAt:        new Date(),
+              attempts:      { increment: 1 },
+            },
+          });
+
+          // Message record
+          const contact = item.contactId
+            ? await tx.contact.findFirst({ where: { id: item.contactId }, select: { id: true } })
+            : await tx.contact.upsert({
+                where:  { phone_userId: { phone: item.toPhone, userId: item.userId } },
+                update: { lastMessageAt: new Date() },
+                create: { phone: item.toPhone, userId: item.userId, lastMessageAt: new Date() },
+              });
+
+          if (contact) {
+            if (item.existingMessageId) {
+              await tx.message.update({
+                where: { id: item.existingMessageId },
+                data:  { status: MessageStatus.sent, whatsappId: sendResult.whatsappMsgId, sentAt: new Date() },
+              });
+            } else {
+              await tx.message.create({
+                data: {
+                  userId:     item.userId,
+                  contactId:  contact.id,
+                  campaignId: item.campaignId ?? undefined,
+                  content:    item.templateName ? `[قالب] ${item.templateName}` : (item.content ?? ""),
+                  type:       MessageType.template,
+                  direction:  MessageDirection.outbound,
+                  status:     MessageStatus.sent,
+                  whatsappId: sendResult.whatsappMsgId,
+                  sentAt:     new Date(),
+                },
+              });
+            }
+            await tx.contact.update({
+              where: { id: contact.id },
+              data:  { lastMessageAt: new Date() },
+            });
+          }
+
+          // تحديث عداد الحملة
+          if (item.campaignId) {
+            const updated = await tx.campaign.update({
+              where: { id: item.campaignId },
+              data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              select: { queuedCount: true, status: true },
+            });
+            if (updated.queuedCount <= 0 && updated.status === CampaignStatus.running) {
+              await tx.campaign.update({
+                where: { id: item.campaignId },
+                data:  { status: CampaignStatus.completed, completedAt: new Date() },
+              });
+            }
+          }
+
+          await tx.whatsAppAccount.update({
+            where: { id: account.id },
+            data:  { dailySentCount: { increment: 1 } },
+          });
+        });
+
+      } else if (sendResult.isRateLimit) {
+        // ── Rate Limited → backoff ───────────────────────────────────────────
+        await prisma.whatsAppAccount.update({
+          where: { id: account.id },
+          data:  { backoffUntil: new Date(Date.now() + 60_000), backoffCount: { increment: 1 } },
+        });
+        await prisma.messageQueue.update({
+          where: { id: item.id },
+          data:  { status: QueueStatus.pending, processedAt: null, nextRetryAt: new Date(Date.now() + 60_000), attempts: { increment: 1 } },
+        });
+
+      } else {
+        // ── فشل → retry أو failed نهائي ─────────────────────────────────────
+        const newAttempts = item.attempts + 1;
+        const isFinal     = newAttempts >= item.maxAttempts;
+        await prisma.messageQueue.update({
+          where: { id: item.id },
+          data: {
+            status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
+            error:       sendResult.error,
+            attempts:    { increment: 1 },
+            nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000),
+            processedAt: null,
+          },
+        });
+        if (!isFinal) throw new Error(sendResult.error ?? "send failed"); // Inngest retry
+      }
+    });
+
+    // ── Step 4: delay بين الرسائل على Inngest مش Vercel ──────────────────────
+    if (sendResult.ok) {
+      await step.sleep("rate-limit-delay", "350ms");
+    }
+
+    return { ok: sendResult.ok };
   }
 );

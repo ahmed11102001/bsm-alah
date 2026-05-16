@@ -5,7 +5,7 @@
 
 import { serve }            from "inngest/next";
 import { inngest }          from "@/inngest/client";
-import { processCampaign, sendDirectMessage } from "@/inngest/functions";
+import { processCampaign, sendDirectMessage, processQueueItem } from "@/inngest/functions";
 import {
   handleShopifyOrderCreated,
   handleShopifyOrderFulfilled,
@@ -27,6 +27,7 @@ const inngestHandler = serve({
   functions: [
     processCampaign,
     sendDirectMessage,
+    processQueueItem,
     handleShopifyOrderCreated,
     handleShopifyOrderFulfilled,
     handleShopifyOrderUpdated,
