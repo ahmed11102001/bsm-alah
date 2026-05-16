@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType } from "@prisma/client";
+import { MessageDirection, MessageStatus, MessageType } from "@/types/enums";
 import { inngest } from "@/inngest/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 

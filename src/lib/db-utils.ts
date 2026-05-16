@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
-import { Prisma, CampaignStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { CampaignStatus } from "@/types/enums";
 
 /**
  * Safe database query wrapper

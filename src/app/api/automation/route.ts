@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { TriggerType, ReplyType } from "@prisma/client";
+import { TriggerType, ReplyType } from "@/types/enums";
 
 function ownerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);

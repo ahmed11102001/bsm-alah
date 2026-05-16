@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
-import { OrderSource }               from "@prisma/client";
+import { OrderSource }               from "@/types/enums";
 
 const PAGE_SIZE = 100;
 

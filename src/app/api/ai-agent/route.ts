@@ -1,7 +1,7 @@
 // src/app/api/ai-agent/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { AIProvider } from "@prisma/client";
+import { AIProvider } from "@/types/enums";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 

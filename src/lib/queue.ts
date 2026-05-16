@@ -10,7 +10,7 @@ import {
   MessageStatus,
   MessageType,
   MessageDirection,
-} from "@prisma/client";
+} from "@/types/enums";
 import { sendWhatsAppMessage, QUEUE_CONSTANTS } from "@/lib/whatsapp-api";
 import { notifyPlanLimitReached } from "@/lib/notifications";
 

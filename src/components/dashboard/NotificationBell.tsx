@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
-import { NotificationType } from "@prisma/client";
+import { NotificationType } from "@/types/enums";
 
 interface Notification {
   id:        string;

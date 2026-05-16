@@ -3,7 +3,7 @@
 // كل trigger في السيستم بيستدعي من هنا — مفيش منطق مكرر
 
 import prisma from "@/lib/prisma";
-import { NotificationType } from "@prisma/client";
+import { NotificationType } from "@/types/enums";
 
 type CreateNotificationParams = {
   userId: string;

@@ -1,9 +1,9 @@
-﻿// src/app/api/audiences/route.ts
+// src/app/api/audiences/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection } from "@prisma/client";
+import { MessageDirection } from "@/types/enums";
 import { checkContactsLimit } from "@/lib/plan-guard";
 import { normalizePhone } from "@/lib/phone";
 
@@ -28,7 +28,7 @@ function normalizeContactsInput(contacts: any[]): { phone: string; name: string 
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "??? ????" }, { status: 401 });
   const userId = uid(session);
   const { searchParams } = new URL(req.url);
   const audienceId = searchParams.get("audienceId");
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    if (!audience) return NextResponse.json({ error: "الجمهور غير موجود" }, { status: 404 });
+    if (!audience) return NextResponse.json({ error: "??????? ??? ?????" }, { status: 404 });
 
     return NextResponse.json({
       id: audience.id,
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
 
   const vipCard = {
     id: "vip",
-    name: "العملاء المميزون VIP",
+    name: "??????? ???????? VIP",
     notes: null,
     type: "vip",
     contacts: vipContacts,
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
 
   const noRespCard = {
     id: "no-response",
-    name: "لم يردوا على رسائلك",
+    name: "?? ????? ??? ??????",
     notes: null,
     type: "no-response",
     contacts: noRespContacts,
@@ -148,19 +148,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "??? ????" }, { status: 401 });
   const userId = uid(session);
 
   const body = await req.json();
   const { name, notes, type = "excel", contacts } = body;
 
-  if (!name?.trim()) return NextResponse.json({ error: "اسم الجمهور مطلوب" }, { status: 400 });
+  if (!name?.trim()) return NextResponse.json({ error: "??? ??????? ?????" }, { status: 400 });
   if (!Array.isArray(contacts) || contacts.length === 0)
-    return NextResponse.json({ error: "لا توجد جهات اتصال" }, { status: 400 });
+    return NextResponse.json({ error: "?? ???? ???? ?????" }, { status: 400 });
 
   const unique = normalizeContactsInput(contacts);
   if (unique.length === 0)
-    return NextResponse.json({ error: "لا توجد جهات اتصال صالحة" }, { status: 400 });
+    return NextResponse.json({ error: "?? ???? ???? ????? ?????" }, { status: 400 });
 
   const limitCheck = await checkContactsLimit(userId, unique.length);
   if (!limitCheck.allowed) {
@@ -207,26 +207,26 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("POST /api/audiences:", err);
-    return NextResponse.json({ error: err.message ?? "فشل الحفظ" }, { status: 500 });
+    return NextResponse.json({ error: err.message ?? "??? ?????" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "??? ????" }, { status: 401 });
   const userId = uid(session);
 
   const { id, contacts } = await req.json();
-  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "id ?????" }, { status: 400 });
   if (!Array.isArray(contacts) || contacts.length === 0)
-    return NextResponse.json({ error: "contacts مطلوبة" }, { status: 400 });
+    return NextResponse.json({ error: "contacts ??????" }, { status: 400 });
 
   const normalizedContacts = normalizeContactsInput(contacts);
   if (normalizedContacts.length === 0)
-    return NextResponse.json({ error: "لا توجد جهات اتصال صالحة" }, { status: 400 });
+    return NextResponse.json({ error: "?? ???? ???? ????? ?????" }, { status: 400 });
 
   const audience = await prisma.audience.findFirst({ where: { id, userId } });
-  if (!audience) return NextResponse.json({ error: "الجمهور غير موجود" }, { status: 404 });
+  if (!audience) return NextResponse.json({ error: "??????? ??? ?????" }, { status: 404 });
 
   await prisma.$transaction(async (tx) => {
     await tx.contact.updateMany({ where: { audienceId: id, userId }, data: { deletedAt: new Date() } });
@@ -253,14 +253,14 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: "??? ????" }, { status: 401 });
   const userId = uid(session);
 
   const { id } = await req.json();
-  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "id ?????" }, { status: 400 });
 
   const audience = await prisma.audience.findFirst({ where: { id, userId } });
-  if (!audience) return NextResponse.json({ error: "الجمهور غير موجود" }, { status: 404 });
+  if (!audience) return NextResponse.json({ error: "??????? ??? ?????" }, { status: 404 });
 
   await prisma.$transaction([
     prisma.contact.updateMany({ where: { audienceId: id, userId }, data: { audienceId: null } }),
