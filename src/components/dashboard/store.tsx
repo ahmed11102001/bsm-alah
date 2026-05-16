@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn }   from "@/lib/utils";
+import { useLanguage } from "@/lib/language-context";
 type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
+type Lang = "ar" | "en";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +93,41 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: "bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400",
 };
 
+const TX = {
+  openChat: { ar: "فتح المحادثة", en: "Open Chat" },
+  ordersCount: { ar: "طلب", en: "orders" },
+  totalOrders: { ar: "إجمالي الطلبات", en: "Total Orders" },
+  totalCustomers: { ar: "إجمالي العملاء", en: "Total Customers" },
+  campaignRevenue: { ar: "إيرادات الحملات", en: "Campaign Revenue" },
+  revenueSub: { ar: "من رسائل واتساب", en: "From WhatsApp messages" },
+  lastSync: { ar: "آخر مزامنة", en: "Last Sync" },
+  savedOrders: { ar: "طلب محفوظ", en: "saved orders" },
+  automationsTitle: { ar: "⚙️ أتمتات المتجر", en: "⚙️ Store Automations" },
+  enabled: { ar: "مفعّل", en: "enabled" },
+  customersTitle: { ar: "👥 العملاء", en: "👥 Customers" },
+  searchPh: { ar: "اسم أو رقم أو طلب...", en: "Name, number, or order..." },
+  noCustomers: { ar: "لا يوجد عملاء مطابقون", en: "No matching customers" },
+  loadMore: { ar: "تحميل المزيد", en: "Load more" },
+  listTitle: { ar: "قائمة", en: "List" },
+  syncedContacts: { ar: "جهة اتصال مزامَنة من المتجر", en: "contacts synced from store" },
+  goContacts: { ar: "عرض القائمة", en: "View list" },
+  goContactsToast: { ar: "اذهب إلى صفحة جهات الاتصال", en: "Go to Contacts page" },
+  manualSync: { ar: "مزامنة يدوية", en: "Manual Sync" },
+  manualSyncSub: { ar: "سحب آخر 100 طلب من إيزي أوردرز", en: "Pull latest 100 orders from EasyOrders" },
+  syncing: { ar: "جاري المزامنة...", en: "Syncing..." },
+  syncNow: { ar: "مزامنة الآن", en: "Sync now" },
+  webhookTitle: { ar: "الطلبات تصل تلقائياً عبر Webhook", en: "Orders arrive automatically via Webhook" },
+  webhookSub: { ar: "كل أوردر جديد في WooCommerce بيوصل فوراً", en: "Every new WooCommerce order arrives instantly" },
+  active: { ar: "نشط", en: "Active" },
+  webhookHint: { ar: "لو محتاج تضيف الـ Webhook من جديد، روح صفحة API وانسخ الرابط من قسم WooCommerce.", en: "If you need to add the webhook again, go to API page and copy the WooCommerce URL." },
+  storeLoadErr: { ar: "تعذر تحميل بيانات المتجر", en: "Failed to load store data" },
+  noStore: { ar: "لم يتم ربط أي متجر بعد", en: "No store connected yet" },
+  noStoreSub: { ar: "اذهب إلى صفحة API لربط متجر Shopify أو EasyOrders أو WooCommerce", en: "Go to API page to connect Shopify, EasyOrders, or WooCommerce" },
+  connected: { ar: "متصل", en: "Connected" },
+  storeFallback: { ar: "المتجر", en: "Store" },
+};
+const tr = (k: keyof typeof TX, lang: Lang) => TX[k][lang];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatPhone(p: string): string {
@@ -98,17 +135,17 @@ function formatPhone(p: string): string {
   return clean.startsWith("0") ? `+2${clean}` : `+${clean}`;
 }
 
-function formatMoney(value: number, currency = "EGP"): string {
+function formatMoney(value: number, lang: Lang, currency = "EGP"): string {
   if (isNaN(value)) return "—";
-  return value.toLocaleString("ar-EG", {
+  return value.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", {
     style:              "currency",
     currency,
     maximumFractionDigits: 0,
   });
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("ar-EG", {
+function formatDate(iso: string, lang: Lang): string {
+  return new Date(iso).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", {
     day:   "numeric",
     month: "short",
     year:  "numeric",
@@ -145,14 +182,15 @@ function KpiCard({ icon, label, value, sub, color }: KpiCardProps) {
 interface CustomerCardProps {
   customer: Customer;
   onChat:   (phone: string) => void;
+  lang: Lang;
 }
 
-function CustomerCard({ customer, onChat }: CustomerCardProps) {
+function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const statusKey   = customer.lastOrder?.status?.toLowerCase() ?? "";
   const statusClass = STATUS_BADGE[statusKey] ?? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-  const initial     = customer.name.trim().charAt(0).toUpperCase() || "ع";
+  const initial     = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -168,9 +206,9 @@ function CustomerCard({ customer, onChat }: CustomerCardProps) {
         </div>
         <div className="text-left flex-shrink-0">
           <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-            {formatMoney(customer.totalSpent, customer.currency)}
+            {formatMoney(customer.totalSpent, lang, customer.currency)}
           </p>
-          <p className="text-[10px] text-gray-400 text-left">{customer.ordersCount} طلب</p>
+          <p className="text-[10px] text-gray-400 text-left">{customer.ordersCount} {tr("ordersCount", lang)}</p>
         </div>
       </div>
 
@@ -196,7 +234,7 @@ function CustomerCard({ customer, onChat }: CustomerCardProps) {
           className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20bb5a] active:bg-[#1aaa52] text-white text-xs font-medium py-2.5 rounded-xl transition-colors"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          فتح المحادثة
+          {tr("openChat", lang)}
         </button>
         <button
           onClick={() => setExpanded((p) => !p)}
@@ -212,11 +250,11 @@ function CustomerCard({ customer, onChat }: CustomerCardProps) {
       {expanded && (
         <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-700/30">
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>إجمالي الطلبات: <strong className="text-gray-700 dark:text-gray-200">{customer.ordersCount}</strong></span>
+            <span>{tr("totalOrders", lang)}: <strong className="text-gray-700 dark:text-gray-200">{customer.ordersCount}</strong></span>
             <span>
               {customer.lastOrder
-                ? `آخر طلب: ${formatDate(customer.lastOrder.orderedAt)}`
-                : "لا توجد طلبات"}
+                ? `${tr("lastSync", lang)}: ${formatDate(customer.lastOrder.orderedAt, lang)}`
+                : (lang === "ar" ? "لا توجد طلبات" : "No orders")}
             </span>
           </div>
         </div>
@@ -231,9 +269,10 @@ interface AutomationCardProps {
   automation: AutomationItem;
   templates:  AutomationTemplate[];
   onSave:     (type: StoreAutomationType, isEnabled: boolean, templateId: string | null) => Promise<void>;
+  lang: Lang;
 }
 
-function AutomationCard({ automation, templates, onSave }: AutomationCardProps) {
+function AutomationCard({ automation, templates, onSave, lang }: AutomationCardProps) {
   const [enabled,    setEnabled]    = useState(automation.isEnabled);
   const [templateId, setTemplateId] = useState(automation.templateId ?? "");
   const [saving,     setSaving]     = useState(false);
@@ -242,7 +281,7 @@ function AutomationCard({ automation, templates, onSave }: AutomationCardProps) 
 
   async function handleToggle() {
     if (!enabled && !templateId) {
-      toast.error("اختر قالباً من القائمة أولاً");
+      toast.error(lang === "ar" ? "اختر قالباً من القائمة أولاً" : "Choose a template first");
       return;
     }
     const next = !enabled;
@@ -281,7 +320,7 @@ function AutomationCard({ automation, templates, onSave }: AutomationCardProps) 
           onClick={handleToggle}
           disabled={saving}
           className="flex-shrink-0 transition-opacity disabled:opacity-50"
-          aria-label={enabled ? "إيقاف الأتمتة" : "تفعيل الأتمتة"}
+          aria-label={enabled ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation") : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
         >
           {saving
             ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -294,20 +333,20 @@ function AutomationCard({ automation, templates, onSave }: AutomationCardProps) 
 
       {/* Template Selector */}
       <div>
-        <label className="text-[11px] text-gray-400 mb-1.5 block">القالب المستخدم</label>
+        <label className="text-[11px] text-gray-400 mb-1.5 block">{lang === "ar" ? "القالب المستخدم" : "Used template"}</label>
         <select
           value={templateId}
           onChange={(e) => handleTemplateChange(e.target.value)}
           className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
         >
-          <option value="">— اختر قالب معتمد —</option>
+          <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
         {templates.length === 0 && (
           <p className="text-[10px] text-orange-500 mt-1.5">
-            ⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب
+            {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
           </p>
         )}
       </div>
@@ -317,7 +356,7 @@ function AutomationCard({ automation, templates, onSave }: AutomationCardProps) 
         <div className="mt-3 flex items-center gap-1.5">
           <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
           <span className="text-[11px] text-gray-400">
-            {automation.sentCount.toLocaleString("ar-EG")} رسالة أُرسلت
+            {automation.sentCount.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
           </span>
         </div>
       )}
@@ -330,9 +369,10 @@ function AutomationCard({ automation, templates, onSave }: AutomationCardProps) 
 interface StoreTabProps {
   store:      StoreInfo;
   onOpenChat: (phone: string) => void;
+  lang: Lang;
 }
 
-function StoreTab({ store, onOpenChat }: StoreTabProps) {
+function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   const [customers,   setCustomers]   = useState<Customer[]>([]);
   const [total,       setTotal]       = useState(0);
   const [page,        setPage]        = useState(1);
@@ -360,7 +400,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       setHasMore(d.hasMore);
       setPage(p);
     } catch {
-      toast.error("تعذر تحميل بيانات العملاء");
+      toast.error(lang === "ar" ? "تعذر تحميل بيانات العملاء" : "Failed to load customers");
     } finally {
       setLoadingC(false);
     }
@@ -376,7 +416,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       setAutomations(d.automations ?? []);
       setTemplates(d.templates ?? []);
     } catch {
-      toast.error("تعذر تحميل الأتمتات");
+      toast.error(lang === "ar" ? "تعذر تحميل automations" : "Failed to load automations");
     } finally {
       setLoadingA(false);
     }
@@ -408,11 +448,11 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       const d: { success?: boolean; error?: string; automation?: AutomationItem } = await r.json();
 
       if (!r.ok) {
-        toast.error(d.error ?? "فشل حفظ الأتمتة");
+        toast.error(d.error ?? (lang === "ar" ? "فشل حفظ الأتمتة" : "Failed to save automation"));
         return;
       }
 
-      toast.success(isEnabled ? "✅ تم تفعيل الأتمتة" : "تم إيقاف الأتمتة");
+      toast.success(isEnabled ? (lang === "ar" ? "✅ تم تفعيل الأتمتة" : "✅ Automation enabled") : (lang === "ar" ? "تم إيقاف الأتمتة" : "Automation disabled"));
 
       setAutomations((prev) =>
         prev.map((a) =>
@@ -422,7 +462,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
         )
       );
     } catch {
-      toast.error("خطأ في الاتصال");
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
     }
   }
 
@@ -438,18 +478,18 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       const d: { success?: boolean; synced?: number; error?: string; hasMore?: boolean } = await r.json();
 
       if (!r.ok) {
-        toast.error(d.error ?? "فشلت المزامنة");
+        toast.error(d.error ?? (lang === "ar" ? "فشلت المزامنة" : "Sync failed"));
         return;
       }
 
       toast.success(
-        `✅ تمت مزامنة ${d.synced ?? 0} طلب${d.hasMore ? " — اضغط مجدداً للمزيد" : ""}`
+        `${lang === "ar" ? "✅ تمت مزامنة" : "✅ Synced"} ${d.synced ?? 0} ${lang === "ar" ? "طلب" : "orders"}${d.hasMore ? (lang === "ar" ? " — اضغط مجدداً للمزيد" : " — press again for more") : ""}`
       );
       // إعادة تحميل العملاء بعد المزامنة
       await fetchCustomers(1, search);
 
     } catch {
-      toast.error("خطأ في الاتصال");
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
     } finally {
       setSyncing(false);
     }
@@ -462,28 +502,28 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
           icon={<Package className="w-5 h-5 text-blue-600" />}
-          label="إجمالي الطلبات"
-          value={store.totalOrders.toLocaleString("ar-EG")}
+          label={tr("totalOrders", lang)}
+          value={store.totalOrders.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
           color="bg-blue-50 dark:bg-blue-900/20"
         />
         <KpiCard
           icon={<Users className="w-5 h-5 text-purple-600" />}
-          label="إجمالي العملاء"
-          value={store.totalCustomers.toLocaleString("ar-EG")}
+          label={tr("totalCustomers", lang)}
+          value={store.totalCustomers.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
           color="bg-purple-50 dark:bg-purple-900/20"
         />
         <KpiCard
           icon={<TrendingUp className="w-5 h-5 text-[#25D366]" />}
-          label="إيرادات الحملات"
-          value={formatMoney(store.campaignRevenue)}
-          sub="من رسائل واتساب"
+          label={tr("campaignRevenue", lang)}
+          value={formatMoney(store.campaignRevenue, lang)}
+          sub={tr("revenueSub", lang)}
           color="bg-[#25D366]/10"
         />
         <KpiCard
           icon={<RefreshCw className="w-5 h-5 text-orange-500" />}
-          label="آخر مزامنة"
-          value={store.lastSyncAt ? formatDate(store.lastSyncAt) : "—"}
-          sub={store.totalSynced ? `${store.totalSynced.toLocaleString("ar-EG")} طلب محفوظ` : undefined}
+          label={tr("lastSync", lang)}
+          value={store.lastSyncAt ? formatDate(store.lastSyncAt, lang) : "—"}
+          sub={store.totalSynced ? `${store.totalSynced.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${tr("savedOrders", lang)}` : undefined}
           color="bg-orange-50 dark:bg-orange-900/20"
         />
       </div>
@@ -492,10 +532,10 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
-            ⚙️ أتمتات المتجر
+            {tr("automationsTitle", lang)}
           </h2>
           <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
-            {automations.filter((a) => a.isEnabled).length} / {automations.length} مفعّل
+            {automations.filter((a) => a.isEnabled).length} / {automations.length} {tr("enabled", lang)}
           </span>
         </div>
 
@@ -513,6 +553,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
                 automation={auto}
                 templates={templates}
                 onSave={handleSaveAutomation}
+                lang={lang}
               />
             ))}
           </div>
@@ -523,9 +564,9 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       <section>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
-            👥 العملاء
+            {tr("customersTitle", lang)}
             <span className="text-sm font-normal text-gray-400 mr-2">
-              ({total.toLocaleString("ar-EG")})
+              ({total.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")})
             </span>
           </h2>
 
@@ -534,7 +575,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="اسم أو رقم أو طلب..."
+              placeholder={tr("searchPh", lang)}
               className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
             />
           </div>
@@ -549,13 +590,13 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
         ) : customers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Users className="w-12 h-12 text-gray-200 dark:text-gray-600 mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">لا يوجد عملاء مطابقون</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{tr("noCustomers", lang)}</p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {customers.map((c) => (
-                <CustomerCard key={c.phone} customer={c} onChat={onOpenChat} />
+                <CustomerCard key={c.phone} customer={c} onChat={onOpenChat} lang={lang} />
               ))}
             </div>
 
@@ -568,7 +609,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
                 >
                   {loadingC
                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : "تحميل المزيد"}
+                    : tr("loadMore", lang)}
                 </button>
               </div>
             )}
@@ -583,17 +624,17 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-800 dark:text-white">
-            قائمة "عملاء {store.storeName}"
+            {tr("listTitle", lang)} "{lang === "ar" ? `عملاء ${store.storeName}` : `${store.storeName} customers`}"
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
-            {store.totalCustomers.toLocaleString("ar-EG")} جهة اتصال مزامَنة من المتجر
+            {store.totalCustomers.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {tr("syncedContacts", lang)}
           </p>
         </div>
         <button
-          onClick={() => toast.info("اذهب إلى صفحة جهات الاتصال")}
+          onClick={() => toast.info(tr("goContactsToast", lang))}
           className="flex items-center gap-1.5 text-xs font-medium text-[#25D366] hover:underline flex-shrink-0"
         >
-          عرض القائمة
+          {tr("goContacts", lang)}
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -602,8 +643,8 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
       {store.source === "easyorders" && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center justify-between gap-4">
           <div>
-            <p className="font-semibold text-sm text-gray-800 dark:text-white">مزامنة يدوية</p>
-            <p className="text-xs text-gray-400 mt-0.5">سحب آخر 100 طلب من إيزي أوردرز</p>
+            <p className="font-semibold text-sm text-gray-800 dark:text-white">{tr("manualSync", lang)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{tr("manualSyncSub", lang)}</p>
           </div>
           <button
             onClick={handleSync}
@@ -611,7 +652,7 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] active:bg-[#1aaa52] text-white text-sm font-medium transition-colors disabled:opacity-60"
           >
             <RefreshCw className={cn("w-4 h-4", syncing && "animate-spin")} />
-            {syncing ? "جاري المزامنة..." : "مزامنة الآن"}
+            {syncing ? tr("syncing", lang) : tr("syncNow", lang)}
           </button>
         </div>
       )}
@@ -623,17 +664,17 @@ function StoreTab({ store, onOpenChat }: StoreTabProps) {
             <div>
               <p className="font-semibold text-sm text-gray-800 dark:text-white flex items-center gap-2">
                 <Globe className="w-4 h-4 text-purple-500" />
-                الطلبات تصل تلقائياً عبر Webhook
+                {tr("webhookTitle", lang)}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">كل أوردر جديد في WooCommerce بيوصل فوراً</p>
+              <p className="text-xs text-gray-400 mt-0.5">{tr("webhookSub", lang)}</p>
             </div>
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200 dark:border-green-800">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-              نشط
+              {tr("active", lang)}
             </span>
           </div>
           <p className="text-[11px] text-gray-400 dark:text-gray-500">
-            لو محتاج تضيف الـ Webhook من جديد، روح صفحة <strong>API</strong> وانسخ الرابط من قسم WooCommerce.
+            {tr("webhookHint", lang)}
           </p>
         </div>
       )}
@@ -648,6 +689,8 @@ interface StoreProps {
 }
 
 export default function Store({ onOpenChat }: StoreProps) {
+  const { locale } = useLanguage();
+  const lang: Lang = locale === "en" ? "en" : "ar";
   const [storeData,  setStoreData]  = useState<StoreData | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [activeTab,  setActiveTab]  = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
@@ -660,9 +703,9 @@ export default function Store({ onOpenChat }: StoreProps) {
         if (!d.shopify && d.easyorders) setActiveTab("easyorders");
         else if (!d.shopify && !d.easyorders && d.woocommerce) setActiveTab("woocommerce");
       })
-      .catch(() => toast.error("تعذر تحميل بيانات المتجر"))
+      .catch(() => toast.error(tr("storeLoadErr", lang)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [lang]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
@@ -679,9 +722,9 @@ export default function Store({ onOpenChat }: StoreProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-4">
         <ShoppingBag className="w-16 h-16 text-gray-200 dark:text-gray-700" />
-        <p className="text-gray-600 dark:text-gray-400 font-medium">لم يتم ربط أي متجر بعد</p>
+        <p className="text-gray-600 dark:text-gray-400 font-medium">{tr("noStore", lang)}</p>
         <p className="text-gray-400 dark:text-gray-500 text-sm">
-          اذهب إلى صفحة <strong>API</strong> لربط متجر Shopify أو EasyOrders أو WooCommerce
+          {tr("noStoreSub", lang)}
         </p>
       </div>
     );
@@ -701,16 +744,16 @@ export default function Store({ onOpenChat }: StoreProps) {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-            {activeStore?.storeName ?? "المتجر"}
+            {activeStore?.storeName ?? tr("storeFallback", lang)}
           </h1>
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              متصل
+              {tr("connected", lang)}
             </span>
             <span className="text-xs text-gray-400">
               {activeStore?.source === "shopify" ? "Shopify"
-                : activeStore?.source === "easyorders" ? "إيزي أوردرز"
+                : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
                 : "WooCommerce"}
             </span>
           </div>
@@ -751,6 +794,7 @@ export default function Store({ onOpenChat }: StoreProps) {
         <StoreTab
           store={activeStore}
           onOpenChat={onOpenChat ?? (() => {})}
+          lang={lang}
         />
       )}
     </div>
