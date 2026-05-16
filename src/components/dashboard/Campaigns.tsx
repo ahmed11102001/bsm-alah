@@ -19,8 +19,9 @@ import {
   Plus, Send, Calendar, FileSpreadsheet, X, Megaphone,
   Trash2, RefreshCw, ChevronRight, ChevronLeft,
   CheckCircle, Clock, Eye, Users, MessageSquare,
-  XCircle, Loader2, BarChart3, Hourglass, Languages,
+  XCircle, Loader2, BarChart3, Hourglass,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 type Lang = "ar" | "en";
@@ -109,6 +110,27 @@ const t = {
   repeatAfter48:  { ar: "يمكن تكرار الحملة بعد 48 ساعة", en: "Can repeat after 48h" },
   hoursLeft:      { ar: "ساعة متبقية",              en: "hours left"                },
   numbers:        { ar: "رقم",                      en: "numbers"                   },
+  totalCampaignsSubtitle: { ar: "حملة إجمالاً", en: "total campaigns" },
+  errLoadCampaigns: { ar: "فشل في تحميل الحملات", en: "Failed to load campaigns" },
+  errLoadTemplates: { ar: "فشل في تحميل القوالب", en: "Failed to load templates" },
+  errLoadAudiences: { ar: "فشل في تحميل جهات الاتصال", en: "Failed to load audiences" },
+  errNoSheets: { ar: "الملف لا يحتوي على أوراق", en: "The file has no sheets" },
+  errReadFile: { ar: "فشل في قراءة الملف", en: "Failed to read file" },
+  errPickAudience: { ar: "اختر جهة اتصال أولاً", en: "Choose an audience first" },
+  errLoadAudience: { ar: "فشل في تحميل جهة الاتصال", en: "Failed to load audience" },
+  errNoValidNumbers: { ar: "لا توجد أرقام صالحة", en: "No valid numbers found" },
+  errEnterName: { ar: "أدخل اسم الحملة", en: "Enter campaign name" },
+  errChooseTemplate: { ar: "اختر قالباً", en: "Choose a template" },
+  errPickSchedule: { ar: "حدد موعد الجدولة", en: "Select schedule time" },
+  creatingCampaign: { ar: "جاري إنشاء الحملة...", en: "Creating campaign..." },
+  errCreateCampaign: { ar: "فشل إنشاء الحملة", en: "Failed to create campaign" },
+  deleting: { ar: "جاري الحذف...", en: "Deleting..." },
+  errDelete: { ar: "فشل الحذف", en: "Delete failed" },
+  deletedOk: { ar: "تم الحذف", en: "Deleted" },
+  repeating: { ar: "جاري تكرار الحملة...", en: "Repeating campaign..." },
+  errRepeat: { ar: "فشل التكرار", en: "Repeat failed" },
+  repeatedOk: { ar: "تم تكرار الحملة ✅", en: "Campaign repeated ✅" },
+  errAddNumbersFirst: { ar: "أضف أرقام أولاً", en: "Add numbers first" },
 };
 const tr = (key: keyof typeof t, lang: Lang) => t[key][lang];
 
@@ -356,16 +378,8 @@ function DetailsModal({ campaign, open, onClose, lang }: {
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export default function Campaigns() {
-  const [lang, setLang] = useState<Lang>("ar");
-  useEffect(() => {
-    const saved = localStorage.getItem("dashboard_lang") as Lang | null;
-    if (saved === "en" || saved === "ar") setLang(saved);
-  }, []);
-  const toggleLang = () => {
-    const next = lang === "ar" ? "en" : "ar";
-    setLang(next);
-    localStorage.setItem("dashboard_lang", next);
-  };
+  const { locale } = useLanguage();
+  const lang: Lang = locale === "en" ? "en" : "ar";
 
   const [campaigns,     setCampaigns]     = useState<Campaign[]>([]);
   const [total,         setTotal]         = useState(0);
@@ -424,7 +438,7 @@ export default function Campaigns() {
 
       setCampaigns(list);
       setTotal(data.total ?? list.length);
-    } catch { toast.error("فشل في تحميل الحملات"); }
+    } catch { toast.error(tr("errLoadCampaigns", lang)); }
     finally  { setLoadingList(false); }
   }, [filterStatus]);
 
@@ -436,7 +450,7 @@ export default function Campaigns() {
       const approved = list.filter(t => ["approved","pending","APPROVED","PENDING"].includes(t.status ?? ""));
       setTemplates(approved);
       if (approved.length > 0) setSelectedTemplate(approved[0]);
-    } catch { toast.error("فشل في تحميل القوالب"); }
+    } catch { toast.error(tr("errLoadTemplates", lang)); }
   }, []);
 
   const loadAudiences = useCallback(async () => {
@@ -447,7 +461,7 @@ export default function Campaigns() {
         .filter((a: any) => ["excel","custom"].includes(a.type))
         .map((a: any) => ({ id: a.id, name: a.name, type: a.type, contactCount: Number(a.contactCount ?? 0) }));
       setAudiences(list);
-    } catch { toast.error("فشل في تحميل جهات الاتصال"); }
+    } catch { toast.error(tr("errLoadAudiences", lang)); }
   }, []);
 
   useEffect(() => { loadCampaigns(); },                          [loadCampaigns]);
@@ -473,7 +487,7 @@ export default function Campaigns() {
       const wb     = new ExcelJS.Workbook();
       await wb.xlsx.load(buffer);
       const ws = wb.worksheets[0];
-      if (!ws) { toast.error("الملف لا يحتوي على أوراق"); return; }
+      if (!ws) { toast.error(tr("errNoSheets", lang)); return; }
       const extracted: string[] = [];
       ws.eachRow(row => {
         (Array.isArray(row.values) ? row.values : []).forEach(cell => {
@@ -485,19 +499,19 @@ export default function Campaigns() {
       const unique = [...new Set([...numbers, ...extracted])];
       setNumbers(unique);
       toast.success(`${lang === "ar" ? "تم استخراج" : "Extracted"} ${extracted.length} ${lang === "ar" ? "رقم صالح" : "valid numbers"}`);
-    } catch { toast.error("فشل في قراءة الملف"); }
+    } catch { toast.error(tr("errReadFile", lang)); }
   };
 
   const importAudienceContacts = async () => {
-    if (!selectedAudienceId) { toast.error("اختر جهة اتصال أولاً"); return; }
+    if (!selectedAudienceId) { toast.error(tr("errPickAudience", lang)); return; }
     setImportingAudience(true);
     try {
       const res  = await fetch(`/api/audiences?audienceId=${encodeURIComponent(selectedAudienceId)}&includeContacts=all`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل في تحميل جهة الاتصال");
+      if (!res.ok) throw new Error(data.error || tr("errLoadAudience", lang));
       const contacts: AudienceContact[] = Array.isArray(data.contacts) ? data.contacts : [];
       const extracted = contacts.map(c => cleanNumber(String(c.phone ?? "").trim())).filter(isValidPhone);
-      if (extracted.length === 0) { toast.error("لا توجد أرقام صالحة"); return; }
+      if (extracted.length === 0) { toast.error(tr("errNoValidNumbers", lang)); return; }
       setNumbers([...new Set([...numbers, ...extracted])]);
       toast.success(`${lang === "ar" ? "تم استيراد" : "Imported"} ${extracted.length} ${lang === "ar" ? "رقم" : "numbers"}`);
     } catch (err: any) { toast.error(err.message); }
@@ -505,18 +519,18 @@ export default function Campaigns() {
   };
 
   const handleSubmit = async () => {
-    if (!campaignName.trim()) { toast.error("أدخل اسم الحملة"); return; }
-    if (!selectedTemplate)    { toast.error("اختر قالباً"); return; }
-    if (sendMode === "scheduled" && !scheduledAt) { toast.error("حدد موعد الجدولة"); return; }
+    if (!campaignName.trim()) { toast.error(tr("errEnterName", lang)); return; }
+    if (!selectedTemplate)    { toast.error(tr("errChooseTemplate", lang)); return; }
+    if (sendMode === "scheduled" && !scheduledAt) { toast.error(tr("errPickSchedule", lang)); return; }
     setSubmitting(true);
-    const tid = toast.loading("جاري إنشاء الحملة...");
+    const tid = toast.loading(tr("creatingCampaign", lang));
     try {
       const res  = await fetch("/api/campaigns", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: campaignName, templateName: selectedTemplate.name, numbers, scheduledAt: sendMode === "scheduled" ? new Date(scheduledAt).toISOString() : null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل إنشاء الحملة");
+      if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
       toast.dismiss(tid);
       toast.success(data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅");
       setDialogOpen(false); resetDialog(); await loadCampaigns();
@@ -525,12 +539,12 @@ export default function Campaigns() {
   };
 
   const handleDelete = async (id: string) => {
-    const tid = toast.loading("جاري الحذف...");
+    const tid = toast.loading(tr("deleting", lang));
     try {
       const res  = await fetch("/api/campaigns", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل الحذف");
-      toast.dismiss(tid); toast.success("تم الحذف"); await loadCampaigns();
+      if (!res.ok) throw new Error(data.error || tr("errDelete", lang));
+      toast.dismiss(tid); toast.success(tr("deletedOk", lang)); await loadCampaigns();
     } catch (err: any) { toast.dismiss(tid); toast.error(err.message); }
   };
 
@@ -542,12 +556,12 @@ export default function Campaigns() {
       toast.error(`${tr("repeatAfter48",lang)} — ${h} ${tr("hoursLeft",lang)}`);
       return;
     }
-    const tid = toast.loading("جاري تكرار الحملة...");
+    const tid = toast.loading(tr("repeating", lang));
     try {
       const res  = await fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ _action: "repeat", campaignId: campaign.id }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل التكرار");
-      toast.dismiss(tid); toast.success("تم تكرار الحملة ✅"); await loadCampaigns();
+      if (!res.ok) throw new Error(data.error || tr("errRepeat", lang));
+      toast.dismiss(tid); toast.success(tr("repeatedOk", lang)); await loadCampaigns();
     } catch (err: any) { toast.dismiss(tid); toast.error(err.message); }
   };
 
@@ -572,14 +586,9 @@ export default function Campaigns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{tr("title",lang)}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{total} {lang === "ar" ? "حملة إجمالاً" : "total campaigns"}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{total} {tr("totalCampaignsSubtitle", lang)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={toggleLang} title="Toggle language"
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition flex items-center gap-1.5 text-xs font-medium">
-            <Languages className="w-4 h-4" />
-            {lang === "ar" ? "EN" : "AR"}
-          </button>
           <button onClick={loadCampaigns}
             className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
@@ -731,7 +740,7 @@ export default function Campaigns() {
                   </div>
                 </div>
               )}
-              <Button onClick={() => { if (!numbers.length) { toast.error("أضف أرقام أولاً"); return; } setStep(2); }}
+              <Button onClick={() => { if (!numbers.length) { toast.error(tr("errAddNumbersFirst", lang)); return; } setStep(2); }}
                 className="w-full bg-green-500 hover:bg-green-600 text-white gap-2" disabled={numbers.length === 0}>
                 {tr("nextTemplate",lang)} {lang === "ar" ? <ChevronLeft className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
               </Button>
