@@ -27,6 +27,7 @@ import {
   RefreshCw, Shield, ShoppingBag, DollarSign,
   Package, Star, Zap, Store, ArrowUpRight,
 } from "lucide-react";
+import AutomationReportTab from "@/components/dashboard/AutomationReportTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Overview {
@@ -363,6 +364,7 @@ export default function Reports() {
             { value: "team",      label: "الفريق",           icon: <Shield className="w-4 h-4" /> },
             { value: "logs",      label: "سجل النشاط",      icon: <Activity className="w-4 h-4" /> },
             { value: "store",     label: "تقرير المتجر",    icon: <ShoppingBag className="w-4 h-4" /> },
+            { value: "automation",label: "تقرير الأتمتة",   icon: <Bot className="w-4 h-4" /> },
           ].map((t) => (
             <TabsTrigger
               key={t.value} value={t.value}
@@ -1172,6 +1174,10 @@ export default function Reports() {
 
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <AutomationReportTab />
         </TabsContent>
       </Tabs>
     </div>
