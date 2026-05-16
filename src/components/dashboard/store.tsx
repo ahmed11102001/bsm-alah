@@ -221,7 +221,7 @@ function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
           <span className="text-[11px] text-gray-500 dark:text-gray-400">
             {customer.lastOrder.orderNumber ? `#${customer.lastOrder.orderNumber}` : "—"}
             {customer.lastOrder.total != null
-              ? ` · ${formatMoney(customer.lastOrder.total, customer.currency)}`
+              ? ` · ${formatMoney(customer.lastOrder.total, lang, customer.currency)}`
               : ""}
           </span>
         </div>
