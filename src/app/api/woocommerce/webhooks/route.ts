@@ -5,6 +5,16 @@ import { createHmac }                from "crypto";
 import prisma                        from "@/lib/prisma";
 import { inngest }                   from "@/inngest/client";
 import { attributeOrderToCampaign }  from "@/lib/attribution";
+import {
+  type WooOrder,
+  type WooCustomer,
+  type WooCoupon,
+  isWooOrder,
+  isWooCustomer,
+  isWooCoupon,
+  extractWooTracking,
+} from "@/types/woocommerce";
+import { OrderSource } from "@/types/enums";
 
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
@@ -39,22 +49,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ignored" });
     }
 
-    let payload: any;
+    let payload: unknown;
     try { payload = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-    const topic = req.headers.get("x-wc-webhook-topic") || "";
+    const topic = req.headers.get("x-wc-webhook-topic") ?? "";
     console.log(`[WooCommerce WH] ${topic} — userId: ${userId}`);
 
     // ── Route by topic ────────────────────────────────────────────────────────
     if (topic === "order.created") {
-      await handleOrderCreated(payload, store.userId, store.id);
+      if (isWooOrder(payload)) {
+        await handleOrderCreated(payload, store.userId, store.id);
+      } else {
+        console.warn("[WooCommerce WH] order.created — invalid payload shape");
+      }
     } else if (topic === "order.updated") {
-      await handleOrderUpdated(payload, store.userId, store.id);
+      if (isWooOrder(payload)) {
+        await handleOrderUpdated(payload, store.userId, store.id);
+      }
     } else if (topic === "order.deleted") {
-      await handleOrderDeleted(payload, store.userId);
+      if (isWooOrder(payload)) {
+        await handleOrderDeleted(payload, store.userId);
+      }
     } else if (topic.startsWith("coupon.")) {
-      await handleCoupon(payload, store.userId, topic);
+      if (isWooCoupon(payload)) {
+        await handleCoupon(payload, store.userId, topic);
+      }
     } else {
       console.log(`[WooCommerce WH] Unhandled topic: ${topic}`);
     }
@@ -76,26 +96,30 @@ export async function POST(req: NextRequest) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Order Created
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleOrderCreated(order: any, userId: string, woocommerceStoreId: string) {
+async function handleOrderCreated(
+  order: WooOrder,
+  userId: string,
+  woocommerceStoreId: string,
+) {
   try {
-    const rawPhone = order.billing?.phone || order.shipping?.phone || "";
+    const rawPhone = order.billing?.phone ?? order.shipping?.phone ?? "";
     if (!rawPhone) {
       console.warn(`[WooCommerce] Order ${order.id} — no phone`);
       return;
     }
 
-    const cleanPhone   = rawPhone.replace(/\D/g, "");
+    const cleanPhone = rawPhone.replace(/\D/g, "");
     if (cleanPhone.length < 9) return;
 
     const customerName = [order.billing?.first_name, order.billing?.last_name]
       .filter(Boolean).join(" ") || "عميل";
-    const revenue      = parseFloat(order.total ?? "0") || 0;
-    const externalId   = String(order.id);
+    const revenue    = parseFloat(order.total ?? "0") || 0;
+    const externalId = String(order.id);
 
-    // استخراج كودات الكوبون
+    // استخراج كودات الكوبون — typed بدل (c: any)
     const couponCodes: string[] = (order.coupon_lines ?? [])
-      .map((c: any) => c.code)
-      .filter(Boolean);
+      .map(c => c.code)
+      .filter((code): code is string => Boolean(code));
 
     // ── Upsert Contact ───────────────────────────────────────────────────────
     const contact = await prisma.contact.upsert({
@@ -108,7 +132,7 @@ async function handleOrderCreated(order: any, userId: string, woocommerceStoreId
     const storeOrder = await prisma.storeOrder.upsert({
       where: {
         source_externalId_userId: {
-          source: "woocommerce" as any,
+          source:     OrderSource.woocommerce,
           externalId,
           userId,
         },
@@ -116,7 +140,7 @@ async function handleOrderCreated(order: any, userId: string, woocommerceStoreId
       update: { status: order.status ?? "pending" },
       create: {
         userId,
-        source:             "woocommerce" as any,
+        source:             OrderSource.woocommerce,
         externalId,
         orderNumber:        String(order.number ?? order.id),
         customerName,
@@ -151,11 +175,11 @@ async function handleOrderCreated(order: any, userId: string, woocommerceStoreId
         userId,
         contactId:          contact.id,
         orderId:            order.id,
-        orderNumber:        order.number,
-        totalPrice:         order.total,
-        currency:           order.currency,
+        orderNumber:        order.number ?? null,
+        totalPrice:         order.total   ?? null,
+        currency:           order.currency ?? null,
         customerName,
-        customerEmail:      order.billing?.email,
+        customerEmail:      order.billing?.email ?? null,
         customerPhone:      cleanPhone,
         woocommerceStoreId,
         couponCodes,
@@ -170,60 +194,55 @@ async function handleOrderCreated(order: any, userId: string, woocommerceStoreId
 // ═══════════════════════════════════════════════════════════════════════════════
 // Order Updated — تحديث الحالة + الشحن لو completed
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleOrderUpdated(order: any, userId: string, woocommerceStoreId: string) {
+async function handleOrderUpdated(
+  order: WooOrder,
+  userId: string,
+  woocommerceStoreId: string,
+) {
   try {
     const externalId = String(order.id);
     const status     = order.status ?? "updated";
 
-    // تحديث الحالة في الـ DB
     await prisma.storeOrder.updateMany({
-      where: { userId, source: "woocommerce" as any, externalId },
+      where: { userId, source: OrderSource.woocommerce, externalId },
       data:  { status },
     });
 
-    // ── لو اتشحن (completed) → استخرج الـ tracking واعمل fulfilled event ──
+    // لو اتشحن (completed) → استخرج الـ tracking واعمل fulfilled event
     if (status === "completed") {
-      const rawPhone = order.billing?.phone || order.shipping?.phone || "";
+      const rawPhone   = order.billing?.phone ?? order.shipping?.phone ?? "";
       const cleanPhone = rawPhone.replace(/\D/g, "");
 
-      // WooCommerce بيحط shipping في meta_data أو في shipment plugins
-      const trackingUrl: string | null =
-        order.meta_data?.find((m: any) => m.key === "_wc_shipment_tracking_url")?.value ??
-        order.meta_data?.find((m: any) => m.key === "tracking_url")?.value ??
-        null;
+      // extractWooTracking بيجيب الـ tracking من meta_data بشكل typed
+      const { trackingUrl, trackingNumber, shippingProvider } =
+        extractWooTracking(order.meta_data);
 
-      const trackingNumber: string | null =
-        order.meta_data?.find((m: any) => m.key === "_wc_shipment_tracking_number")?.value ??
-        order.meta_data?.find((m: any) => m.key === "tracking_number")?.value ??
-        null;
-
-      const shippingProvider: string | null =
-        order.meta_data?.find((m: any) => m.key === "_wc_shipment_tracking_provider")?.value ??
-        order.shipping_lines?.[0]?.method_title ??
-        null;
+      // fallback: لو مفيش tracking في meta → جرّب shipping_lines
+      const provider = shippingProvider
+        ?? order.shipping_lines?.[0]?.method_title
+        ?? null;
 
       await inngest.send({
         name: "woocommerce/order.fulfilled",
         data: {
           userId,
           orderId:          order.id,
-          orderNumber:      order.number,
+          orderNumber:      order.number ?? null,
           customerPhone:    cleanPhone,
           trackingUrl,
           trackingNumber,
-          shippingProvider,
+          shippingProvider: provider,
           woocommerceStoreId,
         },
       });
     }
 
-    // Inngest event للـ order updated
     await inngest.send({
       name: "woocommerce/order.updated",
       data: {
         userId,
         orderId:     order.id,
-        orderNumber: order.number,
+        orderNumber: order.number ?? null,
         status,
         woocommerceStoreId,
       },
@@ -237,10 +256,10 @@ async function handleOrderUpdated(order: any, userId: string, woocommerceStoreId
 // ═══════════════════════════════════════════════════════════════════════════════
 // Order Deleted — تنظيف
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleOrderDeleted(order: any, userId: string) {
+async function handleOrderDeleted(order: WooOrder, userId: string) {
   try {
     await prisma.storeOrder.updateMany({
-      where: { userId, source: "woocommerce" as any, externalId: String(order.id) },
+      where: { userId, source: OrderSource.woocommerce, externalId: String(order.id) },
       data:  { status: "cancelled" },
     });
   } catch (err) {
@@ -251,13 +270,11 @@ async function handleOrderDeleted(order: any, userId: string) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Coupon — تسجيل العروض الجديدة
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleCoupon(coupon: any, userId: string, topic: string) {
+async function handleCoupon(coupon: WooCoupon, userId: string, topic: string) {
   try {
-    // بنسجل في الـ log بس — الـ automation بيتحكم فيها من صفحة الأتمتة
-    console.log(`[WooCommerce] Coupon ${topic}: code="${coupon.code}" discount="${coupon.discount_type}:${coupon.amount}"`);
-
-    // لو عاوز تشيل الكوبون للـ DB في الـ مستقبل
-    // await prisma.storePromotion.upsert(...)
+    console.log(
+      `[WooCommerce] Coupon ${topic}: code="${coupon.code}" discount="${coupon.discount_type}:${coupon.amount}"`
+    );
 
     await inngest.send({
       name: "woocommerce/coupon.event",
@@ -265,12 +282,12 @@ async function handleCoupon(coupon: any, userId: string, topic: string) {
         userId,
         topic,
         couponId:     coupon.id,
-        code:         coupon.code,
-        discountType: coupon.discount_type,  // percent / fixed_cart / fixed_product
-        amount:       coupon.amount,
-        expiryDate:   coupon.date_expires,
-        usageCount:   coupon.usage_count,
-        usageLimit:   coupon.usage_limit,
+        code:         coupon.code         ?? null,
+        discountType: coupon.discount_type ?? null,
+        amount:       coupon.amount        ?? null,
+        expiryDate:   coupon.date_expires  ?? null,
+        usageCount:   coupon.usage_count   ?? 0,
+        usageLimit:   coupon.usage_limit   ?? null,
       },
     });
   } catch (err) {
