@@ -16,6 +16,14 @@ import { NextResponse, type NextRequest } from "next/server";
 //   • لو مكتبة تانية محتاجة eval في production:
 //       حطّها هنا مع تعليق يوضح ليه، بدل ما تحطها global
 //
+//   • style-src بـ nonce بدل unsafe-inline
+//       → unsafe-inline بيسمح بـ CSS injection attacks
+//       → nonce بيسمح فقط للـ styles اللي Next.js بيولّدها
+//
+//   • connect-src محدد بالـ domains الحقيقية
+//       → https: العام بيسمح بالاتصال بأي domain
+//       → بنحدد كل domain بنستخدمه فعلاً
+//
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === "development";
 
@@ -27,15 +35,52 @@ function buildCsp(nonce: string): string {
     .filter(Boolean)
     .join(" ");
 
+  // style-src: nonce بدل unsafe-inline — بيمنع CSS injection
+  const styleSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "https://fonts.googleapis.com",
+    // في dev بنضيف unsafe-inline لأن بعض الـ dev tools محتاجاها
+    isDev ? "'unsafe-inline'" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // connect-src: بنحدد الـ domains بدل https: العام
+  const connectSrc = [
+    "'self'",
+    // Meta / WhatsApp API
+    "https://graph.facebook.com",
+    "https://graph.instagram.com",
+    // Cloudinary (رفع الصور والميديا)
+    "https://*.cloudinary.com",
+    // Resend (إرسال الإيميلات)
+    "https://api.resend.com",
+    // Inngest (background jobs)
+    "https://api.inngest.com",
+    // ElevenLabs (voice agent)
+    "https://api.elevenlabs.io",
+    // Upstash Redis (rate limiting)
+    "https://*.upstash.io",
+    // WebSocket للـ real-time features
+    "wss:",
+    // في dev بنسمح بـ localhost
+    isDev ? "http://localhost:*" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `style-src ${styleSrc}`,
     "img-src 'self' data: https: blob:",
     "media-src 'self' blob:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https: wss:",
+    `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",
+    // منع الـ browser من تخمين الـ MIME type
+    "X-Content-Type-Options: nosniff",
   ].join("; ");
 }
 
@@ -77,6 +122,15 @@ export async function middleware(req: NextRequest) {
 
   // ── Step 4: حط الـ CSP في الـ response ──────────────────────────────────────
   response.headers.set("Content-Security-Policy", buildCsp(nonce));
+
+  // ── Step 5: Security headers إضافية ─────────────────────────────────────────
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()"
+  );
 
   return response;
 }

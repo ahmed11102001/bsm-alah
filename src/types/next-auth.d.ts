@@ -1,28 +1,35 @@
+/**
+ * src/types/next-auth.d.ts
+ *
+ * توسيع لـ NextAuth types عشان نضيف الـ fields الخاصة بينا
+ * (role, parentId, isSuper) على الـ Session والـ JWT.
+ *
+ * بعد الملف ده، مش محتاج تكتب (session.user as any).parentId
+ * أو (session.user as any).role في أي مكان تاني —
+ * TypeScript هيعرفهم تلقائياً.
+ */
+
 import "next-auth";
-import { DefaultSession } from "next-auth";
-import { UserRole } from "@prisma/client";
+import "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id:       string;
-      role:     UserRole | string;
+      name:     string | null;
+      email:    string;
+      image?:   string | null;
+      /** دور المستخدم في النظام */
+      role:     "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
+      /** لو الأكاونت ده sub-account، ده الـ ID بتاع الأونر */
       parentId: string | null;
+      /** صلاحية السوبر أدمن */
       isSuper:  boolean;
-    } & DefaultSession["user"];
+    };
   }
 
   interface User {
-    id:       string;
-    role:     UserRole | string;
-    parentId: string | null;
-    isSuper:  boolean;
-  }
-}
-
-declare module "next-auth/adapters" {
-  interface AdapterUser {
-    role:     UserRole | string;
+    role:     "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
     parentId: string | null;
     isSuper:  boolean;
   }
@@ -30,9 +37,11 @@ declare module "next-auth/adapters" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id:       string;
-    role:     string;
-    parentId: string | null;
-    isSuper:  boolean;
+    id:                 string;
+    role:               "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
+    parentId:           string | null;
+    isSuper:            boolean;
+    /** آخر مرة تحققنا من isSuper من الـ DB (timestamp) */
+    isSuperVerifiedAt?: number;
   }
 }

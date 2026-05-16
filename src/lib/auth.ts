@@ -1,12 +1,16 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // PrismaAdapter بيرجع Adapter type صح بس فيه version mismatch بين
+  // @auth/prisma-adapter و next-auth — الـ cast لـ Adapter بدل any
+  // بيحتفظ بالـ type safety بدل ما يسيب الموضوع مفتوح.
+  adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -27,7 +31,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where:  { email: credentials.email.toLowerCase() },
+          // نجيب isSuper صراحة من الـ DB
+          select: {
+            id:         true,
+            name:       true,
+            email:      true,
+            password:   true,
+            role:       true,
+            parentId:   true,
+            isSuper:    true,
+            inviteCode: true,
+          },
         });
 
         // رسالة موحدة — مش بنكشف هل الإيميل موجود أو لأ
@@ -47,13 +62,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
+        // isSuper جاي من الـ DB مباشرة — مش محتاج as any
         return {
           id:       user.id,
           name:     user.name,
           email:    user.email,
           role:     user.role,
           parentId: user.parentId,
-          isSuper:  (user as any).isSuper ?? false,
+          isSuper:  user.isSuper,
         };
       },
     }),
@@ -70,7 +86,7 @@ export const authOptions: NextAuthOptions = {
         token.role              = user.role;
         token.parentId          = user.parentId;
         token.isSuper           = user.isSuper ?? false;
-        token.isSuperVerifiedAt = Date.now();   // وقت آخر تحقق من الـ DB
+        token.isSuperVerifiedAt = Date.now();
         return token;
       }
 
@@ -78,11 +94,11 @@ export const authOptions: NextAuthOptions = {
       // بيضمن إن سحب صلاحية isSuper يسري خلال 5 دقائق كحد أقصى،
       // بدل 30 يوم — من غير DB query على كل request.
       const FIVE_MINUTES = 5 * 60 * 1000;
-      const lastVerified  = (token.isSuperVerifiedAt as number) ?? 0;
+      const lastVerified  = token.isSuperVerifiedAt ?? 0;
 
       if (Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
-          where:  { id: token.id as string },
+          where:  { id: token.id },
           select: { isSuper: true, role: true },
         });
 
@@ -100,12 +116,15 @@ export const authOptions: NextAuthOptions = {
 
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
-        session.user.id       = token.id as string;
-        session.user.role     = token.role as string;
-        session.user.parentId = token.parentId as string | null;
-        session.user.isSuper  = token.isSuper as boolean;
+        // الـ types معرّفة في src/types/next-auth.d.ts
+        // مش محتاج as string أو as boolean تاني
+        session.user.id       = token.id;
+        session.user.role     = token.role;
+        session.user.parentId = token.parentId;
+        session.user.isSuper  = token.isSuper;
       }
       return session;
     },
