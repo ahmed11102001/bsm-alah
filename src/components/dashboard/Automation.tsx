@@ -531,11 +531,16 @@ export default function Automation() {
               let schedLabel = "";
               try {
                 const p = JSON.parse(rule.triggerValue ?? "{}");
-                const daysAr = (p.days ?? []).map((d: string) => DAYS_AR.find(x => x.key === d)?.label ?? d).join("، ");
+                const daysAr = (p.days ?? []).map((d: string) => {
+                  const day = DAYS_AR.find(x => x.key === d);
+                  return day ? (lang === "ar" ? day.ar : day.en) : d;
+                }).join(lang === "ar" ? "، " : ", ");
                 const aud = audiences.find(a => a.id === p.audienceId);
                 schedLabel = `${daysAr} — ${p.hour}:${p.minute}`;
                 if (aud) schedLabel += ` · ${aud.name}`;
-                if (p.maxContacts) schedLabel += ` (${p.maxContacts.toLocaleString()} كحد أقصى)`;
+                if (p.maxContacts) schedLabel += lang === "ar"
+                  ? ` (${p.maxContacts.toLocaleString()} كحد أقصى)`
+                  : ` (${p.maxContacts.toLocaleString()} max)`;
               } catch {}
               return (
                 <div key={rule.id} className={`bg-white dark:bg-gray-800 border rounded-2xl p-4 shadow-sm ${rule.isEnabled ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-700/50 opacity-60"}`}>
