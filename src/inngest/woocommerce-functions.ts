@@ -1,85 +1,122 @@
 // src/inngest/woocommerce-functions.ts
-// ─── أتمتة WooCommerce — نفس بنية EasyOrders ─────────────────────────────────
+// ─── Inngest functions لأحداث WooCommerce ─────────────────────────────────────
+
 import { inngest } from "./client";
 import prisma      from "@/lib/prisma";
 
-export const handleWooOrderReceived = inngest.createFunction(
-  {
-    id:       "woo-order-received",
-    retries:  2,
-    triggers: [{ event: "woocommerce/order.received" }],
-  },
+function cleanPhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. Order Created — حفظ الأوردر + Contact + كوبون لو موجود
+// ═══════════════════════════════════════════════════════════════════════════════
+export const handleWooOrderCreated = inngest.createFunction(
+  { id: "woo-order-created", retries: 2, triggers: [{ event: "woocommerce/order.created" }] },
   async ({ event, step }: { event: any; step: any }) => {
     const {
-      userId,
-      phone,
-      name,
-      orderNumber,
-      total,
-      currency,
-      status,
-      wooCommerceStoreId,
+      userId, orderId, orderNumber, totalPrice, currency,
+      customerName, customerPhone, customerEmail,
+      woocommerceStoreId, couponCodes,
     } = event.data;
 
-    if (!phone) {
-      console.warn("[WOO Inngest] No phone — skipping");
+    if (!customerPhone) {
+      console.warn(`[WooCommerce] Order ${orderNumber} — no phone`);
       return { skipped: true, reason: "no_phone" };
     }
 
-    // ── Step 1: Upsert Contact ──────────────────────────────────────────────
+    const phone = cleanPhone(customerPhone);
+
+    // ── Step 1: Upsert Contact ─────────────────────────────────────────────
     const contact = await step.run("upsert-contact", async () => {
       return prisma.contact.upsert({
         where:  { phone_userId: { phone, userId } },
-        update: { name: name && name !== "العميل" ? name : undefined },
-        create: { phone, userId, name: name || "عميل" },
+        update: { name: customerName || undefined },
+        create: { phone, userId, name: customerName || "عميل WooCommerce" },
       });
     });
 
-    // ── Step 2: Fire StoreAutomation — order_confirm ──────────────────────
-    // الأتمتة نفسها بتشتغل من صفحة المتجر زي Shopify و EasyOrders
-    // الإرسال يحصل من StoreAutomation trigger اللي بتشوف لو isEnabled = true
-
-    const automation = await step.run("check-confirm-automation", async () => {
-      if (!wooCommerceStoreId) return null;
-      return prisma.storeAutomation.findFirst({
+    // ── Step 2: Save StoreOrder ────────────────────────────────────────────
+    const order = await step.run("save-order", async () => {
+      return prisma.storeOrder.upsert({
         where: {
-          wooCommerceStoreId,
-          type:      "order_confirm",
-          isEnabled: true,
+          source_externalId_userId: {
+            userId,
+            source:     "woocommerce",
+            externalId: String(orderId),
+          },
         },
-        include: {
-          template: { select: { id: true, name: true } },
+        update: { status: "pending" },
+        create: {
+          userId,
+          source:             "woocommerce",
+          externalId:         String(orderId),
+          orderNumber:        orderNumber ? String(orderNumber) : undefined,
+          customerName,
+          customerPhone:      phone,
+          total:              totalPrice != null ? Number(totalPrice) : undefined,
+          currency:           currency || "EGP",
+          status:             "pending",
+          contactId:          contact.id,
+          wooCommerceStoreId: woocommerceStoreId,
+          rawData: couponCodes?.length
+            ? { couponCodes }
+            : undefined,
         },
       });
     });
 
-    if (automation?.templateId) {
-      await step.run("send-confirm-message", async () => {
-        // بعت event لـ Inngest Campaign sender
-        await inngest.send({
-          name: "store/automation.trigger",
-          data: {
-            userId,
-            contactId:   contact.id,
-            phone,
-            customerName: name,
-            orderNumber,
-            total,
-            currency,
-            templateId:  automation.templateId,
-            automationType: "order_confirm",
-            source:      "woocommerce",
-          },
-        });
+    console.log(`[WooCommerce] ✓ Order #${orderNumber} saved — contact: ${contact.id}${couponCodes?.length ? ` — كوبون: ${couponCodes.join(",")}` : ""}`);
+    return { success: true, orderId: order.id, contactId: contact.id };
+  }
+);
 
-        // زود عداد الـ sent
-        await prisma.storeAutomation.update({
-          where: { id: automation.id },
-          data:  { sentCount: { increment: 1 } },
-        });
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. Order Fulfilled (completed) — تحديث حالة الشحن + Tracking
+// ═══════════════════════════════════════════════════════════════════════════════
+export const handleWooOrderFulfilled = inngest.createFunction(
+  { id: "woo-order-fulfilled", retries: 2, triggers: [{ event: "woocommerce/order.fulfilled" }] },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { userId, orderId, orderNumber, trackingUrl, trackingNumber, shippingProvider } = event.data;
+
+    await step.run("update-order-fulfilled", async () => {
+      await prisma.storeOrder.updateMany({
+        where: { userId, source: "woocommerce", externalId: String(orderId) },
+        data: {
+          status:  "fulfilled",
+          rawData: (trackingUrl || trackingNumber)
+            ? { trackingUrl, trackingNumber, shippingProvider }
+            : undefined,
+        },
       });
+    });
+
+    console.log(`[WooCommerce] ✓ Order #${orderNumber} fulfilled${trackingUrl ? ` — tracking: ${trackingUrl}` : ""}`);
+    return { success: true };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. Order Updated — تحديث الحالة العامة
+// ═══════════════════════════════════════════════════════════════════════════════
+export const handleWooOrderUpdated = inngest.createFunction(
+  { id: "woo-order-updated", retries: 2, triggers: [{ event: "woocommerce/order.updated" }] },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { userId, orderId, orderNumber, status } = event.data;
+
+    await step.run("update-order-status", async () => {
+      await prisma.storeOrder.updateMany({
+        where: { userId, source: "woocommerce", externalId: String(orderId) },
+        data:  { status: status || "updated" },
+      });
+    });
+
+    // لو اتشحن → بعت fulfilled event
+    if (status === "completed") {
+      await inngest.send({ name: "woocommerce/order.fulfilled", data: event.data });
     }
 
-    return { success: true, contactId: contact.id };
+    console.log(`[WooCommerce] ✓ Order #${orderNumber} → ${status}`);
+    return { processed: true };
   }
 );

@@ -1,4 +1,8 @@
 // src/app/api/inngest/route.ts
+// ─── Inngest Handler ──────────────────────────────────────────────────────────
+// ده الباب اللي Inngest بيكلم مشروعك من خلاله
+// لازم يكون accessible (مش محمي بـ auth)
+
 import { serve }            from "inngest/next";
 import { inngest }          from "@/inngest/client";
 import { processCampaign, sendDirectMessage } from "@/inngest/functions";
@@ -7,8 +11,12 @@ import {
   handleShopifyOrderFulfilled,
   handleShopifyOrderUpdated,
 } from "@/inngest/shopify-functions";
-import { handleEasyOrderReceived }  from "@/inngest/easy-orders-functions";
-import { handleWooOrderReceived }   from "@/inngest/woocommerce-functions";
+import { handleEasyOrderReceived } from "@/inngest/easy-orders-functions";
+import {
+  handleWooOrderCreated,
+  handleWooOrderFulfilled,
+  handleWooOrderUpdated,
+} from "@/inngest/woocommerce-functions";
 import {
   noReplyCron,
   timeBasedCron,
@@ -23,7 +31,10 @@ const inngestHandler = serve({
     handleShopifyOrderFulfilled,
     handleShopifyOrderUpdated,
     handleEasyOrderReceived,
-    handleWooOrderReceived,
+    handleWooOrderCreated,
+    handleWooOrderFulfilled,
+    handleWooOrderUpdated,
+    // ── Automation Crons ──
     noReplyCron,
     timeBasedCron,
   ],
