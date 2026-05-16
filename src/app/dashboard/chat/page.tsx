@@ -9,8 +9,9 @@ import {
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
-  Moon, Sun, Globe, ArrowLeft, ChevronLeft,
+  Globe, ArrowLeft, ChevronLeft,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub,
@@ -300,7 +301,8 @@ function Bubble({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
-  const [dark, setDark] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
   const [lang, setLang] = useState<Lang>("ar");
 
   const [convs, setConvs]               = useState<Conversation[]>([]);
@@ -605,14 +607,6 @@ export default function ChatPage() {
               >
                 <Globe className="w-3.5 h-3.5" />
                 {lang === "ar" ? "EN" : "عر"}
-              </button>
-              {/* Dark mode toggle */}
-              <button
-                onClick={() => setDark(d => !d)}
-                className={`p-1.5 rounded-full transition-all
-                  ${dark ? "bg-[#2a3942] text-yellow-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-              >
-                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
           </div>
