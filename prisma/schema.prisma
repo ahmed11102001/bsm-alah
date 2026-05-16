@@ -65,7 +65,7 @@ model Subscription {
   campaignsUsedThisMonth Int                @default(0)
   periodResetAt          DateTime           @default(now())
   currentPeriodStart     DateTime           @default(now())
-  currentPeriodEnd       DateTime           @default(dbgenerated("(now() + '100 years'::interval)"))
+  currentPeriodEnd       DateTime?          // null = free plan (لا ينتهي) — set by Stripe for paid plans
   stripeCustomerId       String?            @unique
   stripeSubscriptionId   String?            @unique
   createdAt              DateTime           @default(now())

@@ -79,7 +79,7 @@ export async function POST(req: Request) {
           campaignsUsedThisMonth: 0,
           periodResetAt: new Date(),
           currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date("2099-12-31"),
+          currentPeriodEnd:   null,  // free plan — لا ينتهي
         },
       });
 
