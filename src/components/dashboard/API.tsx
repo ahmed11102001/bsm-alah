@@ -154,15 +154,18 @@ interface ShopifyStatus {
 }
 
 function ShopifyContent({
-  storeName, setStoreName, webhookUrl, status, onConnect, onRefresh, loading,
+  storeName, setStoreName, shopDomain, setShopDomain,
+  webhookUrl, status, onConnect, onRefresh, loading,
 }: {
-  storeName:    string;
-  setStoreName: (v: string) => void;
-  webhookUrl:   string;
-  status:       ShopifyStatus | null;
-  onConnect:    () => void;
-  onRefresh:    () => void;
-  loading:      boolean;
+  storeName:      string;
+  setStoreName:   (v: string) => void;
+  shopDomain:     string;
+  setShopDomain:  (v: string) => void;
+  webhookUrl:     string;
+  status:         ShopifyStatus | null;
+  onConnect:      () => void;
+  onRefresh:      () => void;
+  loading:        boolean;
 }) {
   async function handleDisconnect() {
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
@@ -194,14 +197,29 @@ function ShopifyContent({
 
       {/* ── اسم المتجر (قبل الربط فقط) ──────────────────────────────────────── */}
       {!status?.connected && (
-        <div>
-          <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
-          <Input
-            placeholder="مثال: متجر العلاء"
-            value={storeName}
-            onChange={e => setStoreName(e.target.value)}
-            className="mt-1 dark:bg-gray-700 dark:border-gray-600"
-          />
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
+            <Input
+              placeholder="مثال: متجر العلاء"
+              value={storeName}
+              onChange={e => setStoreName(e.target.value)}
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+          <div>
+            <Label className="text-xs dark:text-gray-400">
+              دومين Shopify
+              <span className="text-gray-400 font-normal mr-1">(اختياري — للتحقق)</span>
+            </Label>
+            <Input
+              placeholder="mystore.myshopify.com"
+              value={shopDomain}
+              onChange={e => setShopDomain(e.target.value)}
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left"
+              dir="ltr"
+            />
+          </div>
         </div>
       )}
 
@@ -487,6 +505,7 @@ export default function API({ initialData }: { initialData?: any }) {
     connected: boolean; storeName?: string; connectedAt?: string | null; webhookUrl?: string;
   } | null>(null);
   const [shStoreName,      setShStoreName]      = useState("");
+  const [shShopDomain,     setShShopDomain]     = useState("");
   const [shWebhookUrl,     setShWebhookUrl]     = useState("");
   const [shUrlLoaded,      setShUrlLoaded]      = useState(false);
   const [shConnecting,     setShConnecting]     = useState(false);
@@ -606,7 +625,10 @@ export default function API({ initialData }: { initialData?: any }) {
       const r = await fetch("/api/shopify/install", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ storeName: shStoreName.trim() }),
+        body:    JSON.stringify({
+          storeName:  shStoreName.trim(),
+          shopDomain: shShopDomain.trim() || undefined,
+        }),
       });
       const d = await r.json();
       if (!r.ok) { toast.error(d.error ?? "فشل الحفظ"); return; }
@@ -695,6 +717,7 @@ export default function API({ initialData }: { initialData?: any }) {
             {card.id === "shopify" && (
               <ShopifyContent
                 storeName={shStoreName}
+                shopDomain={shShopDomain}   setShopDomain={setShShopDomain}
                 setStoreName={setShStoreName}
                 webhookUrl={shWebhookUrl}
                 status={shopifyStatus}
