@@ -36,6 +36,7 @@ model User {
   campaigns        Campaign[]
   contacts         Contact[]
   easyOrdersStore  EasyOrdersStore?
+  wooCommerceStore WooCommerceStore?
   messages         Message[]
   messageQueues    MessageQueue[]
   notifications    Notification[]
@@ -321,7 +322,8 @@ model Coupon {
 model ShopifyStore {
   id          String            @id @default(cuid())
   userId      String            @unique
-  shop        String                       // اسم المتجر كما أدخله اليوزر — مش لازم unique
+  shop        String            @unique  // myshopify.com domain — verified
+  storeName   String                     // اسم العرض اللي بيختاره المستخدم
   accessToken String?
   scope       String?
   isActive    Boolean           @default(true)
@@ -346,6 +348,23 @@ model EasyOrdersStore {
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   automations   StoreAutomation[]
   orders        StoreOrder[]
+
+  @@index([userId])
+}
+
+
+model WooCommerceStore {
+  id           String       @id @default(cuid())
+  userId       String       @unique
+  storeName    String
+  storeUrl     String?
+  isActive     Boolean      @default(true)
+  totalSynced  Int          @default(0)
+  lastSyncAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders       StoreOrder[]
 
   @@index([userId])
 }
@@ -430,7 +449,8 @@ model StoreOrder {
   source               OrderSource
   total                Float             @default(0)
   campaignOrder        CampaignOrder?
-  easyOrdersStore      EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
+  easyOrdersStore      EasyOrdersStore?   @relation(fields: [easyOrdersStoreId], references: [id])
+  wooCommerceStore     WooCommerceStore?  @relation(fields: [wooCommerceStoreId], references: [id], onDelete: SetNull)
   shopifyStore         ShopifyStore?     @relation(fields: [shopifyStoreId], references: [id])
   wooCommerceStore     WooCommerceStore? @relation(fields: [wooCommerceStoreId], references: [id])
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)

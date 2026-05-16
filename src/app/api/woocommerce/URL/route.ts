@@ -2,36 +2,41 @@
 import { NextResponse }     from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions }      from "@/lib/auth";
+import { createHmac }       from "crypto";
 import prisma               from "@/lib/prisma";
-import { generateWooWebhookUrl } from "@/app/api/woocommerce/webhooks/route";
+
+export function generateWooWebhookUrl(userId: string): string {
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const token = createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
+    .update(`woo:${userId}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `${base}/api/woocommerce/webhooks?uid=${userId}&token=${token}`;
+}
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  if (!session?.user?.email)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const dbUser = await prisma.user.findUnique({
     where:  { email: session.user.email },
     select: { id: true, parentId: true },
   });
-  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!dbUser) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const userId = dbUser.parentId ?? dbUser.id;
-  const url    = generateWooWebhookUrl(userId);
 
-  // جيب بيانات المتجر لو موجود
   const store = await prisma.wooCommerceStore.findUnique({
     where:  { userId },
-    select: { storeName: true, isActive: true, totalSynced: true, lastSyncAt: true },
-  });
+    select: { storeName: true, createdAt: true, totalSynced: true, lastSyncAt: true },
+  }).catch(() => null);
 
   return NextResponse.json({
-    url,
+    url:         generateWooWebhookUrl(userId),
     connected:   !!store,
-    storeName:   store?.storeName,
-    isActive:    store?.isActive,
+    storeName:   store?.storeName   ?? null,
     totalSynced: store?.totalSynced ?? 0,
-    lastSyncAt:  store?.lastSyncAt ?? null,
+    lastSyncAt:  store?.lastSyncAt  ?? null,
   });
 }

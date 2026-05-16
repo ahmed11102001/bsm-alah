@@ -1,6 +1,11 @@
--- AlterTable ShopifyStore: make accessToken optional, remove @unique from shop, add isActive
-ALTER TABLE "ShopifyStore" ALTER COLUMN "accessToken" DROP NOT NULL;
-ALTER TABLE "ShopifyStore" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;
+-- AlterTable ShopifyStore: make accessToken optional, remove unique from shop, add isActive
 
--- Drop the unique index on shop (userId is already unique per user)
-DROP INDEX IF EXISTS "ShopifyStore_shop_key";
+ALTER TABLE "ShopifyStore"
+ALTER COLUMN "accessToken" DROP NOT NULL;
+
+ALTER TABLE "ShopifyStore"
+ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;
+
+-- Remove UNIQUE constraint from shop
+ALTER TABLE "ShopifyStore"
+DROP CONSTRAINT IF EXISTS "ShopifyStore_shop_key";
