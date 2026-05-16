@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/language-context";
 import { Button }   from "@/components/ui/button";
 import { Input }    from "@/components/ui/input";
 import { Label }    from "@/components/ui/label";
@@ -54,6 +55,8 @@ interface AIAgent {
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
 }
+type Lang = "ar" | "en";
+const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
 const EMPTY_AGENT: AIAgent = {
   isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
@@ -63,18 +66,18 @@ const EMPTY_AGENT: AIAgent = {
 type AutoSubTab = "keywords" | "welcome" | "noreply" | "timebased" | "ab";
 
 const DAYS_AR = [
-  { key: "sun", label: "الأحد" }, { key: "mon", label: "الاثنين" },
-  { key: "tue", label: "الثلاثاء" }, { key: "wed", label: "الأربعاء" },
-  { key: "thu", label: "الخميس" }, { key: "fri", label: "الجمعة" },
-  { key: "sat", label: "السبت" },
+  { key: "sun", ar: "الأحد", en: "Sunday" }, { key: "mon", ar: "الاثنين", en: "Monday" },
+  { key: "tue", ar: "الثلاثاء", en: "Tuesday" }, { key: "wed", ar: "الأربعاء", en: "Wednesday" },
+  { key: "thu", ar: "الخميس", en: "Thursday" }, { key: "fri", ar: "الجمعة", en: "Friday" },
+  { key: "sat", ar: "السبت", en: "Saturday" },
 ];
 
-const subTabs: { id: AutoSubTab; label: string; icon: any }[] = [
-  { id: "keywords",  label: "الكلمات",    icon: Key           },
-  { id: "welcome",   label: "الترحيب",    icon: Hand          },
-  { id: "noreply",   label: "المتابعة",   icon: Clock         },
-  { id: "timebased", label: "الزمنية",    icon: CalendarClock },
-  { id: "ab",        label: "A/B اختبار", icon: FlaskConical  },
+const subTabs: { id: AutoSubTab; ar: string; en: string; icon: any }[] = [
+  { id: "keywords",  ar: "الكلمات",    en: "Keywords",   icon: Key           },
+  { id: "welcome",   ar: "الترحيب",    en: "Welcome",    icon: Hand          },
+  { id: "noreply",   ar: "المتابعة",   en: "Follow-up",  icon: Clock         },
+  { id: "timebased", ar: "الزمنية",    en: "Scheduled",  icon: CalendarClock },
+  { id: "ab",        ar: "A/B اختبار", en: "A/B Test",   icon: FlaskConical  },
 ];
 
 // ─── Small reusable pieces ────────────────────────────────────────────────────
@@ -91,43 +94,43 @@ function EmptyState({ icon, title, desc, action }: {
   );
 }
 
-function OutboundWarning() {
+function OutboundWarning({ lang }: { lang: Lang }) {
   return (
     <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-700 dark:text-amber-300">
       <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
       <div>
-        <p className="font-semibold mb-0.5">يستخدم قوالب رسمية فقط</p>
-        <p className="text-xs leading-relaxed">هذا النوع يبادر بإرسال رسالة للعميل — واتساب يشترط قوالب معتمدة من Meta لتجنب الحظر.</p>
+        <p className="font-semibold mb-0.5">{tx(lang, "يستخدم قوالب رسمية فقط", "Uses approved templates only")}</p>
+        <p className="text-xs leading-relaxed">{tx(lang, "هذا النوع يبادر بإرسال رسالة للعميل — واتساب يشترط قوالب معتمدة من Meta لتجنب الحظر.", "This flow starts outbound messages, so WhatsApp requires Meta-approved templates.")}</p>
       </div>
     </div>
   );
 }
 
-function WelcomeInfo() {
+function WelcomeInfo({ lang }: { lang: Lang }) {
   return (
     <div className="flex items-start gap-2.5 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl p-3 text-sm text-green-700 dark:text-green-300">
       <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
       <div>
-        <p className="font-semibold mb-0.5">نص حر مسموح به هنا</p>
-        <p className="text-xs leading-relaxed">رسالة الترحيب هي رد على رسالة وردت من العميل أولاً — أنت داخل نافذة 24 ساعة، لذا النص الحر آمن بدون قالب.</p>
+        <p className="font-semibold mb-0.5">{tx(lang, "نص حر مسموح به هنا", "Free text is allowed here")}</p>
+        <p className="text-xs leading-relaxed">{tx(lang, "رسالة الترحيب هي رد على رسالة وردت من العميل أولاً — أنت داخل نافذة 24 ساعة، لذا النص الحر آمن بدون قالب.", "Welcome replies are inside the 24-hour customer service window, so free text is safe without template.")}</p>
       </div>
     </div>
   );
 }
 
-function TemplatePicker({ templates, value, onChange }: {
-  templates: Template[]; value: string; onChange: (id: string) => void;
+function TemplatePicker({ templates, value, onChange, lang }: {
+  templates: Template[]; value: string; onChange: (id: string) => void; lang: Lang;
 }) {
   const approved = templates.filter(t => t.status?.toLowerCase() === "approved");
   if (approved.length === 0) return (
     <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5 border border-amber-100 dark:border-amber-800">
       <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-      لا توجد قوالب معتمدة — اذهب لصفحة القوالب وأضف قالباً أولاً
+      {tx(lang, "لا توجد قوالب معتمدة — اذهب لصفحة القوالب وأضف قالباً أولاً", "No approved templates — go to Templates page and add one first")}
     </div>
   );
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue placeholder="اختر قالباً معتمداً..." /></SelectTrigger>
+      <SelectTrigger><SelectValue placeholder={tx(lang, "اختر قالباً معتمداً...", "Choose an approved template...")} /></SelectTrigger>
       <SelectContent>
         {approved.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
       </SelectContent>
@@ -183,6 +186,8 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Automation() {
+  const { locale, dir } = useLanguage();
+  const lang: Lang = locale === "en" ? "en" : "ar";
   const [activeTab,    setActiveTab]    = useState<"automation" | "ai">("automation");
   const [activeSubTab, setActiveSubTab] = useState<AutoSubTab>("keywords");
 
@@ -244,7 +249,7 @@ export default function Automation() {
         elevenLabsApiKey:  agentData.elevenLabsApiKey  ?? "",
         elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
       });
-    } catch { toast.error("خطأ في تحميل البيانات"); }
+    } catch { toast.error(tx(lang, "خطأ في تحميل البيانات", "Failed to load data")); }
     finally  { setLoading(false); }
   }, []);
 
@@ -280,30 +285,30 @@ export default function Automation() {
   // ─── Save rule ────────────────────────────────────────────────────────────
   const saveRule = async () => {
     const { name, keyword, reply, templateId, noReplyDays, days, hour, minute, tbAudienceId, tbMaxContacts } = ruleForm;
-    if (!name.trim()) { toast.error("اسم القاعدة مطلوب"); return; }
+    if (!name.trim()) { toast.error(tx(lang, "اسم القاعدة مطلوب", "Rule name is required")); return; }
 
     let triggerType = "KEYWORD"; let triggerValue: string | null = null;
     let replyType = "TEXT"; let replyContent: string | null = null; let tplId: string | null = null;
 
     if (dialogMode === "keywords") {
-      if (!keyword.trim()) { toast.error("الكلمة المفتاحية مطلوبة"); return; }
-      if (!reply.trim())   { toast.error("نص الرد مطلوب"); return; }
+      if (!keyword.trim()) { toast.error(tx(lang, "الكلمة المفتاحية مطلوبة", "Keyword is required")); return; }
+      if (!reply.trim())   { toast.error(tx(lang, "نص الرد مطلوب", "Reply text is required")); return; }
       triggerType = "KEYWORD"; triggerValue = keyword.trim();
       replyType = "TEXT"; replyContent = reply.trim();
     } else if (dialogMode === "welcome") {
-      if (!reply.trim()) { toast.error("نص الرد مطلوب"); return; }
+      if (!reply.trim()) { toast.error(tx(lang, "نص الرد مطلوب", "Reply text is required")); return; }
       triggerType = "FIRST_MESSAGE"; replyType = "TEXT"; replyContent = reply.trim();
     } else if (dialogMode === "noreply") {
       const d = Number(noReplyDays);
-      if (!d || d < 1 || d > 365) { toast.error("عدد الأيام يجب أن يكون بين 1 و 365"); return; }
-      if (!templateId) { toast.error("اختر قالباً معتمداً"); return; }
+      if (!d || d < 1 || d > 365) { toast.error(tx(lang, "عدد الأيام يجب أن يكون بين 1 و 365", "Days must be between 1 and 365")); return; }
+      if (!templateId) { toast.error(tx(lang, "اختر قالباً معتمداً", "Choose an approved template")); return; }
       triggerType = "NO_REPLY"; triggerValue = String(d); replyType = "TEMPLATE"; tplId = templateId;
     } else if (dialogMode === "timebased") {
-      if (days.length === 0) { toast.error("اختر يوماً واحداً على الأقل"); return; }
-      if (!tbAudienceId)     { toast.error("اختر الجمهور المستهدف"); return; }
-      if (!templateId)       { toast.error("اختر قالباً معتمداً"); return; }
+      if (days.length === 0) { toast.error(tx(lang, "اختر يوماً واحداً على الأقل", "Choose at least one day")); return; }
+      if (!tbAudienceId)     { toast.error(tx(lang, "اختر الجمهور المستهدف", "Choose target audience")); return; }
+      if (!templateId)       { toast.error(tx(lang, "اختر قالباً معتمداً", "Choose an approved template")); return; }
       const maxN = Number(tbMaxContacts);
-      if (!maxN || maxN < 1) { toast.error("عدد جهات الاتصال يجب أن يكون أكبر من 0"); return; }
+      if (!maxN || maxN < 1) { toast.error(tx(lang, "عدد جهات الاتصال يجب أن يكون أكبر من 0", "Contacts count must be greater than 0")); return; }
       triggerType = "TIME_BASED";
       triggerValue = JSON.stringify({ days, hour, minute, audienceId: tbAudienceId, maxContacts: maxN });
       replyType = "TEMPLATE"; tplId = templateId;
@@ -317,10 +322,10 @@ export default function Automation() {
       const r       = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body });
       const d       = await r.json();
       if (!r.ok) throw new Error(d.error);
-      if (editTarget) { toast.success("تم التعديل"); setRules(prev => prev.map(x => x.id === editTarget.id ? d : x)); }
-      else             { toast.success("تم الإضافة"); setRules(prev => [...prev, d]); }
+      if (editTarget) { toast.success(tx(lang, "تم التعديل", "Updated")); setRules(prev => prev.map(x => x.id === editTarget.id ? d : x)); }
+      else             { toast.success(tx(lang, "تم الإضافة", "Added")); setRules(prev => [...prev, d]); }
       setShowDialog(false);
-    } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
+    } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed")); }
     finally { setSaving(false); }
   };
 
@@ -328,32 +333,32 @@ export default function Automation() {
     try {
       await fetch("/api/automation", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: rule.id, isEnabled: !rule.isEnabled }) });
       setRules(prev => prev.map(r => r.id === rule.id ? { ...r, isEnabled: !r.isEnabled } : r));
-    } catch { toast.error("خطأ في التحديث"); }
+    } catch { toast.error(tx(lang, "خطأ في التحديث", "Update failed")); }
   };
 
   const deleteRule = async (id: string) => {
     try {
       const r = await fetch("/api/automation", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
       if (!r.ok) throw new Error();
-      toast.success("تم الحذف"); setRules(prev => prev.filter(x => x.id !== id));
-    } catch { toast.error("خطأ في الحذف"); }
+      toast.success(tx(lang, "تم الحذف", "Deleted")); setRules(prev => prev.filter(x => x.id !== id));
+    } catch { toast.error(tx(lang, "خطأ في الحذف", "Delete failed")); }
   };
 
   // ─── A/B launch ───────────────────────────────────────────────────────────
   const launchABTest = async () => {
     const { name, audienceId, sampleSize, splitRatio, varAName, varATemplate, varBName, varBTemplate } = abForm;
-    if (!name.trim())  { toast.error("اسم الاختبار مطلوب"); return; }
-    if (!audienceId)   { toast.error("اختر جمهوراً"); return; }
-    if (!varATemplate) { toast.error("اختر قالب النسخة أ"); return; }
-    if (!varBTemplate) { toast.error("اختر قالب النسخة ب"); return; }
-    if (varATemplate === varBTemplate) { toast.error("يجب أن يكون لكل نسخة قالب مختلف"); return; }
+    if (!name.trim())  { toast.error(tx(lang, "اسم الاختبار مطلوب", "Test name is required")); return; }
+    if (!audienceId)   { toast.error(tx(lang, "اختر جمهوراً", "Choose audience")); return; }
+    if (!varATemplate) { toast.error(tx(lang, "اختر قالب النسخة أ", "Choose variant A template")); return; }
+    if (!varBTemplate) { toast.error(tx(lang, "اختر قالب النسخة ب", "Choose variant B template")); return; }
+    if (varATemplate === varBTemplate) { toast.error(tx(lang, "يجب أن يكون لكل نسخة قالب مختلف", "Each variant must use a different template")); return; }
 
     setLaunchingAb(true);
     try {
       const audRes  = await fetch(`/api/audiences?audienceId=${audienceId}&includeContacts=all`);
       const audData = await audRes.json();
       const contacts: { phone: string }[] = audData.audience?.contacts ?? [];
-      if (contacts.length === 0) { toast.error("الجمهور فارغ"); return; }
+      if (contacts.length === 0) { toast.error(tx(lang, "الجمهور فارغ", "Audience is empty")); return; }
 
       const shuffled = [...contacts].sort(() => Math.random() - 0.5);
       const n        = Math.min(Number(sampleSize), shuffled.length);
@@ -363,11 +368,11 @@ export default function Automation() {
       const groupA   = sample.slice(0, aCount).map(c => c.phone);
       const groupB   = sample.slice(aCount).map(c => c.phone);
 
-      if (groupA.length === 0 || groupB.length === 0) { toast.error("كل مجموعة تحتاج على الأقل جهة اتصال واحدة"); return; }
+      if (groupA.length === 0 || groupB.length === 0) { toast.error(tx(lang, "كل مجموعة تحتاج على الأقل جهة اتصال واحدة", "Each group needs at least one contact")); return; }
 
       const tplA = templates.find(t => t.id === varATemplate);
       const tplB = templates.find(t => t.id === varBTemplate);
-      if (!tplA || !tplB) { toast.error("لم يتم العثور على القوالب"); return; }
+      if (!tplA || !tplB) { toast.error(tx(lang, "لم يتم العثور على القوالب", "Templates not found")); return; }
 
       const [resA, resB] = await Promise.all([
         fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${name} — ${varAName}`, templateName: tplA.id, numbers: groupA }) }),
@@ -377,12 +382,12 @@ export default function Automation() {
       if (!resA.ok || !resB.ok) {
         const errA = await resA.json().catch(() => ({}));
         const errB = await resB.json().catch(() => ({}));
-        throw new Error(errA.error ?? errB.error ?? "خطأ في إنشاء الحملات");
+        throw new Error(errA.error ?? errB.error ?? tx(lang, "خطأ في إنشاء الحملات", "Failed to create campaigns"));
       }
 
-      toast.success(`✓ تم إطلاق اختبار A/B — ${groupA.length} للنسخة أ، ${groupB.length} للنسخة ب`);
+      toast.success(tx(lang, `✓ تم إطلاق اختبار A/B — ${groupA.length} للنسخة أ، ${groupB.length} للنسخة ب`, `✓ A/B test launched — ${groupA.length} for variant A, ${groupB.length} for variant B`));
       setAbForm({ name: "", audienceId: "", sampleSize: "100", splitRatio: "50", varAName: "نسخة أ", varATemplate: "", varBName: "نسخة ب", varBTemplate: "" });
-    } catch (e: any) { toast.error(e.message ?? "خطأ في إطلاق الاختبار"); }
+    } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في إطلاق الاختبار", "Failed to launch test")); }
     finally { setLaunchingAb(false); }
   };
 
@@ -393,9 +398,9 @@ export default function Automation() {
       const r = await fetch("/api/ai-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(agent) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      toast.success("تم حفظ إعدادات الوكيل الذكي");
+      toast.success(tx(lang, "تم حفظ إعدادات الوكيل الذكي", "AI agent settings saved"));
       setAgentDirty(false); setAgentSaved(true);
-    } catch (e: any) { toast.error(e.message ?? "خطأ في الحفظ"); }
+    } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed")); }
     finally { setSavingAgent(false); }
   };
 
@@ -454,7 +459,7 @@ export default function Automation() {
           </div>
           {welcomeRules.length === 0 && <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("welcome")}><Plus className="w-4 h-4" /> إضافة ترحيب</Button>}
         </div>
-        <WelcomeInfo />
+        <WelcomeInfo lang={lang} />
         <div className="mt-4">
           {welcomeRules.length === 0 ? (
             <EmptyState icon={<Hand className="w-10 h-10 text-green-300" />} title="لا يوجد ترحيب تلقائي" desc="أضف رسالة ترحيب تُرسل فور تواصل أي عميل جديد"
@@ -485,7 +490,7 @@ export default function Automation() {
           </div>
           <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> قاعدة جديدة</Button>
         </div>
-        <OutboundWarning />
+        <OutboundWarning lang={lang} />
         <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
           تُفعَّل هذه القواعد بشكل تلقائي يومياً عبر Inngest scheduler — تأكد من إعداد الـ cron function في السيرفر.
@@ -512,7 +517,7 @@ export default function Automation() {
           </div>
           <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> جدولة جديدة</Button>
         </div>
-        <OutboundWarning />
+        <OutboundWarning lang={lang} />
         <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
           الأتمتة الزمنية تحتاج Inngest cron function تشتغل كل ساعة لفحص القواعد المجدولة.
@@ -619,7 +624,7 @@ export default function Automation() {
                 <Input value={abForm.varAName} onChange={e => setAbForm(f => ({ ...f, varAName: e.target.value }))} className="font-semibold border-0 p-0 h-7 focus-visible:ring-0 bg-transparent dark:bg-transparent" />
               </div>
               <p className="text-xs text-gray-400 mb-2">القالب</p>
-              <TemplatePicker templates={templates} value={abForm.varATemplate} onChange={v => setAbForm(f => ({ ...f, varATemplate: v }))} />
+              <TemplatePicker templates={templates} value={abForm.varATemplate} onChange={v => setAbForm(f => ({ ...f, varATemplate: v }))} lang={lang} />
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * Number(abForm.splitRatio) / 100)} جهة اتصال</p>
             </div>
             <div className="bg-white dark:bg-gray-800 border-2 border-amber-200 dark:border-amber-700 rounded-2xl p-4">
@@ -628,7 +633,7 @@ export default function Automation() {
                 <Input value={abForm.varBName} onChange={e => setAbForm(f => ({ ...f, varBName: e.target.value }))} className="font-semibold border-0 p-0 h-7 focus-visible:ring-0 bg-transparent dark:bg-transparent" />
               </div>
               <p className="text-xs text-gray-400 mb-2">القالب</p>
-              <TemplatePicker templates={templates} value={abForm.varBTemplate} onChange={v => setAbForm(f => ({ ...f, varBTemplate: v }))} />
+              <TemplatePicker templates={templates} value={abForm.varBTemplate} onChange={v => setAbForm(f => ({ ...f, varBTemplate: v }))} lang={lang} />
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * (100 - Number(abForm.splitRatio)) / 100)} جهة اتصال</p>
             </div>
           </div>
@@ -647,7 +652,7 @@ export default function Automation() {
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
-    <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir="rtl">
+    <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
 
       {/* Main Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 w-fit">
@@ -656,7 +661,7 @@ export default function Automation() {
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
               ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
             {tab === "automation" ? <LayoutGrid className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            {tab === "automation" ? "الأتمتة" : "الذكاء الاصطناعي"}
+            {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "الذكاء الاصطناعي", "AI")}
             {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-green-500" />}
           </button>
         ))}
@@ -672,7 +677,7 @@ export default function Automation() {
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
                   ${activeSubTab === st.id ? "bg-green-500 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
                 <st.icon className="w-3.5 h-3.5" />
-                {st.label}
+                {lang === "ar" ? st.ar : st.en}
                 {badgeCount[st.id] > 0 && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeSubTab === st.id ? "bg-white/20 text-white" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"}`}>
                     {badgeCount[st.id]}
@@ -690,14 +695,14 @@ export default function Automation() {
         <>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وكيل الذكاء الاصطناعي</h2>
-              <p className="text-sm text-gray-400 mt-0.5">يرد على أي رسالة مش عندها كلمة مفتاحية</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{tx(lang, "وكيل الذكاء الاصطناعي", "AI Agent")}</h2>
+              <p className="text-sm text-gray-400 mt-0.5">{tx(lang, "يرد على أي رسالة مش عندها كلمة مفتاحية", "Replies to messages that don't match keyword rules")}</p>
             </div>
             <button onClick={() => updateAgent({ isEnabled: !agent.isEnabled })}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm transition-all
                 ${agent.isEnabled ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300" : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"}`}>
               {agent.isEnabled ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
-              {agent.isEnabled ? "مفعّل" : "معطّل"}
+              {agent.isEnabled ? tx(lang, "مفعّل", "Enabled") : tx(lang, "معطّل", "Disabled")}
             </button>
           </div>
           <div className="space-y-5">
@@ -782,7 +787,7 @@ export default function Automation() {
                 ${agentSaved && !agentDirty ? "bg-green-500 hover:bg-green-600 shadow-[0_0_22px_rgba(34,197,94,0.6)]" : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_24px_rgba(16,185,129,0.65)]"}`}
               onClick={saveAgent} disabled={savingAgent || !agentDirty}>
               {savingAgent ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              {savingAgent ? "جاري الحفظ..." : agentDirty ? "حفظ الإعدادات" : "تم الحفظ"}
+              {savingAgent ? tx(lang, "جاري الحفظ...", "Saving...") : agentDirty ? tx(lang, "حفظ الإعدادات", "Save settings") : tx(lang, "تم الحفظ", "Saved")}
             </Button>
 
             {/* ElevenLabs Voice Agent */}
@@ -794,7 +799,7 @@ export default function Automation() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">ElevenLabs Voice Agent</h3>
-                    <p className="text-xs text-gray-400">كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا</p>
+                  <p className="text-xs text-gray-400">{tx(lang, "كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا", "Each user can use their own ElevenLabs voice agent")}</p>
                   </div>
                 </div>
                 <button onClick={() => updateAgent({ elevenLabsEnabled: !agent.elevenLabsEnabled })}
@@ -803,7 +808,7 @@ export default function Automation() {
                       ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
                       : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"}`}>
                   {agent.elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
-                  {agent.elevenLabsEnabled ? "مفعّل" : "معطّل"}
+                  {agent.elevenLabsEnabled ? tx(lang, "مفعّل", "Enabled") : tx(lang, "معطّل", "Disabled")}
                 </button>
               </div>
 
@@ -847,23 +852,23 @@ export default function Automation() {
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              {dialogMode === "keywords"  && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? "تعديل الكلمة" : "كلمة مفتاحية جديدة"}</>}
-              {dialogMode === "welcome"   && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? "تعديل رسالة الترحيب" : "رسالة ترحيب جديدة"}</>}
-              {dialogMode === "noreply"   && <><Clock className="w-5 h-5 text-amber-500" /> {editTarget ? "تعديل قاعدة المتابعة" : "قاعدة متابعة جديدة"}</>}
-              {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? "تعديل الجدولة" : "جدولة زمنية جديدة"}</>}
+              {dialogMode === "keywords"  && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
+              {dialogMode === "welcome"   && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل رسالة الترحيب", "Edit welcome message") : tx(lang, "رسالة ترحيب جديدة", "New welcome message")}</>}
+              {dialogMode === "noreply"   && <><Clock className="w-5 h-5 text-amber-500" /> {editTarget ? tx(lang, "تعديل قاعدة المتابعة", "Edit follow-up rule") : tx(lang, "قاعدة متابعة جديدة", "New follow-up rule")}</>}
+              {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? tx(lang, "تعديل الجدولة", "Edit schedule") : tx(lang, "جدولة زمنية جديدة", "New schedule")}</>}
             </DialogTitle>
             <DialogDescription>
-              {dialogMode === "keywords"  && "لما العميل يكتب الكلمة دي، البوت يرد فوراً"}
-              {dialogMode === "welcome"   && "ترسل تلقائياً على أول رسالة من عميل جديد"}
-              {dialogMode === "noreply"   && "ترسل قالباً للعميل بعد صمت عدد من الأيام"}
-              {dialogMode === "timebased" && "ترسل قالباً في وقت وأيام محددة أسبوعياً"}
+              {dialogMode === "keywords"  && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When customer sends this keyword, bot replies instantly")}
+              {dialogMode === "welcome"   && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on first customer message")}
+              {dialogMode === "noreply"   && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after no-reply days")}
+              {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends template at selected weekly time slots")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-sm mb-1.5 block">اسم القاعدة *</Label>
-              <Input value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder="مثال: رد السعر" />
+              <Label className="text-sm mb-1.5 block">{tx(lang, "اسم القاعدة", "Rule name")} *</Label>
+              <Input value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder={tx(lang, "مثال: رد السعر", "e.g. Price reply")} />
             </div>
 
             {dialogMode === "keywords" && (
@@ -882,7 +887,7 @@ export default function Automation() {
 
             {dialogMode === "welcome" && (
               <>
-                <WelcomeInfo />
+                <WelcomeInfo lang={lang} />
                 <div>
                   <Label className="text-sm mb-1.5 block">نص رسالة الترحيب *</Label>
                   <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder="مثال: أهلاً وسهلاً! 👋 نورت متجرنا. كيف يمكنني مساعدتك؟" className="min-h-[120px] resize-none text-sm" dir="rtl" />
@@ -892,7 +897,7 @@ export default function Automation() {
 
             {dialogMode === "noreply" && (
               <>
-                <OutboundWarning />
+                <OutboundWarning lang={lang} />
                 <div>
                   <Label className="text-sm mb-1.5 block">عدد أيام الصمت *</Label>
                   <div className="flex items-center gap-2">
@@ -902,21 +907,21 @@ export default function Automation() {
                 </div>
                 <div>
                   <Label className="text-sm mb-1.5 block">القالب المعتمد *</Label>
-                  <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} />
+                  <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} lang={lang} />
                 </div>
               </>
             )}
 
             {dialogMode === "timebased" && (
               <>
-                <OutboundWarning />
+                <OutboundWarning lang={lang} />
                 <div>
                   <Label className="text-sm mb-2 block">أيام الإرسال *</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {DAYS_AR.map(d => (
                       <button key={d.key} onClick={() => toggleDay(d.key)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${ruleForm.days.includes(d.key) ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200"}`}>
-                        {d.label}
+                        {lang === "ar" ? d.ar : d.en}
                       </button>
                     ))}
                   </div>
@@ -967,7 +972,7 @@ export default function Automation() {
                 </div>
                 <div>
                   <Label className="text-sm mb-1.5 block">القالب المعتمد *</Label>
-                  <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} />
+                  <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} lang={lang} />
                 </div>
               </>
             )}
