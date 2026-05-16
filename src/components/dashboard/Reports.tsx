@@ -26,6 +26,7 @@ import {
   ChevronRight, AlertCircle, UserCheck, Archive,
   RefreshCw, Shield, ShoppingBag, DollarSign,
   Package, Star, Zap, Store, ArrowUpRight,
+  Bot,
 } from "lucide-react";
 import AutomationReportTab from "@/components/dashboard/AutomationReportTab";
 
