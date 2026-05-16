@@ -26,7 +26,7 @@ import {
   MessageCircle, Home, CheckCircle,
   Loader2, ArrowUpRight, Shield, Phone, Mail,
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
-  Languages,
+  Languages, Bot,
 } from "lucide-react";
 import Contacts        from "@/components/dashboard/Contacts";
 import Templates       from "@/components/dashboard/Templates";
@@ -75,7 +75,7 @@ const SIDEBAR_IDS = [
   { icon: FileText,      id: "templates"  },
   { icon: MessageSquare, id: "chat"       },
   { icon: BarChart3,     id: "reports"    },
-  { icon: Settings,      id: "automation" },
+  { icon: Bot,           id: "automation" },
   { icon: ShoppingBag,   id: "store"      },
   { icon: Code,          id: "api"        },
 ] as const;

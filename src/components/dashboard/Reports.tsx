@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import ExcelJS from "exceljs";
@@ -116,11 +116,11 @@ function StatCard({
   icon: React.ReactNode; color: string;
 }) {
   return (
-    <Card className="border border-gray-100 shadow-sm">
+    <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
       <CardContent className="p-5 flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500 mb-1">{label}</p>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {typeof value === "number" ? value.toLocaleString("ar-EG") : value}
           </p>
           {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
@@ -273,8 +273,8 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">التقارير والإحصائيات</h1>
-          <p className="text-sm text-gray-500 mt-0.5">نظرة شاملة على أداء عملياتك</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">التقارير والإحصائيات</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">نظرة شاملة على أداء عملياتك</p>
         </div>
         {/* Export */}
         <div className="flex gap-2">
@@ -309,17 +309,17 @@ export default function Reports() {
       </div>
 
       {/* Filters */}
-      <Card className="border border-gray-100 shadow-sm mb-6">
+      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500">من</Label>
+            <Label className="text-xs text-gray-500 dark:text-gray-400">من</Label>
             <Input type="date" value={from} max={to}
               onChange={(e) => setFrom(e.target.value)}
               className="w-36 text-sm"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500">إلى</Label>
+            <Label className="text-xs text-gray-500 dark:text-gray-400">إلى</Label>
             <Input type="date" value={to} min={from} max={TODAY}
               onChange={(e) => setTo(e.target.value)}
               className="w-36 text-sm"
@@ -344,7 +344,7 @@ export default function Reports() {
           ].map((r) => (
             <button
               key={r.days}
-              className="text-xs text-gray-500 hover:text-green-600 hover:underline"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 hover:underline"
               onClick={() => {
                 setFrom(new Date(Date.now() - r.days * 86400_000).toISOString().slice(0, 10));
                 setTo(TODAY);
@@ -358,7 +358,7 @@ export default function Reports() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-6 bg-gray-100 p-1 rounded-xl h-auto flex-wrap gap-1">
+        <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl h-auto flex-wrap gap-1">
           {[
             { value: "overview",  label: "نظرة عامة",      icon: <BarChart3 className="w-4 h-4" /> },
             { value: "customers", label: "العملاء",          icon: <Users className="w-4 h-4" /> },
@@ -369,7 +369,7 @@ export default function Reports() {
           ].map((t) => (
             <TabsTrigger
               key={t.value} value={t.value}
-              className="flex items-center gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2"
+              className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 data-[state=active]:shadow-sm rounded-lg px-4 py-2"
             >
               {t.icon} {t.label}
             </TabsTrigger>
@@ -395,7 +395,7 @@ export default function Reports() {
               </div>
 
               {/* Daily chart */}
-              <Card className="border border-gray-100 shadow-sm">
+              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold">الرسائل يومياً</CardTitle>
                 </CardHeader>
@@ -417,7 +417,7 @@ export default function Reports() {
                       <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" />
                     </LineChart>
                   </ResponsiveContainer>
-                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500">
+                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> رسائل مرسلة</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> رسائل واردة</span>
                   </div>
@@ -426,7 +426,7 @@ export default function Reports() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Hourly heatmap */}
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">أفضل أوقات الإرسال</CardTitle>
                   </CardHeader>
@@ -458,7 +458,7 @@ export default function Reports() {
                 </Card>
 
                 {/* Best campaigns */}
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">أفضل الحملات أداءً</CardTitle>
                   </CardHeader>
@@ -469,7 +469,7 @@ export default function Reports() {
                       <div className="space-y-3">
                         {overview.bestCampaigns.map((c, i) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="w-6 h-6 rounded-full bg-gray-100 text-xs text-gray-500 flex items-center justify-center font-semibold flex-shrink-0">
+                            <span className="w-6 h-6 rounded-full bg-gray-100 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center font-semibold flex-shrink-0">
                               {i + 1}
                             </span>
                             <div className="flex-1 min-w-0">
@@ -519,7 +519,7 @@ export default function Reports() {
               ))}
             </div>
 
-            <Card className="border border-gray-100 shadow-sm">
+            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-0">
                 {loadingCust ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
@@ -530,13 +530,13 @@ export default function Reports() {
                     <table className="w-full text-sm">
                       <thead className="border-b border-gray-100">
                         <tr>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">الهاتف</th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">الاسم</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الهاتف</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الاسم</th>
                           {custSegment === "engaged" && (
-                            <><th className="text-right py-3 px-4 font-medium text-gray-500">الرسائل</th>
-                              <th className="text-right py-3 px-4 font-medium text-gray-500">غير مقروء</th></>
+                            <><th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الرسائل</th>
+                              <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">غير مقروء</th></>
                           )}
-                          <th className="text-right py-3 px-4 font-medium text-gray-500">آخر تواصل</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">آخر تواصل</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -582,7 +582,7 @@ export default function Reports() {
           ) : (
             <div className="space-y-5">
               {/* Team chart */}
-              <Card className="border border-gray-100 shadow-sm">
+              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold">نشاط الفريق</CardTitle>
                 </CardHeader>
@@ -602,7 +602,7 @@ export default function Reports() {
                       <Bar dataKey="replied" fill="#3b82f6" radius={[0, 3, 3, 0]} name="replied" />
                     </BarChart>
                   </ResponsiveContainer>
-                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500">
+                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> رسائل مرسلة</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> ردود</span>
                   </div>
@@ -610,16 +610,16 @@ export default function Reports() {
               </Card>
 
               {/* Team table */}
-              <Card className="border border-gray-100 shadow-sm">
+              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardContent className="p-0">
                   <table className="w-full text-sm">
                     <thead className="border-b border-gray-100">
                       <tr>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الاسم</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الصلاحية</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الرسائل المرسلة</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">الردود</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500">معدل الرد</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الاسم</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الصلاحية</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الرسائل المرسلة</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الردود</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">معدل الرد</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -662,10 +662,10 @@ export default function Reports() {
         <TabsContent value="logs">
           <div className="space-y-4">
             {/* Log filters */}
-            <Card className="border border-gray-100 shadow-sm">
+            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-4 flex flex-wrap gap-3 items-end">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">الحالة</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">الحالة</Label>
                   <Select value={logStatus} onValueChange={setLogStatus}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -678,7 +678,7 @@ export default function Reports() {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">نوع الرسالة</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">نوع الرسالة</Label>
                   <Select value={logType} onValueChange={setLogType}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -691,7 +691,7 @@ export default function Reports() {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500">بحث بالرقم</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">بحث بالرقم</Label>
                   <Input
                     className="w-40 text-sm" placeholder="201234..."
                     value={logSearch}
@@ -710,7 +710,7 @@ export default function Reports() {
             </Card>
 
             {/* Logs table */}
-            <Card className="border border-gray-100 shadow-sm">
+            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-0">
                 {loadingLogs ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
@@ -722,14 +722,14 @@ export default function Reports() {
                       <table className="w-full text-xs">
                         <thead className="border-b border-gray-100 bg-gray-50/50">
                           <tr>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الهاتف</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">العميل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الحالة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">النوع</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الاتجاه</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">الحملة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">المرسِل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500">التوقيت</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الهاتف</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">العميل</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الحالة</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">النوع</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الاتجاه</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الحملة</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">المرسِل</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">التوقيت</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -742,14 +742,14 @@ export default function Reports() {
                                   {statusLabel[m.status] ?? m.status}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-gray-500">{typeLabel[m.type] ?? m.type}</td>
+                              <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{typeLabel[m.type] ?? m.type}</td>
                               <td className="py-2.5 px-3">
                                 <span className={`px-2 py-0.5 rounded-full text-xs ${m.direction === "outbound" ? "bg-blue-50 text-blue-600" : "bg-teal-50 text-teal-600"}`}>
                                   {dirLabel[m.direction]}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-gray-500 truncate max-w-[100px]">{m.campaign?.name ?? "—"}</td>
-                              <td className="py-2.5 px-3 text-gray-500">{m.user?.name ?? m.user?.email ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400 truncate max-w-[100px]">{m.campaign?.name ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{m.user?.name ?? m.user?.email ?? "—"}</td>
                               <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
                                 {new Date(m.createdAt).toLocaleString("ar-EG", {
                                   month: "short", day: "numeric",
@@ -800,7 +800,7 @@ export default function Reports() {
               <Loader2 className="w-10 h-10 animate-spin text-green-400" />
             </div>
           ) : !storeReport ? (
-            <Card className="border border-gray-100 shadow-sm">
+            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-12 text-center text-gray-400">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">لا يوجد بيانات متجر متاحة</p>
@@ -837,78 +837,78 @@ export default function Reports() {
 
               {/* ── KPIs ── */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="border border-gray-100 shadow-sm col-span-1">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                       <Package className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">إجمالي الطلبات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الطلبات</p>
                       <p className="text-xl font-bold text-gray-800">
                         {storeReport.summary.totalOrders.toLocaleString("ar-EG")}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 shadow-sm col-span-1">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
                       <DollarSign className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">إجمالي الإيرادات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الإيرادات</p>
                       <p className="text-xl font-bold text-gray-800">
                         {storeReport.summary.totalRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 shadow-sm col-span-1 border-l-4 border-l-[#25D366]">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1 border-l-4 border-l-[#25D366]">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
                       <Zap className="w-4 h-4 text-[#25D366]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">إيرادات الحملات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">إيرادات الحملات</p>
                       <p className="text-xl font-bold text-[#25D366]">
                         {storeReport.summary.totalCampaignRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 shadow-sm col-span-1">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">نسبة الحملات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">نسبة الحملات</p>
                       <p className="text-xl font-bold text-purple-700">
                         {storeReport.summary.campaignRevenueShare}%
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 shadow-sm col-span-1">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
                       <Users className="w-4 h-4 text-orange-500" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">العملاء الفريدون</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">العملاء الفريدون</p>
                       <p className="text-xl font-bold text-gray-800">
                         {storeReport.summary.totalUniqueCustomers.toLocaleString("ar-EG")}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 shadow-sm col-span-1">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
                       <Store className="w-4 h-4 text-teal-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">المتاجر المربوطة</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">المتاجر المربوطة</p>
                       <p className="text-xl font-bold text-gray-800">
                         {storeReport.summary.storesConnected}
                       </p>
@@ -921,7 +921,7 @@ export default function Reports() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Campaign Revenue Share Visual */}
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Zap className="w-4 h-4 text-[#25D366]" />
@@ -931,7 +931,7 @@ export default function Reports() {
                   <CardContent>
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500">حملات واتساب</span>
+                        <span className="text-gray-500 dark:text-gray-400">حملات واتساب</span>
                         <span className="font-bold text-[#25D366]">{storeReport.summary.campaignRevenueShare}%</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
@@ -953,7 +953,7 @@ export default function Reports() {
                     {/* Orders by Status */}
                     {storeReport.ordersByStatus.length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 mb-2">الطلبات حسب الحالة</p>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">الطلبات حسب الحالة</p>
                         {storeReport.ordersByStatus.map((s) => {
                           const total = storeReport.summary.totalOrders || 1;
                           const pct = Math.round((s.count / total) * 100);
@@ -971,7 +971,7 @@ export default function Reports() {
                             <div key={s.status}>
                               <div className="flex justify-between text-xs mb-0.5">
                                 <span className="text-gray-600">{labels[s.status] ?? s.status}</span>
-                                <span className="text-gray-500">{s.count} طلب ({pct}%)</span>
+                                <span className="text-gray-500 dark:text-gray-400">{s.count} طلب ({pct}%)</span>
                               </div>
                               <div className="w-full bg-gray-100 rounded-full h-2">
                                 <div
@@ -988,7 +988,7 @@ export default function Reports() {
                 </Card>
 
                 {/* Daily Revenue Trend Chart */}
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-blue-500" />
@@ -1027,7 +1027,7 @@ export default function Reports() {
 
               {/* ── Revenue Attribution per Campaign ── */}
               {storeReport.campaignRevenue.length > 0 && (
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <ArrowUpRight className="w-4 h-4 text-[#25D366]" />
@@ -1080,12 +1080,12 @@ export default function Reports() {
                                 <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${
                                   parseFloat(convRate) >= 5 ? "bg-green-50 text-green-600"
                                   : parseFloat(convRate) >= 2 ? "bg-yellow-50 text-yellow-600"
-                                  : "bg-gray-100 text-gray-500"
+                                  : "bg-gray-100 text-gray-500 dark:text-gray-400"
                                 }`}>
                                   {convRate}%
                                 </span>
                               </td>
-                              <td className="py-3 text-center text-gray-500 text-xs">{revPerMsg} EGP</td>
+                              <td className="py-3 text-center text-gray-500 dark:text-gray-400 text-xs">{revPerMsg} EGP</td>
                               <td className="py-3 pl-2 text-right text-xs text-gray-400">
                                 {c.completedAt
                                   ? new Date(c.completedAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })
@@ -1099,7 +1099,7 @@ export default function Reports() {
 
                     {/* Revenue Bar Chart */}
                     <div className="mt-6">
-                      <p className="text-xs font-semibold text-gray-500 mb-3">مقارنة إيرادات الحملات</p>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">مقارنة إيرادات الحملات</p>
                       <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={storeReport.campaignRevenue.slice(0, 8)} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
@@ -1131,7 +1131,7 @@ export default function Reports() {
 
               {/* ── Top Customers ── */}
               {storeReport.topCustomers.length > 0 && (
-                <Card className="border border-gray-100 shadow-sm">
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Star className="w-4 h-4 text-amber-500" />
@@ -1156,7 +1156,7 @@ export default function Reports() {
                             <td className="py-3">
                               <div className="font-medium text-gray-800">{c.name ?? "—"}</div>
                             </td>
-                            <td className="py-3 text-center text-gray-500 text-xs font-mono">{c.phone}</td>
+                            <td className="py-3 text-center text-gray-500 dark:text-gray-400 text-xs font-mono">{c.phone}</td>
                             <td className="py-3 text-center">
                               <span className="bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs">
                                 {c.ordersCount}
@@ -1184,3 +1184,4 @@ export default function Reports() {
     </div>
   );
 }
+
