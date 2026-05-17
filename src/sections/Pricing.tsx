@@ -135,20 +135,18 @@ export default function Pricing({ lang }: PricingProps) {
                   </div>
                 )}
 
-                {/* top full-width offer bar for enterprise */}
+                {/* top full-width offer bar for enterprise (part of the card, not overlay) */}
                 {isEnterprise && (
-                  <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-                    <div
-                      className="w-full text-center font-black text-[12px] py-2"
-                      style={{
-                        background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
-                        color: "#3a2500",
-                        boxShadow: "0 2px 8px rgba(180,130,0,0.35)",
-                        letterSpacing: "0.02em",
-                      }}
-                    >
-                      {isAr ? "عرض خاص" : "Special Offer"}
-                    </div>
+                  <div
+                    className="-mx-6 -mt-6 mb-2 rounded-t-2xl text-center font-black text-[12px] py-2"
+                    style={{
+                      background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
+                      color: "#3a2500",
+                      boxShadow: "0 2px 8px rgba(180,130,0,0.28)",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {isAr ? "عرض خاص" : "Special Offer"}
                   </div>
                 )}
 
