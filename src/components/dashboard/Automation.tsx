@@ -217,6 +217,19 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     varAName: "نسخة أ", varATemplate: "", varBName: "نسخة ب", varBTemplate: "",
   });
   const [launchingAb, setLaunchingAb] = useState(false);
+  const isEnterprise = planTier === "enterprise";
+  const isProOrAbove = planTier === "pro" || planTier === "enterprise";
+
+  const aiLockMsg = tx(
+    lang,
+    "تبويب الذكاء الاصطناعي متاح فقط في باقة Enterprise. قم بترقية الباقة.",
+    "AI tab is available only on Enterprise plan. Please upgrade."
+  );
+  const proLockMsg = tx(
+    lang,
+    "الميزة متاحة من باقة Professional فما فوق. قم بترقية الباقة.",
+    "This feature is available on Professional plan and above. Please upgrade."
+  );
 
   // ─── Load all data ────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -662,11 +675,29 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       {/* Main Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 w-fit">
         {(["automation", "ai"] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
+          <button
+            key={tab}
+            onClick={() => {
+              if (tab === "ai" && !isEnterprise) {
+                toast.error(aiLockMsg);
+                return;
+              }
+              setActiveTab(tab);
+            }}
+            onMouseEnter={() => {
+              if (tab === "ai" && !isEnterprise) toast.error(aiLockMsg);
+            }}
+            title={tab === "ai" && !isEnterprise ? aiLockMsg : undefined}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
-              ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              ${tab === "ai" && !isEnterprise
+                ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70"
+                : activeTab === tab
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}>
             {tab === "automation" ? <LayoutGrid className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
             {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "الذكاء الاصطناعي", "AI")}
+            {tab === "ai" && !isEnterprise && <span className="text-[10px]">🔒</span>}
             {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-green-500" />}
           </button>
         ))}
@@ -678,12 +709,22 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           {/* Inner sub-tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
             {subTabs.map(st => {
-              // noreply و timebased — pro فأعلى فقط
-              const needsPro = st.id === "noreply" || st.id === "timebased";
-              const isLocked = needsPro && planTier !== "pro" && planTier !== "enterprise";
+              // noreply و timebased و ab — pro فأعلى فقط
+              const needsPro = st.id === "noreply" || st.id === "timebased" || st.id === "ab";
+              const isLocked = needsPro && !isProOrAbove;
               return (
                 <button key={st.id}
-                  onClick={() => !isLocked && setActiveSubTab(st.id)}
+                  onClick={() => {
+                    if (isLocked) {
+                      toast.error(proLockMsg);
+                      return;
+                    }
+                    setActiveSubTab(st.id);
+                  }}
+                  onMouseEnter={() => {
+                    if (isLocked) toast.error(proLockMsg);
+                  }}
+                  title={isLocked ? proLockMsg : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
                     ${isLocked
                       ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60"
