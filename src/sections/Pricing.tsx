@@ -124,12 +124,12 @@ export default function Pricing({ lang }: PricingProps) {
               : 0;
 
             return (
-              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-4 overflow-hidden ${s.card}`}>
+              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-4 overflow-visible ${s.card}`}>
 
                 {/* popular badge */}
                 {"badge" in plan && plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#25D366] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                    <span className="bg-[#25D366] text-white text-xs font-bold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap">
                       {tr(plan.badge as { ar: string; en: string }, lang)}
                     </span>
                   </div>
@@ -137,14 +137,18 @@ export default function Pricing({ lang }: PricingProps) {
 
                 {/* golden ribbon for enterprise */}
                 {isEnterprise && (
-                  <div className="absolute top-5 -right-8 overflow-hidden pointer-events-none" style={{width: "120px", height: "120px"}}>
+                  <div
+                    className={`absolute top-5 overflow-hidden pointer-events-none ${isAr ? "-left-8" : "-right-8"}`}
+                    style={{ width: "120px", height: "120px" }}
+                  >
                     <div
                       className="absolute text-center font-black text-[10px] tracking-widest uppercase"
                       style={{
                         width: "140px",
                         top: "26px",
-                        right: "-34px",
-                        transform: "rotate(45deg)",
+                        right: isAr ? "auto" : "-34px",
+                        left: isAr ? "-34px" : "auto",
+                        transform: isAr ? "rotate(-45deg)" : "rotate(45deg)",
                         background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
                         color: "#3a2500",
                         padding: "5px 0",
