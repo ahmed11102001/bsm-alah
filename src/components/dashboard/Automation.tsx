@@ -230,6 +230,10 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     "الميزة متاحة من باقة Professional فما فوق. قم بترقية الباقة.",
     "This feature is available on Professional plan and above. Please upgrade."
   );
+  const showLockToast = (msg: string) => {
+    toast.dismiss("plan-lock");
+    toast.error(msg, { id: "plan-lock" });
+  };
 
   // ─── Load all data ────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -679,13 +683,16 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
             key={tab}
             onClick={() => {
               if (tab === "ai" && !isEnterprise) {
-                toast.error(aiLockMsg);
+                showLockToast(aiLockMsg);
                 return;
               }
               setActiveTab(tab);
             }}
+            onPointerDown={() => {
+              if (tab === "ai" && !isEnterprise) showLockToast(aiLockMsg);
+            }}
             onMouseEnter={() => {
-              if (tab === "ai" && !isEnterprise) toast.error(aiLockMsg);
+              if (tab === "ai" && !isEnterprise) showLockToast(aiLockMsg);
             }}
             title={tab === "ai" && !isEnterprise ? aiLockMsg : undefined}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
@@ -716,13 +723,16 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 <button key={st.id}
                   onClick={() => {
                     if (isLocked) {
-                      toast.error(proLockMsg);
+                      showLockToast(proLockMsg);
                       return;
                     }
                     setActiveSubTab(st.id);
                   }}
+                  onPointerDown={() => {
+                    if (isLocked) showLockToast(proLockMsg);
+                  }}
                   onMouseEnter={() => {
-                    if (isLocked) toast.error(proLockMsg);
+                    if (isLocked) showLockToast(proLockMsg);
                   }}
                   title={isLocked ? proLockMsg : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
