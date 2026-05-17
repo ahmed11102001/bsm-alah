@@ -300,6 +300,14 @@ async function handleAutomation(ctx: {
   });
 
   if (contactRecord?.voiceAgentEnabled) {
+    // ── Plan guard: Voice Agent — enterprise فقط ──────────────────────────
+    const voiceGuard = await checkFeature(userId, "aiAgent");
+    if (!voiceGuard.allowed) {
+      console.log(`[VOICE-AGENT] Blocked — plan doesn't include AI for ${userId}`);
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     const agentSettings = await prisma.aIAgent.findUnique({
       where:  { userId },
       select: { elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true },
