@@ -339,3 +339,31 @@ export const timeBasedCron = inngest.createFunction(
     };
   }
 );
+// ═══════════════════════════════════════════════════════════════════════════════
+// monthly-reset: تصفير عدادات الباقات — كل أول الشهر الساعة 00:00
+// ═══════════════════════════════════════════════════════════════════════════════
+export const monthlyPlanReset = inngest.createFunction(
+  {
+    id:       "monthly-plan-reset",
+    name:     "Monthly Plan Reset",
+    triggers: [{ cron: "0 0 1 * *" }], // أول يوم كل شهر الساعة 12 منتصف الليل
+  },
+  async ({ step }) => {
+    // تصفير campaignsUsedThisMonth لكل المشتركين
+    const result = await step.run("reset-campaigns-counter", async () => {
+      const updated = await prisma.subscription.updateMany({
+        data: {
+          campaignsUsedThisMonth: 0,
+          periodResetAt:          new Date(),
+        },
+      });
+      return { updatedSubscriptions: updated.count };
+    });
+
+    // الـ contacts مش بنمسحهم — بس العداد الشهري بيتحسب من createdAt تلقائي
+    // يعني مجرد ما الشهر يتغير → checkContactsLimit هيعد من أول الشهر الجديد
+
+    console.log(`[MONTHLY-RESET] Done — reset ${result.updatedSubscriptions} subscriptions`);
+    return result;
+  }
+);

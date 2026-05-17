@@ -20,6 +20,7 @@ import {
 import {
   noReplyCron,
   timeBasedCron,
+  monthlyPlanReset,
 } from "@/inngest/automation-cron-functions";
 
 const inngestHandler = serve({
@@ -38,6 +39,8 @@ const inngestHandler = serve({
     // ── Automation Crons ──
     noReplyCron,
     timeBasedCron,
+    // ── Plan Reset ──
+    monthlyPlanReset,
   ],
 });
 

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { AIProvider } from "@/types/enums";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -53,6 +54,11 @@ export async function PUT(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = await resolveUserId(session);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // ── Plan guard: AI Agent — enterprise فقط ──
+  const aiGuard = await checkFeature(userId, "aiAgent");
+  const aiBlocked = guardResponse(aiGuard);
+  if (aiBlocked) return aiBlocked;
+
 
   try {
     const body = await req.json();

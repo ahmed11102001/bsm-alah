@@ -3,6 +3,7 @@ import { NextResponse }     from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions }      from "@/lib/auth";
 import prisma               from "@/lib/prisma";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 
 export async function GET() {
@@ -20,6 +21,11 @@ export async function GET() {
 
     const userId = dbUser.parentId ?? dbUser.id;
     const url    = generateShopifyWebhookUrl(userId);
+    // ── Plan guard: store integration — pro فأعلى ──
+    const sgGuard = await checkFeature(userId, "storeIntegration");
+    const sgBlocked = guardResponse(sgGuard);
+    if (sgBlocked) return sgBlocked;
+
 
     const store = await prisma.shopifyStore.findUnique({
       where:  { userId },

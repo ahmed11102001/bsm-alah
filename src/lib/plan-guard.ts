@@ -98,20 +98,28 @@ export async function checkContactsLimit(
 
   if (isUnlimited(limit)) return { allowed: true };
 
-  const currentCount = await prisma.contact.count({
-    where: { userId: ownerId, deletedAt: null },
+  // نعد الـ contacts اللي اتضافوا في الشهر الحالي فقط
+  const now            = new Date();
+  const startOfMonth   = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const addedThisMonth = await prisma.contact.count({
+    where: {
+      userId:    ownerId,
+      deletedAt: null,
+      createdAt: { gte: startOfMonth },
+    },
   });
 
-  if (currentCount + addingCount > limit) {
+  if (addedThisMonth + addingCount > limit) {
     await notifyPlanLimitReached(ownerId, "contacts");
     return {
       allowed:      false,
       code:         "LIMIT_REACHED",
-      message:      `وصلت للحد الأقصى (${limitLabel(limit)} جهة اتصال) في باقة ${PLAN_NAMES[plan]}. قم بالترقية لإضافة المزيد.`,
+      message:      `وصلت للحد الأقصى (${limitLabel(limit)} جهة اتصال) هذا الشهر في باقة ${PLAN_NAMES[plan]}. الحد يُجدَّد أول كل شهر أو قم بالترقية.`,
       plan,
       requiredPlan: nextPlan(plan),
       limit,
-      used:         currentCount,
+      used:         addedThisMonth,
     };
   }
 
@@ -262,8 +270,13 @@ export async function getPlanStatus(ownerId: string) {
     if (reset !== null) campaignsUsed = 0;
   }
 
-  const [contactsCount, teamCount] = await Promise.all([
-    prisma.contact.count({ where: { userId: ownerId, deletedAt: null } }),
+  const now          = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [contactsAddedThisMonth, teamCount] = await Promise.all([
+    prisma.contact.count({
+      where: { userId: ownerId, deletedAt: null, createdAt: { gte: startOfMonth } },
+    }),
     prisma.user.count({ where: { parentId: ownerId, deletedAt: null } }),
   ]);
 
@@ -274,8 +287,8 @@ export async function getPlanStatus(ownerId: string) {
     status:        sub?.status ?? "active",
     limits,
     usage: {
-      contacts:           contactsCount,
-      teamMembers:        teamCount + 1, // +1 للمالك
+      contacts:           contactsAddedThisMonth,  // اللي اتضافوا الشهر ده بس
+      teamMembers:        teamCount + 1,            // +1 للمالك
       campaignsThisMonth: campaignsUsed,
     },
   };

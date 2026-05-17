@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { TriggerType, ReplyType } from "@/types/enums";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 function ownerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -26,6 +27,12 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  // ── Plan guard: automation — starter فأعلى ──
+  const owner = ownerId(session);
+  const agGuard = await checkFeature(owner, "scheduledCampaigns");
+  const agBlocked = guardResponse(agGuard);
+  if (agBlocked) return agBlocked;
 
   // فقط OWNER / FULL_ACCESS
   if ((session.user as any).role === "CHAT_ONLY")

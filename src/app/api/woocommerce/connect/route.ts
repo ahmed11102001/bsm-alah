@@ -5,6 +5,7 @@ import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateWooWebhookUrl }     from "@/app/api/woocommerce/URL/route";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 // ── التحقق إن الدومين موقع WooCommerce حقيقي ────────────────────────────────
 async function verifyStoreDomain(url: string): Promise<boolean> {
@@ -54,6 +55,11 @@ export async function POST(req: NextRequest) {
     if (!dbUser) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
 
     const userId = dbUser.parentId ?? dbUser.id;
+
+    // ── Plan guard: store integration — pro فأعلى ──
+    const wgGuard = await checkFeature(userId, "storeIntegration");
+    const wgBlocked = guardResponse(wgGuard);
+    if (wgBlocked) return wgBlocked;
 
     const store = await prisma.wooCommerceStore.upsert({
       where:  { userId },
