@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input }  from "@/components/ui/input";
+import { Label }  from "@/components/ui/label";
 import {
   AlertCircle, Loader2, KeyRound, Eye, EyeOff,
   CheckCircle2, XCircle, ArrowRight, Mail, Lock,
@@ -23,127 +23,129 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
-// ─── Animation variants ───────────────────────────────────────────────────────
-import { cubicBezier } from "framer-motion";
-
+// ─── Animations ───────────────────────────────────────────────────────────────
 const easeSmooth = cubicBezier(0.25, 0.1, 0.25, 1);
 
 const slide = {
   initial: { opacity: 0, x: 24 },
-  animate: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.22,
-      ease: easeSmooth,
-    },
-  },
-  exit: {
-    opacity: 0,
-    x: -20,
-    transition: {
-      duration: 0.15,
-      ease: easeSmooth,
-    },
-  },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.22, ease: easeSmooth } },
+  exit:    { opacity: 0, x: -20, transition: { duration: 0.15, ease: easeSmooth } },
 };
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function ErrMsg({ msg }: { msg: string }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
-    >
+    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
       <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
       <p className="text-sm text-red-700">{msg}</p>
     </motion.div>
   );
 }
 
-function PasswordInput({
-  value, onChange, placeholder = "••••••••", ...rest
-}: {
-  value: string; onChange: (v: string) => void;
-  placeholder?: string; [k: string]: any;
+function PasswordInput({ value, onChange, placeholder = "••••••••", ...rest }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; [k: string]: any;
 }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <Input
-        {...rest}
-        type={show ? "text" : "password"}
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        className="rounded-xl pl-10 pr-4 h-12"
-      />
-      <button
-        type="button"
-        onClick={() => setShow(p => !p)}
-        className="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600"
-        tabIndex={-1}
-      >
+      <Input {...rest} type={show ? "text" : "password"} value={value}
+        placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        className="rounded-xl pl-10 pr-4 h-12" />
+      <button type="button" onClick={() => setShow(p => !p)}
+        className="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600" tabIndex={-1}>
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
   );
 }
 
-// Tab button
 function Tab({ active, onClick, children }: {
   active: boolean; onClick: () => void; children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <button type="button" onClick={onClick}
       className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all relative ${
         active ? "text-[#25D366]" : "text-gray-400 hover:text-gray-600"
-      }`}
-    >
+      }`}>
       {children}
       {active && (
-        <motion.div
-          layoutId="tab-indicator"
-          className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#25D366] rounded-full"
-        />
+        <motion.div layoutId="tab-indicator"
+          className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#25D366] rounded-full" />
       )}
     </button>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Google Button ─────────────────────────────────────────────────────────────
+// تصميم Google الرسمي (brand guidelines)
+function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className="w-full h-12 flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-all shadow-sm text-sm font-medium text-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {loading ? (
+        <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+      ) : (
+        <>
+          {/* Google SVG الرسمي */}
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          متابعة بـ Google
+        </>
+      )}
+    </button>
+  );
+}
+
+// ─── Divider ──────────────────────────────────────────────────────────────────
+function OrDivider() {
+  return (
+    <div className="flex items-center gap-3 my-1">
+      <div className="flex-1 h-px bg-gray-100" />
+      <span className="text-xs text-gray-400">أو</span>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router  = useRouter();
-  const [view,  setView]    = useState<View>("login");
-  const [busy,  setBusy]    = useState(false);
-  const [err,   setErr]     = useState("");
+  const [view,  setView]  = useState<View>("login");
+  const [busy,  setBusy]  = useState(false);
+  const [gBusy, setGBusy] = useState(false);
+  const [err,   setErr]   = useState("");
 
   // login
-  const [loginEmail,  setLoginEmail]  = useState("");
-  const [loginPass,   setLoginPass]   = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPass,  setLoginPass]  = useState("");
 
   // register
-  const [regFirst,    setRegFirst]    = useState("");
-  const [regLast,     setRegLast]     = useState("");
-  const [regEmail,    setRegEmail]    = useState("");
-  const [regPhone,    setRegPhone]    = useState("");
-  const [regPass,     setRegPass]     = useState("");
-  const [regConfirm,  setRegConfirm]  = useState("");
+  const [regFirst,   setRegFirst]   = useState("");
+  const [regLast,    setRegLast]    = useState("");
+  const [regEmail,   setRegEmail]   = useState("");
+  const [regPhone,   setRegPhone]   = useState("");
+  const [regPass,    setRegPass]    = useState("");
+  const [regConfirm, setRegConfirm] = useState("");
 
   // join team
-  const [joinEmail,   setJoinEmail]   = useState("");
-  const [joinCode,    setJoinCode]    = useState("");
-  const [joinPass,    setJoinPass]    = useState("");
+  const [joinEmail, setJoinEmail] = useState("");
+  const [joinCode,  setJoinCode]  = useState("");
+  const [joinPass,  setJoinPass]  = useState("");
 
   // forgot
   const [forgotEmail, setForgotEmail] = useState("");
 
   const go = (v: View) => { setView(v); setErr(""); };
 
-  // ── Instant email check ───────────────────────────────────────
-  // تحقق محلي فقط من صيغة الإيميل — بدون API call عشان منكشفش وجود المستخدمين
   const emailFormatOk = /\S+@\S+\.\S+/.test(regEmail);
   const emailIcon = regEmail
     ? emailFormatOk
@@ -151,7 +153,20 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       : <XCircle className="w-4 h-4 text-red-400" />
     : null;
 
-  // ── Login ─────────────────────────────────────────────────────
+  // ── Google Login ──────────────────────────────────────────────────────────
+  const handleGoogle = async () => {
+    setGBusy(true);
+    try {
+      // NextAuth بيعمل redirect تلقائي لـ Google ثم يرجع
+      // بعد الرجوع، الـ session callback بيحدد هل يروح /onboarding أو /dashboard
+      await signIn("google", { callbackUrl: "/auth/callback" });
+    } catch {
+      setErr("حدث خطأ، حاول مرة أخرى");
+      setGBusy(false);
+    }
+  };
+
+  // ── Email Login ───────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
@@ -164,40 +179,33 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     finally { setBusy(false); }
   };
 
-  // ── Register ──────────────────────────────────────────────────
+  // ── Register ──────────────────────────────────────────────────────────────
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
     const fullName = `${regFirst.trim()} ${regLast.trim()}`.trim();
     if (!regFirst.trim() || !regLast.trim()) { setErr("الاسم الثنائي مطلوب"); return; }
-    if (!emailFormatOk) { setErr("صيغة البريد الإلكتروني غير صحيحة"); return; }
-    if (!regPhone.trim()) { setErr("رقم الهاتف مطلوب"); return; }
-    if (regPass.length < 8) { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
-    if (regPass !== regConfirm) { setErr("كلمتا المرور غير متطابقتين"); return; }
+    if (!emailFormatOk)                       { setErr("صيغة البريد غير صحيحة"); return; }
+    if (!regPhone.trim())                     { setErr("رقم الهاتف مطلوب"); return; }
+    if (regPass.length < 8)                   { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
+    if (regPass !== regConfirm)               { setErr("كلمتا المرور غير متطابقتين"); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fullName, email: regEmail.toLowerCase(),
-          phone: regPhone, password: regPass,
-        }),
+        body: JSON.stringify({ name: fullName, email: regEmail.toLowerCase(), phone: regPhone, password: regPass }),
       });
       const d = await r.json();
       if (!r.ok) { setErr(d.error); return; }
       toast.success("تم إنشاء الحساب بنجاح!");
-      // تأكد إن مفيش session قديمة عالقة قبل auto-login
       await signOut({ redirect: false });
-      // auto-login
-      await signIn("credentials", {
-        email: regEmail.toLowerCase(), password: regPass, redirect: false,
-      });
+      await signIn("credentials", { email: regEmail.toLowerCase(), password: regPass, redirect: false });
       onClose(); router.push("/dashboard");
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };
 
-  // ── Join team ─────────────────────────────────────────────────
+  // ── Join team ─────────────────────────────────────────────────────────────
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
@@ -214,7 +222,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     finally { setBusy(false); }
   };
 
-  // ── Forgot password ───────────────────────────────────────────
+  // ── Forgot password ───────────────────────────────────────────────────────
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
@@ -230,7 +238,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     finally { setBusy(false); }
   };
 
-  // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
@@ -242,10 +250,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         <div className="px-7 pt-5 pb-7">
           {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-2.5 mb-5"
-          >
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-2.5 mb-5">
             <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
@@ -254,7 +260,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </span>
           </motion.div>
 
-          {/* Tabs — only for main 3 views */}
+          {/* Tabs */}
           {(view === "login" || view === "register" || view === "join") && (
             <div className="flex border-b border-gray-100 mb-5">
               <Tab active={view === "login"}    onClick={() => go("login")}>دخول</Tab>
@@ -263,160 +269,144 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </div>
           )}
 
-          {/* Views */}
           <AnimatePresence mode="wait">
 
             {/* ══ LOGIN ══ */}
             {view === "login" && (
-              <motion.form key="login" {...slide} onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
-                  <div className="relative">
-                    <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                    <Input
-                      type="email" required
-                      value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
-                      placeholder="example@email.com"
-                      className="rounded-xl pr-10 h-12 text-sm"
-                    />
+              <motion.div key="login" {...slide} className="space-y-4">
+
+                {/* ── Google (Primary CTA) ── */}
+                <GoogleButton loading={gBusy} onClick={handleGoogle} />
+
+                <OrDivider />
+
+                {/* ── Email / Password (Secondary) ── */}
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
+                    <div className="relative">
+                      <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
+                      <Input type="email" required value={loginEmail}
+                        onChange={e => setLoginEmail(e.target.value)}
+                        placeholder="example@email.com"
+                        className="rounded-xl pr-10 h-12 text-sm" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium text-gray-700">كلمة المرور</Label>
-                    <button
-                      type="button"
-                      onClick={() => go("forgot")}
-                      className="text-xs text-[#25D366] hover:underline"
-                    >
-                      نسيت كلمة المرور؟
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium text-gray-700">كلمة المرور</Label>
+                      <button type="button" onClick={() => go("forgot")}
+                        className="text-xs text-[#25D366] hover:underline">
+                        نسيت كلمة المرور؟
+                      </button>
+                    </div>
+                    <PasswordInput value={loginPass} onChange={setLoginPass} />
                   </div>
-                  <PasswordInput value={loginPass} onChange={setLoginPass} />
-                </div>
 
-                {err && <ErrMsg msg={err} />}
+                  {err && <ErrMsg msg={err} />}
 
-                <Button
-                  type="submit" disabled={busy}
-                  className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm"
-                >
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تسجيل الدخول"}
-                </Button>
-              </motion.form>
+                  <Button type="submit" disabled={busy}
+                    className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تسجيل الدخول"}
+                  </Button>
+                </form>
+              </motion.div>
             )}
 
             {/* ══ REGISTER ══ */}
             {view === "register" && (
-              <motion.form key="register" {...slide} onSubmit={handleRegister} className="space-y-3.5">
-                {/* Full name */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-600">الاسم الأول</Label>
-                    <div className="relative">
-                      <User className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                      <Input
-                        required value={regFirst} onChange={e => setRegFirst(e.target.value)}
-                        placeholder="أحمد"
-                        className="rounded-xl pr-9 h-11 text-sm"
-                      />
+              <motion.div key="register" {...slide} className="space-y-4">
+
+                {/* ── Google (Primary CTA) ── */}
+                <GoogleButton loading={gBusy} onClick={handleGoogle} />
+
+                <OrDivider />
+
+                {/* ── Email Register (Secondary) ── */}
+                <form onSubmit={handleRegister} className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-600">الاسم الأول</Label>
+                      <div className="relative">
+                        <User className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                        <Input required value={regFirst} onChange={e => setRegFirst(e.target.value)}
+                          placeholder="أحمد" className="rounded-xl pr-9 h-11 text-sm" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-600">اسم العائلة</Label>
+                      <Input required value={regLast} onChange={e => setRegLast(e.target.value)}
+                        placeholder="محمد" className="rounded-xl h-11 text-sm" />
                     </div>
                   </div>
+
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-600">اسم العائلة</Label>
-                    <Input
-                      required value={regLast} onChange={e => setRegLast(e.target.value)}
-                      placeholder="محمد"
-                      className="rounded-xl h-11 text-sm"
-                    />
+                    <Label className="text-xs font-medium text-gray-600">البريد الإلكتروني</Label>
+                    <div className="relative">
+                      <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                      <Input type="email" required value={regEmail}
+                        onChange={e => setRegEmail(e.target.value)} placeholder="owner@email.com"
+                        className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors ${
+                          regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
+                          regEmail &&  emailFormatOk ? "border-green-400 focus:ring-green-200" : ""
+                        }`} />
+                      <span className="absolute left-3 top-3">{emailIcon}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-600">البريد الإلكتروني</Label>
-                  <div className="relative">
-                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                    <Input
-                      type="email" required
-                      value={regEmail} onChange={e => setRegEmail(e.target.value)}
-                      placeholder="owner@email.com"
-                      className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors ${
-                        regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
-                        regEmail &&  emailFormatOk ? "border-green-400 focus:ring-green-200" : ""
-                      }`}
-                    />
-                    <span className="absolute left-3 top-3">{emailIcon}</span>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-600">رقم الهاتف <span className="text-red-400">*</span></Label>
+                    <div className="relative">
+                      <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                      <Input required type="tel" value={regPhone}
+                        onChange={e => setRegPhone(e.target.value)}
+                        placeholder="201234567890" className="rounded-xl pr-9 h-11 text-sm" dir="ltr" />
+                    </div>
                   </div>
-                </div>
 
-                {/* Phone */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-600">رقم الهاتف <span className="text-red-400">*</span></Label>
-                  <div className="relative">
-                    <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                    <Input
-                      required type="tel"
-                      value={regPhone} onChange={e => setRegPhone(e.target.value)}
-                      placeholder="201234567890"
-                      className="rounded-xl pr-9 h-11 text-sm" dir="ltr"
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
-                  <div className="relative">
-                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                    <PasswordInput
-                      value={regPass} onChange={setRegPass}
-                      className="rounded-xl pr-9 h-11 text-sm"
-                    />
-                  </div>
-                  {/* Strength bar */}
-                  {regPass && (
-                    <div className="flex gap-1 mt-1">
-                      {[4,6,8,10].map((threshold, i) => (
-                        <div key={i}
-                          className={`h-1 flex-1 rounded-full transition-colors ${
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
+                    <div className="relative">
+                      <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                      <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl pr-9 h-11 text-sm" />
+                    </div>
+                    {regPass && (
+                      <div className="flex gap-1 mt-1">
+                        {[4,6,8,10].map((threshold, i) => (
+                          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
                             regPass.length >= threshold
                               ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
                               : "bg-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                          }`} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Confirm */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
-                  <PasswordInput
-                    value={regConfirm} onChange={setRegConfirm}
-                    className={`rounded-xl h-11 text-sm ${
-                      regConfirm && regPass !== regConfirm ? "border-red-400" :
-                      regConfirm && regPass === regConfirm ? "border-green-400" : ""
-                    }`}
-                  />
-                  {regConfirm && regPass !== regConfirm && (
-                    <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
-                  )}
-                </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
+                    <PasswordInput value={regConfirm} onChange={setRegConfirm}
+                      className={`rounded-xl h-11 text-sm ${
+                        regConfirm && regPass !== regConfirm ? "border-red-400" :
+                        regConfirm && regPass === regConfirm ? "border-green-400" : ""
+                      }`} />
+                    {regConfirm && regPass !== regConfirm && (
+                      <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
+                    )}
+                  </div>
 
-                {err && <ErrMsg msg={err} />}
+                  {err && <ErrMsg msg={err} />}
 
-                <Button
-                  type="submit" disabled={busy || (!!regEmail && !emailFormatOk)}
-                  className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm mt-1"
-                >
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}
-                </Button>
-              </motion.form>
+                  <Button type="submit" disabled={busy || (!!regEmail && !emailFormatOk)}
+                    className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm mt-1">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}
+                  </Button>
+                </form>
+              </motion.div>
             )}
 
-            {/* ══ JOIN TEAM ══ */}
+            {/* ══ JOIN TEAM — بدون Google (عضو الفريق لازم يستخدم كود الدعوة) ══ */}
             {view === "join" && (
               <motion.form key="join" {...slide} onSubmit={handleJoin} className="space-y-4">
                 <div className="bg-green-50 border border-green-100 rounded-2xl p-3.5 flex items-start gap-2.5">
@@ -430,23 +420,18 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
                   <div className="relative">
                     <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                    <Input
-                      type="email" required
-                      value={joinEmail} onChange={e => setJoinEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="rounded-xl pr-10 h-12 text-sm"
-                    />
+                    <Input type="email" required value={joinEmail}
+                      onChange={e => setJoinEmail(e.target.value)}
+                      placeholder="your@email.com" className="rounded-xl pr-10 h-12 text-sm" />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">كود الانضمام</Label>
-                  <Input
-                    required value={joinCode}
+                  <Input required value={joinCode}
                     onChange={e => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="WP-XXXX"
-                    className="rounded-xl h-12 text-sm font-mono text-center tracking-widest border-green-200"
-                  />
+                    className="rounded-xl h-12 text-sm font-mono text-center tracking-widest border-green-200" />
                 </div>
 
                 <div className="space-y-1.5">
@@ -456,10 +441,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                 {err && <ErrMsg msg={err} />}
 
-                <Button
-                  type="submit" disabled={busy}
-                  className="w-full h-12 bg-[#128C7E] hover:bg-[#0e7066] text-white rounded-xl font-semibold text-sm"
-                >
+                <Button type="submit" disabled={busy}
+                  className="w-full h-12 bg-[#128C7E] hover:bg-[#0e7066] text-white rounded-xl font-semibold text-sm">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تفعيل الحساب والانضمام"}
                 </Button>
               </motion.form>
@@ -469,10 +452,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             {view === "forgot" && (
               <motion.form key="forgot" {...slide} onSubmit={handleForgot} className="space-y-5">
                 <div>
-                  <button
-                    type="button" onClick={() => go("login")}
-                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-4"
-                  >
+                  <button type="button" onClick={() => go("login")}
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-4">
                     <ArrowRight className="w-4 h-4" /> العودة لتسجيل الدخول
                   </button>
                   <h2 className="text-lg font-bold text-gray-900 mb-1">نسيت كلمة المرور؟</h2>
@@ -485,21 +466,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
                   <div className="relative">
                     <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                    <Input
-                      type="email" required
-                      value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                      placeholder="example@email.com"
-                      className="rounded-xl pr-10 h-12 text-sm"
-                    />
+                    <Input type="email" required value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="example@email.com" className="rounded-xl pr-10 h-12 text-sm" />
                   </div>
                 </div>
 
                 {err && <ErrMsg msg={err} />}
 
-                <Button
-                  type="submit" disabled={busy}
-                  className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm"
-                >
+                <Button type="submit" disabled={busy}
+                  className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال رابط الاستعادة"}
                 </Button>
               </motion.form>
@@ -518,10 +494,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     تحقق من بريدك الوارد.
                   </p>
                 </div>
-                <button
-                  type="button" onClick={() => go("login")}
-                  className="text-sm text-[#25D366] hover:underline font-medium"
-                >
+                <button type="button" onClick={() => go("login")}
+                  className="text-sm text-[#25D366] hover:underline font-medium">
                   العودة لتسجيل الدخول
                 </button>
               </motion.div>

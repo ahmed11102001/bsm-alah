@@ -1,17 +1,25 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { Adapter } from "next-auth/adapters";
-import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { rateLimit } from "@/lib/rate-limit";
+import GoogleProvider       from "next-auth/providers/google";
+import { PrismaAdapter }   from "@auth/prisma-adapter";
+import prisma              from "@/lib/prisma";
+import bcrypt              from "bcryptjs";
+import { rateLimit }       from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
-  // PrismaAdapter بيرجع Adapter type صح بس فيه version mismatch بين
-  // @auth/prisma-adapter و next-auth — الـ cast لـ Adapter بدل any
-  // بيحتفظ بالـ type safety بدل ما يسيب الموضوع مفتوح.
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma) as any,
+
   providers: [
+
+    // ── Google ─────────────────────────────────────────────────────────────────
+    GoogleProvider({
+      clientId:     process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // يسمح بربط حساب Google بحساب إيميل موجود بنفس العنوان
+      allowDangerousEmailAccountLinking: true,
+    }),
+
+    // ── Email / Password ───────────────────────────────────────────────────────
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -23,7 +31,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
         }
 
-        // ── Rate Limit: 10 محاولات كل 15 دقيقة لنفس الإيميل ─────────────────
+        // ── Rate Limit: 10 محاولات كل 15 دقيقة لنفس الإيميل ──────────────────
         const key    = `login:${credentials.email.toLowerCase()}`;
         const result = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
         if (!result.success) {
@@ -31,18 +39,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where:  { email: credentials.email.toLowerCase() },
-          // نجيب isSuper صراحة من الـ DB
-          select: {
-            id:         true,
-            name:       true,
-            email:      true,
-            password:   true,
-            role:       true,
-            parentId:   true,
-            isSuper:    true,
-            inviteCode: true,
-          },
+          where: { email: credentials.email.toLowerCase() },
         });
 
         // رسالة موحدة — مش بنكشف هل الإيميل موجود أو لأ
@@ -56,53 +53,84 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-
-        // نفس الرسالة لو الباسورد غلط
         if (!isValid) {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
-        // isSuper جاي من الـ DB مباشرة — مش محتاج as any
         return {
           id:       user.id,
           name:     user.name,
           email:    user.email,
           role:     user.role,
           parentId: user.parentId,
-          isSuper:  user.isSuper,
+          isSuper:  (user as any).isSuper ?? false,
         };
       },
     }),
   ],
+
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 يوم
   },
+
   callbacks: {
-    async jwt({ token, user }) {
-      // ── أول مرة: وقت الـ login — احفظ البيانات في الـ token ────────────────
-      if (user) {
+
+    // ── signIn: تحقق قبل ما نكمل ────────────────────────────────────────────────
+    async signIn({ user, account }) {
+      // Credentials — التحقق بيتم بالكامل في authorize فوق
+      if (account?.provider === "credentials") return true;
+
+      // Google — تأكد إن اليوزر مش محذوف
+      if (account?.provider === "google" && user.email) {
+        const existing = await prisma.user.findUnique({
+          where:  { email: user.email },
+          select: { deletedAt: true },
+        });
+        if ((existing as any)?.deletedAt) return false;
+      }
+
+      return true;
+    },
+
+    // ── jwt ──────────────────────────────────────────────────────────────────────
+    async jwt({ token, user, account }) {
+
+      // ── أول مرة: وقت الـ login ─────────────────────────────────────────────
+      if (user && account) {
+        const dbUser = await prisma.user.findUnique({
+          where:  { id: user.id },
+          select: { role: true, parentId: true, isSuper: true, phone: true, inviteCode: true },
+        });
+
         token.id                = user.id;
-        token.role              = user.role;
-        token.parentId          = user.parentId;
-        token.isSuper           = user.isSuper ?? false;
+        token.role              = dbUser?.role     ?? "OWNER";
+        token.parentId          = dbUser?.parentId ?? null;
+        token.isSuper           = (dbUser as any)?.isSuper ?? false;
         token.isSuperVerifiedAt = Date.now();
+
+        // ── Google فقط: هل محتاج Onboarding? (رقم الواتساب ناقص) ─────────────
+        // اليوزر الجديد من جوجل مش عنده phone → نبعته لـ /onboarding
+        // اليوزر القديم اللي ربط Google بحسابه عنده phone → Dashboard مباشرة
+        if (account.provider === "google") {
+          token.needsOnboarding = !dbUser?.phone;
+        } else {
+          token.needsOnboarding = false;
+        }
+
         return token;
       }
 
-      // ── كل request بعد كده: تحقق من isSuper كل 5 دقائق فقط ────────────────
-      // بيضمن إن سحب صلاحية isSuper يسري خلال 5 دقائق كحد أقصى،
-      // بدل 30 يوم — من غير DB query على كل request.
+      // ── كل request بعد كده: تحقق من isSuper كل 5 دقائق ───────────────────
       const FIVE_MINUTES = 5 * 60 * 1000;
-      const lastVerified  = token.isSuperVerifiedAt ?? 0;
+      const lastVerified  = (token.isSuperVerifiedAt as number) ?? 0;
 
       if (Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
-          where:  { id: token.id },
+          where:  { id: token.id as string },
           select: { isSuper: true, role: true },
         });
 
-        // لو اليوزر اتحذف من الـ DB → اشيل الصلاحيات فوراً
         if (!freshUser) {
           token.isSuper = false;
           token.role    = "OWNER";
@@ -117,20 +145,22 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
+    // ── session ──────────────────────────────────────────────────────────────────
     async session({ session, token }) {
       if (session.user) {
-        // الـ types معرّفة في src/types/next-auth.d.ts
-        // مش محتاج as string أو as boolean تاني
-        session.user.id       = token.id;
-        session.user.role     = token.role;
-        session.user.parentId = token.parentId;
-        session.user.isSuper  = token.isSuper;
+        session.user.id             = token.id       as string;
+        session.user.role           = token.role     as string;
+        session.user.parentId       = token.parentId as string | null;
+        session.user.isSuper        = token.isSuper  as boolean;
+        session.user.needsOnboarding = token.needsOnboarding as boolean;
       }
       return session;
     },
   },
+
   pages: {
     signIn: "/",
   },
+
   secret: process.env.NEXTAUTH_SECRET,
 };

@@ -12,7 +12,7 @@ model User {
   email            String            @unique
   name             String?
   phone            String?
-  password         String
+  password         String?           // nullable — يوزر Google مش عنده password
   image            String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -30,6 +30,7 @@ model User {
   pricingInfo      String?
   workingHours     String?
   aiTone           String            @default("friendly")
+  accounts         Account[]
   aiAgent          AIAgent?
   audiences        Audience[]
   automationRules  AutomationRule[]
@@ -56,6 +57,28 @@ model User {
   @@index([deletedAt])
 }
 
+// ─── Account — مطلوب لـ NextAuth PrismaAdapter + Google OAuth ────────────────
+// بيخزن الـ access_token والـ refresh_token الخاصة بـ Google لكل يوزر
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
 model Subscription {
   id                     String             @id @default(cuid())
   userId                 String             @unique
@@ -65,7 +88,7 @@ model Subscription {
   campaignsUsedThisMonth Int                @default(0)
   periodResetAt          DateTime           @default(now())
   currentPeriodStart     DateTime           @default(now())
-  currentPeriodEnd       DateTime?          // null = free plan (لا ينتهي) — set by Stripe for paid plans
+  currentPeriodEnd       DateTime?
   stripeCustomerId       String?            @unique
   stripeSubscriptionId   String?            @unique
   createdAt              DateTime           @default(now())
@@ -169,24 +192,24 @@ model Audience {
 }
 
 model Contact {
-  id                String    @id @default(cuid())
+  id                String     @id @default(cuid())
   phone             String
   audienceId        String?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime   @default(now())
   name              String?
   userId            String
-  storeOrders          StoreOrder[]
   deletedAt         DateTime?
-  isArchived        Boolean   @default(false)
-  isPinned          Boolean   @default(false)
+  isArchived        Boolean    @default(false)
+  isPinned          Boolean    @default(false)
   lastMessageAt     DateTime?
   notes             String?
-  unreadCount       Int       @default(0)
-  updatedAt         DateTime  @updatedAt
-  voiceAgentEnabled Boolean   @default(false)
-  audience          Audience? @relation(fields: [audienceId], references: [id])
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unreadCount       Int        @default(0)
+  updatedAt         DateTime   @updatedAt
+  voiceAgentEnabled Boolean    @default(false)
+  audience          Audience?  @relation(fields: [audienceId], references: [id])
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages          Message[]
+  storeOrders       StoreOrder[]
 
   @@unique([phone, userId])
   @@index([userId])
@@ -216,30 +239,30 @@ model Template {
 }
 
 model Campaign {
-  id             String          @id @default(cuid())
-  name           String
-  userId         String
-  templateId     String?
-  sentCount      Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  completedAt    DateTime?
-  deliveredCount Int             @default(0)
-  failedCount    Int             @default(0)
-  readCount      Int             @default(0)
-  startedAt      DateTime?
-  status         CampaignStatus  @default(draft)
-  scheduledAt    DateTime?       @map("scheduled_at")
-  queuedCount    Int             @default(0)
-  totalQueued    Int             @default(0)
-  ordersCount    Int             @default(0)
-  revenue        Float           @default(0)
-  trackedUrl        String?
-  attributionHours  Int     @default(48) // قابل للتخصيص per campaign (1–168 ساعة)
-  template       Template?       @relation(fields: [templateId], references: [id])
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaignOrders CampaignOrder[]
-  messages       Message[]
+  id               String          @id @default(cuid())
+  name             String
+  userId           String
+  templateId       String?
+  sentCount        Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  completedAt      DateTime?
+  deliveredCount   Int             @default(0)
+  failedCount      Int             @default(0)
+  readCount        Int             @default(0)
+  startedAt        DateTime?
+  status           CampaignStatus  @default(draft)
+  scheduledAt      DateTime?       @map("scheduled_at")
+  queuedCount      Int             @default(0)
+  totalQueued      Int             @default(0)
+  ordersCount      Int             @default(0)
+  revenue          Float           @default(0)
+  trackedUrl       String?
+  attributionHours Int             @default(48)
+  template         Template?       @relation(fields: [templateId], references: [id])
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignOrders   CampaignOrder[]
+  messages         Message[]
 
   @@index([userId])
   @@index([status])
@@ -319,12 +342,11 @@ model Coupon {
   @@index([active])
 }
 
-// ─── ShopifyStore — webhook-only, no OAuth, no custom app ────────────────────
 model ShopifyStore {
   id          String            @id @default(cuid())
   userId      String            @unique
-  shop        String            @unique  // myshopify.com domain — verified
-  storeName   String                     // اسم العرض اللي بيختاره المستخدم
+  shop        String            @unique
+  storeName   String
   accessToken String?
   scope       String?
   isActive    Boolean           @default(true)
@@ -353,20 +375,19 @@ model EasyOrdersStore {
   @@index([userId])
 }
 
-
 model WooCommerceStore {
-  id           String       @id @default(cuid())
-  userId       String       @unique
-  storeName    String
-  storeUrl     String?
-  isActive     Boolean      @default(true)
-  totalSynced  Int          @default(0)
-  lastSyncAt   DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders       StoreOrder[]
-  automations  StoreAutomation[]
+  id          String            @id @default(cuid())
+  userId      String            @unique
+  storeName   String
+  storeUrl    String?
+  isActive    Boolean           @default(true)
+  totalSynced Int               @default(0)
+  lastSyncAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      StoreOrder[]
+  automations StoreAutomation[]
 
   @@index([userId])
 }
@@ -416,33 +437,33 @@ model AIAgent {
 }
 
 model StoreOrder {
-  id                   String            @id @default(cuid())
-  userId               String
-  externalId           String
-  orderNumber          String?
-  customerName         String?
-  customerPhone        String
-  currency             String            @default("EGP")
-  status               String            @default("pending")
-  rawData              Json?
- contactId            String?
-contact              Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
-@@index([contactId])
-  createdAt            DateTime          @default(now())
-  easyOrdersStoreId    String?
-  orderedAt            DateTime          @default(now())
-  shopifyStoreId       String?
-  wooCommerceStoreId   String?
-  source               OrderSource
-  total                Float             @default(0)
-  campaignOrder        CampaignOrder?
-  easyOrdersStore      EasyOrdersStore?   @relation(fields: [easyOrdersStoreId], references: [id])
-  wooCommerceStore     WooCommerceStore?  @relation(fields: [wooCommerceStoreId], references: [id], onDelete: SetNull)
-  shopifyStore         ShopifyStore?     @relation(fields: [shopifyStoreId], references: [id])
-  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String            @id @default(cuid())
+  userId             String
+  externalId         String
+  orderNumber        String?
+  customerName       String?
+  customerPhone      String
+  currency           String            @default("EGP")
+  status             String            @default("pending")
+  rawData            Json?
+  contactId          String?
+  createdAt          DateTime          @default(now())
+  easyOrdersStoreId  String?
+  orderedAt          DateTime          @default(now())
+  shopifyStoreId     String?
+  wooCommerceStoreId String?
+  source             OrderSource
+  total              Float             @default(0)
+  campaignOrder      CampaignOrder?
+  contact            Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  easyOrdersStore    EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
+  wooCommerceStore   WooCommerceStore? @relation(fields: [wooCommerceStoreId], references: [id], onDelete: SetNull)
+  shopifyStore       ShopifyStore?     @relation(fields: [shopifyStoreId], references: [id])
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([source, externalId, userId])
   @@index([userId])
+  @@index([contactId])
   @@index([customerPhone, userId])
   @@index([source, userId])
   @@index([orderedAt])
@@ -481,22 +502,22 @@ model CampaignOrder {
 }
 
 model StoreAutomation {
-  id                   String              @id @default(cuid())
-  userId               String
-  type                 StoreAutomationType
-  isEnabled            Boolean             @default(false)
-  templateId           String?
-  sentCount            Int                 @default(0)
-  shopifyStoreId       String?
-  easyOrdersStoreId    String?
-  wooCommerceStoreId   String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  easyOrdersStore      EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
-  shopifyStore         ShopifyStore?       @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
-  wooCommerceStore     WooCommerceStore?   @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
-  template             Template?           @relation(fields: [templateId], references: [id])
-  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(cuid())
+  userId             String
+  type               StoreAutomationType
+  isEnabled          Boolean             @default(false)
+  templateId         String?
+  sentCount          Int                 @default(0)
+  shopifyStoreId     String?
+  easyOrdersStoreId  String?
+  wooCommerceStoreId String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  easyOrdersStore    EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
+  shopifyStore       ShopifyStore?       @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+  wooCommerceStore   WooCommerceStore?   @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
+  template           Template?           @relation(fields: [templateId], references: [id])
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([shopifyStoreId, type])
   @@unique([easyOrdersStoreId, type])
@@ -519,6 +540,8 @@ model Article {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum MessageType {
   text
