@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   UserPlus, ShieldCheck, MessageSquare, Trash2,
   Loader2, ShieldAlert, Copy, CheckCircle2, Users,
@@ -92,9 +93,16 @@ function MemberCard({ member, isSelf, canDelete, copiedId, onDelete, onCopy }: {
   );
 }
 
-export default function TeamPage({ canAddMembers = true }: { canAddMembers?: boolean }) {
+export default function TeamPage({
+  canAddMembers = true,
+  atLimit = false,
+}: {
+  canAddMembers?: boolean;
+  atLimit?: boolean;
+}) {
   const { data: session } = useSession();
   const { t, dir, locale } = useLanguage();
+  const router = useRouter();
   const tm = t.team;
 
   const [members,    setMembers]    = useState<TeamMember[]>([]);
@@ -103,6 +111,25 @@ export default function TeamPage({ canAddMembers = true }: { canAddMembers?: boo
   const [copiedId,   setCopiedId]   = useState<string | null>(null);
 
   const isOwner = session?.user?.role !== "CHAT_ONLY";
+
+  function showLimitToast() {
+    toast.custom(() => (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          وصلت الحد الأقصى للأعضاء في باقتك
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          رقّي الباقة لإضافة المزيد من أعضاء الفريق.
+        </p>
+        <button
+          onClick={() => { toast.dismiss(); router.push("/checkout"); }}
+          className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg transition-colors"
+        >
+          ترقية الباقة ←
+        </button>
+      </div>
+    ), { duration: 6000 });
+  }
 
   const fetchTeam = async () => {
     try {
@@ -168,7 +195,7 @@ export default function TeamPage({ canAddMembers = true }: { canAddMembers?: boo
       </div>
 
       {/* Add member form */}
-      {isOwner && canAddMembers && (
+      {isOwner && canAddMembers && !atLimit && (
         <form
           onSubmit={handleAdd}
           className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm"
@@ -220,6 +247,18 @@ export default function TeamPage({ canAddMembers = true }: { canAddMembers?: boo
             </button>
           </div>
         </form>
+      )}
+
+      {isOwner && canAddMembers && atLimit && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm">
+          <button
+            onClick={showLimitToast}
+            className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+          >
+            <UserPlus className="w-4 h-4" />
+            {locale === "ar" ? "وصلت الحد الأقصى" : "Member limit reached"}
+          </button>
+        </div>
       )}
 
       {isOwner && !canAddMembers && (
