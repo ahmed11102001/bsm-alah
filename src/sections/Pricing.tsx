@@ -124,7 +124,7 @@ export default function Pricing({ lang }: PricingProps) {
               : 0;
 
             return (
-              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-4 ${s.card}`}>
+              <div key={i} className={`relative rounded-2xl p-6 flex flex-col gap-4 overflow-hidden ${s.card}`}>
 
                 {/* popular badge */}
                 {"badge" in plan && plan.badge && (
@@ -132,6 +132,28 @@ export default function Pricing({ lang }: PricingProps) {
                     <span className="bg-[#25D366] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
                       {tr(plan.badge as { ar: string; en: string }, lang)}
                     </span>
+                  </div>
+                )}
+
+                {/* golden ribbon for enterprise */}
+                {isEnterprise && (
+                  <div className="absolute top-5 -right-8 overflow-hidden pointer-events-none" style={{width: "120px", height: "120px"}}>
+                    <div
+                      className="absolute text-center font-black text-[10px] tracking-widest uppercase"
+                      style={{
+                        width: "140px",
+                        top: "26px",
+                        right: "-34px",
+                        transform: "rotate(45deg)",
+                        background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
+                        color: "#3a2500",
+                        padding: "5px 0",
+                        boxShadow: "0 2px 8px rgba(180,130,0,0.5)",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {isAr ? "عرض خاص" : "Special Offer"}
+                    </div>
                   </div>
                 )}
 

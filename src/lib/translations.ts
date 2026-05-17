@@ -194,7 +194,8 @@ export const t = {
         cta:     { ar: "ابدأ مجاناً", en: "Start Free" },
         slug:    "free",
         features:[
-          { ar: "١٠٠ جهة اتصال",  en: "100 contacts",     ok: true },
+          { ar: "محادثات غير محدودة", en: "Unlimited conversations", ok: true },
+          { ar: "١٠٠ جهة اتصال",      en: "100 contacts",            ok: true },
           { ar: "١ مستخدم",        en: "1 user",           ok: true },
           { ar: "٣ حملات فقط",     en: "3 campaigns only", ok: true },
           { ar: "نص فقط",          en: "Text only",        ok: true },
@@ -207,6 +208,7 @@ export const t = {
         cta:     { ar: "ابدأ الآن", en: "Get Started" },
         slug:    "starter",
         features:[
+          { ar: "محادثات غير محدودة",    en: "Unlimited conversations",   ok: true  },
           { ar: "٢٬٠٠٠ جهة اتصال",      en: "2,000 contacts",            ok: true  },
           { ar: "٢ مستخدمين",            en: "2 users",                   ok: true  },
           { ar: "٥٠ حملة شهرياً",       en: "50 campaigns/month",        ok: true  },
@@ -223,6 +225,7 @@ export const t = {
         cta:     { ar: "ابدأ الآن", en: "Get Started" },
         slug:    "professional",
         features:[
+          { ar: "محادثات غير محدودة",      en: "Unlimited conversations",   ok: true  },
           { ar: "٢٠٬٠٠٠ جهة اتصال",       en: "20,000 contacts",           ok: true  },
           { ar: "حتى ٥ مستخدمين",          en: "Up to 5 users",             ok: true  },
           { ar: "حملات غير محدودة",        en: "Unlimited campaigns",       ok: true  },
@@ -238,6 +241,7 @@ export const t = {
         cta:     { ar: "تواصل معنا", en: "Contact Us" },
         slug:    "enterprise",
         features:[
+          { ar: "محادثات غير محدودة",     en: "Unlimited conversations",   ok: true  },
           { ar: "جهات اتصال غير محدودة",  en: "Unlimited contacts",        ok: true  },
           { ar: "مستخدمون غير محدودون",   en: "Unlimited users",           ok: true  },
           { ar: "حملات غير محدودة",       en: "Unlimited campaigns",       ok: true  },
