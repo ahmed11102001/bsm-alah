@@ -37,7 +37,7 @@ const PARTNERS = [
     color: "from-cyan-500 to-cyan-600",
     description: { ar: "ذكاء اصطناعي", en: "AI Assistant" },
   },
-   {
+  {
     name: "Elevenlabs",
     logoSrc: "/partners/elevenlabs.svg",
     color: "from-yellow-500 to-yellow-600",
@@ -49,7 +49,59 @@ const PARTNERS = [
     color: "from-pink-500 to-pink-600",
     description: { ar: "سيلز AI", en: "AI Sales" },
   },
- 
+  {
+    name: "Google Ads",
+    logoSrc: "/partners/googleads.svg",
+    color: "from-red-500 to-red-600",
+    description: { ar: "إعلانات ممولة", en: "Paid Ads" },
+  },
+];
+
+const WHO_FOR = [
+  {
+    icon: "🛍️",
+    title: { ar: "أصحاب المتاجر الإلكترونية", en: "E-commerce Owners" },
+    desc: {
+      ar: "أرسل تأكيدات الطلبات، عروض خاصة، وتذكيرات السلة المهجورة تلقائياً",
+      en: "Send order confirmations, special offers & abandoned cart reminders automatically",
+    },
+    color: "from-green-50 to-emerald-50",
+    border: "border-green-200",
+    iconBg: "bg-green-100",
+  },
+  {
+    icon: "☕",
+    title: { ar: "المطاعم والكافيهات", en: "Restaurants & Cafes" },
+    desc: {
+      ar: "تواصل مع عملائك بعروض يومية، قوائم جديدة، وحجوزات عبر واتساب مباشرة",
+      en: "Reach customers with daily offers, new menus & WhatsApp reservations",
+    },
+    color: "from-orange-50 to-amber-50",
+    border: "border-orange-200",
+    iconBg: "bg-orange-100",
+  },
+  {
+    icon: "🏥",
+    title: { ar: "العيادات والمراكز الطبية", en: "Clinics & Medical Centers" },
+    desc: {
+      ar: "ذكّر مرضاك بمواعيدهم وأرسل تعليمات ما بعد الزيارة بشكل احترافي",
+      en: "Remind patients of appointments & send post-visit instructions professionally",
+    },
+    color: "from-blue-50 to-sky-50",
+    border: "border-blue-200",
+    iconBg: "bg-blue-100",
+  },
+  {
+    icon: "🏢",
+    title: { ar: "الشركات والمؤسسات", en: "Companies & Businesses" },
+    desc: {
+      ar: "أتمتة تواصلك مع العملاء، فريق المبيعات، والدعم الفني في مكان واحد",
+      en: "Automate customer communication, sales team & support in one place",
+    },
+    color: "from-purple-50 to-violet-50",
+    border: "border-purple-200",
+    iconBg: "bg-purple-100",
+  },
 ];
 
 export default function Partners({ lang }: PartnersProps) {
@@ -60,7 +112,8 @@ export default function Partners({ lang }: PartnersProps) {
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+
+        {/* ── Header ── */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-2 mb-4">
             <span className="text-2xl">🤝</span>
@@ -77,40 +130,46 @@ export default function Partners({ lang }: PartnersProps) {
           </p>
         </div>
 
-        {/* Static grid (no animation) */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* ── Partners grid 4×2 ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {PARTNERS.map((partner, idx) => (
             <PartnerCard key={idx} partner={partner} lang={lang} />
           ))}
         </div>
 
-        {/* Bottom Stats */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 pt-16 border-t border-gray-100">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700 mb-2">
-              99+
-            </div>
-            <p className="text-gray-600 text-sm">
-              {lang === "ar" ? "شركة تثق بنا" : "Companies Trust Us"}
+        {/* ── Divider + Who is it for ── */}
+        <div className="mt-16 pt-16 border-t border-gray-100">
+          <div className="text-center mb-10">
+            <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+              {lang === "ar" ? "مناسب لـ 🎯" : "Who is it for? 🎯"}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {lang === "ar"
+                ? "واتس برو مصمم لكل من يريد تسويقاً أذكى عبر واتساب"
+                : "WhatsPro is built for anyone who wants smarter WhatsApp marketing"}
             </p>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-purple-700 mb-2">
-              99.9%
-            </div>
-            <p className="text-gray-600 text-sm">
-              {lang === "ar" ? "معدل التوفر" : "Uptime Guarantee"}
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-green-700 mb-2">
-              24/7
-            </div>
-            <p className="text-gray-600 text-sm">
-              {lang === "ar" ? "دعم فني" : "Technical Support"}
-            </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {WHO_FOR.map((item, idx) => (
+              <div
+                key={idx}
+                className={`relative rounded-2xl border ${item.border} bg-gradient-to-br ${item.color} p-6 hover:shadow-md transition-shadow duration-200`}
+              >
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${item.iconBg} mb-4 text-2xl`}>
+                  {item.icon}
+                </div>
+                <h4 className="text-base font-bold text-gray-900 mb-2">
+                  {item.title[lang]}
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {item.desc[lang]}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
+
       </div>
     </section>
   );
@@ -124,13 +183,11 @@ function PartnerCard({
   lang: Lang;
 }) {
   return (
-    <div className="flex-shrink-0 w-40 group">
-      <div className="relative bg-white border border-gray-200 rounded-2xl p-6 h-40 flex flex-col items-center justify-center hover:shadow-lg hover:border-gray-300 overflow-hidden">
+    <div className="group">
+      <div className="relative bg-white border border-gray-200 rounded-2xl p-6 h-40 flex flex-col items-center justify-center hover:shadow-lg hover:border-gray-300 overflow-hidden transition-all duration-200">
         <div
-          className={`absolute inset-0 opacity-0 group-hover:opacity-10 bg-gradient-to-br ${partner.color}`}
+          className={`absolute inset-0 opacity-0 group-hover:opacity-10 bg-gradient-to-br ${partner.color} transition-opacity duration-200`}
         />
-
-        {/* Content */}
         <div className="relative z-10 text-center">
           <div className="mb-3 h-12 w-full flex items-center justify-center">
             <img
@@ -138,27 +195,17 @@ function PartnerCard({
               alt={partner.name}
               width={140}
               height={40}
-              className="h-10 w-auto max-w-[140px] object-contain"
+              className="h-10 w-auto max-w-[120px] object-contain"
               loading="lazy"
             />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-1">
+          <h3 className="text-sm font-bold text-gray-900 mb-1">
             {partner.name}
           </h3>
-          <p
-            className={`text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r ${partner.color}`}
-          >
+          <p className={`text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r ${partner.color}`}>
             {partner.description[lang]}
           </p>
         </div>
-
-        <div
-          className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 pointer-events-none`}
-          style={{
-            background: `conic-gradient(from 0deg, ${partner.color.split(" ")[1]}, transparent 50%)`,
-            opacity: 0,
-          }}
-        />
       </div>
     </div>
   );
