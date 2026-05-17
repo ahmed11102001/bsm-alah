@@ -185,7 +185,7 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function Automation() {
+export default function Automation({ planTier = "free" }: { planTier?: string }) {
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
   const [activeTab,    setActiveTab]    = useState<"automation" | "ai">("automation");
@@ -677,19 +677,31 @@ export default function Automation() {
         <>
           {/* Inner sub-tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
-            {subTabs.map(st => (
-              <button key={st.id} onClick={() => setActiveSubTab(st.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
-                  ${activeSubTab === st.id ? "bg-green-500 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                <st.icon className="w-3.5 h-3.5" />
-                {lang === "ar" ? st.ar : st.en}
-                {badgeCount[st.id] > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeSubTab === st.id ? "bg-white/20 text-white" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"}`}>
-                    {badgeCount[st.id]}
-                  </span>
-                )}
-              </button>
-            ))}
+            {subTabs.map(st => {
+              // noreply و timebased — pro فأعلى فقط
+              const needsPro = st.id === "noreply" || st.id === "timebased";
+              const isLocked = needsPro && planTier !== "pro" && planTier !== "enterprise";
+              return (
+                <button key={st.id}
+                  onClick={() => !isLocked && setActiveSubTab(st.id)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
+                    ${isLocked
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60"
+                      : activeSubTab === st.id
+                        ? "bg-green-500 text-white shadow-sm"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}>
+                  <st.icon className="w-3.5 h-3.5" />
+                  {lang === "ar" ? st.ar : st.en}
+                  {isLocked && <span className="text-[10px]">🔒</span>}
+                  {!isLocked && badgeCount[st.id] > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeSubTab === st.id ? "bg-white/20 text-white" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"}`}>
+                      {badgeCount[st.id]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           {renderSubTab()}
         </>

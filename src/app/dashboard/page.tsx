@@ -633,11 +633,11 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       case "campaigns":  return <Campaigns />;
       case "reports":
         return (
-          <PlanGate allowed={canReports} featureName="التقارير المتقدمة" requiredPlan="Professional">
-            <Reports />
+          <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
+            <Reports planTier={dashData?.plan.plan ?? "free"} />
           </PlanGate>
         );
-      case "automation": return <Automation />;
+      case "automation": return <Automation planTier={dashData?.plan.plan ?? "free"} />;
       case "store":
         return (
           <PlanGate allowed={canStore} featureName="ربط المتجر والأتمتة" requiredPlan="Professional">

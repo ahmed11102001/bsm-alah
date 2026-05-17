@@ -164,7 +164,7 @@ function printPage() {
   window.print();
 }
 // ─── Main Component ────────────────────────────────────────────────────────────
-export default function Reports() {
+export default function Reports({ planTier = "free" }: { planTier?: string }) {
   // ── Filters ─────────────────────────────────────────────────────
   const [from, setFrom]   = useState(MONTH_AGO);
   const [to,   setTo]     = useState(TODAY);
@@ -360,20 +360,33 @@ export default function Reports() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl h-auto flex-wrap gap-1">
           {[
-            { value: "overview",  label: "نظرة عامة",      icon: <BarChart3 className="w-4 h-4" /> },
-            { value: "customers", label: "العملاء",          icon: <Users className="w-4 h-4" /> },
-            { value: "team",      label: "الفريق",           icon: <Shield className="w-4 h-4" /> },
-            { value: "logs",      label: "سجل النشاط",      icon: <Activity className="w-4 h-4" /> },
-            { value: "store",     label: "تقرير المتجر",    icon: <ShoppingBag className="w-4 h-4" /> },
-            { value: "automation",label: "تقرير الأتمتة",   icon: <Bot className="w-4 h-4" /> },
-          ].map((t) => (
-            <TabsTrigger
-              key={t.value} value={t.value}
-              className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 data-[state=active]:shadow-sm rounded-lg px-4 py-2"
-            >
-              {t.icon} {t.label}
-            </TabsTrigger>
-          ))}
+            // free+
+            { value: "overview",   label: "نظرة عامة",    icon: <BarChart3 className="w-4 h-4" />,    minPlan: "free"       },
+            // starter+
+            { value: "customers",  label: "العملاء",       icon: <Users className="w-4 h-4" />,        minPlan: "starter"    },
+            { value: "team",       label: "الفريق",        icon: <Shield className="w-4 h-4" />,       minPlan: "starter"    },
+            // pro+
+            { value: "logs",       label: "سجل النشاط",   icon: <Activity className="w-4 h-4" />,     minPlan: "pro"        },
+            { value: "store",      label: "تقرير المتجر",  icon: <ShoppingBag className="w-4 h-4" />,  minPlan: "pro"        },
+            { value: "automation", label: "تقرير الأتمتة", icon: <Bot className="w-4 h-4" />,          minPlan: "pro"        },
+          ].map((t) => {
+            const order = ["free","starter","pro","enterprise"];
+            const allowed = order.indexOf(planTier) >= order.indexOf(t.minPlan);
+            return (
+              <TabsTrigger
+                key={t.value} value={t.value}
+                disabled={!allowed}
+                className={`flex items-center gap-1.5 text-sm rounded-lg px-4 py-2
+                  ${!allowed
+                    ? "opacity-40 cursor-not-allowed text-gray-400"
+                    : "text-gray-600 dark:text-gray-300 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 data-[state=active]:shadow-sm"
+                  }`}
+              >
+                {t.icon} {t.label}
+                {!allowed && <span className="text-[10px] mr-1">🔒</span>}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         {/* ══════════════ OVERVIEW ══════════════ */}
@@ -1184,4 +1197,3 @@ export default function Reports() {
     </div>
   );
 }
-
