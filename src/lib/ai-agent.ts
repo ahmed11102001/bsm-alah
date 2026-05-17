@@ -9,6 +9,8 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+import * as Sentry from "@sentry/nextjs";
+
 export interface AgentContext {
   brandName?:    string | null;
   businessDesc?: string | null;
@@ -17,6 +19,7 @@ export interface AgentContext {
   workingHours?: string | null;
   tone?:         string | null;
   systemPrompt?: string | null;
+  userId?:       string | null;
 }
 
 // رسالة واحدة في تاريخ المحادثة
@@ -154,6 +157,10 @@ async function callGemini(
 
     return { ok: false, error: "No supported Gemini model found" };
   } catch (err: any) {
+    Sentry.captureException(err, {
+      tags: { component: "ai-agent" },
+      extra: { userId: ctx.userId ?? null, provider: "gemini" },
+    });
     console.error("[AI-AGENT/GEMINI] Network error:", err);
     return { ok: false, error: err.message ?? "Network error" };
   }
@@ -201,6 +208,10 @@ async function callOpenAI(
     if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" };
     return parseAgentJSON(raw);
   } catch (err: any) {
+    Sentry.captureException(err, {
+      tags: { component: "ai-agent" },
+      extra: { userId: ctx.userId ?? null, provider: "openai" },
+    });
     console.error("[AI-AGENT/OPENAI] Network error:", err);
     return { ok: false, error: err.message ?? "Network error" };
   }

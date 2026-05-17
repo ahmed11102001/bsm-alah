@@ -7,6 +7,7 @@ import { inngest }   from "./client";
 import prisma        from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
+import * as Sentry from "@sentry/nextjs";
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
 const QueueStatus      = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
@@ -299,8 +300,12 @@ export const processCampaign = inngest.createFunction(
         } else {
           await notifyCampaignPartial(userId, name, campaignId, sent, failed);
         }
-      } catch (err) {
-        console.error("[INNGEST] Notification error:", err);
+      } catch (error) {
+        Sentry.captureException(error, {
+          tags: { component: "inngest", function: "send-campaign" },
+        });
+        console.error("[INNGEST] Notification error:", error);
+        throw error; // مهم عشان Inngest يعتبر الـ job فشل
       }
     });
 

@@ -1,5 +1,6 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import * as Sentry from "@sentry/nextjs";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@/types/enums";
 import { notifyNewMessage } from "@/lib/notifications";
@@ -203,6 +204,9 @@ export async function POST(req: NextRequest) {
               folder: "whatsapp-media/images",
             });
           } catch (uploadErr) {
+            Sentry.captureException(uploadErr, {
+              tags: { component: "webhook" },
+            });
             console.error("[WEBHOOK] Cloudinary upload failed for image:", uploadErr);
             mediaUrl = metaImageId;
           }
@@ -217,6 +221,9 @@ export async function POST(req: NextRequest) {
               folder: "whatsapp-media/audio",
             });
           } catch (uploadErr) {
+            Sentry.captureException(uploadErr, {
+              tags: { component: "webhook" },
+            });
             console.error("[WEBHOOK] Cloudinary upload failed for audio:", uploadErr);
             mediaUrl = metaAudioId;
           }
@@ -260,6 +267,9 @@ export async function POST(req: NextRequest) {
           try {
             await handleAutomation({ userId, from, messageText: content, accountOwner });
           } catch (err) {
+            Sentry.captureException(err, {
+              tags: { component: "webhook" },
+            });
             console.error("[AUTOMATION] Unhandled error:", err);
           }
         });
@@ -269,6 +279,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success" });
 
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "webhook" },
+    });
     console.error("[WEBHOOK] Processing error:", error);
     // ???? 200 ?????? ???? Meta ?? ????? ???????? ????? flood
     return NextResponse.json({ error: "Internal error" }, { status: 200 });
