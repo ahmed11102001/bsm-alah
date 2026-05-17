@@ -64,6 +64,7 @@ export const authOptions: NextAuthOptions = {
           role:     user.role,
           parentId: user.parentId,
           isSuper:  (user as any).isSuper ?? false,
+          needsOnboarding: !user.phone,
         };
       },
     }),
