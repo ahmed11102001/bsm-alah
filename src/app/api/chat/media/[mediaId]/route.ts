@@ -103,7 +103,7 @@ export async function GET(
       return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
     }
 
-    const mediaInfoRes = await fetch(`https://graph.facebook.com/v20.0/${encodeURIComponent(mediaId)}`, {
+    const mediaInfoRes = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(mediaId)}`, {
       headers: { Authorization: `Bearer ${account.accessToken}` },
       cache: "no-store",
     });

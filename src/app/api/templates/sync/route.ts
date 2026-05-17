@@ -17,7 +17,7 @@ export async function POST() {
       return NextResponse.json({ error: "برجاء حفظ إعدادات API أولاً" }, { status: 400 });
     }
 
-    const metaUrl = `https://graph.facebook.com/v20.0/${account.wabaId}/message_templates?limit=100`;
+    const metaUrl = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?limit=100`;
     const response = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${account.accessToken.trim()}` },
     });

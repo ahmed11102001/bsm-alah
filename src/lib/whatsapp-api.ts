@@ -83,7 +83,7 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
 
   try {
     const res  = await fetch(
-      `https://graph.facebook.com/v20.0/${item.phoneNumberId}/messages`,
+      `https://graph.facebook.com/v21.0/${item.phoneNumberId}/messages`,
       {
         method:  "POST",
         headers: {

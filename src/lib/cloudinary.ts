@@ -61,7 +61,7 @@ export async function downloadFromMetaAndUpload(
 ): Promise<string> {
   // الخطوة 1: جيب URL الملف من Meta
   const infoRes = await fetch(
-    `https://graph.facebook.com/v20.0/${encodeURIComponent(metaMediaId)}`,
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(metaMediaId)}`,
     { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
   );
 

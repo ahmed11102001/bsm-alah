@@ -350,7 +350,7 @@ async function handleAutomation(ctx: {
         if (audioUrl) {
           // ???? ??? audio ??? ?????? ?? voice note
           const metaRes = await fetch(
-            `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
+            `https://graph.facebook.com/v21.0/${accountOwner.phoneNumberId}/messages`,
             {
               method:  "POST",
               headers: {
@@ -568,7 +568,7 @@ async function sendReply(ctx: {
   const { userId, from, replyText, accountOwner, ruleName } = ctx;
 
   const metaRes = await fetch(
-    `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
+    `https://graph.facebook.com/v21.0/${accountOwner.phoneNumberId}/messages`,
     {
       method:  "POST",
       headers: {
