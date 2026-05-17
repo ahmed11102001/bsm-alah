@@ -135,25 +135,16 @@ export default function Pricing({ lang }: PricingProps) {
                   </div>
                 )}
 
-                {/* golden ribbon for enterprise */}
+                {/* top full-width offer bar for enterprise */}
                 {isEnterprise && (
-                  <div
-                    className={`absolute top-5 overflow-hidden pointer-events-none ${isAr ? "-left-8" : "-right-8"}`}
-                    style={{ width: "120px", height: "120px" }}
-                  >
+                  <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
                     <div
-                      className="absolute text-center font-black text-[10px] tracking-widest uppercase"
+                      className="w-full text-center font-black text-[12px] py-2"
                       style={{
-                        width: "140px",
-                        top: "26px",
-                        right: isAr ? "auto" : "-34px",
-                        left: isAr ? "-34px" : "auto",
-                        transform: isAr ? "rotate(-45deg)" : "rotate(45deg)",
                         background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
                         color: "#3a2500",
-                        padding: "5px 0",
-                        boxShadow: "0 2px 8px rgba(180,130,0,0.5)",
-                        letterSpacing: "0.08em",
+                        boxShadow: "0 2px 8px rgba(180,130,0,0.35)",
+                        letterSpacing: "0.02em",
                       }}
                     >
                       {isAr ? "عرض خاص" : "Special Offer"}
