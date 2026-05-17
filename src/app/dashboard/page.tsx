@@ -611,7 +611,6 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const planLimits   = dashData?.plan.limits;
   const isStarter    = planLimits != null; // starter+ = أي باقة مدفوعة (للـ team)
   const canReports   = planLimits?.advancedReports   ?? false;
-  const canAPI       = planLimits?.apiAccess          ?? false;
   const canTeam      = planLimits != null && (planLimits.teamMembers === -1 || planLimits.teamMembers > 1);
   const canStore     = planLimits?.storeIntegration   ?? false;
   const canAI        = planLimits?.aiAgent             ?? false;
@@ -624,11 +623,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
       case "team":
-        return (
-          <PlanGate allowed={canTeam} featureName="إدارة الفريق" requiredPlan="Starter">
-            <TeamPage />
-          </PlanGate>
-        );
+        return <TeamPage canAddMembers={canTeam} />;
       case "templates":  return <Templates />;
       case "campaigns":  return <Campaigns />;
       case "reports":
@@ -639,17 +634,9 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         );
       case "automation": return <Automation planTier={dashData?.plan.plan ?? "free"} />;
       case "store":
-        return (
-          <PlanGate allowed={canStore} featureName="ربط المتجر والأتمتة" requiredPlan="Professional">
-            <Store />
-          </PlanGate>
-        );
+        return <Store />;
       case "api":
-        return (
-          <PlanGate allowed={canAPI} featureName="الوصول عبر API" requiredPlan="Enterprise">
-            <API />
-          </PlanGate>
-        );
+        return <API canUseStoreIntegrations={canStore} />;
       case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
     }

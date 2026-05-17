@@ -9,7 +9,7 @@ import {
   Copy, CheckCircle2, RefreshCw, ShoppingBag, Zap,
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
-  Database, Link as LinkIcon, Globe, Key, Trash2,
+  Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,11 +54,13 @@ const CARD_VISUALS: CardVisual[] = [
   { id: "webhook",     icon: <Webhook       className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
 ];
 
-function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children }: {
+function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
   id: CardId; title: string; subtitle: string;
   steps: { title: string; desc: string }[];
   isOpen: boolean; onToggle: () => void;
   children: React.ReactNode;
+  locked?: boolean;
+  lockMessage?: string;
 }) {
   const v = CARD_VISUALS.find(c => c.id === id)!;
   return (
@@ -70,6 +72,7 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
       isOpen && "md:col-span-2"
     )}>
       <button onClick={onToggle}
+        title={locked ? lockMessage : undefined}
         className="w-full text-right p-5 flex items-center justify-between gap-3 cursor-pointer">
         <div className="flex items-center gap-3">
           <div className={cn(
@@ -79,7 +82,10 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
             <span className={v.accentColor}>{v.icon}</span>
           </div>
           <div className="text-right">
-            <p className="font-semibold text-sm text-gray-900 dark:text-white">{title}</p>
+            <p className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+              {title}
+              {locked && <Lock className="w-3.5 h-3.5 text-amber-500" />}
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
           </div>
         </div>
@@ -486,7 +492,7 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function API({ initialData }: { initialData?: any }) {
+export default function API({ initialData, canUseStoreIntegrations = true }: { initialData?: any; canUseStoreIntegrations?: boolean }) {
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 
@@ -573,7 +579,17 @@ export default function API({ initialData }: { initialData?: any }) {
     } catch {}
   }, [eoUrlLoaded]);
 
+  const lockMessage = locale === "ar"
+    ? "ربط المتاجر متاح من باقة Professional فما فوق. قم بترقية الباقة."
+    : "Store integrations are available on Professional plan and above. Please upgrade.";
+  const isStoreCardLocked = (id: CardId) =>
+    !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
+
   const handleCardClick = (id: CardId) => {
+    if (isStoreCardLocked(id)) {
+      toast.error(lockMessage);
+      return;
+    }
     setOpenCard(prev => prev === id ? null : id);
     if (id === "easyorders") loadEoWebhookUrl();
   };
@@ -705,6 +721,8 @@ export default function API({ initialData }: { initialData?: any }) {
             {...card}
             isOpen={openCard === card.id}
             onToggle={() => handleCardClick(card.id)}
+            locked={isStoreCardLocked(card.id)}
+            lockMessage={lockMessage}
           >
             {card.id === "whatsapp" && (
               <WhatsAppContent

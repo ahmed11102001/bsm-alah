@@ -92,9 +92,9 @@ function MemberCard({ member, isSelf, canDelete, copiedId, onDelete, onCopy }: {
   );
 }
 
-export default function TeamPage() {
+export default function TeamPage({ canAddMembers = true }: { canAddMembers?: boolean }) {
   const { data: session } = useSession();
-  const { t, dir } = useLanguage();
+  const { t, dir, locale } = useLanguage();
   const tm = t.team;
 
   const [members,    setMembers]    = useState<TeamMember[]>([]);
@@ -168,7 +168,7 @@ export default function TeamPage() {
       </div>
 
       {/* Add member form */}
-      {isOwner && (
+      {isOwner && canAddMembers && (
         <form
           onSubmit={handleAdd}
           className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm"
@@ -222,6 +222,31 @@ export default function TeamPage() {
         </form>
       )}
 
+      {isOwner && !canAddMembers && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => toast.error(locale === "ar" ? "إضافة أعضاء الفريق متاحة من باقة Starter فما فوق. قم بالترقية أولاً." : "Adding team members is available on Starter plan and above. Please upgrade first.")}
+          onMouseEnter={() => toast.error(locale === "ar" ? "الميزة مقفولة على الباقة الحالية. رقّي الباقة لفتح إضافة أعضاء الفريق." : "This feature is locked on your current plan. Upgrade to unlock adding team members.")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toast.error(locale === "ar" ? "إضافة أعضاء الفريق متاحة من باقة Starter فما فوق. قم بالترقية أولاً." : "Adding team members is available on Starter plan and above. Please upgrade first.");
+            }
+          }}
+          className="bg-white dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm cursor-not-allowed opacity-80"
+          title={locale === "ar" ? "الميزة مقفولة - تتطلب ترقية الباقة" : "Locked feature - requires plan upgrade"}
+        >
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+            <UserPlus className="w-3.5 h-3.5" />
+            {tm.addForm.title} 
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {locale === "ar" ? "متاحة من باقة Starter فما فوق" : "Available on Starter plan and above"}
+          </p>
+        </div>
+      )}
+
       {/* Members grid */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -254,3 +279,4 @@ export default function TeamPage() {
     </div>
   );
 }
+
