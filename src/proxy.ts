@@ -85,9 +85,9 @@ function buildCsp(nonce: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Middleware الرئيسي
+// proxy الرئيسي
 // ═══════════════════════════════════════════════════════════════════════════════
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // ── Step 1: توليد nonce عشوائي لكل request ──────────────────────────────────
@@ -135,7 +135,7 @@ export async function middleware(req: NextRequest) {
   return response;
 }
 
-// بنشغل الـ middleware على كل الصفحات ما عدا الـ static files
+// بنشغل الـ proxy على كل الصفحات ما عدا الـ static files
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
