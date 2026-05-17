@@ -7,7 +7,8 @@ import { t, tr, type Lang } from "@/lib/translations";
 import { usePixel } from "@/hooks/usePixel";
 
 // ─── config ──────────────────────────────────────────────────────────────────
-const BASE_PRICES = [0, 249, 499, 850];
+const BASE_PRICES = [0, 249, 499, 1199];
+const ENTERPRISE_OFFER = 999;
 
 const CYCLES = [
   { key: "monthly",   label: { ar: "شهري",        en: "Monthly"   }, discount: 0    },
@@ -108,12 +109,13 @@ export default function Pricing({ lang }: PricingProps) {
         {/* ── Cards ── */}
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
           {plans.map((plan, i) => {
-            const s       = PLAN_STYLES[i];
-            const base    = BASE_PRICES[i];
-            const price   = computePrice(base, cycle);
-            const slug    = (plan as any).slug as string;
-            const isFree  = base === 0;
-            const Icon    = PLAN_ICONS[i];
+            const s            = PLAN_STYLES[i];
+            const base         = BASE_PRICES[i];
+            const price        = computePrice(base, cycle);
+            const slug         = (plan as any).slug as string;
+            const isFree       = base === 0;
+            const isEnterprise = slug === "enterprise";
+            const Icon         = PLAN_ICONS[i];
 
             // savings label
             const disc    = CYCLES.find(c => c.key === cycle)!.discount;
@@ -156,6 +158,23 @@ export default function Pricing({ lang }: PricingProps) {
                     <p className={`text-4xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
                       {tr(t.pricing.free, lang)}
                     </p>
+                  ) : isEnterprise ? (
+                    <>
+                      <div className="flex items-end gap-2">
+                        <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
+                          {ENTERPRISE_OFFER.toLocaleString("ar-EG")}
+                        </span>
+                        <span className="text-sm mb-1.5 line-through opacity-40 text-gray-400">
+                          {price.toLocaleString("ar-EG")}
+                        </span>
+                        <span className="text-sm mb-1.5 text-gray-400">
+                          {tr(t.pricing.currency, lang)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#1a9e50] font-semibold mt-0.5">
+                        {isAr ? "عرض محدود — وفّر ٢٠٠ج/شهر" : "Limited offer — save 200 EGP/mo"}
+                      </p>
+                    </>
                   ) : (
                     <>
                       <div className="flex items-end gap-1.5">
@@ -178,12 +197,23 @@ export default function Pricing({ lang }: PricingProps) {
                 </div>
 
                 {/* CTA */}
-                <button
-                  onClick={() => handleCTA(slug, isFree, price)}
-                  className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
-                >
-                  {tr(plan.cta, lang)}
-                </button>
+                {isEnterprise ? (
+                  <a
+                    href="https://wa.me/201XXXXXXXXX?text=مرحباً%20أريد%20الاستفسار%20عن%20باقة%20Enterprise"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 block ${s.cta}`}
+                  >
+                    {tr(plan.cta, lang)}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => handleCTA(slug, isFree, price)}
+                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
+                  >
+                    {tr(plan.cta, lang)}
+                  </button>
+                )}
 
                 {/* divider */}
                 <div className={`h-px ${s.dark ? "bg-gray-800" : "bg-gray-100"}`} />
