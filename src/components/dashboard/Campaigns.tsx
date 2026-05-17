@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { Button }      from "@/components/ui/button";
@@ -377,7 +378,8 @@ function DetailsModal({ campaign, open, onClose, lang }: {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
-export default function Campaigns() {
+export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
+  const router = useRouter();
   const { locale } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
 
@@ -579,6 +581,25 @@ export default function Campaigns() {
     { value: "draft",     label: tr("filterDraft",lang)     },
   ];
 
+  function showLimitToast() {
+    toast.custom(() => (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          وصلت الحد الأقصى للحملات هذا الشهر
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          رقّي الباقة لإرسال حملات غير محدودة.
+        </p>
+        <button
+          onClick={() => { toast.dismiss(); router.push("/checkout"); }}
+          className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg transition-colors"
+        >
+          ترقية الباقة ←
+        </button>
+      </div>
+    ), { duration: 6000 });
+  }
+
   return (
     <div className="max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
 
@@ -593,8 +614,15 @@ export default function Campaigns() {
             className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
-          <Button onClick={() => { resetDialog(); setDialogOpen(true); }} className="bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2 flex-1 sm:flex-none justify-center">
-            <Plus className="w-4 h-4" /> {tr("newCampaign",lang)}
+          <Button
+            onClick={() => atLimit ? showLimitToast() : (resetDialog(), setDialogOpen(true))}
+            className={atLimit
+              ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+              : "bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+            }
+          >
+            <Plus className="w-4 h-4" />
+            {atLimit ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
           </Button>
         </div>
       </div>

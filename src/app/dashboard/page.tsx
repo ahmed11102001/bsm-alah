@@ -3,6 +3,7 @@
 import ChatPage    from "@/app/dashboard/chat/page";
 import TeamPage    from "@/app/dashboard/team/page";
 import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import "@/app/globals.css";
 import { useState, useEffect, useCallback } from "react";
@@ -415,9 +416,10 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
 }
 
 // ─── Home Dashboard ───────────────────────────────────────────────────────────
-function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
-  data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void;
+function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false }: {
+  data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean;
 }) {
+  const router = useRouter();
   const { t, locale, dir } = useLanguage();
   const h = t.home;
   const { stats, recentCampaigns, user } = data;
@@ -432,6 +434,24 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
   ] as const;
 
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
+  const showCampaignLimitToast = () => {
+    toast.custom(() => (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          وصلت الحد الأقصى للحملات هذا الشهر
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          رقّي الباقة لإرسال حملات غير محدودة.
+        </p>
+        <button
+          onClick={() => { toast.dismiss(); router.push("/checkout"); }}
+          className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg transition-colors"
+        >
+          ترقية الباقة ←
+        </button>
+      </div>
+    ), { duration: 6000 });
+  };
 
   return (
     <div dir={dir}>
@@ -446,8 +466,14 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings }: {
           <Button size="sm" variant="outline" onClick={onOpenSettings} className="gap-1.5 text-sm hidden sm:flex">
             <Settings className="w-4 h-4" /> {h.settingsBtn}
           </Button>
-          <Button size="sm" className="bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm w-full sm:w-auto justify-center" onClick={onCreateCampaign}>
-            <Plus className="w-4 h-4" /> {h.newCampaign}
+          <Button
+            size="sm"
+            className={campaignAtLimit
+              ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
+              : "bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm w-full sm:w-auto justify-center"}
+            onClick={() => campaignAtLimit ? showCampaignLimitToast() : onCreateCampaign()}
+          >
+            <Plus className="w-4 h-4" /> {campaignAtLimit ? (locale === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : h.newCampaign}
           </Button>
         </div>
       </div>
@@ -615,20 +641,23 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const teamUsed     = dashData?.plan.usage.teamMembers ?? 0;
   const canTeam      = planLimits != null && (teamLimit === -1 || (teamLimit > 1 && teamUsed < teamLimit));
   const teamAtMax    = planLimits != null && teamLimit !== -1 && teamLimit > 1 && teamUsed >= teamLimit;
+  const campaignLimit = planLimits?.campaignsPerMonth ?? 0;
+  const campaignUsed  = dashData?.plan.usage.campaignsThisMonth ?? 0;
+  const campaignAtMax = planLimits != null && campaignLimit !== -1 && campaignUsed >= campaignLimit;
   const canStore     = planLimits?.storeIntegration   ?? false;
   const canAI        = planLimits?.aiAgent             ?? false;
 
   const renderContent = () => {
     switch (activeSection) {
       case "home":       return dashData
-        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} />
+        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
       case "team":
         return <TeamPage canAddMembers={canTeam} atLimit={teamAtMax} />;
       case "templates":  return <Templates />;
-      case "campaigns":  return <Campaigns />;
+      case "campaigns":  return <Campaigns atLimit={campaignAtMax} />;
       case "reports":
         return (
           <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
