@@ -150,10 +150,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id             = token.id       as string;
-        session.user.role           = token.role     as string;
+        session.user.role           = token.role as "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
         session.user.parentId       = token.parentId as string | null;
         session.user.isSuper        = token.isSuper  as boolean;
-        session.user.needsOnboarding = token.needsOnboarding as boolean;
+        session.user.needsOnboarding = (token.needsOnboarding as boolean | undefined) ?? false;
       }
       return session;
     },
