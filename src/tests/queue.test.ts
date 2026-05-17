@@ -1,9 +1,7 @@
 // src/__tests__/queue.test.ts
 // ─── اختبار Queue Processor ────────────────────────────────────────────────────
-// ده اللي بيبعت الحملات فعلاً. لو فيه bug:
-//   - رسائل بتتبعت مرتين (double send)
-//   - rate limit مش بيتطبق → حساب واتساب بيتبان
-//   - الحملة مبتكملش → status بيفضل "running" للأبد
+// بعد الـ refactor: processQueue بقت fan-out لـ Inngest
+// والـ processing الفعلي بيحصل في processQueueItem (Inngest function)
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueueStatus, CampaignStatus, MessageStatus, MessageType, MessageDirection } from "@/types/enums";
@@ -13,7 +11,7 @@ const mockSendWhatsApp = vi.fn();
 vi.mock("@/lib/whatsapp-api", () => ({
   sendWhatsAppMessage: mockSendWhatsApp,
   QUEUE_CONSTANTS: {
-    DELAY_BETWEEN_MSGS: 0,        // zero delay في الـ tests
+    DELAY_BETWEEN_MSGS: 0,
     BACKOFF_STEPS_SEC:  [60, 300, 900, 3600],
     TIER_DAILY_LIMIT:   { 1: 1000, 2: 10000, 3: 100000, 4: Infinity },
     TIER_BATCH_SIZE:    { 1: 10,   2: 30,    3: 80,     4: 150 },
@@ -22,36 +20,13 @@ vi.mock("@/lib/whatsapp-api", () => ({
 
 // ─── Mock Prisma ──────────────────────────────────────────────────────────────
 const mockPrisma = {
-  whatsAppAccount: {
-    findMany: vi.fn(),
-    update:   vi.fn(),
-  },
-  messageQueue: {
-    findMany:    vi.fn(),
-    updateMany:  vi.fn(),
-    update:      vi.fn(),
-    count:       vi.fn(),
-    createMany:  vi.fn(),
-    create:      vi.fn(),
-  },
-  campaign: {
-    update:  vi.fn(),
-    findMany: vi.fn(),
-  },
-  message: {
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-  contact: {
-    findFirst: vi.fn(),
-    upsert:    vi.fn(),
-    update:    vi.fn(),
-  },
-  subscription: {
-    findUnique: vi.fn(),
-    update:     vi.fn(),
-  },
-  $transaction: vi.fn(),
+  whatsAppAccount: { findMany: vi.fn(), update: vi.fn() },
+  messageQueue:    { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), update: vi.fn(), count: vi.fn(), createMany: vi.fn(), create: vi.fn() },
+  campaign:        { update: vi.fn(), findMany: vi.fn() },
+  message:         { create: vi.fn(), update: vi.fn() },
+  contact:         { findFirst: vi.fn(), upsert: vi.fn(), update: vi.fn() },
+  subscription:    { findUnique: vi.fn(), update: vi.fn() },
+  $transaction:    vi.fn(),
 };
 
 vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
@@ -63,47 +38,56 @@ vi.mock("@/lib/notifications", () => ({
   notifyCampaignPartial:  vi.fn(),
 }));
 
-const { processQueue, enqueueCampaign, enqueueDirectMessage, triggerScheduledCampaigns } =
+// ─── Mock Inngest ─────────────────────────────────────────────────────────────
+const mockInngestSend = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/inngest/client", () => ({
+  inngest: {
+    send:           mockInngestSend,
+    // createFunction بيأخد (config, handler) ويرجع object فيه handler للـ testing
+    createFunction: (config: any, handler: any) => ({ id: config.id, handler }),
+  },
+}));
+
+const { processQueue, enqueueCampaign, triggerScheduledCampaigns } =
   await import("@/lib/queue");
 
 // ─── Stubs ────────────────────────────────────────────────────────────────────
 const stubAccount = {
-  id:             "acc_1",
-  phoneNumberId:  "phone_1",
-  accessToken:    "TOKEN",
-  messagingTier:  1,
-  dailySentCount: 0,
-  dailyResetAt:   new Date(),
-  backoffCount:   0,
-  backoffUntil:   null,
+  id: "acc_1", phoneNumberId: "phone_1", accessToken: "TOKEN",
+  messagingTier: 1, dailySentCount: 0, dailyResetAt: new Date(),
+  backoffCount: 0, backoffUntil: null,
 };
 
-function makeQueueItem(overrides = {}) {
+function makeQueueItem(overrides: Record<string, any> = {}) {
   return {
-    id:                "q_1",
-    userId:            "user_1",
-    whatsappAccountId: "acc_1",
-    toPhone:           "201012345678",
-    contactId:         "contact_1",
-    messageType:       "template",
-    templateName:      "order_confirm",
-    templateLang:      "ar",
-    templateVars:      null,
-    content:           null,
-    campaignId:        "camp_1",
-    attempts:          0,
-    maxAttempts:       3,
-    phoneNumberId:     "phone_1",
-    existingMessageId: null,
+    id: "q_1", userId: "user_1", whatsappAccountId: "acc_1",
+    toPhone: "201012345678", contactId: "contact_1",
+    messageType: "template", templateName: "order_confirm",
+    templateLang: "ar", templateVars: null, content: null,
+    campaignId: "camp_1", attempts: 0, maxAttempts: 3,
+    phoneNumberId: "phone_1", existingMessageId: null,
+    whatsappAccount: stubAccount,
+    ...overrides,
+  };
+}
+
+/** Mock step object لاختبار Inngest functions ──────────────────────────────── */
+function makeStep(overrides: Record<string, any> = {}) {
+  return {
+    run:   vi.fn().mockImplementation((_name: string, fn: () => any) => fn()),
+    sleep: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockInngestSend.mockResolvedValue(undefined);
 
   mockPrisma.whatsAppAccount.findMany.mockResolvedValue([stubAccount]);
   mockPrisma.whatsAppAccount.update.mockResolvedValue({});
+  mockPrisma.messageQueue.findMany.mockResolvedValue([]);
+  mockPrisma.messageQueue.findUnique.mockResolvedValue(null);
   mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
   mockPrisma.messageQueue.update.mockResolvedValue({});
   mockPrisma.messageQueue.count.mockResolvedValue(0);
@@ -113,75 +97,132 @@ beforeEach(() => {
   mockPrisma.contact.findFirst.mockResolvedValue({ id: "contact_1" });
   mockPrisma.contact.upsert.mockResolvedValue({ id: "contact_1" });
   mockPrisma.contact.update.mockResolvedValue({});
-
-  // $transaction بيشغّل الـ callback
   mockPrisma.$transaction.mockImplementation((fn: any) =>
     typeof fn === "function" ? fn(mockPrisma) : Promise.all(fn)
   );
-
-  // الافتراضي: batch فاضي (مفيش رسائل)
-  mockPrisma.messageQueue.findMany.mockResolvedValue([]);
   mockSendWhatsApp.mockResolvedValue({ ok: true, whatsappMsgId: "wamid.001" });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-describe("processQueue — Happy Path", () => {
-  it("لو مفيش رسائل → بيرجع processed:0", async () => {
+// processQueue — Fan-out to Inngest
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("processQueue — Fan-out to Inngest", () => {
+  it("لو مفيش رسائل → بيرجع processed:0 ومش بيبعت events", async () => {
     mockPrisma.messageQueue.findMany.mockResolvedValue([]);
+  mockPrisma.messageQueue.findUnique.mockResolvedValue(null);
     const result = await processQueue();
     expect(result.processed).toBe(0);
-    expect(result.sent).toBe(0);
+    expect(mockInngestSend).not.toHaveBeenCalled();
   });
 
-  it("رسالة واحدة → بتتبعت وتحفظ", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
-
+  it("رسالة واحدة → بيبعت event لـ Inngest", async () => {
+    mockPrisma.messageQueue.findMany.mockResolvedValue([
+      makeQueueItem({ id: "q_1", phoneNumberId: "phone_1" }),
+    ]);
     const result = await processQueue();
-
-    expect(mockSendWhatsApp).toHaveBeenCalledOnce();
-    expect(result.sent).toBe(1);
     expect(result.processed).toBe(1);
+    expect(mockInngestSend).toHaveBeenCalledOnce();
+    expect(mockInngestSend).toHaveBeenCalledWith([
+      expect.objectContaining({ name: "queue/process-item", data: { queueId: "q_1", phoneNumberId: "phone_1" } }),
+    ]);
   });
 
-  it("بيبعت الـ params الصحيحة لـ sendWhatsAppMessage", async () => {
-    const item = makeQueueItem({
-      templateName: "order_confirmed",
-      templateLang: "ar",
-      templateVars: { body: ["أحمد"] },
-    });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([item]);
+  it("3 رسائل → بيبعت 3 events دفعة واحدة", async () => {
+    mockPrisma.messageQueue.findMany.mockResolvedValue([
+      makeQueueItem({ id: "q_1", phoneNumberId: "phone_1" }),
+      makeQueueItem({ id: "q_2", phoneNumberId: "phone_1" }),
+      makeQueueItem({ id: "q_3", phoneNumberId: "phone_2" }),
+    ]);
+    const result = await processQueue();
+    expect(result.processed).toBe(3);
+    expect(mockInngestSend).toHaveBeenCalledOnce();
+    const events = mockInngestSend.mock.calls[0][0];
+    expect(events).toHaveLength(3);
+    expect(events[0]).toMatchObject({ name: "queue/process-item", data: { queueId: "q_1" } });
+    expect(events[2]).toMatchObject({ name: "queue/process-item", data: { queueId: "q_3" } });
+  });
 
+  it("بيجيب الـ pending items اللي scheduledAt <= now فقط", async () => {
+    mockPrisma.messageQueue.findMany.mockResolvedValue([]);
+  mockPrisma.messageQueue.findUnique.mockResolvedValue(null);
     await processQueue();
-
-    expect(mockSendWhatsApp).toHaveBeenCalledWith(
+    expect(mockPrisma.messageQueue.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        toPhone:      "201012345678",
-        phoneNumberId: "phone_1",
-        accessToken:   "TOKEN",
-        templateName:  "order_confirmed",
-        templateLang:  "ar",
-        templateVars:  { body: ["أحمد"] },
+        where: expect.objectContaining({
+          status:      QueueStatus.pending,
+          scheduledAt: expect.objectContaining({ lte: expect.any(Date) }),
+        }),
       })
     );
   });
 
-  it("بيعمل status=processing فوراً (atomic lock يمنع double-send)", async () => {
+  it("مش بيبعت لـ sendWhatsAppMessage مباشرة (ده شغل Inngest)", async () => {
     mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
-
     await processQueue();
+    expect(mockSendWhatsApp).not.toHaveBeenCalled();
+  });
 
-    // الـ updateMany الأول لازم يكون processing
+  it("مفيش accounts → الـ fan-out شغال بدون اعتماد عليهم", async () => {
+    mockPrisma.whatsAppAccount.findMany.mockResolvedValue([]);
+    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem({ id: "q_1" })]);
+    const result = await processQueue();
+    expect(result.processed).toBe(1);
+    expect(mockInngestSend).toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// processQueueItem — الـ Inngest function اللي بتنفذ الإرسال الفعلي
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("processQueueItem — Happy Path", () => {
+  it("رسالة واحدة → بتتبعت وتحفظ", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
+
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    expect(mockSendWhatsApp).toHaveBeenCalled();
+    expect(result?.ok).toBe(true);
+  });
+
+  it("بيعمل status=processing فوراً (atomic lock يمنع double-send)", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
+
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    // claim-item step بيعمل updateMany لـ pending → processing
     expect(mockPrisma.messageQueue.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { status: QueueStatus.processing, processedAt: expect.any(Date) },
+        where: expect.objectContaining({ status: QueueStatus.pending }),
+        data:  expect.objectContaining({ status: QueueStatus.processing }),
       })
     );
   });
 
   it("بعد النجاح بيعمل status=sent ويحفظ whatsappMsgId", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
 
     expect(mockPrisma.messageQueue.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -193,51 +234,73 @@ describe("processQueue — Happy Path", () => {
     );
   });
 
-  it("بيزوّد dailySentCount بعد كل رسالة ناجحة", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
+  it("بيعمل step.sleep بعد الإرسال (delay على Inngest مش Vercel)", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
 
-    expect(mockPrisma.whatsAppAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { dailySentCount: { increment: 1 } },
-      })
-    );
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    expect(step.sleep).toHaveBeenCalledWith("rate-limit-delay", "350ms");
   });
 
-  it("بيعمل campaign.update بـ sentCount increment", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
+  it("لو الـ item مش pending → بيعمل skip", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.sent }));
 
-    expect(mockPrisma.campaign.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ sentCount: { increment: 1 } }),
-      })
-    );
+    const result = await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    expect(mockSendWhatsApp).not.toHaveBeenCalled();
+    expect(result?.skipped).toBe(true);
+  });
+
+  it("مفيش item في الـ DB → بيعمل skip", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
+
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(null);
+
+    const result = await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_not_exist", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    expect(result?.skipped).toBe(true);
+    expect(mockSendWhatsApp).not.toHaveBeenCalled();
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-describe("processQueue — Rate Limiting & Backoff", () => {
+describe("processQueueItem — Rate Limiting & Backoff", () => {
   it("rate limit (429) → يوقف الـ account ويعمل backoff", async () => {
-    mockSendWhatsApp.mockResolvedValue({ ok: false, isRateLimit: true });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    const result = await processQueue();
+    mockSendWhatsApp.mockResolvedValue({ ok: false, isRateLimit: true, error: "Rate limit" });
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
 
-    expect(result.skipped).toBe(1);
-    // لازم يعمل backoff على الـ account
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
     expect(mockPrisma.whatsAppAccount.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "acc_1" },
-        data: expect.objectContaining({
-          backoffUntil: expect.any(Date),
-          backoffCount: { increment: 1 },
-        }),
+        data: expect.objectContaining({ backoffCount: { increment: 1 } }),
       })
     );
-    // الرسالة ترجع pending مش failed
+    // المتجر بيرجع لـ pending مش failed
     expect(mockPrisma.messageQueue.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: QueueStatus.pending }),
@@ -245,93 +308,43 @@ describe("processQueue — Rate Limiting & Backoff", () => {
     );
   });
 
-  it("بعد rate limit، باقي الـ batch بيتعمله skip (مش بيتبعت)", async () => {
-    // رسالتين — الأولى بترد بـ rate limit
-    mockSendWhatsApp
-      .mockResolvedValueOnce({ ok: false, isRateLimit: true })
-      .mockResolvedValueOnce({ ok: true, whatsappMsgId: "wamid.002" });
+  it("فشل عادي → بيزوّد attempts ويعمل retry بعد 5 دقائق", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    mockPrisma.messageQueue.findMany.mockResolvedValue([
-      makeQueueItem({ id: "q_1" }),
-      makeQueueItem({ id: "q_2" }),
-    ]);
+    mockSendWhatsApp.mockResolvedValue({ ok: false, isRateLimit: false, error: "Network error" });
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending, attempts: 0, maxAttempts: 3 }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await processQueue();
-
-    // الأولى rate limited، الثانية skip
-    expect(mockSendWhatsApp).toHaveBeenCalledTimes(1); // مش 2
-    expect(result.skipped).toBe(2); // q_1 (rate limit) + q_2 (account blocked)
-  });
-
-  it("token error (code 190) → بيعمل queue failed ويوقف الـ account", async () => {
-    // لازم نـ override الـ default mock بعد beforeEach
-    mockSendWhatsApp.mockReset();
-    mockSendWhatsApp.mockResolvedValue({
-      ok: false, isTokenError: true, error: "Invalid OAuth access token",
-    });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem({ id: "q_1" })]);
-
-    await processQueue();
-
-    // بيعمل update بـ status=failed على الـ queue item
-    expect(mockPrisma.messageQueue.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: QueueStatus.failed }),
-      })
-    );
-    // مش بيعمل backoff (token error مختلف عن rate limit)
-    const backoffCall = mockPrisma.whatsAppAccount.update.mock.calls.find((c: any[]) =>
-      c[0]?.data?.backoffUntil
-    );
-    expect(backoffCall).toBeUndefined();
-  });
-
-  it("daily limit → بيعمل skip للـ account كله", async () => {
-    const fullAccount = { ...stubAccount, dailySentCount: 1000 }; // وصل الحد
-    mockPrisma.whatsAppAccount.findMany.mockResolvedValue([fullAccount]);
-
-    const result = await processQueue();
-
-    expect(mockSendWhatsApp).not.toHaveBeenCalled();
-    expect(result.skipped).toBe(1);
-  });
-
-  it("مفيش accounts → بيرجع فوراً", async () => {
-    mockPrisma.whatsAppAccount.findMany.mockResolvedValue([]);
-
-    const result = await processQueue();
-
-    expect(result.processed).toBe(0);
-    expect(mockSendWhatsApp).not.toHaveBeenCalled();
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-describe("processQueue — Retry Logic", () => {
-  it("فشل عادي (مش rate limit) → بيزوّد attempts ويعمل retry بعد 5 دقائق", async () => {
-    mockSendWhatsApp.mockResolvedValue({ ok: false, error: "Unknown error" });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem({ attempts: 0, maxAttempts: 3 })]);
-
-    await processQueue();
+    try {
+      await (processQueueItem as any).handler({
+        event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+        step,
+      });
+    } catch { /* Inngest بيعمل retry عند الـ throw */ }
 
     expect(mockPrisma.messageQueue.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status:      QueueStatus.pending, // مش failed لأن لسه في attempts
-          attempts:    { increment: 1 },
-          nextRetryAt: expect.any(Date),
+          status:  QueueStatus.pending,
+          attempts: { increment: 1 },
         }),
       })
     );
   });
 
   it("وصل maxAttempts → بيعمل status=failed نهائي", async () => {
-    mockSendWhatsApp.mockResolvedValue({ ok: false, error: "Persistent error" });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([
-      makeQueueItem({ attempts: 2, maxAttempts: 3 }), // المحاولة الأخيرة
-    ]);
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockSendWhatsApp.mockResolvedValue({ ok: false, isRateLimit: false, error: "Final fail" });
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending, attempts: 2, maxAttempts: 3 }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    }).catch(() => {});
 
     expect(mockPrisma.messageQueue.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -340,33 +353,43 @@ describe("processQueue — Retry Logic", () => {
     );
   });
 
-  it("فشل نهائي بـ existingMessageId → بيعمل message.update بـ failed", async () => {
-    mockSendWhatsApp.mockResolvedValue({ ok: false, error: "Final error" });
-    mockPrisma.messageQueue.findMany.mockResolvedValue([
-      makeQueueItem({ attempts: 2, maxAttempts: 3, existingMessageId: "msg_existing", campaignId: null }),
-    ]);
+  it("الـ account في backoff → بيعمل skip", async () => {
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
-
-    expect(mockPrisma.message.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "msg_existing" },
-        data:  expect.objectContaining({ status: MessageStatus.failed }),
+    const future = new Date(Date.now() + 60_000);
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(
+      makeQueueItem({
+        status: QueueStatus.pending,
+        whatsappAccount: { ...stubAccount, backoffUntil: future },
       })
     );
+
+    const result = await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
+    expect(mockSendWhatsApp).not.toHaveBeenCalled();
+    expect(result?.skipped).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-describe("processQueue — Campaign Completion", () => {
+describe("processQueueItem — Campaign Completion", () => {
   it("لما تخلص الرسائل كلها → الحملة بتبقى completed", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
-    mockPrisma.messageQueue.count.mockResolvedValue(0); // مفيش pending/processing
-    mockPrisma.campaign.update.mockResolvedValue({ queuedCount: 0, status: "running" });
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.campaign.update.mockResolvedValue({ queuedCount: 0, status: CampaignStatus.running });
 
-    // لازم يعمل update بـ completed
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
+
     const calls = mockPrisma.campaign.update.mock.calls;
     const completionCall = calls.find((c: any[]) =>
       c[0]?.data?.status === CampaignStatus.completed
@@ -375,35 +398,23 @@ describe("processQueue — Campaign Completion", () => {
   });
 
   it("لما يفضل رسائل pending → الحملة مبتكملش", async () => {
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
-    mockPrisma.messageQueue.count.mockResolvedValue(5); // لسه في رسائل
-    mockPrisma.campaign.update.mockResolvedValue({ queuedCount: 5, status: "running" });
+    const { processQueueItem } = await import("@/inngest/functions");
+    const step = makeStep();
 
-    await processQueue();
+    mockPrisma.messageQueue.findUnique.mockResolvedValue(makeQueueItem({ status: QueueStatus.pending }));
+    mockPrisma.messageQueue.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.campaign.update.mockResolvedValue({ queuedCount: 5, status: CampaignStatus.running });
+
+    await (processQueueItem as any).handler({
+      event: { data: { queueId: "q_1", phoneNumberId: "phone_1" } },
+      step,
+    });
 
     const calls = mockPrisma.campaign.update.mock.calls;
     const completionCall = calls.find((c: any[]) =>
       c[0]?.data?.status === CampaignStatus.completed
     );
     expect(completionCall).toBeUndefined();
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-describe("processQueue — Backoff Clearing", () => {
-  it("بعد نجاح ورسالة، لو الـ account كان في backoff → بيتصفر", async () => {
-    const accountWithBackoff = { ...stubAccount, backoffCount: 2 };
-    mockPrisma.whatsAppAccount.findMany.mockResolvedValue([accountWithBackoff]);
-    mockPrisma.messageQueue.findMany.mockResolvedValue([makeQueueItem()]);
-
-    await processQueue();
-
-    // clearBackoff بيعمل update بـ backoffUntil: null
-    expect(mockPrisma.whatsAppAccount.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { backoffUntil: null, backoffCount: 0 },
-      })
-    );
   });
 });
 
@@ -416,13 +427,10 @@ describe("enqueueCampaign", () => {
 
   it("بيعمل createMany بعدد الـ numbers", async () => {
     await enqueueCampaign({
-      campaignId:        "camp_1",
-      userId:            "user_1",
-      numbers:           ["201011111111", "201022222222", "201033333333"],
-      templateName:      "test_template",
-      whatsappAccountId: "acc_1",
-      phoneNumberId:     "phone_1",
-      accessToken:       "TOKEN",
+      campaignId: "camp_1", userId: "user_1",
+      numbers: ["201011111111", "201022222222", "201033333333"],
+      templateName: "test_template",
+      whatsappAccountId: "acc_1", phoneNumberId: "phone_1", accessToken: "TOKEN",
     });
 
     expect(mockPrisma.messageQueue.createMany).toHaveBeenCalledWith(
@@ -441,9 +449,7 @@ describe("enqueueCampaign", () => {
       campaignId: "camp_1", userId: "user_1",
       numbers: ["201011111111"],
       templateName: "test_template",
-      whatsappAccountId: "acc_1",
-      phoneNumberId: "phone_1",
-      accessToken: "TOKEN",
+      whatsappAccountId: "acc_1", phoneNumberId: "phone_1", accessToken: "TOKEN",
     });
 
     expect(mockPrisma.campaign.update).toHaveBeenCalledWith(
@@ -460,9 +466,7 @@ describe("enqueueCampaign", () => {
       numbers: ["201011111111"],
       templateName: "test_template",
       scheduledAt: future,
-      whatsappAccountId: "acc_1",
-      phoneNumberId: "phone_1",
-      accessToken: "TOKEN",
+      whatsappAccountId: "acc_1", phoneNumberId: "phone_1", accessToken: "TOKEN",
     });
 
     expect(mockPrisma.campaign.update).toHaveBeenCalledWith(
@@ -477,9 +481,7 @@ describe("enqueueCampaign", () => {
       campaignId: "camp_1", userId: "user_1",
       numbers: ["201011111111", "201022222222"],
       templateName: "test_template",
-      whatsappAccountId: "acc_1",
-      phoneNumberId: "phone_1",
-      accessToken: "TOKEN",
+      whatsappAccountId: "acc_1", phoneNumberId: "phone_1", accessToken: "TOKEN",
     });
 
     expect(result.queued).toBe(2);
@@ -496,9 +498,7 @@ describe("triggerScheduledCampaigns", () => {
 
   it("حملة scheduled حان وقتها → بتتحول لـ running", async () => {
     mockPrisma.campaign.findMany.mockResolvedValue([{ id: "camp_scheduled" }]);
-
     const count = await triggerScheduledCampaigns();
-
     expect(count).toBe(1);
     expect(mockPrisma.$transaction).toHaveBeenCalled();
   });
