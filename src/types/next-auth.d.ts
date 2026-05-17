@@ -34,7 +34,7 @@ declare module "next-auth" {
     role:     "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
     parentId: string | null;
     isSuper:  boolean;
-    needsOnboarding: boolean;
+    needsOnboarding?: boolean;
   }
 }
 
@@ -44,7 +44,7 @@ declare module "next-auth/jwt" {
     role:               "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
     parentId:           string | null;
     isSuper:            boolean;
-    needsOnboarding:    boolean;
+    needsOnboarding?:   boolean;
     /** آخر مرة تحققنا من isSuper من الـ DB (timestamp) */
     isSuperVerifiedAt?: number;
   }
