@@ -231,7 +231,7 @@ export const t = {
           { ar: "حملات غير محدودة",        en: "Unlimited campaigns",       ok: true  },
           { ar: "كل أنواع الميديا",        en: "All media types",           ok: true  },
           { ar: "تقارير متقدمة + Export",  en: "Advanced reports + Export", ok: true  },
-          { ar: "أتمتة الردود الذكية",     en: "Smart auto-replies",        ok: true  },
+          { ar: "أتمة ذكية",     en: "Smart automation",        ok: true  },
           { ar: "ربط متجر + أتمتة كاملة", en: "Store + full automation",   ok: true  },
         ],
       },
