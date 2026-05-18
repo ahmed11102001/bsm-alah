@@ -10,7 +10,7 @@ import {
 } from "@/lib/plan-guard";
 import { enqueueCampaign } from "@/lib/queue";
 import { inngest }         from "@/inngest/client";
-
+import { decryptToken }    from "@/lib/crypto";
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
@@ -225,7 +225,7 @@ async function handleCreate(userId: string, body: any) {
     scheduledAt:       isScheduled ? scheduledDate : null,
     whatsappAccountId: account.id,
     phoneNumberId:     account.phoneNumberId,
-    accessToken:       account.accessToken,
+    accessToken:       decryptToken(account.accessToken),
   });
 
   await incrementCampaignUsage(userId);
@@ -310,7 +310,7 @@ async function handleRepeat(userId: string, campaignId: string) {
     scheduledAt:       null,
     whatsappAccountId: account.id,
     phoneNumberId:     account.phoneNumberId,
-    accessToken:       account.accessToken,
+    accessToken:       decryptToken(account.accessToken),
   });
 
   await incrementCampaignUsage(userId);

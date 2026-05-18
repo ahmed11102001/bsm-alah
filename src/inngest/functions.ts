@@ -7,7 +7,14 @@ import { inngest }   from "./client";
 import prisma        from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
+import { decryptToken }        from "@/lib/crypto";
 import * as Sentry from "@sentry/nextjs";
+
+// ─── حجم كل chunk من الرسائل ─────────────────────────────────────────────────
+// بدل ما نجيب كل الحملة دفعة واحدة في الذاكرة، نجيب 200 رسالة بس في كل دورة.
+// حملة بـ 20,000 رسالة → 100 دورة × 200 رسالة، كل دورة تمحي نفسها من الذاكرة
+// قبل ما الجاية تبدأ.
+const CAMPAIGN_CHUNK_SIZE = 200;
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
 const QueueStatus      = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
@@ -81,197 +88,233 @@ export const processCampaign = inngest.createFunction(
       });
     });
 
-    // ── Step 3: جيب كل الرسائل المعلقة ──────────────────────────────────────
-    const messages = await step.run("get-pending-messages", async () => {
-      return await prisma.messageQueue.findMany({
-        where: {
-          campaignId,
-          status: QueueStatus.pending,
-        },
-        orderBy: { scheduledAt: "asc" },
-        select: {
-          id:               true,
-          userId:           true,
-          toPhone:          true,
-          contactId:        true,
-          messageType:      true,
-          templateName:     true,
-          templateLang:     true,
-          templateVars:     true,
-          content:          true,
-          attempts:         true,
-          maxAttempts:      true,
-          existingMessageId: true,
-          phoneNumberId:    true,
-          whatsappAccountId: true,
-        },
-      });
-    });
+    // ── Step 3+4: إرسال الرسائل بـ chunked cursor pagination ──────────────────
+    //
+    // ❌ النهج القديم (محذوف):
+    //   findMany بدون take → يجيب 20,000 رسالة دفعة واحدة في الذاكرة
+    //
+    // ✅ النهج الجديد:
+    //   نجيب CAMPAIGN_CHUNK_SIZE رسالة، نبعتهم، ثم نجيب الـ CHUNK التالية
+    //   باستخدام cursor (آخر id في الـ chunk السابقة).
+    //   الذاكرة المستخدمة = CAMPAIGN_CHUNK_SIZE رسالة بس في أي لحظة.
+    //
+    // مثال: حملة 20,000 رسالة
+    //   قديم: 20,000 record في الذاكرة دفعة واحدة
+    //   جديد: 200 record × 100 دورة — كل دورة تتحرر من الذاكرة قبل الجاية
 
-    if (messages.length === 0) {
-      // مفيش رسائل — اكمل الحملة
-      await step.run("complete-empty", async () => {
-        await prisma.campaign.update({
-          where: { id: campaignId },
-          data:  { status: CampaignStatus.completed, completedAt: new Date() },
-        });
-      });
-      return { sent: 0, failed: 0 };
-    }
-
-    // ── Step 4: إرسال كل رسالة (كل رسالة = step مستقل = retry منفصل) ──────────
-    let sent   = 0;
-    let failed = 0;
+    let sent       = 0;
+    let failed     = 0;
     let tokenError = false;
+    let chunkIndex = 0;           // رقم الـ chunk الحالية — بيدخل في اسم الـ step لضمان uniqueness
+    let cursor: string | undefined; // id آخر عنصر في الـ chunk السابقة
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
+    // ── حلقة الـ chunks ───────────────────────────────────────────────────────
+    while (!tokenError) {
+      const capturedCursor = cursor; // نسخة محلية للـ closure داخل step.run
 
-      // لو التوكن باظ — وقف الحملة
-      if (tokenError) {
-        await step.run(`skip-token-error-${msg.id}`, async () => {
-          await prisma.messageQueue.update({
-            where: { id: msg.id },
-            data:  { status: QueueStatus.failed, error: "Token error — campaign stopped" },
-          });
+      // جيب chunk واحدة بس من الـ DB
+      const chunk = await step.run(`fetch-chunk-${chunkIndex}`, async () => {
+        return prisma.messageQueue.findMany({
+          where: {
+            campaignId,
+            status: QueueStatus.pending,
+          },
+          orderBy: { id: "asc" },   // ترتيب ثابت بالـ id لضمان cursor صحيح
+          take:    CAMPAIGN_CHUNK_SIZE,
+          ...(capturedCursor
+            ? { cursor: { id: capturedCursor }, skip: 1 }
+            : {}),
+          select: {
+            id:                true,
+            userId:            true,
+            toPhone:           true,
+            contactId:         true,
+            messageType:       true,
+            templateName:      true,
+            templateLang:      true,
+            templateVars:      true,
+            content:           true,
+            attempts:          true,
+            maxAttempts:       true,
+            existingMessageId: true,
+            phoneNumberId:     true,
+            whatsappAccountId: true,
+          },
         });
-        failed++;
-        continue;
+      });
+
+      // مفيش رسائل (أول chunk فارغة = حملة فارغة تماماً)
+      if (chunk.length === 0) {
+        if (chunkIndex === 0) {
+          await step.run("complete-empty", async () => {
+            await prisma.campaign.update({
+              where: { id: campaignId },
+              data:  { status: CampaignStatus.completed, completedAt: new Date() },
+            });
+          });
+          return { sent: 0, failed: 0 };
+        }
+        break; // الحملة خلصت
       }
 
-      // إرسال الرسالة
-      const result = await step.run(`send-${msg.id}`, async () => {
-        return await sendWhatsAppMessage({
-          toPhone:       msg.toPhone,
-          phoneNumberId: account.phoneNumberId,
-          accessToken:   account.accessToken,
-          messageType:   msg.messageType,
-          templateName:  msg.templateName,
-          templateLang:  msg.templateLang,
-          templateVars:  msg.templateVars,
-          content:       msg.content,
-        });
-      });
+      // ── إرسال رسائل الـ chunk ─────────────────────────────────────────────
+      for (let i = 0; i < chunk.length; i++) {
+        const msg = chunk[i];
 
-      // معالجة النتيجة
-      await step.run(`handle-result-${msg.id}`, async () => {
-        if (result.ok) {
-          // ── نجاح ──
-          await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.messageQueue.update({
+        // لو التوكن باظ — اكتب failed لكل اللي تبقى وأوقف
+        if (tokenError) {
+          await step.run(`skip-token-error-${msg.id}`, async () => {
+            await prisma.messageQueue.update({
               where: { id: msg.id },
-              data: {
-                status:        QueueStatus.sent,
-                whatsappMsgId: result.whatsappMsgId,
-                sentAt:        new Date(),
-                attempts:      { increment: 1 },
-              },
+              data:  { status: QueueStatus.failed, error: "Token error — campaign stopped" },
             });
+          });
+          failed++;
+          continue;
+        }
 
-            const contact = msg.contactId
-              ? await tx.contact.findFirst({ where: { id: msg.contactId }, select: { id: true } })
-              : await tx.contact.upsert({
-                  where:  { phone_userId: { phone: msg.toPhone, userId: msg.userId } },
-                  // لا نحدّث lastMessageAt عند الإرسال — بيتحدّث بس لما العميل يرد (inbound)
-                  update: {},
-                  create: { phone: msg.toPhone, userId: msg.userId },
-                });
+        // إرسال الرسالة
+        const result = await step.run(`send-${msg.id}`, async () => {
+          return await sendWhatsAppMessage({
+            toPhone:       msg.toPhone,
+            phoneNumberId: account.phoneNumberId,
+            accessToken:   decryptToken(account.accessToken),
+            messageType:   msg.messageType,
+            templateName:  msg.templateName,
+            templateLang:  msg.templateLang,
+            templateVars:  msg.templateVars,
+            content:       msg.content,
+          });
+        });
 
-            if (contact) {
-              await tx.message.create({
+        // معالجة النتيجة
+        await step.run(`handle-result-${msg.id}`, async () => {
+          if (result.ok) {
+            // ── نجاح ──
+            await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+              await tx.messageQueue.update({
+                where: { id: msg.id },
                 data: {
-                  userId:     msg.userId,
-                  contactId:  contact.id,
-                  campaignId: campaignId,
-                  content:    msg.templateName ? `[قالب] ${msg.templateName}` : msg.content,
-                  type:       MessageType.template,
-                  direction:  MessageDirection.outbound,
-                  status:     MessageStatus.sent,
-                  whatsappId: result.whatsappMsgId,
-                  sentAt:     new Date(),
+                  status:        QueueStatus.sent,
+                  whatsappMsgId: result.whatsappMsgId,
+                  sentAt:        new Date(),
+                  attempts:      { increment: 1 },
                 },
               });
-              // ❌ لا نحدّث lastMessageAt هنا — بيتحدّث بس لما العميل يرد من الـ webhook
-            }
 
-            await tx.campaign.update({
-              where: { id: campaignId },
-              data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              const contact = msg.contactId
+                ? await tx.contact.findFirst({ where: { id: msg.contactId }, select: { id: true } })
+                : await tx.contact.upsert({
+                    where:  { phone_userId: { phone: msg.toPhone, userId: msg.userId } },
+                    // لا نحدّث lastMessageAt عند الإرسال — بيتحدّث بس لما العميل يرد (inbound)
+                    update: {},
+                    create: { phone: msg.toPhone, userId: msg.userId },
+                  });
+
+              if (contact) {
+                await tx.message.create({
+                  data: {
+                    userId:     msg.userId,
+                    contactId:  contact.id,
+                    campaignId: campaignId,
+                    content:    msg.templateName ? `[قالب] ${msg.templateName}` : msg.content,
+                    type:       MessageType.template,
+                    direction:  MessageDirection.outbound,
+                    status:     MessageStatus.sent,
+                    whatsappId: result.whatsappMsgId,
+                    sentAt:     new Date(),
+                  },
+                });
+                // ❌ لا نحدّث lastMessageAt هنا — بيتحدّث بس لما العميل يرد من الـ webhook
+              }
+
+              await tx.campaign.update({
+                where: { id: campaignId },
+                data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              });
+
+              await tx.whatsAppAccount.update({
+                where: { id: msg.whatsappAccountId },
+                data:  { dailySentCount: { increment: 1 } },
+              });
             });
 
-            await tx.whatsAppAccount.update({
-              where: { id: msg.whatsappAccountId },
-              data:  { dailySentCount: { increment: 1 } },
+          } else if (result.isTokenError) {
+            // ── Token Error: وقف الحملة + إشعار العميل ──
+            await prisma.messageQueue.update({
+              where: { id: msg.id },
+              data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
             });
-          });
-
-        } else if (result.isTokenError) {
-          // ── Token Error: وقف الحملة + إشعار العميل ──
-          await prisma.messageQueue.update({
-            where: { id: msg.id },
-            data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
-          });
-          await prisma.campaign.update({
-            where: { id: campaignId },
-            data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
-          });
-
-          // ✅ إشعار فوري للعميل
-          try {
-            const { createNotification } = await import("@/lib/notifications");
-            await createNotification({
-              userId: campaign.userId,
-              type:   "PLAN_LIMIT_REACHED" as any,
-              title:  "⚠️ توكن واتساب انتهت صلاحيته",
-              body:   `توقف إرسال حملة "${campaign.name}" — يرجى تحديث توكن واتساب`,
-              link:   "/dashboard?section=api",
-            });
-          } catch {}
-
-        } else if (result.isRateLimit) {
-          // ── Rate Limit: ارجع الرسالة لـ pending وحاول بعد شوية ──
-          await prisma.messageQueue.update({
-            where: { id: msg.id },
-            data: {
-              status:      QueueStatus.pending,
-              processedAt: null,
-              nextRetryAt: new Date(Date.now() + 60_000),
-              attempts:    { increment: 1 },
-            },
-          });
-
-        } else {
-          // ── فشل عادي ──
-          const newAttempts = msg.attempts + 1;
-          const isFinal     = newAttempts >= msg.maxAttempts;
-
-          await prisma.messageQueue.update({
-            where: { id: msg.id },
-            data: {
-              status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
-              error:       result.error,
-              attempts:    { increment: 1 },
-              nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000),
-            },
-          });
-
-          if (isFinal) {
             await prisma.campaign.update({
               where: { id: campaignId },
               data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
             });
+
+            try {
+              const { createNotification } = await import("@/lib/notifications");
+              await createNotification({
+                userId: campaign.userId,
+                type:   "PLAN_LIMIT_REACHED" as any,
+                title:  "⚠️ توكن واتساب انتهت صلاحيته",
+                body:   `توقف إرسال حملة "${campaign.name}" — يرجى تحديث توكن واتساب`,
+                link:   "/dashboard?section=api",
+              });
+            } catch {}
+
+          } else if (result.isRateLimit) {
+            // ── Rate Limit: ارجع الرسالة لـ pending وحاول بعد شوية ──
+            await prisma.messageQueue.update({
+              where: { id: msg.id },
+              data: {
+                status:      QueueStatus.pending,
+                processedAt: null,
+                nextRetryAt: new Date(Date.now() + 60_000),
+                attempts:    { increment: 1 },
+              },
+            });
+
+          } else {
+            // ── فشل عادي ──
+            const newAttempts = msg.attempts + 1;
+            const isFinal     = newAttempts >= msg.maxAttempts;
+
+            await prisma.messageQueue.update({
+              where: { id: msg.id },
+              data: {
+                status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
+                error:       result.error,
+                attempts:    { increment: 1 },
+                nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000),
+              },
+            });
+
+            if (isFinal) {
+              await prisma.campaign.update({
+                where: { id: campaignId },
+                data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              });
+            }
           }
+        });
+
+        if (result.ok)                { sent++; }
+        else if (result.isTokenError) { tokenError = true; failed++; }
+        else if (!result.isRateLimit) { failed++; }
+
+        // delay بين الرسائل (مش في آخر رسالة في الـ chunk الأخيرة)
+        const isLastInChunk = i === chunk.length - 1;
+        const isLastChunk   = chunk.length < CAMPAIGN_CHUNK_SIZE;
+        if (!(isLastInChunk && isLastChunk) && !tokenError) {
+          await step.sleep(`delay-${chunkIndex}-${i}`, "350ms");
         }
-      });
-
-      if (result.ok)            sent++;
-      else if (result.isTokenError) { tokenError = true; failed++; }
-      else if (!result.isRateLimit) failed++;
-
-      // delay بين الرسائل (مش في آخر رسالة)
-      if (i < messages.length - 1 && !tokenError) {
-        await step.sleep(`delay-${i}`, "350ms");
       }
+
+      // لو الـ chunk أقل من CHUNK_SIZE → ده كان آخر chunk → نطلع
+      if (chunk.length < CAMPAIGN_CHUNK_SIZE) break;
+
+      // حدّث الـ cursor لـ chunk الجاية
+      cursor = chunk[chunk.length - 1].id;
+      chunkIndex++;
     }
 
     // ── Step 5: اكمل الحملة وابعت إشعار ──────────────────────────────────────
@@ -309,7 +352,7 @@ export const processCampaign = inngest.createFunction(
       }
     });
 
-    return { sent, failed, total: messages.length };
+    return { sent, failed, total: sent + failed };
   }
 );
 
@@ -353,7 +396,7 @@ export const sendDirectMessage = inngest.createFunction(
       return await sendWhatsAppMessage({
         toPhone:       item.toPhone,
         phoneNumberId: item.whatsappAccount!.phoneNumberId,
-        accessToken:   item.whatsappAccount!.accessToken,
+        accessToken:   decryptToken(item.whatsappAccount!.accessToken),
         messageType:   item.messageType,
         templateName:  item.templateName,
         templateLang:  item.templateLang,

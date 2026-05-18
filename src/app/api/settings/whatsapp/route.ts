@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { encryptToken } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,23 +18,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "جميع الحقول مطلوبة" }, { status: 400 });
     }
 
+    // تشفير الـ token قبل الحفظ في DB
+    const encryptedToken = encryptToken(accessToken);
+
     // حفظ أو تحديث بيانات واتساب الخاص باليوزر
-    const account = await prisma.whatsAppAccount.upsert({
+    await prisma.whatsAppAccount.upsert({
       where: { userId: ownerId },
       update: {
-        accessToken,
+        accessToken: encryptedToken,
         phoneNumberId,
         wabaId,
       },
       create: {
         userId: ownerId,
-        accessToken,
+        accessToken: encryptedToken,
         phoneNumberId,
         wabaId,
       },
     });
 
-    return NextResponse.json({ success: true, account });
+    // لا نرجع الـ accessToken في الـ response نهائياً
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

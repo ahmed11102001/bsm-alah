@@ -1,5 +1,6 @@
 ﻿import prisma from "@/lib/prisma";
 import { normalizePhone } from "@/lib/phone";
+import { decryptToken }  from "@/lib/crypto";
 
 export async function sendMessage(
   userId: string,
@@ -25,7 +26,7 @@ export async function sendMessage(
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${whatsappAccount.accessToken}`,
+          Authorization: `Bearer ${decryptToken(whatsappAccount.accessToken)}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

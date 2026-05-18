@@ -26,7 +26,8 @@ export async function GET() {
     }),
     prisma.whatsAppAccount.findUnique({
       where: { userId: ownerId },
-      select: { accessToken: true, phoneNumberId: true, wabaId: true },
+      // لا نسترجع accessToken — مش المفروض يتبعت للـ client أبداً
+      select: { phoneNumberId: true, wabaId: true },
     }),
   ]);
 

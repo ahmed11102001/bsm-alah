@@ -5,6 +5,7 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import bcrypt                        from "bcryptjs";
 import { normalizePhone }            from "@/lib/phone";
+import { encryptToken }              from "@/lib/crypto";
 
 const VALID_TONES = ["friendly", "formal", "egyptian"] as const;
 
@@ -121,8 +122,8 @@ export async function PATCH(req: NextRequest) {
 
     const account = await prisma.whatsAppAccount.upsert({
       where:  { userId: ownerId },
-      update: { accessToken, phoneNumberId, wabaId },
-      create: { userId: ownerId, accessToken, phoneNumberId, wabaId },
+      update: { accessToken: encryptToken(accessToken), phoneNumberId, wabaId },
+      create: { userId: ownerId, accessToken: encryptToken(accessToken), phoneNumberId, wabaId },
     });
 
     return NextResponse.json({

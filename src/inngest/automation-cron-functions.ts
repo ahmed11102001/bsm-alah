@@ -10,6 +10,7 @@
 import { inngest }              from "./client";
 import prisma                   from "@/lib/prisma";
 import { sendWhatsAppMessage }  from "@/lib/whatsapp-api";
+import { decryptToken }         from "@/lib/crypto";
 
 // ─── Constants (string literals بدل enum لتجنب مشاكل prisma generate) ────────
 const QueueStatus      = { sent: "sent", failed: "failed" } as const;
@@ -31,7 +32,7 @@ async function sendTemplateToContact({
   const result = await sendWhatsAppMessage({
     toPhone:       phone,
     phoneNumberId: account.phoneNumberId,
-    accessToken:   account.accessToken,
+    accessToken:   decryptToken(account.accessToken),
     messageType:   "template",
     templateName:  template.name,
     templateLang:  template.language ?? "ar",

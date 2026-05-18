@@ -8,6 +8,7 @@ import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
+import { decryptToken } from "@/lib/crypto";
 
 // -----------------------------------------------------------------------------
 // HELPER: ?????? ?? ????? Meta (HMAC-SHA256)
@@ -106,6 +107,9 @@ export async function POST(req: NextRequest) {
     if (!accountOwner) {
       return NextResponse.json({ status: "ignored" });
     }
+
+    // فك تشفير الـ token فور الجلب من DB
+    accountOwner.accessToken = decryptToken(accountOwner.accessToken);
 
     const userId = accountOwner.userId;
 
@@ -350,7 +354,7 @@ async function handleAutomation(ctx: {
         if (audioUrl) {
           // ???? ??? audio ??? ?????? ?? voice note
           const metaRes = await fetch(
-            `https://graph.facebook.com/v21.0/${accountOwner.phoneNumberId}/messages`,
+            `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
             {
               method:  "POST",
               headers: {
@@ -568,7 +572,7 @@ async function sendReply(ctx: {
   const { userId, from, replyText, accountOwner, ruleName } = ctx;
 
   const metaRes = await fetch(
-    `https://graph.facebook.com/v21.0/${accountOwner.phoneNumberId}/messages`,
+    `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
     {
       method:  "POST",
       headers: {

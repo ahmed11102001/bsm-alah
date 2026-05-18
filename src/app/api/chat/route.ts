@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType } from "@/types/enums";
 import { inngest } from "@/inngest/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { decryptToken } from "@/lib/crypto";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -285,11 +286,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
     const metaRes = await fetch(
-      `https://graph.facebook.com/v21.0/${account.phoneNumberId}/messages`,
+      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
       {
         method:  "POST",
         headers: {
-          Authorization:  `Bearer ${account.accessToken}`,
+          Authorization:  `Bearer ${decryptToken(account.accessToken)}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -414,10 +415,10 @@ async function sendMedia(userId: string, req: NextRequest) {
     uploadForm.append("messaging_product", "whatsapp");
 
     const uploadRes = await fetch(
-      `https://graph.facebook.com/v21.0/${account.phoneNumberId}/media`,
+      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/media`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${account.accessToken}` },
+        headers: { Authorization: `Bearer ${decryptToken(account.accessToken)}` },
         body: uploadForm,
       }
     );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { decryptToken } from "@/lib/crypto";
 
 export const runtime = "nodejs";
 
@@ -103,8 +104,8 @@ export async function GET(
       return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
     }
 
-    const mediaInfoRes = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(mediaId)}`, {
-      headers: { Authorization: `Bearer ${account.accessToken}` },
+    const mediaInfoRes = await fetch(`https://graph.facebook.com/v20.0/${encodeURIComponent(mediaId)}`, {
+      headers: { Authorization: `Bearer ${decryptToken(account.accessToken)}` },
       cache: "no-store",
     });
 
@@ -124,7 +125,7 @@ export async function GET(
     }
 
     const mediaRes = await fetch(upstreamUrl, {
-      headers: { Authorization: `Bearer ${account.accessToken}` },
+      headers: { Authorization: `Bearer ${decryptToken(account.accessToken)}` },
       cache: "no-store",
     });
 

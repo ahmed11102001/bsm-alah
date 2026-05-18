@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { encryptToken, decryptToken } from "@/lib/crypto";
 
 // 1. دالة حفظ إعدادات الربط (Access Token, IDs)
 export async function saveWhatsAppSettings(data: {
@@ -15,16 +16,19 @@ export async function saveWhatsAppSettings(data: {
   if (!session?.user?.id) throw new Error("غير مصرح لك");
   const ownerId = (session.user.parentId as string | null) ?? session.user.id;
 
+  // تشفير الـ token قبل الحفظ في DB
+  const encryptedToken = encryptToken(data.accessToken);
+
   await prisma.whatsAppAccount.upsert({
     where: { userId: ownerId },
     update: {
-      accessToken: data.accessToken,
+      accessToken: encryptedToken,
       phoneNumberId: data.phoneNumberId,
       wabaId: data.wabaId,
     },
     create: {
       userId: ownerId,
-      accessToken: data.accessToken,
+      accessToken: encryptedToken,
       phoneNumberId: data.phoneNumberId,
       wabaId: data.wabaId,
     },
@@ -52,7 +56,7 @@ export async function syncWhatsAppTemplates() {
   try {
     // الاتصال بـ Meta API لجلب القوالب
     const response = await fetch(
-      `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?access_token=${account.accessToken}`
+      `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?access_token=${decryptToken(account.accessToken)}`
     );
 
     const data = await response.json();
