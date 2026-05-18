@@ -49,12 +49,6 @@ const PARTNERS = [
     color: "from-pink-500 to-pink-600",
     description: { ar: "سيلز AI", en: "AI Sales" },
   },
-  {
-    name: "Google Ads",
-    logoSrc: "/partners/googleads.svg",
-    color: "from-red-500 to-red-600",
-    description: { ar: "إعلانات ممولة", en: "Paid Ads" },
-  },
 ];
 
 const WHO_FOR = [
