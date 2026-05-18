@@ -6,10 +6,9 @@ import prisma                        from "@/lib/prisma";
 import bcrypt                        from "bcryptjs";
 import { normalizePhone }            from "@/lib/phone";
 import { encryptToken }              from "@/lib/crypto";
+import { SettingsPatchSchema, parseInput } from "@/lib/schemas";
 
-const VALID_TONES = ["friendly", "formal", "egyptian"] as const;
-
-// ─── GET /api/me/settings ─────────────────────────────────────────────────────
+// GET /api/me/settings
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user)
@@ -27,7 +26,6 @@ export async function GET() {
       where:  { userId: ownerId },
       select: { phoneNumberId: true, wabaId: true },
     }),
-    // ── Brand data من AIAgent (المصدر الحقيقي) ───────────────────────────────
     prisma.aIAgent.findUnique({
       where:  { userId: ownerId },
       select: {
@@ -37,25 +35,19 @@ export async function GET() {
     }),
   ]);
 
-  // نرجع brand data باسم aiTone عشان الـ UI يفضل شغال بدون تعديل
   const brand = agent ? {
     brandName:    agent.brandName,
     businessDesc: agent.businessDesc,
     productsInfo: agent.productsInfo,
     pricingInfo:  agent.pricingInfo,
     workingHours: agent.workingHours,
-    aiTone:       agent.tone,          // ← نحول tone → aiTone للـ UI
+    aiTone:       agent.tone,
   } : null;
 
   return NextResponse.json({ user, whatsapp, brand });
 }
 
-// ─── PATCH /api/me/settings ───────────────────────────────────────────────────
-// Body options:
-//   { type: "profile",  name, phone }
-//   { type: "password", currentPassword, newPassword }
-//   { type: "whatsapp", accessToken, phoneNumberId, wabaId }
-//   { type: "brand",    brandName, businessDesc, productsInfo, pricingInfo, workingHours, aiTone }
+// PATCH /api/me/settings
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user)
@@ -64,15 +56,14 @@ export async function PATCH(req: NextRequest) {
   const userId  = session.user.id as string;
   const ownerId = (session.user as any).parentId ?? userId;
 
-  const body = await req.json();
-  const { type } = body;
+  const parsed = parseInput(SettingsPatchSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  // ── Profile ──────────────────────────────────────────────────────────────────
-  if (type === "profile") {
+  const body = parsed.data;
+
+  // Profile
+  if (body.type === "profile") {
     const { name, phone } = body;
-    if (!name?.trim())
-      return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
-
     const normalizedPhone = phone?.trim() ? normalizePhone(phone) : null;
     if (phone?.trim() && !normalizedPhone)
       return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
@@ -82,19 +73,12 @@ export async function PATCH(req: NextRequest) {
       data:   { name: name.trim(), phone: normalizedPhone },
       select: { id: true, name: true, email: true, phone: true },
     });
-
     return NextResponse.json({ success: true, user: updated });
   }
 
-  // ── Password ─────────────────────────────────────────────────────────────────
-  if (type === "password") {
+  // Password
+  if (body.type === "password") {
     const { currentPassword, newPassword } = body;
-
-    if (!currentPassword || !newPassword)
-      return NextResponse.json({ error: "جميع الحقول مطلوبة" }, { status: 400 });
-
-    if (newPassword.length < 8)
-      return NextResponse.json({ error: "كلمة المرور الجديدة 8 أحرف على الأقل" }, { status: 400 });
 
     const user = await prisma.user.findUnique({
       where:  { id: userId },
@@ -107,19 +91,15 @@ export async function PATCH(req: NextRequest) {
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
-
     return NextResponse.json({ success: true });
   }
 
-  // ── WhatsApp ─────────────────────────────────────────────────────────────────
-  if (type === "whatsapp") {
+  // WhatsApp
+  if (body.type === "whatsapp") {
     if ((session.user as any).parentId)
       return NextResponse.json({ error: "فقط المالك يمكنه تعديل إعدادات واتساب" }, { status: 403 });
 
     const { accessToken, phoneNumberId, wabaId } = body;
-    if (!accessToken || !phoneNumberId || !wabaId)
-      return NextResponse.json({ error: "جميع الحقول مطلوبة" }, { status: 400 });
-
     const account = await prisma.whatsAppAccount.upsert({
       where:  { userId: ownerId },
       update: { accessToken: encryptToken(accessToken), phoneNumberId, wabaId },
@@ -132,17 +112,12 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // ── Brand / AI settings → AIAgent (المصدر الحقيقي) ───────────────────────────
-  if (type === "brand") {
+  // Brand
+  if (body.type === "brand") {
     if ((session.user as any).parentId)
       return NextResponse.json({ error: "فقط المالك يمكنه تعديل بيانات البراند" }, { status: 403 });
 
     const { brandName, businessDesc, productsInfo, pricingInfo, workingHours, aiTone } = body;
-
-    if (!businessDesc?.trim())
-      return NextResponse.json({ error: "وصف النشاط مطلوب" }, { status: 400 });
-
-    const tone = VALID_TONES.includes(aiTone) ? aiTone : "friendly";
 
     const payload = {
       brandName:    brandName?.trim()    || null,
@@ -150,10 +125,9 @@ export async function PATCH(req: NextRequest) {
       productsInfo: productsInfo?.trim() || null,
       pricingInfo:  pricingInfo?.trim()  || null,
       workingHours: workingHours?.trim() || null,
-      tone,
+      tone:         aiTone ?? "friendly",
     };
 
-    // upsert في AIAgent — الـ source of truth الوحيد
     const agent = await prisma.aIAgent.upsert({
       where:  { userId: ownerId },
       update: payload,
@@ -166,7 +140,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      brand: { ...agent, aiTone: agent.tone }, // ← نحول tone → aiTone للـ UI
+      brand: { ...agent, aiTone: agent.tone },
     });
   }
 

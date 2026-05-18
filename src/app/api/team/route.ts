@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
 import { checkTeamLimit, guardResponse } from "@/lib/plan-guard";
+import { TeamInviteSchema, parseInput } from "@/lib/schemas";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -23,16 +24,14 @@ export async function POST(req: Request) {
   if (!session?.user?.id || session.user.role === "CHAT_ONLY")
     return NextResponse.json({ error: "لا تملك صلاحية إضافة أعضاء" }, { status: 403 });
 
-  // ✅ Guard: حد أعضاء الفريق
   const check = await checkTeamLimit(session.user.id);
   const block = guardResponse(check);
   if (block) return block;
 
-  const body = await req.json();
-  const { email, name, role } = body;
+  const parsed = parseInput(TeamInviteSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  if (!email || !role)
-    return NextResponse.json({ error: "البريد والدور مطلوبان" }, { status: 400 });
+  const { email, name, role } = parsed.data;
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser)
@@ -59,18 +58,17 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 
-  if (!id) return NextResponse.json({ error: "ID مطلوب" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
 
-  const userToDelete = await prisma.user.findUnique({ where: { id } });
-  if (!userToDelete)
-    return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
-
-  if (userToDelete.parentId !== session.user.id)
-    return NextResponse.json({ error: "لا تملك صلاحية حذف هذا المستخدم" }, { status: 403 });
+  const member = await prisma.user.findFirst({
+    where: { id, parentId: session.user.id },
+  });
+  if (!member) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
 
   await prisma.user.update({
     where: { id },
-    data:  { deletedAt: new Date(), deletedBy: session.user.id },
+    data:  { deletedAt: new Date() },
   });
+
   return NextResponse.json({ success: true });
 }

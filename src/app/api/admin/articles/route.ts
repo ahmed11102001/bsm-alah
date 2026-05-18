@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { z } from "zod";
+import { AdminCreateArticleSchema, parseInput } from "@/lib/schemas";
 
 async function requireSuper() {
   const session = await getServerSession(authOptions);
@@ -19,7 +21,10 @@ function toSlug(title: string) {
     .slice(0, 80);
 }
 
-// ── GET — جيب كل المقالات ─────────────────────────────────────────────────────
+const ArticlePatchSchema = AdminCreateArticleSchema.partial().extend({ id: z.string().min(1) });
+const ArticleDeleteSchema = z.object({ id: z.string().min(1) });
+
+// GET — جيب كل المقالات
 export async function GET(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -35,33 +40,30 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(articles);
 }
 
-// ── POST — إنشاء مقال جديد ───────────────────────────────────────────────────
+// POST — إنشاء مقال جديد
 export async function POST(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { title, content, excerpt, coverImage, published, slug: rawSlug } = await req.json();
+  const parsed = parseInput(AdminCreateArticleSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  if (!title?.trim() || !content?.trim()) {
-    return NextResponse.json({ error: "العنوان والمحتوى مطلوبان" }, { status: 400 });
-  }
+  const { title, content, excerpt, coverImage, published, slug: rawSlug } = parsed.data;
 
   const slug = rawSlug?.trim() || toSlug(title);
 
-  // تحقق من عدم تكرار الـ slug
   const exists = await prisma.article.findUnique({ where: { slug } });
-  if (exists) {
+  if (exists)
     return NextResponse.json({ error: "هذا الـ slug مستخدم بالفعل" }, { status: 409 });
-  }
 
   const article = await prisma.article.create({
     data: {
       title: title.trim(),
       slug,
       content: content.trim(),
-      excerpt: excerpt?.trim() || null,
+      excerpt:    excerpt?.trim()    || null,
       coverImage: coverImage?.trim() || null,
-      published: !!published,
+      published:  !!published,
       publishedAt: published ? new Date() : null,
     },
   });
@@ -69,20 +71,21 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(article, { status: 201 });
 }
 
-// ── PATCH — تحديث مقال ───────────────────────────────────────────────────────
+// PATCH — تحديث مقال
 export async function PATCH(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { id, title, content, excerpt, coverImage, published, slug: rawSlug } = await req.json();
-  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+  const parsed = parseInput(ArticlePatchSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
+  const { id, title, content, excerpt, coverImage, published, slug: rawSlug } = parsed.data;
 
   const current = await prisma.article.findUnique({ where: { id } });
   if (!current) return NextResponse.json({ error: "المقال غير موجود" }, { status: 404 });
 
   const slug = rawSlug?.trim() || (title ? toSlug(title) : current.slug);
 
-  // تحقق من slug إذا اتغير
   if (slug !== current.slug) {
     const exists = await prisma.article.findUnique({ where: { slug } });
     if (exists) return NextResponse.json({ error: "هذا الـ slug مستخدم بالفعل" }, { status: 409 });
@@ -94,11 +97,11 @@ export async function PATCH(req: NextRequest) {
   const updated = await prisma.article.update({
     where: { id },
     data: {
-      title:       title?.trim()       ?? current.title,
+      title:       title?.trim()      ?? current.title,
       slug,
-      content:     content?.trim()     ?? current.content,
-      excerpt:     excerpt?.trim()     ?? current.excerpt,
-      coverImage:  coverImage?.trim()  ?? current.coverImage,
+      content:     content?.trim()    ?? current.content,
+      excerpt:     excerpt?.trim()    ?? current.excerpt,
+      coverImage:  coverImage?.trim() ?? current.coverImage,
       published:   nowPublished,
       publishedAt: nowPublished && !wasPublished ? new Date() : current.publishedAt,
     },
@@ -107,14 +110,14 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(updated);
 }
 
-// ── DELETE — حذف مقال ────────────────────────────────────────────────────────
+// DELETE — حذف مقال
 export async function DELETE(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { id } = await req.json();
-  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+  const parsed = parseInput(ArticleDeleteSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  await prisma.article.delete({ where: { id } });
+  await prisma.article.delete({ where: { id: parsed.data.id } });
   return NextResponse.json({ success: true });
 }

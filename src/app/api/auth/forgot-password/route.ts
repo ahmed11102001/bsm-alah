@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { sendResetEmail } from "@/lib/email";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { ForgotPasswordSchema, parseInput } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   // ── Rate Limit: 3 طلبات كل 15 دقيقة لنفس الـ IP ──────────────────────────
@@ -18,14 +19,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Validation ────────────────────────────────────────────────────────────
-  const { email } = await req.json();
+  const parsed = parseInput(ForgotPasswordSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  if (!email?.trim()) {
-    return NextResponse.json({ error: "البريد الإلكتروني مطلوب" }, { status: 400 });
-  }
+  const { email } = parsed.data;
 
   const user = await prisma.user.findUnique({
-    where:  { email: email.toLowerCase().trim() },
+    where:  { email },
     select: { id: true, email: true },
   });
 

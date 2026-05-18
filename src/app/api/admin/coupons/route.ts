@@ -4,6 +4,8 @@ import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import crypto                        from "crypto";
+import { AdminCreateCouponSchema, parseInput } from "@/lib/schemas";
+import { z } from "zod";
 
 async function guardSuper() {
   const session = await getServerSession(authOptions);
@@ -17,7 +19,7 @@ function generateCode(prefix = "SAVE"): string {
   return `${prefix}-${rand}`;
 }
 
-// ── GET: كل الكوبونات ─────────────────────────────────────────────────────────
+// GET: كل الكوبونات
 export async function GET() {
   if (!await guardSuper())
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
@@ -29,29 +31,20 @@ export async function GET() {
   return NextResponse.json(coupons);
 }
 
-// ── POST: إنشاء كوبون ─────────────────────────────────────────────────────────
+// POST: إنشاء كوبون
 export async function POST(req: NextRequest) {
   if (!await guardSuper())
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
 
-  const {
-    prefix       = "SAVE",
-    discountType  = "percent",
-    discountValue,
-    maxUses      = 1,
-    expiresAt,
-  } = await req.json();
+  const parsed = parseInput(AdminCreateCouponSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  if (!discountValue || discountValue <= 0)
-    return NextResponse.json({ error: "قيمة الخصم مطلوبة" }, { status: 400 });
-
-  if (discountType === "percent" && discountValue > 100)
-    return NextResponse.json({ error: "نسبة الخصم لا تتجاوز 100%" }, { status: 400 });
+  const { prefix, discountType, discountValue, maxUses, expiresAt } = parsed.data;
 
   // تأكد إن الكود مش موجود قبل كده (نجرب 3 مرات)
   let code = "";
   for (let i = 0; i < 3; i++) {
-    const candidate = generateCode(prefix.toUpperCase().slice(0, 8));
+    const candidate = generateCode(prefix);
     const exists    = await prisma.coupon.findUnique({ where: { code: candidate } });
     if (!exists) { code = candidate; break; }
   }
@@ -62,26 +55,28 @@ export async function POST(req: NextRequest) {
     data: {
       code,
       discountType,
-      discountValue: Number(discountValue),
-      maxUses:       Number(maxUses),
-      expiresAt:     expiresAt ? new Date(expiresAt) : null,
-      active:        true,
+      discountValue,
+      maxUses,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      active:    true,
     },
   });
 
   return NextResponse.json({ success: true, coupon }, { status: 201 });
 }
 
-// ── DELETE: حذف أو تعطيل كوبون ───────────────────────────────────────────────
+// DELETE: تعطيل كوبون
+const DeleteCouponSchema = z.object({ id: z.string().min(1) });
+
 export async function DELETE(req: NextRequest) {
   if (!await guardSuper())
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
 
-  const { id } = await req.json();
-  if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
+  const parsed = parseInput(DeleteCouponSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   await prisma.coupon.update({
-    where: { id },
+    where: { id: parsed.data.id },
     data:  { active: false },
   });
 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
+import { AdminTestimonialPatchSchema, parseInput } from "@/lib/schemas";
 
 async function guardSuper() {
   const session = await getServerSession(authOptions);
@@ -10,7 +11,7 @@ async function guardSuper() {
   return session;
 }
 
-// ── GET: كل الآراء (pending + approved) ──────────────────────────────────────
+// GET: كل الآراء (pending + approved)
 export async function GET(req: NextRequest) {
   if (!await guardSuper())
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
@@ -28,15 +29,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(testimonials);
 }
 
-// ── PATCH: موافقة أو رفض ─────────────────────────────────────────────────────
+// PATCH: موافقة أو رفض
 export async function PATCH(req: NextRequest) {
   if (!await guardSuper())
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
 
-  const { id, action } = await req.json(); // action: "approve" | "reject"
+  const parsed = parseInput(AdminTestimonialPatchSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  if (!id || !["approve", "reject"].includes(action))
-    return NextResponse.json({ error: "بيانات غير صحيحة" }, { status: 400 });
+  const { id, action } = parsed.data;
 
   if (action === "reject") {
     await prisma.testimonial.delete({ where: { id } });

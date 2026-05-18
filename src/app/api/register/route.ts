@@ -1,9 +1,11 @@
 ﻿// src/app/api/register/route.ts
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
+import { RegisterSchema, parseInput } from "@/lib/schemas";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
@@ -17,29 +19,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { email, password, name, phone } = await req.json();
+    const parsed = parseInput(RegisterSchema, await req.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "البريد الإلكتروني وكلمة المرور مطلوبان" },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" },
-        { status: 400 }
-      );
-    }
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
-    }
-
-    if (!phone?.trim()) {
-      return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
-    }
+    const { email, password, name, phone } = parsed.data;
 
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) {
@@ -60,7 +43,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newUser = await tx.user.create({
         data: {
           email: email.toLowerCase().trim(),
