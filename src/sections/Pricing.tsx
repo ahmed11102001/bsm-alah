@@ -214,7 +214,7 @@ export default function Pricing({ lang }: PricingProps) {
                 {/* CTA */}
                 {isEnterprise ? (
                   <a
-                    href="https://wa.me/201XXXXXXXXX?text=مرحباً%20أريد%20الاستفسار%20عن%20باقة%20Enterprise"
+                    href="https://wa.me/201281657907?text=مرحبا اريد الاشتراك ف باقة المؤسسات"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 block ${s.cta}`}

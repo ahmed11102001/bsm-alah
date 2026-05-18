@@ -58,7 +58,7 @@ export default function Home() {
 
       {/* ── WhatsApp Floating Button ── */}
       <a
-        href="https://wa.me/201000000000"
+        href="https://wa.me/201281657907؟text= مرحبا اخبري بالمزيد عن خدمات واتس برو"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="تواصل معنا على واتساب"

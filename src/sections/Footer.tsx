@@ -44,7 +44,7 @@ export default function Footer({ lang }: FooterProps) {
               </div>
               <div className="flex items-center gap-3 text-gray-400">
                 <Phone className="w-5 h-5 flex-shrink-0" />
-                <span dir="ltr">+20 10 0000 0000</span>
+                <span dir="ltr">+20 1281657907</span>
               </div>
               <div className="flex items-center gap-3 text-gray-400">
                 <MapPin className="w-5 h-5 flex-shrink-0" />
