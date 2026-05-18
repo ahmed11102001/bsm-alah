@@ -153,6 +153,25 @@ function mediaSrc(mediaUrl: string, opts?: { download?: boolean }) {
   return opts?.download ? `${base}?download=1` : base;
 }
 
+function linkify(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}
+        className="underline text-blue-400 break-all"
+      >
+        {part}
+      </a>
+    ) : part
+  );
+}
+
 function MsgTick({ status, isMe }: { status: string; isMe: boolean }) {
   if (!isMe) return null;
   if (status === "pending")   return <Clock className="w-3 h-3 opacity-60" />;
@@ -271,10 +290,18 @@ function Bubble({
               <FileText className="w-4 h-4" /> {t[lang].downloadFile}
             </a>
           )}
+          {msg.type === "sticker" && resolvedMediaSrc && (
+            <img
+              src={resolvedMediaSrc}
+              alt="sticker"
+              className="w-32 h-32 object-contain mb-1"
+              style={{ background: "transparent" }}
+            />
+          )}
 
           {msg.content && (
             <p className={`leading-relaxed whitespace-pre-wrap break-words ${textColor}`}>
-              {msg.content}
+              {linkify(msg.content)}
             </p>
           )}
 
