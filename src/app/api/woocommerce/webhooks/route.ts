@@ -189,6 +189,7 @@ async function handleOrderCreated(
     });
 
     // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+    // ── أتمتة تأكيد الأوردر: بيبعت قالب ميتا مع متغيرات الأوردر الحقيقية ──
     await triggerStoreAutomation({
       userId,
       automationType: "order_confirm",
@@ -196,7 +197,14 @@ async function handleOrderCreated(
       storeId:        woocommerceStoreId,
       customerPhone:  cleanPhone,
       contactId:      contact.id,
-      templateVars:   null,
+      // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
+      templateVars: {
+        body: [
+          customerName,
+          String(order.number ?? order.id),
+          order.total ?? "",
+        ],
+      },
     });
 
   } catch (err) {
@@ -256,6 +264,7 @@ async function handleOrderUpdated(
           select: { id: true },
         });
         if (contact) {
+          // ── أتمتة تحديث الشحن: بيبعت قالب ميتا مع رقم الأوردر ورابط التتبع ──
           await triggerStoreAutomation({
             userId,
             automationType: "order_shipped",
@@ -263,7 +272,13 @@ async function handleOrderUpdated(
             storeId:        woocommerceStoreId,
             customerPhone:  cleanPhone,
             contactId:      contact.id,
-            templateVars:   null,
+            // {{1}} رقم الأوردر  {{2}} رابط التتبع
+            templateVars: {
+              body: [
+                String(order.number ?? order.id),
+                trackingUrl ?? trackingNumber ?? "—",
+              ],
+            },
           });
         }
       }

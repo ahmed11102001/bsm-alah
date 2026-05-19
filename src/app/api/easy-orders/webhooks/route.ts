@@ -135,6 +135,7 @@ export async function POST(req: NextRequest) {
 
     // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
     if (easyStore?.id) {
+      // ── أتمتة تأكيد الأوردر: بيبعت قالب ميتا مع متغيرات الأوردر الحقيقية ──
       await triggerStoreAutomation({
         userId,
         automationType: "order_confirm",
@@ -142,7 +143,10 @@ export async function POST(req: NextRequest) {
         storeId:        easyStore.id,
         customerPhone:  cleanPhone,
         contactId:      contact.id,
-        templateVars:   null,
+        // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
+        templateVars: {
+          body: [customerName, orderNumber, totalStr],
+        },
       });
     }
 

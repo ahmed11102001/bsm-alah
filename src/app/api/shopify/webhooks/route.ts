@@ -191,7 +191,7 @@ async function handleOrderCreated(
       data:  { updatedAt: new Date() },
     });
 
-    // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+    // ── أتمتة تأكيد الأوردر: بيبعت قالب ميتا مع متغيرات الأوردر الحقيقية ──
     await triggerStoreAutomation({
       userId,
       automationType: "order_confirm",
@@ -199,7 +199,15 @@ async function handleOrderCreated(
       storeId:        shopifyStoreId,
       customerPhone:  cleanPhone,
       contactId:      contact.id,
-      templateVars:   null,
+      // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
+      // اليوزر يرتّب القالب في ميتا بنفس الترتيب ده
+      templateVars: {
+        body: [
+          customerName,
+          String(order.order_number ?? order.id),
+          String(order.total_price ?? ""),
+        ],
+      },
     });
 
     console.log(`[Shopify] ✓ Order #${order.order_number} — ${cleanPhone}`);
@@ -287,6 +295,7 @@ async function handleOrderFulfilled(
       select: { id: true },
     });
     if (contact) {
+      // ── أتمتة تحديث الشحن: بيبعت قالب ميتا مع رقم الأوردر ورابط التتبع ──
       await triggerStoreAutomation({
         userId,
         automationType: "order_shipped",
@@ -294,7 +303,13 @@ async function handleOrderFulfilled(
         storeId:        shopifyStoreId,
         customerPhone:  cleanPhone,
         contactId:      contact.id,
-        templateVars:   null,
+        // {{1}} رقم الأوردر  {{2}} رابط التتبع
+        templateVars: {
+          body: [
+            String(order.order_number ?? order.id),
+            trackingUrl ?? "—",
+          ],
+        },
       });
     }
   } catch (error) {
