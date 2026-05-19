@@ -9,6 +9,7 @@ import {
   MessageSquare, ChevronDown, ChevronUp, Search, Loader2,
   ToggleLeft, ToggleRight, CheckCircle, ChevronRight, Phone,
   Send, X, CheckSquare, Square, AlertCircle,
+  Copy, Download, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn }   from "@/lib/utils";
@@ -175,6 +176,100 @@ function KpiCard({ icon, label, value, sub, color }: KpiCardProps) {
         {sub && <p className="text-[11px] text-gray-400 mt-1">{sub}</p>}
       </div>
     </div>
+  );
+}
+
+// ─── Copy Phones Button ───────────────────────────────────────────────────────
+
+function CopyPhonesButton({ customers, lang }: { customers: Customer[]; lang: Lang }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (customers.length === 0) {
+      toast.error(lang === "ar" ? "لا يوجد عملاء للنسخ" : "No customers to copy");
+      return;
+    }
+    const text = customers.map((c) => c.phone).join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast.success(
+        lang === "ar"
+          ? `✅ تم نسخ ${customers.length} رقم`
+          : `✅ Copied ${customers.length} numbers`
+      );
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error(lang === "ar" ? "تعذّر النسخ" : "Copy failed");
+    });
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={lang === "ar" ? "نسخ أرقام العملاء" : "Copy customer phones"}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all",
+        copied
+          ? "border-[#25D366]/40 bg-[#25D366]/10 text-[#25D366]"
+          : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:border-[#25D366]/30 hover:text-[#25D366]"
+      )}
+    >
+      {copied
+        ? <Check className="w-3.5 h-3.5" />
+        : <Copy  className="w-3.5 h-3.5" />}
+      {lang === "ar" ? "نسخ الأرقام" : "Copy numbers"}
+    </button>
+  );
+}
+
+// ─── Export Excel Button ──────────────────────────────────────────────────────
+
+function ExportExcelButton({
+  source, search, lang,
+}: { source: string; search: string; lang: Lang }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleExport() {
+    setLoading(true);
+    try {
+      const r = await fetch(
+        `/api/store/export?source=${source}&search=${encodeURIComponent(search)}`
+      );
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        toast.error((d as any).error ?? (lang === "ar" ? "فشل التصدير" : "Export failed"));
+        return;
+      }
+      const blob     = await r.blob();
+      const url      = URL.createObjectURL(blob);
+      const a        = document.createElement("a");
+      const today    = new Date().toISOString().slice(0, 10);
+      a.href         = url;
+      a.download     = `customers-${source}-${today}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(lang === "ar" ? "✅ تم تصدير الملف" : "✅ File exported");
+    } catch {
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleExport}
+      disabled={loading}
+      title={lang === "ar" ? "تصدير Excel" : "Export Excel"}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:border-green-400 hover:text-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {loading
+        ? <Loader2  className="w-3.5 h-3.5 animate-spin" />
+        : <Download className="w-3.5 h-3.5" />}
+      {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+    </button>
   );
 }
 
@@ -855,15 +950,22 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
             </span>
           </h2>
 
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={tr("searchPh", lang)}
-              className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
-            />
+          {/* أزرار النسخ والتصدير */}
+          <div className="flex items-center gap-2">
+            <CopyPhonesButton customers={customers} lang={lang} />
+            <ExportExcelButton source={store.source} search={search} lang={lang} />
           </div>
+        </div>
+
+        {/* بحث */}
+        <div className="relative mb-4 max-w-xs">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={tr("searchPh", lang)}
+            className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
+          />
         </div>
 
         {loadingC && customers.length === 0 ? (
