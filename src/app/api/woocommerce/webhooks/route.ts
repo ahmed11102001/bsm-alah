@@ -16,6 +16,7 @@ import {
   extractWooTracking,
 } from "@/types/woocommerce";
 import { OrderSource } from "@/types/enums";
+import { triggerStoreAutomation } from "@/lib/store-automation";
 
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
@@ -187,6 +188,17 @@ async function handleOrderCreated(
       },
     });
 
+    // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+    await triggerStoreAutomation({
+      userId,
+      automationType: "order_confirm",
+      storeSource:    "woocommerce",
+      storeId:        woocommerceStoreId,
+      customerPhone:  cleanPhone,
+      contactId:      contact.id,
+      templateVars:   null,
+    });
+
   } catch (err) {
     console.error("[WooCommerce] handleOrderCreated error:", err);
   }
@@ -236,6 +248,25 @@ async function handleOrderUpdated(
           woocommerceStoreId,
         },
       });
+
+      // ── أتمتة تحديث الشحن: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ────
+      if (cleanPhone) {
+        const contact = await prisma.contact.findFirst({
+          where:  { phone: cleanPhone, userId },
+          select: { id: true },
+        });
+        if (contact) {
+          await triggerStoreAutomation({
+            userId,
+            automationType: "order_shipped",
+            storeSource:    "woocommerce",
+            storeId:        woocommerceStoreId,
+            customerPhone:  cleanPhone,
+            contactId:      contact.id,
+            templateVars:   null,
+          });
+        }
+      }
     }
 
     await inngest.send({

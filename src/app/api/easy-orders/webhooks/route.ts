@@ -4,6 +4,7 @@ import { createHmac } from "crypto";
 import prisma from "@/lib/prisma";
 import { inngest } from "@/inngest/client";
 import { attributeOrderToCampaign } from "@/lib/attribution";
+import { triggerStoreAutomation } from "@/lib/store-automation";
 
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
@@ -131,6 +132,19 @@ export async function POST(req: NextRequest) {
         easyOrdersStoreId: easyStore?.id ?? null,
       },
     });
+
+    // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+    if (easyStore?.id) {
+      await triggerStoreAutomation({
+        userId,
+        automationType: "order_confirm",
+        storeSource:    "easyorders",
+        storeId:        easyStore.id,
+        customerPhone:  cleanPhone,
+        contactId:      contact.id,
+        templateVars:   null,
+      });
+    }
 
     console.log(`[EASYORDER] ✓ Order #${orderNumber} processed for ${cleanPhone}`);
     return NextResponse.json({ status: "success" });

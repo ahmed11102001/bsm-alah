@@ -8,6 +8,7 @@ import {
   ShoppingBag, Zap, Globe, Users, Package, TrendingUp, RefreshCw,
   MessageSquare, ChevronDown, ChevronUp, Search, Loader2,
   ToggleLeft, ToggleRight, CheckCircle, ChevronRight, Phone,
+  Send, X, CheckSquare, Square, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn }   from "@/lib/utils";
@@ -263,6 +264,236 @@ function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
   );
 }
 
+// ─── Promo Send Modal ─────────────────────────────────────────────────────────
+
+interface PromoSendModalProps {
+  source:    "shopify" | "easyorders" | "woocommerce";
+  customers: Customer[];
+  onClose:   () => void;
+  lang:      Lang;
+  onSent?:   (sent: number) => void;
+}
+
+function PromoSendModal({ source, customers, onClose, lang, onSent }: PromoSendModalProps) {
+  const [search,   setSearch]   = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sending,  setSending]  = useState(false);
+  const [result,   setResult]   = useState<{ sent: number; failed: number } | null>(null);
+
+  const filtered = customers.filter((c) => {
+    const q = search.toLowerCase();
+    return (
+      !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.phone.includes(q)
+    );
+  });
+
+  const allSelected = filtered.length > 0 && filtered.every((c) => selected.has(c.phone));
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((c) => next.delete(c.phone));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((c) => next.add(c.phone));
+        return next;
+      });
+    }
+  }
+
+  function toggleOne(phone: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(phone) ? next.delete(phone) : next.add(phone);
+      return next;
+    });
+  }
+
+  async function handleSend() {
+    if (selected.size === 0) {
+      toast.error(lang === "ar" ? "اختر عميلاً واحداً على الأقل" : "Select at least one customer");
+      return;
+    }
+    setSending(true);
+    try {
+      const r = await fetch("/api/store/automation/send", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ source, phones: Array.from(selected) }),
+      });
+      const d: { success?: boolean; sent?: number; failed?: number; error?: string } = await r.json();
+      if (!r.ok) {
+        toast.error(d.error ?? (lang === "ar" ? "فشل الإرسال" : "Send failed"));
+        return;
+      }
+      setResult({ sent: d.sent ?? 0, failed: d.failed ?? 0 });
+      onSent?.(d.sent ?? 0);
+      toast.success(
+        lang === "ar"
+          ? `✅ تم إرسال ${d.sent} رسالة${(d.failed ?? 0) > 0 ? ` — فشل ${d.failed}` : ""}`
+          : `✅ Sent ${d.sent}${(d.failed ?? 0) > 0 ? ` — failed ${d.failed}` : ""}`
+      );
+    } catch {
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+          <div>
+            <p className="font-bold text-gray-800 dark:text-white">
+              🎁 {lang === "ar" ? "إرسال عرض لعملاء المتجر" : "Send promo to store customers"}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {selected.size > 0
+                ? `${selected.size.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${lang === "ar" ? "عميل مختار" : "selected"}`
+                : lang === "ar" ? "اختر العملاء اللي هتبعتلهم" : "Choose which customers to send to"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Result banner */}
+        {result && (
+          <div className="mx-5 mt-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex items-center gap-2 flex-shrink-0">
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <p className="text-sm text-green-700 dark:text-green-400">
+              {lang === "ar"
+                ? `تم إرسال ${result.sent} رسالة${result.failed > 0 ? ` — فشل ${result.failed}` : " بنجاح"}`
+                : `Sent ${result.sent}${result.failed > 0 ? ` — failed ${result.failed}` : " successfully"}`}
+            </p>
+          </div>
+        )}
+
+        {/* Search + Select All */}
+        <div className="px-5 pt-4 pb-2 flex-shrink-0 space-y-2">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={lang === "ar" ? "بحث باسم أو رقم..." : "Search by name or number..."}
+              className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
+            />
+          </div>
+
+          {filtered.length > 0 && (
+            <button
+              onClick={toggleAll}
+              className="flex items-center gap-2 text-sm text-[#25D366] hover:underline"
+            >
+              {allSelected
+                ? <CheckSquare className="w-4 h-4" />
+                : <Square      className="w-4 h-4" />}
+              {allSelected
+                ? (lang === "ar" ? "إلغاء تحديد الكل" : "Deselect all")
+                : (lang === "ar" ? "تحديد الكل" : "Select all")}
+              <span className="text-gray-400 text-xs">({filtered.length})</span>
+            </button>
+          )}
+        </div>
+
+        {/* Customer list */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-2">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center py-10 text-center">
+              <Users className="w-10 h-10 text-gray-200 dark:text-gray-600 mb-2" />
+              <p className="text-sm text-gray-400">
+                {lang === "ar" ? "لا يوجد عملاء مطابقون" : "No matching customers"}
+              </p>
+            </div>
+          ) : (
+            filtered.map((c) => {
+              const isChecked = selected.has(c.phone);
+              return (
+                <button
+                  key={c.phone}
+                  onClick={() => toggleOne(c.phone)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-all",
+                    isChecked
+                      ? "border-[#25D366]/40 bg-[#25D366]/5 dark:bg-[#25D366]/10"
+                      : "border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 bg-white dark:bg-gray-800"
+                  )}
+                >
+                  <div className={cn(
+                    "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                    isChecked
+                      ? "border-[#25D366] bg-[#25D366]"
+                      : "border-gray-300 dark:border-gray-600"
+                  )}>
+                    {isChecked && <CheckCircle className="w-3 h-3 text-white" />}
+                  </div>
+
+                  <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-[#25D366]">
+                    {c.name.trim().charAt(0).toUpperCase() || "ع"}
+                  </div>
+
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="text-sm font-medium text-gray-800 dark:text-white truncate">{c.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{c.phone}</p>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{c.ordersCount} {lang === "ar" ? "طلب" : "orders"}</p>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            {lang === "ar" ? "إلغاء" : "Cancel"}
+          </button>
+
+          <button
+            onClick={handleSend}
+            disabled={sending || selected.size === 0}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#25D366] text-white text-sm font-medium hover:bg-[#1fba59] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {sending
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Send className="w-4 h-4" />}
+            {sending
+              ? (lang === "ar" ? "جاري الإرسال..." : "Sending...")
+              : `${lang === "ar" ? "إرسال لـ" : "Send to"} ${selected.size > 0 ? selected.size : ""} ${lang === "ar" ? "عميل" : "customers"}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Automation Card ──────────────────────────────────────────────────────────
 
 interface AutomationCardProps {
@@ -270,12 +501,17 @@ interface AutomationCardProps {
   templates:  AutomationTemplate[];
   onSave:     (type: StoreAutomationType, isEnabled: boolean, templateId: string | null) => Promise<void>;
   lang: Lang;
+  // للـ promo بس
+  storeSource?: "shopify" | "easyorders" | "woocommerce";
+  customers?:   Customer[];
 }
 
-function AutomationCard({ automation, templates, onSave, lang }: AutomationCardProps) {
-  const [enabled,    setEnabled]    = useState(automation.isEnabled);
-  const [templateId, setTemplateId] = useState(automation.templateId ?? "");
-  const [saving,     setSaving]     = useState(false);
+function AutomationCard({ automation, templates, onSave, lang, storeSource, customers = [] }: AutomationCardProps) {
+  const [enabled,      setEnabled]      = useState(automation.isEnabled);
+  const [templateId,   setTemplateId]   = useState(automation.templateId ?? "");
+  const [saving,       setSaving]       = useState(false);
+  const [showPromo,    setShowPromo]    = useState(false);
+  const [promoSentAdj, setPromoSentAdj] = useState(0);
 
   const meta = AUTO_LABELS[automation.type];
 
@@ -300,7 +536,11 @@ function AutomationCard({ automation, templates, onSave, lang }: AutomationCardP
     }
   }
 
+  const isPromo    = automation.type === "promo";
+  const totalSent  = (automation.sentCount ?? 0) + promoSentAdj;
+
   return (
+    <>
     <div className={cn(
       "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all",
       enabled
@@ -351,16 +591,59 @@ function AutomationCard({ automation, templates, onSave, lang }: AutomationCardP
         )}
       </div>
 
+      {/* زر إرسال العروض — الـ promo فقط */}
+      {isPromo && (
+        <button
+          onClick={() => {
+            if (!enabled || !templateId) {
+              toast.error(lang === "ar" ? "فعّل الأتمتة واختر قالباً أولاً" : "Enable automation and choose a template first");
+              return;
+            }
+            if (customers.length === 0) {
+              toast.error(lang === "ar" ? "لا يوجد عملاء في المتجر" : "No store customers found");
+              return;
+            }
+            setShowPromo(true);
+          }}
+          className={cn(
+            "mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
+            enabled && templateId
+              ? "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20"
+              : "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed border border-transparent"
+          )}
+        >
+          <Send className="w-4 h-4" />
+          {lang === "ar" ? "إرسال لعملاء المتجر" : "Send to store customers"}
+          {customers.length > 0 && (
+            <span className="text-[11px] bg-[#25D366]/20 text-[#25D366] px-1.5 py-0.5 rounded-full">
+              {customers.length}
+            </span>
+          )}
+        </button>
+      )}
+
       {/* Sent Count */}
-      {automation.sentCount > 0 && (
+      {totalSent > 0 && (
         <div className="mt-3 flex items-center gap-1.5">
           <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
           <span className="text-[11px] text-gray-400">
-            {automation.sentCount.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
+            {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
           </span>
         </div>
       )}
     </div>
+
+    {/* Promo Modal */}
+    {isPromo && showPromo && storeSource && (
+      <PromoSendModal
+        source={storeSource}
+        customers={customers}
+        lang={lang}
+        onClose={() => setShowPromo(false)}
+        onSent={(n) => setPromoSentAdj((p) => p + n)}
+      />
+    )}
+    </>
   );
 }
 
@@ -554,6 +837,8 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
                 templates={templates}
                 onSave={handleSaveAutomation}
                 lang={lang}
+                storeSource={store.source}
+                customers={customers}
               />
             ))}
           </div>

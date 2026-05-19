@@ -11,6 +11,7 @@ import {
   isShopifyOrder,
   isShopifyCustomer,
 } from "@/types/shopify";
+import { triggerStoreAutomation } from "@/lib/store-automation";
 
 // ── Token helper — نفس WooCommerce و EasyOrders ───────────────────────────────
 function userToken(userId: string): string {
@@ -190,6 +191,17 @@ async function handleOrderCreated(
       data:  { updatedAt: new Date() },
     });
 
+    // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+    await triggerStoreAutomation({
+      userId,
+      automationType: "order_confirm",
+      storeSource:    "shopify",
+      storeId:        shopifyStoreId,
+      customerPhone:  cleanPhone,
+      contactId:      contact.id,
+      templateVars:   null,
+    });
+
     console.log(`[Shopify] ✓ Order #${order.order_number} — ${cleanPhone}`);
   } catch (error) {
     console.error("[Shopify] handleOrderCreated error:", error);
@@ -268,6 +280,23 @@ async function handleOrderFulfilled(
         shopifyStoreId,
       },
     });
+
+    // ── أتمتة تحديث الشحن: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──────
+    const contact = await prisma.contact.findFirst({
+      where:  { phone: cleanPhone, userId },
+      select: { id: true },
+    });
+    if (contact) {
+      await triggerStoreAutomation({
+        userId,
+        automationType: "order_shipped",
+        storeSource:    "shopify",
+        storeId:        shopifyStoreId,
+        customerPhone:  cleanPhone,
+        contactId:      contact.id,
+        templateVars:   null,
+      });
+    }
   } catch (error) {
     console.error("[Shopify] handleOrderFulfilled error:", error);
   }
