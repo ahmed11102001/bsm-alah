@@ -550,6 +550,8 @@ enum MessageType {
   document
   audio
   template
+  video
+  sticker
 }
 
 enum MessageStatus {

@@ -226,6 +226,45 @@ export async function POST(req: NextRequest) {
             mediaUrl = metaAudioId;
           }
         }
+      } else if ((msg.type as string) === "video") {
+        type    = MessageType.video;
+        content = (msg as any).video?.caption || "Video";
+        const metaVideoId = (msg as any).video?.id as string | undefined;
+        if (metaVideoId) {
+          try {
+            mediaUrl = await downloadFromMetaAndUpload(metaVideoId, accountOwner.accessToken, {
+              folder: "whatsapp-media/videos",
+            });
+          } catch {
+            mediaUrl = metaVideoId;
+          }
+        }
+      } else if ((msg.type as string) === "document") {
+        type    = MessageType.document;
+        content = (msg as any).document?.filename || "Document";
+        const metaDocId = (msg as any).document?.id as string | undefined;
+        if (metaDocId) {
+          try {
+            mediaUrl = await downloadFromMetaAndUpload(metaDocId, accountOwner.accessToken, {
+              folder: "whatsapp-media/documents",
+            });
+          } catch {
+            mediaUrl = metaDocId;
+          }
+        }
+      } else if ((msg.type as string) === "sticker") {
+        type    = MessageType.sticker;
+        content = "Sticker";
+        const metaStickerId = (msg as any).sticker?.id as string | undefined;
+        if (metaStickerId) {
+          try {
+            mediaUrl = await downloadFromMetaAndUpload(metaStickerId, accountOwner.accessToken, {
+              folder: "whatsapp-media/stickers",
+            });
+          } catch {
+            mediaUrl = metaStickerId;
+          }
+        }
       }
 
       await prisma.$transaction(async (tx) => {
