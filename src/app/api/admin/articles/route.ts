@@ -16,8 +16,12 @@ function toSlug(title: string) {
   return title
     .trim()
     .toLowerCase()
+    // أزل علامات الترقيم العربية قبل ما نطبق الفلتر
+    .replace(/[\u0600-\u0605\u060C\u060D\u061B\u061C\u061D\u061E\u061F\u066A-\u066D\u06D4]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/[^\w\u0600-\u06FF-]/g, "")
+    .replace(/[^\w\u0621-\u06D3\u06D5-\u06FF-]/g, "")
+    .replace(/-+/g, "-")          // دمج الشرطات المتكررة
+    .replace(/^-|-$/g, "")        // أزل الشرطات من البداية والنهاية
     .slice(0, 80);
 }
 
