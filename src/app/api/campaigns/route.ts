@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { CampaignStatus, MessageDirection, QueueStatus } from "@/types/enums";
+import { CampaignStatus, MessageDirection, MessageStatus, QueueStatus } from "@/types/enums";
 import {
   checkCampaignsLimit, checkFeature,
   incrementCampaignUsage, guardResponse,
@@ -47,20 +47,38 @@ export async function GET(req: NextRequest) {
       prisma.campaign.count({ where }),
     ]);
 
-    // ── احسب totalQueued + queuedCount (الـ pending) لكل حملة ────────────────
+    // ── احسب totalQueued + queuedCount + deliveredCount + readCount لكل حملة ──
     const campaignIds = rawCampaigns.map(c => c.id);
 
-    const totalQueueCounts = await prisma.messageQueue.groupBy({
-      by:    ["campaignId"],
-      where: { campaignId: { in: campaignIds } },
-      _count: { id: true },
-    });
-
-    const pendingCounts = await prisma.messageQueue.groupBy({
-      by:    ["campaignId"],
-      where: { campaignId: { in: campaignIds }, status: QueueStatus.pending },
-      _count: { id: true },
-    });
+    const [
+      totalQueueCounts,
+      pendingCounts,
+      deliveredCounts,
+      readCounts,
+    ] = await Promise.all([
+      prisma.messageQueue.groupBy({
+        by:    ["campaignId"],
+        where: { campaignId: { in: campaignIds } },
+        _count: { id: true },
+      }),
+      prisma.messageQueue.groupBy({
+        by:    ["campaignId"],
+        where: { campaignId: { in: campaignIds }, status: QueueStatus.pending },
+        _count: { id: true },
+      }),
+      // ✅ deliveredCount من Message table مباشرة — نفس منطق صفحة التقارير
+      prisma.message.groupBy({
+        by:    ["campaignId"],
+        where: { campaignId: { in: campaignIds }, status: MessageStatus.delivered },
+        _count: { id: true },
+      }),
+      // ✅ readCount من Message table مباشرة — نفس منطق صفحة التقارير
+      prisma.message.groupBy({
+        by:    ["campaignId"],
+        where: { campaignId: { in: campaignIds }, status: MessageStatus.read },
+        _count: { id: true },
+      }),
+    ]);
 
     const totalMap = new Map(
       totalQueueCounts.map(p => [p.campaignId, p._count.id])
@@ -70,21 +88,31 @@ export async function GET(req: NextRequest) {
       pendingCounts.map(p => [p.campaignId, p._count.id])
     );
 
+    const deliveredMap = new Map(
+      deliveredCounts.map(p => [p.campaignId!, p._count.id])
+    );
+
+    const readMap = new Map(
+      readCounts.map(p => [p.campaignId!, p._count.id])
+    );
+
     // ── شكّل الـ response بكل البيانات الحقيقية ──────────────────────────────
     const campaigns = rawCampaigns.map(c => {
-      const totalQueued  = totalMap.get(c.id) ?? 0;          // إجمالي الـ queue
-      const queuedCount  = pendingMap.get(c.id) ?? 0;       // الـ pending فعلاً
+      const totalQueued    = totalMap.get(c.id)     ?? 0;
+      const queuedCount    = pendingMap.get(c.id)   ?? 0;
+      const deliveredCount = deliveredMap.get(c.id) ?? 0;  // ✅ من Message table
+      const readCount      = readMap.get(c.id)      ?? 0;  // ✅ من Message table
 
       return {
         id:             c.id,
         name:           c.name,
         status:         c.status,
         sentCount:      c.sentCount,
-        deliveredCount: c.deliveredCount,
-        readCount:      c.readCount,
+        deliveredCount,                                       // ✅ من Message table
+        readCount,                                            // ✅ من Message table
         failedCount:    c.failedCount,
-        totalQueued,                                          // ✅ من الـ DB
-        queuedCount,                                          // ✅ من الـ DB
+        totalQueued,
+        queuedCount,
         scheduledAt:    c.scheduledAt,
         createdAt:      c.createdAt,
         completedAt:    c.completedAt,
