@@ -21,7 +21,7 @@ export async function PATCH(
   const body = await req.json();
 
   // لو الـ body جاي بـ isBetaUser بس → toggle الـ flag فقط
-  if (typeof body.isBetaUser === "boolean" && !body.plan) {
+  if (typeof body.isBetaUser === "boolean" && !body.plan && body.aiExtraCredits === undefined) {
     await prisma.subscription.upsert({
       where:  { userId: id },
       update: { isBetaUser: body.isBetaUser },
@@ -37,20 +37,45 @@ export async function PATCH(
     return NextResponse.json({ success: true });
   }
 
+  // لو الـ body جاي بـ aiExtraCredits → تعديل كريديتس الـ AI
+  if (typeof body.aiExtraCredits === "number" && !body.plan) {
+    const delta = Math.round(body.aiExtraCredits); // الفرق المراد إضافته أو طرحه
+    if (isNaN(delta))
+      return NextResponse.json({ error: "aiExtraCredits يجب أن يكون رقمًا" }, { status: 400 });
+
+    await prisma.subscription.upsert({
+      where:  { userId: id },
+      update: { aiExtraCredits: { increment: delta } },
+      create: {
+        userId:                id,
+        plan:                  "free",
+        status:                "active",
+        aiExtraCredits:        Math.max(0, delta),
+        periodResetAt:         new Date(),
+        campaignsUsedThisMonth: 0,
+      },
+    });
+    return NextResponse.json({ success: true });
+  }
+
   // غير ذلك → تعديل الـ plan العادي
   const { plan } = body;
   if (!plan)
     return NextResponse.json({ error: "plan أو isBetaUser مطلوب" }, { status: 400 });
 
+  // لو بنرقّي لـ enterprise، نضع الـ aiPlanCredits = 1_000_000 تلقائياً
+  const extraData = plan === "enterprise" ? { aiPlanCredits: 1_000_000 } : {};
+
   await prisma.subscription.upsert({
     where:  { userId: id },
-    update: { plan },
+    update: { plan, ...extraData },
     create: {
       userId:                id,
       plan,
       status:                "active",
       periodResetAt:         new Date(),
       campaignsUsedThisMonth: 0,
+      ...extraData,
     },
   });
 

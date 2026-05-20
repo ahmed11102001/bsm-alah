@@ -27,7 +27,7 @@ import {
   MessageCircle, Home, CheckCircle,
   Loader2, ArrowUpRight, Shield, Phone, Mail,
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
-  Languages, Bot,
+  Languages, Bot, Sparkles, Zap, MessageCircleMore,
 } from "lucide-react";
 import Contacts        from "@/components/dashboard/Contacts";
 import Templates       from "@/components/dashboard/Templates";
@@ -58,6 +58,12 @@ interface DashboardData {
       storeIntegration: boolean; aiAgent: boolean;
     };
     usage: { contacts: number; teamMembers: number; campaignsThisMonth: number };
+  };
+  aiCredits: {
+    planCredits: number;
+    extraCredits: number;
+    usedCredits: number;
+    total: number;
   };
   recentCampaigns: {
     id: string; name: string; status: string;
@@ -415,6 +421,150 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   );
 }
 
+// ─── AI Credits Card (Enterprise only) ───────────────────────────────────────
+function AiCreditsCard({ aiCredits }: { aiCredits: DashboardData["aiCredits"] }) {
+  const [buying, setBuying] = useState<string | null>(null);
+  const { total, planCredits, extraCredits, usedCredits } = aiCredits;
+  const totalAllotted = planCredits + extraCredits;
+  const usedPct = totalAllotted > 0 ? Math.min(Math.round((usedCredits / totalAllotted) * 100), 100) : 0;
+  const remaining = Math.max(total, 0);
+  const isNearLimit = usedPct >= 80;
+
+  const handleBuy = async (packageId: string, label: string) => {
+    setBuying(packageId);
+    try {
+      const r = await fetch("/api/ai-credits/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packageId }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      toast.success(d.message ?? `تمت إضافة ${label}`);
+      // رفرش الداشبورد لو في callback — هنا بنعمل reload بسيط
+      window.location.reload();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBuying(null); }
+  };
+
+  const fmtNum = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : `${n}`;
+
+  return (
+    <Card className="border border-purple-100 dark:border-purple-900/40 shadow-sm mb-6 bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-900/10 dark:to-gray-800">
+      <CardContent className="p-6">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white">باقة الذكاء الاصطناعي</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">كريديتس استخدام AI — Gemini · ChatGPT · ElevenLabs</p>
+            </div>
+          </div>
+          <a
+            href="https://wa.me/20xxxxxxxxx"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-xs text-[#25D366] border border-[#25D366]/30 px-3 py-1.5 rounded-xl hover:bg-[#25D366]/10 transition"
+          >
+            <MessageCircleMore className="w-3.5 h-3.5" />
+            تواصل معنا
+          </a>
+        </div>
+
+        {/* Usage bar */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">الاستهلاك</span>
+            <span className={`text-xs font-semibold ${isNearLimit ? "text-orange-500" : "text-gray-700 dark:text-gray-300"}`}>
+              {fmtNum(usedCredits)} / {fmtNum(totalAllotted)}
+            </span>
+          </div>
+          <Progress
+            value={usedPct}
+            className={`h-2 ${isNearLimit ? "[&>div]:bg-orange-400" : "[&>div]:bg-purple-500"}`}
+          />
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-[11px] text-gray-400">متبقي: <span className="font-semibold text-purple-600 dark:text-purple-400">{fmtNum(remaining)}</span></span>
+            {extraCredits > 0 && (
+              <span className="text-[11px] text-purple-500">+{fmtNum(extraCredits)} إضافي</span>
+            )}
+          </div>
+        </div>
+
+        {/* Credit breakdown */}
+        <div className="grid grid-cols-3 gap-3 mb-5 p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-purple-100 dark:border-purple-900/30">
+          {[
+            { label: "من الباقة", value: planCredits, color: "text-purple-600" },
+            { label: "إضافي مشترى", value: extraCredits, color: "text-blue-600" },
+            { label: "مستهلك", value: usedCredits, color: "text-gray-500" },
+          ].map(item => (
+            <div key={item.label} className="text-center">
+              <p className={`text-base font-bold ${item.color}`}>{fmtNum(item.value)}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Buy more buttons */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => handleBuy("500k", "500K كريديت")}
+            disabled={!!buying}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-sm font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30 transition disabled:opacity-60"
+          >
+            {buying === "500k" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            500K كريديت — $99
+          </button>
+          <button
+            onClick={() => handleBuy("1m", "1M كريديت")}
+            disabled={!!buying}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition disabled:opacity-60"
+          >
+            {buying === "1m" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            1M كريديت — $149
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Enterprise Upsell Hook (للباقات الأقل من Enterprise) ────────────────────
+function EnterpriseUpsellHook() {
+  const router = useRouter();
+  return (
+    <Card className="border border-dashed border-purple-200 dark:border-purple-800 shadow-sm mb-6 overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+            <Bot className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white">مساعد الذكاء الاصطناعي</h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">Enterprise</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              رد تلقائي على العملاء بـ AI · توليد محتوى للحملات · تحليل ذكي للمحادثات · دعم Gemini و ChatGPT و ElevenLabs
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/checkout")}
+            className="flex-shrink-0 flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold hover:opacity-90 transition"
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            ترقية للـ Enterprise
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Home Dashboard ───────────────────────────────────────────────────────────
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean;
@@ -422,7 +572,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const router = useRouter();
   const { t, locale, dir } = useLanguage();
   const h = t.home;
-  const { stats, recentCampaigns, user } = data;
+  const { stats, recentCampaigns, user, aiCredits } = data;
+  const isEnterprise = data.plan.plan === "enterprise";
   const firstName = (user.name ?? "").split(" ")[0] || (locale === "ar" ? "مرحباً" : "there");
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
 
@@ -505,6 +656,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
       {/* ── Plan Card ── */}
       <PlanCard plan={data.plan} />
+
+      {/* ── AI Credits Card (Enterprise) / Upsell Hook (others) ── */}
+      {isEnterprise
+        ? <AiCreditsCard aiCredits={aiCredits} />
+        : <EnterpriseUpsellHook />
+      }
 
       {/* ── Recent Campaigns ── */}
       <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">

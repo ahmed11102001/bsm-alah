@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       isSuper:   true,
       createdAt: true,
       subscription: {
-        select: { plan: true, status: true, isBetaUser: true },
+        select: { plan: true, status: true, isBetaUser: true, aiPlanCredits: true, aiExtraCredits: true, aiUsedCredits: true },
       },
     },
   });

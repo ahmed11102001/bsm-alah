@@ -30,6 +30,7 @@ export async function GET(_req: NextRequest) {
       planStatus,
       userRecord,
       whatsappAccount,
+      aiCreditsRecord,
     ] = await Promise.all([
       // إجمالي الرسائل المرسلة
       prisma.message.count({
@@ -78,6 +79,11 @@ export async function GET(_req: NextRequest) {
         where:  { userId: ownerId },
         select: { phoneNumberId: true, wabaId: true },
       }),
+      // AI credits
+      prisma.subscription.findUnique({
+        where:  { userId: ownerId },
+        select: { aiPlanCredits: true, aiExtraCredits: true, aiUsedCredits: true },
+      }),
     ]);
 
     const deliveryRate = totalSent > 0
@@ -102,6 +108,14 @@ export async function GET(_req: NextRequest) {
         replyRate,
       },
       plan: planStatus,
+      aiCredits: {
+        planCredits:  aiCreditsRecord?.aiPlanCredits  ?? 0,
+        extraCredits: aiCreditsRecord?.aiExtraCredits ?? 0,
+        usedCredits:  aiCreditsRecord?.aiUsedCredits  ?? 0,
+        total:        (aiCreditsRecord?.aiPlanCredits ?? 0)
+                    + (aiCreditsRecord?.aiExtraCredits ?? 0)
+                    - (aiCreditsRecord?.aiUsedCredits  ?? 0),
+      },
       recentCampaigns: recentCampaigns.map(c => ({
         ...c,
         createdAt: c.createdAt.toISOString(),

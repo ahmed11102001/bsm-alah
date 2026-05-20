@@ -105,8 +105,21 @@ export function planAtLeast(current: PlanTier, required: PlanTier): boolean {
   return PLAN_ORDER.indexOf(current) >= PLAN_ORDER.indexOf(required);
 }
 
-/** هل الحد غير محدود؟ */
-export function isUnlimited(n: number): boolean {
+/** كريديتس الذكاء الاصطناعي المدرجة في كل باقة */
+export const AI_PLAN_CREDITS: Record<PlanTier, number> = {
+  free:       0,
+  starter:    0,
+  pro:        0,
+  enterprise: 1_000_000,
+};
+
+/** حزم شراء الكريديتس الإضافية */
+export const AI_CREDIT_PACKAGES = [
+  { id: "500k", credits: 500_000, price: 99,  label: "500K كريديت" },
+  { id: "1m",   credits: 1_000_000, price: 149, label: "1M كريديت"  },
+] as const;
+
+export type AiCreditPackageId = typeof AI_CREDIT_PACKAGES[number]["id"];
   return n === -1;
 }
 
