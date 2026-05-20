@@ -78,9 +78,9 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
     // best campaigns (top 5 by readCount)
     prisma.campaign.findMany({
       where: { userId, completedAt: { not: null } },
-      orderBy: { readCount: "desc" },
+      orderBy: { sentCount: "desc" },
       take: 5,
-      select: { name: true, sentCount: true, deliveredCount: true, readCount: true, failedCount: true },
+      select: { id: true, name: true, sentCount: true, failedCount: true },
     }),
 
     // daily messages for chart — raw messages grouped by date
@@ -116,6 +116,23 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
   const readRate     = totalSent > 0 ? +((totalRead      / totalSent) * 100).toFixed(1) : 0;
   const replyRate    = totalSent > 0 ? +((inbound        / totalSent) * 100).toFixed(1) : 0;
 
+  // ✅ احسب delivered/read لكل حملة من Message table مباشرة
+  const campaignIds = campaigns.map(c => c.id);
+  const [campDelivered, campRead] = await Promise.all([
+    prisma.message.groupBy({
+      by: ["campaignId"],
+      where: { campaignId: { in: campaignIds }, status: MessageStatus.delivered },
+      _count: { id: true },
+    }),
+    prisma.message.groupBy({
+      by: ["campaignId"],
+      where: { campaignId: { in: campaignIds }, status: MessageStatus.read },
+      _count: { id: true },
+    }),
+  ]);
+  const campDeliveredMap = new Map(campDelivered.map(p => [p.campaignId!, p._count.id]));
+  const campReadMap      = new Map(campRead.map(p => [p.campaignId!, p._count.id]));
+
   const daily = dailyRaw.map((r) => ({
     day:      r.day,
     sent:     Number(r.sent),
@@ -136,10 +153,18 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
     },
     daily,
     hourly,
-    bestCampaigns: campaigns.map((c) => ({
-      ...c,
-      rate: c.sentCount > 0 ? +((c.readCount / c.sentCount) * 100).toFixed(1) : 0,
-    })),
+    bestCampaigns: campaigns.map((c) => {
+      const delivered = campDeliveredMap.get(c.id) ?? 0;
+      const read      = campReadMap.get(c.id)      ?? 0;
+      return {
+        name:          c.name,
+        sentCount:     c.sentCount,
+        deliveredCount: delivered,
+        readCount:      read,
+        failedCount:   c.failedCount,
+        rate: c.sentCount > 0 ? +((read / c.sentCount) * 100).toFixed(1) : 0,
+      };
+    }),
   });
 }
 
