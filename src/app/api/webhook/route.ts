@@ -113,37 +113,59 @@ export async function POST(req: NextRequest) {
 
     const userId = accountOwner.userId;
 
-    // Step 2: ??????? ?????? (Delivered / Read / Failed)
+    // Step 2: تحديث حالة الرسالة (Delivered / Read / Failed)
     if (value?.statuses?.length) {
       const status = value.statuses[0];
 
-      // ??? ??????? ????? ???? ???? ??? campaignId
+      // ── البحث بـ whatsappId فقط بدون userId ──────────────────────────────
+      // السبب: الرسالة ممكن تكون اتحفظت بـ userId مختلف (sub-user أو parent)
+      // لذا نبحث بـ whatsappId فقط، وهو unique في الـ DB
       const relatedMsg = await prisma.message.findFirst({
-        where:  { whatsappId: status.id, userId },
-        select: { id: true, campaignId: true },
+        where:  { whatsappId: status.id },
+        select: { id: true, campaignId: true, status: true },
       });
 
-      await prisma.message.updateMany({
-        where: { whatsappId: status.id, userId },
-        data: {
-          status: mapStatus(status.status),
-          ...(status.status === "delivered" && { deliveredAt: new Date() }),
-          ...(status.status === "read"      && { readAt:      new Date() }),
-        },
-      });
+      // تحديث حالة الرسالة
+      if (relatedMsg) {
+        await prisma.message.update({
+          where: { id: relatedMsg.id },
+          data: {
+            status: mapStatus(status.status),
+            ...(status.status === "delivered" && { deliveredAt: new Date() }),
+            ...(status.status === "read"      && { readAt:      new Date() }),
+          },
+        });
+      } else {
+        // fallback: حاول بالـ userId لو whatsappId مش موجود
+        await prisma.message.updateMany({
+          where: { whatsappId: status.id, userId },
+          data: {
+            status: mapStatus(status.status),
+            ...(status.status === "delivered" && { deliveredAt: new Date() }),
+            ...(status.status === "read"      && { readAt:      new Date() }),
+          },
+        });
+      }
 
-      // ?? ??????? ?? ?? ???? — ???? ?????? ??????
+      // ── تحديث عدادات الحملة ───────────────────────────────────────────────
       if (relatedMsg?.campaignId) {
         const campaignId = relatedMsg.campaignId;
+
         if (status.status === "delivered") {
           await prisma.campaign.update({
             where: { id: campaignId },
             data:  { deliveredCount: { increment: 1 } },
           });
         } else if (status.status === "read") {
+          // "read" تعني إنه اتوصّل كمان — نزوّد الاتنين لو مش اتحسبت delivered قبل كده
+          const wasDelivered = relatedMsg.status === "delivered";
           await prisma.campaign.update({
             where: { id: campaignId },
-            data:  { readCount: { increment: 1 } },
+            data: {
+              readCount:      { increment: 1 },
+              // لو Meta بعتت "read" مباشرة بدون "delivered" قبلها — نحسبها delivered كمان
+              deliveredCount: wasDelivered ? undefined : { increment: 1 },
+            },
           });
         }
       }

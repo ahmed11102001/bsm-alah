@@ -212,8 +212,11 @@ export const processCampaign = inngest.createFunction(
                   });
 
               if (contact) {
-                await tx.message.create({
-                  data: {
+                // upsert بدل create — يحمي من unique constraint لو wamid اتكرر
+                await tx.message.upsert({
+                  where:  { whatsappId: result.whatsappMsgId ?? `no-wamid-${Date.now()}` },
+                  update: {},   // لو موجود بالفعل — لا تعمل حاجة
+                  create: {
                     userId:     msg.userId,
                     contactId:  contact.id,
                     campaignId: campaignId,
@@ -576,8 +579,10 @@ export const processQueueItem = inngest.createFunction(
                 data:  { status: MessageStatus.sent, whatsappId: sendResult.whatsappMsgId, sentAt: new Date() },
               });
             } else {
-              await tx.message.create({
-                data: {
+              await tx.message.upsert({
+                where:  { whatsappId: sendResult.whatsappMsgId ?? `no-wamid-${Date.now()}` },
+                update: {},
+                create: {
                   userId:     item.userId,
                   contactId:  contact.id,
                   campaignId: item.campaignId ?? undefined,
