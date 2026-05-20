@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
+import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 
 interface Notification {
@@ -19,7 +19,9 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   CAMPAIGN_FAILED:  <XCircle      className="w-4 h-4 text-red-500"    />,
   CAMPAIGN_PARTIAL: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
   PLAN_LIMIT_REACHED: <AlertTriangle className="w-4 h-4 text-orange-500" />,
-  NEW_MESSAGE:      <MessageSquare className="w-4 h-4 text-blue-500"  />,
+  NEW_MESSAGE:      <MessageSquare className="w-4 h-4 text-blue-500"   />,
+  STORE_AUTO_SENT:  <ShoppingBag   className="w-4 h-4 text-emerald-500" />,
+  STORE_AUTO_FAILED:<ShoppingBag   className="w-4 h-4 text-red-500"     />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -28,6 +30,8 @@ const TYPE_BG: Record<NotificationType, string> = {
   CAMPAIGN_PARTIAL:   "bg-yellow-50",
   PLAN_LIMIT_REACHED: "bg-orange-50",
   NEW_MESSAGE:        "bg-blue-50",
+  STORE_AUTO_SENT:    "bg-emerald-50",
+  STORE_AUTO_FAILED:  "bg-red-50",
 };
 
 function timeAgo(dateStr: string): string {
