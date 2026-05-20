@@ -121,7 +121,10 @@ export const AI_CREDIT_PACKAGES = [
 
 export type AiCreditPackageId =
   typeof AI_CREDIT_PACKAGES[number]["id"];
-
+  
+export function isUnlimited(n: number) {
+  return n === -1;
+}
 /** نص الحد للعرض */
 export function limitLabel(n: number): string {
   return n === -1 ? "غير محدود" : n.toLocaleString("ar-EG");
