@@ -106,9 +106,9 @@ async function callGemini(
   const configuredModel = process.env.GEMINI_MODEL?.trim();
   const modelsToTry = [
     configuredModel,
-    "gemini-2.0-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-flash",
+    "gemini-2.5-flash",          // الأسرع والأرخص — الاختيار الأول
+    "gemini-2.5-flash-preview-05-20", // preview أحدث لو متاح
+    "gemini-2.0-flash",          // fallback مستقر
   ].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
 
   // Gemini بيستخدم "model" مش "assistant"

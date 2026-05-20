@@ -119,9 +119,8 @@ export const AI_CREDIT_PACKAGES = [
   { id: "1m",   credits: 1_000_000, price: 149, label: "1M كريديت"  },
 ] as const;
 
-export type AiCreditPackageId = typeof AI_CREDIT_PACKAGES[number]["id"];
-  return n === -1;
-}
+export type AiCreditPackageId =
+  typeof AI_CREDIT_PACKAGES[number]["id"];
 
 /** نص الحد للعرض */
 export function limitLabel(n: number): string {
