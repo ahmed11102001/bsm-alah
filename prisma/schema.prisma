@@ -608,6 +608,8 @@ enum NotificationType {
   CAMPAIGN_PARTIAL
   PLAN_LIMIT_REACHED
   NEW_MESSAGE
+  STORE_AUTO_SENT
+  STORE_AUTO_FAILED
 }
 
 enum StoreType {

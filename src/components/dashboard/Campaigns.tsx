@@ -358,11 +358,11 @@ function DetailsModal({ campaign, open, onClose, lang }: {
             <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5" /> {tr("performance",lang)}
             </p>
-            <ProgressBar label={tr("sentPct",lang)}      value={campaign.sentCount}      max={total}              color="bg-blue-400"   textColor="text-blue-600 dark:text-blue-400"   />
-            <ProgressBar label={tr("deliveryRateL",lang)} value={campaign.deliveredCount} max={campaign.sentCount} color="bg-green-400"  textColor="text-green-600 dark:text-green-400" />
-            <ProgressBar label={tr("readRateL",lang)}     value={campaign.readCount}      max={campaign.sentCount} color="bg-purple-400" textColor="text-purple-600 dark:text-purple-400" />
+            <ProgressBar label={tr("sentPct",lang)}       value={campaign.sentCount}                           max={total}              color="bg-blue-400"   textColor="text-blue-600 dark:text-blue-400"   />
+            <ProgressBar label={tr("deliveryRateL",lang)}  value={campaign.deliveredCount + campaign.readCount} max={campaign.sentCount} color="bg-green-400"  textColor="text-green-600 dark:text-green-400" />
+            <ProgressBar label={tr("readRateL",lang)}      value={campaign.readCount}                           max={campaign.sentCount} color="bg-purple-400" textColor="text-purple-600 dark:text-purple-400" />
             {campaign.failedCount > 0 && (
-              <ProgressBar label={tr("failureRateL",lang)} value={campaign.failedCount}   max={campaign.sentCount} color="bg-red-400"    textColor="text-red-500 dark:text-red-400"     />
+              <ProgressBar label={tr("failureRateL",lang)} value={campaign.failedCount}                         max={campaign.sentCount} color="bg-red-400"    textColor="text-red-500 dark:text-red-400"     />
             )}
           </div>
         )}
@@ -568,9 +568,12 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
   };
 
   // Summary stats
-  const totalSent      = campaigns.reduce((a, c) => a + c.sentCount,      0);
-  const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount,  0);
-  const totalRead      = campaigns.reduce((a, c) => a + c.readCount,       0);
+  // deliveredCount في الـ DB = رسائل وصلت بدون ما تتقرأ
+  // readCount = رسائل اتقرأت (وبالتأكيد وصلت)
+  // معدل التوصيل الحقيقي = deliveredCount + readCount
+  const totalSent      = campaigns.reduce((a, c) => a + c.sentCount,                        0);
+  const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount + c.readCount,      0);
+  const totalRead      = campaigns.reduce((a, c) => a + c.readCount,                         0);
 
   const STATUS_FILTERS = [
     { value: "all",       label: tr("filterAll",lang)       },

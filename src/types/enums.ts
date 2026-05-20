@@ -81,6 +81,8 @@ export const NotificationType = {
   CAMPAIGN_PARTIAL:   "CAMPAIGN_PARTIAL",
   PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED",
   NEW_MESSAGE:        "NEW_MESSAGE",
+  STORE_AUTO_SENT:    "STORE_AUTO_SENT",
+  STORE_AUTO_FAILED:  "STORE_AUTO_FAILED",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

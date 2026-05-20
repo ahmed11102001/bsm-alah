@@ -4,6 +4,7 @@
 import prisma                  from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { decryptToken }        from "@/lib/crypto";
+import { notifyStoreAutoSent, notifyStoreAutoFailed } from "@/lib/notifications";
 import {
   MessageDirection,
   MessageStatus,
@@ -118,6 +119,18 @@ export async function triggerStoreAutomation(
     ? `[StoreAuto] ✓ ${automationType} → ${customerPhone} (${storeSource})`
     : `[StoreAuto] ✗ ${automationType} → ${customerPhone}: ${result.error}`
   );
+
+  // 🔔 إشعار نجاح أو فشل الإرسال
+  if (result.ok) {
+    await notifyStoreAutoSent(
+      userId, automationType, storeSource, customerPhone, automation.template.name,
+    ).catch(() => {});
+  } else {
+    await notifyStoreAutoFailed(
+      userId, automationType, storeSource, customerPhone,
+      automation.template.name, result.error ?? "فشل غير معروف",
+    ).catch(() => {});
+  }
 
   return { sent: result.ok, reason: result.ok ? undefined : result.error };
 }

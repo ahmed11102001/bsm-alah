@@ -35,9 +35,12 @@ export async function GET(_req: NextRequest) {
       prisma.message.count({
         where: { userId: ownerId, direction: MessageDirection.outbound, deletedAt: null },
       }),
-      // إجمالي المستلمة
+      // إجمالي المستلمة = delivered + read (اللي اتقرأ اتوصّل بالتأكيد)
       prisma.message.count({
-        where: { userId: ownerId, status: MessageStatus.delivered, deletedAt: null },
+        where: {
+          userId: ownerId, deletedAt: null,
+          status: { in: [MessageStatus.delivered, MessageStatus.read] },
+        },
       }),
       // إجمالي المقروءة
       prisma.message.count({
@@ -58,7 +61,8 @@ export async function GET(_req: NextRequest) {
         take: 5,
         select: {
           id: true, name: true, status: true,
-          sentCount: true, failedCount: true, createdAt: true,
+          sentCount: true, deliveredCount: true,
+          readCount: true, failedCount: true, createdAt: true,
           template: { select: { name: true } },
         },
       }),
@@ -75,28 +79,6 @@ export async function GET(_req: NextRequest) {
         select: { phoneNumberId: true, wabaId: true },
       }),
     ]);
-
-    const recentCampaignIds = recentCampaigns.map(c => c.id);
-
-    const [recentDeliveredCounts, recentReadCounts] = await Promise.all([
-      prisma.message.groupBy({
-        by:    ["campaignId"],
-        where: { campaignId: { in: recentCampaignIds }, status: MessageStatus.delivered },
-        _count: { id: true },
-      }),
-      prisma.message.groupBy({
-        by:    ["campaignId"],
-        where: { campaignId: { in: recentCampaignIds }, status: MessageStatus.read },
-        _count: { id: true },
-      }),
-    ]);
-
-    const recentDeliveredMap = new Map(
-      recentDeliveredCounts.map(p => [p.campaignId!, p._count.id])
-    );
-    const recentReadMap = new Map(
-      recentReadCounts.map(p => [p.campaignId!, p._count.id])
-    );
 
     const deliveryRate = totalSent > 0
       ? +((totalDelivered / totalSent) * 100).toFixed(1) : 0;
@@ -122,8 +104,6 @@ export async function GET(_req: NextRequest) {
       plan: planStatus,
       recentCampaigns: recentCampaigns.map(c => ({
         ...c,
-        deliveredCount: recentDeliveredMap.get(c.id) ?? 0,  // ✅ من Message table
-        readCount:      recentReadMap.get(c.id)      ?? 0,  // ✅ من Message table
         createdAt: c.createdAt.toISOString(),
       })),
     });

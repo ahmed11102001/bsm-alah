@@ -84,3 +84,56 @@ export async function notifyNewMessage(userId: string, fromPhone: string) {
     meta:  { fromPhone },
   });
 }
+
+// ─── أتمتة المتجر ─────────────────────────────────────────────────────────────
+
+const automationLabels: Record<string, string> = {
+  order_confirm:  "تأكيد الطلب",
+  order_shipped:  "تحديث الشحن",
+  promo:          "عرض ترويجي",
+};
+
+const storeLabels: Record<string, string> = {
+  shopify:      "Shopify",
+  woocommerce:  "WooCommerce",
+  easyorders:   "EasyOrders",
+};
+
+export async function notifyStoreAutoSent(
+  userId:         string,
+  automationType: string,
+  storeSource:    string,
+  customerPhone:  string,
+  templateName:   string,
+) {
+  const autoLabel  = automationLabels[automationType] ?? automationType;
+  const storeLabel = storeLabels[storeSource]         ?? storeSource;
+  await createNotification({
+    userId,
+    type:  NotificationType.STORE_AUTO_SENT,
+    title: `🛒 تم إرسال قالب ${autoLabel}`,
+    body:  `${storeLabel}: تم إرسال "${templateName}" إلى ${customerPhone}`,
+    link:  `/dashboard?section=store`,
+    meta:  { automationType, storeSource, customerPhone, templateName },
+  });
+}
+
+export async function notifyStoreAutoFailed(
+  userId:         string,
+  automationType: string,
+  storeSource:    string,
+  customerPhone:  string,
+  templateName:   string,
+  reason:         string,
+) {
+  const autoLabel  = automationLabels[automationType] ?? automationType;
+  const storeLabel = storeLabels[storeSource]         ?? storeSource;
+  await createNotification({
+    userId,
+    type:  NotificationType.STORE_AUTO_FAILED,
+    title: `❌ فشل إرسال قالب ${autoLabel}`,
+    body:  `${storeLabel}: فشل إرسال "${templateName}" إلى ${customerPhone} — ${reason}`,
+    link:  `/dashboard?section=store`,
+    meta:  { automationType, storeSource, customerPhone, templateName, reason },
+  });
+}
