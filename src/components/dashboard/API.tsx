@@ -10,7 +10,7 @@ import {
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
   Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
-  PlayCircle, X,
+  PlayCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -492,121 +492,12 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
   );
 }
 
-// ─── GuideModal ───────────────────────────────────────────────────────────────
-function GuideModal({ onClose }: { onClose: () => void }) {
-  const steps = [
-    {
-      platform: "WhatsApp",
-      color:    "text-green-600 dark:text-green-400",
-      bg:       "bg-green-50 dark:bg-green-900/20",
-      border:   "border-green-200 dark:border-green-800",
-      icon:     "💬",
-      items: [
-        "اتجه لـ Meta for Developers → My Apps → اختر تطبيقك",
-        "WhatsApp → API Setup → انسخ الـ Access Token والـ Phone Number ID",
-        "الصقهم في كارت WhatsApp واضغط حفظ",
-        "اضغط 'تحديث القوالب' لمزامنة القوالب من Meta",
-      ],
-    },
-    {
-      platform: "Shopify",
-      color:    "text-blue-600 dark:text-blue-400",
-      bg:       "bg-blue-50 dark:bg-blue-900/20",
-      border:   "border-blue-200 dark:border-blue-800",
-      icon:     "🛍️",
-      items: [
-        "أدخل اسم متجرك واضغط 'حفظ وتفعيل' عشان تاخد الـ Webhook URL",
-        "افتح Shopify → Settings → Notifications → Webhooks",
-        "Create webhook → اختر 'Order creation' → الصق الـ URL",
-        "كرر الخطوة لـ 'Order fulfillment' عشان تاخد تحديثات الشحن",
-      ],
-    },
-    {
-      platform: "WooCommerce",
-      color:    "text-purple-600 dark:text-purple-400",
-      bg:       "bg-purple-50 dark:bg-purple-900/20",
-      border:   "border-purple-200 dark:border-purple-800",
-      icon:     "🌐",
-      items: [
-        "أدخل اسم متجرك واضغط 'حفظ وتفعيل' عشان تاخد الـ Webhook URL",
-        "افتح WooCommerce → Settings → Advanced → Webhooks",
-        "Add webhook → اختر 'Order created' → الصق الـ URL",
-        "كرر لـ 'Order updated' عشان تستقبل تحديثات حالة الطلب",
-      ],
-    },
-    {
-      platform: "EasyOrders",
-      color:    "text-orange-600 dark:text-orange-400",
-      bg:       "bg-orange-50 dark:bg-orange-900/20",
-      border:   "border-orange-200 dark:border-orange-800",
-      icon:     "⚡",
-      items: [
-        "افتح EasyOrders → الإعدادات → API Keys → انسخ الـ API Key",
-        "الصق الـ API Key في الكارت واضغط 'مزامنة العملاء'",
-        "انسخ الـ Webhook URL والصقه في إعدادات EasyOrders",
-        "العملاء الجدد هيتضافوا تلقائياً بعد كل طلب",
-      ],
-    },
-  ];
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <PlayCircle className="w-5 h-5 text-green-500" />
-            <span className="font-semibold text-sm text-gray-900 dark:text-white">طريقة ربط التكاملات</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Steps */}
-        <div className="p-5 space-y-4">
-          {steps.map((s) => (
-            <div key={s.platform} className={cn("rounded-xl border p-4", s.bg, s.border)}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">{s.icon}</span>
-                <span className={cn("font-semibold text-sm", s.color)}>{s.platform}</span>
-              </div>
-              <ol className="space-y-2">
-                {s.items.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                    <span className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5",
-                      "bg-white dark:bg-gray-800",
-                      s.color,
-                    )}>
-                      {i + 1}
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function API({ initialData, canUseStoreIntegrations = true }: { initialData?: any; canUseStoreIntegrations?: boolean }) {
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 
   const [openCard,     setOpenCard]     = useState<CardId | null>(null);
-  const [showGuide,    setShowGuide]    = useState(false);
   const [isSyncing,    setIsSyncing]    = useState(false);
   const [waLoading,    setWaLoading]    = useState(false);
   const [eoApiKey,     setEoApiKey]     = useState("");
@@ -818,14 +709,16 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{api.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="gap-2 dark:border-gray-700 dark:text-gray-300"
-            onClick={() => setShowGuide(true)}
+          <a
+            href="https://youtube.com/YOUR_VIDEO"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            <PlayCircle className="w-4 h-4 text-green-500" />
-            شاهد طريقة الربط
-          </Button>
+            <Button variant="outline" className="gap-2 dark:border-gray-700 dark:text-gray-300">
+              <PlayCircle className="w-4 h-4 text-green-500" />
+              شاهد طريقة الربط
+            </Button>
+          </a>
           <Button variant="outline" className="gap-2 dark:border-gray-700 dark:text-gray-300"
             onClick={handleSyncTemplates} disabled={isSyncing}>
             <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
@@ -833,8 +726,6 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
           </Button>
         </div>
       </div>
-
-      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {CARD_DEFS.map(card => (
