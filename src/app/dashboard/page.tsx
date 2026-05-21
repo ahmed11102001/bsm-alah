@@ -53,6 +53,7 @@ interface DashboardData {
     plan: string; planName: string; status: string;
     limits: {
       contacts: number; teamMembers: number; campaignsPerMonth: number;
+      aiTokensPerMonth: number;
       scheduledCampaigns: boolean; advancedReports: boolean;
       apiAccess: boolean; mediaMessages: boolean; customAudiences: boolean;
       storeIntegration: boolean; aiAgent: boolean;
