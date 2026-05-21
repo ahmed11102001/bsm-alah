@@ -59,6 +59,7 @@ async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date)
       where: { userId: ownerId },
       data: {
         campaignsUsedThisMonth: 0,
+        aiTokensUsedThisMonth:  0,   // ← reset شهري للتوكن
         periodResetAt:          now,
       },
     });
