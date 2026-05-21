@@ -3,6 +3,7 @@
 import ChatPage    from "@/app/dashboard/chat/page";
 import TeamPage    from "@/app/dashboard/team/page";
 import { signOut, useSession } from "next-auth/react";
+import { TOKEN_PACKAGES, SUBSCRIPTION_PLANS } from "@/lib/pricing";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import "@/app/globals.css";
@@ -546,7 +547,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               {/* Price + CTA */}
               <div className="flex items-center justify-between pt-1">
                 <div>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">999</span>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{SUBSCRIPTION_PLANS.enterprise.monthly}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{locale === "ar" ? " جنيه/شهر" : " EGP/mo"}</span>
                 </div>
                 <button
@@ -572,18 +573,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           : n >= 1_000 ? `${Math.round(n / 1000)}K` : `${n}`;
 
         const [showPacks, setShowPacks] = React.useState(false);
-
-        const packs = locale === "ar"
-          ? [
-              { label: "+500K توكن",  price: "99 جنيه",   id: "pack_500k" },
-              { label: "+1M توكن",    price: "149 جنيه",  id: "pack_1m"   },
-              { label: "+2M توكن",    price: "249 جنيه",  id: "pack_2m"   },
-            ]
-          : [
-              { label: "+500K tokens", price: "EGP 99",  id: "pack_500k" },
-              { label: "+1M tokens",   price: "EGP 149", id: "pack_1m"   },
-              { label: "+2M tokens",   price: "EGP 249", id: "pack_2m"   },
-            ];
 
         return (
           <Card className="border border-purple-100 dark:border-purple-900/30 shadow-sm bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-950/10 dark:to-gray-900">
@@ -650,7 +639,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30">
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{ai.packs.title}</p>
                     <div className="grid grid-cols-1 gap-2">
-                      {packs.map(pack => (
+                      {TOKEN_PACKAGES.map(pack => (
                         <button
                           key={pack.id}
                           onClick={() => window.location.href = `/checkout?packageId=${pack.id}`}
@@ -658,7 +647,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                         >
                           <p className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.price}</span>
+                            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.priceEGP} جنيه</span>
                             <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
                           </div>
                         </button>

@@ -5,76 +5,61 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   Shield, Lock, Check, ChevronDown, ChevronUp,
   Loader2, CreditCard, Tag, ArrowRight,
-  Sparkles, Bot, Store, Brain, CheckCircle2,
+  Sparkles, Bot, CheckCircle2, Zap,
 } from "lucide-react";
 import { usePixel } from "@/hooks/usePixel";
+import {
+  SUBSCRIPTION_PLANS, BILLING_CYCLES, TOKEN_PACKAGES,
+  computePrice,
+  type PlanSlug, type BillingCycle, type TokenPackageId,
+} from "@/lib/pricing";
 
-// ─── Plan config (must match Pricing) ────────────────────────────────────────
-const PLANS: Record<string, {
-  name: string; tagline: string; color: string; icon: any;
-  monthly: number; features: string[];
-}> = {
-  starter: {
-    name: "Starter", tagline: "للمشاريع الناشئة", color: "text-gray-700",
-    icon: Bot, monthly: 249,
-    features: ["٢٬٠٠٠ جهة اتصال", "٢ مستخدمين", "Chatbot بردود ثابتة", "٥٠ حملة شهرياً"],
-  },
-  professional: {
-    name: "Professional", tagline: "للمتاجر والشركات الجادة", color: "text-[#25D366]",
-    icon: Store, monthly: 499,
-    features: ["٢٠٬٠٠٠ جهة اتصال", "٥ مستخدمين", "ربط متجر + أتمتة", "حملات غير محدودة"],
-  },
-  enterprise: {
-    name: "Enterprise", tagline: "للشركات الكبيرة", color: "text-purple-600",
-    icon: Brain, monthly: 850,
-    features: ["جهات اتصال غير محدودة", "مستخدمون غير محدودون", "AI Sales Assistant", "قاعدة بيانات مخصصة"],
-  },
-};
-
-const CYCLES: Record<string, { label: string; months: number; discount: number }> = {
-  monthly:   { label: "شهري",     months: 1,  discount: 0    },
-  quarterly: { label: "ربع سنوي", months: 3,  discount: 0.15 },
-  annual:    { label: "سنوي",     months: 12, discount: 0.25 },
-};
-
-function computePrice(monthly: number, cycle: string) {
-  const c = CYCLES[cycle] ?? CYCLES.monthly;
-  return Math.round(monthly * (1 - c.discount));
-}
-
-// ─── PayMob mock card field ───────────────────────────────────────────────────
-function CardField({ label, placeholder, type = "text", maxLength }: {
-  label: string; placeholder: string; type?: string; maxLength?: number;
+// ─── Card input field ─────────────────────────────────────────────────────────
+function CardField({ label, placeholder, type = "text", maxLength, onFocus }: {
+  label: string; placeholder: string; type?: string;
+  maxLength?: number; onFocus?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-gray-500">{label}</label>
       <input
-        type={type} placeholder={placeholder} maxLength={maxLength}
+        type={type} placeholder={placeholder} maxLength={maxLength} onFocus={onFocus}
         className="h-10 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25D366]/40 focus:border-[#25D366] transition-all placeholder-gray-400"
       />
     </div>
   );
 }
 
-// ─── Main checkout component ──────────────────────────────────────────────────
+// ─── Main checkout ─────────────────────────────────────────────────────────────
 function CheckoutContent() {
-  const params  = useSearchParams();
-  const router  = useRouter();
+  const params = useSearchParams();
+  const router = useRouter();
+  const { track } = usePixel();
 
-  const planSlug = params.get("plan") ?? "professional";
-  const cycleKey = params.get("cycle") ?? "monthly";
+  // ── استنتج نوع الـ checkout من الـ URL ──
+  const packageId = params.get("packageId") as TokenPackageId | null;
+  const planSlug  = params.get("plan") as PlanSlug | null;
+  const cycleKey  = (params.get("cycle") ?? "monthly") as BillingCycle;
 
-  const plan  = PLANS[planSlug] ?? PLANS.professional;
-  const cycle = CYCLES[cycleKey] ?? CYCLES.monthly;
-  const Icon  = plan.icon;
+  // ── Token purchase mode ──
+  const tokenPkg = packageId
+    ? TOKEN_PACKAGES.find(p => p.id === packageId) ?? null
+    : null;
+
+  // ── Plan purchase mode ──
+  const plan  = planSlug && SUBSCRIPTION_PLANS[planSlug]
+    ? SUBSCRIPTION_PLANS[planSlug]
+    : SUBSCRIPTION_PLANS.professional;
+  const cycle = BILLING_CYCLES[cycleKey] ?? BILLING_CYCLES.monthly;
+  const Icon  = tokenPkg ? Zap : plan.icon;
 
   const pricePerMonth = computePrice(plan.monthly, cycleKey);
-  const totalDue      = pricePerMonth * cycle.months;
-  const savings       = cycle.discount > 0
+  const totalDue      = tokenPkg ? tokenPkg.priceEGP : pricePerMonth * cycle.months;
+  const savings       = !tokenPkg && cycle.discount > 0
     ? Math.round(plan.monthly * cycle.discount * cycle.months)
     : 0;
 
+  // ── UI state ──
   const [coupon,        setCoupon]        = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError,   setCouponError]   = useState("");
@@ -83,13 +68,10 @@ function CheckoutContent() {
   const [success,       setSuccess]       = useState(false);
   const [cardFocused,   setCardFocused]   = useState(false);
 
-  const { track } = usePixel();
-
-  // ── InitiateCheckout عند دخول الصفحة ──
   useEffect(() => {
     track("InitiateCheckout", {
-      content_name: plan.name,
-      content_ids:  [planSlug],
+      content_name: tokenPkg ? tokenPkg.label : plan.name,
+      content_ids:  [tokenPkg ? tokenPkg.id : plan.slug],
       content_type: "product",
       value:        totalDue,
       currency:     "EGP",
@@ -98,16 +80,16 @@ function CheckoutContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── AddPaymentInfo عند أول focus على البطاقة ──
   const handleCardFocus = () => {
     if (cardFocused) return;
     setCardFocused(true);
     track("AddPaymentInfo", {
-      content_name: plan.name,
+      content_name: tokenPkg ? tokenPkg.label : plan.name,
       value:        finalTotal,
       currency:     "EGP",
     });
   };
+
   const applyCoupon = () => {
     if (coupon.trim().toUpperCase() === "WHATSPRO20") {
       setCouponApplied(true); setCouponError("");
@@ -119,25 +101,41 @@ function CheckoutContent() {
   const couponDiscount = couponApplied ? Math.round(totalDue * 0.1) : 0;
   const finalTotal     = totalDue - couponDiscount;
 
-  // ── fake payment submit ──
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaying(true);
+
+    if (tokenPkg) {
+      // ── شراء توكن إضافية ──
+      const res = await fetch("/api/ai-credits/purchase", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ packageId: tokenPkg.id }),
+      });
+      if (!res.ok) {
+        setPaying(false);
+        return;
+      }
+    }
+
     // TODO: استبدل بـ PayMob iframe/API call هنا
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1800));
+
     track("Purchase", {
-      content_name: plan.name,
-      content_ids:  [planSlug],
+      content_name: tokenPkg ? tokenPkg.label : plan.name,
+      content_ids:  [tokenPkg ? tokenPkg.id : plan.slug],
       content_type: "product",
       value:        finalTotal,
       currency:     "EGP",
       num_items:    1,
     });
+
     setPaying(false);
     setSuccess(true);
     setTimeout(() => router.push("/dashboard"), 2500);
   };
 
+  // ── Success screen ──
   if (success) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
@@ -146,7 +144,11 @@ function CheckoutContent() {
             <CheckCircle2 className="w-10 h-10 text-[#25D366]" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">تم الدفع بنجاح! 🎉</h2>
-          <p className="text-gray-500 text-sm">جاري تفعيل باقة {plan.name}…</p>
+          <p className="text-gray-500 text-sm">
+            {tokenPkg
+              ? `تمت إضافة ${tokenPkg.tokens.toLocaleString("ar-EG")} توكن لحسابك`
+              : `جاري تفعيل باقة ${plan.name}…`}
+          </p>
         </div>
       </div>
     );
@@ -172,33 +174,56 @@ function CheckoutContent() {
 
         {/* ══ Right: Order Summary ══ */}
         <div className="lg:col-span-2 space-y-4">
-
-          {/* Plan card */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">ملخص الطلب</p>
 
+            {/* Product header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-                <Icon className="w-5 h-5 text-[#25D366]" />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tokenPkg ? "bg-purple-50" : "bg-green-50"}`}>
+                <Icon className={`w-5 h-5 ${tokenPkg ? "text-purple-500" : "text-[#25D366]"}`} />
               </div>
               <div>
-                <p className="font-bold text-gray-900">{plan.name}</p>
-                <p className="text-xs text-gray-400">{plan.tagline}</p>
+                <p className="font-bold text-gray-900">
+                  {tokenPkg ? tokenPkg.label : plan.name}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {tokenPkg
+                    ? `${tokenPkg.tokens.toLocaleString("ar-EG")} توكن — ${tokenPkg.description}`
+                    : plan.tagline}
+                </p>
               </div>
             </div>
 
-            {/* Cycle */}
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-gray-500">دورة الفوترة</span>
-              <span className="font-semibold text-gray-800">{cycle.label}</span>
-            </div>
+            {/* Token pack: one-time badge */}
+            {tokenPkg && (
+              <div className="flex items-center gap-1.5 mb-3 text-xs text-purple-600 bg-purple-50 rounded-lg px-3 py-2">
+                <Zap className="w-3.5 h-3.5" />
+                دفعة واحدة — تُضاف فوراً لرصيد التوكن
+              </div>
+            )}
+
+            {/* Plan: cycle selector */}
+            {!tokenPkg && (
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-gray-500">دورة الفوترة</span>
+                <span className="font-semibold text-gray-800">{cycle.label}</span>
+              </div>
+            )}
 
             {/* Price breakdown */}
             <div className="bg-gray-50 rounded-xl p-3 space-y-2 text-sm mt-3">
-              <div className="flex justify-between">
-                <span className="text-gray-500">{pricePerMonth.toLocaleString("ar-EG")} ج × {cycle.months} شهر</span>
-                <span className="text-gray-700 font-medium">{totalDue.toLocaleString("ar-EG")} ج</span>
-              </div>
+              {!tokenPkg && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{pricePerMonth.toLocaleString("ar-EG")} ج × {cycle.months} شهر</span>
+                  <span className="text-gray-700 font-medium">{totalDue.toLocaleString("ar-EG")} ج</span>
+                </div>
+              )}
+              {tokenPkg && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{tokenPkg.label}</span>
+                  <span className="text-gray-700 font-medium">{tokenPkg.priceEGP} ج</span>
+                </div>
+              )}
               {savings > 0 && (
                 <div className="flex justify-between text-[#1a9e50]">
                   <span>خصم {Math.round(cycle.discount * 100)}%</span>
@@ -217,23 +242,27 @@ function CheckoutContent() {
               </div>
             </div>
 
-            {/* Features toggle */}
-            <button
-              onClick={() => setShowFeatures(v => !v)}
-              className="w-full flex items-center justify-between mt-3 text-xs text-gray-400 hover:text-gray-600 transition"
-            >
-              <span>ما المضمون في الباقة؟</span>
-              {showFeatures ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-            {showFeatures && (
-              <ul className="mt-2 space-y-1.5">
-                {plan.features.map((f, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                    <Check className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
+            {/* Plan features toggle */}
+            {!tokenPkg && (
+              <>
+                <button
+                  onClick={() => setShowFeatures(v => !v)}
+                  className="w-full flex items-center justify-between mt-3 text-xs text-gray-400 hover:text-gray-600 transition"
+                >
+                  <span>ما المضمون في الباقة؟</span>
+                  {showFeatures ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+                {showFeatures && (
+                  <ul className="mt-2 space-y-1.5">
+                    {plan.features.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                        <Check className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </div>
 
@@ -283,24 +312,22 @@ function CheckoutContent() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 mb-4">بيانات الحساب</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CardField label="الاسم الكامل"  placeholder="أحمد محمد" />
-              <CardField label="البريد الإلكتروني" placeholder="ahmed@example.com" type="email" />
+              <CardField label="الاسم الكامل"       placeholder="أحمد محمد" />
+              <CardField label="البريد الإلكتروني"  placeholder="ahmed@example.com" type="email" />
             </div>
           </div>
 
-          {/* Card info — PayMob placeholder ── */}
+          {/* Card info */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5" /> بيانات البطاقة
               </p>
-              {/* PayMob logo placeholder */}
               <span className="text-[10px] font-bold text-gray-400 border border-gray-200 rounded-md px-2 py-0.5">
                 Powered by PayMob
               </span>
             </div>
-
-            {/* TODO: استبدل بـ PayMob iFrame بعد ما تجيب الـ API Keys */}
+            {/* TODO: استبدل بـ PayMob iFrame بعد الـ API Keys */}
             <div className="space-y-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-gray-500">رقم البطاقة</label>
@@ -312,13 +339,10 @@ function CheckoutContent() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <CardField label="تاريخ الانتهاء" placeholder="MM / YY" maxLength={5} />
-                <CardField label="CVV" placeholder="•••" type="password" maxLength={4} />
+                <CardField label="CVV"             placeholder="•••"     type="password" maxLength={4} />
               </div>
               <CardField label="الاسم على البطاقة" placeholder="AHMED MOHAMED" />
             </div>
-
-            {/* PayMob iframe سيُضاف هنا */}
-            {/* <iframe src={payMobIframeUrl} className="w-full h-[400px] border-0" /> */}
           </div>
 
           {/* Submit */}
