@@ -119,3 +119,29 @@ export function isUnlimited(n: number): boolean {
 export function limitLabel(n: number): string {
   return n === -1 ? "غير محدود" : n.toLocaleString("ar-EG");
 }
+// ─── AI Credits Packages ─────────────────────────────────────────────────────
+export const AI_CREDIT_PACKAGES = {
+  pack_500k: {
+    id:          "pack_500k",
+    label:       "+500K توكن",
+    tokens:      500_000,
+    priceEGP:    99,
+    description: "500 ألف توكن إضافي — مناسب للاستخدام المتوسط",
+  },
+  pack_1m: {
+    id:          "pack_1m",
+    label:       "+1M توكن",
+    tokens:      1_000_000,
+    priceEGP:    149,
+    description: "مليون توكن إضافي — الأفضل قيمة",
+  },
+  pack_2m: {
+    id:          "pack_2m",
+    label:       "+2M توكن",
+    tokens:      2_000_000,
+    priceEGP:    249,
+    description: "مليونين توكن إضافي — للاستخدام المكثف",
+  },
+} as const;
+
+export type AiCreditPackageId = keyof typeof AI_CREDIT_PACKAGES;
