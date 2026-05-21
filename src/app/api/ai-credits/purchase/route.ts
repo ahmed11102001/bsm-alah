@@ -44,13 +44,13 @@ export async function POST(req: NextRequest) {
   // Sandbox: نضيف مباشرة
   await prisma.subscription.update({
     where: { userId: ownerId },
-    data:  { aiExtraCredits: { increment: pkg.credits } },
+    data:  { aiTokensBonusBalance: { increment: pkg.tokens } },
   });
 
   return NextResponse.json({
     success: true,
-    added:   pkg.credits,
-    message: `تمت إضافة ${pkg.credits.toLocaleString("ar-EG")} كريديت بنجاح`,
+    added:   pkg.tokens,
+    message: `تمت إضافة ${pkg.tokens.toLocaleString("ar-EG")} كريديت بنجاح`,
   });
 }
 
