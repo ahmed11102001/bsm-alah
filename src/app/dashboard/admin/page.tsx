@@ -6,7 +6,7 @@ import { useRouter }  from "next/navigation";
 import {
   Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
-  Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft, Sparkles,
+  Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -26,7 +26,7 @@ interface User {
   isSuper: boolean; createdAt: string;
   subscription: {
     plan: Plan; status: string; isBetaUser: boolean;
-    aiPlanCredits: number; aiExtraCredits: number; aiUsedCredits: number;
+    aiTokensUsedThisMonth: number; aiTokensBonusBalance: number;
   } | null;
 }
 interface Testimonial {
@@ -85,10 +85,10 @@ export default function AdminPage() {
   const [restoring,  setRestoring]  = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [form,       setForm]       = useState({ name: "", email: "", password: "", plan: "enterprise" as Plan });
-  // AI credits
-  const [editCreditsId,    setEditCreditsId]    = useState<string | null>(null);
-  const [creditsDelta,     setCreditsDelta]     = useState<string>("");
-  const [savingCredits,    setSavingCredits]    = useState(false);
+  // AI tokens bonus
+  const [tokenBonusId,  setTokenBonusId]  = useState<string | null>(null);
+  const [tokenBonusAmt, setTokenBonusAmt] = useState("500000");
+  const [savingToken,   setSavingToken]   = useState(false);
   // pagination + search
   const [cursors,    setCursors]    = useState<(string | null)[]>([null]);
   const [pageIdx,    setPageIdx]    = useState(0);
@@ -199,19 +199,6 @@ export default function AdminPage() {
     setSaving(false); setEditId(null);
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
-  const handleCreditsSave = async (userId: string) => {
-    const delta = parseInt(creditsDelta, 10);
-    if (isNaN(delta)) return;
-    setSavingCredits(true);
-    await fetch(`/api/admin/users/${userId}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aiExtraCredits: delta }),
-    });
-    setSavingCredits(false);
-    setEditCreditsId(null);
-    setCreditsDelta("");
-    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
-  };
   const handleDelete = async (userId: string, email: string) => {
     if (!confirm(`حذف ناعم للمستخدم: ${email}\nهيتحذف من الـ dashboard لكن بياناته هتفضل في الـ DB.\nممكن تسترجعه لاحقاً.`)) return;
     setDeleting(userId);
@@ -220,8 +207,19 @@ export default function AdminPage() {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
 
-  const handleRestore = async (userId: string) => {
-    setRestoring(userId);
+  const handleAddTokenBonus = async (userId: string) => {
+    const amount = parseInt(tokenBonusAmt, 10);
+    if (!amount || amount <= 0) return;
+    setSavingToken(true);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aiTokensBonus: amount }),
+    });
+    setSavingToken(false); setTokenBonusId(null);
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
+  };
+
+  const handleRestore = async (userId: string) => {    setRestoring(userId);
     await fetch(`/api/admin/users/${userId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -436,7 +434,6 @@ export default function AdminPage() {
                     {adm.users.headers.map((h, i) => (
                       <th key={i} className="text-right px-6 py-3 font-medium">{h}</th>
                     ))}
-                    <th className="text-right px-6 py-3 font-medium">AI كريديتس</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -473,50 +470,48 @@ export default function AdminPage() {
                               β Beta
                             </span>
                           )}
+                          {/* AI tokens display — enterprise فقط */}
+                          {user.subscription?.plan === "enterprise" && (
+                            <div className="mt-1 w-full">
+                              {tokenBonusId === user.id ? (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <select
+                                    value={tokenBonusAmt}
+                                    onChange={e => setTokenBonusAmt(e.target.value)}
+                                    className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366]"
+                                  >
+                                    <option value="500000">+500K توكن</option>
+                                    <option value="1000000">+1M توكن</option>
+                                    <option value="2000000">+2M توكن</option>
+                                  </select>
+                                  <button onClick={() => handleAddTokenBonus(user.id)} disabled={savingToken}
+                                    className="text-green-600 hover:text-green-500">
+                                    {savingToken ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  </button>
+                                  <button onClick={() => setTokenBonusId(null)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setTokenBonusId(user.id)}
+                                  className="text-[10px] mt-1 text-purple-500 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  AI: {((user.subscription?.aiTokensUsedThisMonth ?? 0) / 1000).toFixed(0)}K/{(1000).toFixed(0)}K
+                                  {(user.subscription?.aiTokensBonusBalance ?? 0) > 0 && (
+                                    <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 rounded-full">
+                                      +{((user.subscription?.aiTokensBonusBalance ?? 0) / 1000).toFixed(0)}K bonus
+                                    </span>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-400 dark:text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString(dateLocale)}
-                      </td>
-                      {/* ── AI Credits column ── */}
-                      <td className="px-6 py-4">
-                        {user.subscription?.plan === "enterprise" ? (
-                          editCreditsId === user.id ? (
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="number"
-                                value={creditsDelta}
-                                onChange={e => setCreditsDelta(e.target.value)}
-                                placeholder="+500000"
-                                className="w-28 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-purple-400"
-                              />
-                              <button
-                                onClick={() => handleCreditsSave(user.id)}
-                                disabled={savingCredits}
-                                className="text-purple-600 hover:text-purple-800"
-                              >
-                                {savingCredits ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                              </button>
-                              <button onClick={() => { setEditCreditsId(null); setCreditsDelta(""); }} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => { setEditCreditsId(user.id); setCreditsDelta(""); }}
-                              className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400"
-                              title="تعديل كريديتس AI"
-                            >
-                              <Sparkles className="w-3.5 h-3.5" />
-                              <span className="font-mono">
-                                {((user.subscription?.aiPlanCredits ?? 0) + (user.subscription?.aiExtraCredits ?? 0)).toLocaleString()}
-                              </span>
-                              <Pencil className="w-3 h-3 opacity-50" />
-                            </button>
-                          )
-                        ) : (
-                          <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 justify-end">

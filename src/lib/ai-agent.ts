@@ -31,9 +31,10 @@ export interface ConversationMessage {
 export interface AgentResult {
   ok:       boolean;
   reply?:   string;
-  action?:  "handoff" | null;  // handoff = حوّل للبشر
+  action?:  "handoff" | null;
   error?:   string;
   offTopic?: boolean;
+  tokensUsed?: number;   // ← إجمالي التوكن المستهلكة (input + output)
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -106,9 +107,9 @@ async function callGemini(
   const configuredModel = process.env.GEMINI_MODEL?.trim();
   const modelsToTry = [
     configuredModel,
-    "gemini-2.5-flash",          // الأسرع والأرخص — الاختيار الأول
-    "gemini-2.5-flash-preview-05-20", // preview أحدث لو متاح
-    "gemini-2.0-flash",          // fallback مستقر
+    "gemini-2.5-flash-lite",   // ← الأسرع والأرخص (خلف 2.0 flash)
+    "gemini-2.5-flash",
+    "gemini-1.5-flash-latest",
   ].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
 
   // Gemini بيستخدم "model" مش "assistant"
@@ -152,7 +153,11 @@ async function callGemini(
       const data = await res.json();
       const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       if (!raw.trim()) return { ok: false, error: "Empty response from Gemini" };
-      return parseAgentJSON(raw);
+      const tokensUsed: number =
+        (data?.usageMetadata?.promptTokenCount ?? 0) +
+        (data?.usageMetadata?.candidatesTokenCount ?? 0);
+      const parsed = parseAgentJSON(raw);
+      return { ...parsed, tokensUsed };
     }
 
     return { ok: false, error: "No supported Gemini model found" };
@@ -206,7 +211,9 @@ async function callOpenAI(
     const data = await res.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? "";
     if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" };
-    return parseAgentJSON(raw);
+    const tokensUsed: number = data?.usage?.total_tokens ?? 0;
+    const parsed = parseAgentJSON(raw);
+    return { ...parsed, tokensUsed };
   } catch (err: any) {
     Sentry.captureException(err, {
       tags: { component: "ai-agent" },

@@ -311,3 +311,111 @@ export function guardResponse(result: GuardResult): NextResponse | null {
     { status: 403 }
   );
 }
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6. checkAITokensLimit — قبل كل AI call
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function checkAITokensLimit(
+  ownerId: string,
+  estimatedTokens = 1500
+): Promise<GuardResult> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId))
+    return { allowed: true };
+
+  const sub  = await getSubscription(ownerId);
+  const plan = safePlan(sub);
+  const monthlyLimit = PLANS[plan].aiTokensPerMonth;
+
+  if (monthlyLimit === 0)
+    return {
+      allowed:      false,
+      code:         "FEATURE_LOCKED",
+      message:      "ميزة AI Sales Assistant غير متاحة في باقتك الحالية.",
+      plan,
+      requiredPlan: "enterprise",
+    };
+
+  const fullSub = await prisma.subscription.findUnique({
+    where:  { userId: ownerId },
+    select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true, periodResetAt: true },
+  });
+
+  let usedThisMonth = fullSub?.aiTokensUsedThisMonth ?? 0;
+  if (fullSub?.periodResetAt) {
+    const reset = await resetMonthlyCounterIfNeeded(ownerId, fullSub.periodResetAt);
+    if (reset !== null) usedThisMonth = 0;
+  }
+
+  const bonusBalance     = fullSub?.aiTokensBonusBalance ?? 0;
+  if (isUnlimited(monthlyLimit)) return { allowed: true };
+
+  const monthlyRemaining = Math.max(0, monthlyLimit - usedThisMonth);
+  const totalRemaining   = monthlyRemaining + bonusBalance;
+
+  if (totalRemaining < estimatedTokens) {
+    await notifyPlanLimitReached(ownerId, "aiTokens");
+    return {
+      allowed: false,
+      code:    "LIMIT_REACHED",
+      message: `انتهت حصتك الشهرية من التوكن (${limitLabel(monthlyLimit)} توكن) والرصيد الإضافي.`,
+      plan,
+      limit:   monthlyLimit,
+      used:    usedThisMonth,
+    };
+  }
+  return { allowed: true };
+}
+
+export async function incrementAITokens(ownerId: string, tokens: number): Promise<void> {
+  if (tokens <= 0) return;
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return;
+
+  const sub          = await getSubscription(ownerId);
+  const plan         = safePlan(sub);
+  const monthlyLimit = PLANS[plan].aiTokensPerMonth;
+  if (monthlyLimit === 0) return;
+
+  const fullSub = await prisma.subscription.findUnique({
+    where:  { userId: ownerId },
+    select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true },
+  });
+
+  const usedThisMonth = fullSub?.aiTokensUsedThisMonth ?? 0;
+  const bonusBalance  = fullSub?.aiTokensBonusBalance  ?? 0;
+
+  if (isUnlimited(monthlyLimit)) {
+    await prisma.subscription.update({
+      where: { userId: ownerId },
+      data:  { aiTokensUsedThisMonth: { increment: tokens } },
+    });
+    return;
+  }
+
+  const monthlyRemaining = Math.max(0, monthlyLimit - usedThisMonth);
+  if (tokens <= monthlyRemaining) {
+    await prisma.subscription.update({
+      where: { userId: ownerId },
+      data:  { aiTokensUsedThisMonth: { increment: tokens } },
+    });
+  } else {
+    const fromBonus = Math.min(tokens - monthlyRemaining, bonusBalance);
+    await prisma.subscription.update({
+      where: { userId: ownerId },
+      data: {
+        aiTokensUsedThisMonth: { increment: monthlyRemaining },
+        aiTokensBonusBalance:  { decrement: fromBonus },
+      },
+    });
+  }
+}
+
+export async function addAITokensBonus(ownerId: string, tokens: number): Promise<void> {
+  await prisma.subscription.upsert({
+    where:  { userId: ownerId },
+    update: { aiTokensBonusBalance: { increment: tokens } },
+    create: {
+      userId: ownerId, plan: "enterprise", status: "active",
+      periodResetAt: new Date(), campaignsUsedThisMonth: 0,
+      aiTokensUsedThisMonth: 0, aiTokensBonusBalance: tokens,
+    },
+  });
+}

@@ -88,16 +88,12 @@ model Subscription {
   isBetaUser             Boolean            @default(false)
   campaignsUsedThisMonth Int                @default(0)
   periodResetAt          DateTime           @default(now())
+  aiTokensUsedThisMonth  Int                @default(0)
+  aiTokensBonusBalance   Int                @default(0)
   currentPeriodStart     DateTime           @default(now())
   currentPeriodEnd       DateTime?
   stripeCustomerId       String?            @unique
   stripeSubscriptionId   String?            @unique
-  // ─── AI Credits ───────────────────────────────────────────────────────────
-  // totalAvailable = aiPlanCredits + aiExtraCredits - aiUsedCredits
-  // لا نعدّل aiPlanCredits لما نشتري extra — بنضيف على aiExtraCredits
-  aiPlanCredits          Int                @default(0)   // من الباقة (1M enterprise)
-  aiExtraCredits         Int                @default(0)   // مشتراة إضافية
-  aiUsedCredits          Int                @default(0)   // مستهلكة
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -614,8 +610,6 @@ enum NotificationType {
   CAMPAIGN_PARTIAL
   PLAN_LIMIT_REACHED
   NEW_MESSAGE
-  STORE_AUTO_SENT
-  STORE_AUTO_FAILED
 }
 
 enum StoreType {

@@ -9,7 +9,7 @@ async function guardSuper() {
   return session;
 }
 
-// ─── PATCH /api/admin/users/[id] — تعديل الـ plan أو isBetaUser flag ─────────
+// ─── PATCH /api/admin/users/[id] — تعديل الـ plan أو isBetaUser أو AI bonus ──
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,62 +20,55 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  // لو الـ body جاي بـ isBetaUser بس → toggle الـ flag فقط
-  if (typeof body.isBetaUser === "boolean" && !body.plan && body.aiExtraCredits === undefined) {
+  // toggle isBetaUser فقط
+  if (typeof body.isBetaUser === "boolean" && !body.plan && body.aiTokensBonus === undefined) {
     await prisma.subscription.upsert({
       where:  { userId: id },
       update: { isBetaUser: body.isBetaUser },
       create: {
-        userId:                 id,
-        plan:                   "free",
-        status:                 "active",
-        isBetaUser:             body.isBetaUser,
-        periodResetAt:          new Date(),
-        campaignsUsedThisMonth: 0,
+        userId: id, plan: "free", status: "active", isBetaUser: body.isBetaUser,
+        periodResetAt: new Date(), campaignsUsedThisMonth: 0,
+        aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0,
       },
     });
     return NextResponse.json({ success: true });
   }
 
-  // لو الـ body جاي بـ aiExtraCredits → تعديل كريديتس الـ AI
-  if (typeof body.aiExtraCredits === "number" && !body.plan) {
-    const delta = Math.round(body.aiExtraCredits); // الفرق المراد إضافته أو طرحه
-    if (isNaN(delta))
-      return NextResponse.json({ error: "aiExtraCredits يجب أن يكون رقمًا" }, { status: 400 });
-
+  // إضافة bonus tokens للـ AI
+  if (typeof body.aiTokensBonus === "number" && body.aiTokensBonus > 0) {
     await prisma.subscription.upsert({
       where:  { userId: id },
-      update: { aiExtraCredits: { increment: delta } },
+      update: { aiTokensBonusBalance: { increment: body.aiTokensBonus } },
       create: {
-        userId:                id,
-        plan:                  "free",
-        status:                "active",
-        aiExtraCredits:        Math.max(0, delta),
-        periodResetAt:         new Date(),
-        campaignsUsedThisMonth: 0,
+        userId: id, plan: "enterprise", status: "active",
+        periodResetAt: new Date(), campaignsUsedThisMonth: 0,
+        aiTokensUsedThisMonth: 0, aiTokensBonusBalance: body.aiTokensBonus,
       },
     });
     return NextResponse.json({ success: true });
   }
 
-  // غير ذلك → تعديل الـ plan العادي
+  // reset bonus tokens (لو الأدمن حب يصفّر)
+  if (body.resetAiBonus === true) {
+    await prisma.subscription.update({
+      where: { userId: id },
+      data:  { aiTokensBonusBalance: 0 },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // تعديل الـ plan العادي
   const { plan } = body;
   if (!plan)
-    return NextResponse.json({ error: "plan أو isBetaUser مطلوب" }, { status: 400 });
-
-  // لو بنرقّي لـ enterprise، نضع الـ aiPlanCredits = 1_000_000 تلقائياً
-  const extraData = plan === "enterprise" ? { aiPlanCredits: 1_000_000 } : {};
+    return NextResponse.json({ error: "plan أو isBetaUser أو aiTokensBonus مطلوب" }, { status: 400 });
 
   await prisma.subscription.upsert({
     where:  { userId: id },
-    update: { plan, ...extraData },
+    update: { plan },
     create: {
-      userId:                id,
-      plan,
-      status:                "active",
-      periodResetAt:         new Date(),
-      campaignsUsedThisMonth: 0,
-      ...extraData,
+      userId: id, plan, status: "active",
+      periodResetAt: new Date(), campaignsUsedThisMonth: 0,
+      aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0,
     },
   });
 

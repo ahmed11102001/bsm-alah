@@ -9,6 +9,7 @@ export interface PlanLimits {
   contacts:            number;   // -1 = غير محدود
   teamMembers:         number;   // -1 = غير محدود
   campaignsPerMonth:   number;   // -1 = غير محدود
+  aiTokensPerMonth:    number;   // -1 = غير محدود, 0 = disabled
   // مميزات boolean
   scheduledCampaigns:  boolean;
   advancedReports:     boolean;
@@ -24,6 +25,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     contacts:           100,
     teamMembers:        1,
     campaignsPerMonth:  3,
+    aiTokensPerMonth:   0,
     scheduledCampaigns: false,
     advancedReports:    false,
     apiAccess:          false,
@@ -36,6 +38,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     contacts:           2_000,
     teamMembers:        2,
     campaignsPerMonth:  50,
+    aiTokensPerMonth:   0,
     scheduledCampaigns: true,
     advancedReports:    false,
     apiAccess:          false,
@@ -48,6 +51,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     contacts:           20_000,   // ← مزامنة مع صفحة الأسعار
     teamMembers:        5,
     campaignsPerMonth:  -1,
+    aiTokensPerMonth:   0,
     scheduledCampaigns: true,
     advancedReports:    true,
     apiAccess:          false,
@@ -60,6 +64,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     contacts:           -1,
     teamMembers:        -1,
     campaignsPerMonth:  -1,
+    aiTokensPerMonth:   1_000_000,  // ← 1M توكن شهرياً
     scheduledCampaigns: true,
     advancedReports:    true,
     apiAccess:          true,
@@ -105,26 +110,11 @@ export function planAtLeast(current: PlanTier, required: PlanTier): boolean {
   return PLAN_ORDER.indexOf(current) >= PLAN_ORDER.indexOf(required);
 }
 
-/** كريديتس الذكاء الاصطناعي المدرجة في كل باقة */
-export const AI_PLAN_CREDITS: Record<PlanTier, number> = {
-  free:       0,
-  starter:    0,
-  pro:        0,
-  enterprise: 1_000_000,
-};
-
-/** حزم شراء الكريديتس الإضافية */
-export const AI_CREDIT_PACKAGES = [
-  { id: "500k", credits: 500_000, price: 99,  label: "500K كريديت" },
-  { id: "1m",   credits: 1_000_000, price: 149, label: "1M كريديت"  },
-] as const;
-
-export type AiCreditPackageId =
-  typeof AI_CREDIT_PACKAGES[number]["id"];
-  
-export function isUnlimited(n: number) {
+/** هل الحد غير محدود؟ */
+export function isUnlimited(n: number): boolean {
   return n === -1;
 }
+
 /** نص الحد للعرض */
 export function limitLabel(n: number): string {
   return n === -1 ? "غير محدود" : n.toLocaleString("ar-EG");
