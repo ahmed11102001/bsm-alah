@@ -81,6 +81,23 @@ export const translations = {
           draft:     "مسودة",
         },
       },
+
+      // ── AI Usage Card ───────────────────────────────────────────────────────
+      ai: {
+        title:           "مساعد المبيعات الذكي",
+        renews:          "يتجدد أول كل شهر",
+        usedThisMonth:   "مستخدم هذا الشهر",
+        remainingPlan:   "متبقي من الباقة",
+        bonusBalance:    "رصيد إضافي",
+        addTokens:       "شراء توكن إضافية",
+        upgradeCta:      "فعّل مساعد المبيعات الذكي",
+        upgradeDesc:     "ردّ على عملاءك تلقائياً بالذكاء الاصطناعي — متاح في باقة Enterprise",
+        upgradeBtn:      "ترقية للـ Enterprise",
+        packs: {
+          title:  "باقات إضافية",
+          buy:    "شراء",
+        },
+      },
     },
 
     // ── Team Page ─────────────────────────────────────────────────────────────
@@ -546,6 +563,23 @@ export const translations = {
           scheduled: "Scheduled",
           failed:    "Failed",
           draft:     "Draft",
+        },
+      },
+
+      // ── AI Usage Card ───────────────────────────────────────────────────────
+      ai: {
+        title:           "AI Sales Assistant",
+        renews:          "Renews on the 1st of each month",
+        usedThisMonth:   "Used this month",
+        remainingPlan:   "Remaining in plan",
+        bonusBalance:    "Bonus balance",
+        addTokens:       "Buy extra tokens",
+        upgradeCta:      "Activate AI Sales Assistant",
+        upgradeDesc:     "Automatically reply to your customers using AI — available on Enterprise plan",
+        upgradeBtn:      "Upgrade to Enterprise",
+        packs: {
+          title:  "Add-on Packs",
+          buy:    "Buy",
         },
       },
     },

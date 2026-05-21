@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import "@/app/globals.css";
 import { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { toast } from "sonner";
 import { Button }   from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   MessageCircle, Home, CheckCircle,
   Loader2, ArrowUpRight, Shield, Phone, Mail,
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
-  Languages, Bot,
+  Languages, Bot, Sparkles,
 } from "lucide-react";
 import Contacts        from "@/components/dashboard/Contacts";
 import Templates       from "@/components/dashboard/Templates";
@@ -507,72 +508,164 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {/* ── Plan Card ── */}
       <PlanCard plan={data.plan} />
 
-      {/* ── AI Usage Card (enterprise) ── */}
-      {data.plan.plan === "enterprise" && (() => {
-        const aiSub     = (data.plan as any).aiTokens?.usedThisMonth;
-        const used      = aiSub?.aiTokensUsedThisMonth ?? 0;
-        const bonus     = aiSub?.aiTokensBonusBalance  ?? 0;
-        const monthly   = data.plan.limits.aiTokensPerMonth;
-        const pct       = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
-        const fmtK      = (n: number) => n >= 1_000_000
+      {/* ── AI Sales Assistant Card ── */}
+      {(() => {
+        const ai = h.ai;
+        const isEnterprise = data.plan.plan === "enterprise";
+
+        // ── Upgrade card for non-enterprise ──
+        if (!isEnterprise) return (
+          <Card className="border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-gray-900">
+            <CardContent className="px-5 py-6 flex flex-col gap-4">
+              {/* Icon + title */}
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{ai.upgradeCta}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{ai.upgradeDesc}</p>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="grid grid-cols-1 gap-1.5">
+                {(locale === "ar"
+                  ? ["ردود تلقائية بالذكاء الاصطناعي", "1 مليون توكن شهرياً", "يدعم ChatGPT و Gemini", "إمكانية شراء توكن إضافية"]
+                  : ["Automatic AI replies", "1M tokens per month", "ChatGPT & Gemini support", "Buy extra tokens anytime"]
+                ).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    <div className="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    {f}
+                  </div>
+                ))}
+              </div>
+
+              {/* Price + CTA */}
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">999</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{locale === "ar" ? " جنيه/شهر" : " EGP/mo"}</span>
+                </div>
+                <button
+                  onClick={() => window.location.href = `/checkout?plan=enterprise`}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center gap-2 shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {ai.upgradeBtn}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+        // ── Enterprise usage card ──
+        const aiData   = (data.plan as any).aiTokens;
+        const used     = aiData?.aiTokensUsedThisMonth ?? 0;
+        const bonus    = aiData?.aiTokensBonusBalance  ?? 0;
+        const monthly  = data.plan.limits.aiTokensPerMonth;
+        const pct      = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
+        const fmtK     = (n: number) => n >= 1_000_000
           ? `${(n / 1_000_000).toFixed(1)}M`
-          : `${Math.round(n / 1000)}K`;
+          : n >= 1_000 ? `${Math.round(n / 1000)}K` : `${n}`;
+
+        const [showPacks, setShowPacks] = React.useState(false);
+
+        const packs = locale === "ar"
+          ? [
+              { label: "+500K توكن",  price: "99 جنيه",   id: "pack_500k" },
+              { label: "+1M توكن",    price: "149 جنيه",  id: "pack_1m"   },
+              { label: "+2M توكن",    price: "249 جنيه",  id: "pack_2m"   },
+            ]
+          : [
+              { label: "+500K tokens", price: "EGP 99",  id: "pack_500k" },
+              { label: "+1M tokens",   price: "EGP 149", id: "pack_1m"   },
+              { label: "+2M tokens",   price: "EGP 249", id: "pack_2m"   },
+            ];
+
         return (
-          <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <Card className="border border-purple-100 dark:border-purple-900/30 shadow-sm bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-950/10 dark:to-gray-900">
+            {/* Header */}
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
               <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-purple-500" />
-                <CardTitle className="text-base font-bold">AI Sales Assistant</CardTitle>
+                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">{ai.title}</CardTitle>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{ai.renews}</p>
+                </div>
               </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">يتجدد أول كل شهر</span>
+              {pct >= 80 && (
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pct >= 95 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+                  {pct}%
+                </span>
+              )}
             </CardHeader>
-            <CardContent className="px-4 sm:px-5 pb-5">
+
+            <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
               {/* Progress bar */}
-              <div className="mb-3">
+              <div>
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                  <span>{fmtK(used)} مستخدم</span>
-                  <span>{fmtK(monthly)} توكن/شهر</span>
+                  <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(monthly)} {locale === "ar" ? "توكن/شهر" : "tokens/mo"}</span>
                 </div>
                 <Progress
                   value={pct}
-                  className={`h-2 ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`}
+                  className={`h-2.5 rounded-full ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`}
                 />
               </div>
+
               {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{fmtK(used)}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">مستخدم هذا الشهر</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+                  <p className="text-base font-bold text-gray-900 dark:text-white">{fmtK(used)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.usedThisMonth}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{fmtK(Math.max(0, monthly - used))}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">متبقي من الباقة</p>
+                <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+                  <p className="text-base font-bold text-green-600 dark:text-green-400">{fmtK(Math.max(0, monthly - used))}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.remainingPlan}</p>
                 </div>
-                <div className={`rounded-xl p-3 text-center ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20" : "bg-gray-50 dark:bg-gray-800/50"}`}>
-                  <p className={`text-lg font-semibold ${bonus > 0 ? "text-purple-600 dark:text-purple-400" : "text-gray-400 dark:text-gray-500"}`}>
+                <div className={`rounded-xl p-3 text-center border ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" : "bg-white dark:bg-gray-800/60 border-gray-100 dark:border-gray-700"}`}>
+                  <p className={`text-base font-bold ${bonus > 0 ? "text-purple-600 dark:text-purple-400" : "text-gray-300 dark:text-gray-600"}`}>
                     {bonus > 0 ? fmtK(bonus) : "—"}
                   </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">رصيد إضافي</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.bonusBalance}</p>
                 </div>
               </div>
-              {/* Add-on packs */}
-              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">باقات إضافية</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "+500K توكن", price: "99 جنيه", tokens: 500_000 },
-                    { label: "+1M توكن",   price: "149 جنيه", tokens: 1_000_000 },
-                  ].map(pack => (
-                    <div key={pack.tokens} className="border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex items-center justify-between hover:border-purple-400 dark:hover:border-purple-500 transition cursor-pointer group"
-                      onClick={() => toast.info(`تواصل معنا لشراء ${pack.label} بـ ${pack.price}`)}>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
-                        <p className="text-xs text-gray-400">{pack.price}</p>
-                      </div>
-                      <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
+
+              {/* Add tokens button + dropdown */}
+              <div>
+                <button
+                  onClick={() => setShowPacks(p => !p)}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  {ai.addTokens}
+                </button>
+
+                {showPacks && (
+                  <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{ai.packs.title}</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {packs.map(pack => (
+                        <button
+                          key={pack.id}
+                          onClick={() => window.location.href = `/checkout?packageId=${pack.id}`}
+                          className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition group"
+                        >
+                          <p className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.price}</span>
+                            <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
