@@ -10,44 +10,44 @@ const PARTNERS = [
   {
     name: "Meta",
     logoSrc: "/partners/meta.svg",
-    color: "from-blue-500 to-blue-600",
     description: { ar: "واتساب API", en: "WhatsApp API" },
+    accent: "#0081FB",
   },
   {
     name: "Shopify",
     logoSrc: "/partners/shopify.svg",
-    color: "from-green-500 to-green-600",
-    description: { ar: "متجر متكامل", en: "E-commerce Store" },
+    description: { ar: "متجر متكامل", en: "E-commerce" },
+    accent: "#96BF48",
   },
   {
     name: "EasyOrder",
     logoSrc: "/partners/easyorder.svg",
-    color: "from-orange-500 to-orange-600",
-    description: { ar: "إدارة الطلبات", en: "Order Management" },
+    description: { ar: "إدارة الطلبات", en: "Order Mgmt" },
+    accent: "#F97316",
   },
   {
-    name: "woocommerce",
+    name: "WooCommerce",
     logoSrc: "/partners/woocommerce.svg",
-    color: "from-purple-500 to-purple-600",
-    description: { ar: "ارسال عروض", en: "Send Offers" },
+    description: { ar: "إرسال عروض", en: "Send Offers" },
+    accent: "#7F54B3",
   },
   {
     name: "ChatGPT",
     logoSrc: "/partners/chatgpt.svg",
-    color: "from-cyan-500 to-cyan-600",
     description: { ar: "ذكاء اصطناعي", en: "AI Assistant" },
+    accent: "#10A37F",
   },
   {
     name: "Elevenlabs",
     logoSrc: "/partners/elevenlabs.svg",
-    color: "from-yellow-500 to-yellow-600",
     description: { ar: "Voice AI", en: "Voice AI" },
+    accent: "#EAB308",
   },
   {
     name: "Gemini",
     logoSrc: "/partners/gemini.svg",
-    color: "from-pink-500 to-pink-600",
     description: { ar: "سيلز AI", en: "AI Sales" },
+    accent: "#8B5CF6",
   },
 ];
 
@@ -99,16 +99,49 @@ const WHO_FOR = [
 ];
 
 export default function Partners({ lang }: PartnersProps) {
+  // duplicate for seamless infinite loop
+  const track = [...PARTNERS, ...PARTNERS, ...PARTNERS];
+
   return (
     <section
       id="partners"
-      className="py-20 lg:py-32 bg-gradient-to-b from-white to-gray-50"
+      className="py-20 lg:py-32 bg-gradient-to-b from-white to-gray-50 overflow-hidden"
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
+      <style>{`
+        @keyframes marquee-ltr {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-33.333%); }
+        }
+        @keyframes marquee-rtl {
+          0%   { transform: translateX(-33.333%); }
+          100% { transform: translateX(0); }
+        }
+        .marquee-track-ltr {
+          animation: marquee-ltr 28s linear infinite;
+          will-change: transform;
+        }
+        .marquee-track-rtl {
+          animation: marquee-rtl 28s linear infinite;
+          will-change: transform;
+        }
+        .marquee-track-ltr:hover,
+        .marquee-track-rtl:hover {
+          animation-play-state: paused;
+        }
+        .partner-pill {
+          transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+        }
+        .partner-pill:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        }
+      `}</style>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Header ── */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-2 mb-4">
             <span className="text-2xl">🤝</span>
             <span className="text-blue-600 text-sm font-medium">
@@ -124,14 +157,41 @@ export default function Partners({ lang }: PartnersProps) {
           </p>
         </div>
 
-        {/* ── Partners grid 4×2 ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {PARTNERS.map((partner, idx) => (
-            <PartnerCard key={idx} partner={partner} lang={lang} />
-          ))}
+      </div>
+
+      {/* ── Marquee — full bleed, no max-w constraint ── */}
+      <div className="relative w-full select-none" aria-hidden="true">
+
+        {/* fade edges */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10
+          bg-gradient-to-r from-white to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10
+          bg-gradient-to-l from-white to-transparent" />
+
+        {/* row 1 — left-to-right */}
+        <div className="overflow-hidden mb-3">
+          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-rtl" : "marquee-track-ltr"}`}
+               style={{ width: "max-content" }}>
+            {track.map((p, i) => (
+              <PartnerPill key={i} partner={p} lang={lang} />
+            ))}
+          </div>
         </div>
 
-        {/* ── Divider + Who is it for ── */}
+        {/* row 2 — opposite direction, offset timing */}
+        <div className="overflow-hidden">
+          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-ltr" : "marquee-track-rtl"}`}
+               style={{ width: "max-content", animationDelay: "-14s" }}>
+            {[...track].reverse().map((p, i) => (
+              <PartnerPill key={i} partner={p} lang={lang} />
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Who is it for ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mt-16 pt-16 border-t border-gray-100">
           <div className="text-center mb-10">
             <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
@@ -163,13 +223,13 @@ export default function Partners({ lang }: PartnersProps) {
             ))}
           </div>
         </div>
-
       </div>
+
     </section>
   );
 }
 
-function PartnerCard({
+function PartnerPill({
   partner,
   lang,
 }: {
@@ -177,29 +237,27 @@ function PartnerCard({
   lang: Lang;
 }) {
   return (
-    <div className="group">
-      <div className="relative bg-white border border-gray-200 rounded-2xl p-6 h-40 flex flex-col items-center justify-center hover:shadow-lg hover:border-gray-300 overflow-hidden transition-all duration-200">
-        <div
-          className={`absolute inset-0 opacity-0 group-hover:opacity-10 bg-gradient-to-br ${partner.color} transition-opacity duration-200`}
+    <div
+      className="partner-pill flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 cursor-default"
+      style={{ minWidth: 180 }}
+    >
+      <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center">
+        <img
+          src={partner.logoSrc}
+          alt={partner.name}
+          width={36}
+          height={36}
+          className="w-9 h-9 object-contain"
+          loading="lazy"
         />
-        <div className="relative z-10 text-center">
-          <div className="mb-3 h-12 w-full flex items-center justify-center">
-            <img
-              src={partner.logoSrc}
-              alt={partner.name}
-              width={140}
-              height={40}
-              className="h-10 w-auto max-w-[120px] object-contain"
-              loading="lazy"
-            />
-          </div>
-          <h3 className="text-sm font-bold text-gray-900 mb-1">
-            {partner.name}
-          </h3>
-          <p className={`text-xs font-medium text-transparent bg-clip-text bg-gradient-to-r ${partner.color}`}>
-            {partner.description[lang]}
-          </p>
-        </div>
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
+          {partner.name}
+        </p>
+        <p className="text-xs font-medium truncate" style={{ color: partner.accent }}>
+          {partner.description[lang]}
+        </p>
       </div>
     </div>
   );
