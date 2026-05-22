@@ -142,7 +142,7 @@ export default function Partners({ lang }: PartnersProps) {
 
         {/* row 1 — left-to-right */}
         <div className="overflow-hidden mb-3">
-          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-rtl" : "marquee-track-ltr"}`}
+          <div className={`flex gap-3 pe-3 ${lang === "ar" ? "marquee-track-rtl" : "marquee-track-ltr"}`}
                style={{ width: "max-content" }}>
             {track.map((p, i) => (
               <PartnerPill key={i} partner={p} lang={lang} />
@@ -152,7 +152,7 @@ export default function Partners({ lang }: PartnersProps) {
 
         {/* row 2 — opposite direction, offset timing */}
         <div className="overflow-hidden">
-          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-ltr" : "marquee-track-rtl"}`}
+          <div className={`flex gap-3 pe-3 ${lang === "ar" ? "marquee-track-ltr" : "marquee-track-rtl"}`}
                style={{ width: "max-content", animationDelay: "-14s" }}>
             {[...track].reverse().map((p, i) => (
               <PartnerPill key={i} partner={p} lang={lang} />
