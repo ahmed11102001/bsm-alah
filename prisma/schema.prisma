@@ -649,3 +649,28 @@ enum AIProvider {
   gemini
   openai
 }
+
+// ── AI Assistant Widget Leads ─────────────────────────────────────────────────
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  business  String
+  goal      String
+  volume    String
+  lang      String     @default("ar")
+  source    String?
+  status    LeadStatus @default(NEW)
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}

@@ -7,6 +7,7 @@ import {
   Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
+  Target, Download, Phone,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -43,8 +44,14 @@ interface Article {
   coverImage: string | null; published: boolean;
   publishedAt: string | null; createdAt: string;
 }
+interface Lead {
+  id: string; name: string; phone: string; business: string;
+  goal: string; volume: string; lang: string; source: string | null;
+  status: "NEW" | "CONTACTED" | "CONVERTED" | "LOST";
+  notes: string | null; createdAt: string;
+}
 
-type Tab = "users" | "testimonials" | "coupons" | "articles";
+type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads";
 
 const blankArticle = {
   title: "", slug: "", excerpt: "", content: "", coverImage: "", published: false,
@@ -121,6 +128,13 @@ export default function AdminPage() {
   const [deletingA,     setDeletingA]     = useState<string | null>(null);
   const [articlePreview,setArticlePreview]= useState(false);
 
+  // leads
+  const [leads,         setLeads]         = useState<Lead[]>([]);
+  const [loadingL,      setLoadingL]      = useState(false);
+  const [leadStatus,    setLeadStatus]    = useState<"all"|"NEW"|"CONTACTED"|"CONVERTED"|"LOST">("all");
+  const [leadTotal,     setLeadTotal]     = useState(0);
+  const [updatingLead,  setUpdatingLead]  = useState<string | null>(null);
+
   // guard
   useEffect(() => {
     if (status === "loading") return;
@@ -161,6 +175,18 @@ export default function AdminPage() {
     if (r.ok) setArticles(await r.json());
     setLoadingA(false);
   };
+  const fetchLeads = async (status: string = "all") => {
+    setLoadingL(true);
+    const params = new URLSearchParams();
+    if (status !== "all") params.set("status", status);
+    const r = await fetch(`/api/leads?${params}`);
+    if (r.ok) {
+      const data = await r.json();
+      setLeads(data.leads);
+      setLeadTotal(data.total);
+    }
+    setLoadingL(false);
+  };
 
   useEffect(() => {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
@@ -170,6 +196,8 @@ export default function AdminPage() {
     if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")      fetchCoupons();
     if (activeTab === "articles")     fetchArticles();
+    if (activeTab === "leads")        fetchLeads(leadStatus);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
   // ── user actions ──────────────────────────────────────────────────────────
@@ -315,6 +343,23 @@ export default function AdminPage() {
 
   if (status === "loading" || !session?.user?.isSuper) return null;
 
+  const handleLeadStatusUpdate = async (id: string, newStatus: Lead["status"]) => {
+    setUpdatingLead(id);
+    await fetch("/api/leads", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: newStatus }),
+    });
+    setUpdatingLead(null);
+    fetchLeads(leadStatus);
+  };
+
+  const handleLeadExport = () => {
+    const params = new URLSearchParams({ export: "csv" });
+    if (leadStatus !== "all") params.set("status", leadStatus);
+    window.open(`/api/leads?${params}`, "_blank");
+  };
+
   const PLAN_LABELS = adm.plans;
 
   return (
@@ -335,6 +380,7 @@ export default function AdminPage() {
           {activeTab === "users"    && <button onClick={() => setShowForm(true)}    className={btn}><Plus className="w-4 h-4" /> {adm.users.newBtn}</button>}
           {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
           {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
+          {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
         </div>
 
         {/* Tabs */}
@@ -344,6 +390,7 @@ export default function AdminPage() {
             { id: "testimonials", label: adm.tabs.testimonials, icon: MessageSquareQuote },
             { id: "coupons",      label: adm.tabs.coupons,      icon: Ticket             },
             { id: "articles",     label: adm.tabs.articles,     icon: FileText           },
+            { id: "leads",        label: adm.leads.tab,         icon: Target             },
           ] as { id: Tab; label: string; icon: any }[]).map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowArticleF(false); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -934,6 +981,143 @@ export default function AdminPage() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {/* ══ LEADS ══ */}
+        {activeTab === "leads" && (
+          <div>
+            {/* Filters row */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {(["all", "NEW", "CONTACTED", "CONVERTED", "LOST"] as const).map(s => {
+                const labelMap: Record<string, string> = {
+                  all:       adm.leads.statusAll,
+                  NEW:       adm.leads.statusNew,
+                  CONTACTED: adm.leads.statusContacted,
+                  CONVERTED: adm.leads.statusConverted,
+                  LOST:      adm.leads.statusLost,
+                };
+                const colorMap: Record<string, string> = {
+                  all:       "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300",
+                  NEW:       "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+                  CONTACTED: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+                  CONVERTED: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+                  LOST:      "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400",
+                };
+                const isActive = leadStatus === s;
+                return (
+                  <button key={s}
+                    onClick={() => { setLeadStatus(s); fetchLeads(s); }}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                      isActive
+                        ? "bg-[#25D366] text-white"
+                        : colorMap[s] + " hover:opacity-80"
+                    }`}>
+                    {labelMap[s]}
+                    {s === "all" && leadTotal > 0 && (
+                      <span className="mr-1.5 bg-white/20 text-xs px-1.5 py-0.5 rounded-full">{leadTotal}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Table */}
+            {loadingL ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+            ) : leads.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
+                <Target className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{adm.leads.empty}</p>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                    <tr>
+                      {adm.leads.headers.map((h, i) => (
+                        <th key={i} className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map(lead => {
+                      const statusColors: Record<string, string> = {
+                        NEW:       "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                        CONTACTED: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300",
+                        CONVERTED: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
+                        LOST:      "bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400",
+                      };
+                      const statusLabels: Record<string, string> = {
+                        NEW:       adm.leads.statusNew,
+                        CONTACTED: adm.leads.statusContacted,
+                        CONVERTED: adm.leads.statusConverted,
+                        LOST:      adm.leads.statusLost,
+                      };
+                      return (
+                        <tr key={lead.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                          {/* Name */}
+                          <td className="py-3 px-3">
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">{lead.name}</p>
+                          </td>
+                          {/* Phone */}
+                          <td className="py-3 px-3">
+                            <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1 text-[#25D366] hover:text-[#20b557] transition text-xs font-mono">
+                              <Phone className="w-3 h-3 flex-shrink-0" />
+                              {lead.phone}
+                            </a>
+                          </td>
+                          {/* Business */}
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-300 text-xs">
+                            {(adm.leads.bizLabels as any)[lead.business] ?? lead.business}
+                          </td>
+                          {/* Goal */}
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-300 text-xs">
+                            {(adm.leads.goalLabels as any)[lead.goal] ?? lead.goal}
+                          </td>
+                          {/* Volume */}
+                          <td className="py-3 px-3 text-gray-500 dark:text-gray-400 text-xs font-mono">{lead.volume}</td>
+                          {/* Lang */}
+                          <td className="py-3 px-3">
+                            <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full uppercase">
+                              {lead.lang}
+                            </span>
+                          </td>
+                          {/* Date */}
+                          <td className="py-3 px-3 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">
+                            {new Date(lead.createdAt).toLocaleDateString(dateLocale)}
+                          </td>
+                          {/* Status badge */}
+                          <td className="py-3 px-3">
+                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[lead.status]}`}>
+                              {statusLabels[lead.status]}
+                            </span>
+                          </td>
+                          {/* Status change actions */}
+                          <td className="py-3 px-3">
+                            {updatingLead === lead.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            ) : (
+                              <select
+                                value={lead.status}
+                                onChange={e => handleLeadStatusUpdate(lead.id, e.target.value as Lead["status"])}
+                                className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366] cursor-pointer"
+                              >
+                                <option value="NEW">{adm.leads.statusNew}</option>
+                                <option value="CONTACTED">{adm.leads.statusContacted}</option>
+                                <option value="CONVERTED">{adm.leads.statusConverted}</option>
+                                <option value="LOST">{adm.leads.statusLost}</option>
+                              </select>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
