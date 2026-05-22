@@ -322,12 +322,12 @@ function DetailsModal({ campaign, open, onClose, lang }: {
   const total = campaign.totalQueued || campaign.sentCount;
 
   const stats = [
-    { label: tr("totalAudience",lang), value: total,                   icon: <Users className="w-5 h-5"/>,       color: "bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300"      },
-    { label: tr("totalSent",lang),     value: campaign.sentCount,      icon: <Send className="w-5 h-5"/>,        color: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"   },
-    { label: tr("totalDelivered",lang),value: campaign.deliveredCount, icon: <CheckCircle className="w-5 h-5"/>, color: "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" },
-    { label: tr("totalRead",lang),     value: campaign.readCount,      icon: <Eye className="w-5 h-5"/>,         color: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" },
-    { label: tr("failed",lang),        value: campaign.failedCount,    icon: <XCircle className="w-5 h-5"/>,     color: "bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400"       },
-    { label: tr("waiting",lang),       value: campaign.queuedCount,    icon: <Hourglass className="w-5 h-5"/>,   color: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" },
+    { label: tr("totalAudience",lang), value: total,                                       icon: <Users className="w-5 h-5"/>,       color: "bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300"      },
+    { label: tr("totalSent",lang),     value: campaign.sentCount,                          icon: <Send className="w-5 h-5"/>,        color: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"   },
+    { label: tr("totalDelivered",lang),value: campaign.deliveredCount + campaign.readCount, icon: <CheckCircle className="w-5 h-5"/>, color: "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" },
+    { label: tr("totalRead",lang),     value: campaign.readCount,                          icon: <Eye className="w-5 h-5"/>,         color: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" },
+    ...(campaign.failedCount > 0 ? [{ label: tr("failed",lang), value: campaign.failedCount, icon: <XCircle className="w-5 h-5"/>, color: "bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400" }] : []),
+    { label: tr("waiting",lang),       value: campaign.queuedCount,                        icon: <Hourglass className="w-5 h-5"/>,   color: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" },
   ];
 
   return (
