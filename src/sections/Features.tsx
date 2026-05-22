@@ -64,12 +64,12 @@ export default function Features({ lang }: FeaturesProps) {
             return (
               <div
                 key={i}
-                className={`group relative bg-white border border-gray-100 rounded-2xl p-5
-                  hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5
+                className={`group relative ${m.light} border ${m.border} rounded-2xl p-5
+                  hover:shadow-lg hover:-translate-y-1
                   transition-[box-shadow,transform,border-color] duration-200 ${span}`}
               >
                 {/* tag pill */}
-                <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-3 ${m.light} ${m.text}`}>
+                <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-3 bg-white/70 backdrop-blur-sm ${m.text}`}>
                   {tr(f.tag, lang)}
                 </span>
 

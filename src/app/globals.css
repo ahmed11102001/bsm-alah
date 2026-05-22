@@ -531,11 +531,11 @@ input:focus, textarea:focus {
 }
 
 .marquee-track-ltr {
-  animation: marquee-ltr 28s linear infinite;
+  animation: marquee-ltr 18s linear infinite;
   will-change: transform;
 }
 .marquee-track-rtl {
-  animation: marquee-rtl 28s linear infinite;
+  animation: marquee-rtl 18s linear infinite;
   will-change: transform;
 }
 .marquee-track-ltr:hover,

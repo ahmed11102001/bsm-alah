@@ -130,13 +130,14 @@ export default function Partners({ lang }: PartnersProps) {
       </div>
 
       {/* ── Marquee — full bleed, no max-w constraint ── */}
-      <div className="relative w-full select-none" aria-hidden="true">
-
-        {/* fade edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10
-          bg-gradient-to-r from-white to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10
-          bg-gradient-to-l from-white to-transparent" />
+      <div
+        className="relative w-full select-none"
+        aria-hidden="true"
+        style={{
+          maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+        }}
+      >
 
         {/* row 1 — left-to-right */}
         <div className="overflow-hidden mb-3">
