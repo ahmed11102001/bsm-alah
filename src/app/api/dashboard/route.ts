@@ -33,19 +33,19 @@ export async function GET(_req: NextRequest) {
     ] = await Promise.all([
       // إجمالي الرسائل المرسلة
       prisma.message.count({
-        where: { userId: ownerId, direction: MessageDirection.outbound, deletedAt: null },
+        where: { userId: ownerId, direction: MessageDirection.outbound },
       }),
-      // إجمالي المستلمة
+      // إجمالي المستلمة (delivered + read)
       prisma.message.count({
-        where: { userId: ownerId, status: MessageStatus.delivered, deletedAt: null },
+        where: { userId: ownerId, status: { in: [MessageStatus.delivered, MessageStatus.read] } },
       }),
       // إجمالي المقروءة
       prisma.message.count({
-        where: { userId: ownerId, status: MessageStatus.read, deletedAt: null },
+        where: { userId: ownerId, status: MessageStatus.read },
       }),
       // إجمالي الردود الواردة
       prisma.message.count({
-        where: { userId: ownerId, direction: MessageDirection.inbound, deletedAt: null },
+        where: { userId: ownerId, direction: MessageDirection.inbound },
       }),
       // إجمالي الحملات
       prisma.campaign.count({ where: { userId: ownerId } }),
