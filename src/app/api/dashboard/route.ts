@@ -54,8 +54,8 @@ export async function GET(_req: NextRequest) {
       // آخر 5 حملات
       prisma.campaign.findMany({
         where:   { userId: ownerId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
+        orderBy: { sentCount: "desc" },
+        take: 3,
         select: {
           id: true, name: true, status: true,
           sentCount: true, failedCount: true, createdAt: true,

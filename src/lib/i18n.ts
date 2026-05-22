@@ -61,7 +61,7 @@ export const translations = {
       },
 
       campaigns: {
-        title:      "آخر الحملات",
+        title:      "أفضل الحملات",
         viewAll:    "عرض الكل",
         empty:      "لا توجد حملات بعد",
         startFirst: "ابدأ أول حملة الآن",
@@ -572,7 +572,7 @@ export const translations = {
       },
 
       campaigns: {
-        title:      "Recent Campaigns",
+        title:      "Best Campaigns",
         viewAll:    "View All",
         empty:      "No campaigns yet",
         startFirst: "Start your first campaign now",

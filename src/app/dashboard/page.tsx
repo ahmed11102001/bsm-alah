@@ -699,7 +699,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                           </div>
                         </td>
                         <td className="py-3 px-4 font-medium">{numFmt(c.sentCount)}</td>
-                        <td className="py-3 px-4 text-green-600 font-medium">{numFmt(c.deliveredCount)}</td>
+                        <td className="py-3 px-4 text-green-600 font-medium">{numFmt(c.deliveredCount + c.readCount)}</td>
                         <td className="py-3 px-4 text-blue-600 font-medium">{numFmt(c.readCount)}</td>
                         <td className="py-3 px-4">
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-600"}`}>
@@ -733,7 +733,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       </span>
                       <span className="flex items-center gap-1">
                         <CheckCircle className="w-3 h-3 text-green-500" />
-                        {numFmt(c.deliveredCount)}
+                        {numFmt(c.deliveredCount + c.readCount)}
                       </span>
                       <span className="flex items-center gap-1">
                         <MessageSquare className="w-3 h-3 text-purple-500" />
