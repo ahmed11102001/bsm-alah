@@ -100,7 +100,8 @@ const WHO_FOR = [
 
 export default function Partners({ lang }: PartnersProps) {
   // duplicate for seamless infinite loop
-  const track = [...PARTNERS, ...PARTNERS, ...PARTNERS];
+  // 4 copies: animate -50% = exactly 2 sets, seamless on any screen width
+  const track = [...PARTNERS, ...PARTNERS, ...PARTNERS, ...PARTNERS];
 
   return (
     <section
