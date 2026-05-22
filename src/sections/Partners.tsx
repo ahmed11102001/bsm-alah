@@ -108,36 +108,6 @@ export default function Partners({ lang }: PartnersProps) {
       className="py-20 lg:py-32 bg-gradient-to-b from-white to-gray-50 overflow-hidden"
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
-      <style>{`
-        @keyframes marquee-ltr {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
-        }
-        @keyframes marquee-rtl {
-          0%   { transform: translateX(-33.333%); }
-          100% { transform: translateX(0); }
-        }
-        .marquee-track-ltr {
-          animation: marquee-ltr 28s linear infinite;
-          will-change: transform;
-        }
-        .marquee-track-rtl {
-          animation: marquee-rtl 28s linear infinite;
-          will-change: transform;
-        }
-        .marquee-track-ltr:hover,
-        .marquee-track-rtl:hover {
-          animation-play-state: paused;
-        }
-        .partner-pill {
-          transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
-        }
-        .partner-pill:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.10);
-        }
-      `}</style>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Header ── */}
