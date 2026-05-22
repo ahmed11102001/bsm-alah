@@ -343,103 +343,131 @@ async function handleAutomation(ctx: {
   });
 
   if (contactRecord?.voiceAgentEnabled) {
-    // ── Plan guard: Voice Agent — enterprise فقط ──────────────────────────
-    const voiceGuard = await checkFeature(userId, "aiAgent");
+    // ── Plan guard: token quota (نفس الـ text AI) ─────────────────────────
+    const voiceGuard = await checkAITokensLimit(userId);
     if (!voiceGuard.allowed) {
-      console.log(`[VOICE-AGENT] Blocked — plan doesn't include AI for ${userId}`);
+      console.log(`[VOICE-AGENT] Blocked — token limit for ${userId}`);
       return;
     }
-    // ─────────────────────────────────────────────────────────────────────
 
     const agentSettings = await prisma.aIAgent.findUnique({
       where:  { userId },
-      select: { elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true },
+      select: {
+        elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true,
+        isEnabled: true, provider: true,
+        brandName: true, businessDesc: true, productsInfo: true,
+        pricingInfo: true, workingHours: true, tone: true, systemPrompt: true,
+      },
     });
 
     if (
       agentSettings?.elevenLabsEnabled &&
+      agentSettings?.isEnabled &&
       agentSettings.elevenLabsApiKey?.trim() &&
       agentSettings.elevenLabsAgentId?.trim()
     ) {
-      // ??? ??? 10 ????? ???????? ?? history ??? Agent
+      // ── Step 1: ولّد الرد النصي عبر Gemini/OpenAI (بيتحسب في التوكن) ──
       const recentMsgs = await prisma.message.findMany({
         where:   { contactId: contactRecord.id, userId, type: MessageType.text },
         orderBy: { createdAt: "desc" },
-        take:    10,
+        take:    20,
         select:  { content: true, direction: true },
       });
 
-      const conversationHistory = recentMsgs
+      const aiMessages: ConversationMessage[] = recentMsgs
         .reverse()
-        .filter(m => m.content)
+         .filter(m => m.content)
         .map(m => ({
           role:    m.direction === "inbound" ? "user" as const : "assistant" as const,
           content: m.content!,
         }));
 
-      console.log(`[VOICE-AGENT] Calling ElevenLabs for ${from}`);
+      if (!aiMessages.length) aiMessages.push({ role: "user", content: messageText });
 
-      const result = await callVoiceAgent({
-        agentId:            agentSettings.elevenLabsAgentId,
-        apiKey:             agentSettings.elevenLabsApiKey,
-        userText:           messageText,
-        conversationHistory,
-      });
+      const aiResult = await getAIReply(
+        aiMessages,
+        {
+          brandName:    agentSettings.brandName,
+          businessDesc: agentSettings.businessDesc,
+          productsInfo: agentSettings.productsInfo,
+          pricingInfo:  agentSettings.pricingInfo,
+          workingHours: agentSettings.workingHours,
+          tone:         agentSettings.tone,
+          systemPrompt: agentSettings.systemPrompt,
+        },
+        agentSettings.provider as "gemini" | "openai",
+      );
 
-      if (result.ok && result.audioBuffer) {
-        // ???? ??? audio ??? Cloudinary
-        const audioUrl = await uploadAudioToCloudinary(result.audioBuffer);
-
-        if (audioUrl) {
-          // ???? ??? audio ??? ?????? ?? voice note
-          const metaRes = await fetch(
-            `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
-            {
-              method:  "POST",
-              headers: {
-                "Content-Type":  "application/json",
-                "Authorization": `Bearer ${accountOwner.accessToken}`,
-              },
-              body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to:   from,
-                type: "audio",
-                audio: { link: audioUrl },
-              }),
-            }
-          );
-
-          if (metaRes.ok) {
-            const metaData      = await metaRes.json();
-            const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
-
-            // ???? ??????? ?? ??? DB
-            await prisma.message.create({
-              data: {
-                userId,
-                contactId:  contactRecord.id,
-                content:    result.textResponse ?? "[Voice Agent Reply]",
-                type:       MessageType.audio,
-                direction:  MessageDirection.outbound,
-                status:     MessageStatus.sent,
-                whatsappId: whatsappMsgId,
-                mediaUrl:   audioUrl,
-                sentAt:     new Date(),
-              },
-            });
-
-            console.log(`[VOICE-AGENT] ? Audio reply sent to ${from}`);
-          } else {
-            console.error("[VOICE-AGENT] WhatsApp send failed:", await metaRes.text());
-          }
-        } else {
-          console.error("[VOICE-AGENT] Cloudinary upload failed");
-        }
-      } else {
-        console.error("[VOICE-AGENT] callVoiceAgent failed:", result.error);
+      if (!aiResult.ok || !aiResult.reply?.trim()) {
+        console.error("[VOICE-AGENT] AI text generation failed:", aiResult.error);
+        return;
       }
 
-      return; // ?? ???? ??? keyword ?? ??? AI
+      // سجّل استهلاك التوكن
+      if (aiResult.tokensUsed) void incrementAITokens(userId, aiResult.tokensUsed);
+
+      console.log(`[VOICE-AGENT] Text ready (${aiResult.tokensUsed ?? 0} tokens) → converting to audio`);
+
+      // ── Step 2: حوّل النص لصوت عبر ElevenLabs TTS فقط ───────────────────
+      const voiceResult = await callVoiceAgent({
+        agentId:   agentSettings.elevenLabsAgentId,
+        apiKey:    agentSettings.elevenLabsApiKey,
+        textReply: aiResult.reply,
+      });
+
+      if (!voiceResult.ok || !voiceResult.audioBuffer) {
+        console.error("[VOICE-AGENT] TTS failed:", voiceResult.error);
+        return;
+      }
+
+      // ── Step 3: ارفع على Cloudinary وابعت Voice Note ─────────────────────
+      const audioUrl = await uploadAudioToCloudinary(voiceResult.audioBuffer);
+      if (!audioUrl) {
+        console.error("[VOICE-AGENT] Cloudinary upload failed");
+        return;
+      }
+
+      const metaRes = await fetch(
+        `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
+        {
+          method:  "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${accountOwner.accessToken}`,
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to:   from,
+            type: "audio",
+            audio: { link: audioUrl },
+          }),
+        }
+      );
+
+      if (metaRes.ok) {
+        const metaData      = await metaRes.json();
+        const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
+
+        await prisma.message.create({
+          data: {
+            userId,
+            contactId:  contactRecord.id,
+            content:    aiResult.reply,
+            type:       MessageType.audio,
+            direction:  MessageDirection.outbound,
+            status:     MessageStatus.sent,
+            whatsappId: whatsappMsgId,
+            mediaUrl:   audioUrl,
+            sentAt:     new Date(),
+          },
+        });
+
+        console.log(`[VOICE-AGENT] ✅ Audio reply sent to ${from} via ${agentSettings.provider}`);
+      } else {
+        console.error("[VOICE-AGENT] WhatsApp send failed:", await metaRes.text());
+      }
+
+      return; // لا تكمل لـ text AI
     }
   }
 
@@ -489,7 +517,7 @@ async function handleAutomation(ctx: {
   });
 
   // Human takeover — ?? ?????? ?? ?????? ?? ?????? ???? ?????
-  const humanTriggered = keywordRules.some(r =>
+ const humanTriggered = keywordRules.some(r =>
     r.humanKeywords?.some(kw => {
       const kn = kw?.toLowerCase().trim();
       return !!kn && textLower.includes(kn);
@@ -502,7 +530,7 @@ async function handleAutomation(ctx: {
   }
 
   // Keyword match — ??? ?????
-  const matched = keywordRules.find(r =>
+   const matched = keywordRules.find(r =>
     r.triggerValue?.trim() &&
     textLower.includes(r.triggerValue.toLowerCase().trim())
   );
@@ -561,7 +589,7 @@ async function handleAutomation(ctx: {
     });
     const fromDb = recentMsgs
       .reverse()
-      .filter(m => m.content?.trim())
+         .filter(m => m.content?.trim())
       .map(m => ({
         role:    m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
         content: m.content!.trim(),
