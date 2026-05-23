@@ -99,7 +99,8 @@ const WHO_FOR = [
 ];
 
 export default function Partners({ lang }: PartnersProps) {
-  // 4x repeat to guarantee full-width coverage on all screens
+  // duplicate for seamless infinite loop
+  // 4 copies: animate -50% = exactly 2 sets, seamless on any screen width
   const track = [...PARTNERS, ...PARTNERS, ...PARTNERS, ...PARTNERS];
 
   return (
@@ -130,17 +131,18 @@ export default function Partners({ lang }: PartnersProps) {
       </div>
 
       {/* ── Marquee — full bleed, no max-w constraint ── */}
-      <div className="relative w-full select-none" aria-hidden="true">
-
-        {/* fade edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10
-          bg-gradient-to-r from-white to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10
-          bg-gradient-to-l from-white to-transparent" />
+      <div
+        className="relative w-full select-none"
+        aria-hidden="true"
+        style={{
+          maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+        }}
+      >
 
         {/* row 1 — left-to-right */}
         <div className="overflow-hidden mb-3">
-          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-rtl" : "marquee-track-ltr"}`}
+          <div className={`flex gap-3 pe-3 ${lang === "ar" ? "marquee-track-rtl" : "marquee-track-ltr"}`}
                style={{ width: "max-content" }}>
             {track.map((p, i) => (
               <PartnerPill key={i} partner={p} lang={lang} />
@@ -150,9 +152,9 @@ export default function Partners({ lang }: PartnersProps) {
 
         {/* row 2 — opposite direction, offset timing */}
         <div className="overflow-hidden">
-          <div className={`flex gap-3 ${lang === "ar" ? "marquee-track-ltr" : "marquee-track-rtl"}`}
-               style={{ width: "max-content", animationDelay: "-10s" }}>
-            {track.map((p, i) => (
+          <div className={`flex gap-3 pe-3 ${lang === "ar" ? "marquee-track-ltr" : "marquee-track-rtl"}`}
+               style={{ width: "max-content", animationDelay: "-14s" }}>
+            {[...track].reverse().map((p, i) => (
               <PartnerPill key={i} partner={p} lang={lang} />
             ))}
           </div>
