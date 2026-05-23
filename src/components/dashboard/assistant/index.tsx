@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import WelcomeBanner  from "./welcomebanner";
+import WelcomeBanner from "./WelcomeBanner";
 import RuleBanner     from "./RuleBanner";
 import FloatingHelper from "./FloatingHelper";
 import {
