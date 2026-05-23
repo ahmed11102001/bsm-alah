@@ -41,6 +41,7 @@ import Store           from "@/components/dashboard/store";
 import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate         from "@/components/dashboard/PlanGate";
+import DashboardAssistant from "@/components/dashboard/assistant";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
@@ -1033,7 +1034,20 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        <div className="p-4 lg:p-6">{renderContent()}</div>
+        <div className="p-4 lg:p-6">
+          <DashboardAssistant
+            userId={session?.user?.id ?? ""}
+            locale={locale as "ar" | "en"}
+            activeSection={activeSection}
+            whatsappConnected={!!dashData?.whatsapp}
+            totalContacts={dashData?.stats.totalContacts ?? 0}
+            deliveryRate={dashData?.stats.deliveryRate ?? 0}
+            planStatus={dashData?.plan.status ?? "active"}
+            planName={dashData?.plan.planName ?? ""}
+            onNavigate={setActiveSection}
+          />
+          {renderContent()}
+        </div>
       </main>
 
       <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} onSaved={fetchDash} />
