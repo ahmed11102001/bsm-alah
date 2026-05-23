@@ -232,13 +232,26 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     };
   }, []);
 
-  // ── Initialize messages when opened ─────────────────────────────────────
+  // ── Reset messages when lang changes ────────────────────────────────────
   useEffect(() => {
-    if (!isOpen || messages.length > 0) return;
-    // لو المستخدم كان عنده progress قديم — بنبدأ من الأول دلوقتي (single session)
-    pushBotMessage(f.welcome);
+    setMessages([]);
+    setStep("welcome");
+    setShowForm(false);
+    setSelections({});
+  }, [lang]);
+
+  // ── Initialize messages when opened (or after lang reset) ────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const flow = FLOW[lang];
+    setIsTyping(true);
+    const t = setTimeout(() => {
+      setIsTyping(false);
+      setMessages([{ id: uid(), role: "bot", text: flow.welcome }]);
+    }, 600);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, lang]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const pushBotMessage = useCallback(
