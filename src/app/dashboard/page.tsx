@@ -671,7 +671,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         const canClaude = isPro || isEnt;
         const mcpLimit = (data.plan.limits as any).mcpCommandsPerMonth ?? 0;
         const mcpUsed  = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
-        const mcpPct   = mcpLimit > 0 ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
+        const isUnlimitedMcp = mcpLimit === -1 || isEnt;
+        const mcpPct   = (!isUnlimitedMcp && mcpLimit > 0) ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
 
         // ── Upgrade hook for free/starter ──
         if (!canClaude) return (
@@ -754,10 +755,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                     <div className="flex justify-between text-xs text-gray-500 mb-1.5">
                       <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
                       <span className="font-semibold text-gray-700 dark:text-gray-200">
-                        {isEnt ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
+                        {isUnlimitedMcp ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
                       </span>
                     </div>
-                    {!isEnt && (
+                    {!isUnlimitedMcp && (
                       <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-orange-500"}`} />
                     )}
                   </div>
@@ -767,7 +768,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       <p className="text-[10px] text-gray-400">{locale === "ar" ? "مستخدم" : "Used"}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                      <p className="text-lg font-bold text-[#25D366]">{isEnt ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
+                      <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{isUnlimitedMcp ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
                       <p className="text-[10px] text-gray-400">{locale === "ar" ? "متبقي" : "Remaining"}</p>
                     </div>
                   </div>

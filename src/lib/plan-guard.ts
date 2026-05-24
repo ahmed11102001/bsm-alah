@@ -336,7 +336,7 @@ export async function checkMCPCommandsLimit(ownerId: string): Promise<GuardResul
     return {
       allowed:      false,
       code:         "LIMIT_REACHED",
-      message:      `استهلكت كل أوامر Claude المتاحة هذا الشهر (${limit} أمر). قم بشراء أوامر إضافية أو الترقية للـ Enterprise.`,
+      message:      `استهلكت كل أوامر Claude المتاحة هذا الشهر (${limit} أمر). قم بالترقية للـ Enterprise للحصول على أوامر غير محدودة.`,
       plan,
       requiredPlan: "enterprise",
       limit,
@@ -360,7 +360,7 @@ export async function incrementMCPCommandUsage(ownerId: string): Promise<void> {
   });
 }
 
-/** شراء أوامر إضافية — 100 أمر بـ 99 جنيه */
+/** إعادة ضبط عداد MCP — تستخدم عند الترقية */
 export async function addMCPCommandsBonus(ownerId: string, count: number): Promise<void> {
   await prisma.subscription.update({
     where: { userId: ownerId },
