@@ -17,7 +17,7 @@ async function resolveUser(req: NextRequest) {
 
   const user = await prisma.user.findFirst({
     where: { apiKey: key, deletedAt: null },
-    select: { id: true, name: true, parentId: true, plan: true },
+    select: { id: true, name: true, parentId: true },
   });
   if (!user) return null;
 
