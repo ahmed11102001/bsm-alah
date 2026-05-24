@@ -10,6 +10,7 @@ export interface PlanLimits {
   teamMembers:         number;   // -1 = غير محدود
   campaignsPerMonth:   number;   // -1 = غير محدود
   aiTokensPerMonth:    number;   // -1 = غير محدود, 0 = disabled
+  mcpCommandsPerMonth: number;   // -1 = غير محدود, 0 = disabled (Claude MCP)
   // مميزات boolean
   scheduledCampaigns:  boolean;
   advancedReports:     boolean;
@@ -26,6 +27,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     teamMembers:        1,
     campaignsPerMonth:  3,
     aiTokensPerMonth:   0,
+    mcpCommandsPerMonth: 0,
     scheduledCampaigns: false,
     advancedReports:    false,
     apiAccess:          false,
@@ -39,6 +41,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     teamMembers:        2,
     campaignsPerMonth:  50,
     aiTokensPerMonth:   0,
+    mcpCommandsPerMonth: 0,
     scheduledCampaigns: true,
     advancedReports:    false,
     apiAccess:          false,
@@ -52,6 +55,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     teamMembers:        5,
     campaignsPerMonth:  -1,
     aiTokensPerMonth:   0,
+    mcpCommandsPerMonth: 50,
     scheduledCampaigns: true,
     advancedReports:    true,
     apiAccess:          false,
@@ -64,7 +68,8 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     contacts:           -1,
     teamMembers:        -1,
     campaignsPerMonth:  -1,
-    aiTokensPerMonth:   1_000_000,  // ← 1M توكن شهرياً
+    aiTokensPerMonth:   1_000_000,
+    mcpCommandsPerMonth: -1,         // ← غير محدود
     scheduledCampaigns: true,
     advancedReports:    true,
     apiAccess:          true,

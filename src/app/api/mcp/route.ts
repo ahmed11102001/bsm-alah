@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { MessageStatus, MessageDirection, CampaignStatus } from "@/types/enums";
+import { checkMCPCommandsLimit, incrementMCPCommandUsage } from "@/lib/plan-guard";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 async function resolveUser(req: NextRequest) {
@@ -527,7 +528,25 @@ export async function POST(req: NextRequest) {
       const toolName = params?.name;
       const toolArgs = params?.arguments ?? {};
 
+      // ── Plan guard: check MCP commands limit ─────────────────────────
+      const guard = await checkMCPCommandsLimit(user.ownerId);
+      if (!guard.allowed) {
+        return NextResponse.json({
+          jsonrpc: "2.0", id,
+          error: {
+            code:    -32003,
+            message: guard.code === "FEATURE_LOCKED"
+              ? "❌ ميزة Claude AI تتطلب باقة Professional أو أعلى. قم بالترقية من الداشبورد."
+              : `⚠️ انتهت أوامر Claude الشهرية. يمكنك شراء 100 أمر إضافي بـ 99 جنيه من الداشبورد.`,
+            data: { code: guard.code, requiredPlan: guard.requiredPlan, limit: guard.limit, used: guard.used },
+          },
+        }, { headers: CORS });
+      }
+
       const result = await runTool(toolName, toolArgs, user.ownerId);
+
+      // ── Increment usage after successful tool call ────────────────────
+      await incrementMCPCommandUsage(user.ownerId).catch(() => {});
 
       return NextResponse.json({
         jsonrpc: "2.0", id,

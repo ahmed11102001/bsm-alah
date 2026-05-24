@@ -295,6 +295,79 @@ export async function getPlanStatus(ownerId: string) {
   };
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 7. checkMCPCommandsLimit — قبل كل Claude MCP command
+// ═══════════════════════════════════════════════════════════════════════════════
+export async function checkMCPCommandsLimit(ownerId: string): Promise<GuardResult> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
+
+  const sub  = await getSubscription(ownerId);
+  const plan = safePlan(sub);
+  const limit = PLANS[plan].mcpCommandsPerMonth;
+
+  // 0 = disabled (free / starter)
+  if (limit === 0) return {
+    allowed:      false,
+    code:         "FEATURE_LOCKED",
+    message:      `ميزة Claude AI متاحة في باقة Professional وما فوقها. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
+    plan,
+    requiredPlan: "pro",
+  };
+
+  if (isUnlimited(limit)) return { allowed: true };
+
+  // Count this month usage
+  const now          = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const fullSub = await prisma.subscription.findUnique({
+    where:  { userId: ownerId },
+    select: { mcpCommandsUsedThisMonth: true, periodResetAt: true },
+  });
+
+  let used = fullSub?.mcpCommandsUsedThisMonth ?? 0;
+  if (fullSub?.periodResetAt) {
+    const reset = await resetMonthlyCounterIfNeeded(ownerId, fullSub.periodResetAt);
+    if (reset !== null) used = 0;
+  }
+
+  if (used >= limit) {
+    return {
+      allowed:      false,
+      code:         "LIMIT_REACHED",
+      message:      `استهلكت كل أوامر Claude المتاحة هذا الشهر (${limit} أمر). قم بشراء أوامر إضافية أو الترقية للـ Enterprise.`,
+      plan,
+      requiredPlan: "enterprise",
+      limit,
+      used,
+    };
+  }
+
+  return { allowed: true };
+}
+
+/** زيادة عداد MCP commands بعد كل تنفيذ ناجح */
+export async function incrementMCPCommandUsage(ownerId: string): Promise<void> {
+  const sub  = await getSubscription(ownerId);
+  const plan = safePlan(sub);
+  if (isUnlimited(PLANS[plan].mcpCommandsPerMonth)) return;
+  if (PLANS[plan].mcpCommandsPerMonth === 0) return;
+
+  await prisma.subscription.update({
+    where: { userId: ownerId },
+    data:  { mcpCommandsUsedThisMonth: { increment: 1 } },
+  });
+}
+
+/** شراء أوامر إضافية — 100 أمر بـ 99 جنيه */
+export async function addMCPCommandsBonus(ownerId: string, count: number): Promise<void> {
+  await prisma.subscription.update({
+    where: { userId: ownerId },
+    data:  { mcpCommandsUsedThisMonth: { decrement: count } }, // نخصم من الاستهلاك
+  });
+}
+
 // ─── Shorthand: تحويل GuardResult لـ NextResponse مباشرة ────────────────────
 import { NextResponse } from "next/server";
 

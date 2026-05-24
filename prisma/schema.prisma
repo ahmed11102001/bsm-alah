@@ -87,6 +87,7 @@ model Subscription {
   status                 SubscriptionStatus @default(active)
   isBetaUser             Boolean            @default(false)
   campaignsUsedThisMonth Int                @default(0)
+  mcpCommandsUsedThisMonth Int               @default(0)
   periodResetAt          DateTime           @default(now())
   aiTokensUsedThisMonth  Int                @default(0)
   aiTokensBonusBalance   Int                @default(0)

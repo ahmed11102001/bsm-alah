@@ -18,10 +18,14 @@ const CYCLES = [
 type Cycle = typeof CYCLES[number]["key"];
 
 const PLAN_STYLES = [
-  { card: "bg-white border border-gray-200",                              dark: false, highlight: false, cta: "border border-gray-300 text-gray-700 hover:border-[#25D366] hover:text-[#25D366]" },
-  { card: "bg-white border border-gray-200",                              dark: false, highlight: false, cta: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white" },
-  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", dark: false, highlight: true,  cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]" },
-  { card: "bg-gray-950 border border-gray-800",                           dark: true,  highlight: false, cta: "bg-white text-gray-900 hover:bg-gray-100" },
+  // Free — slate هادئ
+  { card: "bg-slate-50 border border-slate-200", accent: "text-slate-500", iconBg: "bg-slate-100", dark: false, highlight: false, cta: "border border-slate-300 text-slate-600 hover:border-slate-500 hover:text-slate-800" },
+  // Starter — أزرق سماوي
+  { card: "bg-sky-50 border border-sky-200",     accent: "text-sky-600",   iconBg: "bg-sky-100",   dark: false, highlight: false, cta: "border-2 border-sky-500 text-sky-700 hover:bg-sky-500 hover:text-white" },
+  // Pro — أخضر (البراند) مع highlight
+  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", accent: "text-[#25D366]", iconBg: "bg-green-50", dark: false, highlight: true, cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]" },
+  // Enterprise — داكن ذهبي
+  { card: "bg-gray-950 border border-amber-700/50", accent: "text-amber-400", iconBg: "bg-amber-900/30", dark: true, highlight: false, cta: "bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold hover:from-amber-400 hover:to-yellow-300" },
 ];
 
 // أيقونة مميزة لكل plan

@@ -662,6 +662,135 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         );
       })()}
 
+
+      {/* ── Claude MCP Card ── */}
+      {(() => {
+        const plan     = data.plan.plan as string;
+        const isPro    = plan === "pro" || plan === "professional";
+        const isEnt    = plan === "enterprise";
+        const canClaude = isPro || isEnt;
+        const mcpLimit = (data.plan.limits as any).mcpCommandsPerMonth ?? 0;
+        const mcpUsed  = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
+        const mcpPct   = mcpLimit > 0 ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
+
+        // ── Upgrade hook for free/starter ──
+        if (!canClaude) return (
+          <Card className="border border-[#25D366]/20 dark:border-[#25D366]/10 shadow-sm bg-gradient-to-br from-[#25D366]/5 to-white dark:from-[#25D366]/5 dark:to-gray-900">
+            <CardContent className="px-5 py-5 flex flex-col gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
+                  <img src="/claude-icon.png" className="w-6 h-6" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} alt="" />
+                  <Bot className="w-5 h-5 text-[#25D366]" style={{marginLeft: -24}} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {locale === "ar" ? "🤖 تحكّم في واتس برو بالكلام مع Claude" : "🤖 Control WhatsPro by talking to Claude"}
+                  </p>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                    {locale === "ar" ? "قول لـ Claude: اعمل حملة لعملائي — وهو يتنفذها تلقائياً." : "Tell Claude to create campaigns or reports — it executes automatically."}
+                  </p>
+
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(locale === "ar"
+                  ? ["إنشاء حملات بأمر واحد", "تقارير فورية", "إدارة جهات الاتصال", "50 أمر/شهر في Pro"]
+                  : ["Create campaigns in one command", "Instant reports", "Manage contacts", "50 cmds/mo in Pro"]
+                ).map((f, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#25D366]/15 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-2 h-2 text-[#25D366]" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    {f}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => window.location.href = "/checkout?plan=professional"}
+                className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm active:scale-[.98]"
+              >
+                <Sparkles className="w-4 h-4" />
+                {locale === "ar" ? "ترقّى وابدأ مع Claude" : "Upgrade to use Claude"}
+              </button>
+            </CardContent>
+          </Card>
+        );
+
+        // ── Pro/Enterprise usage card ──
+        const [activeTab, setActiveTabClaude] = React.useState<"usage" | "buy">("usage");
+
+        return (
+          <Card className="border border-[#25D366]/20 dark:border-[#25D366]/15 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-[#25D366]" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">
+                    {locale === "ar" ? "Claude AI" : "Claude AI"}
+                  </CardTitle>
+                  <p className="text-[11px] text-gray-400">{locale === "ar" ? "يتجدد أول كل شهر" : "Resets monthly"}</p>
+                </div>
+              </div>
+              {/* Tabs */}
+              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 gap-0.5">
+                {(["usage", "buy"] as const).map(tab => (
+                  <button key={tab} onClick={() => setActiveTabClaude(tab)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                    {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "شراء إضافي" : "Buy More")}
+                  </button>
+                ))}
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-4 sm:px-5 pb-5">
+              {activeTab === "usage" ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                      <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
+                      <span className="font-semibold text-gray-700 dark:text-gray-200">
+                        {isEnt ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
+                      </span>
+                    </div>
+                    {!isEnt && (
+                      <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-[#25D366]"}`} />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{mcpUsed}</p>
+                      <p className="text-[10px] text-gray-400">{locale === "ar" ? "مستخدم" : "Used"}</p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                      <p className="text-lg font-bold text-[#25D366]">{isEnt ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
+                      <p className="text-[10px] text-gray-400">{locale === "ar" ? "متبقي" : "Remaining"}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  <div className="bg-[#25D366]/5 border border-[#25D366]/20 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{locale === "ar" ? "100 أمر Claude إضافي" : "100 extra Claude commands"}</p>
+                    <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "تُضاف فوراً لرصيدك" : "Added instantly to your balance"}</p>
+                  </div>
+                  <button
+                    onClick={() => window.location.href = "/checkout?addon=mcp100"}
+                    className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {locale === "ar" ? "شراء 100 أمر — 99 ج" : "Buy 100 commands — 99 EGP"}
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* ── Recent Campaigns ── */}
       <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
