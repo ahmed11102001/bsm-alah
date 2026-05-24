@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import ChatPage    from "@/app/dashboard/chat/page";
 import TeamPage    from "@/app/dashboard/team/page";
@@ -423,7 +423,6 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
 function EnterpriseTokenCard({ data }: { data: DashboardData }) {
   const { t, locale } = useLanguage();
   const ai = t.home.ai;
-  const [showPacks, setShowPacks] = useState(false);
 
   const aiData  = (data.plan as any).aiTokens;
   const used    = aiData?.aiTokensUsedThisMonth ?? 0;
@@ -478,37 +477,6 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
             </p>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.bonusBalance}</p>
           </div>
-        </div>
-
-        <div>
-          <button
-            onClick={() => setShowPacks(p => !p)}
-            className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            {ai.addTokens}
-          </button>
-
-          {showPacks && (
-            <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{ai.packs.title}</p>
-              <div className="grid grid-cols-1 gap-2">
-                {TOKEN_PACKAGES.map(pack => (
-                  <button
-                    key={pack.id}
-                    onClick={() => window.location.href = `/checkout?packageId=${pack.id}`}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition group"
-                  >
-                    <p className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.priceEGP} جنيه</span>
-                      <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
