@@ -419,6 +419,262 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   );
 }
 
+// ─── EnterpriseTokenCard — مستخرج من IIFE عشان useState يشتغل صح ─────────────
+function EnterpriseTokenCard({ data }: { data: DashboardData }) {
+  const { t, locale } = useLanguage();
+  const ai = t.home.ai;
+  const [showPacks, setShowPacks] = useState(false);
+
+  const aiData  = (data.plan as any).aiTokens;
+  const used    = aiData?.aiTokensUsedThisMonth ?? 0;
+  const bonus   = aiData?.aiTokensBonusBalance  ?? 0;
+  const monthly = data.plan.limits.aiTokensPerMonth;
+  const pct     = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
+  const fmtK    = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000   ? `${Math.round(n / 1000)}K`
+    : `${n}`;
+
+  return (
+    <Card className="border border-purple-100 dark:border-purple-900/30 shadow-sm bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-950/10 dark:to-gray-900">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">{ai.title}</CardTitle>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">{ai.renews}</p>
+          </div>
+        </div>
+        {pct >= 80 && (
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pct >= 95 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+            {pct}%
+          </span>
+        )}
+      </CardHeader>
+
+      <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+            <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
+            <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(monthly)} {locale === "ar" ? "توكن/شهر" : "tokens/mo"}</span>
+          </div>
+          <Progress value={pct} className={`h-2.5 rounded-full ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`} />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+            <p className="text-base font-bold text-gray-900 dark:text-white">{fmtK(used)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.usedThisMonth}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+            <p className="text-base font-bold text-green-600 dark:text-green-400">{fmtK(Math.max(0, monthly - used))}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.remainingPlan}</p>
+          </div>
+          <div className={`rounded-xl p-3 text-center border ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" : "bg-white dark:bg-gray-800/60 border-gray-100 dark:border-gray-700"}`}>
+            <p className={`text-base font-bold ${bonus > 0 ? "text-purple-600 dark:text-purple-400" : "text-gray-300 dark:text-gray-600"}`}>
+              {bonus > 0 ? fmtK(bonus) : "—"}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.bonusBalance}</p>
+          </div>
+        </div>
+
+        <div>
+          <button
+            onClick={() => setShowPacks(p => !p)}
+            className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            {ai.addTokens}
+          </button>
+
+          {showPacks && (
+            <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{ai.packs.title}</p>
+              <div className="grid grid-cols-1 gap-2">
+                {TOKEN_PACKAGES.map(pack => (
+                  <button
+                    key={pack.id}
+                    onClick={() => window.location.href = `/checkout?packageId=${pack.id}`}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition group"
+                  >
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.priceEGP} جنيه</span>
+                      <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── ClaudeMcpUsageCard — مستخرج من IIFE عشان useState يشتغل صح ───────────────
+function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
+  const { locale } = useLanguage();
+  const [activeTab, setActiveTab] = useState<"usage" | "buy">("usage");
+
+  const plan     = data.plan.plan as string;
+  const isEnt    = plan === "enterprise";
+  const mcpLimit = (data.plan.limits as any).mcpCommandsPerMonth ?? 0;
+  const mcpUsed  = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
+  const isUnlimitedMcp = mcpLimit === -1 || isEnt;
+  const mcpPct   = (!isUnlimitedMcp && mcpLimit > 0) ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
+
+  return (
+    <Card className="border border-orange-200 dark:border-orange-900/40 shadow-sm bg-gradient-to-br from-orange-50/50 to-white dark:from-orange-950/10 dark:to-gray-900">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+          </div>
+          <div>
+            <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">Claude AI</CardTitle>
+            <p className="text-[11px] text-gray-400">{locale === "ar" ? "يتجدد أول كل شهر" : "Resets monthly"}</p>
+          </div>
+        </div>
+        {!isEnt && (
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 gap-0.5">
+            {(["usage", "buy"] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "ترقية" : "Upgrade")}
+              </button>
+            ))}
+          </div>
+        )}
+      </CardHeader>
+
+      <CardContent className="px-4 sm:px-5 pb-5">
+        {activeTab === "usage" ? (
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
+                <span className="font-semibold text-gray-700 dark:text-gray-200">
+                  {isUnlimitedMcp ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
+                </span>
+              </div>
+              {!isUnlimitedMcp && (
+                <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-orange-500"}`} />
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{mcpUsed}</p>
+                <p className="text-[10px] text-gray-400">{locale === "ar" ? "مستخدم" : "Used"}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{isUnlimitedMcp ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
+                <p className="text-[10px] text-gray-400">{locale === "ar" ? "متبقي" : "Remaining"}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-1">
+            <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl p-4 text-center">
+              <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
+              <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude غير محدود ∞" : "Unlimited Claude ∞"}</p>
+              <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "ترقية لباقة Pro وانتهت القيود" : "Upgrade to Pro — no limits"}</p>
+            </div>
+            <button
+              onClick={() => window.location.href = "/checkout?plan=pro&price=99"}
+              className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              {locale === "ar" ? "ترقية لـ Pro — 99 ج/شهر" : "Upgrade to Pro — 99 EGP/mo"}
+            </button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── ClaudeHeaderBadge — مستخرج من IIFE عشان useState يشتغل صح ───────────────
+function ClaudeHeaderBadge({ locale, dir, onNavigate }: {
+  locale: string;
+  dir: string;
+  onNavigate: (section: string) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowMenu(v => !v)}
+        title="Claude AI"
+        className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
+      >
+        <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+          <img src="/partners/claude.svg.svg" alt="Claude" className="w-5 h-5 object-contain" />
+        </div>
+        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
+          <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+        </span>
+      </button>
+
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                <img src="/partners/claude.svg.svg" alt="" className="w-5 h-5 object-contain" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Claude AI</p>
+                <p className="text-[11px] text-orange-100">{locale === "ar" ? "مربوط ويعمل ✓" : "Connected & active ✓"}</p>
+              </div>
+            </div>
+
+            <div className="p-3 space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">
+                {locale === "ar" ? "قول لـ Claude في Desktop App:" : "Tell Claude in Desktop App:"}
+              </p>
+              {(locale === "ar" ? [
+                { icon: "📊", text: "\"اعملي تقرير عن آخر حملة\"" },
+                { icon: "🚀", text: "\"أنشئ حملة على قائمة VIP\"" },
+                { icon: "💬", text: "\"فيه كام رسالة واردة؟\"" },
+                { icon: "👥", text: "\"اعرضلي قوائم الجمهور\"" },
+              ] : [
+                { icon: "📊", text: "\"Give me a report on the last campaign\"" },
+                { icon: "🚀", text: "\"Create a campaign for VIP list\"" },
+                { icon: "💬", text: "\"How many unread messages?\"" },
+                { icon: "👥", text: "\"Show me my contact lists\"" },
+              ]).map((cmd, i) => (
+                <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                  <span className="text-sm flex-shrink-0">{cmd.icon}</span>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300 font-mono leading-snug">{cmd.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5 flex items-center justify-between">
+              <button
+                onClick={() => { setShowMenu(false); onNavigate("api"); }}
+                className="text-xs text-orange-500 hover:text-orange-600 font-medium"
+              >
+                {locale === "ar" ? "إدارة الربط" : "Manage connection"}
+              </button>
+              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                {locale === "ar" ? "نشط" : "Active"}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Home Dashboard ───────────────────────────────────────────────────────────
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean;
@@ -515,11 +771,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         const ai = h.ai;
         const isEnterprise = data.plan.plan === "enterprise";
 
-        // ── Upgrade card for non-enterprise ──
         if (!isEnterprise) return (
           <Card className="border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-gray-900">
             <CardContent className="px-5 py-6 flex flex-col gap-4">
-              {/* Icon + title */}
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -529,8 +783,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{ai.upgradeDesc}</p>
                 </div>
               </div>
-
-              {/* Features */}
               <div className="grid grid-cols-1 gap-1.5">
                 {(locale === "ar"
                   ? ["ردود تلقائية بالذكاء الاصطناعي", "1 مليون توكن شهرياً", "يدعم ChatGPT و Gemini", "إمكانية شراء توكن إضافية"]
@@ -544,8 +796,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   </div>
                 ))}
               </div>
-
-              {/* Price + CTA */}
               <div className="flex items-center justify-between pt-1">
                 <div>
                   <span className="text-xl font-bold text-gray-900 dark:text-white">{SUBSCRIPTION_PLANS.enterprise.monthly}</span>
@@ -563,118 +813,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         );
 
-        // ── Enterprise usage card ──
-        const aiData   = (data.plan as any).aiTokens;
-        const used     = aiData?.aiTokensUsedThisMonth ?? 0;
-        const bonus    = aiData?.aiTokensBonusBalance  ?? 0;
-        const monthly  = data.plan.limits.aiTokensPerMonth;
-        const pct      = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
-        const fmtK     = (n: number) => n >= 1_000_000
-          ? `${(n / 1_000_000).toFixed(1)}M`
-          : n >= 1_000 ? `${Math.round(n / 1000)}K` : `${n}`;
-
-        const [showPacks, setShowPacks] = React.useState(false);
-
-        return (
-          <Card className="border border-purple-100 dark:border-purple-900/30 shadow-sm bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-950/10 dark:to-gray-900">
-            {/* Header */}
-            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">{ai.title}</CardTitle>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{ai.renews}</p>
-                </div>
-              </div>
-              {pct >= 80 && (
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pct >= 95 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
-                  {pct}%
-                </span>
-              )}
-            </CardHeader>
-
-            <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
-              {/* Progress bar */}
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                  <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(monthly)} {locale === "ar" ? "توكن/شهر" : "tokens/mo"}</span>
-                </div>
-                <Progress
-                  value={pct}
-                  className={`h-2.5 rounded-full ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`}
-                />
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
-                  <p className="text-base font-bold text-gray-900 dark:text-white">{fmtK(used)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.usedThisMonth}</p>
-                </div>
-                <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
-                  <p className="text-base font-bold text-green-600 dark:text-green-400">{fmtK(Math.max(0, monthly - used))}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.remainingPlan}</p>
-                </div>
-                <div className={`rounded-xl p-3 text-center border ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" : "bg-white dark:bg-gray-800/60 border-gray-100 dark:border-gray-700"}`}>
-                  <p className={`text-base font-bold ${bonus > 0 ? "text-purple-600 dark:text-purple-400" : "text-gray-300 dark:text-gray-600"}`}>
-                    {bonus > 0 ? fmtK(bonus) : "—"}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.bonusBalance}</p>
-                </div>
-              </div>
-
-              {/* Add tokens button + dropdown */}
-              <div>
-                <button
-                  onClick={() => setShowPacks(p => !p)}
-                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  {ai.addTokens}
-                </button>
-
-                {showPacks && (
-                  <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{ai.packs.title}</p>
-                    <div className="grid grid-cols-1 gap-2">
-                      {TOKEN_PACKAGES.map(pack => (
-                        <button
-                          key={pack.id}
-                          onClick={() => window.location.href = `/checkout?packageId=${pack.id}`}
-                          className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition group"
-                        >
-                          <p className="text-sm font-semibold text-gray-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{pack.label}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{pack.priceEGP} جنيه</span>
-                            <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <EnterpriseTokenCard data={data} />;
       })()}
 
 
       {/* ── Claude MCP Card ── */}
       {(() => {
-        const plan     = data.plan.plan as string;
-        const isPro    = plan === "pro" || plan === "professional";
-        const isEnt    = plan === "enterprise";
+        const plan      = data.plan.plan as string;
+        const isPro     = plan === "pro" || plan === "professional";
+        const isEnt     = plan === "enterprise";
         const canClaude = isPro || isEnt;
-        const mcpLimit = (data.plan.limits as any).mcpCommandsPerMonth ?? 0;
-        const mcpUsed  = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
-        const isUnlimitedMcp = mcpLimit === -1 || isEnt;
-        const mcpPct   = (!isUnlimitedMcp && mcpLimit > 0) ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
 
-        // ── Upgrade hook for free/starter ──
         if (!canClaude) return (
           <Card className="border border-[#25D366]/20 dark:border-[#25D366]/10 shadow-sm bg-gradient-to-br from-[#25D366]/5 to-white dark:from-[#25D366]/5 dark:to-gray-900">
             <CardContent className="px-5 py-5 flex flex-col gap-4">
@@ -687,11 +836,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {locale === "ar" ? "🤖 تحكّم في واتس برو بالكلام مع Claude" : "🤖 Control WhatsPro by talking to Claude"}
                   </p>
-
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
                     {locale === "ar" ? "قول لـ Claude: اعمل حملة لعملائي — وهو يتنفذها تلقائياً." : "Tell Claude to create campaigns or reports — it executes automatically."}
                   </p>
-
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -718,80 +865,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         );
 
-        // ── Pro/Enterprise usage card ──
-        const [activeTab, setActiveTabClaude] = React.useState<"usage" | "buy">("usage");
-
-        return (
-          <Card className="border border-orange-200 dark:border-orange-900/40 shadow-sm bg-gradient-to-br from-orange-50/50 to-white dark:from-orange-950/10 dark:to-gray-900">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">
-                    {locale === "ar" ? "Claude AI" : "Claude AI"}
-                  </CardTitle>
-                  <p className="text-[11px] text-gray-400">{locale === "ar" ? "يتجدد أول كل شهر" : "Resets monthly"}</p>
-                </div>
-              </div>
-              {/* Tabs — buy tab only for Pro, not Enterprise */}
-              {!isEnt && (
-                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 gap-0.5">
-                  {(["usage", "buy"] as const).map(tab => (
-                    <button key={tab} onClick={() => setActiveTabClaude(tab)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
-                      {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "ترقية" : "Upgrade")}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardHeader>
-
-            <CardContent className="px-4 sm:px-5 pb-5">
-              {activeTab === "usage" ? (
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                      <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
-                      <span className="font-semibold text-gray-700 dark:text-gray-200">
-                        {isUnlimitedMcp ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
-                      </span>
-                    </div>
-                    {!isUnlimitedMcp && (
-                      <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-orange-500"}`} />
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{mcpUsed}</p>
-                      <p className="text-[10px] text-gray-400">{locale === "ar" ? "مستخدم" : "Used"}</p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                      <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{isUnlimitedMcp ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
-                      <p className="text-[10px] text-gray-400">{locale === "ar" ? "متبقي" : "Remaining"}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3 pt-1">
-                  <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
-                    <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude غير محدود ∞" : "Unlimited Claude ∞"}</p>
-                    <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "ترقية لباقة Pro وانتهت القيود" : "Upgrade to Pro — no limits"}</p>
-                  </div>
-                  <button
-                    onClick={() => window.location.href = "/checkout?plan=pro&price=99"}
-                    className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {locale === "ar" ? "ترقية لـ Pro — 99 ج/شهر" : "Upgrade to Pro — 99 EGP/mo"}
-                  </button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
+        return <ClaudeMcpUsageCard data={data} />;
       })()}
 
       {/* ── Recent Campaigns ── */}
@@ -1163,84 +1237,13 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             <NotificationBell onNavigate={(section) => setActiveSection(section)} />
 
             {/* Claude Connected Badge */}
-            {claudeConnected && (() => {
-              const [showClaudeMenu, setShowClaudeMenu] = React.useState(false);
-              return (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowClaudeMenu(v => !v)}
-                    title="Claude AI"
-                    className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
-                      <img
-                        src="/partners/claude.svg.svg"
-                        alt="Claude"
-                        className="w-5 h-5 object-contain"
-                      />
-                    </div>
-                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
-                      <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
-                    </span>
-                  </button>
-
-                  {showClaudeMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowClaudeMenu(false)} />
-                      <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                            <img src="/partners/claude.svg.svg" alt="" className="w-5 h-5 object-contain" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">Claude AI</p>
-                            <p className="text-[11px] text-orange-100">{locale === "ar" ? "مربوط ويعمل ✓" : "Connected & active ✓"}</p>
-                          </div>
-                        </div>
-
-                        {/* Commands list */}
-                        <div className="p-3 space-y-1.5">
-                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">
-                            {locale === "ar" ? "قول لـ Claude في Desktop App:" : "Tell Claude in Desktop App:"}
-                          </p>
-                          {(locale === "ar" ? [
-                            { icon: "📊", text: "\"اعملي تقرير عن آخر حملة\"" },
-                            { icon: "🚀", text: "\"أنشئ حملة على قائمة VIP\"" },
-                            { icon: "💬", text: "\"فيه كام رسالة واردة؟\"" },
-                            { icon: "👥", text: "\"اعرضلي قوائم الجمهور\"" },
-                          ] : [
-                            { icon: "📊", text: "\"Give me a report on the last campaign\"" },
-                            { icon: "🚀", text: "\"Create a campaign for VIP list\"" },
-                            { icon: "💬", text: "\"How many unread messages?\"" },
-                            { icon: "👥", text: "\"Show me my contact lists\"" },
-                          ]).map((cmd, i) => (
-                            <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800">
-                              <span className="text-sm flex-shrink-0">{cmd.icon}</span>
-                              <p className="text-[11px] text-gray-600 dark:text-gray-300 font-mono leading-snug">{cmd.text}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5 flex items-center justify-between">
-                          <button
-                            onClick={() => { setShowClaudeMenu(false); setActiveSection("api"); }}
-                            className="text-xs text-orange-500 hover:text-orange-600 font-medium"
-                          >
-                            {locale === "ar" ? "إدارة الربط" : "Manage connection"}
-                          </button>
-                          <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                            {locale === "ar" ? "نشط" : "Active"}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
+            {claudeConnected && (
+              <ClaudeHeaderBadge
+                locale={locale}
+                dir={dir}
+                onNavigate={setActiveSection}
+              />
+            )}
 
             <div className="flex items-center gap-2">
               <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
