@@ -432,15 +432,61 @@ async function runTool(name: string, args: any, ownerId: string) {
 
 // ── MCP Protocol handlers ─────────────────────────────────────────────────────
 
-// GET — للتحقق إن الـ server شغال (يستخدمه Claude Desktop)
-export async function GET() {
-  return NextResponse.json({
-    name:        "WhatsPro",
-    version:     "1.0.0",
-    description: "منصة واتساب التسويقي — تحكم في حملاتك ورسائلك مباشرة من Claude",
-    icon:        "https://whatsprosystem.vercel.app/icon.png",
-  });
+
+// ── CORS headers — required for claude.ai web ────────────────────────────────
+const CORS = {
+  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, Mcp-Session-Id",
+};
+
+// OPTIONS — CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
 }
+
+// GET — Claude.ai (SSE) أو discovery (browser/Desktop)
+export async function GET(req: NextRequest) {
+  const accept = req.headers.get("accept") ?? "";
+
+  // SSE mode — claude.ai web
+  if (accept.includes("text/event-stream")) {
+    const encoder = new TextEncoder();
+    const stream  = new ReadableStream({
+      start(controller) {
+        const payload = JSON.stringify({
+          jsonrpc: "2.0",
+          method:  "notifications/initialized",
+          params:  {
+            serverInfo:      { name: "WhatsPro", version: "1.0.0" },
+            protocolVersion: "2024-11-05",
+            capabilities:    { tools: {} },
+          },
+        });
+        controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+        const hb = setInterval(() => {
+          try { controller.enqueue(encoder.encode(": heartbeat\n\n")); }
+          catch { clearInterval(hb); }
+        }, 15_000);
+      },
+    });
+    return new NextResponse(stream, {
+      headers: {
+        ...CORS,
+        "Content-Type":  "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection":    "keep-alive",
+      },
+    });
+  }
+
+  // Discovery mode
+  return NextResponse.json(
+    { name: "WhatsPro", version: "1.0.0", description: "WhatsApp Marketing Platform" },
+    { headers: CORS }
+  );
+}
+
 
 // POST — الطلبات الفعلية من Claude
 export async function POST(req: NextRequest) {
@@ -449,7 +495,7 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { error: { code: -32001, message: "Unauthorized — أضف الـ API Key الخاص بك" } },
-        { status: 401 }
+        { status: 401, headers: CORS }
       );
     }
 
