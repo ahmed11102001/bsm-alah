@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 
-type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook";
+type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude";
 
 // ─── CopyInput ────────────────────────────────────────────────────────────────
 function CopyInput({ value, placeholder }: { value: string; placeholder?: string }) {
@@ -53,6 +53,7 @@ const CARD_VISUALS: CardVisual[] = [
   { id: "easyorders",  icon: <Zap           className="w-6 h-6" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
   { id: "woocommerce", icon: <Globe         className="w-6 h-6" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50",  bgDark: "dark:bg-purple-900/20",  borderLight: "border-purple-200",  borderDark: "dark:border-purple-800"  },
   { id: "webhook",     icon: <Webhook       className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
+  { id: "claude",      icon: <span className="text-xl font-bold">✦</span>,   accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
 ];
 
 function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
@@ -521,6 +522,9 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
   } | null>(null);
   const [verifyToken,  setVerifyToken]  = useState("");
   const [webhookUrl,   setWebhookUrl]   = useState("");
+  const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [claudeLoading, setClaudeLoading] = useState(false);
+  const [claudeCopied,  setClaudeCopied]  = useState<"key"|"config"|null>(null);
 
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
@@ -567,6 +571,7 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
     fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => {});
+    fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => {});
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
   }, [loadShopifyStatus]);
@@ -656,6 +661,36 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
     finally  { setShConnecting(false); }
   };
 
+  const handleGenerateApiKey = async () => {
+    setClaudeLoading(true);
+    try {
+      const r = await fetch("/api/me/api-key", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { toast.error(d.error ?? "خطأ"); return; }
+      setClaudeApiKey(d.apiKey);
+      toast.success("تم إنشاء API Key جديد");
+    } catch { toast.error("خطأ في الاتصال"); }
+    finally { setClaudeLoading(false); }
+  };
+
+  const copyClaudeText = (type: "key" | "config") => {
+    const host = typeof window !== "undefined" ? window.location.host : "whatsprosystem.vercel.app";
+    const text = type === "key"
+      ? claudeApiKey
+      : JSON.stringify({
+          mcpServers: {
+            whatspro: {
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-fetch", `https://${host}/api/mcp`],
+              env: { AUTHORIZATION: `Bearer ${claudeApiKey}` },
+            },
+          },
+        }, null, 2);
+    navigator.clipboard.writeText(text);
+    setClaudeCopied(type);
+    setTimeout(() => setClaudeCopied(null), 2000);
+  };
+
   const CARD_DEFS: {
     id: CardId; title: string; subtitle: string;
     steps: { title: string; desc: string }[];
@@ -697,6 +732,16 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
       title:    api.cards.webhook.title,
       subtitle: api.cards.webhook.subtitle,
       steps:    api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+    },
+    {
+      id: "claude",
+      title:    "Claude AI",
+      subtitle: "اربط واتس برو بـ Claude وتحكم بكل حاجة من الشات",
+      steps: [
+        { title: "أنشئ API Key",        desc: "اضغط 'إنشاء مفتاح جديد' للحصول على مفتاحك الخاص" },
+        { title: "افتح Claude Desktop", desc: "حمّل التطبيق من claude.ai/download ثم افتح الإعدادات" },
+        { title: "الصق الـ Config",     desc: "انسخ إعدادات الربط والصقها في Settings → Developer → MCP" },
+      ],
     },
   ];
 
@@ -770,6 +815,114 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
             )}
             {card.id === "webhook" && (
               <WebhookContent webhookUrl={webhookUrl} verifyToken={verifyToken} hint={api.cards.webhook.hint} />
+            )}
+            {card.id === "claude" && (
+              <div className="space-y-5 pt-1">
+
+                {/* API Key */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                    <Key className="w-3 h-3" /> API Key الخاص بك
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      dir="ltr"
+                      value={claudeApiKey || "لم يتم إنشاء مفتاح بعد"}
+                      className="font-mono text-xs bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                    />
+                    <Button variant="outline" size="icon"
+                      onClick={() => copyClaudeText("key")}
+                      disabled={!claudeApiKey}
+                      className="dark:border-gray-600 dark:text-gray-300 flex-shrink-0"
+                      title="نسخ المفتاح"
+                    >
+                      {claudeCopied === "key"
+                        ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        : <Copy className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={handleGenerateApiKey}
+                      disabled={claudeLoading}
+                      className="bg-orange-500 hover:bg-orange-600 text-white flex-shrink-0"
+                      title={claudeApiKey ? "تجديد المفتاح" : "إنشاء مفتاح"}
+                    >
+                      {claudeLoading
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <RefreshCw className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {claudeApiKey && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> احتفظ بهذا المفتاح سري — لا تشاركه
+                    </p>
+                  )}
+                </div>
+
+                {/* Config */}
+                {claudeApiKey && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                      <Database className="w-3 h-3" /> إعدادات Claude Desktop (انسخ والصق في MCP Config)
+                    </label>
+                    <div className="relative">
+                      <pre className="text-xs font-mono bg-gray-950 text-green-400 rounded-xl p-4 overflow-x-auto leading-relaxed" dir="ltr">
+{`{
+  "mcpServers": {
+    "whatspro": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch",
+               "https://${typeof window !== "undefined" ? window.location.host : "whatsprosystem.vercel.app"}/api/mcp"],
+      "env": {
+        "AUTHORIZATION": "Bearer ${claudeApiKey}"
+      }
+    }
+  }
+}`}
+                      </pre>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyClaudeText("config")}
+                        className="absolute top-2 left-2 text-xs gap-1 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+                      >
+                        {claudeCopied === "config"
+                          ? <><CheckCircle2 className="w-3 h-3 text-green-400" /> تم النسخ</>
+                          : <><Copy className="w-3 h-3" /> نسخ</>}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Download link */}
+                <a
+                  href="https://claude.ai/download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  تحميل Claude Desktop
+                </a>
+
+                {/* What can Claude do */}
+                <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/10 p-4">
+                  <p className="text-xs font-semibold text-orange-700 dark:text-orange-400 mb-2">بعد الربط — تقدر تقول لـ Claude:</p>
+                  <ul className="space-y-1">
+                    {[
+                      "\"اعملي تقرير عن آخر حملة\"",
+                      "\"فيه كام رسالة واردة؟\"",
+                      "\"اعرضلي أفضل الحملات هذا الشهر\"",
+                      "\"كام جهة اتصال عندي؟\"",
+                    ].map((ex, i) => (
+                      <li key={i} className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
+                        <span className="text-orange-400">›</span> {ex}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             )}
           </IntegrationCard>
         ))}

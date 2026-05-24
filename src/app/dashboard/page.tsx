@@ -755,6 +755,14 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
+  const [claudeConnected, setClaudeConnected] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/me/api-key")
+      .then(r => r.ok ? r.json() : { apiKey: "" })
+      .then(d => setClaudeConnected(!!d.apiKey))
+      .catch(() => {});
+  }, []);
   const { t, dir, locale } = useLanguage();
   const [activeSection,  setActiveSection]  = useState("home");
   const [dashData,       setDashData]       = useState<DashboardData | null>(null);
@@ -1021,6 +1029,23 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             </button>
 
             <NotificationBell onNavigate={(section) => setActiveSection(section)} />
+
+            {/* Claude Connected Badge */}
+            {claudeConnected && (
+              <button
+                onClick={() => setActiveSection("api")}
+                title="Claude AI مربوط — اضغط لإدارة الربط"
+                className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                  <span className="text-white text-xs font-bold leading-none">✦</span>
+                </div>
+                {/* pulse dot */}
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
+                  <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+                </span>
+              </button>
+            )}
 
             <div className="flex items-center gap-2">
               <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
