@@ -48,12 +48,12 @@ interface CardVisual {
 }
 
 const CARD_VISUALS: CardVisual[] = [
-  { id: "whatsapp",    icon: <MessageSquare className="w-6 h-6" />, accentColor: "text-green-600 dark:text-green-400",   bgLight: "bg-green-50",   bgDark: "dark:bg-green-900/20",   borderLight: "border-green-200",   borderDark: "dark:border-green-800"   },
-  { id: "shopify",     icon: <ShoppingBag   className="w-6 h-6" />, accentColor: "text-blue-600 dark:text-blue-400",     bgLight: "bg-blue-50",    bgDark: "dark:bg-blue-900/20",    borderLight: "border-blue-200",    borderDark: "dark:border-blue-800"    },
-  { id: "easyorders",  icon: <Zap           className="w-6 h-6" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
-  { id: "woocommerce", icon: <Globe         className="w-6 h-6" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50",  bgDark: "dark:bg-purple-900/20",  borderLight: "border-purple-200",  borderDark: "dark:border-purple-800"  },
-  { id: "webhook",     icon: <Webhook       className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
-  { id: "claude",      icon: <span className="text-xl font-bold">✦</span>,   accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
+  { id: "whatsapp",    icon: <img src="/partners/meta.svg" alt="Meta" className="w-6 h-6 object-contain" />, accentColor: "text-green-600 dark:text-green-400",   bgLight: "bg-green-50",   bgDark: "dark:bg-green-900/20",   borderLight: "border-green-200",   borderDark: "dark:border-green-800"   },
+  { id: "shopify",     icon: <img src="/partners/shopify.svg" alt="Shopify" className="w-6 h-6 object-contain" />, accentColor: "text-blue-600 dark:text-blue-400",     bgLight: "bg-blue-50",    bgDark: "dark:bg-blue-900/20",    borderLight: "border-blue-200",    borderDark: "dark:border-blue-800"    },
+  { id: "easyorders",  icon: <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
+  { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-6 h-6 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50",  bgDark: "dark:bg-purple-900/20",  borderLight: "border-purple-200",  borderDark: "dark:border-purple-800"  },
+  { id: "webhook",     icon: <Webhook className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
+  { id: "claude",      icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
 ];
 
 function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
