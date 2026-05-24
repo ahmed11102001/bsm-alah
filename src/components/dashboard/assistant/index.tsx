@@ -24,6 +24,8 @@ interface Props {
 
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
 const WELCOMED_KEY  = (uid: string) => `wp_assistant_welcomed_${uid}`;
+const LAST_SHOWN_KEY = (uid: string) => `wp_assistant_welcome_last_shown_${uid}`;
+const WELCOME_INTERVAL_MS = 48 * 60 * 60 * 1000;
 
 export default function DashboardAssistant({
   userId, locale, activeSection,
@@ -43,8 +45,17 @@ export default function DashboardAssistant({
     } catch { /* ignore */ }
 
     // هل نعرض الـ welcome banner؟
-    const welcomed = localStorage.getItem(WELCOMED_KEY(userId));
-    if (!welcomed) setShowWelcome(true);
+    const now = Date.now();
+    const lastShownRaw = localStorage.getItem(LAST_SHOWN_KEY(userId));
+    const lastShown = lastShownRaw ? Number(lastShownRaw) : 0;
+
+    if (!lastShown || Number.isNaN(lastShown) || now - lastShown >= WELCOME_INTERVAL_MS) {
+      setShowWelcome(true);
+      try {
+        localStorage.setItem(LAST_SHOWN_KEY(userId), String(now));
+        localStorage.setItem(WELCOMED_KEY(userId), "1");
+      } catch { /* ignore */ }
+    }
   }, [userId]);
 
   // ── جلب context data من الـ assistant API ───────────────────────────────
