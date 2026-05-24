@@ -58,7 +58,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
     mcpCommandsPerMonth: 50,
     scheduledCampaigns: true,
     advancedReports:    true,
-    apiAccess:          false,
+    apiAccess:          true,   // ← Pro يقدر يوصل Claude MCP
     mediaMessages:      true,
     customAudiences:    true,
     storeIntegration:   true,
