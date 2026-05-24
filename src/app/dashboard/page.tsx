@@ -721,11 +721,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         const [activeTab, setActiveTabClaude] = React.useState<"usage" | "buy">("usage");
 
         return (
-          <Card className="border border-[#25D366]/20 dark:border-[#25D366]/15 shadow-sm">
+          <Card className="border border-orange-200 dark:border-orange-900/40 shadow-sm bg-gradient-to-br from-orange-50/50 to-white dark:from-orange-950/10 dark:to-gray-900">
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-[#25D366]" />
+                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">
@@ -734,15 +734,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <p className="text-[11px] text-gray-400">{locale === "ar" ? "يتجدد أول كل شهر" : "Resets monthly"}</p>
                 </div>
               </div>
-              {/* Tabs */}
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 gap-0.5">
-                {(["usage", "buy"] as const).map(tab => (
-                  <button key={tab} onClick={() => setActiveTabClaude(tab)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
-                    {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "شراء إضافي" : "Buy More")}
-                  </button>
-                ))}
-              </div>
+              {/* Tabs — buy tab only for Pro, not Enterprise */}
+              {!isEnt && (
+                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-0.5 gap-0.5">
+                  {(["usage", "buy"] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTabClaude(tab)}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                      {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "ترقية" : "Upgrade")}
+                    </button>
+                  ))}
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="px-4 sm:px-5 pb-5">
@@ -756,7 +758,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       </span>
                     </div>
                     {!isEnt && (
-                      <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-[#25D366]"}`} />
+                      <Progress value={mcpPct} className={`h-2 rounded-full ${mcpPct >= 90 ? "[&>div]:bg-red-500" : mcpPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-orange-500"}`} />
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -772,17 +774,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
-                  <div className="bg-[#25D366]/5 border border-[#25D366]/20 rounded-xl p-4 text-center">
+                  <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl p-4 text-center">
                     <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{locale === "ar" ? "100 أمر Claude إضافي" : "100 extra Claude commands"}</p>
-                    <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "تُضاف فوراً لرصيدك" : "Added instantly to your balance"}</p>
+                    <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude غير محدود ∞" : "Unlimited Claude ∞"}</p>
+                    <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "ترقية لباقة Pro وانتهت القيود" : "Upgrade to Pro — no limits"}</p>
                   </div>
                   <button
-                    onClick={() => window.location.href = "/checkout?addon=mcp100"}
-                    className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2"
+                    onClick={() => window.location.href = "/checkout?plan=pro&price=99"}
+                    className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
                   >
                     <Sparkles className="w-4 h-4" />
-                    {locale === "ar" ? "شراء 100 أمر — 99 ج" : "Buy 100 commands — 99 EGP"}
+                    {locale === "ar" ? "ترقية لـ Pro — 99 ج/شهر" : "Upgrade to Pro — 99 EGP/mo"}
                   </button>
                 </div>
               )}
@@ -1160,25 +1162,84 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             <NotificationBell onNavigate={(section) => setActiveSection(section)} />
 
             {/* Claude Connected Badge */}
-            {claudeConnected && (
-              <button
-                onClick={() => setActiveSection("api")}
-                title="Claude AI مربوط — اضغط لإدارة الربط"
-                className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
-              >
-                <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
-                  <img
-                    src="/partners/claude.svg.svg"
-                    alt="Claude"
-                    className="w-5 h-5 object-contain"
-                  />
+            {claudeConnected && (() => {
+              const [showClaudeMenu, setShowClaudeMenu] = React.useState(false);
+              return (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowClaudeMenu(v => !v)}
+                    title="Claude AI"
+                    className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+                      <img
+                        src="/partners/claude.svg.svg"
+                        alt="Claude"
+                        className="w-5 h-5 object-contain"
+                      />
+                    </div>
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
+                      <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+                    </span>
+                  </button>
+
+                  {showClaudeMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowClaudeMenu(false)} />
+                      <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                            <img src="/partners/claude.svg.svg" alt="" className="w-5 h-5 object-contain" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Claude AI</p>
+                            <p className="text-[11px] text-orange-100">{locale === "ar" ? "مربوط ويعمل ✓" : "Connected & active ✓"}</p>
+                          </div>
+                        </div>
+
+                        {/* Commands list */}
+                        <div className="p-3 space-y-1.5">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">
+                            {locale === "ar" ? "قول لـ Claude في Desktop App:" : "Tell Claude in Desktop App:"}
+                          </p>
+                          {(locale === "ar" ? [
+                            { icon: "📊", text: "\"اعملي تقرير عن آخر حملة\"" },
+                            { icon: "🚀", text: "\"أنشئ حملة على قائمة VIP\"" },
+                            { icon: "💬", text: "\"فيه كام رسالة واردة؟\"" },
+                            { icon: "👥", text: "\"اعرضلي قوائم الجمهور\"" },
+                          ] : [
+                            { icon: "📊", text: "\"Give me a report on the last campaign\"" },
+                            { icon: "🚀", text: "\"Create a campaign for VIP list\"" },
+                            { icon: "💬", text: "\"How many unread messages?\"" },
+                            { icon: "👥", text: "\"Show me my contact lists\"" },
+                          ]).map((cmd, i) => (
+                            <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                              <span className="text-sm flex-shrink-0">{cmd.icon}</span>
+                              <p className="text-[11px] text-gray-600 dark:text-gray-300 font-mono leading-snug">{cmd.text}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5 flex items-center justify-between">
+                          <button
+                            onClick={() => { setShowClaudeMenu(false); setActiveSection("api"); }}
+                            className="text-xs text-orange-500 hover:text-orange-600 font-medium"
+                          >
+                            {locale === "ar" ? "إدارة الربط" : "Manage connection"}
+                          </button>
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                            {locale === "ar" ? "نشط" : "Active"}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {/* pulse dot */}
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
-                  <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
-                </span>
-              </button>
-            )}
+              );
+            })()}
 
             <div className="flex items-center gap-2">
               <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
