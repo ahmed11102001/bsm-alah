@@ -38,6 +38,12 @@ const PARTNERS = [
     accent: "#10A37F",
   },
   {
+    name: "Claude",
+    logoSrc: "/partners/claude.svg.svg",
+    description: { ar: "مساعد ذكي", en: "AI Assistant" },
+    accent: "#D97706",
+  },
+  {
     name: "Elevenlabs",
     logoSrc: "/partners/elevenlabs.svg",
     description: { ar: "Voice AI", en: "Voice AI" },
