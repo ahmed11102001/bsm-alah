@@ -7,8 +7,8 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 // StoreAutomationType defined locally to avoid Prisma client generation dependency
 
-type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
-const VALID_TYPES: StoreAutomationType[] = ["order_confirm", "order_shipped", "promo"];
+type StoreAutomationType = "order_confirm" | "order_shipped" | "promo" | "cart_abandon";
+const VALID_TYPES: StoreAutomationType[] = ["order_confirm", "order_shipped", "promo", "cart_abandon"];
 
 type StoreSource = "shopify" | "easyorders" | "woocommerce";
 
@@ -64,12 +64,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const automations = VALID_TYPES.map((type) => {
     const found = existing.find((a: any) => a.type === type);
     return {
-      id:         found?.id          ?? null,
+      id:          found?.id          ?? null,
       type,
-      isEnabled:  found?.isEnabled   ?? false,
-      templateId: found?.templateId  ?? null,
-      template:   found?.template    ?? null,
-      sentCount:  found?.sentCount   ?? 0,
+      isEnabled:   found?.isEnabled   ?? false,
+      templateId:  found?.templateId  ?? null,
+      template:    found?.template    ?? null,
+      sentCount:   found?.sentCount   ?? 0,
+      failedCount: found?.failedCount ?? 0,
+      lastSentAt:  found?.lastSentAt  ?? null,
     };
   });
 

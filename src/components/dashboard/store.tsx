@@ -9,12 +9,12 @@ import {
   MessageSquare, ChevronDown, ChevronUp, Search, Loader2,
   ToggleLeft, ToggleRight, CheckCircle, ChevronRight, Phone,
   Send, X, CheckSquare, Square, AlertCircle,
-  Copy, Download, Check,
+  Copy, Download, Check, XCircle, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn }   from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
-type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
+type StoreAutomationType = "order_confirm" | "order_shipped" | "promo" | "cart_abandon";
 type Lang = "ar" | "en";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -60,6 +60,8 @@ interface AutomationItem {
   templateId: string | null;
   template:   AutomationTemplate | null;
   sentCount:  number;
+  failedCount: number;
+  lastSentAt: string | null;
 }
 
 interface StoreData {
@@ -70,21 +72,33 @@ interface StoreData {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const AUTO_LABELS: Record<StoreAutomationType, { label: string; desc: string; icon: string }> = {
+const AUTO_LABELS: Record<StoreAutomationType, {
+  label: { ar: string; en: string };
+  desc:  { ar: string; en: string };
+  icon:  string;
+  // Shopify فقط؟ — لو true بنعرض badge للمتاجر الأخرى
+  shopifyOnly?: boolean;
+}> = {
   order_confirm: {
-    label: "تأكيد الأوردر",
-    desc:  "بيبعت للعميل فور إنشاء الطلب",
+    label: { ar: "تأكيد الأوردر",     en: "Order Confirmation" },
+    desc:  { ar: "يُرسل فور إنشاء الطلب", en: "Sent instantly on order creation" },
     icon:  "✅",
   },
   order_shipped: {
-    label: "تحديث الشحن",
-    desc:  "بيبعت لما يتشحن الطلب",
+    label: { ar: "تحديث الشحن",       en: "Shipping Update" },
+    desc:  { ar: "يُرسل لما يتشحن الطلب", en: "Sent when order is shipped" },
     icon:  "🚚",
   },
   promo: {
-    label: "عروض وخصومات",
-    desc:  "ترسله يدوياً لعملاء المتجر",
+    label: { ar: "عروض وخصومات",      en: "Promotions" },
+    desc:  { ar: "ترسله يدوياً للعملاء", en: "Send manually to customers" },
     icon:  "🎁",
+  },
+  cart_abandon: {
+    label: { ar: "استرداد السلة",      en: "Abandoned Cart" },
+    desc:  { ar: "يُرسل بعد ساعة من ترك السلة", en: "Sent 1 hour after cart is left" },
+    icon:  "🛒",
+    shopifyOnly: true,
   },
 };
 
@@ -608,9 +622,16 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
   const [showPromo,    setShowPromo]    = useState(false);
   const [promoSentAdj, setPromoSentAdj] = useState(0);
 
-  const meta = AUTO_LABELS[automation.type];
+  const meta    = AUTO_LABELS[automation.type];
+  const label   = meta.label[lang];
+  const desc    = meta.desc[lang];
+
+  // cart_abandon تشتغل بس مع Shopify
+  const isShopifyOnly    = meta.shopifyOnly === true;
+  const isUnsupported    = isShopifyOnly && storeSource !== "shopify";
 
   async function handleToggle() {
+    if (isUnsupported) return;
     if (!enabled && !templateId) {
       toast.error(lang === "ar" ? "اختر قالباً من القائمة أولاً" : "Choose a template first");
       return;
@@ -623,6 +644,7 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
   }
 
   async function handleTemplateChange(tid: string) {
+    if (isUnsupported) return;
     setTemplateId(tid);
     if (enabled && tid) {
       setSaving(true);
@@ -631,100 +653,161 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
     }
   }
 
-  const isPromo    = automation.type === "promo";
-  const totalSent  = (automation.sentCount ?? 0) + promoSentAdj;
+  const isPromo   = automation.type === "promo";
+  const totalSent = (automation.sentCount ?? 0) + promoSentAdj;
+
+  // تنسيق تاريخ آخر إرسال
+  function formatLastSent(iso: string | null): string {
+    if (!iso) return lang === "ar" ? "لم يُرسل بعد" : "Not sent yet";
+    const d = new Date(iso);
+    return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+  }
 
   return (
     <>
     <div className={cn(
-      "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all",
-      enabled
+      "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all relative",
+      enabled && !isUnsupported
         ? "border-[#25D366]/40 dark:border-[#25D366]/25"
-        : "border-gray-100 dark:border-gray-700"
+        : "border-gray-100 dark:border-gray-700",
+      isUnsupported && "opacity-70"
     )}>
+
+      {/* Badge: Shopify فقط */}
+      {isShopifyOnly && (
+        <span className={cn(
+          "absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full font-medium",
+          storeSource === "shopify"
+            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+            : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+        )}>
+          {storeSource === "shopify"
+            ? (lang === "ar" ? "Shopify ✓" : "Shopify ✓")
+            : (lang === "ar" ? "Shopify فقط" : "Shopify only")}
+        </span>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl leading-none">{meta.icon}</span>
           <div>
-            <p className="font-semibold text-sm text-gray-800 dark:text-white">{meta.label}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{meta.desc}</p>
+            <p className="font-semibold text-sm text-gray-800 dark:text-white">{label}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
           </div>
         </div>
         <button
           onClick={handleToggle}
-          disabled={saving}
-          className="flex-shrink-0 transition-opacity disabled:opacity-50"
-          aria-label={enabled ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation") : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
+          disabled={saving || isUnsupported}
+          className="flex-shrink-0 transition-opacity disabled:opacity-40"
+          aria-label={enabled
+            ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation")
+            : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
         >
           {saving
             ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-            : enabled
+            : enabled && !isUnsupported
               ? <ToggleRight className="w-8 h-8 text-[#25D366]" />
               : <ToggleLeft  className="w-8 h-8 text-gray-300 dark:text-gray-600" />
           }
         </button>
       </div>
 
-      {/* Template Selector */}
-      <div>
-        <label className="text-[11px] text-gray-400 mb-1.5 block">{lang === "ar" ? "القالب المستخدم" : "Used template"}</label>
-        <select
-          value={templateId}
-          onChange={(e) => handleTemplateChange(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
-        >
-          <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
-          {templates.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-        {templates.length === 0 && (
-          <p className="text-[10px] text-orange-500 mt-1.5">
-            {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
-          </p>
-        )}
-      </div>
-
-      {/* زر إرسال العروض — الـ promo فقط */}
-      {isPromo && (
-        <button
-          onClick={() => {
-            if (!enabled || !templateId) {
-              toast.error(lang === "ar" ? "فعّل الأتمتة واختر قالباً أولاً" : "Enable automation and choose a template first");
-              return;
-            }
-            if (customers.length === 0) {
-              toast.error(lang === "ar" ? "لا يوجد عملاء في المتجر" : "No store customers found");
-              return;
-            }
-            setShowPromo(true);
-          }}
-          className={cn(
-            "mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
-            enabled && templateId
-              ? "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20"
-              : "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed border border-transparent"
-          )}
-        >
-          <Send className="w-4 h-4" />
-          {lang === "ar" ? "إرسال لعملاء المتجر" : "Send to store customers"}
-          {customers.length > 0 && (
-            <span className="text-[11px] bg-[#25D366]/20 text-[#25D366] px-1.5 py-0.5 rounded-full">
-              {customers.length}
-            </span>
-          )}
-        </button>
-      )}
-
-      {/* Sent Count */}
-      {totalSent > 0 && (
-        <div className="mt-3 flex items-center gap-1.5">
-          <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
-          <span className="text-[11px] text-gray-400">
-            {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
-          </span>
+      {/* رسالة المتاجر غير المدعومة */}
+      {isUnsupported ? (
+        <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
+          {lang === "ar"
+            ? "⚠️ هذه الأتمتة متاحة فقط لمتاجر Shopify — يستلزم webhook السلة المهجورة"
+            : "⚠️ This automation is available for Shopify stores only — requires abandoned checkout webhook"}
         </div>
+      ) : (
+        <>
+          {/* Template Selector */}
+          <div>
+            <label className="text-[11px] text-gray-400 mb-1.5 block">
+              {lang === "ar" ? "القالب المستخدم" : "Used template"}
+            </label>
+            <select
+              value={templateId}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
+            >
+              <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            {templates.length === 0 && (
+              <p className="text-[10px] text-orange-500 mt-1.5">
+                {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
+              </p>
+            )}
+          </div>
+
+          {/* زر إرسال العروض — الـ promo فقط */}
+          {isPromo && (
+            <button
+              onClick={() => {
+                if (!enabled || !templateId) {
+                  toast.error(lang === "ar" ? "فعّل الأتمتة واختر قالباً أولاً" : "Enable automation and choose a template first");
+                  return;
+                }
+                if (customers.length === 0) {
+                  toast.error(lang === "ar" ? "لا يوجد عملاء في المتجر" : "No store customers found");
+                  return;
+                }
+                setShowPromo(true);
+              }}
+              className={cn(
+                "mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
+                enabled && templateId
+                  ? "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed border border-transparent"
+              )}
+            >
+              <Send className="w-4 h-4" />
+              {lang === "ar" ? "إرسال لعملاء المتجر" : "Send to store customers"}
+              {customers.length > 0 && (
+                <span className="text-[11px] bg-[#25D366]/20 text-[#25D366] px-1.5 py-0.5 rounded-full">
+                  {customers.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* إحصائيات الإرسال */}
+          <div className="mt-3 space-y-1.5">
+            {totalSent > 0 && (
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
+                <span className="text-[11px] text-gray-400">
+                  {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                  {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
+                </span>
+              </div>
+            )}
+            {(automation.failedCount ?? 0) > 0 && (
+              <div className="flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                <span className="text-[11px] text-gray-400">
+                  {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                  {lang === "ar" ? "فشل" : "failed"}
+                </span>
+              </div>
+            )}
+            {automation.lastSentAt && (
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <span className="text-[11px] text-gray-400">
+                  {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
+                  {formatLastSent(automation.lastSentAt)}
+                </span>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
 
@@ -918,13 +1001,13 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </div>
 
         {loadingA ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-44 bg-gray-100 dark:bg-gray-700 rounded-2xl animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-gray-100 dark:bg-gray-700 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {automations.map((auto) => (
               <AutomationCard
                 key={auto.type}

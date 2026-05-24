@@ -91,6 +91,7 @@ const automationLabels: Record<string, string> = {
   order_confirm:  "تأكيد الطلب",
   order_shipped:  "تحديث الشحن",
   promo:          "عرض ترويجي",
+  cart_abandon:   "استرداد السلة",
 };
 
 const storeLabels: Record<string, string> = {

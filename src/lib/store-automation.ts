@@ -11,7 +11,7 @@ import {
   MessageType,
 } from "@/types/enums";
 
-export type StoreAutomationType = "order_confirm" | "order_shipped" | "promo";
+export type StoreAutomationType = "order_confirm" | "order_shipped" | "promo" | "cart_abandon";
 export type StoreSource         = "shopify" | "easyorders" | "woocommerce";
 
 // المتغيرات اللي بتتحقن في القالب
@@ -111,7 +111,12 @@ export async function triggerStoreAutomation(
   if (result.ok) {
     await prisma.storeAutomation.update({
       where: { id: automation.id },
-      data:  { sentCount: { increment: 1 } },
+      data:  { sentCount: { increment: 1 }, lastSentAt: new Date() },
+    }).catch(() => {});
+  } else {
+    await prisma.storeAutomation.update({
+      where: { id: automation.id },
+      data:  { failedCount: { increment: 1 } },
     }).catch(() => {});
   }
 

@@ -10,6 +10,7 @@ import {
   handleShopifyOrderCreated,
   handleShopifyOrderFulfilled,
   handleShopifyOrderUpdated,
+  handleShopifyCartAbandoned,
 } from "@/inngest/shopify-functions";
 import { handleEasyOrderReceived } from "@/inngest/easy-orders-functions";
 import {
@@ -32,6 +33,7 @@ const inngestHandler = serve({
     handleShopifyOrderCreated,
     handleShopifyOrderFulfilled,
     handleShopifyOrderUpdated,
+    handleShopifyCartAbandoned,
     handleEasyOrderReceived,
     handleWooOrderCreated,
     handleWooOrderFulfilled,

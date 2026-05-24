@@ -245,6 +245,8 @@ function ShopifyContent({
             📌 <strong>Settings → Notifications → Webhooks → Create webhook</strong>
             <br />
             اختر <strong>Order creation</strong> والصق الـ URL — كرر لـ <strong>Order fulfillment</strong>
+            <br />
+            لتفعيل أتمتة السلة 🛒: كرر أيضاً لـ <strong>Checkout creation</strong> و <strong>Checkout update</strong>
           </p>
         </div>
       </div>

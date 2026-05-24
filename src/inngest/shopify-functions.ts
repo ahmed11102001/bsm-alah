@@ -113,8 +113,135 @@ export const handleShopifyOrderFulfilled = inngest.createFunction(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Function 3: Order Updated — تحديث الحالة العامة
+// Function 4: Cart Abandoned — استنى ساعة، تحقق، وابعت رسالة
 // ─────────────────────────────────────────────────────────────────────────────
+export const handleShopifyCartAbandoned = inngest.createFunction(
+  {
+    id:      "shopify-cart-abandoned",
+    retries: 2,
+    triggers: [{ event: "shopify/cart.abandoned" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const {
+      userId,
+      shopifyStoreId,
+      checkoutToken,
+      customerPhone,
+      customerName,
+      cartTotal,
+      cartItems,
+      recoveryUrl,
+    } = event.data;
+
+    if (!customerPhone || !checkoutToken) {
+      return { skipped: true, reason: "missing_data" };
+    }
+
+    // ── استنى ساعة قبل الإرسال ───────────────────────────────────────────────
+    await step.sleep("wait-before-sending", "1h");
+
+    // ── تحقق: هل السلة اتحولت لأوردر؟ ──────────────────────────────────────
+    const cart = await step.run("check-if-recovered", async () => {
+      return prisma.abandonedCart.findFirst({
+        where:  { externalId: checkoutToken, userId },
+        select: { id: true, recoveredAt: true, sentAt: true },
+      });
+    });
+
+    // لو اشترى فعلاً → لا ترسل
+    if (cart?.recoveredAt) {
+      console.log(`[CartAbandon] Already recovered — ${customerPhone}`);
+      return { skipped: true, reason: "order_completed" };
+    }
+
+    // لو اتبعتت رسالة من قبل (checkouts/update بيجي أكتر من مرة) → تجاهل
+    if (cart?.sentAt) {
+      console.log(`[CartAbandon] Already sent — ${customerPhone}`);
+      return { skipped: true, reason: "already_sent" };
+    }
+
+    // ── تحقق تاني: هل في أوردر بنفس رقم الموبايل في آخر ساعتين؟ ──────────
+    // ده fallback لو ما انحفظش checkout_token في الأوردر
+    const recentOrder = await step.run("check-recent-order", async () => {
+      return prisma.storeOrder.findFirst({
+        where: {
+          userId,
+          customerPhone,
+          source: "shopify",
+          orderedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        },
+        select: { id: true },
+      });
+    });
+
+    if (recentOrder) {
+      // علّم السلة كـ recovered
+      if (cart?.id) {
+        await prisma.abandonedCart.update({
+          where: { id: cart.id },
+          data:  { recoveredAt: new Date() },
+        }).catch(() => {});
+      }
+      console.log(`[CartAbandon] Recent order found — skipping ${customerPhone}`);
+      return { skipped: true, reason: "recent_order_found" };
+    }
+
+    // ── ابعت رسالة السلة ─────────────────────────────────────────────────────
+    const contact = await step.run("get-contact", async () => {
+      return prisma.contact.findFirst({
+        where:  { phone: customerPhone, userId },
+        select: { id: true },
+      });
+    });
+
+    if (!contact) {
+      console.log(`[CartAbandon] Contact not found — ${customerPhone}`);
+      return { skipped: true, reason: "no_contact" };
+    }
+
+    // أهم منتج في السلة (أول عنصر)
+    const firstItem = Array.isArray(cartItems) && cartItems.length > 0
+      ? (cartItems[0] as any)?.title ?? ""
+      : "";
+
+    const result = await step.run("send-cart-message", async () => {
+      const { triggerStoreAutomation } = await import("@/lib/store-automation");
+      return triggerStoreAutomation({
+        userId,
+        automationType: "cart_abandon",
+        storeSource:    "shopify",
+        storeId:        shopifyStoreId,
+        customerPhone,
+        contactId:      contact.id,
+        // {{1}} اسم العميل  {{2}} المنتج  {{3}} الإجمالي  {{4}} رابط الاسترداد
+        templateVars: {
+          body: [
+            customerName || "عزيزي العميل",
+            firstItem,
+            String(cartTotal ?? ""),
+            recoveryUrl ?? "",
+          ],
+        },
+      });
+    });
+
+    // سجّل sentAt في السلة
+    if (result.sent && cart?.id) {
+      await prisma.abandonedCart.update({
+        where: { id: cart.id },
+        data:  { sentAt: new Date() },
+      }).catch(() => {});
+    }
+
+    console.log(
+      result.sent
+        ? `[CartAbandon] ✓ Sent to ${customerPhone}`
+        : `[CartAbandon] ✗ Failed — ${result.reason}`
+    );
+
+    return { sent: result.sent, reason: result.reason };
+  }
+);
 export const handleShopifyOrderUpdated = inngest.createFunction(
   {
     id:      "shopify-order-updated",

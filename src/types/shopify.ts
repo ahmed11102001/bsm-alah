@@ -75,6 +75,38 @@ export interface ShopifyCustomer {
   updated_at?:     string | null;
 }
 
+// ─── Checkout (abandoned cart webhook payload) ─────────────────────────────────
+
+export interface ShopifyCheckoutLineItem {
+  title?:    string | null;
+  quantity?: number;
+  price?:    string | null;
+  sku?:      string | null;
+}
+
+export interface ShopifyCheckout {
+  id:              number;
+  token:           string;           // ← الـ unique identifier
+  email?:          string | null;
+  phone?:          string | null;
+  total_price?:    string | null;
+  subtotal_price?: string | null;
+  currency?:       string | null;
+  abandoned_checkout_url?: string | null;  // رابط استكمال الشراء
+  created_at?:     string | null;
+  updated_at?:     string | null;
+  customer?: {
+    id?:         number;
+    email?:      string | null;
+    phone?:      string | null;
+    first_name?: string | null;
+    last_name?:  string | null;
+  } | null;
+  billing_address?:  ShopifyAddress | null;
+  shipping_address?: ShopifyAddress | null;
+  line_items?: ShopifyCheckoutLineItem[];
+}
+
 // ─── Type Guards ───────────────────────────────────────────────────────────────
 // بنتحقق إن الـ payload جاي صح من Shopify قبل ما نعالجه
 
@@ -93,5 +125,14 @@ export function isShopifyCustomer(payload: unknown): payload is ShopifyCustomer 
     payload !== null &&
     "id" in payload &&
     typeof (payload as ShopifyCustomer).id === "number"
+  );
+}
+
+export function isShopifyCheckout(payload: unknown): payload is ShopifyCheckout {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "token" in payload &&
+    typeof (payload as ShopifyCheckout).token === "string"
   );
 }

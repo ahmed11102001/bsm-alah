@@ -511,6 +511,8 @@ model StoreAutomation {
   isEnabled          Boolean             @default(false)
   templateId         String?
   sentCount          Int                 @default(0)
+  failedCount        Int                 @default(0)
+  lastSentAt         DateTime?
   shopifyStoreId     String?
   easyOrdersStoreId  String?
   wooCommerceStoreId String?
@@ -529,6 +531,30 @@ model StoreAutomation {
   @@index([shopifyStoreId])
   @@index([easyOrdersStoreId])
   @@index([wooCommerceStoreId])
+}
+
+// ── السلة المهجورة — Shopify فقط في المرحلة الأولى ──────────────────────────
+model AbandonedCart {
+  id            String    @id @default(cuid())
+  userId        String
+  source        String    // "shopify" | "woocommerce"
+  externalId    String    // checkout token / id
+  customerPhone String
+  customerName  String?
+  cartTotal     Float?
+  cartItems     Json?     // [{ title, quantity, price }]
+  recoveryUrl   String?   // رابط إكمال الشراء من Shopify
+  sentAt        DateTime? // وقت إرسال رسالة السلة
+  recoveredAt   DateTime? // وقت الشراء الفعلي بعد الرسالة
+  shopifyStoreId     String?
+  wooCommerceStoreId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([source, externalId, userId])
+  @@index([userId])
+  @@index([customerPhone, userId])
+  @@index([shopifyStoreId])
 }
 
 model Article {
@@ -624,6 +650,7 @@ enum StoreAutomationType {
   order_confirm
   order_shipped
   promo
+  cart_abandon
 }
 
 enum OrderSource {

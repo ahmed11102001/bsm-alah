@@ -8,8 +8,10 @@ import { attributeOrderToCampaign }  from "@/lib/attribution";
 import {
   type ShopifyOrder,
   type ShopifyCustomer,
+  type ShopifyCheckout,
   isShopifyOrder,
   isShopifyCustomer,
+  isShopifyCheckout,
 } from "@/types/shopify";
 import { triggerStoreAutomation } from "@/lib/store-automation";
 
@@ -87,6 +89,16 @@ export async function POST(req: NextRequest) {
         }
         break;
 
+      // ── السلة المهجورة — Abandoned Checkout ──────────────────────────────
+      case "checkouts/create":
+      case "checkouts/update":
+        if (isShopifyCheckout(payload)) {
+          await handleCheckoutAbandoned(payload, userId, shopifyStore.id);
+        } else {
+          console.warn(`[Shopify WH] ${topic} — invalid checkout payload`);
+        }
+        break;
+
       case "customers/create":
         if (isShopifyCustomer(payload)) {
           await handleCustomerCreated(payload, userId);
@@ -128,6 +140,13 @@ async function handleOrderCreated(
       return;
     }
 
+    // ── Bugfix: تجاهل الأوردرات الملغية أو المرتجعة ────────────────────────
+    const SKIP_STATUSES = ["voided", "refunded", "expired"];
+    if (SKIP_STATUSES.includes(order.financial_status ?? "")) {
+      console.log(`[Shopify] Order ${order.id} skipped — financial_status: ${order.financial_status}`);
+      return;
+    }
+
     const cleanPhone   = rawPhone.replace(/\D/g, "");
     const customerName = [order.customer?.first_name, order.customer?.last_name]
       .filter(Boolean).join(" ") || "عميل";
@@ -141,7 +160,8 @@ async function handleOrderCreated(
       create: { phone: cleanPhone, userId, name: customerName },
     });
 
-    // حفظ StoreOrder
+    // حفظ StoreOrder مع checkout_token عشان نتحقق من السلة المهجورة لاحقاً
+    const checkoutToken = (order as any).checkout_token ?? null;
     const storeOrder = await prisma.storeOrder.upsert({
       where:  { source_externalId_userId: { source: "shopify", externalId, userId } },
       update: { status: order.financial_status ?? "pending", total: revenue },
@@ -158,8 +178,18 @@ async function handleOrderCreated(
         status:        order.financial_status ?? "pending",
         shopifyStoreId,
         orderedAt:     order.created_at ? new Date(order.created_at) : new Date(),
+        // نحفظ checkout_token في rawData عشان أتمتة السلة تتحقق منه
+        rawData:       checkoutToken ? { checkoutToken } : undefined,
       },
     });
+
+    // لو في checkout_token → علّم السلة إنها اتحولت لأوردر (recovered)
+    if (checkoutToken) {
+      await prisma.abandonedCart.updateMany({
+        where: { externalId: checkoutToken, userId, recoveredAt: null },
+        data:  { recoveredAt: new Date() },
+      }).catch(() => {});
+    }
 
     // Revenue Attribution
     await attributeOrderToCampaign({
@@ -200,7 +230,6 @@ async function handleOrderCreated(
       customerPhone:  cleanPhone,
       contactId:      contact.id,
       // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
-      // اليوزر يرتّب القالب في ميتا بنفس الترتيب ده
       templateVars: {
         body: [
           customerName,
@@ -314,6 +343,83 @@ async function handleOrderFulfilled(
     }
   } catch (error) {
     console.error("[Shopify] handleOrderFulfilled error:", error);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Abandoned Checkout — حفظ السلة + إرسال Inngest event بعد delay
+// ═══════════════════════════════════════════════════════════════════════════════
+async function handleCheckoutAbandoned(
+  checkout: ShopifyCheckout,
+  userId: string,
+  shopifyStoreId: string,
+) {
+  try {
+    const rawPhone =
+      checkout.customer?.phone ??
+      checkout.billing_address?.phone ??
+      checkout.phone ?? "";
+
+    if (!rawPhone) {
+      console.log(`[Shopify] Checkout ${checkout.token} — no phone, skipping`);
+      return;
+    }
+
+    const cleanPhone   = rawPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 9) return;
+
+    const customerName = [checkout.customer?.first_name, checkout.customer?.last_name]
+      .filter(Boolean).join(" ") || "عميل";
+    const cartTotal  = parseFloat(checkout.total_price ?? "0") || 0;
+    const externalId = checkout.token;
+
+    // حفظ / تحديث السلة في DB
+    await prisma.abandonedCart.upsert({
+      where:  { source_externalId_userId: { source: "shopify", externalId, userId } },
+      update: {
+        cartTotal,
+        cartItems:  (checkout.line_items ?? []) as any,
+        recoveryUrl: checkout.abandoned_checkout_url ?? null,
+        updatedAt:  new Date(),
+      },
+      create: {
+        userId,
+        source:        "shopify",
+        externalId,
+        customerPhone: cleanPhone,
+        customerName,
+        cartTotal,
+        cartItems:     (checkout.line_items ?? []) as any,
+        recoveryUrl:   checkout.abandoned_checkout_url ?? null,
+        shopifyStoreId,
+      },
+    });
+
+    // Upsert Contact عشان نقدر نبعتله رسالة
+    await prisma.contact.upsert({
+      where:  { phone_userId: { phone: cleanPhone, userId } },
+      update: { name: customerName !== "عميل" ? customerName : undefined },
+      create: { phone: cleanPhone, userId, name: customerName },
+    }).catch(() => {});
+
+    // Inngest event — هيستنى ساعة ويتحقق إذا اشترى
+    await inngest.send({
+      name: "shopify/cart.abandoned",
+      data: {
+        userId,
+        shopifyStoreId,
+        checkoutToken: externalId,
+        customerPhone: cleanPhone,
+        customerName,
+        cartTotal,
+        cartItems: checkout.line_items ?? [],
+        recoveryUrl: checkout.abandoned_checkout_url ?? null,
+      },
+    });
+
+    console.log(`[Shopify] 🛒 Checkout saved — ${cleanPhone} — ${cartTotal}`);
+  } catch (error) {
+    console.error("[Shopify] handleCheckoutAbandoned error:", error);
   }
 }
 
