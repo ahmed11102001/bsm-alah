@@ -106,6 +106,41 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "list_templates",
+    description: "قائمة القوالب المعتمدة المتاحة للإرسال مع أسمائها وحالتها",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "create_campaign",
+    description: "إنشاء وإطلاق حملة تسويقية جديدة — يمكن إرسالها فوراً أو جدولتها لوقت محدد",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "اسم الحملة",
+        },
+        template_name: {
+          type: "string",
+          description: "اسم القالب المعتمد من Meta — استخدم list_templates لمعرفة الأسماء المتاحة",
+        },
+        audience_id: {
+          type: "string",
+          description: "ID قائمة الاتصال — استخدم list_contacts لمعرفة الـ IDs المتاحة",
+        },
+        scheduled_at: {
+          type: "string",
+          description: "وقت الجدولة بصيغة ISO 8601 — مثال: 2026-05-25T18:00:00 — اتركه فارغاً للإرسال الفوري",
+        },
+      },
+      required: ["name", "template_name", "audience_id"],
+    },
+  },
 ];
 
 // ── Tool handlers ─────────────────────────────────────────────────────────────
@@ -301,6 +336,94 @@ async function runTool(name: string, args: any, ownerId: string) {
       معدل_التوصيل:   sent > 0 ? `${+((delivered / sent) * 100).toFixed(1)}%` : "0%",
       معدل_القراءة:   sent > 0 ? `${+((read      / sent) * 100).toFixed(1)}%` : "0%",
       معدل_الرد:      sent > 0 ? `${+((inbound   / sent) * 100).toFixed(1)}%` : "0%",
+    };
+  }
+
+  // ── list_templates ───────────────────────────────────────────────────────
+  if (name === "list_templates") {
+    const templates = await prisma.template.findMany({
+      where:   { userId: ownerId, status: "APPROVED" },
+      orderBy: { name: "asc" },
+      select:  { id: true, name: true, language: true, category: true },
+    });
+
+    if (templates.length === 0)
+      return { رسالة: "لا توجد قوالب معتمدة — تأكد من مزامنة القوالب من صفحة الربط" };
+
+    return templates.map(t => ({
+      id:       t.id,
+      الاسم:    t.name,
+      اللغة:    t.language ?? "ar",
+      الفئة:    t.category ?? "—",
+    }));
+  }
+
+  // ── create_campaign ──────────────────────────────────────────────────────
+  if (name === "create_campaign") {
+    const { name: campaignName, template_name, audience_id, scheduled_at } = args;
+
+    if (!campaignName?.trim())
+      return { error: "اسم الحملة مطلوب" };
+    if (!template_name)
+      return { error: "اسم القالب مطلوب — استخدم list_templates لمعرفة القوالب المتاحة" };
+    if (!audience_id)
+      return { error: "ID قائمة الاتصال مطلوب — استخدم list_contacts لمعرفة القوائم المتاحة" };
+
+    // جيب أرقام الجمهور
+    const audience = await prisma.audience.findFirst({
+      where:   { id: audience_id, userId: ownerId },
+      include: { contacts: { select: { phone: true } } },
+    });
+
+    if (!audience)
+      return { error: `قائمة الاتصال "${audience_id}" غير موجودة` };
+
+    if (audience.contacts.length === 0)
+      return { error: "القائمة المحددة فارغة — أضف جهات اتصال أولاً" };
+
+    const numbers = audience.contacts.map(c => c.phone);
+
+    // بعت request لـ campaigns API مع نفس الـ apiKey للمصادقة
+    const host = process.env.NEXTAUTH_URL ?? "https://whatsprosystem.vercel.app";
+
+    const apiKey = await prisma.user.findUnique({
+      where:  { id: ownerId },
+      select: { apiKey: true },
+    });
+
+    const res = await fetch(`${host}/api/campaigns`, {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "x-mcp-user-id": ownerId,  // internal header — validated inside
+      },
+      body: JSON.stringify({
+        name:        campaignName.trim(),
+        templateName: template_name,
+        numbers,
+        scheduledAt: scheduled_at ?? null,
+        _mcpInternal: true,
+        _mcpOwnerId:  ownerId,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok)
+      return { error: data.error ?? "فشل إنشاء الحملة" };
+
+    return {
+      نجاح:           true,
+      رسالة:          scheduled_at
+        ? `✅ تم جدولة الحملة "${campaignName}" لـ ${new Date(scheduled_at).toLocaleString("ar-EG")}`
+        : `✅ تم إطلاق الحملة "${campaignName}" — جاري الإرسال`,
+      اسم_الحملة:     campaignName,
+      عدد_المستلمين:  numbers.length,
+      القالب:         template_name,
+      الجمهور:        audience.name,
+      موعد_الإرسال:   scheduled_at
+        ? new Date(scheduled_at).toLocaleString("ar-EG")
+        : "فوري",
     };
   }
 

@@ -130,12 +130,27 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/campaigns ──────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    // ── MCP internal call bypass ──────────────────────────────────────────
+    const body = await req.json();
+    if (body._mcpInternal === true && body._mcpOwnerId) {
+      const mcpUserId = body._mcpOwnerId as string;
+      // تحقق إن المستخدم موجود فعلاً
+      const mcpUser = await prisma.user.findUnique({
+        where: { id: mcpUserId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!mcpUser)
+        return NextResponse.json({ error: "مستخدم غير موجود" }, { status: 401 });
+      // نظّف الـ internal fields قبل ما نمرر الـ body
+      const { _mcpInternal: _, _mcpOwnerId: __, ...cleanBody } = body;
+      return handleCreate(mcpUserId, cleanBody);
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user)
       return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
 
     const userId = resolveUserId(session);
-    const body   = await req.json();
 
     if (body._action === "repeat" && body.campaignId)
       return handleRepeat(userId, body.campaignId);
