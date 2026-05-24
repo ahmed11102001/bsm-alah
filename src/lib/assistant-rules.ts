@@ -33,7 +33,9 @@ export interface AssistantRule {
   cooldownHours: number;          // 0 = دايماً يظهر, 24 = مرة في اليوم
   condition:     (ctx: RuleContext) => boolean;
   title:         Record<"ar" | "en", string | ((ctx: RuleContext) => string)>;
+  shortTitle?:   Record<"ar" | "en", string>;  // للـ Banner — مختصر
   message:       Record<"ar" | "en", string | ((ctx: RuleContext) => string)>;
+  shortMessage?: Record<"ar" | "en", string>;  // للـ Banner — سطر واحد
   tip?:          Record<"ar" | "en", string | ((ctx: RuleContext) => string)>;  // نصيحة إضافية
   action?: {
     label:  Record<"ar" | "en", string>;
@@ -63,7 +65,9 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     title:   { ar: "⚠️ الواتساب مش متوصل",              en: "⚠️ WhatsApp Not Connected"           },
     message: { ar: "مش هتقدر تبعت أو تستقبل رسائل — لازم توصل حسابك الأول.", en: "You can't send or receive messages until you connect your WhatsApp account." },
     tip:     { ar: "تأكد إن الـ WhatsApp Business API متفعّل من Meta for Developers", en: "Make sure WhatsApp Business API is activated from Meta for Developers" },
-    action:  { label: { ar: "ربط الواتساب الآن", en: "Connect WhatsApp Now" }, target: "home", type: "navigate" },
+    shortTitle:   { ar: "⚠️ الواتساب مش متوصل", en: "⚠️ WhatsApp Not Connected" },
+    shortMessage: { ar: "مش هتقدر تبعت أو تستقبل رسائل.", en: "You can't send or receive messages." },
+    action:  { label: { ar: "ربط الواتساب الآن", en: "Connect WhatsApp Now" }, target: "api", type: "navigate" },
   },
 
   // ── 🔴 CRITICAL: محادثات عدت 24 ساعة ────────────────────────────────────
@@ -87,6 +91,8 @@ export const ASSISTANT_RULES: AssistantRule[] = [
       en: "Always use an approved Template to re-open a conversation — this is Meta's policy, not optional.",
     },
     action:         { label: { ar: "اختار قالب وابعته", en: "Pick a Template" },             target: "templates",  type: "navigate" },
+    shortTitle:   { ar: "🚨 محادثات منتهية الـ 24 ساعة", en: "🚨 Expired conversations" },
+    shortMessage: { ar: "ابعت template فقط — ممنوع رسائل عادية.", en: "Send template only — regular messages are blocked." },
     secondaryAction:{ label: { ar: "شوف المحادثات المتأثرة", en: "View Affected Chats" },    target: "chat",       type: "navigate" },
   },
 
@@ -100,7 +106,9 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     condition:     ctx => ctx.totalContacts === 0,
     title:   { ar: "📋 مفيش جهات اتصال بعد",          en: "📋 No Contacts Yet"                 },
     message: { ar: "من غير contacts مش هتقدر تبعت حملات أو ترد على عملاء — ابدأ برفع قائمة العملاء.", en: "Without contacts you can't run campaigns or reply to customers — start by importing your list." },
-    action:  { label: { ar: "استيراد جهات الاتصال",  en: "Import Contacts" },  target: "contacts", type: "navigate" },
+    shortTitle:   { ar: "📋 مفيش جهات اتصال", en: "📋 No Contacts" },
+    shortMessage: { ar: "أضف عملاءك لتشغيل الحملات.", en: "Add customers to run campaigns." },
+    action:  { label: { ar: "استيراد جهات الاتصال", en: "Import Contacts" }, target: "contacts", type: "navigate" },
   },
 
   // ── 🟡 WARNING: نسبة delivery وحشة ─────────────────────────────────────
@@ -130,6 +138,8 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     condition:     ctx => ctx.automationCount === 0,
     title:   { ar: "🤖 مفيش أتمتة مفعّلة",             en: "🤖 No Automation Active"            },
     message: { ar: "مش عامل أي automation rules — يعني بترد يدوي على كل رسالة. جرب تضيف رد تلقائي على الرسالة الأولى.", en: "You have no automation rules — you're replying manually to everything. Try adding an auto-reply for first messages." },
+    shortTitle:   { ar: "🤖 مفيش أتمتة", en: "🤖 No Automation" },
+    shortMessage: { ar: "كل الردود يدوية — فعّل automation.", en: "All replies are manual — enable automation." },
     action:  { label: { ar: "إضافة أول Rule", en: "Add First Rule" }, target: "automation", type: "navigate" },
   },
 
