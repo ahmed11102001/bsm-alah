@@ -1037,8 +1037,12 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 title="Claude AI مربوط — اضغط لإدارة الربط"
                 className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
               >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <span className="text-white text-xs font-bold leading-none">✦</span>
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+                  <img
+                    src="/partners/claude.svg.svg"
+                    alt="Claude"
+                    className="w-5 h-5 object-contain"
+                  />
                 </div>
                 {/* pulse dot */}
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
