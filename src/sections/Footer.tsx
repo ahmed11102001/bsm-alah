@@ -1,4 +1,4 @@
-﻿import { MessageCircle, Mail, Phone, MapPin, Facebook, Instagram } from 'lucide-react';
+﻿import { Mail, Phone, MapPin, Facebook, Instagram } from 'lucide-react';
 import { t, tr, type Lang } from "@/lib/translations";
 
 const socialLinks = [
@@ -32,10 +32,10 @@ export default function Footer({ lang }: FooterProps) {
           <div className="lg:col-span-5 pr-0 lg:pr-8">
             <div className="flex items-center gap-3 mb-6">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#25D366]/20"
+                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#25D366]/20 overflow-hidden"
                 style={{ background: "#25D366" }}
               >
-                <MessageCircle className="w-6 h-6 text-white" />
+                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span className="text-2xl font-bold tracking-tight">
                 {isAr ? "وني" : "WANI"}
@@ -44,8 +44,8 @@ export default function Footer({ lang }: FooterProps) {
 
             <p className="text-base leading-relaxed mb-8" style={{ color: "#8fa89a", maxWidth: "320px" }}>
               {isAr
-                ? "أرسل، أتمت، واكسب أكثر عبر واتساب — كل ده في مكان واحد."
-                : "Send, automate, and earn more via WhatsApp — all in one place."}
+                ? "ملوك واتساب API"
+                : "The kings of WhatsApp API"}
             </p>
 
             <div className="flex flex-col gap-4">
@@ -136,3 +136,4 @@ export default function Footer({ lang }: FooterProps) {
     </footer>
   );
 }
+
