@@ -4,9 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Loader2, ChevronDown } from "lucide-react";
 import type { Lang } from "@/lib/translations";
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 // Types
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 interface Message {
   id:   string;
   role: "bot" | "user";
@@ -22,144 +22,144 @@ interface Selections {
 
 const STORAGE_KEY = "wp_widget_v1"; // "dismissed" | "done"
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 // Flow content  (AR + EN)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 const FLOW = {
   ar: {
-    title:    "Ù…Ø³Ø§Ø¹Ø¯ ÙˆØ§ØªØ³ +AI",
-    online:   "Ù…ØªØµÙ„ Ø§Ù„Ø¢Ù†",
-    powered:  "Ù…Ø¯Ø¹ÙˆÙ… Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ",
-    proactive:"Ø¹Ø§ÙŠØ² ØªØ¹Ø±Ù Ø¥Ø°Ø§ ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù…Ù†Ø§Ø³Ø¨ Ù„Ù†Ø´Ø§Ø·ÙƒØŸ ðŸ‘‹",
+    title:    "المساعد الذكي وني",
+    online:   "متصل الآن",
+    powered:  "مدعوم بالذكاء الاصطناعي",
+    proactive:"عايز تعرف إذا وني مناسب لنشاطك؟ 👋",
 
-    welcome:  "ðŸ‘‹ Ø£Ù‡Ù„Ø§Ù‹ Ø¨ÙŠÙƒ ÙÙŠ ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ!\nØ£Ù‚Ø¯Ø± Ø£Ø³Ø§Ø¹Ø¯Ùƒ ØªØ¹Ø±Ù Ø¥Ø°Ø§ Ø§Ù„Ø³ÙŠØ³ØªÙ… Ù…Ù†Ø§Ø³Ø¨ Ù„Ù†Ø´Ø§Ø·Ùƒ ÙÙŠ Ø¯Ù‚ÙŠÙ‚Ø© ÙˆØ§Ø­Ø¯Ø© Ø¨Ø³.",
+    welcome:  "👋اهلا بك ف وني\nأقدر أساعدك تعرف إذا السيستم مناسب لنشاطك في دقيقة واحدة بس.",
     welcomeButtons: [
-      { label: "Ø§Ø¨Ø¯Ø£ ðŸš€",   value: "start"  },
-      { label: "Ù„Ø§Ø­Ù‚Ø§Ù‹",    value: "later"  },
+      { label: "ابدأ 🚀",   value: "start"  },
+      { label: "لاحقاً",    value: "later"  },
     ],
 
-    step1Q: "Ù…Ù…ØªØ§Ø²! Ù†Ø´Ø§Ø·Ùƒ Ø¥ÙŠÙ‡ØŸ ðŸ‘‡",
+    step1Q: "ممتاز! نشاطك إيه؟ 👇",
     step1Buttons: [
-      { label: "ðŸ›ï¸ Ù…ØªØ¬Ø± Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ", value: "store"       },
-      { label: "ðŸ¢ Ø´Ø±ÙƒØ© Ø®Ø¯Ù…Ø§Øª",    value: "services"    },
-      { label: "ðŸ¥ Ø¹ÙŠØ§Ø¯Ø©",          value: "clinic"      },
-      { label: "ðŸ  Ø¹Ù‚Ø§Ø±Ø§Øª",         value: "real_estate" },
-      { label: "ðŸ• Ù…Ø·Ø¹Ù…",           value: "restaurant"  },
-      { label: "ðŸ’¼ Ù†Ø´Ø§Ø· Ø¢Ø®Ø±",       value: "other"       },
+      { label: "🛍️ متجر إلكتروني", value: "store"       },
+      { label: "🏢 شركة خدمات",    value: "services"    },
+      { label: "🏥 عيادة",          value: "clinic"      },
+      { label: "🏠 عقارات",         value: "real_estate" },
+      { label: "🍕 مطعم",           value: "restaurant"  },
+      { label: "💼 نشاط آخر",       value: "other"       },
     ],
     valueProps: {
-      store:       "ðŸš€ Ù…Ù…ØªØ§Ø²! Ø£ØºÙ„Ø¨ Ø§Ù„Ù…ØªØ§Ø¬Ø± Ø¨ØªØ³ØªØ®Ø¯Ù… ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù„ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§ØªØŒ Ø§Ø³ØªØ±Ø¬Ø§Ø¹ Ø§Ù„Ø³Ù„Ø§Øª Ø§Ù„Ù…ØªØ±ÙˆÙƒØ©ØŒ ÙˆØ²ÙŠØ§Ø¯Ø© Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹.",
-      services:    "ðŸš€ Ù…Ù…ØªØ§Ø²! Ø´Ø±ÙƒØ§Øª Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø¨ØªØ³ØªØ®Ø¯Ù… ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ø§Ù„Ù„ÙŠØ¯Ø² ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ ÙˆØªÙ‚Ù„ÙŠÙ„ ÙˆÙ‚Øª Ø§Ù„Ø±Ø¯ Ø¬Ø¯Ø§Ù‹.",
-      clinic:      "ðŸš€ Ù…Ù…ØªØ§Ø²! Ø§Ù„Ø¹ÙŠØ§Ø¯Ø§Øª Ø¨ØªØ³ØªØ®Ø¯Ù… ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù„ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…ÙˆØ§Ø¹ÙŠØ¯ ÙˆØªÙ‚Ù„ÙŠÙ„ Ø§Ù„Ù€ no-shows Ø¨Ù†Ø³Ø¨Ø© ØªØµÙ„ Ù„Ù€ 60%.",
-      real_estate: "ðŸš€ Ù…Ù…ØªØ§Ø²! Ø§Ù„Ù…Ø·ÙˆØ±ÙŠÙ† Ø§Ù„Ø¹Ù‚Ø§Ø±ÙŠÙŠÙ† Ø¨ÙŠØ³ØªØ®Ø¯Ù…ÙˆØ§ ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…Ù‡ØªÙ…ÙŠÙ† Ø¹Ù„Ù‰ Ù…Ø¯Ø§Ø± Ø§Ù„Ø³Ø§Ø¹Ø©.",
-      restaurant:  "ðŸš€ Ù…Ù…ØªØ§Ø²! Ø§Ù„Ù…Ø·Ø§Ø¹Ù… Ø¨ØªØ³ØªØ®Ø¯Ù… ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù„ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§ØªØŒ Ø§Ù„ØªÙˆØµÙŠÙ„ØŒ ÙˆØ§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ø®Ø§ØµØ©.",
-      other:       "ðŸš€ Ù…Ù…ØªØ§Ø²! ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù…Ù†Ø§Ø³Ø¨ Ù„Ø£ÙŠ Ù†Ø´Ø§Ø· ØªØ¬Ø§Ø±ÙŠ Ø¨ÙŠØªØ¹Ø§Ù…Ù„ Ù…Ø¹ Ø¹Ù…Ù„Ø§Ø¡ Ø¹Ù„Ù‰ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨.",
+      store:       "🚀 ممتاز! أغلب المتاجر بتستخدم وني لتأكيد الطلبات، استرجاع السلات المتروكة، وزيادة المبيعات تلقائياً.",
+      services:    "🚀 ممتاز! شركات الخدمات بتستخدم وني لمتابعة الليدز تلقائياً وتقليل وقت الرد جداً.",
+      clinic:      "🚀 ممتاز! العيادات بتستخدم وني لتأكيد المواعيد وتقليل الـ no-shows بنسبة تصل لـ 60%.",
+      real_estate: "🚀 ممتاز! المطورين العقاريين بيستخدموا وني لمتابعة العملاء المهتمين على مدار الساعة.",
+      restaurant:  "🚀 ممتاز! المطاعم بتستخدم وني لتأكيد الطلبات، التوصيل، والعروض الخاصة.",
+      other:       "🚀 ممتاز! وني مناسب لأي نشاط تجاري بيتعامل مع عملاء على الواتساب.",
     } as Record<string, string>,
 
-    step2Q: "Ø¥ÙŠÙ‡ Ø£Ù‡Ù… Ø­Ø§Ø¬Ø© Ù…Ø­ØªØ§Ø¬Ù‡Ø§ØŸ ðŸŽ¯",
+    step2Q: "إيه أهم حاجة محتاجها؟ 🎯",
     step2Buttons: [
-      { label: "ðŸ¤– Ø£ØªÙ…ØªØ© Ø§Ù„Ø±Ø¯ÙˆØ¯",   value: "automation"   },
-      { label: "ðŸ“¢ Ø­Ù…Ù„Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨",   value: "campaigns"    },
-      { label: "ðŸ”— Ø±Ø¨Ø· Ø§Ù„Ù…ØªØ¬Ø±",     value: "integration"  },
-      { label: "âœ¨ ÙƒÙ„ Ø¯Ù‡",           value: "all"          },
+      { label: "🤖 أتمتة الردود",   value: "automation"   },
+      { label: "📢 حملات واتساب",   value: "campaigns"    },
+      { label: "🔗 ربط المتجر",     value: "integration"  },
+      { label: "✨ كل ده",           value: "all"          },
     ],
 
-    socialProof: "ðŸ”¥ +200 Ø¨ÙŠØ²Ù†Ø³ Ø¨ÙŠØ³ØªØ®Ø¯Ù… ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ ÙŠÙˆÙ…ÙŠØ§Ù‹ Ù„Ø²ÙŠØ§Ø¯Ø© Ù…Ø¨ÙŠØ¹Ø§ØªÙ‡Ù… Ø¹Ù„Ù‰ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨.",
-    step3Q:      "ØªÙ‚Ø±ÙŠØ¨Ù‹Ø§ Ø¨ÙŠÙˆØµÙ„Ùƒ ÙƒØ§Ù… Ø±Ø³Ø§Ù„Ø© ÙŠÙˆÙ…ÙŠÙ‹Ø§ØŸ ðŸ“Š",
+    socialProof: "🔥 +200 بيزنس بيستخدم وني يومياً لزيادة مبيعاتهم على الواتساب.",
+    step3Q:      "تقريبًا بيوصلك كام رسالة يوميًا؟ 📊",
     step3Buttons: [
-      { label: "Ø£Ù‚Ù„ Ù…Ù† 50",  value: "<50"      },
-      { label: "50 â€“ 200",   value: "50-200"   },
-      { label: "200 â€“ 1000", value: "200-1000" },
+      { label: "أقل من 50",  value: "<50"      },
+      { label: "50 – 200",   value: "50-200"   },
+      { label: "200 – 1000", value: "200-1000" },
       { label: "+1000",      value: "+1000"    },
     ],
 
-    step4Msg:  "ðŸ‘Œ Ø£Ù‚Ø¯Ø± Ø£Ø¬Ù‡Ø²Ù„Ùƒ Ø£ÙØ¶Ù„ Setup Ù…Ù†Ø§Ø³Ø¨ Ù„Ù†Ø´Ø§Ø·Ùƒ ØªÙ…Ø§Ù…Ù‹Ø§.\n\nØ³ÙŠØ¨ Ø¨ÙŠØ§Ù†Ø§ØªÙƒ ÙˆÙØ±ÙŠÙ‚Ù†Ø§ Ù‡ÙŠØªÙˆØ§ØµÙ„ Ù…Ø¹Ø§Ùƒ Ø®Ù„Ø§Ù„ Ø³Ø§Ø¹Ø§Øª! ðŸŽ‰",
-    namePh:    "Ø§Ø³Ù…Ùƒ...",
-    phonePh:   "Ø±Ù‚Ù… Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ (Ù…Ø«Ø§Ù„: 01012345678)",
-    submitBtn: "Ø§Ø­Ø¬Ø² Setup Ù…Ø¬Ø§Ù†ÙŠ âœ…",
-    sending:   "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„...",
-    nameErr:   "Ù…Ù† ÙØ¶Ù„Ùƒ Ø§ÙƒØªØ¨ Ø§Ø³Ù…Ùƒ",
-    phoneErr:  "Ù…Ù† ÙØ¶Ù„Ùƒ Ø§ÙƒØªØ¨ Ø±Ù‚Ù… ÙˆØ§ØªØ³Ø§Ø¨ ØµØ­ÙŠØ­",
+    step4Msg:  "👌 أقدر أجهزلك أفضل Setup مناسب لنشاطك تمامًا.\n\nسيب بياناتك وفريقنا هيتواصل معاك خلال ساعات! 🎉",
+    namePh:    "اسمك...",
+    phonePh:   "رقم الواتساب (مثال: 01012345678)",
+    submitBtn: "احجز Setup مجاني ✅",
+    sending:   "جاري الإرسال...",
+    nameErr:   "من فضلك اكتب اسمك",
+    phoneErr:  "من فضلك اكتب رقم واتساب صحيح",
 
-    doneMsg:      "âœ… ØªÙ…! ÙØ±ÙŠÙ‚ ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ Ù‡ÙŠØªÙˆØ§ØµÙ„ Ù…Ø¹Ø§Ùƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§.",
-    ctaWhatsapp:  "ðŸ’¬ ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø³ÙŠÙ„Ø²",
-    ctaPricing:   "ðŸ’° Ø´ÙˆÙ Ø§Ù„Ø£Ø³Ø¹Ø§Ø±",
-    ctaScroll:    "ðŸ“– Ø§Ø¹Ø±Ù Ø£ÙƒØªØ±",
+    doneMsg:      "✅ تم! فريق وني هيتواصل معاك قريبًا.",
+    ctaWhatsapp:  "💬 تواصل مع السيلز",
+    ctaPricing:   "💰 شوف الأسعار",
+    ctaScroll:    "📖 اعرف أكتر",
     waMsg:        (name: string, biz: string, goal: string) =>
-      `Ù…Ø±Ø­Ø¨Ø§Ù‹! Ø§Ø³Ù…ÙŠ ${name}ØŒ Ø¹Ù†Ø¯ÙŠ ${biz} ÙˆØ£Ù‡ØªÙ… Ø¨Ù€ ${goal} â€” Ø¹Ø§ÙŠØ² Ø£Ø¹Ø±Ù Ø£ÙƒØªØ± Ø¹Ù† ÙˆØ§ØªØ³ Ø¨Ø±Ùˆ.`,
+      `مرحباً! اسمي ${name}، عندي ${biz} وأهتم بـ ${goal} — عايز أعرف أكتر عن وني.`,
     progress:     (step: number, total: number) => `${step} / ${total}`,
   },
 
   en: {
-    title:    "WANI +AI Assistant",
+    title:    "WANI AI Assistant",
     online:   "Online now",
     powered:  "Powered by AI",
-    proactive:"Want to know if WANI fits your business? ðŸ‘‹",
+    proactive:"Want to know if WANI fits your business? 👋",
 
-    welcome:  "ðŸ‘‹ Welcome to WANI!\nI can help you find out if our system fits your business â€” in just a minute.",
+    welcome:  "👋 Welcome to WANI!\nI can help you find out if our system fits your business — in just a minute.",
     welcomeButtons: [
-      { label: "Let's Start ðŸš€", value: "start" },
+      { label: "Let's Start 🚀", value: "start" },
       { label: "Maybe Later",    value: "later" },
     ],
 
-    step1Q: "Great! What's your business type? ðŸ‘‡",
+    step1Q: "Great! What's your business type? 👇",
     step1Buttons: [
-      { label: "ðŸ›ï¸ Online Store",    value: "store"       },
-      { label: "ðŸ¢ Service Company", value: "services"    },
-      { label: "ðŸ¥ Clinic",          value: "clinic"      },
-      { label: "ðŸ  Real Estate",     value: "real_estate" },
-      { label: "ðŸ• Restaurant",      value: "restaurant"  },
-      { label: "ðŸ’¼ Other",           value: "other"       },
+      { label: "🛍️ Online Store",    value: "store"       },
+      { label: "🏢 Service Company", value: "services"    },
+      { label: "🏥 Clinic",          value: "clinic"      },
+      { label: "🏠 Real Estate",     value: "real_estate" },
+      { label: "🍕 Restaurant",      value: "restaurant"  },
+      { label: "💼 Other",           value: "other"       },
     ],
     valueProps: {
-      store:       "ðŸš€ Great! Most online stores use WANI to confirm orders, recover abandoned carts, and automate sales.",
-      services:    "ðŸš€ Great! Service companies use WANI to follow up on leads automatically and cut response times.",
-      clinic:      "ðŸš€ Great! Clinics use WANI to confirm appointments and reduce no-shows by up to 60%.",
-      real_estate: "ðŸš€ Great! Real estate developers use WANI to follow up with interested clients 24/7.",
-      restaurant:  "ðŸš€ Great! Restaurants use WANI for order confirmations, delivery updates, and special offers.",
-      other:       "ðŸš€ Great! WANI works for any business that communicates with customers on WhatsApp.",
+      store:       "🚀 Great! Most online stores use WANI to confirm orders, recover abandoned carts, and automate sales.",
+      services:    "🚀 Great! Service companies use WANI to follow up on leads automatically and cut response times.",
+      clinic:      "🚀 Great! Clinics use WANI to confirm appointments and reduce no-shows by up to 60%.",
+      real_estate: "🚀 Great! Real estate developers use WANI to follow up with interested clients 24/7.",
+      restaurant:  "🚀 Great! Restaurants use WANI for order confirmations, delivery updates, and special offers.",
+      other:       "🚀 Great! WANI works for any business that communicates with customers on WhatsApp.",
     } as Record<string, string>,
 
-    step2Q: "What's your top priority? ðŸŽ¯",
+    step2Q: "What's your top priority? 🎯",
     step2Buttons: [
-      { label: "ðŸ¤– Automate Replies",   value: "automation"  },
-      { label: "ðŸ“¢ WhatsApp Campaigns", value: "campaigns"   },
-      { label: "ðŸ”— Store Integration",  value: "integration" },
-      { label: "âœ¨ All of the above",   value: "all"         },
+      { label: "🤖 Automate Replies",   value: "automation"  },
+      { label: "📢 WhatsApp Campaigns", value: "campaigns"   },
+      { label: "🔗 Store Integration",  value: "integration" },
+      { label: "✨ All of the above",   value: "all"         },
     ],
 
-    socialProof: "ðŸ”¥ 200+ businesses use WANI daily to boost their WhatsApp sales.",
-    step3Q:      "How many messages do you receive daily? ðŸ“Š",
+    socialProof: "🔥 200+ businesses use WANI daily to boost their WhatsApp sales.",
+    step3Q:      "How many messages do you receive daily? 📊",
     step3Buttons: [
       { label: "Less than 50", value: "<50"      },
-      { label: "50 â€“ 200",     value: "50-200"   },
-      { label: "200 â€“ 1,000",  value: "200-1000" },
+      { label: "50 – 200",     value: "50-200"   },
+      { label: "200 – 1,000",  value: "200-1000" },
       { label: "+1,000",       value: "+1000"    },
     ],
 
-    step4Msg:  "ðŸ‘Œ I can help you set up the perfect plan for your business.\n\nLeave your info and our team will reach out within hours! ðŸŽ‰",
+    step4Msg:  "👌 I can help you set up the perfect plan for your business.\n\nLeave your info and our team will reach out within hours! 🎉",
     namePh:    "Your name...",
     phonePh:   "WhatsApp number (e.g. +201012345678)",
-    submitBtn: "Book Free Setup âœ…",
+    submitBtn: "Book Free Setup ✅",
     sending:   "Sending...",
     nameErr:   "Please enter your name",
     phoneErr:  "Please enter a valid WhatsApp number",
 
-    doneMsg:      "âœ… Done! The WANI team will contact you soon.",
-    ctaWhatsapp:  "ðŸ’¬ Chat with Sales",
-    ctaPricing:   "ðŸ’° View Pricing",
-    ctaScroll:    "ðŸ“– Learn More",
+    doneMsg:      "✅ Done! The WANI team will contact you soon.",
+    ctaWhatsapp:  "💬 Chat with Sales",
+    ctaPricing:   "💰 View Pricing",
+    ctaScroll:    "📖 Learn More",
     waMsg:        (name: string, biz: string, goal: string) =>
-      `Hi! My name is ${name}, I have a ${biz} and I'm interested in ${goal} â€” I'd love to learn more about WANI.`,
+      `Hi! My name is ${name}, I have a ${biz} and I'm interested in ${goal} — I'd love to learn more about WANI.`,
     progress:     (step: number, total: number) => `${step} / ${total}`,
   },
 } as const;
 
 const TOTAL_STEPS = 4; // 1:business 2:goal 3:volume 4:form
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 // Helpers
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 let _msgId = 0;
 const uid = () => `m${++_msgId}`;
 
@@ -177,9 +177,9 @@ function TypingDots() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 // Main Component
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function AIAssistantWidget({ lang }: { lang: Lang }) {
   const f   = FLOW[lang];
   const dir = lang === "ar" ? "rtl" : "ltr";
@@ -204,12 +204,12 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
 
   const SALES_WA = process.env.NEXT_PUBLIC_SALES_WHATSAPP ?? "201281657907";
 
-  // â”€â”€ Scroll to bottom on new messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Scroll to bottom on new messages ────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping, showForm]);
 
-  // â”€â”€ Session storage read â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Session storage read ─────────────────────────────────────────────────
   useEffect(() => {
     const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored === "done") {
@@ -232,28 +232,15 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     };
   }, []);
 
-  // â”€â”€ Reset messages when lang changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Initialize messages when opened ─────────────────────────────────────
   useEffect(() => {
-    setMessages([]);
-    setStep("welcome");
-    setShowForm(false);
-    setSelections({});
-  }, [lang]);
-
-  // â”€â”€ Initialize messages when opened (or after lang reset) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    if (!isOpen) return;
-    const flow = FLOW[lang];
-    setIsTyping(true);
-    const t = setTimeout(() => {
-      setIsTyping(false);
-      setMessages([{ id: uid(), role: "bot", text: flow.welcome }]);
-    }, 600);
-    return () => clearTimeout(t);
+    if (!isOpen || messages.length > 0) return;
+    // لو المستخدم كان عنده progress قديم — بنبدأ من الأول دلوقتي (single session)
+    pushBotMessage(f.welcome);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, lang]);
+  }, [isOpen]);
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers ──────────────────────────────────────────────────────────────
   const pushBotMessage = useCallback(
     (text: string, delay = 600) => {
       setIsTyping(true);
@@ -269,7 +256,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     setMessages(prev => [...prev, { id: uid(), role: "user", text }]);
   };
 
-  // â”€â”€ Open / Close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Open / Close ─────────────────────────────────────────────────────────
   const handleOpen = () => {
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setProactive(false);
@@ -283,7 +270,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     }
   };
 
-  // â”€â”€ Welcome step buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Welcome step buttons ─────────────────────────────────────────────────
   const handleWelcomeBtn = (value: string) => {
     if (value === "later") {
       handleClose();
@@ -294,7 +281,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     setTimeout(() => pushBotMessage(f.step1Q, 800), 200);
   };
 
-  // â”€â”€ Step 1: Business â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 1: Business ─────────────────────────────────────────────────────
   const handleBusiness = (value: string, label: string) => {
     pushUserMessage(label);
     setSelections(s => ({ ...s, business: value, businessLabel: label }));
@@ -306,7 +293,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     }, 200);
   };
 
-  // â”€â”€ Step 2: Goal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 2: Goal ─────────────────────────────────────────────────────────
   const handleGoal = (value: string, label: string) => {
     pushUserMessage(label);
     setSelections(s => ({ ...s, goal: value }));
@@ -317,7 +304,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     }, 200);
   };
 
-  // â”€â”€ Step 3: Volume â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 3: Volume ───────────────────────────────────────────────────────
   const handleVolume = (value: string, label: string) => {
     pushUserMessage(label);
     setSelections(s => ({ ...s, volume: value }));
@@ -329,7 +316,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     }, 200);
   };
 
-  // â”€â”€ Step 4: Form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 4: Form submit ──────────────────────────────────────────────────
   const handleSubmit = async () => {
     const errs: typeof formErr = {};
     if (!formName.trim())                         errs.name  = f.nameErr;
@@ -354,17 +341,17 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         }),
       });
     } catch {
-      // silent fail â€” user still sees success
+      // silent fail — user still sees success
     }
     setSubmitting(false);
     setShowForm(false);
     setStep("done");
     sessionStorage.setItem(STORAGE_KEY, "done");
-    pushUserMessage(`${formName} â€” ${formPhone}`);
+    pushUserMessage(`${formName} — ${formPhone}`);
     setTimeout(() => pushBotMessage(f.doneMsg, 800), 300);
   };
 
-  // â”€â”€ Current step number for progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Current step number for progress ────────────────────────────────────
   const stepNum =
     step === "welcome" ? 0 :
     step === "business" ? 1 :
@@ -372,23 +359,23 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     step === "volume"   ? 3 :
     step === "form"     ? 4 : 4;
 
-  // â”€â”€ Buttons to show under messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Buttons to show under messages ───────────────────────────────────────
   const showWelcomeBtns = step === "welcome"  && !isTyping && messages.length > 0;
   const showBiz         = step === "business" && !isTyping && messages.length >= 2;
   const showGoal        = step === "goal"     && !isTyping && messages.length >= 4;
   const showVolume      = step === "volume"   && !isTyping && messages.length >= 6;
 
-  // â”€â”€ WhatsApp CTA link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── WhatsApp CTA link ────────────────────────────────────────────────────
   const waHref = `https://wa.me/${SALES_WA}?text=${encodeURIComponent(
-    f.waMsg(formName || "Ø²Ø§Ø¦Ø±", selections.businessLabel ?? selections.business ?? "", selections.goal ?? "")
+    f.waMsg(formName || "زائر", selections.businessLabel ?? selections.business ?? "", selections.goal ?? "")
   )}`;
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════════════════════
   // Render
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════════════════════
   return (
     <>
-      {/* â”€â”€ CSS animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── CSS animations ────────────────────────────────────────────── */}
       <style>{`
         @keyframes wpBounce {
           0%, 80%, 100% { transform: translateY(0); opacity: .6; }
@@ -411,7 +398,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         .wp-glow-btn  { animation: wpGlow 2.5s ease-in-out infinite; }
       `}</style>
 
-      {/* â”€â”€ Proactive bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Proactive bubble ──────────────────────────────────────────── */}
       {proactive && !isOpen && !dismissed && (
         <button
           onClick={handleOpen}
@@ -425,7 +412,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         </button>
       )}
 
-      {/* â”€â”€ Chat window â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Chat window ───────────────────────────────────────────────── */}
       {isOpen && (
         <div
           dir={dir}
@@ -504,7 +491,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Welcome buttons â”€â”€ */}
+            {/* ── Welcome buttons ── */}
             {showWelcomeBtns && (
               <div className="flex gap-2 flex-wrap justify-end wp-fade-in">
                 {f.welcomeButtons.map(b => (
@@ -518,7 +505,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Business buttons â”€â”€ */}
+            {/* ── Business buttons ── */}
             {showBiz && (
               <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
                 {f.step1Buttons.map(b => (
@@ -532,7 +519,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Goal buttons â”€â”€ */}
+            {/* ── Goal buttons ── */}
             {showGoal && (
               <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
                 {f.step2Buttons.map(b => (
@@ -546,7 +533,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Volume buttons â”€â”€ */}
+            {/* ── Volume buttons ── */}
             {showVolume && (
               <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
                 {f.step3Buttons.map(b => (
@@ -560,7 +547,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Lead form â”€â”€ */}
+            {/* ── Lead form ── */}
             {showForm && step === "form" && (
               <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-3 wp-fade-in">
                 <div>
@@ -601,8 +588,8 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
-            {/* â”€â”€ Done CTAs â”€â”€ */}
-            {step === "done" && !isTyping && messages.some(m => m.text.includes("âœ…")) && (
+            {/* ── Done CTAs ── */}
+            {step === "done" && !isTyping && messages.some(m => m.text.includes("✅")) && (
               <div className="flex flex-col gap-2 wp-fade-in">
                 <a href={waHref} target="_blank" rel="noopener noreferrer"
                   className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white font-semibold
@@ -625,12 +612,12 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
           <div className="px-4 py-2 border-t border-gray-800 flex-shrink-0 flex items-center justify-center gap-1">
             <span className="text-[10px] text-gray-600">{f.powered}</span>
             <span className="w-1 h-1 rounded-full bg-gray-700" />
-            <span className="text-[10px] text-gray-600">WANI</span>
+            <span className="text-[10px] text-gray-600">WhatsPro</span>
           </div>
         </div>
       )}
 
-      {/* â”€â”€ Floating bubble button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Floating bubble button ─────────────────────────────────────── */}
       <button
         onClick={handleOpen}
         aria-label={f.title}
@@ -645,7 +632,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         ) : (
           <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
         )}
-        {/* Notification dot Ù„Ùˆ ÙÙŠÙ‡ proactive */}
+        {/* Notification dot لو فيه proactive */}
         {proactive && !isOpen && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full
                            border-2 border-white text-white text-[8px] flex items-center justify-center font-bold">
