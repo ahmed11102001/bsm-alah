@@ -49,9 +49,9 @@ export const t = {
     floatContsSub: { ar: "٥٬٦٧٨ رسالة تلقائية", en: "5,678 auto messages" },
     floatRate:     { ar: "معدل الإغلاق",        en: "Close Rate" },
     // trust strip
-    trust1: { ar: "بدون كودينج",       en: "No coding"       },
-    trust2: { ar: "إعداد في ١٥ دقيقة", en: "Setup in 15 min" },
-    trust3: { ar: "ربط متجرك فوراً",  en: "Instant Store Connection" },
+    trust1: { ar: "إعداد في ١٥ دقيقة", en: "Setup in 15 minutes" },
+trust2: { ar: "تحديثات مستمرة", en: "Continuous updates" },
+trust3: { ar: "تحكم سلس", en: "Seamless control" },
   },
 
   // ── Features ────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export const t = {
       {
         tag:   { ar: "المتجر",    en: "Store"      },
         hook:  { ar: "ربط مباشر مع متجرك",          en: "Direct store connection"    },
-        title: { ar: "Shopify و EasyOrders — متصلين", en: "Shopify & EasyOrders — connected" },
+        title: { ar: "Shopify و Woo Commerce و EasyOrders — متصلين", en: "Shopify & WooCommerce & EasyOrders — connected" },
         desc:  { ar: "كل أوردر جديد بيوصل رسالة تأكيد تلقائي. وكل شحنة بتبعت تتبع فوري. ربط في دقائق بدون كودينج.", en: "Every new order triggers an auto-confirmation. Every shipment sends instant tracking. Connect in minutes with zero coding." },
       },
       {

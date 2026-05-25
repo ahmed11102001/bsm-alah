@@ -1,4 +1,4 @@
-import { MessageCircle, Mail, Phone, MapPin, Facebook, Instagram } from 'lucide-react';
+﻿import { MessageCircle, Mail, Phone, MapPin, Facebook, Instagram } from 'lucide-react';
 import { t, tr, type Lang } from "@/lib/translations";
 
 const socialLinks = [
@@ -24,44 +24,8 @@ export default function Footer({ lang }: FooterProps) {
       style={{ background: "#0A0F0D" }} // لون خلفية أغمق وأكثر احترافية
       dir={isAr ? "rtl" : "ltr"}
     >
-      {/* ── Centered CTA Card (Modern SaaS Style) ── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 pb-12">
-        <div 
-          className="flex flex-col items-center text-center p-8 sm:p-12 rounded-3xl relative overflow-hidden"
-          style={{ 
-            background: "linear-gradient(145deg, #111D16 0%, #0A0F0D 100%)", 
-            border: "1px solid #1e3328",
-            boxShadow: "0 20px 40px -15px rgba(37, 211, 102, 0.05)"
-          }}
-        >
-          {/* Subtle background glow */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: "radial-gradient(circle at 50% 0%, #25D366 0%, transparent 70%)" }}></div>
-          
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-3 relative z-10">
-            {isAr
-              ? "جاهز تحول واتساب لماكينة مبيعات؟"
-              : "Ready to turn WhatsApp into a sales machine?"}
-          </h3>
-          <p className="text-sm sm:text-base mb-8 relative z-10" style={{ color: "#8fa89a" }}>
-            {isAr
-              ? "ابدأ مجاناً — لا بطاقة بنكية مطلوبة"
-              : "Start free — no credit card required"}
-          </p>
-          <a
-            href="/checkout"
-            className="inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-1 relative z-10"
-            style={{ 
-              background: "#25D366",
-              boxShadow: "0 8px 20px -6px rgba(37, 211, 102, 0.4)" 
-            }}
-          >
-            {isAr ? "ابدأ الآن مجاناً" : "Get started free"}
-          </a>
-        </div>
-      </div>
-
       {/* ── Main grid ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
 
           {/* Brand Info (Takes up more space) */}
@@ -74,9 +38,7 @@ export default function Footer({ lang }: FooterProps) {
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
               <span className="text-2xl font-bold tracking-tight">
-                {isAr
-                  ? <>واتس <span style={{ color: "#25D366" }}>برو</span></>
-                  : <>Whats<span style={{ color: "#25D366" }}>Pro</span></>}
+                {isAr ? "وني" : "WANI"}
               </span>
             </div>
 
