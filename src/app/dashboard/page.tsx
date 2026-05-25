@@ -1019,10 +1019,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       <aside className={`w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-colors duration-200 ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
-            <img src="/wani.svg" alt="WANI" className="w-full h-full object-cover" />
+            <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
           </div>
           <span className="text-lg font-bold mx-3">
-            {locale === "ar" ? <>وني <span className="text-[#25D366]">/ WANI</span></> : <>WANI<span className="text-[#25D366]"> / وني</span></>}
+            {locale === "ar" ? "وني" : "WANI"}
           </span>
         </div>
 
@@ -1083,12 +1083,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
-                <img src="/wani.svg" alt="WANI" className="w-full h-full object-cover" />
+                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span className="text-base font-bold">
-                {locale === "ar"
-                  ? <>وني <span className="text-[#25D366]">/ WANI</span></>
-                  : <>WANI<span className="text-[#25D366]"> / وني</span></>}
+                {locale === "ar" ? "وني" : "WANI"}
               </span>
             </div>
             <button

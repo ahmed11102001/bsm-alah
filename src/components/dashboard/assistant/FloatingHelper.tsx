@@ -175,15 +175,13 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       {mountEl ? createPortal(
         <button
           onClick={() => setIsOpen(v => !v)}
-          className="relative h-9 px-3 rounded-xl
-                    bg-gradient-to-br from-[#25D366] to-[#128C7E]
-                    flex items-center justify-center gap-2
+          className="relative h-9 w-9 rounded-xl
+                    flex items-center justify-center
                     hover:scale-[1.03] active:scale-95 transition-transform duration-200
-                    shadow-lg shadow-green-500/30"
+                    hover:bg-gray-100 dark:hover:bg-gray-700"
           style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
         >
-          <img src="/wani.svg" alt="WANI" className="w-4 h-4 rounded-sm object-cover" />
-          <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
+          <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
           {totalCount > 0 && (
             <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
                               text-white text-[9px] font-bold flex items-center justify-center
@@ -196,15 +194,13 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       ) : (
       <button
         onClick={() => setIsOpen(v => !v)}
-        className={`fixed top-3 ${side} z-[60] h-9 px-3 rounded-xl
-                    bg-gradient-to-br from-[#25D366] to-[#128C7E]
-                    flex items-center justify-center gap-2
+        className={`fixed top-3 ${side} z-[60] h-9 w-9 rounded-xl
+                    flex items-center justify-center
                     hover:scale-[1.03] active:scale-95 transition-transform duration-200
-                    shadow-lg shadow-green-500/30`}
+                    hover:bg-gray-100 dark:hover:bg-gray-700`}
         style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
       >
-        <img src="/wani.svg" alt="WANI" className="w-4 h-4 rounded-sm object-cover" />
-        <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
+        <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
         {totalCount > 0 && (
           <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
                             text-white text-[9px] font-bold flex items-center justify-center
