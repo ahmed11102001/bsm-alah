@@ -53,7 +53,29 @@ export default function NotificationBell({ onNavigate }: Props) {
   const [notifs,      setNotifs]      = useState<Notification[]>([]);
   const [unread,      setUnread]      = useState(0);
   const [loading,     setLoading]     = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref        = useRef<HTMLDivElement>(null);
+  const prevUnread = useRef<number>(-1);   // -1 = أول تحميل، مش بنعزف فيه
+
+  const playNotifSound = useCallback(() => {
+    try {
+      const ctx  = new AudioContext();
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+
+      // نغمتين سريعين بشبه واتساب
+      [0, 0.15].forEach((delay, i) => {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+        osc.type            = "sine";
+        osc.frequency.value = i === 0 ? 784 : 1047; // G5 → C6
+        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+        gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.25);
+      });
+    } catch { /* المتصفح منع AudioContext */ }
+  }, []);
 
   const fetchNotifs = useCallback(async () => {
     setLoading(true);
@@ -63,6 +85,11 @@ export default function NotificationBell({ onNavigate }: Props) {
         const d = await r.json();
         setNotifs(d.notifications);
         setUnread(d.unreadCount);
+        // عزف الصوت لو جاء إشعار جديد (مش أول تحميل)
+        if (prevUnread.current !== -1 && d.unreadCount > prevUnread.current) {
+          playNotifSound();
+        }
+        prevUnread.current = d.unreadCount;
       }
     } finally { setLoading(false); }
   }, []);
