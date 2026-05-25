@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bot, X, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import type { AssistantRule, RuleContext } from "@/lib/assistant-rules";
 import { resolveText } from "@/lib/assistant-rules";
@@ -11,6 +12,7 @@ interface Props {
   locale:    "ar" | "en";
   onDismiss: (id: string) => void;
   onAction:  (target: string, type: "navigate" | "link") => void;
+  mountId?:  string;
 }
 
 const T = {
@@ -93,18 +95,24 @@ function RuleRow({
   );
 }
 
-export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction }: Props) {
+export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction, mountId }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mountEl, setMountEl] = useState<HTMLElement | null>(null);
   const t   = T[locale];
   const dir = locale === "ar" ? "rtl" : "ltr";
 
   // ── موضع ديناميكي — عكس الـ sidebar دايماً ─────────────────────────────
   // Sidebar في العربي على اليمين → الـ helper على اليسار
   // Sidebar في الإنجليزي على اليسار → الـ helper على اليمين
-  const side = locale === "ar" ? "left-6" : "right-6";
+  const side = locale === "ar" ? "left-4 sm:left-6 lg:left-[calc(16rem+1.5rem)]" : "right-4 sm:right-6";
 
   const criticalCount = rules.filter(r => r.severity === "critical").length;
   const totalCount    = rules.length;
+
+  useEffect(() => {
+    if (!mountId) return;
+    setMountEl(document.getElementById(mountId));
+  }, [mountId]);
 
   return (
     <>
@@ -123,7 +131,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       {isOpen && (
         <div
           dir={dir}
-          className={`fixed bottom-20 ${side} z-50 w-80 bg-white dark:bg-gray-900
+          className={`fixed top-16 ${side} z-50 w-80 bg-white dark:bg-gray-900
                       border border-gray-100 dark:border-gray-700 rounded-3xl shadow-2xl overflow-hidden`}
           style={{ animation: "wpAssistSlideUp .25s ease forwards" }}
         >
@@ -164,25 +172,48 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       )}
 
       {/* ── Floating button ── */}
+      {mountEl ? createPortal(
+        <button
+          onClick={() => setIsOpen(v => !v)}
+          className="relative h-9 px-3 rounded-xl
+                    bg-gradient-to-br from-[#25D366] to-[#128C7E]
+                    flex items-center justify-center gap-2
+                    hover:scale-[1.03] active:scale-95 transition-transform duration-200
+                    shadow-lg shadow-green-500/30"
+          style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
+        >
+          <Bot className="w-4 h-4 text-white" />
+          <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
+          {totalCount > 0 && (
+            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
+                              text-white text-[9px] font-bold flex items-center justify-center
+                              ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
+              {totalCount}
+            </span>
+          )}
+        </button>,
+        mountEl
+      ) : (
       <button
         onClick={() => setIsOpen(v => !v)}
-        className={`fixed bottom-6 ${side} z-50 w-14 h-14 rounded-full
+        className={`fixed top-3 ${side} z-[60] h-9 px-3 rounded-xl
                     bg-gradient-to-br from-[#25D366] to-[#128C7E]
-                    flex items-center justify-center
-                    hover:scale-110 active:scale-95 transition-transform duration-200
+                    flex items-center justify-center gap-2
+                    hover:scale-[1.03] active:scale-95 transition-transform duration-200
                     shadow-lg shadow-green-500/30`}
         style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
       >
-        <Bot className="w-6 h-6 text-white" />
+        <Bot className="w-4 h-4 text-white" />
+        <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
         {totalCount > 0 && (
-          <span className={`absolute -top-1 w-5 h-5 rounded-full border-2 border-white
+          <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
                             text-white text-[9px] font-bold flex items-center justify-center
-                            ${locale === "ar" ? "-right-1" : "-right-1"}
                             ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
             {totalCount}
           </span>
         )}
       </button>
+      )}
     </>
   );
 }

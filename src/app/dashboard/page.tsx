@@ -1212,6 +1212,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 onNavigate={setActiveSection}
               />
             )}
+            <div id="assistant-header-slot" className="flex items-center" />
 
             <div className="flex items-center gap-2">
               <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
@@ -1236,6 +1237,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             planStatus={dashData?.plan.status ?? "active"}
             planName={dashData?.plan.planName ?? ""}
             onNavigate={setActiveSection}
+            helperMountId="assistant-header-slot"
           />
           {renderContent()}
         </div>
