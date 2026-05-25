@@ -45,6 +45,7 @@ interface PricingProps { lang: Lang }
 
 export default function Pricing({ lang }: PricingProps) {
   const isAr   = lang === "ar";
+  const numLocale = isAr ? "ar-EG" : "en-US";
   const router = useRouter();
   const { track } = usePixel();
   const plans  = t.pricing.plans;
@@ -171,10 +172,10 @@ export default function Pricing({ lang }: PricingProps) {
                     <>
                       <div className="flex items-end gap-2">
                         <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
-                          {ENTERPRISE_OFFER.toLocaleString("ar-EG")}
+                          {ENTERPRISE_OFFER.toLocaleString(numLocale)}
                         </span>
                         <span className="text-sm mb-1.5 line-through opacity-40 text-gray-400">
-                          {price.toLocaleString("ar-EG")}
+                          {price.toLocaleString(numLocale)}
                         </span>
                         <span className="text-sm mb-1.5 text-gray-400">
                           {tr(t.pricing.currency, lang)}
@@ -188,7 +189,7 @@ export default function Pricing({ lang }: PricingProps) {
                     <>
                       <div className="flex items-end gap-1.5">
                         <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
-                          {price.toLocaleString("ar-EG")}
+                          {price.toLocaleString(numLocale)}
                         </span>
                         <span className={`text-sm mb-1.5 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
                           {tr(t.pricing.currency, lang)}
@@ -196,7 +197,7 @@ export default function Pricing({ lang }: PricingProps) {
                       </div>
                       {saving > 0 ? (
                         <p className="text-[11px] text-[#1a9e50] font-semibold mt-0.5">
-                          {tr(t.pricing.annualSave, lang)} {saving.toLocaleString("ar-EG")} {tr(t.pricing.annualSaveSuffix, lang)}
+                          {tr(t.pricing.annualSave, lang)} {saving.toLocaleString(numLocale)} {tr(t.pricing.annualSaveSuffix, lang)}
                         </p>
                       ) : (
                         <p className="text-[11px] text-gray-400 mt-0.5 h-4" />
