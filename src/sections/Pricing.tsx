@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -18,8 +18,8 @@ const CYCLES = [
 type Cycle = typeof CYCLES[number]["key"];
 
 const PLAN_STYLES = [
-  // Free — slate هادئ
-  { card: "bg-slate-50 border border-slate-200", accent: "text-slate-500", iconBg: "bg-slate-100", dark: false, highlight: false, cta: "border border-slate-300 text-slate-600 hover:border-slate-500 hover:text-slate-800" },
+  // Free — pink soft
+  { card: "bg-rose-50 border border-rose-200", accent: "text-rose-500", iconBg: "bg-rose-100", dark: false, highlight: false, cta: "border border-rose-300 text-rose-600 hover:border-rose-500 hover:text-rose-800" },
   // Starter — أزرق سماوي
   { card: "bg-sky-50 border border-sky-200",     accent: "text-sky-600",   iconBg: "bg-sky-100",   dark: false, highlight: false, cta: "border-2 border-sky-500 text-sky-700 hover:bg-sky-500 hover:text-white" },
   // Pro — أخضر (البراند) مع highlight
@@ -139,21 +139,6 @@ export default function Pricing({ lang }: PricingProps) {
                   </div>
                 )}
 
-                {/* top full-width offer bar for enterprise (part of the card, not overlay) */}
-                {isEnterprise && (
-                  <div
-                    className="-mx-6 -mt-6 mb-2 rounded-t-2xl text-center font-black text-[12px] py-2"
-                    style={{
-                      background: "linear-gradient(135deg, #c9a84c 0%, #f5d078 40%, #e8b84b 60%, #a87c2a 100%)",
-                      color: "#3a2500",
-                      boxShadow: "0 2px 8px rgba(180,130,0,0.28)",
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    {isAr ? "عرض خاص" : "Special Offer"}
-                  </div>
-                )}
-
                 {/* plan icon + name */}
                 <div className="flex items-center gap-2">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -168,6 +153,11 @@ export default function Pricing({ lang }: PricingProps) {
                     <p className={`text-[11px] leading-tight ${s.dark ? "text-gray-400" : "text-gray-500"}`}>
                       {tr(plan.tagline, lang)}
                     </p>
+                    {isEnterprise && (
+                      <span className="mt-1.5 inline-flex rounded-xl px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        {isAr ? "عرض خاص" : "Special Offer"}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -217,14 +207,12 @@ export default function Pricing({ lang }: PricingProps) {
 
                 {/* CTA */}
                 {isEnterprise ? (
-                  <a
-                    href="https://wa.me/201281657907?text=مرحبا اريد الاشتراك ف باقة المؤسسات"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 block ${s.cta}`}
+                  <button
+                    onClick={() => handleCTA(slug, false, ENTERPRISE_OFFER)}
+                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
                   >
-                    {tr(plan.cta, lang)}
-                  </a>
+                    {isAr ? "اشترك الآن" : "Subscribe Now"}
+                  </button>
                 ) : (
                   <button
                     onClick={() => handleCTA(slug, isFree, price)}

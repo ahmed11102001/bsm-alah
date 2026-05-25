@@ -208,7 +208,7 @@ export const t = {
         cta:     { ar: "ابدأ الآن", en: "Get Started" },
         slug:    "starter",
         features:[
-          { ar: "محادثات غير محدودة",    en: "Unlimited conversations",   ok: true  },
+        
           { ar: "٢٬٠٠٠ جهة اتصال",      en: "2,000 contacts",            ok: true  },
           { ar: "٢ مستخدمين",            en: "2 users",                   ok: true  },
           { ar: "٥٠ حملة شهرياً",       en: "50 campaigns/month",        ok: true  },
@@ -225,7 +225,7 @@ export const t = {
         cta:     { ar: "ابدأ الآن", en: "Get Started" },
         slug:    "professional",
         features:[
-          { ar: "محادثات غير محدودة",      en: "Unlimited conversations",   ok: true  },
+          
           { ar: "٢٠٬٠٠٠ جهة اتصال",       en: "20,000 contacts",           ok: true  },
           { ar: "حتى ٥ مستخدمين",          en: "Up to 5 users",             ok: true  },
           { ar: "حملات غير محدودة",        en: "Unlimited campaigns",       ok: true  },
@@ -233,7 +233,7 @@ export const t = {
           { ar: "تقارير متقدمة + Export",  en: "Advanced reports + Export", ok: true  },
           { ar: "أتمة ذكية",     en: "Smart automation",        ok: true  },
           { ar: "ربط متجر + أتمتة كاملة", en: "Store + full automation",   ok: true  },
-          { ar: "🤖 Claude AI — 50 أمر/شهر", en: "🤖 Claude AI — 50 cmds/mo", ok: true  },
+          { ar: "كلود AI المساعد", en: "Claude AI Assistant", ok: true  },
         ],
       },
       {
@@ -243,13 +243,13 @@ export const t = {
         cta:     { ar: "تواصل معنا", en: "Contact Us" },
         slug:    "enterprise",
         features:[
-          { ar: "محادثات غير محدودة",         en: "Unlimited conversations",     ok: true  },
+          
           { ar: "جهات اتصال غير محدودة",      en: "Unlimited contacts",          ok: true  },
           { ar: "مستخدمون غير محدودون",       en: "Unlimited users",             ok: true  },
           { ar: "حملات غير محدودة",           en: "Unlimited campaigns",         ok: true  },
           { ar: "AI Sales Assistant ذكي",      en: "Smart AI Sales Assistant",    ok: true  },
           { ar: "ربط متجر + أتمتة كاملة",    en: "Store + full automation",     ok: true  },
-          { ar: "🤖 Claude AI — غير محدود",   en: "🤖 Claude AI — Unlimited",   ok: true  },
+          { ar: "كلود AI المساعد ",   en: "Claude AI Assistant",   ok: true  },
           { ar: "API كامل",                    en: "Full API access",             ok: true  },
           { ar: "دعم VIP ٢٤/٧",               en: "24/7 VIP support",            ok: true  },
         ],
