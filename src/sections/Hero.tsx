@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, ArrowRight, Play, Sparkles, Zap, Brain,
   Send, Paperclip, Smile, MoreVertical, Phone, Video,
-  CheckCheck, Store, Bot, TrendingUp,
+  CheckCheck, Store, TrendingUp,
 } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
@@ -127,13 +127,13 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                   {/* Chat header */}
                   <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
                     <div className="relative">
-                      <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shadow-md">
-                        <Bot className="w-5 h-5 text-white" />
+                      <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shadow-md overflow-hidden">
+                        <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-[#075E54] rounded-full" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white text-sm leading-tight">{tr(t.hero.chatHeader, lang)}</p>
+                      <p className="font-semibold text-white text-sm leading-tight">{isAr ? "وني AI" : "WANI AI"}</p>
                       <p className="text-[11px] text-green-300 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                         {tr(t.hero.chatOnline, lang)}

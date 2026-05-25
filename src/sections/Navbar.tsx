@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Menu, X, User, Languages } from "lucide-react";
+import { Menu, X, User, Languages } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 interface NavbarProps {
@@ -47,13 +47,11 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-whatsapp-gradient flex items-center justify-center">
-              <MessageCircle className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-whatsapp-gradient flex items-center justify-center overflow-hidden">
+              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
             </div>
             <span className={`text-xl font-bold ${isScrolled ? "text-gray-900" : "text-gray-900 lg:text-white"}`}>
-              {isAr
-                ? <>واتس <span className="text-[#25D366]">برو</span></>
-                : <>Whats<span className="text-[#25D366]">Pro</span></>}
+              {isAr ? "وني" : "WANI"}
             </span>
           </div>
 
@@ -72,7 +70,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
             ))}
           </div>
 
-          {/* Right — lang + login */}
+          {/* Right â€” lang + login */}
           <div className="hidden lg:flex items-center gap-3">
             <button
               onClick={() => onLangChange(lang === "ar" ? "en" : "ar")}
@@ -98,7 +96,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
           {/* Mobile menu btn */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-label={isMobileMenuOpen ? "Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©" : "ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©"}
             aria-expanded={isMobileMenuOpen}
             className={`lg:hidden p-2 rounded-lg ${isScrolled ? "text-gray-900" : "text-white"}`}
           >
@@ -126,7 +124,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
               className="flex items-center gap-2 w-full py-2 text-gray-500 font-medium"
             >
               <Languages className="w-4 h-4" />
-              {lang === "ar" ? "Switch to English" : "التبديل للعربية"}
+              {lang === "ar" ? "Switch to English" : "Ø§Ù„ØªØ¨Ø¯ÙŠÙ„ Ù„Ù„Ø¹Ø±Ø¨ÙŠØ©"}
             </button>
 
             <Button
