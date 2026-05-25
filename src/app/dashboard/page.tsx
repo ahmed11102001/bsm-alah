@@ -26,7 +26,7 @@ import {
 import {
   Users, MessageSquare, Send, FileText, BarChart3, Settings,
   Code, LogOut, Plus, TrendingUp, Calendar, ChevronLeft,
-  MessageCircle, Home, CheckCircle,
+  Home, CheckCircle,
   Loader2, ArrowUpRight, Shield, Phone, Mail,
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
   Languages, Bot, Sparkles,
@@ -1018,11 +1018,11 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       {/* ── Desktop Sidebar ── */}
       <aside className={`w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-colors duration-200 ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
-            <MessageCircle className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
+            <img src="/wani.svg" alt="WANI" className="w-full h-full object-cover" />
           </div>
           <span className="text-lg font-bold mx-3">
-            {locale === "ar" ? <>واتس <span className="text-[#25D366]">برو</span></> : <>Whats<span className="text-[#25D366]">Pro</span></>}
+            {locale === "ar" ? <>وني <span className="text-[#25D366]">/ WANI</span></> : <>WANI<span className="text-[#25D366]"> / وني</span></>}
           </span>
         </div>
 
@@ -1082,13 +1082,13 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           {/* Top bar */}
           <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
+                <img src="/wani.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span className="text-base font-bold">
                 {locale === "ar"
-                  ? <>واتس <span className="text-[#25D366]">برو</span></>
-                  : <>Whats<span className="text-[#25D366]">Pro</span></>}
+                  ? <>وني <span className="text-[#25D366]">/ WANI</span></>
+                  : <>WANI<span className="text-[#25D366]"> / وني</span></>}
               </span>
             </div>
             <button

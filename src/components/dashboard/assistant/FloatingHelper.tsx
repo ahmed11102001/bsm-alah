@@ -182,7 +182,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                     shadow-lg shadow-green-500/30"
           style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
         >
-          <Bot className="w-4 h-4 text-white" />
+          <img src="/wani.svg" alt="WANI" className="w-4 h-4 rounded-sm object-cover" />
           <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
           {totalCount > 0 && (
             <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
@@ -203,7 +203,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                     shadow-lg shadow-green-500/30`}
         style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
       >
-        <Bot className="w-4 h-4 text-white" />
+        <img src="/wani.svg" alt="WANI" className="w-4 h-4 rounded-sm object-cover" />
         <span className="hidden sm:inline text-[12px] font-semibold text-white">{t.title}</span>
         {totalCount > 0 && (
           <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
