@@ -1,9 +1,11 @@
 // src/lib/notifications.ts
 // ─── Helper مركزي لإنشاء الإشعارات ──────────────────────────────────────────
-// كل trigger في السيستم بيستدعي من هنا — مفيش منطق مكرر
 
 import prisma from "@/lib/prisma";
 import { NotificationType } from "@/types/enums";
+
+// ─── Bilingual text helper ────────────────────────────────────────────────────
+const bi = (ar: string, en: string) => JSON.stringify({ ar, en });
 
 type CreateNotificationParams = {
   userId: string;
@@ -18,21 +20,23 @@ export async function createNotification(params: CreateNotificationParams) {
   try {
     await prisma.notification.create({ data: params });
   } catch (err) {
-    // الإشعارات مش حرجة — مش هنوقف السيستم لو فشلت
     console.error("[NOTIFY] Failed to create notification:", err);
   }
 }
 
-// ─── Presets جاهزة للاستخدام ─────────────────────────────────────────────────
+// ─── Presets ──────────────────────────────────────────────────────────────────
 
 export async function notifyCampaignSuccess(userId: string, campaignName: string, campaignId: string, sentCount: number) {
   await createNotification({
     userId,
     type:  NotificationType.CAMPAIGN_SUCCESS,
-    title: "✅ تم إرسال الحملة بنجاح",
-    body:  `حملة "${campaignName}" — تم إرسال ${sentCount.toLocaleString("ar-EG")} رسالة بنجاح`,
-    link:  `/dashboard?section=campaigns`,
-    meta:  { campaignId, sentCount },
+    title: bi("✅ تم إرسال الحملة بنجاح", "✅ Campaign sent successfully"),
+    body:  bi(
+      `حملة "${campaignName}" — تم إرسال ${sentCount.toLocaleString("ar-EG")} رسالة بنجاح`,
+      `Campaign "${campaignName}" — ${sentCount.toLocaleString()} messages sent successfully`,
+    ),
+    link: `/dashboard?section=campaigns`,
+    meta: { campaignId, sentCount },
   });
 }
 
@@ -40,10 +44,13 @@ export async function notifyCampaignFailed(userId: string, campaignName: string,
   await createNotification({
     userId,
     type:  NotificationType.CAMPAIGN_FAILED,
-    title: "❌ فشل إرسال الحملة",
-    body:  `حملة "${campaignName}" — فشل إرسال ${failedCount.toLocaleString("ar-EG")} رسالة`,
-    link:  `/dashboard?section=campaigns`,
-    meta:  { campaignId, failedCount },
+    title: bi("❌ فشل إرسال الحملة", "❌ Campaign failed"),
+    body:  bi(
+      `حملة "${campaignName}" — فشل إرسال ${failedCount.toLocaleString("ar-EG")} رسالة`,
+      `Campaign "${campaignName}" — ${failedCount.toLocaleString()} messages failed`,
+    ),
+    link: `/dashboard?section=campaigns`,
+    meta: { campaignId, failedCount },
   });
 }
 
@@ -51,26 +58,37 @@ export async function notifyCampaignPartial(userId: string, campaignName: string
   await createNotification({
     userId,
     type:  NotificationType.CAMPAIGN_PARTIAL,
-    title: "⚠️ الحملة اكتملت جزئياً",
-    body:  `حملة "${campaignName}" — ${sentCount.toLocaleString("ar-EG")} ناجحة، ${failedCount.toLocaleString("ar-EG")} فاشلة`,
-    link:  `/dashboard?section=campaigns`,
-    meta:  { campaignId, sentCount, failedCount },
+    title: bi("⚠️ الحملة اكتملت جزئياً", "⚠️ Campaign partially completed"),
+    body:  bi(
+      `حملة "${campaignName}" — ${sentCount.toLocaleString("ar-EG")} ناجحة، ${failedCount.toLocaleString("ar-EG")} فاشلة`,
+      `Campaign "${campaignName}" — ${sentCount.toLocaleString()} sent, ${failedCount.toLocaleString()} failed`,
+    ),
+    link: `/dashboard?section=campaigns`,
+    meta: { campaignId, sentCount, failedCount },
   });
 }
 
 export async function notifyPlanLimitReached(userId: string, limitType: string) {
-  const labels: Record<string, string> = {
-    contacts:           "جهات الاتصال",
-    campaignsPerMonth:  "الحملات الشهرية",
-    teamMembers:        "أعضاء الفريق",
+  const labelsAr: Record<string, string> = {
+    contacts:          "جهات الاتصال",
+    campaignsPerMonth: "الحملات الشهرية",
+    teamMembers:       "أعضاء الفريق",
+  };
+  const labelsEn: Record<string, string> = {
+    contacts:          "contacts",
+    campaignsPerMonth: "monthly campaigns",
+    teamMembers:       "team members",
   };
   await createNotification({
     userId,
     type:  NotificationType.PLAN_LIMIT_REACHED,
-    title: "🚨 وصلت لحد الباقة",
-    body:  `وصلت للحد الأقصى لـ ${labels[limitType] ?? limitType} في باقتك الحالية`,
-    link:  `/dashboard?section=api`,
-    meta:  { limitType },
+    title: bi("🚨 وصلت لحد الباقة", "🚨 Plan limit reached"),
+    body:  bi(
+      `وصلت للحد الأقصى لـ ${labelsAr[limitType] ?? limitType} في باقتك الحالية`,
+      `You've reached the limit for ${labelsEn[limitType] ?? limitType} in your current plan`,
+    ),
+    link: `/dashboard?section=api`,
+    meta: { limitType },
   });
 }
 
@@ -78,63 +96,60 @@ export async function notifyNewMessage(userId: string, fromPhone: string) {
   await createNotification({
     userId,
     type:  NotificationType.NEW_MESSAGE,
-    title: "💬 رسالة واردة جديدة",
-    body:  `رسالة جديدة من ${fromPhone}`,
-    link:  `/dashboard?section=chat`,
-    meta:  { fromPhone },
+    title: bi("💬 رسالة واردة جديدة", "💬 New incoming message"),
+    body:  bi(
+      `رسالة جديدة من ${fromPhone}`,
+      `New message from ${fromPhone}`,
+    ),
+    link: `/dashboard?section=chat`,
+    meta: { fromPhone },
   });
 }
 
 // ─── أتمتة المتجر ─────────────────────────────────────────────────────────────
 
-const automationLabels: Record<string, string> = {
-  order_confirm:  "تأكيد الطلب",
-  order_shipped:  "تحديث الشحن",
-  promo:          "عرض ترويجي",
-  cart_abandon:   "استرداد السلة",
-};
-
-const storeLabels: Record<string, string> = {
-  shopify:      "Shopify",
-  woocommerce:  "WooCommerce",
-  easyorders:   "EasyOrders",
-};
+const autoAr: Record<string, string> = { order_confirm: "تأكيد الطلب", order_shipped: "تحديث الشحن", promo: "عرض ترويجي" };
+const autoEn: Record<string, string> = { order_confirm: "Order Confirmation", order_shipped: "Shipping Update", promo: "Promo Offer" };
+const storeLabels: Record<string, string> = { shopify: "Shopify", woocommerce: "WooCommerce", easyorders: "EasyOrders" };
 
 export async function notifyStoreAutoSent(
-  userId:         string,
-  automationType: string,
-  storeSource:    string,
-  customerPhone:  string,
-  templateName:   string,
+  userId: string, automationType: string, storeSource: string,
+  customerPhone: string, templateName: string,
 ) {
-  const autoLabel  = automationLabels[automationType] ?? automationType;
-  const storeLabel = storeLabels[storeSource]         ?? storeSource;
+  const store = storeLabels[storeSource] ?? storeSource;
   await createNotification({
     userId,
     type:  NotificationType.STORE_AUTO_SENT,
-    title: `🛒 تم إرسال قالب ${autoLabel}`,
-    body:  `${storeLabel}: تم إرسال "${templateName}" إلى ${customerPhone}`,
-    link:  `/dashboard?section=store`,
-    meta:  { automationType, storeSource, customerPhone, templateName },
+    title: bi(
+      `🛒 تم إرسال قالب ${autoAr[automationType] ?? automationType}`,
+      `🛒 ${autoEn[automationType] ?? automationType} template sent`,
+    ),
+    body: bi(
+      `${store}: تم إرسال "${templateName}" إلى ${customerPhone}`,
+      `${store}: "${templateName}" sent to ${customerPhone}`,
+    ),
+    link: `/dashboard?section=store`,
+    meta: { automationType, storeSource, customerPhone, templateName },
   });
 }
 
 export async function notifyStoreAutoFailed(
-  userId:         string,
-  automationType: string,
-  storeSource:    string,
-  customerPhone:  string,
-  templateName:   string,
-  reason:         string,
+  userId: string, automationType: string, storeSource: string,
+  customerPhone: string, templateName: string, reason: string,
 ) {
-  const autoLabel  = automationLabels[automationType] ?? automationType;
-  const storeLabel = storeLabels[storeSource]         ?? storeSource;
+  const store = storeLabels[storeSource] ?? storeSource;
   await createNotification({
     userId,
     type:  NotificationType.STORE_AUTO_FAILED,
-    title: `❌ فشل إرسال قالب ${autoLabel}`,
-    body:  `${storeLabel}: فشل إرسال "${templateName}" إلى ${customerPhone} — ${reason}`,
-    link:  `/dashboard?section=store`,
-    meta:  { automationType, storeSource, customerPhone, templateName, reason },
+    title: bi(
+      `❌ فشل إرسال قالب ${autoAr[automationType] ?? automationType}`,
+      `❌ ${autoEn[automationType] ?? automationType} template failed`,
+    ),
+    body: bi(
+      `${store}: فشل إرسال "${templateName}" إلى ${customerPhone} — ${reason}`,
+      `${store}: Failed to send "${templateName}" to ${customerPhone} — ${reason}`,
+    ),
+    link: `/dashboard?section=store`,
+    meta: { automationType, storeSource, customerPhone, templateName, reason },
   });
 }

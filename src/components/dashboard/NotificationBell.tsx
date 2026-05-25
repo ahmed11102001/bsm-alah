@@ -46,9 +46,21 @@ function timeAgo(dateStr: string): string {
 
 interface Props {
   onNavigate?: (section: string) => void;
+  lang?: "ar" | "en";
 }
 
-export default function NotificationBell({ onNavigate }: Props) {
+// parse bilingual JSON stored as {"ar":"...","en":"..."} — falls back to raw string
+function t(raw: string, lang: "ar" | "en"): string {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && (parsed.ar || parsed.en)) {
+      return parsed[lang] ?? parsed.ar ?? raw;
+    }
+  } catch { /* plain string, use as-is */ }
+  return raw;
+}
+
+export default function NotificationBell({ onNavigate, lang = "ar" }: Props) {
   const [open,        setOpen]        = useState(false);
   const [notifs,      setNotifs]      = useState<Notification[]>([]);
   const [unread,      setUnread]      = useState(0);
@@ -208,9 +220,9 @@ export default function NotificationBell({ onNavigate }: Props) {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm leading-snug ${!notif.isRead ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}>
-                      {notif.title}
+                      {t(notif.title, lang)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-snug">{notif.body}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-snug">{t(notif.body, lang)}</p>
                     <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt)}</p>
                   </div>
 
