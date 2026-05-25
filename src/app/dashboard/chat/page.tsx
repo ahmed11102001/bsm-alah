@@ -210,8 +210,30 @@ function Bubble({
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
   const [showReactions, setShowReactions] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const resolvedMediaSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl) : null;
   const resolvedMediaDownloadSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl, { download: true }) : null;
+
+  const handleSaveImage = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!resolvedMediaSrc || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(resolvedMediaDownloadSrc ?? resolvedMediaSrc);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const ext = blob.type.split("/")[1]?.split("+")[0] ?? "jpg";
+      a.href = url;
+      a.download = `image_${msg.id}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  };
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -254,15 +276,51 @@ function Bubble({
         >
           {msg.type === "image" && resolvedMediaSrc && (
             <>
-              <a href={resolvedMediaSrc} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-                <img src={resolvedMediaSrc} alt="" className="rounded-lg mb-1 max-w-full max-h-60 object-cover" />
-              </a>
-              {resolvedMediaDownloadSrc && (
-                <a href={resolvedMediaDownloadSrc} download onClick={e => e.stopPropagation()}
-                  className="inline-flex items-center text-[11px] text-blue-400 hover:underline mb-1">
-                  {t[lang].saveImage}
-                </a>
+              {/* Lightbox modal */}
+              {lightboxOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                  onClick={() => setLightboxOpen(false)}
+                >
+                  <button
+                    onClick={() => setLightboxOpen(false)}
+                    className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/60 rounded-full p-2 z-10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleSaveImage}
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white bg-black/40 hover:bg-black/60 rounded-full px-4 py-2 text-sm flex items-center gap-2 z-10"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                    {t[lang].saveImage}
+                  </button>
+                  <img
+                    src={resolvedMediaSrc}
+                    alt=""
+                    className="max-w-[92vw] max-h-[85vh] rounded-xl object-contain shadow-2xl"
+                    onClick={e => e.stopPropagation()}
+                  />
+                </div>
               )}
+              {/* Thumbnail — click to open lightbox */}
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setLightboxOpen(true); }}
+                className="block w-full"
+              >
+                <img src={resolvedMediaSrc} alt="" className="rounded-lg mb-1 max-w-full max-h-60 object-cover cursor-zoom-in" />
+              </button>
+              {/* Save button — downloads via blob */}
+              <button
+                type="button"
+                onClick={handleSaveImage}
+                disabled={saving}
+                className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline mb-1 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                {t[lang].saveImage}
+              </button>
             </>
           )}
           {msg.type === "video" && resolvedMediaSrc && (
@@ -761,13 +819,13 @@ export default function ChatPage() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
-                  className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                     ${selected.voiceAgentEnabled
                       ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
                       : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                 >
                   <Mic2 className="w-3.5 h-3.5" />
-                  {selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}
+                  <span className="hidden sm:inline">{selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}</span>
                 </button>
                 <button
                   onClick={() => { setSelected(null); setMessages([]); setMobileShowChat(false); }}
