@@ -496,7 +496,7 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function API({ initialData, canUseStoreIntegrations = true }: { initialData?: any; canUseStoreIntegrations?: boolean }) {
+export default function API({ initialData, canUseStoreIntegrations = true, canUseClaude = true }: { initialData?: any; canUseStoreIntegrations?: boolean; canUseClaude?: boolean }) {
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 
@@ -527,6 +527,7 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
   const [claudeApiKey, setClaudeApiKey] = useState("");
   const [claudeLoading, setClaudeLoading] = useState(false);
   const [claudeCopied,  setClaudeCopied]  = useState<"key"|"config"|null>(null);
+  const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
 
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
@@ -590,12 +591,20 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
   const lockMessage = locale === "ar"
     ? "ربط المتاجر متاح من باقة Professional فما فوق. قم بترقية الباقة."
     : "Store integrations are available on Professional plan and above. Please upgrade.";
+  const claudeLockMessage = locale === "ar"
+    ? "Claude AI متاح من باقة Pro فما فوق. قم بالترقية للوصول."
+    : "Claude AI is available on Pro plan and above. Please upgrade.";
   const isStoreCardLocked = (id: CardId) =>
     !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
+  const isClaudeCardLocked = (id: CardId) => !canUseClaude && id === "claude";
+  const isCardLocked = (id: CardId) => isStoreCardLocked(id) || isClaudeCardLocked(id);
+  const getCardLockMessage = (id: CardId) =>
+    isClaudeCardLocked(id) ? claudeLockMessage : lockMessage;
 
   const handleCardClick = (id: CardId) => {
-    if (isStoreCardLocked(id)) {
-      toast.error(lockMessage);
+    if (isCardLocked(id)) {
+      if (id === "claude") { setShowClaudeUpgrade(true); return; }
+      toast.error(getCardLockMessage(id));
       return;
     }
     setOpenCard(prev => prev === id ? null : id);
@@ -678,7 +687,7 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
   const copyClaudeText = (type: "key" | "config") => {
     const host = typeof window !== "undefined" ? window.location.host : "whatsprosystem.vercel.app";
     const text = type === "key"
-      ? claudeApiKey
+      ? `Bearer ${claudeApiKey}`
       : JSON.stringify({
           mcpServers: {
             whatspro: {
@@ -749,6 +758,43 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
+      {/* ── Claude Upgrade Modal ── */}
+      {showClaudeUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setShowClaudeUpgrade(false)}>
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-orange-200 dark:border-orange-900/50"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Claude AI — باقة Pro</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">هذه الميزة متاحة من باقة Pro فما فوق</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              قم بالترقية إلى <span className="font-bold text-orange-500">Pro</span> للوصول لـ Claude AI وربطه بواتس برو مباشرة من الشات.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowClaudeUpgrade(false); window.location.href = "/checkout?plan=professional"; }}
+                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4" /> ترقية الآن — 499 ج/شهر
+              </button>
+              <button
+                onClick={() => setShowClaudeUpgrade(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
+                لاحقاً
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8 flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -781,8 +827,8 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
             {...card}
             isOpen={openCard === card.id}
             onToggle={() => handleCardClick(card.id)}
-            locked={isStoreCardLocked(card.id)}
-            lockMessage={lockMessage}
+            locked={isCardLocked(card.id)}
+            lockMessage={getCardLockMessage(card.id)}
           >
             {card.id === "whatsapp" && (
               <WhatsAppContent
@@ -821,7 +867,7 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
             {card.id === "claude" && (
               <div className="space-y-5 pt-1">
 
-                {/* API Key */}
+                {/* API Key — shows "Bearer bsm_..." for easy copy-paste */}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
                     <Key className="w-3 h-3" /> API Key الخاص بك
@@ -830,7 +876,7 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
                     <Input
                       readOnly
                       dir="ltr"
-                      value={claudeApiKey || "لم يتم إنشاء مفتاح بعد"}
+                      value={claudeApiKey ? `Bearer ${claudeApiKey}` : "لم يتم إنشاء مفتاح بعد"}
                       className="font-mono text-xs bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                     />
                     <Button variant="outline" size="icon"
@@ -860,6 +906,22 @@ export default function API({ initialData, canUseStoreIntegrations = true }: { i
                       <Shield className="w-3 h-3" /> احتفظ بهذا المفتاح سري — لا تشاركه
                     </p>
                   )}
+                </div>
+
+                {/* MCP URL — copy-ready endpoint */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                    <LinkIcon className="w-3 h-3" /> رابط الاتصال (MCP URL)
+                  </label>
+                  <CopyInput
+                    value={typeof window !== "undefined"
+                      ? `https://${window.location.host}/api/mcp`
+                      : "https://whatsprosystem.vercel.app/api/mcp"}
+                    placeholder="https://whatsprosystem.vercel.app/api/mcp"
+                  />
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                    استخدم هذا الرابط + المفتاح أعلاه في إعدادات Claude Desktop
+                  </p>
                 </div>
 
                 {/* Config */}
