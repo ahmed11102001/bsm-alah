@@ -93,6 +93,20 @@ export const TOKEN_PACKAGES = [
 
 export type TokenPackageId = typeof TOKEN_PACKAGES[number]["id"];
 
+// ─── باقة أوامر Claude الإضافية (غير محدودة لشهر) ────────────────────────────
+export const MCP_ADDON_PACKAGES = [
+  {
+    id:          "mcp_addon_unlimited",
+    label:       "Claude غير محدود ∞",
+    labelEn:     "Unlimited Claude ∞",
+    commands:    -1,           // -1 = غير محدود
+    priceEGP:    99,
+    description: "أوامر Claude غير محدودة لمدة شهر كامل",
+  },
+] as const;
+
+export type McpAddonPackageId = typeof MCP_ADDON_PACKAGES[number]["id"];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export function computePrice(monthly: number, cycle: BillingCycle): number {
   const c = BILLING_CYCLES[cycle] ?? BILLING_CYCLES.monthly;

@@ -549,14 +549,14 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
             <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl p-4 text-center">
               <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
               <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude غير محدود ∞" : "Unlimited Claude ∞"}</p>
-              <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "ترقية لباقة Pro وانتهت القيود" : "Upgrade to Pro — no limits"}</p>
+              <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "أوامر Claude غير محدودة لشهر كامل" : "Unlimited Claude commands for a month"}</p>
             </div>
             <button
-              onClick={() => window.location.href = "/checkout?plan=pro&price=99"}
+              onClick={() => window.location.href = "/checkout?packageId=mcp_addon_unlimited"}
               className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
             >
               <Sparkles className="w-4 h-4" />
-              {locale === "ar" ? "ترقية لـ Pro — 99 ج/شهر" : "Upgrade to Pro — 99 EGP/mo"}
+              {locale === "ar" ? "اشترِ أوامر غير محدودة — 99 ج/شهر" : "Buy Unlimited Commands — 99 EGP/mo"}
             </button>
           </div>
         )}

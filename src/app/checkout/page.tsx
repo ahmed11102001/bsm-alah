@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { usePixel } from "@/hooks/usePixel";
 import {
-  SUBSCRIPTION_PLANS, BILLING_CYCLES, TOKEN_PACKAGES,
+  SUBSCRIPTION_PLANS, BILLING_CYCLES, TOKEN_PACKAGES, MCP_ADDON_PACKAGES,
   computePrice,
   type PlanSlug, type BillingCycle, type TokenPackageId,
 } from "@/lib/pricing";
@@ -37,13 +37,18 @@ function CheckoutContent() {
   const { track } = usePixel();
 
   // ── استنتج نوع الـ checkout من الـ URL ──
-  const packageId = params.get("packageId") as TokenPackageId | null;
-  const planSlug  = params.get("plan") as PlanSlug | null;
-  const cycleKey  = (params.get("cycle") ?? "monthly") as BillingCycle;
+  const rawPackageId = params.get("packageId");
+  const planSlug     = params.get("plan") as PlanSlug | null;
+  const cycleKey     = (params.get("cycle") ?? "monthly") as BillingCycle;
+
+  // ── MCP Addon purchase mode (id يبدأ بـ mcp_addon_) ──
+  const mcpAddonPkg = rawPackageId?.startsWith("mcp_addon_")
+    ? MCP_ADDON_PACKAGES.find(p => p.id === rawPackageId) ?? null
+    : null;
 
   // ── Token purchase mode ──
-  const tokenPkg = packageId
-    ? TOKEN_PACKAGES.find(p => p.id === packageId) ?? null
+  const tokenPkg = !mcpAddonPkg && rawPackageId
+    ? TOKEN_PACKAGES.find(p => p.id === (rawPackageId as TokenPackageId)) ?? null
     : null;
 
   // ── Plan purchase mode ──
@@ -51,11 +56,15 @@ function CheckoutContent() {
     ? SUBSCRIPTION_PLANS[planSlug]
     : SUBSCRIPTION_PLANS.professional;
   const cycle = BILLING_CYCLES[cycleKey] ?? BILLING_CYCLES.monthly;
-  const Icon  = tokenPkg ? Zap : plan.icon;
+  const Icon  = mcpAddonPkg ? Bot : tokenPkg ? Zap : plan.icon;
 
   const pricePerMonth = computePrice(plan.monthly, cycleKey);
-  const totalDue      = tokenPkg ? tokenPkg.priceEGP : pricePerMonth * cycle.months;
-  const savings       = !tokenPkg && cycle.discount > 0
+  const totalDue      = mcpAddonPkg
+    ? mcpAddonPkg.priceEGP
+    : tokenPkg
+    ? tokenPkg.priceEGP
+    : pricePerMonth * cycle.months;
+  const savings       = !tokenPkg && !mcpAddonPkg && cycle.discount > 0
     ? Math.round(plan.monthly * cycle.discount * cycle.months)
     : 0;
 
@@ -70,8 +79,8 @@ function CheckoutContent() {
 
   useEffect(() => {
     track("InitiateCheckout", {
-      content_name: tokenPkg ? tokenPkg.label : plan.name,
-      content_ids:  [tokenPkg ? tokenPkg.id : plan.slug],
+      content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
+      content_ids:  [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
       content_type: "product",
       value:        totalDue,
       currency:     "EGP",
@@ -84,7 +93,7 @@ function CheckoutContent() {
     if (cardFocused) return;
     setCardFocused(true);
     track("AddPaymentInfo", {
-      content_name: tokenPkg ? tokenPkg.label : plan.name,
+      content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
       value:        finalTotal,
       currency:     "EGP",
     });
@@ -105,7 +114,18 @@ function CheckoutContent() {
     e.preventDefault();
     setPaying(true);
 
-    if (tokenPkg) {
+    if (mcpAddonPkg) {
+      // ── شراء أوامر Claude غير محدودة ──
+      const res = await fetch("/api/mcp-addon/purchase", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ packageId: mcpAddonPkg.id }),
+      });
+      if (!res.ok) {
+        setPaying(false);
+        return;
+      }
+    } else if (tokenPkg) {
       // ── شراء توكن إضافية ──
       const res = await fetch("/api/ai-credits/purchase", {
         method:  "POST",
@@ -122,8 +142,8 @@ function CheckoutContent() {
     await new Promise(r => setTimeout(r, 1800));
 
     track("Purchase", {
-      content_name: tokenPkg ? tokenPkg.label : plan.name,
-      content_ids:  [tokenPkg ? tokenPkg.id : plan.slug],
+      content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
+      content_ids:  [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
       content_type: "product",
       value:        finalTotal,
       currency:     "EGP",
@@ -145,7 +165,9 @@ function CheckoutContent() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900">تم الدفع بنجاح! 🎉</h2>
           <p className="text-gray-500 text-sm">
-            {tokenPkg
+            {mcpAddonPkg
+              ? `تمت إضافة أوامر Claude غير محدودة لحسابك لمدة شهر`
+              : tokenPkg
               ? `تمت إضافة ${tokenPkg.tokens.toLocaleString("ar-EG")} توكن لحسابك`
               : `جاري تفعيل باقة ${plan.name}…`}
           </p>
@@ -179,23 +201,33 @@ function CheckoutContent() {
 
             {/* Product header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tokenPkg ? "bg-purple-50" : "bg-green-50"}`}>
-                <Icon className={`w-5 h-5 ${tokenPkg ? "text-purple-500" : "text-[#25D366]"}`} />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${mcpAddonPkg ? "bg-orange-50" : tokenPkg ? "bg-purple-50" : "bg-green-50"}`}>
+                <Icon className={`w-5 h-5 ${mcpAddonPkg ? "text-orange-500" : tokenPkg ? "text-purple-500" : "text-[#25D366]"}`} />
               </div>
               <div>
                 <p className="font-bold text-gray-900">
-                  {tokenPkg ? tokenPkg.label : plan.name}
+                  {mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {tokenPkg
+                  {mcpAddonPkg
+                    ? mcpAddonPkg.description
+                    : tokenPkg
                     ? `${tokenPkg.tokens.toLocaleString("ar-EG")} توكن — ${tokenPkg.description}`
                     : plan.tagline}
                 </p>
               </div>
             </div>
 
+            {/* MCP Addon: one-time badge */}
+            {mcpAddonPkg && (
+              <div className="flex items-center gap-1.5 mb-3 text-xs text-orange-600 bg-orange-50 rounded-lg px-3 py-2">
+                <Bot className="w-3.5 h-3.5" />
+                دفعة واحدة — تُفعَّل فوراً لمدة شهر كامل
+              </div>
+            )}
+
             {/* Token pack: one-time badge */}
-            {tokenPkg && (
+            {tokenPkg && !mcpAddonPkg && (
               <div className="flex items-center gap-1.5 mb-3 text-xs text-purple-600 bg-purple-50 rounded-lg px-3 py-2">
                 <Zap className="w-3.5 h-3.5" />
                 دفعة واحدة — تُضاف فوراً لرصيد التوكن
@@ -203,7 +235,7 @@ function CheckoutContent() {
             )}
 
             {/* Plan: cycle selector */}
-            {!tokenPkg && (
+            {!tokenPkg && !mcpAddonPkg && (
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-gray-500">دورة الفوترة</span>
                 <span className="font-semibold text-gray-800">{cycle.label}</span>
@@ -212,7 +244,7 @@ function CheckoutContent() {
 
             {/* Price breakdown */}
             <div className="bg-gray-50 rounded-xl p-3 space-y-2 text-sm mt-3">
-              {!tokenPkg && (
+              {!tokenPkg && !mcpAddonPkg && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">{pricePerMonth.toLocaleString("ar-EG")} ج × {cycle.months} شهر</span>
                   <span className="text-gray-700 font-medium">{totalDue.toLocaleString("ar-EG")} ج</span>
@@ -222,6 +254,12 @@ function CheckoutContent() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">{tokenPkg.label}</span>
                   <span className="text-gray-700 font-medium">{tokenPkg.priceEGP} ج</span>
+                </div>
+              )}
+              {mcpAddonPkg && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Claude غير محدود ∞ — شهر</span>
+                  <span className="text-gray-700 font-medium">{mcpAddonPkg.priceEGP} ج</span>
                 </div>
               )}
               {savings > 0 && (
@@ -243,7 +281,7 @@ function CheckoutContent() {
             </div>
 
             {/* Plan features toggle */}
-            {!tokenPkg && (
+            {!tokenPkg && !mcpAddonPkg && (
               <>
                 <button
                   onClick={() => setShowFeatures(v => !v)}
