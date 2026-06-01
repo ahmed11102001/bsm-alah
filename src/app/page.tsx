@@ -15,6 +15,7 @@ import FAQ          from "@/sections/FAQ";
 import Footer       from "@/sections/Footer";
 import LoginModal          from "@/components/LoginModal";
 import AIAssistantWidget   from "@/components/AIAssistantWidget";
+import RevealSection       from "@/components/RevealSection";
 import type { Lang } from "@/lib/translations";
 
 export default function Home() {
@@ -44,13 +45,14 @@ export default function Home() {
         onLangChange={setLang}
       />
       <Hero        onLoginClick={() => setIsLoginModalOpen(true)} lang={lang} />
-      <Features    lang={lang} />
-      <Partners    lang={lang} />
-      <HowItWorks  lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} />
-      <Pricing     lang={lang} />
-      <Testimonials lang={lang} />
-      <FAQ         lang={lang} />
-      <Footer      lang={lang} />
+
+      <RevealSection><Features    lang={lang} /></RevealSection>
+      <RevealSection><Partners    lang={lang} /></RevealSection>
+      <RevealSection><HowItWorks  lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
+      <RevealSection><Pricing     lang={lang} /></RevealSection>
+      <RevealSection><Testimonials lang={lang} /></RevealSection>
+      <RevealSection><FAQ         lang={lang} /></RevealSection>
+      <RevealSection><Footer      lang={lang} /></RevealSection>
 
       <LoginModal
         isOpen={isLoginModalOpen}

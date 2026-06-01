@@ -1,12 +1,12 @@
 // ─── Features Section ─────────────────────────────────────────────────────────
-// Server Component — zero JS bundle — pure CSS hover
-// مفيش animations ثقيلة، مفيش framer-motion، مفيش useEffect
+// Server Component — مع StatsCounter client component للـ animated counters
 
 import {
   Send, Brain, Store, Zap, BarChart3,
   MessageSquare, Users, Shield, UserCheck,
 } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
+import StatsCounter from "@/components/StatsCounter";
 
 // ── icon + color per feature ──────────────────────────────────────────────────
 const META = [
@@ -21,12 +21,7 @@ const META = [
   { icon: Shield,       bg: "bg-red-500",     light: "bg-red-50",     border: "border-red-100",     text: "text-red-700"     },
 ] as const;
 
-const STATS = [
-  { value: "٩٨.٥٪", label: { ar: "نسبة التسليم",       en: "Delivery Rate"         } },
-  { value: "١٥",    label: { ar: "دقيقة للإعداد",      en: "Min to Setup"          } },
-  { value: "٢٤/٧",  label: { ar: "أتمتة مستمرة",       en: "Always-on Automation"  } },
-  { value: "API",   label: { ar: "واتساب رسمي",         en: "Official WhatsApp"     } },
-] as const;
+
 
 interface FeaturesProps { lang: Lang }
 
@@ -64,9 +59,10 @@ export default function Features({ lang }: FeaturesProps) {
             return (
               <div
                 key={i}
-                className={`group relative ${m.light} border ${m.border} rounded-2xl p-5
+                className={`feature-card group relative ${m.light} border ${m.border} rounded-2xl p-5
                   hover:shadow-lg hover:-translate-y-1
                   transition-[box-shadow,transform,border-color] duration-200 ${span}`}
+                style={{ "--card-delay": `${i * 75}ms` } as React.CSSProperties}
               >
                 {/* tag pill */}
                 <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-3 bg-white/70 backdrop-blur-sm ${m.text}`}>
@@ -98,17 +94,8 @@ export default function Features({ lang }: FeaturesProps) {
           })}
         </div>
 
-        {/* ── Stats strip ── */}
-        <div className="mt-12 bg-white border border-gray-100 rounded-2xl shadow-sm px-6 py-5
-          grid grid-cols-2 md:grid-cols-4 gap-6 divide-y-0 md:divide-x divide-gray-100"
-          style={{ direction: isAr ? "rtl" : "ltr" }}>
-          {STATS.map((s, i) => (
-            <div key={i} className={`flex flex-col items-center text-center ${i > 0 ? "md:pr-6" : ""}`}>
-              <span className="text-2xl font-black text-[#25D366] leading-none mb-1">{s.value}</span>
-              <span className="text-xs text-gray-500 font-medium">{tr(s.label, lang)}</span>
-            </div>
-          ))}
-        </div>
+        {/* ── Stats strip (animated counters) ── */}
+        <StatsCounter lang={lang} />
 
       </div>
     </section>

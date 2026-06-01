@@ -520,6 +520,35 @@ input:focus, textarea:focus {
   }
 }
 
+/* ── Scroll Reveal ─────────────────────────────────────────────────────────── */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity  0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-section.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Feature Cards Stagger ─────────────────────────────────────────────────── */
+/* الكاردز invisible في الأول */
+.reveal-section .feature-card {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: none; /* الـ animation هتتحكم */
+}
+
+/* لما الـ section يتكشف → stagger animation تبدأ */
+.reveal-section.is-revealed .feature-card {
+  animation: fade-in-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--card-delay, 0ms);
+}
+
 /* ── Partners Marquee ──────────────────────────────────────────────────────── */
 @keyframes marquee-ltr {
   0%   { transform: translateX(0); }
