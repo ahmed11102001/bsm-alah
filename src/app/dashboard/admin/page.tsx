@@ -7,7 +7,7 @@ import {
   Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
-  Target, Download, Phone,
+  Target, Download, Phone, Bot, Send, Power, PowerOff,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -135,6 +135,18 @@ export default function AdminPage() {
   const [leadTotal,     setLeadTotal]     = useState(0);
   const [updatingLead,  setUpdatingLead]  = useState<string | null>(null);
 
+  // lead bot
+  interface Template { id: string; name: string; language: string; status: string; }
+  interface LeadBotConfig { id: string; templateId: string | null; templateName: string | null; templateLang: string; isActive: boolean; sentCount: number; }
+  const [botConfig,       setBotConfig]       = useState<LeadBotConfig | null>(null);
+  const [botTemplates,    setBotTemplates]    = useState<Template[]>([]);
+  const [botSelectedTpl,  setBotSelectedTpl]  = useState<string>("");
+  const [botActive,       setBotActive]       = useState(false);
+  const [loadingBot,      setLoadingBot]      = useState(false);
+  const [savingBot,       setSavingBot]       = useState(false);
+  const [sendingBot,      setSendingBot]      = useState(false);
+  const [botMsg,          setBotMsg]          = useState<string | null>(null);
+
   // guard
   useEffect(() => {
     if (status === "loading") return;
@@ -188,6 +200,66 @@ export default function AdminPage() {
     setLoadingL(false);
   };
 
+  const fetchBotConfig = async () => {
+    setLoadingBot(true);
+    const [configRes, templatesRes] = await Promise.all([
+      fetch("/api/admin/lead-bot"),
+      fetch("/api/templates"),
+    ]);
+    if (configRes.ok) {
+      const { config } = await configRes.json();
+      if (config) {
+        setBotConfig(config);
+        setBotActive(config.isActive);
+        setBotSelectedTpl(config.templateName ?? "");
+      }
+    }
+    if (templatesRes.ok) {
+      const tpls = await templatesRes.json();
+      setBotTemplates(Array.isArray(tpls) ? tpls.filter((t: any) => t.status === "APPROVED" || t.status === "approved") : []);
+    }
+    setLoadingBot(false);
+  };
+
+  const handleBotSave = async () => {
+    if (!botSelectedTpl) { setBotMsg(adm.leads.bot.noTemplate); return; }
+    setSavingBot(true); setBotMsg(null);
+    const selectedTplObj = botTemplates.find(t => t.name === botSelectedTpl);
+    const r = await fetch("/api/admin/lead-bot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action:       "save",
+        templateId:   selectedTplObj?.id ?? null,
+        templateName: botSelectedTpl,
+        templateLang: selectedTplObj?.language ?? "ar",
+        isActive:     botActive,
+      }),
+    });
+    setSavingBot(false);
+    if (r.ok) {
+      const { config } = await r.json();
+      setBotConfig(config);
+      setBotMsg(botActive ? adm.leads.bot.activeStatus + " ✅" : adm.leads.bot.inactiveStatus);
+    }
+  };
+
+  const handleBotSendNow = async () => {
+    if (!botSelectedTpl) { setBotMsg(adm.leads.bot.noTemplate); return; }
+    setSendingBot(true); setBotMsg(null);
+    const r = await fetch("/api/admin/lead-bot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send_now" }),
+    });
+    setSendingBot(false);
+    if (r.ok) {
+      const { sent, failed } = await r.json();
+      setBotMsg(adm.leads.bot.sentSuccess(sent, failed));
+      fetchBotConfig();
+    }
+  };
+
   useEffect(() => {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,7 +268,7 @@ export default function AdminPage() {
     if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")      fetchCoupons();
     if (activeTab === "articles")     fetchArticles();
-    if (activeTab === "leads")        fetchLeads(leadStatus);
+    if (activeTab === "leads")        { fetchLeads(leadStatus); fetchBotConfig(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
@@ -988,6 +1060,114 @@ export default function AdminPage() {
         {/* ══ LEADS ══ */}
         {activeTab === "leads" && (
           <div>
+            {/* ── Lead Bot Panel ─────────────────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mb-5 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${botActive ? "bg-green-100 dark:bg-green-900/30" : "bg-gray-100 dark:bg-gray-700"}`}>
+                    <Bot className={`w-5 h-5 ${botActive ? "text-[#25D366]" : "text-gray-400 dark:text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{adm.leads.bot.title}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{adm.leads.bot.subtitle}</p>
+                  </div>
+                </div>
+                {/* Status badge */}
+                <div className="flex items-center gap-3">
+                  {botConfig && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {adm.leads.bot.sentCount(botConfig.sentCount)}
+                    </span>
+                  )}
+                  <span className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
+                    botActive
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${botActive ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+                    {botActive ? adm.leads.bot.activeStatus : adm.leads.bot.inactiveStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-4">
+                {loadingBot ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {adm.leads.bot.loadingTemplates}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-end gap-3">
+                    {/* Template selector */}
+                    <div className="flex-1 min-w-48">
+                      <label className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 block font-medium">
+                        {adm.leads.bot.selectTemplate}
+                      </label>
+                      {botTemplates.length === 0 ? (
+                        <p className="text-xs text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800">
+                          {adm.leads.bot.noTemplates}
+                        </p>
+                      ) : (
+                        <select
+                          value={botSelectedTpl}
+                          onChange={e => setBotSelectedTpl(e.target.value)}
+                          className={inp + " cursor-pointer"}
+                        >
+                          <option value="">— {adm.leads.bot.selectTemplate} —</option>
+                          {botTemplates.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {/* Activate toggle */}
+                    <div className="flex items-center gap-2 pb-0.5">
+                      <button
+                        onClick={() => setBotActive(v => !v)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition ${
+                          botActive
+                            ? "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                            : "border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+                        }`}
+                      >
+                        {botActive ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                        {botActive ? adm.leads.bot.deactivate : adm.leads.bot.activate}
+                      </button>
+
+                      {/* Save */}
+                      <button
+                        onClick={handleBotSave}
+                        disabled={savingBot || !botSelectedTpl}
+                        className={btn}
+                      >
+                        {savingBot ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        {savingBot ? adm.leads.bot.saving : adm.leads.bot.saveBtn}
+                      </button>
+
+                      {/* Send now */}
+                      <button
+                        onClick={handleBotSendNow}
+                        disabled={sendingBot || !botSelectedTpl}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {sendingBot ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        {sendingBot ? adm.leads.bot.sending : adm.leads.bot.sendNow}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Feedback message */}
+                {botMsg && (
+                  <p className="mt-3 text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-xl border border-green-200 dark:border-green-800">
+                    {botMsg}
+                  </p>
+                )}
+              </div>
+            </div>
             {/* Filters row */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {(["all", "NEW", "CONTACTED", "CONVERTED", "LOST"] as const).map(s => {

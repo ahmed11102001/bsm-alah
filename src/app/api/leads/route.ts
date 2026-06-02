@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
+import { inngest }                   from "@/inngest/client";
 
 // ── POST /api/leads — حفظ lead جديد (public) ─────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -39,6 +40,15 @@ export async function POST(req: NextRequest) {
         source:   source?.slice(0, 200) ?? null,
       },
     });
+
+    return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
+
+    // 🔔 نشر event لـ Inngest عشان الـ lead bot يشتغل تلقائياً
+    // (fire-and-forget — مش هيأثر على الـ response)
+    inngest.send({
+      name: "lead/created",
+      data: { leadId: lead.id, leadName: lead.name, leadPhone: lead.phone },
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
   } catch (err) {

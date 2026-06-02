@@ -659,3 +659,78 @@ export const processQueueItem = inngest.createFunction(
     return { ok: sendResult.ok };
   }
 );
+// ═══════════════════════════════════════════════════════════════════════════════
+// Function 4: handleNewLeadBot
+// بيشتغل لما يتنشر event "lead/created" — بيبعت القالب للـ lead الجديد تلقائياً
+// ═══════════════════════════════════════════════════════════════════════════════
+export const handleNewLeadBot = inngest.createFunction(
+  {
+    id:      "handle-new-lead-bot",
+    retries: 1,
+    triggers: [{ event: "lead/created" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { leadId, leadName, leadPhone } = event.data as {
+      leadId:    string;
+      leadName:  string;
+      leadPhone: string;
+    };
+
+    // ── Step 1: جيب الـ config لو موجود ومفعّل ──────────────────────────────
+    const config = await step.run("get-lead-bot-config", async () => {
+      return await prisma.leadBotConfig.findFirst({
+        where: { isActive: true, templateName: { not: null } },
+      });
+    });
+
+    if (!config) return { ok: false, reason: "bot not active or no template" };
+
+    // ── Step 2: جيب WhatsApp account ──────────────────────────────────────────
+    const wa = await step.run("get-wa-account", async () => {
+      return await prisma.whatsAppAccount.findUnique({
+        where: { userId: config.ownerId },
+      });
+    });
+
+    if (!wa?.accessToken || !wa?.phoneNumberId)
+      return { ok: false, reason: "no whatsapp account" };
+
+    // ── Step 3: بعت الرسالة ──────────────────────────────────────────────────
+    const result = await step.run("send-template", async () => {
+      const { normalizePhone } = await import("@/lib/phone");
+      const { decryptToken }   = await import("@/lib/crypto");
+
+      const normalizedPhone = normalizePhone(leadPhone);
+      if (!normalizedPhone) return { ok: false, error: "invalid phone" };
+
+      return await sendWhatsAppMessage({
+        toPhone:       normalizedPhone,
+        phoneNumberId: wa.phoneNumberId,
+        accessToken:   decryptToken(wa.accessToken),
+        messageType:   "template",
+        templateName:  config.templateName!,
+        templateLang:  config.templateLang,
+        templateVars:  { body: [leadName] },
+        content:       null,
+      });
+    });
+
+    // ── Step 4: حدّث status الـ lead وعدّاد الـ config ──────────────────────
+    if (result.ok) {
+      await step.run("update-lead-status", async () => {
+        await Promise.all([
+          prisma.lead.update({
+            where: { id: leadId },
+            data:  { status: "CONTACTED" },
+          }).catch(() => {}),
+          prisma.leadBotConfig.update({
+            where: { id: config.id },
+            data:  { sentCount: { increment: 1 }, lastSentLeadId: leadId },
+          }).catch(() => {}),
+        ]);
+      });
+    }
+
+    return { ok: result.ok, error: result.error };
+  }
+);
