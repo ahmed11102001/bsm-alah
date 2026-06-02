@@ -168,6 +168,7 @@ export const AutomationCreateSchema = z
     extraInstructions: z.string().trim().max(1000).optional(),
     humanKeywords:     z.array(z.string().trim()).optional().default([]),
     pauseOnReply:      z.boolean().optional().default(true),
+    replyMediaUrl:     z.string().url().optional().or(z.literal("")),
   })
   .superRefine((data, ctx) => {
     if (data.triggerType === TriggerType.KEYWORD && !data.triggerValue) {

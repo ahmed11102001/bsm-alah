@@ -488,7 +488,7 @@ async function handleAutomation(ctx: {
       const welcomeRule = await prisma.automationRule.findFirst({
         where:   { userId, triggerType: TriggerType.FIRST_MESSAGE, isEnabled: true },
         orderBy: { createdAt: "asc" },
-        select:  { id: true, name: true, replyContent: true },
+        select:  { id: true, name: true, replyContent: true, replyMediaUrl: true },
       });
 
       if (welcomeRule?.replyContent?.trim()) {
@@ -496,6 +496,7 @@ async function handleAutomation(ctx: {
         await sendReply({
           userId, from,
           replyText:    welcomeRule.replyContent.trim(),
+          replyMediaUrl: welcomeRule.replyMediaUrl ?? undefined,
           accountOwner,
           ruleName:     welcomeRule.name,
         });
@@ -513,7 +514,7 @@ async function handleAutomation(ctx: {
       replyType:   ReplyType.TEXT,
     },
     orderBy: { createdAt: "asc" },
-    select:  { id: true, name: true, triggerValue: true, replyContent: true, humanKeywords: true },
+    select:  { id: true, name: true, triggerValue: true, replyContent: true, replyMediaUrl: true, humanKeywords: true },
   });
 
   // Human takeover — ?? ?????? ?? ?????? ?? ?????? ???? ?????
@@ -539,7 +540,7 @@ async function handleAutomation(ctx: {
     const replyText = matched.replyContent?.trim();
     if (!replyText) return;
     console.log(`[BOT] Keyword matched ? "${matched.name}" for "${messageText}"`);
-    await sendReply({ userId, from, replyText, accountOwner, ruleName: matched.name });
+    await sendReply({ userId, from, replyText: replyText ?? "", replyMediaUrl: matched.replyMediaUrl ?? undefined, accountOwner, ruleName: matched.name });
     return;
   }
 
@@ -635,30 +636,81 @@ async function handleAutomation(ctx: {
 // Helper: ????? ???? ??? Meta API ????? ?? ??? DB
 // -----------------------------------------------------------------------------
 async function sendReply(ctx: {
-  userId:       string;
-  from:         string;
-  replyText:    string;
-  accountOwner: { accessToken: string; phoneNumberId: string };
-  ruleName:     string;
+  userId:        string;
+  from:          string;
+  replyText:     string;
+  replyMediaUrl?: string;
+  accountOwner:  { accessToken: string; phoneNumberId: string };
+  ruleName:      string;
 }) {
-  const { userId, from, replyText, accountOwner, ruleName } = ctx;
+  const { userId, from, replyText, replyMediaUrl, accountOwner, ruleName } = ctx;
+  const apiBase = `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`;
+  const headers = {
+    "Content-Type":  "application/json",
+    "Authorization": `Bearer ${accountOwner.accessToken}`,
+  };
 
-  const metaRes = await fetch(
-    `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
-    {
+  const contact = await prisma.contact.findFirst({
+    where:  { phone: from, userId },
+    select: { id: true },
+  });
+  if (!contact) return;
+
+  // ── إرسال الصورة أولاً (لو موجودة) ──────────────────────────────────────
+  if (replyMediaUrl?.trim()) {
+    const imgRes = await fetch(apiBase, {
       method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${accountOwner.accessToken}`,
-      },
+      headers,
       body: JSON.stringify({
         messaging_product: "whatsapp",
         to:   from,
-        type: "text",
-        text: { body: replyText },
+        type: "image",
+        image: {
+          link:    replyMediaUrl.trim(),
+          caption: replyText || undefined,   // النص يظهر كـ caption تحت الصورة
+        },
       }),
+    });
+
+    if (!imgRes.ok) {
+      const err = await imgRes.text();
+      console.error(`[AUTOMATION] Image send failed for ${from}:`, err);
+      // fallback: أرسل النص فقط
+    } else {
+      const imgData      = await imgRes.json();
+      const whatsappMsgId = imgData?.messages?.[0]?.id as string | undefined;
+      await prisma.message.create({
+        data: {
+          userId,
+          contactId:  contact.id,
+          content:    replyText || null,
+          mediaUrl:   replyMediaUrl,
+          type:       MessageType.image,
+          direction:  MessageDirection.outbound,
+          status:     MessageStatus.sent,
+          whatsappId: whatsappMsgId,
+          sentAt:     new Date(),
+        },
+      });
+      console.log(`[AUTOMATION] Image sent to ${from} via "${ruleName}"`);
+      // لو في caption (النص) بعت مع الصورة — مش محتاج رسالة نصية تانية
+      return;
     }
-  );
+  }
+
+  // ── إرسال نصي فقط ────────────────────────────────────────────────────────
+  if (!replyText?.trim()) return;
+
+  const metaRes = await fetch(apiBase, {
+    method:  "POST",
+    headers,
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to:   from,
+      type: "text",
+      text: { body: replyText },
+    }),
+  });
 
   if (!metaRes.ok) {
     const err = await metaRes.text();
@@ -668,12 +720,6 @@ async function sendReply(ctx: {
 
   const metaData      = await metaRes.json();
   const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
-
-  const contact = await prisma.contact.findFirst({
-    where:  { phone: from, userId },
-    select: { id: true },
-  });
-  if (!contact) return;
 
   await prisma.message.create({
     data: {

@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare,
+  Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare, ImageIcon,
   Zap, ToggleLeft, ToggleRight, CheckCircle, Save, Sparkles, Key,
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
 } from "lucide-react";
@@ -37,7 +37,7 @@ import {
 interface AutomationRule {
   id: string; name: string; isEnabled: boolean;
   triggerType: string; triggerValue: string | null;
-  replyType: string; replyContent: string | null;
+  replyType: string; replyContent: string | null; replyMediaUrl: string | null;
   templateId: string | null; createdAt: string;
 }
 interface Template { id: string; name: string; content: string; status: string; }
@@ -174,7 +174,17 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
           </DropdownMenu>
         </div>
       </div>
-      {rule.replyContent && (
+      {rule.replyMediaUrl && (
+        <div className="relative w-full rounded-lg overflow-hidden max-h-24">
+          <img src={rule.replyMediaUrl} alt="" className="w-full object-cover max-h-24" />
+          {rule.replyContent && (
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1">
+              <p className="text-[10px] text-white line-clamp-1">{rule.replyContent}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {!rule.replyMediaUrl && rule.replyContent && (
         <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed">{rule.replyContent}</p>
       )}
       {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg w-fit">قالب واتساب معتمد</span>}
@@ -207,10 +217,11 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
   const [saving,     setSaving]     = useState(false);
 
   const [ruleForm, setRuleForm] = useState({
-    name: "", keyword: "", reply: "", templateId: "",
+    name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "",
     noReplyDays: "3", days: [] as string[], hour: "09", minute: "00",
     tbAudienceId: "", tbMaxContacts: "500",
   });
+  const [mediaUploading, setMediaUploading] = useState(false);
 
   const [abForm, setAbForm] = useState({
     name: "", audienceId: "", sampleSize: "100", splitRatio: "50",
@@ -278,9 +289,23 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
   const timeRules    = rules.filter(r => r.triggerType === "TIME_BASED");
 
   // ─── Dialog open ──────────────────────────────────────────────────────────
+  const handleMediaUpload = async (file: File) => {
+    setMediaUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/automation/upload", { method: "POST", body: fd });
+      if (!res.ok) { const e = await res.json(); toast.error(e.error ?? "فشل رفع الصورة"); return; }
+      const { url } = await res.json();
+      setRuleForm(f => ({ ...f, replyMediaUrl: url }));
+      toast.success("تم رفع الصورة ✓");
+    } catch { toast.error("حدث خطأ أثناء الرفع"); }
+    finally { setMediaUploading(false); }
+  };
+
   const openCreate = (mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(null);
-    setRuleForm({ name: "", keyword: "", reply: "", templateId: "", noReplyDays: "3", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
+    setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", noReplyDays: "3", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
     setShowDialog(true);
   };
 
@@ -292,7 +317,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch {}
     }
     setRuleForm({
-      name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "",
+      name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "", replyMediaUrl: rule.replyMediaUrl ?? "",
       templateId: rule.templateId ?? "", noReplyDays: rule.triggerType === "NO_REPLY" ? (rule.triggerValue ?? "3") : "3",
       days, hour, minute, tbAudienceId, tbMaxContacts,
     });
@@ -333,7 +358,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
     setSaving(true);
     try {
-      const payload = { name: name.trim(), triggerType, triggerValue, replyType, replyContent, templateId: tplId, humanKeywords: [], pauseOnReply: dialogMode !== "keywords" };
+      const payload = { name: name.trim(), triggerType, triggerValue, replyType, replyContent, replyMediaUrl: ruleForm.replyMediaUrl?.trim() || null, templateId: tplId, humanKeywords: [], pauseOnReply: dialogMode !== "keywords" };
       const method  = editTarget ? "PATCH" : "POST";
       const body    = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
       const r       = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body });
@@ -950,6 +975,39 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                   <Label className="text-sm mb-1.5 block">نص الرد *</Label>
                   <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder="اكتب الرد اللي هيتبعت تلقائياً..." className="min-h-[100px] resize-none text-sm" dir="rtl" />
                 </div>
+
+                {/* ── صورة اختيارية ── */}
+                <div>
+                  <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                    صورة مرفقة <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+                  </Label>
+                  {ruleForm.replyMediaUrl ? (
+                    <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                      <img src={ruleForm.replyMediaUrl} alt="preview" className="w-full max-h-40 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setRuleForm(f => ({ ...f, replyMediaUrl: "" }))}
+                        className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                      ><X className="w-3 h-3" /></button>
+                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">صورة مرفقة ✓</div>
+                    </div>
+                  ) : (
+                    <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition
+                      ${mediaUploading ? "border-blue-300 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}>
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} />
+                      {mediaUploading
+                        ? <><Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" /><span className="text-xs text-blue-500">جاري الرفع...</span></>
+                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">اضغط لرفع صورة (JPG/PNG/WebP — max 5MB)</span></>}
+                    </label>
+                  )}
+                  {ruleForm.replyMediaUrl && ruleForm.reply && (
+                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                      <Info className="w-3 h-3" /> النص هيظهر كـ caption تحت الصورة في واتساب
+                    </p>
+                  )}
+                </div>
               </>
             )}
 
@@ -959,6 +1017,31 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 <div>
                   <Label className="text-sm mb-1.5 block">نص رسالة الترحيب *</Label>
                   <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder="مثال: أهلاً وسهلاً! 👋 نورت متجرنا. كيف يمكنني مساعدتك؟" className="min-h-[120px] resize-none text-sm" dir="rtl" />
+                </div>
+                {/* صورة ترحيب اختيارية */}
+                <div>
+                  <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                    صورة مرفقة <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+                  </Label>
+                  {ruleForm.replyMediaUrl ? (
+                    <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                      <img src={ruleForm.replyMediaUrl} alt="preview" className="w-full max-h-40 object-cover" />
+                      <button type="button" onClick={() => setRuleForm(f => ({ ...f, replyMediaUrl: "" }))}
+                        className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className={`flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-xl cursor-pointer transition
+                      ${mediaUploading ? "border-blue-300 bg-blue-50" : "border-gray-200 dark:border-gray-700 hover:border-blue-300"}`}>
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} />
+                      {mediaUploading
+                        ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">رفع صورة (اختياري)</span></>}
+                    </label>
+                  )}
                 </div>
               </>
             )}

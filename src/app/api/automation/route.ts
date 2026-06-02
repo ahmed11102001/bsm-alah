@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   const {
     name, triggerType, triggerValue, replyType, replyContent,
-    templateId, extraInstructions, humanKeywords, pauseOnReply,
+    templateId, extraInstructions, humanKeywords, pauseOnReply, replyMediaUrl,
   } = parsed.data;
 
   // تحقق خاص بـ AI — يحتاج DB
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
       triggerValue:      triggerValue?.trim() || null,
       replyType,
       replyContent:      replyContent?.trim() || null,
+      replyMediaUrl:     replyMediaUrl?.trim() || null,
       templateId:        templateId || null,
       extraInstructions: extraInstructions?.trim() || null,
       humanKeywords:     humanKeywords.map((k: string) => k.trim()).filter(Boolean),
