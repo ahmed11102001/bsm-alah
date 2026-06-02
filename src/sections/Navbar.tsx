@@ -113,43 +113,23 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 {tr(t.nav.langSwitch, lang)}
               </button>
 
-              {/* ── Sticky CTA — يظهر بعد الـ hero fold ── */}
-              <div
+              {/* Login btn — يتغير شكله بعد الـ fold */}
+              <Button
+                onClick={onLoginClick}
+                className="h-9 text-sm gap-1.5 transition-all duration-300"
                 style={{
-                  opacity:    pastFold ? 1 : 0,
-                  transform:  pastFold ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.95)",
-                  pointerEvents: pastFold ? "auto" : "none",
-                  transition: "opacity 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1)",
+                  background:  "#25D366",
+                  color:       "white",
+                  paddingInline: "1.25rem",
+                  boxShadow:   pastFold ? "0 4px 14px rgba(37,211,102,0.35)" : "none",
+                  transform:   "scale(1)",
                 }}
               >
-                <Button
-                  onClick={onLoginClick}
-                  className="bg-[#25D366] text-white px-5 hover:bg-[#20bb5a] shadow-md shadow-green-200 hover:scale-[1.02] transition-all h-9 text-sm gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {tr(t.nav.login, lang)}
-                </Button>
-              </div>
-
-              {/* Login btn عادي — يظهر فقط قبل الـ fold */}
-              <div
-                style={{
-                  opacity:    pastFold ? 0 : 1,
-                  transform:  pastFold ? "translateY(8px) scale(0.95)" : "translateY(0) scale(1)",
-                  pointerEvents: pastFold ? "none" : "auto",
-                  position:   "absolute",
-                  transition: "opacity 0.3s ease, transform 0.3s ease",
-                  marginInlineStart: "auto",
-                }}
-              >
-                <Button
-                  onClick={onLoginClick}
-                  className="bg-[#25D366] text-white px-5 hover:bg-[#20bb5a] h-9 text-sm gap-1.5"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  {tr(t.nav.login, lang)}
-                </Button>
-              </div>
+                {pastFold
+                  ? <Sparkles className="w-3.5 h-3.5" />
+                  : <User    className="w-3.5 h-3.5" />}
+                {tr(t.nav.login, lang)}
+              </Button>
             </div>
 
             {/* ── Mobile menu btn ── */}
