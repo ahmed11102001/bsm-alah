@@ -354,6 +354,7 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   const campaignsPct = usagePct(plan.usage.campaignsThisMonth, plan.limits.campaignsPerMonth);
   const teamPct      = usagePct(plan.usage.teamMembers,        plan.limits.teamMembers);
   const isNearLimit  = (pct: number) => pct >= 80;
+  const isEnterprise = plan.plan === "enterprise";
 
   return (
     <Card className="border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
@@ -371,18 +372,20 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
               <span className="text-xs text-gray-400">{plan.status === "active" ? p.active : p.expired}</span>
             </div>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button size="sm" variant="outline"
-              className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
-              onClick={() => toast.info("قريباً — نظام الدفع")}>
-              <RefreshCw className="w-3 h-3" /> {p.changePlan}
-            </Button>
-            <Button size="sm"
-              className="text-xs h-8 gap-1 bg-[#25D366] hover:bg-[#20bb5a] text-white"
-              onClick={() => toast.info("قريباً — نظام الدفع")}>
-              <ArrowUpRight className="w-3 h-3" /> {p.upgrade}
-            </Button>
-          </div>
+          {!isEnterprise && (
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline"
+                className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
+                onClick={() => toast.info("قريباً — نظام الدفع")}> 
+                <RefreshCw className="w-3 h-3" /> {p.changePlan}
+              </Button>
+              <Button size="sm"
+                className="text-xs h-8 gap-1 bg-[#25D366] hover:bg-[#20bb5a] text-white"
+                onClick={() => toast.info("قريباً — نظام الدفع")}>
+                <ArrowUpRight className="w-3 h-3" /> {p.upgrade}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
