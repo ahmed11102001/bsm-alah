@@ -25,7 +25,7 @@ export const SUBSCRIPTION_PLANS = {
     slug:       "professional",
     name:       "Professional",
     tagline:    "للمتاجر والشركات الجادة",
-    monthly:    499,          // ← السعر الشهري بالجنيه
+    monthly:    599,          // ← السعر الشهري بالجنيه
     icon:       Store,
     color:      "text-[#25D366]",
     features:   [

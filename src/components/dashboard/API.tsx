@@ -783,7 +783,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
                 onClick={() => { setShowClaudeUpgrade(false); window.location.href = "/checkout?plan=professional"; }}
                 className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
               >
-                <Zap className="w-4 h-4" /> ترقية الآن — 499 ج/شهر
+                <Zap className="w-4 h-4" /> ترقية الآن — 599 ج/شهر
               </button>
               <button
                 onClick={() => setShowClaudeUpgrade(false)}

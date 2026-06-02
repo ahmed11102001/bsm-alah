@@ -7,7 +7,7 @@ import { t, tr, type Lang } from "@/lib/translations";
 import { usePixel } from "@/hooks/usePixel";
 
 // ─── config ──────────────────────────────────────────────────────────────────
-const BASE_PRICES = [0, 249, 499, 1199];
+const BASE_PRICES = [0, 249, 599, 1199];
 const ENTERPRISE_OFFER = 999;
 
 const CYCLES = [
