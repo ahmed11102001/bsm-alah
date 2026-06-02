@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, Languages } from "lucide-react";
+import { Menu, X, User, Languages, Sparkles } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 interface NavbarProps {
@@ -13,130 +13,222 @@ interface NavbarProps {
 
 export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps) {
   const [isScrolled,       setIsScrolled]       = useState(false);
+  const [pastFold,         setPastFold]         = useState(false);   // بعد الـ hero
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileClosing,    setMobileClosing]    = useState(false);
   const isAr = lang === "ar";
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+      setPastFold(window.scrollY > window.innerHeight * 0.75);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const closeMobile = () => {
+    setMobileClosing(true);
+    setTimeout(() => { setIsMobileMenuOpen(false); setMobileClosing(false); }, 220);
+  };
 
   const scrollToSection = (href: string) => {
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
-    setIsMobileMenuOpen(false);
+    closeMobile();
   };
 
   const navItems = [
-    { label: tr(t.nav.features,     lang), href: "#features" },
-    { label: tr(t.nav.partners,     lang), href: "#partners" },
-    { label: tr(t.nav.howItWorks,   lang), href: "#how-it-works" },
-    { label: tr(t.nav.pricing,      lang), href: "#pricing" },
-    { label: tr(t.nav.testimonials, lang), href: "#testimonials" },
-    { label: tr(t.nav.faq,          lang), href: "#faq" },
+    { label: tr(t.nav.features,     lang), href: "#features"      },
+    { label: tr(t.nav.partners,     lang), href: "#partners"      },
+    { label: tr(t.nav.howItWorks,   lang), href: "#how-it-works"  },
+    { label: tr(t.nav.pricing,      lang), href: "#pricing"       },
+    { label: tr(t.nav.testimonials, lang), href: "#testimonials"  },
+    { label: tr(t.nav.faq,          lang), href: "#faq"           },
   ];
 
+  const isLight = isScrolled || isMobileMenuOpen;
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+    <>
+      <nav
+        className="fixed top-0 left-0 right-0 z-50"
+        style={{
+          background:   isLight ? "rgba(255,255,255,0.97)" : "transparent",
+          backdropFilter: isLight ? "blur(12px)" : "none",
+          boxShadow:    isScrolled ? "0 1px 0 rgba(0,0,0,0.07)" : "none",
+          transition:   "background 0.35s ease, box-shadow 0.35s ease, backdrop-filter 0.35s ease",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 lg:h-18">
 
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-whatsapp-gradient flex items-center justify-center overflow-hidden">
-              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+            {/* ── Logo ── */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden shadow-md shadow-green-200">
+                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+              </div>
+              <span
+                className="text-xl font-black tracking-tight transition-colors duration-300"
+                style={{ color: isLight ? "#111827" : "white" }}
+              >
+                {isAr ? "وني" : "WANI"}
+              </span>
             </div>
-            <span className={`text-xl font-bold ${isScrolled ? "text-gray-900" : "text-gray-900 lg:text-white"}`}>
-              {isAr ? "وني" : "WANI"}
-            </span>
-          </div>
 
-          {/* Desktop nav */}
-          <div className="hidden lg:flex items-center gap-8">
-            {navItems.map((item) => (
+            {/* ── Desktop nav links ── */}
+            <div className="hidden lg:flex items-center gap-6">
+              {navItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => scrollToSection(item.href)}
+                  className="text-sm font-medium transition-colors duration-200 hover:text-[#25D366] relative group"
+                  style={{ color: isLight ? "#374151" : "rgba(255,255,255,0.88)" }}
+                >
+                  {item.label}
+                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-[#25D366] rounded-full group-hover:w-full transition-all duration-250" />
+                </button>
+              ))}
+            </div>
+
+            {/* ── Desktop right ── */}
+            <div className="hidden lg:flex items-center gap-2.5">
+              {/* Lang */}
               <button
-                key={item.href}
-                onClick={() => scrollToSection(item.href)}
-                className={`text-sm font-medium transition-colors hover:text-[#25D366] ${
-                  isScrolled ? "text-gray-700" : "text-white/90"
-                }`}
+                onClick={() => onLangChange(lang === "ar" ? "en" : "ar")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200"
+                style={{
+                  borderColor: isLight ? "#e5e7eb" : "rgba(255,255,255,0.3)",
+                  color:       isLight ? "#6b7280" : "rgba(255,255,255,0.8)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "#25D366";
+                  (e.currentTarget as HTMLElement).style.color       = "#25D366";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = isLight ? "#e5e7eb" : "rgba(255,255,255,0.3)";
+                  (e.currentTarget as HTMLElement).style.color       = isLight ? "#6b7280" : "rgba(255,255,255,0.8)";
+                }}
               >
-                {item.label}
+                <Languages className="w-3.5 h-3.5" />
+                {tr(t.nav.langSwitch, lang)}
               </button>
-            ))}
-          </div>
 
-          {/* Right â€” lang + login */}
-          <div className="hidden lg:flex items-center gap-3">
+              {/* ── Sticky CTA — يظهر بعد الـ hero fold ── */}
+              <div
+                style={{
+                  opacity:    pastFold ? 1 : 0,
+                  transform:  pastFold ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.95)",
+                  pointerEvents: pastFold ? "auto" : "none",
+                  transition: "opacity 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1)",
+                }}
+              >
+                <Button
+                  onClick={onLoginClick}
+                  className="bg-[#25D366] text-white px-5 hover:bg-[#20bb5a] shadow-md shadow-green-200 hover:scale-[1.02] transition-all h-9 text-sm gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {tr(t.nav.login, lang)}
+                </Button>
+              </div>
+
+              {/* Login btn عادي — يظهر فقط قبل الـ fold */}
+              <div
+                style={{
+                  opacity:    pastFold ? 0 : 1,
+                  transform:  pastFold ? "translateY(8px) scale(0.95)" : "translateY(0) scale(1)",
+                  pointerEvents: pastFold ? "none" : "auto",
+                  position:   "absolute",
+                  transition: "opacity 0.3s ease, transform 0.3s ease",
+                  marginInlineStart: "auto",
+                }}
+              >
+                <Button
+                  onClick={onLoginClick}
+                  className="bg-[#25D366] text-white px-5 hover:bg-[#20bb5a] h-9 text-sm gap-1.5"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  {tr(t.nav.login, lang)}
+                </Button>
+              </div>
+            </div>
+
+            {/* ── Mobile menu btn ── */}
             <button
-              onClick={() => onLangChange(lang === "ar" ? "en" : "ar")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                isScrolled
-                  ? "border-gray-200 text-gray-600 hover:border-[#25D366] hover:text-[#25D366]"
-                  : "border-white/30 text-white/80 hover:border-white hover:text-white"
-              }`}
+              onClick={() => isMobileMenuOpen ? closeMobile() : setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl transition-colors"
+              style={{ color: isLight ? "#111827" : "white" }}
+              aria-label="toggle menu"
             >
-              <Languages className="w-4 h-4" />
-              {tr(t.nav.langSwitch, lang)}
+              <div style={{ transition: "transform 0.25s ease" }}>
+                {isMobileMenuOpen
+                  ? <X className="w-5 h-5" />
+                  : <Menu className="w-5 h-5" />}
+              </div>
             </button>
-
-            <Button
-              onClick={onLoginClick}
-              className="bg-[#25D366] text-white px-6 hover:bg-[#20bb5a]"
-            >
-              <User className="w-4 h-4 ml-2" />
-              {tr(t.nav.login, lang)}
-            </Button>
           </div>
-
-          {/* Mobile menu btn */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? "Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©" : "ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©"}
-            aria-expanded={isMobileMenuOpen}
-            className={`lg:hidden p-2 rounded-lg ${isScrolled ? "text-gray-900" : "text-white"}`}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile menu */}
+      {/* ── Mobile menu ── */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t shadow-lg">
-          <div className="px-4 py-4 space-y-3">
-            {navItems.map((item) => (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          onClick={closeMobile}
+        >
+          {/* backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            style={{ animation: `${mobileClosing ? "fade-out" : "fade-in"} 0.22s ease both` }}
+          />
+
+          {/* drawer */}
+          <div
+            className="absolute top-16 left-0 right-0 bg-white shadow-2xl rounded-b-3xl overflow-hidden"
+            style={{
+              animation: `${mobileClosing ? "slide-in-down" : "slide-in-down"} 0.25s cubic-bezier(0.16,1,0.3,1) both`,
+              animationDirection: mobileClosing ? "reverse" : "normal",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 space-y-1">
+              {navItems.map((item, i) => (
+                <button
+                  key={item.href}
+                  onClick={() => scrollToSection(item.href)}
+                  className="flex w-full items-center py-3 px-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 hover:text-[#25D366] transition-colors text-sm"
+                  style={{
+                    textAlign: isAr ? "right" : "left",
+                    animation: `fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) ${i * 40}ms both`,
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              <div className="h-px bg-gray-100 my-2" />
+
               <button
-                key={item.href}
-                onClick={() => scrollToSection(item.href)}
-                className={`block w-full py-2 font-medium text-gray-700 hover:text-[#25D366] ${isAr ? "text-right" : "text-left"}`}
+                onClick={() => { onLangChange(lang === "ar" ? "en" : "ar"); closeMobile(); }}
+                className="flex items-center gap-2 w-full py-3 px-3 rounded-xl text-gray-500 font-medium hover:bg-gray-50 transition-colors text-sm"
+                style={{ animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 240ms both" }}
               >
-                {item.label}
+                <Languages className="w-4 h-4" />
+                {lang === "ar" ? "Switch to English" : "التبديل للعربية"}
               </button>
-            ))}
 
-            <button
-              onClick={() => onLangChange(lang === "ar" ? "en" : "ar")}
-              className="flex items-center gap-2 w-full py-2 text-gray-500 font-medium"
-            >
-              <Languages className="w-4 h-4" />
-              {lang === "ar" ? "Switch to English" : "Ø§Ù„ØªØ¨Ø¯ÙŠÙ„ Ù„Ù„Ø¹Ø±Ø¨ÙŠØ©"}
-            </button>
-
-            <Button
-              onClick={onLoginClick}
-              className="w-full bg-[#25D366] text-white hover:bg-[#20bb5a] mt-4"
-            >
-              <User className="w-4 h-4 ml-2" />
-              {tr(t.nav.login, lang)}
-            </Button>
+              <div style={{ animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 280ms both" }}>
+                <Button
+                  onClick={() => { onLoginClick(); closeMobile(); }}
+                  className="w-full bg-[#25D366] text-white hover:bg-[#20bb5a] mt-2 h-11 text-sm font-bold shadow-md shadow-green-100"
+                >
+                  <Sparkles className="w-4 h-4 ml-1" />
+                  {tr(t.nav.login, lang)}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }
