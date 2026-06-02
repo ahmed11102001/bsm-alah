@@ -520,6 +520,12 @@ input:focus, textarea:focus {
   }
 }
 
+/* ── Feature card active line ─────────────────────────────────────────────── */
+@keyframes expand-line {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
 /* ── Scroll Reveal ─────────────────────────────────────────────────────────── */
 .reveal-section {
   opacity: 0;

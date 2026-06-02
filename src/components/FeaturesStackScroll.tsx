@@ -1,46 +1,51 @@
-// ─── Features Stack Scroll ────────────────────────────────────────────────────
-// "use client" — كل الـ animation من scroll position مباشرة، صفر timers
-// الكاردز مكدسة فوق بعض، كل scroll بيقلب الكارت للخلف ويكشف اللي تحته
+// ─── Features Stack Scroll — v2 ──────────────────────────────────────────────
+// فلسفة الـ animation:
+//   • كل كارت "active" بيبقى على الشاشة فترة كافية (300px scroll)
+//     قبل ما يبدأ يتقلب — عشان اليوزر يقرأ المحتوى
+//   • الـ flip بيبدأ في آخر 35% بس من فترة الكارت — مش فوراً
+//   • الكاردز الخلفية scale تفرق أوضح (7% per level) — Stack واضح
+//   • الكارت الـ active فيها subtle glow بلون الـ accent بتاعها
+//   • progress bar أعلى الشاشة بتبين مكان اليوزر في الرحلة
+//   • StatsCounter متضمّن في الأسفل
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Send, Brain, Store, Zap, BarChart3,
   MessageSquare, Users, Shield, UserCheck,
 } from "lucide-react";
 import { tr, type Lang } from "@/lib/translations";
+import StatsCounter from "@/components/StatsCounter";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SCROLL_PER_CARD = 200;   // px لكل كارت
-const MAX_BEHIND      = 3;     // كام كارت يبانوا وراء الأكتيف
+const SCROLL_PER_CARD = 300;   // px لكل كارت — أكبر = وقت أطول لكل كارت
+const FLIP_START      = 0.65;  // الـ flip يبدأ في 65% من الـ scroll window
+const MAX_BEHIND      = 3;     // عدد الكاردز الخلفية المرئية
 
 // ── Color meta ────────────────────────────────────────────────────────────────
 const META = [
-  { Icon: Send,          bg: "bg-[#25D366]",  light: "bg-green-50",   border: "border-green-200",  text: "text-green-700",  accent: "#25D366" },
-  { Icon: Brain,         bg: "bg-purple-500", light: "bg-purple-50",  border: "border-purple-200", text: "text-purple-700", accent: "#8B5CF6" },
-  { Icon: Store,         bg: "bg-blue-500",   light: "bg-blue-50",    border: "border-blue-200",   text: "text-blue-700",   accent: "#3B82F6" },
-  { Icon: Zap,           bg: "bg-orange-500", light: "bg-orange-50",  border: "border-orange-200", text: "text-orange-700", accent: "#F97316" },
-  { Icon: BarChart3,     bg: "bg-teal-500",   light: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700",   accent: "#14B8A6" },
-  { Icon: MessageSquare, bg: "bg-pink-500",   light: "bg-pink-50",    border: "border-pink-200",   text: "text-pink-700",   accent: "#EC4899" },
-  { Icon: Users,         bg: "bg-indigo-500", light: "bg-indigo-50",  border: "border-indigo-200", text: "text-indigo-700", accent: "#6366F1" },
-  { Icon: UserCheck,     bg: "bg-cyan-500",   light: "bg-cyan-50",    border: "border-cyan-200",   text: "text-cyan-700",   accent: "#06B6D4" },
-  { Icon: Shield,        bg: "bg-rose-500",   light: "bg-rose-50",    border: "border-rose-200",   text: "text-rose-700",   accent: "#F43F5E" },
+  { Icon: Send,          bg: "bg-[#25D366]",  accent: "#25D366", glow: "rgba(37,211,102,0.18)",  border: "border-green-100",  light: "bg-green-50",   text: "text-green-700"  },
+  { Icon: Brain,         bg: "bg-violet-500", accent: "#7C3AED", glow: "rgba(124,58,237,0.15)",  border: "border-violet-100", light: "bg-violet-50",  text: "text-violet-700" },
+  { Icon: Store,         bg: "bg-blue-500",   accent: "#3B82F6", glow: "rgba(59,130,246,0.15)",  border: "border-blue-100",   light: "bg-blue-50",    text: "text-blue-700"   },
+  { Icon: Zap,           bg: "bg-orange-500", accent: "#F97316", glow: "rgba(249,115,22,0.15)",  border: "border-orange-100", light: "bg-orange-50",  text: "text-orange-700" },
+  { Icon: BarChart3,     bg: "bg-teal-500",   accent: "#14B8A6", glow: "rgba(20,184,166,0.15)",  border: "border-teal-100",   light: "bg-teal-50",    text: "text-teal-700"   },
+  { Icon: MessageSquare, bg: "bg-pink-500",   accent: "#EC4899", glow: "rgba(236,72,153,0.15)",  border: "border-pink-100",   light: "bg-pink-50",    text: "text-pink-700"   },
+  { Icon: Users,         bg: "bg-indigo-500", accent: "#6366F1", glow: "rgba(99,102,241,0.15)",  border: "border-indigo-100", light: "bg-indigo-50",  text: "text-indigo-700" },
+  { Icon: UserCheck,     bg: "bg-cyan-500",   accent: "#06B6D4", glow: "rgba(6,182,212,0.15)",   border: "border-cyan-100",   light: "bg-cyan-50",    text: "text-cyan-700"   },
+  { Icon: Shield,        bg: "bg-rose-500",   accent: "#F43F5E", glow: "rgba(244,63,94,0.15)",   border: "border-rose-100",   light: "bg-rose-50",    text: "text-rose-700"   },
 ] as const;
 
-type MetaItem = (typeof META)[number];
+type MetaItem = typeof META[number];
 type BStr     = { ar: string; en: string };
 type FItem    = { tag: BStr; hook: BStr; title: BStr; desc: BStr };
 
-// ── Single card ───────────────────────────────────────────────────────────────
+// ── Single card component ─────────────────────────────────────────────────────
 function FeatureCard({
-  item, meta, lang, index, total,
+  item, meta, lang, index, total, isActive,
 }: {
-  item:   FItem;
-  meta:   MetaItem;
-  lang:   Lang;
-  index:  number;
-  total:  number;
+  item: FItem; meta: MetaItem; lang: Lang;
+  index: number; total: number; isActive: boolean;
 }) {
   const isAr = lang === "ar";
   const { Icon } = meta;
@@ -48,25 +53,42 @@ function FeatureCard({
   return (
     <div
       dir={isAr ? "rtl" : "ltr"}
-      className={`relative w-full rounded-3xl bg-white border ${meta.border} overflow-hidden`}
+      className={`relative w-full rounded-3xl bg-white overflow-hidden ${meta.border} border`}
       style={{
         maxWidth: 560,
-        boxShadow: "0 12px 56px rgba(0,0,0,0.11), 0 2px 8px rgba(0,0,0,0.06)",
+        boxShadow: isActive
+          ? `0 20px 60px ${meta.glow}, 0 4px 20px rgba(0,0,0,0.08)`
+          : "0 8px 32px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04)",
+        transition: "box-shadow 0.4s ease",
       }}
     >
-      {/* Accent top stripe */}
-      <div style={{ height: 4, background: `linear-gradient(90deg, ${meta.accent}, ${meta.accent}88)` }} />
+      {/* Accent stripe — بتتحرك مع الـ active state */}
+      <div
+        style={{
+          height: 4,
+          background: `linear-gradient(90deg, ${meta.accent}, ${meta.accent}66)`,
+          transformOrigin: isAr ? "right" : "left",
+          transform: isActive ? "scaleX(1)" : "scaleX(0.4)",
+          transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)",
+        }}
+      />
 
       <div className="p-7 pt-6">
-        {/* Row: icon ← → tag + counter */}
+        {/* Row: icon ↔ tag + counter */}
         <div className="flex items-start justify-between mb-5">
+          {/* Icon */}
           <div
             className={`w-14 h-14 ${meta.bg} rounded-2xl flex items-center justify-center shrink-0`}
-            style={{ boxShadow: `0 6px 20px ${meta.accent}55` }}
+            style={{
+              boxShadow: isActive ? `0 8px 24px ${meta.glow}` : "none",
+              transform: isActive ? "scale(1.05)" : "scale(1)",
+              transition: "box-shadow 0.4s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+            }}
           >
             <Icon className="w-7 h-7 text-white" strokeWidth={2} />
           </div>
 
+          {/* Tag + counter */}
           <div className="flex flex-col items-end gap-1.5">
             <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${meta.light} ${meta.text}`}>
               {tr(item.tag, lang)}
@@ -91,80 +113,129 @@ function FeatureCard({
         <p className="text-sm text-gray-500 leading-relaxed">
           {tr(item.desc, lang)}
         </p>
+
+        {/* Active indicator line */}
+        {isActive && (
+          <div
+            className="mt-5 h-0.5 rounded-full"
+            style={{
+              background: `linear-gradient(90deg, ${meta.accent}, transparent)`,
+              animation: "expand-line 0.5s cubic-bezier(0.16,1,0.3,1) forwards",
+            }}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Progress bar (أعلى الشاشة) ────────────────────────────────────────────────
+function ProgressBar({ current, total, accent }: { current: number; total: number; accent: string }) {
+  const pct = ((current) / (total - 1)) * 100;
+  return (
+    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gray-100 z-50">
+      <div
+        style={{
+          width: `${pct}%`,
+          background: accent,
+          height: "100%",
+          transition: "width 0.3s ease, background 0.4s ease",
+          borderRadius: "0 2px 2px 0",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 interface Props { items: readonly FItem[]; lang: Lang }
 
 export default function FeaturesStackScroll({ items, lang }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ idx: 0, prog: 0 });
 
+  const onScroll = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    const scrolled  = -el.getBoundingClientRect().top;
+    const maxScroll = (items.length - 1) * SCROLL_PER_CARD;
+
+    if (scrolled <= 0)         { setState({ idx: 0,              prog: 0 }); return; }
+    if (scrolled >= maxScroll) { setState({ idx: items.length-1, prog: 0 }); return; }
+
+    const raw = scrolled / SCROLL_PER_CARD;
+    const idx = Math.floor(raw);
+    setState({ idx, prog: raw - idx });
+  }, [items.length]);
+
   useEffect(() => {
-    const onScroll = () => {
-      const el = wrapperRef.current;
-      if (!el) return;
-
-      const scrolled = -el.getBoundingClientRect().top;
-      const maxScroll = (items.length - 1) * SCROLL_PER_CARD;
-
-      if (scrolled <= 0)          { setState({ idx: 0,                   prog: 0 }); return; }
-      if (scrolled >= maxScroll)  { setState({ idx: items.length - 1,    prog: 0 }); return; }
-
-      const raw  = scrolled / SCROLL_PER_CARD;
-      const idx  = Math.floor(raw);
-      setState({ idx, prog: raw - idx });
-    };
-
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
-  }, [items.length]);
+  }, [onScroll]);
 
   const { idx, prog } = state;
   const totalH = (items.length - 1) * SCROLL_PER_CARD;
+  const currentAccent = META[idx]?.accent ?? "#25D366";
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{ height: `calc(100svh + ${totalH}px)` }}
-    >
+    <div ref={wrapperRef} style={{ height: `calc(100svh + ${totalH}px)` }}>
       <div
         className="sticky top-0 flex flex-col items-center justify-center bg-gray-50"
         style={{ height: "100svh", perspective: "1400px" }}
       >
+        {/* ── Progress bar ─────────────────────────────────────────────────── */}
+        <ProgressBar current={idx} total={items.length} accent={currentAccent} />
 
         {/* ── Cards stack ──────────────────────────────────────────────────── */}
-        <div className="relative w-full px-4" style={{ height: 360 }}>
+        <div
+          className="relative w-full px-4"
+          style={{ height: "min(420px, 80svh)" }}
+        >
           {items.map((item, i) => {
-            if (i < idx) return null;          // gone
-            const rel = i - idx;               // 0 = active, 1 = next, …
-            if (rel > MAX_BEHIND) return null; // outside visible stack
+            if (i < idx) return null;
+            const rel = i - idx;
+            if (rel > MAX_BEHIND) return null;
 
             const isActive = rel === 0;
             const isNext   = rel === 1;
 
-            /* ─ transforms ─ */
             let transform: string;
             let opacity:   number;
+            let zIndex:    number = 50 - rel;
 
             if (isActive) {
-              // قلبة للخلف على rotateX مع fade
-              const angle = prog * -88;
-              const ty    = prog * -4;
-              transform   = `rotateX(${angle}deg) translateY(${ty}%)`;
-              opacity     = prog > 0.52 ? Math.max(0, 1 - (prog - 0.52) / 0.48) : 1;
+              // الـ flip يبدأ بعد FLIP_START فقط
+              const flipProg = prog < FLIP_START
+                ? 0
+                : (prog - FLIP_START) / (1 - FLIP_START);
+
+              const angle = flipProg * -80;
+              const ty    = flipProg * -3;
+              const scale = 1 - flipProg * 0.05;
+
+              transform = `rotateX(${angle}deg) translateY(${ty}%) scale(${scale})`;
+              opacity   = flipProg > 0.6
+                ? Math.max(0, 1 - (flipProg - 0.6) / 0.4)
+                : 1;
             } else {
-              // الكاردز الخلفية تتحرك للأمام تدريجياً
-              const scale = (1 - rel * 0.05) + (isNext ? prog * 0.05 : 0);
-              const ty    = (rel * 14)        - (isNext ? prog * 14   : 0);
-              transform   = `translateY(${ty}px) scale(${scale})`;
-              opacity     = rel === 1 ? 0.9 + prog * 0.1
-                          : rel === 2 ? 0.65
-                          :             0.4;
+              // الكاردز الخلفية — scale تفرق أوضح
+              const baseScale  = 1 - rel * 0.07;
+              const baseTransY = rel * 18;
+
+              // لما الـ active بيبدأ يتقلب → الكاردز الخلفية تتقدم
+              const flipProg = prog < FLIP_START
+                ? 0
+                : (prog - FLIP_START) / (1 - FLIP_START);
+
+              const scaleAdj  = isNext ? flipProg * 0.07 : 0;
+              const transAdj  = isNext ? flipProg * 18   : 0;
+
+              transform = `translateY(${baseTransY - transAdj}px) scale(${baseScale + scaleAdj})`;
+              opacity   = rel === 1 ? 0.85 + flipProg * 0.15
+                        : rel === 2 ? 0.6
+                        :             0.35;
             }
 
             return (
@@ -175,8 +246,9 @@ export default function FeaturesStackScroll({ items, lang }: Props) {
                   transformOrigin: "bottom center",
                   transform,
                   opacity,
-                  zIndex: 50 - rel,
+                  zIndex,
                   willChange: "transform, opacity",
+                  transition: isActive ? "none" : "transform 0.1s ease-out, opacity 0.1s ease-out",
                 }}
               >
                 <FeatureCard
@@ -185,6 +257,7 @@ export default function FeaturesStackScroll({ items, lang }: Props) {
                   lang={lang}
                   index={i}
                   total={items.length}
+                  isActive={isActive}
                 />
               </div>
             );
@@ -192,36 +265,48 @@ export default function FeaturesStackScroll({ items, lang }: Props) {
         </div>
 
         {/* ── Progress dots ─────────────────────────────────────────────────── */}
-        <div className="absolute bottom-9 flex items-center gap-[7px]">
+        <div className="absolute bottom-10 flex items-center gap-[6px]">
           {items.map((_, i) => (
             <div
               key={i}
-              className="rounded-full transition-all duration-300 ease-out"
+              className="rounded-full"
               style={{
-                width:  i === idx ? 28 : 8,
-                height: 8,
-                background:
-                  i === idx ? META[idx].accent
-                  : i < idx ? "#CBD5E1"
-                  :           "#E2E8F0",
+                width:      i === idx ? 32 : 8,
+                height:     8,
+                background: i === idx ? currentAccent : i < idx ? "#CBD5E1" : "#E2E8F0",
+                transition: "width 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease",
               }}
             />
           ))}
         </div>
 
-        {/* ── Scroll hint (يختفي بعد أول scroll) ──────────────────────────── */}
+        {/* ── Scroll hint ───────────────────────────────────────────────────── */}
         <div
-          className="absolute bottom-[72px] flex flex-col items-center gap-1.5 transition-opacity duration-300 pointer-events-none"
-          style={{ opacity: idx === 0 && prog < 0.08 ? 1 - prog * 12 : 0 }}
+          className="absolute bottom-[72px] flex flex-col items-center gap-1.5 pointer-events-none"
+          style={{
+            opacity:    idx === 0 && prog < 0.06 ? 1 - prog * 16 : 0,
+            transition: "opacity 0.3s ease",
+          }}
         >
           <span className="text-xs text-gray-400 font-medium">
             {lang === "ar" ? "اسكرول للاستكشاف" : "Scroll to explore"}
           </span>
-          <svg viewBox="0 0 14 18" className="w-3.5 h-4 text-gray-300 animate-bounce" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <svg
+            viewBox="0 0 14 18"
+            className="w-3.5 h-4 text-gray-300 animate-bounce"
+            fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+          >
             <path d="M7 1v12M2 9l5 6 5-6" />
           </svg>
         </div>
 
+      </div>
+
+      {/* ── Stats counter — يظهر تحت الـ sticky section ───────────────────── */}
+      <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="max-w-4xl mx-auto">
+          <StatsCounter lang={lang} />
+        </div>
       </div>
     </div>
   );
