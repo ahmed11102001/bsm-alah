@@ -16,7 +16,6 @@ import {
   MessageSquare, Users, Shield, UserCheck,
 } from "lucide-react";
 import { tr, type Lang } from "@/lib/translations";
-import StatsCounter from "@/components/StatsCounter";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SCROLL_PER_CARD = 300;   // px لكل كارت — أكبر = وقت أطول لكل كارت
@@ -302,12 +301,6 @@ export default function FeaturesStackScroll({ items, lang }: Props) {
 
       </div>
 
-      {/* ── Stats counter — يظهر تحت الـ sticky section ───────────────────── */}
-      <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <StatsCounter lang={lang} />
-        </div>
-      </div>
     </div>
   );
 }

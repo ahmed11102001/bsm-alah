@@ -4,6 +4,7 @@
 import { Zap } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 import FeaturesStackScroll from "@/components/FeaturesStackScroll";
+import StatsCounter from "@/components/StatsCounter";
 
 interface FeaturesProps { lang: Lang }
 
@@ -38,6 +39,13 @@ export default function Features({ lang }: FeaturesProps) {
 
       {/* ── Stack scroll ────────────────────────────────────────────────────── */}
       <FeaturesStackScroll items={t.features.items} lang={lang} />
+
+      {/* ── Stats — section مستقلة تماماً تحت الكروت ─────────────────────── */}
+      <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="max-w-4xl mx-auto">
+          <StatsCounter lang={lang} />
+        </div>
+      </div>
 
     </section>
   );
