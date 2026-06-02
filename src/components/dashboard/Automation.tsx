@@ -30,6 +30,7 @@ import {
 import {
   Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare, ImageIcon,
   Zap, ToggleLeft, ToggleRight, CheckCircle, Save, Sparkles, Key,
+  X,
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
 } from "lucide-react";
 
