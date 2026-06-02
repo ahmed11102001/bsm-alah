@@ -475,9 +475,7 @@ export const translations = {
           all:         "كل ده",
         },
         updateErr: "حدث خطأ أثناء التحديث",
-      },
-    },
-       bot: {
+        bot: {
           title:         "بوت الليدز",
           subtitle:      "بيبعت قالب واتساب رسمي تلقائياً لكل lead جديد",
           selectTemplate:"اختر القالب",
@@ -495,6 +493,8 @@ export const translations = {
           noTemplate:    "اختر قالباً قبل التفعيل",
           loadingTemplates: "جاري تحميل القوالب...",
         },
+      },
+    },
 
     // ── Settings Modal ────────────────────────────────────────────────────────
     settings: {
@@ -999,6 +999,24 @@ export const translations = {
           all:         "All",
         },
         updateErr: "Error updating lead",
+        bot: {
+          title:         "Leads Bot",
+          subtitle:      "Automatically sends an official WhatsApp template to every new lead",
+          selectTemplate:"Select template",
+          noTemplates:   "No templates — go to Templates page first",
+          activate:      "Activate Bot",
+          deactivate:    "Deactivate Bot",
+          sendNow:       "Send to All Now",
+          saveBtn:       "Save Settings",
+          saving:        "Saving...",
+          sending:       "Sending...",
+          activeStatus:  "Bot is active",
+          inactiveStatus:"Bot is inactive",
+          sentCount:     (n: number) => `Sent to ${n} lead${n === 1 ? "" : "s"}`,
+          sentSuccess:   (s: number, f: number) => `✅ Sent to ${s} lead${s === 1 ? "" : "s"}${f > 0 ? ` — ${f} failed` : ""}`,
+          noTemplate:    "Select a template before activating",
+          loadingTemplates: "Loading templates...",
+        },
       },
     },
 
@@ -1035,24 +1053,7 @@ export const translations = {
       },
     },
   },
-   bot: {
-          title:         "Leads Bot",
-          subtitle:      "Automatically sends an official WhatsApp template to every new lead",
-          selectTemplate:"Select template",
-          noTemplates:   "No templates — go to Templates page first",
-          activate:      "Activate Bot",
-          deactivate:    "Deactivate Bot",
-          sendNow:       "Send to All Now",
-          saveBtn:       "Save Settings",
-          saving:        "Saving...",
-          sending:       "Sending...",
-          activeStatus:  "Bot is active",
-          inactiveStatus:"Bot is inactive",
-          sentCount:     (n: number) => `Sent to ${n} lead${n === 1 ? "" : "s"}`,
-          sentSuccess:   (s: number, f: number) => `✅ Sent to ${s} lead${s === 1 ? "" : "s"}${f > 0 ? ` — ${f} failed` : ""}`,
-          noTemplate:    "Select a template before activating",
-          loadingTemplates: "Loading templates...",
-        },
+  
 } as const;
 
 export type Translations = typeof translations.ar;
