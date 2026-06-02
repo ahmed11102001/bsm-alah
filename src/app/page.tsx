@@ -46,7 +46,7 @@ export default function Home() {
       />
       <Hero        onLoginClick={() => setIsLoginModalOpen(true)} lang={lang} />
 
-      <RevealSection><Features    lang={lang} /></RevealSection>
+      <Features    lang={lang} />
       <RevealSection><Partners    lang={lang} /></RevealSection>
       <RevealSection><HowItWorks  lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
       <RevealSection><Pricing     lang={lang} /></RevealSection>
