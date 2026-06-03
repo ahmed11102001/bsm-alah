@@ -10,8 +10,6 @@ export const contentType = "image/png";
 export default async function OgImage() {
   const logoBase64 = readFileSync(join(process.cwd(), "public", "wani.jpg")).toString("base64");
   const logoSrc = `data:image/jpeg;base64,${logoBase64}`;
-  const arialRegular = readFileSync("C:\\Windows\\Fonts\\arial.ttf");
-  const arialBold = readFileSync("C:\\Windows\\Fonts\\arialbd.ttf");
 
   return new ImageResponse(
     (
@@ -137,12 +135,6 @@ export default async function OgImage() {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        { name: "Arial", data: arialRegular, weight: 400, style: "normal" },
-        { name: "Arial", data: arialBold, weight: 700, style: "normal" },
-      ],
-    }
+    size
   );
 }
