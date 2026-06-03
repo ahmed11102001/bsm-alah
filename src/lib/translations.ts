@@ -471,7 +471,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
       { ar: "شروط الاستخدام", en: "Terms of Service", href: "/terms" },
       { ar: "سياسة الخصوصية", en: "Privacy Policy",   href: "/privacy" },
     ],
-    location: { ar: "الإسكندرية، مصر", en: "Alexandria, Egypt" },
+    location: { ar: "الأسكندرية، مصر", en: "Alexandria, Egypt" },
   },
 } as const;
 
