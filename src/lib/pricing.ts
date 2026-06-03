@@ -21,8 +21,8 @@ export const SUBSCRIPTION_PLANS = {
       "٥٠ حملة شهرياً",
     ],
   },
-  professional: {
-    slug:       "professional",
+  pro: {
+    slug:       "pro",
     name:       "Professional",
     tagline:    "للمتاجر والشركات الجادة",
     monthly:    599,          // ← السعر الشهري بالجنيه

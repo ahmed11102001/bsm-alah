@@ -223,7 +223,7 @@ trust3: { ar: "تحكم سلس", en: "Seamless control" },
         tagline: { ar: "للمتاجر والشركات الجادة", en: "For serious stores & businesses" },
         badge:   { ar: "الأكثر اختياراً", en: "Most Popular" },
         cta:     { ar: "ابدأ الآن", en: "Get Started" },
-        slug:    "professional",
+        slug:    "pro",
         features:[
           
           { ar: "٢٠٬٠٠٠ جهة اتصال",       en: "20,000 contacts",           ok: true  },

@@ -54,7 +54,7 @@ function CheckoutContent() {
   // ── Plan purchase mode ──
   const plan  = planSlug && SUBSCRIPTION_PLANS[planSlug]
     ? SUBSCRIPTION_PLANS[planSlug]
-    : SUBSCRIPTION_PLANS.professional;
+    : SUBSCRIPTION_PLANS.pro;
   const cycle = BILLING_CYCLES[cycleKey] ?? BILLING_CYCLES.monthly;
   const Icon  = mcpAddonPkg ? Bot : tokenPkg ? Zap : plan.icon;
 

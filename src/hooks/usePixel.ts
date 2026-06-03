@@ -29,7 +29,7 @@ export interface PixelData {
   value?       : number;   // القيمة بالجنيه
   currency?    : string;   // "EGP" دايماً
   content_name?: string;   // اسم الباقة مثلاً "Professional"
-  content_ids? : string[]; // ["professional"]
+  content_ids? : string[]; // ["pro"]
   content_type?: string;   // "product"
   num_items?   : number;
   [key: string]: any;

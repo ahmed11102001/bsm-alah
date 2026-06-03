@@ -780,7 +780,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => { setShowClaudeUpgrade(false); window.location.href = "/checkout?plan=professional"; }}
+                onClick={() => { setShowClaudeUpgrade(false); window.location.href = "/checkout?plan=pro"; }}
                 className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
               >
                 <Zap className="w-4 h-4" /> ترقية الآن — 599 ج/شهر

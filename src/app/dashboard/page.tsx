@@ -791,7 +791,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {/* ── Claude MCP Card ── */}
       {(() => {
         const plan      = data.plan.plan as string;
-        const isPro     = plan === "pro" || plan === "professional";
+        const isPro     = plan === "pro" || plan === "pro";
         const isEnt     = plan === "enterprise";
         const canClaude = isPro || isEnt;
 
@@ -826,7 +826,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 ))}
               </div>
               <button
-                onClick={() => window.location.href = "/checkout?plan=professional"}
+                onClick={() => window.location.href = "/checkout?plan=pro"}
                 className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm active:scale-[.98]"
               >
                 <Sparkles className="w-4 h-4" />

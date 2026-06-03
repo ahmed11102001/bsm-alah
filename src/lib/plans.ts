@@ -100,7 +100,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
 >, PlanTier> = {
   scheduledCampaigns: "starter",
   advancedReports:    "pro",
-  apiAccess:          "enterprise",
+  apiAccess:          "pro",
   mediaMessages:      "starter",
   customAudiences:    "starter",
   storeIntegration:   "pro",
