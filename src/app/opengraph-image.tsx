@@ -25,7 +25,7 @@ export default async function OgImage() {
 
   const fonts = fontData
     ? [{ name: "Cairo", data: fontData, weight: 700 as const, style: "normal" as const }]
-    : [];
+    : undefined;
 
   return new ImageResponse(
     (
@@ -39,7 +39,7 @@ export default async function OgImage() {
           justifyContent:  "center",
           backgroundColor: "#075E54",          // solid fallback
           background:      "linear-gradient(135deg, #064e45 0%, #075E54 55%, #0a7a6a 100%)",
-          fontFamily:      fontData ? "Cairo" : "sans-serif",
+          fontFamily:      "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           position:        "relative",
         }}
       >
@@ -134,7 +134,7 @@ export default async function OgImage() {
     ),
     {
       ...size,
-      fonts,
+      ...(fontData ? { fonts } : {}),
     }
   );
 }

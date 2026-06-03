@@ -573,8 +573,19 @@ input:focus, textarea:focus {
   animation: marquee-rtl 18s linear infinite;
   will-change: transform;
 }
+/* الـ row الثاني — نفس الـ keyframe بس بـ reverse ← seamless في الاتجاهين */
+.marquee-track-ltr-reverse {
+  animation: marquee-ltr 22s linear infinite reverse;
+  will-change: transform;
+}
+.marquee-track-rtl-reverse {
+  animation: marquee-rtl 22s linear infinite reverse;
+  will-change: transform;
+}
 .marquee-track-ltr:hover,
-.marquee-track-rtl:hover {
+.marquee-track-rtl:hover,
+.marquee-track-ltr-reverse:hover,
+.marquee-track-rtl-reverse:hover {
   animation-play-state: paused;
 }
 .partner-pill {
