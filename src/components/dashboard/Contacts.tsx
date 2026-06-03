@@ -515,6 +515,7 @@ export default function Contacts() {
   const [vip,        setVip]        = useState<Audience | null>(null);
   const [engaged,    setEngaged]    = useState<Audience | null>(null);
   const [noResp,     setNoResp]     = useState<Audience | null>(null);
+  const [uniqueCount, setUniqueCount] = useState(0);
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
   const [showAdd,    setShowAdd]    = useState(false);
@@ -539,11 +540,12 @@ export default function Contacts() {
     try {
       const r = await fetch("/api/audiences");
       const d = await r.json();
-      const list: Audience[] = Array.isArray(d) ? d : d.data ?? [];
+      const list: Audience[] = Array.isArray(d) ? d : (d.audiences ?? []);
       setAudiences(list.filter(a => a.type === "excel" || a.type === "custom"));
       setVip(list.find(a => a.type === "vip") ?? null);
       setEngaged(list.find(a => a.type === "engaged") ?? null);
       setNoResp(list.find(a => a.type === "no-response") ?? null);
+      setUniqueCount(d.uniqueContactCount ?? 0);
     } finally { setLoading(false); }
   }, []);
 
@@ -651,8 +653,7 @@ export default function Contacts() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const totalContacts = audiences.reduce((s, a) => s + a.contactCount, 0)
-    + (vip?.contactCount ?? 0) + (engaged?.contactCount ?? 0) + (noResp?.contactCount ?? 0);
+  const totalContacts = uniqueCount;
 
   const filtered    = audiences.filter(a => !search || a.name.toLowerCase().includes(search.toLowerCase()));
   const customCards = filtered.filter(a => a.type === "custom");

@@ -459,7 +459,7 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
     try {
       const res  = await fetch("/api/audiences");
       const data = await res.json();
-      const list: AudienceOption[] = (Array.isArray(data) ? data : [])
+      const list: AudienceOption[] = (Array.isArray(data) ? data : (data.audiences ?? []))
         .filter((a: any) => ["excel","custom","vip","engaged","no-response"].includes(a.type))
         .map((a: any) => ({ id: a.id, name: a.name, type: a.type, contactCount: Number(a.contactCount ?? 0) }));
       setAudiences(list);

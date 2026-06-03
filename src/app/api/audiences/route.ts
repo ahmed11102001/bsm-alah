@@ -297,7 +297,63 @@ export async function GET(req: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  return NextResponse.json([vipCard, engagedCard, noRespCard, ...audiences]);
+  // ── Calculate unique contacts across all audiences ──────────────────────────
+  const allAudienceLists = [vipCard, engagedCard, noRespCard, ...audiences];
+  const allPhones = new Set<string>();
+  
+  // Collect from preview contacts
+  for (const aud of allAudienceLists) {
+    if (aud.contacts && Array.isArray(aud.contacts)) {
+      for (const contact of aud.contacts) {
+        if (contact.phone) {
+          allPhones.add(contact.phone);
+        }
+      }
+    }
+  }
+  
+  // Get all contacts from regular audiences (excel + custom)
+  const allRegularContacts = await prisma.contact.findMany({
+    where: {
+      userId,
+      deletedAt: null,
+      audiences: {
+        some: {
+          type: { in: ["excel", "custom"] }
+        }
+      }
+    },
+    select: { phone: true }
+  });
+  
+  for (const contact of allRegularContacts) {
+    if (contact.phone) {
+      allPhones.add(contact.phone);
+    }
+  }
+  
+  // Get all contacts from smart lists (batch queries)
+  const allSmartListIds = [...vipIds, ...engagedIds, ...noRespIds];
+  if (allSmartListIds.length > 0) {
+    const smartContacts = await prisma.contact.findMany({
+      where: {
+        id: { in: allSmartListIds },
+        deletedAt: null
+      },
+      select: { phone: true }
+    });
+    
+    for (const contact of smartContacts) {
+      if (contact.phone) {
+        allPhones.add(contact.phone);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    audiences: allAudienceLists,
+    uniqueContactCount: allPhones.size
+  });
 }
 
 export async function POST(req: NextRequest) {
