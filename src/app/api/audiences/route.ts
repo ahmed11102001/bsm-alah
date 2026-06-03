@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
           by: ["contactId"],
           where: { userId, contactId: { not: null } },
           _count: { id: true },
+          orderBy: { _count: { id: "desc" } },
           take: 500,
         });
         repeatBuyerIds = orderGroups.filter((r) => r._count.id >= 2 && r.contactId !== null).map((r) => r.contactId as string);
