@@ -35,6 +35,97 @@ export async function GET(req: NextRequest) {
   const includeContacts = searchParams.get("includeContacts");
 
   if (audienceId) {
+    // ── Check if it's a smart list ID ──────────────────────────────────────
+    if (audienceId === "vip") {
+      // VIP: ≥ 3 inbound msgs in last 90 days OR ≥ 2 store orders
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const frequentEngaged = await prisma.message.groupBy({
+        by: ["contactId"],
+        where: { userId, direction: MessageDirection.inbound, createdAt: { gte: ninetyDaysAgo } },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 500,
+      });
+      const frequentIds = frequentEngaged.filter((r) => r._count.id >= 3).map((r) => r.contactId);
+      let repeatBuyerIds: string[] = [];
+      try {
+        const orderGroups = await prisma.storeOrder.groupBy({
+          by: ["contactId"],
+          where: { userId, contactId: { not: null } },
+          _count: { id: true },
+          take: 500,
+        });
+        repeatBuyerIds = orderGroups.filter((r) => r._count.id >= 2 && r.contactId !== null).map((r) => r.contactId as string);
+      } catch {}
+      const vipIdSet = new Set([...frequentIds, ...repeatBuyerIds]);
+      const vipIds = [...vipIdSet];
+      const vipContacts = await prisma.contact.findMany({
+        where: { id: { in: includeContacts === "all" ? vipIds : vipIds.slice(0, 5) }, userId, deletedAt: null },
+        select: { id: true, phone: true, name: true },
+      });
+      return NextResponse.json({
+        id: "vip",
+        name: "العملاء المميزون VIP",
+        notes: null,
+        type: "vip",
+        contacts: vipContacts,
+        contactCount: vipIds.length,
+        createdAt: new Date().toISOString(),
+      });
+    } else if (audienceId === "engaged") {
+      // Engaged: replied to at least 1 message
+      const engagedRows = await prisma.message.groupBy({
+        by: ["contactId"],
+        where: { userId, direction: MessageDirection.inbound },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 500,
+      });
+      const engagedIds = engagedRows.map((r) => r.contactId);
+      const engagedContacts = await prisma.contact.findMany({
+        where: { id: { in: includeContacts === "all" ? engagedIds : engagedIds.slice(0, 5) }, userId, deletedAt: null },
+        select: { id: true, phone: true, name: true },
+      });
+      return NextResponse.json({
+        id: "engaged",
+        name: "العملاء المتفاعلون",
+        notes: null,
+        type: "engaged",
+        contacts: engagedContacts,
+        contactCount: engagedIds.length,
+        createdAt: new Date().toISOString(),
+      });
+    } else if (audienceId === "no-response") {
+      // No-response: sent messages but never replied
+      const sentContactIds = await prisma.message.findMany({
+        where: { userId, direction: MessageDirection.outbound },
+        select: { contactId: true },
+        distinct: ["contactId"],
+      });
+      const sentIds = sentContactIds.map((m) => m.contactId);
+      const repliedIds = await prisma.message.findMany({
+        where: { userId, direction: MessageDirection.inbound, contactId: { in: sentIds } },
+        select: { contactId: true },
+        distinct: ["contactId"],
+      });
+      const repliedSet = new Set(repliedIds.map((m) => m.contactId));
+      const noRespIds = sentIds.filter((id) => !repliedSet.has(id));
+      const noRespContacts = await prisma.contact.findMany({
+        where: { id: { in: includeContacts === "all" ? noRespIds : noRespIds.slice(0, 5) }, deletedAt: null },
+        select: { id: true, phone: true, name: true },
+      });
+      return NextResponse.json({
+        id: "no-response",
+        name: "لم يردوا على رسائلك",
+        notes: null,
+        type: "no-response",
+        contacts: noRespContacts,
+        contactCount: noRespIds.length,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // ── Regular audience from database ────────────────────────────────────────
     const audience = await prisma.audience.findFirst({
       where: { id: audienceId, userId },
       include: {
