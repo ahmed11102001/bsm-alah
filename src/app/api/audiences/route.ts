@@ -313,22 +313,29 @@ export async function GET(req: NextRequest) {
   }
   
   // Get all contacts from regular audiences (excel + custom)
-  const allRegularContacts = await prisma.contact.findMany({
+  const allRegularAudiences = await prisma.audience.findMany({
     where: {
       userId,
-      deletedAt: null,
-      audiences: {
-        some: {
-          type: { in: ["excel", "custom"] }
-        }
-      }
+      type: { in: ["excel", "custom"] }
     },
-    select: { phone: true }
+    select: { id: true }
   });
   
-  for (const contact of allRegularContacts) {
-    if (contact.phone) {
-      allPhones.add(contact.phone);
+  if (allRegularAudiences.length > 0) {
+    const audienceIds = allRegularAudiences.map(a => a.id);
+    const regularContacts = await prisma.contact.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        audienceId: { in: audienceIds }
+      },
+      select: { phone: true }
+    });
+    
+    for (const contact of regularContacts) {
+      if (contact.phone) {
+        allPhones.add(contact.phone);
+      }
     }
   }
   
