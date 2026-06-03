@@ -167,7 +167,7 @@ export const translations = {
     contacts: {
       stats: {
         total:     "إجمالي جهات الاتصال",
-        vip:       "العملاء المميزين VIP",
+       engaged: "المتفاعلون",     
         noResp:    "لم يردوا",
       },
       searchPlaceholder: "البحث باسم الجمهور...",
@@ -187,6 +187,7 @@ export const translations = {
       types: {
         vip:        "VIP",
         noResponse: "لم يردوا",
+        engaged: "متفاعل",         
         custom:     "مخصص",
       },
       empty: {
@@ -252,6 +253,12 @@ export const translations = {
       },
       deleteSuccess: "تم الحذف",
     },
+    // vipCriteria — كتلة جديدة كاملة
+vipCriteria: {
+  badge: "⭐ معايير الـ VIP",
+  rule1: "رد ٣+ مرات خلال آخر ٩٠ يوم",
+  rule2: "أو أجرى ٢+ طلبات من المتجر",
+},
 
     // ── API / Integrations Page ───────────────────────────────────────────────
     api: {
@@ -694,6 +701,7 @@ export const translations = {
       stats: {
         total:  "Total Contacts",
         vip:    "VIP Clients",
+        engaged: "Engaged",
         noResp: "No Response",
       },
       searchPlaceholder: "Search audience name...",
@@ -712,6 +720,7 @@ export const translations = {
       },
       types: {
         vip:        "VIP",
+        engaged: "Engaged",
         noResponse: "No Response",
         custom:     "Custom",
       },
@@ -778,6 +787,11 @@ export const translations = {
       },
       deleteSuccess: "Deleted",
     },
+vipCriteria: {
+  badge: "⭐ VIP Criteria",
+  rule1: "Replied 3+ times in last 90 days",
+  rule2: "Or placed 2+ store orders",
+},
 
     api: {
       title:      "API & Integrations",

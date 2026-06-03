@@ -18,7 +18,8 @@ import {
   Users, Plus, Search, MoreVertical, Eye, Edit2, Trash2,
   Copy, ChevronRight, Star, MessageSquareDashed, Upload,
   FileSpreadsheet, CheckCircle, XCircle, Loader2, X,
-  Phone, UserPlus, PenLine,
+  Phone, UserPlus, PenLine, Sparkles, TrendingUp, ShoppingBag,
+  MessageCircle, Crown, Info,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -28,7 +29,7 @@ interface Audience {
   id: string;
   name: string;
   notes: string | null;
-  type: "excel" | "custom" | "vip" | "no-response";
+  type: "excel" | "custom" | "vip" | "engaged" | "no-response";
   contacts: ContactRow[];
   contactCount: number;
   createdAt: string;
@@ -106,14 +107,190 @@ function PhoneStats({ valid, invalid }: { valid: number; invalid: number }) {
   );
 }
 
-// ─── Audience Card ────────────────────────────────────────────────────────────
+// ─── VIP Card — premium design ────────────────────────────────────────────────
+function VipCard({ audience, onView }: { audience: Audience; onView: () => void }) {
+  const { t, locale } = useLanguage();
+  const c    = t.contacts.card;
+  const vc   = t.contacts.vipCriteria;
+  const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800
+      bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50
+      dark:from-amber-950/40 dark:via-yellow-950/30 dark:to-orange-950/40
+      shadow-md hover:shadow-xl transition-all duration-300 group">
+
+      {/* Shimmer strip */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 rounded-t-2xl" />
+
+      {/* Subtle background crown */}
+      <div className="absolute -top-3 -left-3 opacity-5 dark:opacity-10 pointer-events-none">
+        <Crown className="w-28 h-28 text-amber-500" />
+      </div>
+
+      <div className="p-4 flex flex-col gap-3 relative">
+
+        {/* Header row */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 shadow-sm
+              flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+              <Crown className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
+                {audience.name}
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full
+                bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 mt-0.5">
+                <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                VIP
+              </span>
+            </div>
+          </div>
+          <button onClick={onView}
+            className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-500 transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Count */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-3xl font-black text-amber-600 dark:text-amber-400 leading-none">
+            {numFmt(audience.contactCount)}
+          </span>
+          <span className="text-sm font-normal text-amber-500/70 dark:text-amber-400/60">{c.contact}</span>
+        </div>
+
+        {/* Phone pills */}
+        <div className="flex flex-wrap gap-1">
+          {audience.contacts.slice(0, 3).map(ct => (
+            <span key={ct.id}
+              className="text-[11px] bg-amber-100/80 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700
+              px-2 py-0.5 rounded-lg text-amber-700 dark:text-amber-300 font-mono">
+              {ct.phone}
+            </span>
+          ))}
+          {audience.contactCount > 3 && (
+            <span className="text-[11px] text-amber-500/70">+{numFmt(audience.contactCount - 3)}</span>
+          )}
+        </div>
+
+        {/* Criteria tooltip strip */}
+        <div className="flex items-start gap-2 bg-amber-100/60 dark:bg-amber-900/20 rounded-xl px-3 py-2 mt-1">
+          <Info className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-[11px] text-amber-700 dark:text-amber-300 space-y-0.5">
+            <p className="font-semibold">{vc.badge}</p>
+            <p className="flex items-center gap-1">
+              <MessageCircle className="w-3 h-3" /> {vc.rule1}
+            </p>
+            <p className="flex items-center gap-1">
+              <ShoppingBag className="w-3 h-3" /> {vc.rule2}
+            </p>
+          </div>
+        </div>
+
+        {/* View link */}
+        <button onClick={onView}
+          className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200
+          flex items-center gap-1 mt-auto font-medium transition-colors">
+          {c.viewDetails} <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Engaged Card ─────────────────────────────────────────────────────────────
+function EngagedCard({ audience, onView }: { audience: Audience; onView: () => void }) {
+  const { t, locale } = useLanguage();
+  const c = t.contacts.card;
+  const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
+
+  return (
+    <div className="relative rounded-2xl border border-blue-200 dark:border-blue-800
+      bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20
+      shadow-sm hover:shadow-md transition-all duration-200 group">
+
+      <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-t-2xl" />
+
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center
+              group-hover:scale-105 transition-transform duration-200 shadow-sm">
+              <TrendingUp className="w-5 h-5 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
+                {audience.name}
+              </p>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md
+                bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                {t.contacts.types.engaged}
+              </span>
+            </div>
+          </div>
+          <button onClick={onView}
+            className="p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-400 transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 leading-none">
+            {numFmt(audience.contactCount)}
+          </span>
+          <span className="text-sm font-normal text-gray-400">{c.contact}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {audience.contacts.slice(0, 3).map(ct => (
+            <span key={ct.id}
+              className="text-[11px] bg-white/70 dark:bg-gray-700/70 border border-blue-200 dark:border-blue-700
+              px-2 py-0.5 rounded-lg text-gray-600 dark:text-gray-400 font-mono">
+              {ct.phone}
+            </span>
+          ))}
+          {audience.contactCount > 3 && (
+            <span className="text-[11px] text-gray-400">+{numFmt(audience.contactCount - 3)}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-blue-600/70 dark:text-blue-400/70">
+          <MessageCircle className="w-3 h-3" />
+          <span>ردّوا على رسائلك ولو مرة</span>
+        </div>
+
+        <button onClick={onView}
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
+          flex items-center gap-1 mt-auto transition-colors">
+          {c.viewDetails} <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Regular Audience Card ────────────────────────────────────────────────────
 function getTypeConfig(t: ReturnType<typeof useLanguage>["t"]) {
   const types = t.contacts.types;
   return {
-    vip:           { bg: "bg-amber-50 dark:bg-amber-900/20",  border: "border-amber-200 dark:border-amber-800",  icon: <Star className="w-5 h-5 text-amber-500" />,            badge: types.vip,        badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-    "no-response": { bg: "bg-red-50 dark:bg-red-900/20",     border: "border-red-200 dark:border-red-800",      icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />, badge: types.noResponse, badgeColor: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
-    custom:        { bg: "bg-purple-50 dark:bg-purple-900/20",border: "border-purple-200 dark:border-purple-800",icon: <UserPlus className="w-5 h-5 text-purple-500" />,        badge: types.custom,     badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
-    excel:         { bg: "bg-white dark:bg-gray-800",         border: "border-gray-200 dark:border-gray-700",   icon: <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />, badge: "",        badgeColor: "" },
+    "no-response": {
+      bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200 dark:border-red-800",
+      icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />,
+      badge: types.noResponse, badgeColor: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+    },
+    custom: {
+      bg: "bg-purple-50 dark:bg-purple-900/20", border: "border-purple-200 dark:border-purple-800",
+      icon: <UserPlus className="w-5 h-5 text-purple-500" />,
+      badge: types.custom, badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+    },
+    excel: {
+      bg: "bg-white dark:bg-gray-800", border: "border-gray-200 dark:border-gray-700",
+      icon: <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />,
+      badge: "", badgeColor: "",
+    },
   };
 }
 
@@ -122,7 +299,7 @@ function AudienceCard({ audience, onView, onEdit, onDelete }: {
 }) {
   const { t, locale } = useLanguage();
   const c = t.contacts.card;
-  const cfg = getTypeConfig(t)[audience.type] ?? getTypeConfig(t).excel;
+  const cfg = getTypeConfig(t)[audience.type as "no-response" | "custom" | "excel"] ?? getTypeConfig(t).excel;
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
 
   return (
@@ -140,7 +317,7 @@ function AudienceCard({ audience, onView, onEdit, onDelete }: {
           </div>
         </div>
 
-        {audience.type !== "vip" && audience.type !== "no-response" ? (
+        {audience.type !== "no-response" ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-400">
@@ -173,9 +350,11 @@ function AudienceCard({ audience, onView, onEdit, onDelete }: {
       </div>
 
       <div className="flex flex-wrap gap-1">
-        {audience.contacts.slice(0, 3).map(c => (
-          <span key={c.id} className="text-[11px] bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 px-2 py-0.5 rounded-lg text-gray-600 dark:text-gray-400 font-mono">
-            {c.phone}
+        {audience.contacts.slice(0, 3).map(ct => (
+          <span key={ct.id}
+            className="text-[11px] bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600
+            px-2 py-0.5 rounded-lg text-gray-600 dark:text-gray-400 font-mono">
+            {ct.phone}
           </span>
         ))}
         {audience.contactCount > 3 && (
@@ -185,7 +364,9 @@ function AudienceCard({ audience, onView, onEdit, onDelete }: {
         )}
       </div>
 
-      <button onClick={onView} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1 mt-auto">
+      <button onClick={onView}
+        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
+        flex items-center gap-1 mt-auto">
         {c.viewDetails} <ChevronRight className="w-3 h-3" />
       </button>
     </div>
@@ -211,6 +392,8 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
   }, [audience]);
 
   if (!audience) return null;
+
+  const isReadOnly = audience.type === "vip" || audience.type === "engaged" || audience.type === "no-response";
 
   const addContact = () => {
     const n = normalizePhone(addPhone);
@@ -251,8 +434,9 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
               <DialogTitle className="text-lg font-bold dark:text-white">{audience.name}</DialogTitle>
               <DialogDescription className="dark:text-gray-400">{dm.contactCount(audience.contactCount)}</DialogDescription>
             </div>
-            {audience.type !== "vip" && audience.type !== "no-response" && (
-              <Button size="sm" variant="outline" onClick={() => setEditMode(p => !p)} className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
+            {!isReadOnly && (
+              <Button size="sm" variant="outline" onClick={() => setEditMode(p => !p)}
+                className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
                 <Edit2 className="w-3.5 h-3.5" />
                 {editMode ? dm.cancel : dm.edit}
               </Button>
@@ -262,7 +446,8 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
 
         {editMode && (
           <div className="flex gap-2 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
-            <Input placeholder={dm.namePlaceholder} value={addName} onChange={e => setAddName(e.target.value)} className="flex-1 text-sm dark:bg-gray-700 dark:border-gray-600" />
+            <Input placeholder={dm.namePlaceholder} value={addName} onChange={e => setAddName(e.target.value)}
+              className="flex-1 text-sm dark:bg-gray-700 dark:border-gray-600" />
             <Input dir="ltr" placeholder={dm.phonePlaceholder} value={addPhone}
               onChange={e => setAddPhone(e.target.value)}
               onKeyDown={e => e.key === "Enter" && addContact()}
@@ -277,8 +462,10 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
           {contacts.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">{dm.noContacts}</p>
           ) : contacts.map(c => (
-            <div key={c.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2.5 group">
-              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 flex-shrink-0">
+            <div key={c.id}
+              className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2.5 group">
+              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center
+                text-xs font-bold text-gray-600 dark:text-gray-300 flex-shrink-0">
                 {(c.name ?? c.phone).slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -301,14 +488,17 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
 
         {editMode ? (
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300" onClick={onClose}>{dm.closeBtn}</Button>
-            <Button className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={saveChanges} disabled={saving}>
+            <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
+              onClick={onClose}>{dm.closeBtn}</Button>
+            <Button className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-1.5"
+              onClick={saveChanges} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {dm.saveBtn}
             </Button>
           </div>
         ) : (
-          <Button variant="outline" className="w-full dark:border-gray-600 dark:text-gray-300" onClick={onClose}>{dm.closeBtn}</Button>
+          <Button variant="outline" className="w-full dark:border-gray-600 dark:text-gray-300"
+            onClick={onClose}>{dm.closeBtn}</Button>
         )}
       </DialogContent>
     </Dialog>
@@ -323,6 +513,7 @@ export default function Contacts() {
 
   const [audiences,  setAudiences]  = useState<Audience[]>([]);
   const [vip,        setVip]        = useState<Audience | null>(null);
+  const [engaged,    setEngaged]    = useState<Audience | null>(null);
   const [noResp,     setNoResp]     = useState<Audience | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
@@ -351,6 +542,7 @@ export default function Contacts() {
       const list: Audience[] = Array.isArray(d) ? d : d.data ?? [];
       setAudiences(list.filter(a => a.type === "excel" || a.type === "custom"));
       setVip(list.find(a => a.type === "vip") ?? null);
+      setEngaged(list.find(a => a.type === "engaged") ?? null);
       setNoResp(list.find(a => a.type === "no-response") ?? null);
     } finally { setLoading(false); }
   }, []);
@@ -460,21 +652,42 @@ export default function Contacts() {
   };
 
   const totalContacts = audiences.reduce((s, a) => s + a.contactCount, 0)
-    + (vip?.contactCount ?? 0) + (noResp?.contactCount ?? 0);
+    + (vip?.contactCount ?? 0) + (engaged?.contactCount ?? 0) + (noResp?.contactCount ?? 0);
 
-  const filtered  = audiences.filter(a => !search || a.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered    = audiences.filter(a => !search || a.name.toLowerCase().includes(search.toLowerCase()));
   const customCards = filtered.filter(a => a.type === "custom");
   const excelCards  = filtered.filter(a => a.type === "excel");
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      {/* ── Stats strip ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: ct.stats.total,  value: totalContacts,            icon: <Users className="w-5 h-5 text-blue-500" />,               bg: "bg-blue-50 dark:bg-blue-900/20"  },
-          { label: ct.stats.vip,   value: vip?.contactCount ?? 0,   icon: <Star className="w-5 h-5 text-amber-500" />,              bg: "bg-amber-50 dark:bg-amber-900/20" },
-          { label: ct.stats.noResp,value: noResp?.contactCount ?? 0,icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />,  bg: "bg-red-50 dark:bg-red-900/20"   },
+          {
+            label: ct.stats.total,
+            value: totalContacts,
+            icon: <Users className="w-5 h-5 text-blue-500" />,
+            bg: "bg-blue-50 dark:bg-blue-900/20",
+          },
+          {
+            label: ct.stats.vip,
+            value: vip?.contactCount ?? 0,
+            icon: <Crown className="w-5 h-5 text-amber-500" />,
+            bg: "bg-amber-50 dark:bg-amber-900/20",
+          },
+          {
+            label: ct.stats.engaged,
+            value: engaged?.contactCount ?? 0,
+            icon: <TrendingUp className="w-5 h-5 text-indigo-500" />,
+            bg: "bg-indigo-50 dark:bg-indigo-900/20",
+          },
+          {
+            label: ct.stats.noResp,
+            value: noResp?.contactCount ?? 0,
+            icon: <MessageSquareDashed className="w-5 h-5 text-red-400" />,
+            bg: "bg-red-50 dark:bg-red-900/20",
+          },
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-4 flex items-center gap-3`}>
             {s.icon}
@@ -486,7 +699,7 @@ export default function Contacts() {
         ))}
       </div>
 
-      {/* Header bar */}
+      {/* ── Header bar ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
@@ -495,7 +708,8 @@ export default function Contacts() {
             className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-1.5 text-sm dark:border-gray-700 dark:text-gray-300" onClick={() => setShowCustom(true)}>
+          <Button variant="outline" className="gap-1.5 text-sm dark:border-gray-700 dark:text-gray-300"
+            onClick={() => setShowCustom(true)}>
             <PenLine className="w-4 h-4" /> {ct.createCustom}
           </Button>
           <Button className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5 text-sm"
@@ -512,19 +726,35 @@ export default function Contacts() {
       ) : (
         <div className="space-y-8">
 
-          {(vip || noResp) && (
+          {/* ── Smart lists section ── */}
+          {(vip || engaged || noResp) && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">{ct.sections.smart}</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+                {ct.sections.smart}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {vip   && <AudienceCard audience={vip}    onView={() => setDetailAud(vip)}    onEdit={() => {}} onDelete={() => {}} />}
-                {noResp && <AudienceCard audience={noResp} onView={() => setDetailAud(noResp)} onEdit={() => {}} onDelete={() => {}} />}
+                {/* VIP — premium card */}
+                {vip && (
+                  <VipCard audience={vip} onView={() => setDetailAud(vip)} />
+                )}
+                {/* Engaged — blue card */}
+                {engaged && (
+                  <EngagedCard audience={engaged} onView={() => setDetailAud(engaged)} />
+                )}
+                {/* No-response — regular card */}
+                {noResp && (
+                  <AudienceCard audience={noResp}
+                    onView={() => setDetailAud(noResp)} onEdit={() => {}} onDelete={() => {}} />
+                )}
               </div>
             </div>
           )}
 
           {customCards.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">{ct.sections.custom}</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+                {ct.sections.custom}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {customCards.map(a => (
                   <AudienceCard key={a.id} audience={a}
@@ -536,7 +766,9 @@ export default function Contacts() {
 
           {excelCards.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">{ct.sections.excel}</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+                {ct.sections.excel}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {excelCards.map(a => (
                   <AudienceCard key={a.id} audience={a}
@@ -546,7 +778,7 @@ export default function Contacts() {
             </div>
           )}
 
-          {customCards.length === 0 && excelCards.length === 0 && !vip && !noResp && (
+          {customCards.length === 0 && excelCards.length === 0 && !vip && !engaged && !noResp && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
                 <Users className="w-10 h-10 text-gray-300 dark:text-gray-600" />
@@ -618,7 +850,8 @@ export default function Contacts() {
                 {parsed.length > 10 && <p className="text-xs text-gray-400">{ct.excelDialog.moreItems(parsed.length - 10)}</p>}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300" onClick={() => setExStep(1)}>{ct.excelDialog.prevBtn}</Button>
+                <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
+                  onClick={() => setExStep(1)}>{ct.excelDialog.prevBtn}</Button>
                 <Button className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5"
                   onClick={saveExcel} disabled={saving || !audName.trim() || parsed.length === 0}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -657,7 +890,8 @@ export default function Contacts() {
               return <PhoneStats valid={v} invalid={lines.length - v} />;
             })()}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300" onClick={() => setShowCustom(false)}>{ct.customDialog.cancelBtn}</Button>
+              <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
+                onClick={() => setShowCustom(false)}>{ct.customDialog.cancelBtn}</Button>
               <Button className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5"
                 onClick={saveCustom} disabled={custSaving || !custName.trim() || !custInput.trim()}>
                 {custSaving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -669,7 +903,10 @@ export default function Contacts() {
       </Dialog>
 
       <AudienceDetailModal audience={detailAud} open={!!detailAud} onClose={() => setDetailAud(null)}
-        onSave={updated => { setAudiences(prev => prev.map(a => a.id === updated.id ? updated : a)); setDetailAud(null); }} />
+        onSave={updated => {
+          setAudiences(prev => prev.map(a => a.id === updated.id ? updated : a));
+          setDetailAud(null);
+        }} />
     </div>
   );
 }

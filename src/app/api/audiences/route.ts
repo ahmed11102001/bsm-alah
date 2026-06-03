@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ── Regular audiences (excel + custom) ──────────────────────────────────────
   const rawAudiences = await prisma.audience.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -87,18 +88,78 @@ export async function GET(req: NextRequest) {
     createdAt: a.createdAt.toISOString(),
   }));
 
-  const actualVip = (
-    await prisma.message.groupBy({
+  // ── Smart card 1: العملاء المتفاعلون ────────────────────────────────────────
+  // كل من رد على رسالة ولو مرة واحدة
+  const engagedRows = await prisma.message.groupBy({
+    by: ["contactId"],
+    where: { userId, direction: MessageDirection.inbound },
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 200,
+  });
+  const engagedIds = engagedRows.map((r) => r.contactId);
+
+  const engagedContacts = await prisma.contact.findMany({
+    where: { id: { in: engagedIds.slice(0, 5) }, userId, deletedAt: null },
+    take: 5,
+    select: { id: true, phone: true, name: true },
+  });
+
+  const engagedCard = {
+    id: "engaged",
+    name: "العملاء المتفاعلون",
+    notes: null,
+    type: "engaged",
+    contacts: engagedContacts,
+    contactCount: engagedIds.length,
+    createdAt: new Date().toISOString(),
+  };
+
+  // ── Smart card 2: VIP الحقيقيون ─────────────────────────────────────────────
+  // المعايير (يكفي أي شرط):
+  //   A) ≥ 3 رسائل واردة (تفاعل متكرر) خلال آخر 90 يوم
+  //   B) ≥ 2 طلبات من المتجر
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+  // A: تفاعل متكرر حديث
+  const frequentEngaged = await prisma.message.groupBy({
+    by: ["contactId"],
+    where: {
+      userId,
+      direction: MessageDirection.inbound,
+      createdAt: { gte: ninetyDaysAgo },
+    },
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 100,
+  });
+  const frequentIds = frequentEngaged
+    .filter((r) => r._count.id >= 3)
+    .map((r) => r.contactId);
+
+  // B: عملاء كرروا الشراء (طلبان أو أكثر)
+  let repeatBuyerIds: string[] = [];
+  try {
+    const orderGroups = await prisma.storeOrder.groupBy({
       by: ["contactId"],
-      where: { userId, direction: MessageDirection.inbound },
+      where: { userId, contactId: { not: null } },
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
-      take: 50,
-    })
-  ).map((r) => r.contactId);
+      take: 100,
+    });
+    repeatBuyerIds = orderGroups
+      .filter((r) => r._count.id >= 2 && r.contactId !== null)
+      .map((r) => r.contactId as string);
+  } catch {
+    // storeOrder قد لا يكون موجود في كل البيئات
+  }
+
+  // دمج بدون تكرار
+  const vipIdSet = new Set([...frequentIds, ...repeatBuyerIds]);
+  const vipIds = [...vipIdSet].slice(0, 50);
 
   const vipContacts = await prisma.contact.findMany({
-    where: { id: { in: actualVip }, userId, deletedAt: null },
+    where: { id: { in: vipIds.slice(0, 5) }, userId, deletedAt: null },
     take: 5,
     select: { id: true, phone: true, name: true },
   });
@@ -109,10 +170,11 @@ export async function GET(req: NextRequest) {
     notes: null,
     type: "vip",
     contacts: vipContacts,
-    contactCount: actualVip.length,
+    contactCount: vipIds.length,
     createdAt: new Date().toISOString(),
   };
 
+  // ── Smart card 3: لم يردوا ───────────────────────────────────────────────────
   const sentContactIds = await prisma.message.findMany({
     where: { userId, direction: MessageDirection.outbound },
     select: { contactId: true },
@@ -143,7 +205,7 @@ export async function GET(req: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  return NextResponse.json([vipCard, noRespCard, ...audiences]);
+  return NextResponse.json([vipCard, engagedCard, noRespCard, ...audiences]);
 }
 
 export async function POST(req: NextRequest) {
