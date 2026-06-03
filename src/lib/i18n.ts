@@ -167,6 +167,7 @@ export const translations = {
     contacts: {
       stats: {
         total:     "إجمالي جهات الاتصال",
+        vip:       "عملاء VIP",
        engaged: "المتفاعلون",     
         noResp:    "لم يردوا",
       },
@@ -252,6 +253,11 @@ export const translations = {
         copied:       "تم النسخ",
       },
       deleteSuccess: "تم الحذف",
+      vipCriteria: {
+        badge: "⭐ معايير الـ VIP",
+        rule1: "رد 3+ مرات خلال آخر 90 يوم",
+        rule2: "أو أجرى 2+ طلبات من المتجر",
+      },
     },
     // vipCriteria — كتلة جديدة كاملة
 vipCriteria: {
@@ -786,6 +792,11 @@ vipCriteria: {
         copied:       "Copied",
       },
       deleteSuccess: "Deleted",
+      vipCriteria: {
+        badge: "⭐ VIP Criteria",
+        rule1: "Replied 3+ times in last 90 days",
+        rule2: "Or placed 2+ store orders",
+      },
     },
 vipCriteria: {
   badge: "⭐ VIP Criteria",

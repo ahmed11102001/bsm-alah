@@ -21,6 +21,7 @@ import {
   Trash2, RefreshCw, ChevronRight, ChevronLeft,
   CheckCircle, Clock, Eye, Users, MessageSquare,
   XCircle, Loader2, BarChart3, Hourglass,
+  Crown, TrendingUp, MessageSquareDashed,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -149,7 +150,42 @@ interface Campaign {
   template: { name: string; content: string }|null;
 }
 interface AudienceContact { phone: string; }
-interface AudienceOption  { id: string; name: string; type: string; contactCount: number; }
+interface AudienceOption  {
+  id: string; name: string;
+  type: "excel" | "custom" | "vip" | "engaged" | "no-response";
+  contactCount: number;
+}
+
+// ─── Smart audience visual config ─────────────────────────────────────────────
+const SMART_AUDIENCE_CONFIG: Record<string, {
+  icon: React.ReactNode; badge: string;
+  bg: string; border: string; badgeColor: string; countColor: string;
+}> = {
+  vip: {
+    icon: <Crown className="w-4 h-4 text-white" />,
+    badge: "VIP",
+    bg:         "bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30",
+    border:     "border-amber-300 dark:border-amber-700",
+    badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    countColor: "text-amber-600 dark:text-amber-400",
+  },
+  engaged: {
+    icon: <TrendingUp className="w-4 h-4 text-white" />,
+    badge: "متفاعل",
+    bg:         "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20",
+    border:     "border-blue-300 dark:border-blue-700",
+    badgeColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    countColor: "text-blue-600 dark:text-blue-400",
+  },
+  "no-response": {
+    icon: <MessageSquareDashed className="w-4 h-4 text-white" />,
+    badge: "لم يردوا",
+    bg:         "bg-red-50 dark:bg-red-950/20",
+    border:     "border-red-200 dark:border-red-800",
+    badgeColor: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
+    countColor: "text-red-500 dark:text-red-400",
+  },
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 const cleanNumber = (raw: string): string => {
@@ -460,8 +496,12 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
       const res  = await fetch("/api/audiences");
       const data = await res.json();
       const list: AudienceOption[] = (Array.isArray(data) ? data : [])
-        .filter((a: any) => ["excel","custom"].includes(a.type))
-        .map((a: any) => ({ id: a.id, name: a.name, type: a.type, contactCount: Number(a.contactCount ?? 0) }));
+        .filter((a: any) => ["excel","custom","vip","engaged","no-response"].includes(a.type))
+        .map((a: any) => ({
+          id: a.id, name: a.name,
+          type: a.type as AudienceOption["type"],
+          contactCount: Number(a.contactCount ?? 0),
+        }));
       setAudiences(list);
     } catch { toast.error(tr("errLoadAudiences", lang)); }
   }, []);
@@ -732,23 +772,112 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">{tr("orImport",lang)}</Label>
-                <div className="rounded-xl border border-gray-200 dark:border-gray-600 p-4 space-y-3">
-                  <Select value={selectedAudienceId} onValueChange={setSelectedAudienceId}>
-                    <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600">
-                      <SelectValue placeholder={tr("chooseList",lang)} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {audiences.length === 0
-                        ? <SelectItem value="no-audiences" disabled>{tr("noLists",lang)}</SelectItem>
-                        : audiences.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.contactCount.toLocaleString()})</SelectItem>)
-                      }
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" className="w-full gap-2 dark:border-gray-600 dark:text-gray-300" onClick={importAudienceContacts} disabled={!selectedAudienceId || importingAudience}>
-                    {importingAudience ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-                    {tr("importBtn",lang)}
-                  </Button>
-                </div>
+                {audiences.length === 0 ? (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                    {tr("noLists",lang)}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Smart lists */}
+                    {audiences.some(a => ["vip","engaged","no-response"].includes(a.type)) && (
+                      <div>
+                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                          {lang === "ar" ? "قوائم ذكية" : "Smart Lists"}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {audiences
+                            .filter(a => ["vip","engaged","no-response"].includes(a.type))
+                            .map(a => {
+                              const cfg = SMART_AUDIENCE_CONFIG[a.type];
+                              const selected = selectedAudienceId === a.id;
+                              return (
+                                <button
+                                  key={a.id}
+                                  onClick={() => setSelectedAudienceId(selected ? "" : a.id)}
+                                  className={`relative text-start rounded-xl border-2 p-3 transition-all
+                                    ${selected
+                                      ? "ring-2 ring-green-400 border-green-400 bg-green-50 dark:bg-green-900/20"
+                                      : `${cfg.bg} ${cfg.border}`
+                                    }`}
+                                >
+                                  {selected && (
+                                    <span className="absolute top-2 left-2 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                      <CheckCircle className="w-3 h-3 text-white" />
+                                    </span>
+                                  )}
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
+                                      ${a.type === "vip" ? "bg-amber-400"
+                                        : a.type === "engaged" ? "bg-blue-500"
+                                        : "bg-red-400"}`}>
+                                      {cfg.icon}
+                                    </div>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${cfg.badgeColor}`}>
+                                      {cfg.badge}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-800 dark:text-white leading-tight truncate">{a.name}</p>
+                                  <p className={`text-sm font-bold mt-0.5 ${cfg.countColor}`}>
+                                    {a.contactCount.toLocaleString()} {lang === "ar" ? "جهة" : "contacts"}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Regular lists */}
+                    {audiences.some(a => ["excel","custom"].includes(a.type)) && (
+                      <div>
+                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                          {lang === "ar" ? "قوائمي" : "My Lists"}
+                        </p>
+                        <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                          {audiences
+                            .filter(a => ["excel","custom"].includes(a.type))
+                            .map(a => {
+                              const selected = selectedAudienceId === a.id;
+                              return (
+                                <button
+                                  key={a.id}
+                                  onClick={() => setSelectedAudienceId(selected ? "" : a.id)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-start transition-all
+                                    ${selected
+                                      ? "border-green-400 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-400"
+                                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
+                                    }`}
+                                >
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                                    ${a.type === "custom"
+                                      ? "bg-purple-100 dark:bg-purple-900/30"
+                                      : "bg-gray-100 dark:bg-gray-700"}`}>
+                                    <Users className={`w-4 h-4 ${a.type === "custom" ? "text-purple-500" : "text-gray-500"}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 dark:text-white truncate">{a.name}</p>
+                                    <p className="text-xs text-gray-400">{a.contactCount.toLocaleString()} {lang === "ar" ? "جهة اتصال" : "contacts"}</p>
+                                  </div>
+                                  {selected && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Import button */}
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 dark:border-gray-600 dark:text-gray-300"
+                      onClick={importAudienceContacts}
+                      disabled={!selectedAudienceId || importingAudience}
+                    >
+                      {importingAudience ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                      {tr("importBtn",lang)}
+                    </Button>
+                  </div>
+                )}
               </div>
               {numbers.length > 0 && (
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
