@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import LandingPageSkeleton from "@/components/LandingPageSkeleton";
 
 import Navbar       from "@/sections/Navbar";
 import Hero         from "@/sections/Hero";
@@ -34,7 +35,7 @@ export default function Home() {
     if (session) router.push("/dashboard");
   }, [session, router]);
 
-  if (status === "loading") return <div>جاري التحميل...</div>;
+  if (status === "loading") return <LandingPageSkeleton />;
   if (session) return null;
 
   return (
