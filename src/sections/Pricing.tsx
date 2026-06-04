@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -101,7 +101,7 @@ function PricingCard({
         onMouseMove={onMouseMove}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={onMouseLeave}
-        className={`relative rounded-2xl p-6 flex flex-col gap-4 overflow-hidden h-full cursor-default ${s.card}`}
+        className={`relative rounded-2xl p-6 flex flex-col gap-4 h-full cursor-default ${s.card}`}
         dir={isAr ? "rtl" : "ltr"}
         style={{
           transform: hovered
@@ -134,7 +134,7 @@ function PricingCard({
 
         {/* popular badge */}
         {"badge" in plan && plan.badge && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2" style={{ zIndex: 20 }}>
+          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2" style={{ zIndex: 20 }}>
             <span className="bg-[#25D366] text-white text-xs font-bold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap">
               {tr(plan.badge as { ar: string; en: string }, lang)}
             </span>
@@ -349,7 +349,7 @@ export default function Pricing({ lang }: PricingProps) {
         </div>
 
         {/* ── Cards ── */}
-        <div className={`grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch ${isAr ? "xl:[direction:ltr]" : ""}`}>
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
           {plans.map((plan, i) => {
             const s            = PLAN_STYLES[i];
             const base         = BASE_PRICES[i];
