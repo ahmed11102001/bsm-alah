@@ -69,9 +69,13 @@ function CheckoutContent() {
     : 0;
 
   // ── UI state ──
-  const [coupon,        setCoupon]        = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponError,   setCouponError]   = useState("");
+  const [coupon,          setCoupon]          = useState("");
+  const [couponApplied,   setCouponApplied]   = useState(false);
+  const [couponError,     setCouponError]     = useState("");
+  const [validatingCoupon,setValidatingCoupon]= useState(false);
+  const [couponData,      setCouponData]      = useState<{
+    code: string; discountType: string; discountValue: number;
+  } | null>(null);
   const [showFeatures,  setShowFeatures]  = useState(false);
   const [paying,        setPaying]        = useState(false);
   const [success,       setSuccess]       = useState(false);
@@ -99,15 +103,38 @@ function CheckoutContent() {
     });
   };
 
-  const applyCoupon = () => {
-    if (coupon.trim().toUpperCase() === "WHATSPRO20") {
-      setCouponApplied(true); setCouponError("");
+  const applyCoupon = async () => {
+    const trimmed = coupon.trim().toUpperCase();
+    if (!trimmed) return;
+    setValidatingCoupon(true);
+    setCouponError("");
+    setCouponApplied(false);
+    setCouponData(null);
+
+    const planSlug: string | undefined =
+      !tokenPkg && !mcpAddonPkg ? plan.slug : undefined;
+
+    const res  = await fetch("/api/coupon/validate", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ code: trimmed, planSlug }),
+    });
+    const data = await res.json();
+    setValidatingCoupon(false);
+
+    if (data.valid) {
+      setCouponApplied(true);
+      setCouponData({ code: data.code, discountType: data.discountType, discountValue: data.discountValue });
     } else {
-      setCouponError("كود الخصم غير صحيح أو منتهي"); setCouponApplied(false);
+      setCouponError(data.error ?? "كود الخصم غير صحيح");
     }
   };
 
-  const couponDiscount = couponApplied ? Math.round(totalDue * 0.1) : 0;
+  const couponDiscount = couponApplied && couponData
+    ? couponData.discountType === "percent"
+      ? Math.round(totalDue * couponData.discountValue / 100)
+      : Math.min(couponData.discountValue, totalDue)
+    : 0;
   const finalTotal     = totalDue - couponDiscount;
 
   const handlePay = async (e: React.FormEvent) => {
@@ -140,6 +167,15 @@ function CheckoutContent() {
 
     // TODO: استبدل بـ PayMob iframe/API call هنا
     await new Promise(r => setTimeout(r, 1800));
+
+    // ── سجّل استخدام الكوبون ──
+    if (couponApplied && couponData) {
+      await fetch("/api/coupon/use", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ code: couponData.code }),
+      }).catch(() => {}); // silent — لا يوقف الـ UX
+    }
 
     track("Purchase", {
       content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
@@ -268,9 +304,9 @@ function CheckoutContent() {
                   <span>- {savings.toLocaleString("ar-EG")} ج</span>
                 </div>
               )}
-              {couponApplied && (
+              {couponApplied && couponData && (
                 <div className="flex justify-between text-blue-600">
-                  <span>كود WHATSPRO20</span>
+                  <span>كود {couponData.code}</span>
                   <span>- {couponDiscount.toLocaleString("ar-EG")} ج</span>
                 </div>
               )}
@@ -312,20 +348,26 @@ function CheckoutContent() {
             <div className="flex gap-2">
               <input
                 value={coupon}
-                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponError(""); setCouponApplied(false); }}
-                placeholder="WHATSPRO20"
+                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponError(""); setCouponApplied(false); setCouponData(null); }}
+                placeholder="SAVE-A3F9K"
                 className="flex-1 h-9 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25D366]/40 focus:border-[#25D366] transition-all placeholder-gray-300 font-mono"
               />
               <button
                 onClick={applyCoupon}
-                disabled={!coupon.trim()}
-                className="h-9 px-4 text-sm font-semibold rounded-xl bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-30 transition-all"
+                disabled={!coupon.trim() || validatingCoupon}
+                className="h-9 px-4 text-sm font-semibold rounded-xl bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-30 transition-all flex items-center gap-1.5"
               >
+                {validatingCoupon && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 تطبيق
               </button>
             </div>
-            {couponError   && <p className="text-xs text-red-500 mt-1.5">{couponError}</p>}
-            {couponApplied && <p className="text-xs text-[#1a9e50] mt-1.5 flex items-center gap-1"><Check className="w-3 h-3" /> تم تطبيق خصم 10%</p>}
+            {couponError && <p className="text-xs text-red-500 mt-1.5">{couponError}</p>}
+            {couponApplied && couponData && (
+              <p className="text-xs text-[#1a9e50] mt-1.5 flex items-center gap-1">
+                <Check className="w-3 h-3" />
+                تم تطبيق خصم {couponData.discountType === "percent" ? `${couponData.discountValue}%` : `${couponData.discountValue} ج`}
+              </p>
+            )}
           </div>
 
           {/* Trust signals */}

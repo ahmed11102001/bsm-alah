@@ -37,7 +37,7 @@ interface Testimonial {
 interface Coupon {
   id: string; code: string; discountType: string; discountValue: number;
   maxUses: number; usedCount: number; expiresAt: string | null;
-  active: boolean; createdAt: string;
+  active: boolean; createdAt: string; forPlan: string | null;
 }
 interface Article {
   id: string; title: string; slug: string; excerpt: string | null;
@@ -115,6 +115,7 @@ export default function AdminPage() {
   const [showCouponF, setShowCouponF] = useState(false);
   const [couponForm,  setCouponForm]  = useState({
     prefix: "SAVE", discountType: "percent", discountValue: "", maxUses: "1", expiresAt: "",
+    forPlan: "" as "" | "starter" | "pro" | "enterprise",
   });
   const [savingC, setSavingC] = useState(false);
 
@@ -350,12 +351,13 @@ export default function AdminPage() {
         discountValue: Number(couponForm.discountValue),
         maxUses: Number(couponForm.maxUses),
         expiresAt: couponForm.expiresAt || null,
+        forPlan: couponForm.forPlan || null,
       }),
     });
     setSavingC(false);
     if (r.ok) {
       setShowCouponF(false);
-      setCouponForm({ prefix: "SAVE", discountType: "percent", discountValue: "", maxUses: "1", expiresAt: "" });
+      setCouponForm({ prefix: "SAVE", discountType: "percent", discountValue: "", maxUses: "1", expiresAt: "", forPlan: "" });
       fetchCoupons();
     } else {
       const d = await r.json().catch(() => ({}));
@@ -824,6 +826,17 @@ export default function AdminPage() {
                       onChange={e => setCouponForm(f => ({ ...f, expiresAt: e.target.value }))}
                       className={inp} />
                   </div>
+                  <div>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{adm.coupons.fields.forPlan}</label>
+                    <select value={couponForm.forPlan}
+                      onChange={e => setCouponForm(f => ({ ...f, forPlan: e.target.value as typeof couponForm.forPlan }))}
+                      className={inp + " cursor-pointer"}>
+                      <option value="">{adm.coupons.fields.forPlanAll}</option>
+                      <option value="starter">Starter</option>
+                      <option value="pro">Pro</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
                 </div>
                 <button onClick={handleCreateCoupon} disabled={savingC || !couponForm.discountValue} className={btn}>
                   {savingC ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {adm.coupons.createBtn}
@@ -850,6 +863,15 @@ export default function AdminPage() {
                           <span className="font-mono font-bold text-[#25D366] bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">{c.code}</span>
                         </td>
                         <td className="py-3 px-4 text-gray-700 dark:text-gray-300">{adm.coupons.unit(c.discountType, c.discountValue)}</td>
+                        <td className="py-3 px-4">
+                          {c.forPlan ? (
+                            <span className="text-xs px-2 py-1 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                              {{ starter: "Starter", pro: "Pro", enterprise: "Enterprise" }[c.forPlan] ?? c.forPlan}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">{adm.coupons.fields.forPlanAll}</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{c.usedCount} / {c.maxUses}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
                           {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString(dateLocale) : "—"}

@@ -234,6 +234,7 @@ export const AdminCreateCouponSchema = z
     discountValue: z.number().positive("قيمة الخصم مطلوبة"),
     maxUses:       z.number().int().min(1).optional().default(1),
     expiresAt:     z.string().datetime({ offset: true }).optional(),
+    forPlan:       z.enum(["starter", "pro", "enterprise"]).nullable().optional().default(null),
   })
   .refine(
     (d) => !(d.discountType === "percent" && d.discountValue > 100),

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   const parsed = parseInput(AdminCreateCouponSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const { prefix, discountType, discountValue, maxUses, expiresAt } = parsed.data;
+  const { prefix, discountType, discountValue, maxUses, expiresAt, forPlan } = parsed.data;
 
   // تأكد إن الكود مش موجود قبل كده (نجرب 3 مرات)
   let code = "";
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       discountValue,
       maxUses,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
+      forPlan:   forPlan ?? null,
       active:    true,
     },
   });

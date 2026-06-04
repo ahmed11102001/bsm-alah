@@ -340,6 +340,8 @@ model Coupon {
   usedCount     Int       @default(0)
   expiresAt     DateTime?
   active        Boolean   @default(true)
+  /// null = كل الباقات | "starter" | "pro" | "enterprise"
+  forPlan       String?
   createdAt     DateTime  @default(now())
 
   @@index([code])
