@@ -654,6 +654,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const router = useRouter();
   const { t, locale, dir } = useLanguage();
   const h = t.home;
+  const [metaPrompt, setMetaPrompt] = useState<string | null>(null);
   const { stats, recentCampaigns, user } = data;
   const firstName = (user.name ?? "").split(" ")[0] || (locale === "ar" ? "مرحباً" : "there");
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
@@ -667,10 +668,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
   const campaignLimitActive = whatsappConnected && campaignAtLimit;
-  const showMetaConnectToast = () => {
-    toast.error(locale === "ar"
+  const showMetaConnectPrompt = () => {
+    const message = locale === "ar"
       ? "اربط رقمك بميتا علشان تعمل حملة"
-      : "Connect your Meta number to create a campaign.");
+      : "Connect your Meta number to create a campaign.";
+    setMetaPrompt(message);
+    window.setTimeout(() => setMetaPrompt(null), 3500);
   };
   const showCampaignLimitToast = () => {
     toast.custom(() => (
@@ -693,6 +696,28 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
   return (
     <div dir={dir}>
+      {metaPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
+          <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-5 h-5 text-[#25D366]" />
+            </div>
+            <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
+              {locale === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              {metaPrompt}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMetaPrompt(null)}
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#075E54] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064944] transition-colors"
+            >
+              {locale === "ar" ? "حسنًا" : "OK"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-5 gap-3">
@@ -710,7 +735,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
               : "bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm w-full sm:w-auto justify-center"}
             onClick={() => {
-              if (!whatsappConnected) return showMetaConnectToast();
+              if (!whatsappConnected) return showMetaConnectPrompt();
               if (campaignAtLimit) return showCampaignLimitToast();
               onCreateCampaign();
             }}

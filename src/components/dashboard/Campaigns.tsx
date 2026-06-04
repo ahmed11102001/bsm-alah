@@ -405,6 +405,7 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
   const [scheduledAt,  setScheduledAt]  = useState("");
 
   const [detailsCampaign, setDetailsCampaign] = useState<Campaign | null>(null);
+  const [metaPrompt, setMetaPrompt] = useState<string | null>(null);
 
   const hasRunning = campaigns.some(c => c.status === "running");
   const campaignLimitActive = whatsappConnected && atLimit;
@@ -609,9 +610,11 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
   }
 
   function showMetaConnectToast() {
-    toast.error(lang === "ar"
+    const message = lang === "ar"
       ? "اربط رقمك بميتا علشان تعمل حملة"
-      : "Connect your Meta number to create a campaign.");
+      : "Connect your Meta number to create a campaign.";
+    setMetaPrompt(message);
+    window.setTimeout(() => setMetaPrompt(null), 3500);
   }
 
   function openCampaignDialog() {
@@ -629,6 +632,28 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
 
   return (
     <div className="max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
+      {metaPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
+          <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-5 h-5 text-[#25D366]" />
+            </div>
+            <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
+              {lang === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              {metaPrompt}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMetaPrompt(null)}
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#075E54] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064944] transition-colors"
+            >
+              {lang === "ar" ? "حسنًا" : "OK"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
