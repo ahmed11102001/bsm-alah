@@ -21,6 +21,8 @@ interface Props {
   planName:          string;
   onNavigate:        (section: string) => void;
   helperMountId?:    string;
+  helperOpen?:       boolean;
+  onHelperOpenChange?: (open: boolean) => void;
 }
 
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
@@ -31,7 +33,7 @@ const WELCOME_INTERVAL_MS = 48 * 60 * 60 * 1000;
 export default function DashboardAssistant({
   userId, locale, activeSection,
   whatsappConnected, totalContacts, deliveryRate, planStatus, planName,
-  onNavigate, helperMountId,
+  onNavigate, helperMountId, helperOpen, onHelperOpenChange,
 }: Props) {
   const [showWelcome,  setShowWelcome]  = useState(false);
   const [dismissed,    setDismissed]    = useState<Record<string, number>>({});
@@ -151,6 +153,8 @@ export default function DashboardAssistant({
         onDismiss={handleDismiss}
         onAction={handleAction}
         mountId={helperMountId}
+        isOpen={helperOpen}
+        onOpenChange={onHelperOpenChange}
       />
     </>
   );

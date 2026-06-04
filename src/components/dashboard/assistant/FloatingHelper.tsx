@@ -13,6 +13,8 @@ interface Props {
   onDismiss: (id: string) => void;
   onAction:  (target: string, type: "navigate" | "link") => void;
   mountId?:  string;
+  isOpen?:   boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const T = {
@@ -95,8 +97,10 @@ function RuleRow({
   );
 }
 
-export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction, mountId }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction, mountId, isOpen: controlledOpen, onOpenChange }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [mountEl, setMountEl] = useState<HTMLElement | null>(null);
   const t   = T[locale];
   const dir = locale === "ar" ? "rtl" : "ltr";
@@ -144,7 +148,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                 <span className="bg-white/25 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCount}</span>
               )}
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition">
+              <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -163,7 +167,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                   key={rule.id}
                   rule={rule} ctx={ctx} locale={locale}
                   onDismiss={onDismiss}
-                  onAction={(target, type) => { onAction(target, type); setIsOpen(false); }}
+                  onAction={(target, type) => { onAction(target, type); setOpen(false); }}
                 />
               ))
             )}
@@ -174,7 +178,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       {/* ── Floating button ── */}
       {mountEl ? createPortal(
         <button
-          onClick={() => setIsOpen(v => !v)}
+          onClick={() => setOpen(!isOpen)}
           className="relative h-9 w-9 rounded-xl
                     flex items-center justify-center
                     hover:scale-[1.03] active:scale-95 transition-transform duration-200
@@ -193,7 +197,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
         mountEl
       ) : (
       <button
-        onClick={() => setIsOpen(v => !v)}
+        onClick={() => setOpen(!isOpen)}
         className={`fixed top-3 ${side} z-[60] h-9 w-9 rounded-xl
                     flex items-center justify-center
                     hover:scale-[1.03] active:scale-95 transition-transform duration-200

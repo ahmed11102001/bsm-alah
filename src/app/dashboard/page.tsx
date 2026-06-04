@@ -570,17 +570,23 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
 }
 
 // ─── ClaudeHeaderBadge — مستخرج من IIFE عشان useState يشتغل صح ───────────────
-function ClaudeHeaderBadge({ locale, dir, onNavigate }: {
+function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChange }: {
   locale: string;
   dir: string;
   onNavigate: (section: string) => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [showMenu, setShowMenu] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const showMenu = onOpenChange ? isOpen : internalOpen;
+  const setShowMenu = onOpenChange
+    ? (open: boolean) => onOpenChange(open)
+    : setInternalOpen;
 
   return (
     <div className="relative">
       <button
-        onClick={() => setShowMenu(v => !v)}
+        onClick={() => setShowMenu(!showMenu)}
         title="Claude AI"
         className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
       >
@@ -970,6 +976,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
   const [claudeConnected, setClaudeConnected] = useState(false);
+  const [activeTopPanel, setActiveTopPanel] = useState<"claude" | "assistant" | null>(null);
 
   useEffect(() => {
     fetch("/api/me/api-key")
@@ -1249,6 +1256,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 locale={locale}
                 dir={dir}
                 onNavigate={setActiveSection}
+                isOpen={activeTopPanel === "claude"}
+                onOpenChange={(open) => setActiveTopPanel(open ? "claude" : null)}
               />
             )}
             <div id="assistant-header-slot" className="flex items-center" />
@@ -1277,6 +1286,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             planName={dashData?.plan.planName ?? ""}
             onNavigate={setActiveSection}
             helperMountId="assistant-header-slot"
+            helperOpen={activeTopPanel === "assistant"}
+            onHelperOpenChange={(open) => setActiveTopPanel(open ? "assistant" : null)}
           />
           {renderContent()}
         </div>

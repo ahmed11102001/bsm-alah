@@ -527,6 +527,8 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const [claudeApiKey, setClaudeApiKey] = useState("");
   const [claudeLoading, setClaudeLoading] = useState(false);
   const [claudeCopied,  setClaudeCopied]  = useState<"key"|"config"|null>(null);
+  const [showStoreUpgrade, setShowStoreUpgrade] = useState(false);
+  const [storeUpgradeTitle, setStoreUpgradeTitle] = useState("");
   const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
 
   // ── Load initial data ───────────────────────────────────────────────────────
@@ -601,10 +603,20 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const getCardLockMessage = (id: CardId) =>
     isClaudeCardLocked(id) ? claudeLockMessage : lockMessage;
 
+  const openStoreUpgradeModal = (id: CardId) => {
+    const titles: Record<"shopify" | "easyorders" | "woocommerce", string> = {
+      shopify: "ربط Shopify — باقة Pro+",
+      easyorders: "ربط EasyOrders — باقة Pro+",
+      woocommerce: "ربط WooCommerce — باقة Pro+",
+    };
+    setStoreUpgradeTitle(titles[id as "shopify" | "easyorders" | "woocommerce"]);
+    setShowStoreUpgrade(true);
+  };
+
   const handleCardClick = (id: CardId) => {
     if (isCardLocked(id)) {
       if (id === "claude") { setShowClaudeUpgrade(true); return; }
-      toast.error(getCardLockMessage(id));
+      openStoreUpgradeModal(id);
       return;
     }
     setOpenCard(prev => prev === id ? null : id);
@@ -759,6 +771,49 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
       {/* ── Claude Upgrade Modal ── */}
+      {showStoreUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setShowStoreUpgrade(false)}>
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-orange-200 dark:border-orange-900/50"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">{storeUpgradeTitle}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {locale === "ar"
+                    ? "غير متاح للباقة المجانية وباقة Starter"
+                    : "Not available on Free or Starter plans"}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              {locale === "ar"
+                ? "ربط المتاجر الثلاثة يحتاج باقة Pro أو أعلى. قم بالترقية للاستفادة من الربط والأتمتة مباشرة من الداشبورد."
+                : "Store integrations require Pro or above. Upgrade to connect your store and automate workflows directly from the dashboard."}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowStoreUpgrade(false); window.location.href = "/checkout?plan=pro"; }}
+                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4" /> {locale === "ar" ? "ترقية الآن — 599 ج/شهر" : "Upgrade now — 599 EGP/mo"}
+              </button>
+              <button
+                onClick={() => setShowStoreUpgrade(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
+                {locale === "ar" ? "لاحقًا" : "Later"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showClaudeUpgrade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setShowClaudeUpgrade(false)}>
