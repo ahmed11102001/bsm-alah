@@ -102,6 +102,7 @@ function PricingCard({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={onMouseLeave}
         className={`relative rounded-2xl p-6 flex flex-col gap-4 overflow-hidden h-full cursor-default ${s.card}`}
+        dir={isAr ? "rtl" : "ltr"}
         style={{
           transform: hovered
             ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(1.025)`
@@ -348,7 +349,7 @@ export default function Pricing({ lang }: PricingProps) {
         </div>
 
         {/* ── Cards ── */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
+        <div className={`grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch ${isAr ? "xl:[direction:ltr]" : ""}`}>
           {plans.map((plan, i) => {
             const s            = PLAN_STYLES[i];
             const base         = BASE_PRICES[i];
