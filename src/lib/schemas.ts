@@ -233,7 +233,7 @@ export const AdminCreateCouponSchema = z
     discountType:  z.enum(["percent", "fixed"]).optional().default("percent"),
     discountValue: z.number().positive("قيمة الخصم مطلوبة"),
     maxUses:       z.number().int().min(1).optional().default(1),
-    expiresAt:     z.string().datetime({ offset: true }).optional(),
+    expiresAt:     z.string().datetime({ offset: true }).nullable().optional().transform(v => v ?? undefined),
     forPlan:       z.enum(["starter", "pro", "enterprise"]).nullable().optional().default(null),
   })
   .refine(
