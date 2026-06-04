@@ -378,7 +378,7 @@ function DetailsModal({ campaign, open, onClose, lang }: {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
-export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
+export default function Campaigns({ atLimit = false, whatsappConnected = false }: { atLimit?: boolean; whatsappConnected?: boolean }) {
   const router = useRouter();
   const { locale } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
@@ -407,6 +407,7 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
   const [detailsCampaign, setDetailsCampaign] = useState<Campaign | null>(null);
 
   const hasRunning = campaigns.some(c => c.status === "running");
+  const campaignLimitActive = whatsappConnected && atLimit;
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -521,6 +522,10 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
   };
 
   const handleSubmit = async () => {
+    if (!whatsappConnected) {
+      showMetaConnectToast();
+      return;
+    }
     if (!campaignName.trim()) { toast.error(tr("errEnterName", lang)); return; }
     if (!selectedTemplate)    { toast.error(tr("errChooseTemplate", lang)); return; }
     if (sendMode === "scheduled" && !scheduledAt) { toast.error(tr("errPickSchedule", lang)); return; }
@@ -603,6 +608,25 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
     ), { duration: 6000 });
   }
 
+  function showMetaConnectToast() {
+    toast.error(lang === "ar"
+      ? "اربط رقمك بميتا علشان تعمل حملة"
+      : "Connect your Meta number to create a campaign.");
+  }
+
+  function openCampaignDialog() {
+    if (!whatsappConnected) {
+      showMetaConnectToast();
+      return;
+    }
+    if (atLimit) {
+      showLimitToast();
+      return;
+    }
+    resetDialog();
+    setDialogOpen(true);
+  }
+
   return (
     <div className="max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
 
@@ -618,14 +642,14 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
           <Button
-            onClick={() => atLimit ? showLimitToast() : (resetDialog(), setDialogOpen(true))}
-            className={atLimit
+            onClick={openCampaignDialog}
+            className={campaignLimitActive
               ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
               : "bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2 flex-1 sm:flex-none justify-center"
             }
           >
             <Plus className="w-4 h-4" />
-            {atLimit ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
+            {campaignLimitActive ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
           </Button>
         </div>
       </div>
@@ -685,7 +709,7 @@ export default function Campaigns({ atLimit = false }: { atLimit?: boolean }) {
           </h3>
           <p className="text-gray-400 text-sm mb-6 max-w-xs">{tr("noCampaignsDesc",lang)}</p>
           {filterStatus === "all" && (
-            <Button onClick={() => { resetDialog(); setDialogOpen(true); }} className="bg-green-500 hover:bg-green-600 text-white gap-2">
+            <Button onClick={openCampaignDialog} className="bg-green-500 hover:bg-green-600 text-white gap-2">
               <Plus className="w-4 h-4" /> {tr("startFirst",lang)}
             </Button>
           )}

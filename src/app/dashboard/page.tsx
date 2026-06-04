@@ -10,6 +10,7 @@ import "@/app/globals.css";
 import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
+import { planAtLeast, type PlanTier } from "@/lib/plans";
 import { toast } from "sonner";
 import { Button }   from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -647,8 +648,8 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate }: {
 }
 
 // ─── Home Dashboard ───────────────────────────────────────────────────────────
-function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false }: {
-  data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean;
+function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false, whatsappConnected = false }: {
+  data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean; whatsappConnected?: boolean;
 }) {
   const router = useRouter();
   const { t, locale, dir } = useLanguage();
@@ -665,6 +666,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   ] as const;
 
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
+  const campaignLimitActive = whatsappConnected && campaignAtLimit;
+  const showMetaConnectToast = () => {
+    toast.error(locale === "ar"
+      ? "اربط رقمك بميتا علشان تعمل حملة"
+      : "Connect your Meta number to create a campaign.");
+  };
   const showCampaignLimitToast = () => {
     toast.custom(() => (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
@@ -699,12 +706,16 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Button>
           <Button
             size="sm"
-            className={campaignAtLimit
+            className={campaignLimitActive
               ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
               : "bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm w-full sm:w-auto justify-center"}
-            onClick={() => campaignAtLimit ? showCampaignLimitToast() : onCreateCampaign()}
+            onClick={() => {
+              if (!whatsappConnected) return showMetaConnectToast();
+              if (campaignAtLimit) return showCampaignLimitToast();
+              onCreateCampaign();
+            }}
           >
-            <Plus className="w-4 h-4" /> {campaignAtLimit ? (locale === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : h.newCampaign}
+            <Plus className="w-4 h-4" /> {campaignLimitActive ? (locale === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : h.newCampaign}
           </Button>
         </div>
       </div>
@@ -991,14 +1002,14 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const renderContent = () => {
     switch (activeSection) {
       case "home":       return dashData
-        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} />
+        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} whatsappConnected={!!dashData.whatsapp} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
       case "team":
         return <TeamPage canAddMembers={canTeam} atLimit={teamAtMax} />;
       case "templates":  return <Templates />;
-      case "campaigns":  return <Campaigns atLimit={campaignAtMax} />;
+      case "campaigns":  return <Campaigns atLimit={campaignAtMax} whatsappConnected={!!dashData?.whatsapp} />;
       case "reports":
         return (
           <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
@@ -1009,7 +1020,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       case "store":
         return <Store />;
       case "api":
-        return <API canUseStoreIntegrations={canStore} />;
+        return <API canUseStoreIntegrations={canStore} canUseClaude={planAtLeast((dashData?.plan.plan ?? "free") as PlanTier, "pro")} />;
       case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
     }

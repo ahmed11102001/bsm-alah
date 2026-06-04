@@ -592,7 +592,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     ? "ربط المتاجر متاح من باقة Professional فما فوق. قم بترقية الباقة."
     : "Store integrations are available on Professional plan and above. Please upgrade.";
   const claudeLockMessage = locale === "ar"
-    ? "Claude AI متاح من باقة Pro فما فوق. قم بالترقية للوصول."
+    ? "Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه."
     : "Claude AI is available on Pro plan and above. Please upgrade.";
   const isStoreCardLocked = (id: CardId) =>
     !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
@@ -771,12 +771,12 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
                 <Lock className="w-5 h-5 text-orange-500" />
               </div>
               <div>
-                <p className="font-bold text-gray-900 dark:text-white text-sm">Claude AI — باقة Pro</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">هذه الميزة متاحة من باقة Pro فما فوق</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Claude AI — باقة Pro+</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">غير متاح للباقة المجانية وباقة Starter</p>
               </div>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              قم بالترقية إلى <span className="font-bold text-orange-500">Pro</span> للوصول لـ Claude AI وربطه بواتس برو مباشرة من الشات.
+              Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه والوصول إليه مباشرة من الشات.
             </p>
             <div className="flex gap-2">
               <button
