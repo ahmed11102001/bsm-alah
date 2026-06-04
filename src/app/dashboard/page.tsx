@@ -976,7 +976,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
   const [claudeConnected, setClaudeConnected] = useState(false);
-  const [activeTopPanel, setActiveTopPanel] = useState<"claude" | "assistant" | null>(null);
+  const [activeTopPanel, setActiveTopPanel] = useState<"claude" | "assistant" | "notifications" | null>(null);
 
   useEffect(() => {
     fetch("/api/me/api-key")
@@ -990,6 +990,23 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const [loadingDash,    setLoadingDash]    = useState(true);
   const [showSettings,   setShowSettings]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const openSettings = () => {
+    setActiveTopPanel(null);
+    setShowSettings(true);
+  };
+
+  const openNotifications = (open: boolean) => {
+    setActiveTopPanel(open ? "notifications" : null);
+  };
+
+  const openClaudePanel = (open: boolean) => {
+    setActiveTopPanel(open ? "claude" : null);
+  };
+
+  const openAssistantPanel = (open: boolean) => {
+    setActiveTopPanel(open ? "assistant" : null);
+  };
 
   const fetchDash = useCallback(async () => {
     setLoadingDash(true);
@@ -1036,7 +1053,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const renderContent = () => {
     switch (activeSection) {
       case "home":       return dashData
-        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />
+        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={openSettings} campaignAtLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
@@ -1198,7 +1215,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 <LanguageToggle />
               </div>
               <button
-                onClick={() => { setShowSettings(true); setMobileMenuOpen(false); }}
+              onClick={() => { openSettings(); setMobileMenuOpen(false); }}
                 className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
               >
                 <Settings className="w-5 h-5 flex-shrink-0" />
@@ -1242,13 +1259,17 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             <ThemeToggle compact />
 
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={openSettings}
               className="p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
             >
               <Settings className="w-[18px] h-[18px]" />
             </button>
 
-            <NotificationBell onNavigate={(section) => setActiveSection(section)} />
+            <NotificationBell
+              onNavigate={(section) => setActiveSection(section)}
+              isOpen={activeTopPanel === "notifications"}
+              onOpenChange={openNotifications}
+            />
 
             {/* Claude Connected Badge */}
             {claudeConnected && (
@@ -1257,7 +1278,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 dir={dir}
                 onNavigate={setActiveSection}
                 isOpen={activeTopPanel === "claude"}
-                onOpenChange={(open) => setActiveTopPanel(open ? "claude" : null)}
+                onOpenChange={openClaudePanel}
               />
             )}
             <div id="assistant-header-slot" className="flex items-center" />
@@ -1287,7 +1308,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             onNavigate={setActiveSection}
             helperMountId="assistant-header-slot"
             helperOpen={activeTopPanel === "assistant"}
-            onHelperOpenChange={(open) => setActiveTopPanel(open ? "assistant" : null)}
+            onHelperOpenChange={openAssistantPanel}
           />
           {renderContent()}
         </div>

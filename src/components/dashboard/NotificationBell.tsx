@@ -47,6 +47,8 @@ function timeAgo(dateStr: string): string {
 interface Props {
   onNavigate?: (section: string) => void;
   lang?: "ar" | "en";
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // parse bilingual JSON stored as {"ar":"...","en":"..."} — falls back to raw string
@@ -60,8 +62,10 @@ function t(raw: string, lang: "ar" | "en"): string {
   return raw;
 }
 
-export default function NotificationBell({ onNavigate, lang = "ar" }: Props) {
-  const [open,        setOpen]        = useState(false);
+export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOpenChange }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [notifs,      setNotifs]      = useState<Notification[]>([]);
   const [unread,      setUnread]      = useState(0);
   const [loading,     setLoading]     = useState(false);
@@ -150,7 +154,7 @@ export default function NotificationBell({ onNavigate, lang = "ar" }: Props) {
     <div className="relative" ref={ref} dir="rtl">
       {/* Bell Button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(!open)}
         className="relative p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition"
       >
         <Bell className="w-5 h-5" />
