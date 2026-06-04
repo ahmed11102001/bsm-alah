@@ -6,7 +6,7 @@ import { Button }   from "@/components/ui/button";
 import { Input }    from "@/components/ui/input";
 import { Label }    from "@/components/ui/label";
 import {
-  Copy, CheckCircle2, RefreshCw, ShoppingBag, Zap,
+  Copy, CheckCircle2, RefreshCw, ShoppingBag, Zap, Eye, EyeOff,
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
   Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
@@ -163,18 +163,25 @@ interface ShopifyStatus {
 
 function ShopifyContent({
   storeName, setStoreName, shopDomain, setShopDomain,
-  webhookUrl, status, onConnect, onRefresh, loading,
+  accessToken, setAccessToken,
+  webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
 }: {
-  storeName:      string;
-  setStoreName:   (v: string) => void;
-  shopDomain:     string;
-  setShopDomain:  (v: string) => void;
-  webhookUrl:     string;
-  status:         ShopifyStatus | null;
-  onConnect:      () => void;
-  onRefresh:      () => void;
-  loading:        boolean;
+  storeName:       string;
+  setStoreName:    (v: string) => void;
+  shopDomain:      string;
+  setShopDomain:   (v: string) => void;
+  accessToken:     string;
+  setAccessToken:  (v: string) => void;
+  webhookUrl:      string;
+  status:          ShopifyStatus | null;
+  onConnect:       () => void;
+  onRefresh:       () => void;
+  onSyncWebhooks:  () => void;
+  loading:         boolean;
+  syncing:         boolean;
 }) {
+  const [showToken, setShowToken] = useState(false);
+
   async function handleDisconnect() {
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
     const r = await fetch("/api/shopify/install", { method: "DELETE" });
@@ -187,27 +194,42 @@ function ShopifyContent({
 
       {/* ── متجر مربوط ─────────────────────────────────────────────────────── */}
       {status?.connected && (
-        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20
-                        rounded-lg border border-green-200 dark:border-green-800">
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
-            {status.storeName} — متصل ✅
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20
+                          rounded-lg border border-green-200 dark:border-green-800">
+            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
+              {status.storeName} — متصل ✅
+            </p>
+            <button
+              onClick={handleDisconnect}
+              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
+                         dark:hover:bg-red-900/20 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          {/* زر Sync Webhooks للمتاجر المربوطة */}
           <button
-            onClick={handleDisconnect}
-            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
-                       dark:hover:bg-red-900/20 transition-colors"
+            onClick={onSyncWebhooks}
+            disabled={syncing}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+                       border border-blue-200 dark:border-blue-800 text-xs font-medium
+                       text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20
+                       disabled:opacity-50 transition"
           >
-            <Trash2 className="w-4 h-4" />
+            {syncing
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> جاري تسجيل الـ Webhooks...</>
+              : <><RefreshCw className="w-3.5 h-3.5" /> مزامنة الـ Webhooks تلقائياً</>}
           </button>
         </div>
       )}
 
-      {/* ── اسم المتجر (قبل الربط فقط) ──────────────────────────────────────── */}
+      {/* ── فورم الربط (قبل الربط فقط) ──────────────────────────────────────── */}
       {!status?.connected && (
         <div className="space-y-3">
           <div>
-            <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
+            <Label className="text-xs dark:text-gray-400">اسم المتجر *</Label>
             <Input
               placeholder="مثال: متجر العلاء"
               value={storeName}
@@ -228,27 +250,52 @@ function ShopifyContent({
               dir="ltr"
             />
           </div>
+          {/* Admin API Access Token */}
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Key className="w-3 h-3 text-orange-500" />
+              Admin API Access Token
+              <span className="text-gray-400 font-normal mr-1">(مُوصى به — لتفعيل السلة المهجورة تلقائياً)</span>
+            </Label>
+            <div className="relative mt-1">
+              <Input
+                placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                value={accessToken}
+                onChange={e => setAccessToken(e.target.value)}
+                type={showToken ? "text" : "password"}
+                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(v => !v)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="mt-1.5 p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-800/30">
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-4">
+                📋 <strong>Shopify Admin → Settings → Apps → Develop apps → Create app</strong>
+                <br />
+                فعّل: <strong>read_orders, write_orders, read_checkouts, read_customers</strong>
+                <br />
+                ثم <strong>Install app</strong> وانسخ الـ Admin API access token
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Webhook URL — يتعرض دايماً ───────────────────────────────────────── */}
+      {/* ── Webhook URL ───────────────────────────────────────────────────────── */}
       <div>
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1 mb-1">
-          <LinkIcon className="w-3 h-3" /> Webhook URL — انسخه وحطه في Shopify
+          <LinkIcon className="w-3 h-3" /> Webhook URL
+          <span className="text-gray-400 font-normal">
+            {status?.connected ? "(للإضافة اليدوية إن احتجت)" : "(يتسجل تلقائياً لو أضفت الـ Token)"}
+          </span>
         </Label>
-        <CopyInput
-          value={webhookUrl}
-          placeholder={webhookUrl ? "" : "جاري التحميل..."}
-        />
-        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-          <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-5">
-            📌 <strong>Settings → Notifications → Webhooks → Create webhook</strong>
-            <br />
-            اختر <strong>Order creation</strong> والصق الـ URL — كرر لـ <strong>Order fulfillment</strong>
-            <br />
-            لتفعيل أتمتة السلة 🛒: كرر أيضاً لـ <strong>Checkout creation</strong> و <strong>Checkout update</strong>
-          </p>
-        </div>
+        <CopyInput value={webhookUrl} placeholder={webhookUrl ? "" : "جاري التحميل..."} />
       </div>
 
       {/* ── زر الحفظ (قبل الربط فقط) ──────────────────────────────────────── */}
@@ -260,8 +307,8 @@ function ShopifyContent({
           className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
         >
           {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
-            : <><ShoppingBag className="w-4 h-4" /> حفظ وتفعيل المتجر</>}
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ والتسجيل...</>
+            : <><ShoppingBag className="w-4 h-4" /> ربط المتجر وتسجيل الـ Webhooks</>}
         </Button>
       )}
 
@@ -516,9 +563,11 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   } | null>(null);
   const [shStoreName,      setShStoreName]      = useState("");
   const [shShopDomain,     setShShopDomain]     = useState("");
+  const [shAccessToken,    setShAccessToken]    = useState("");
   const [shWebhookUrl,     setShWebhookUrl]     = useState("");
   const [shUrlLoaded,      setShUrlLoaded]      = useState(false);
   const [shConnecting,     setShConnecting]     = useState(false);
+  const [shSyncing,        setShSyncing]        = useState(false);
   const [wooStatus,    setWooStatus]    = useState<{
     connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string | null;
   } | null>(null);
@@ -671,17 +720,36 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          storeName:  shStoreName.trim(),
-          shopDomain: shShopDomain.trim() || undefined,
+          storeName:   shStoreName.trim(),
+          shopDomain:  shShopDomain.trim()  || undefined,
+          accessToken: shAccessToken.trim() || undefined,
         }),
       });
       const d = await r.json();
       if (!r.ok) { toast.error(d.error ?? "فشل الحفظ"); return; }
-      toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify`);
-      setShStoreName("");
+      if (d.webhooks?.autoSetup) {
+        toast.success(`✅ تم ربط ${d.storeName} وتسجيل ${d.webhooks.registered} webhook تلقائياً 🎉`);
+      } else if (d.webhooks?.registered > 0) {
+        toast.success(`✅ تم ربط ${d.storeName} — ${d.webhooks.registered} webhook مسجل`);
+      } else {
+        toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify يدوياً`);
+      }
+      setShStoreName(""); setShShopDomain(""); setShAccessToken("");
       loadShopifyStatus();
     } catch { toast.error("خطأ في الاتصال"); }
     finally  { setShConnecting(false); }
+  };
+
+  const handleShSyncWebhooks = async () => {
+    setShSyncing(true);
+    try {
+      const r = await fetch("/api/shopify/sync-webhooks", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { toast.error(d.error ?? "فشل تسجيل الـ webhooks"); return; }
+      if (d.success) toast.success(d.message);
+      else toast.warning(d.message);
+    } catch { toast.error("خطأ في الاتصال"); }
+    finally { setShSyncing(false); }
   };
 
   const handleGenerateApiKey = async () => {
@@ -897,10 +965,13 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
               <ShopifyContent
                 storeName={shStoreName}
                 shopDomain={shShopDomain}   setShopDomain={setShShopDomain}
+                accessToken={shAccessToken} setAccessToken={setShAccessToken}
                 setStoreName={setShStoreName}
                 webhookUrl={shWebhookUrl}
                 status={shopifyStatus}
                 onConnect={handleShConnect}
+                onSyncWebhooks={handleShSyncWebhooks}
+                syncing={shSyncing}
                 onRefresh={loadShopifyStatus}
                 loading={shConnecting}
               />
