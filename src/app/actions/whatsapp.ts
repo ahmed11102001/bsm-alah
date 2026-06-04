@@ -54,54 +54,94 @@ export async function syncWhatsAppTemplates() {
   }
 
   try {
-    // الاتصال بـ Meta API لجلب القوالب
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?access_token=${decryptToken(account.accessToken)}`
-    );
+    const decryptedToken = decryptToken(account.accessToken).trim();
 
-    const data = await response.json();
+    let remoteTemplates: any[] = [];
+    let nextUrl: string | null = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?limit=100`;
 
-    if (data.error) {
-      throw new Error(data.error.message || "فشل الاتصال بميتا");
+    // Loop through paginated results
+    while (nextUrl) {
+      const response: Response = await fetch(nextUrl, {
+        headers: { Authorization: `Bearer ${decryptedToken}` },
+      });
+
+      if (!response.ok) {
+        const body: any = await response.json();
+        throw new Error(body.error?.message || "فشل الاتصال بميتا لجلب القوالب");
+      }
+
+      const body: any = await response.json();
+      if (body.error) throw new Error(body.error.message);
+
+      if (body.data) {
+        remoteTemplates = [...remoteTemplates, ...body.data];
+      }
+
+      nextUrl = (body.paging?.next as string | undefined) || null;
     }
 
-    const templates = data.data || [];
     let syncedCount = 0;
 
     // المزامنة: تحديث القالب لو موجود أو إنشاؤه لو جديد
-    for (const temp of templates) {
-      // نركز فقط على القوالب المعتمدة
-      if (temp.status === "APPROVED") {
-        // استخراج نص الرسالة (Body) من مكونات القالب
-        const bodyComponent = temp.components.find((c: any) => c.type === "BODY");
-        const content = bodyComponent?.text || "";
+    for (const temp of remoteTemplates) {
+      // 1. Extract body content
+      const bodyComp = temp.components?.find((c: any) => c.type === "BODY");
+      const content = bodyComp?.text || "";
 
-        await prisma.template.upsert({
-          where: {
-            metaId_userId: {
-              metaId: temp.id,
-              userId: ownerId,
-            },
-          },
-          update: {
-            name: temp.name,
-            content: content,
-            language: temp.language,
-            category: temp.category,
-            status: temp.status,
-          },
-          create: {
-            metaId: temp.id,
+      // 2. Extract header info
+      const headerComp = temp.components?.find((c: any) => c.type === "HEADER");
+      const headerType = headerComp ? headerComp.format.toLowerCase() : "none";
+      const headerText = headerComp?.text || null;
+
+      // 3. Extract footer info
+      const footerComp = temp.components?.find((c: any) => c.type === "FOOTER");
+      const footer = footerComp?.text || null;
+
+      // 4. Extract buttons info
+      const buttonsComp = temp.components?.find((c: any) => c.type === "BUTTONS");
+      const buttons = buttonsComp?.buttons || null;
+
+      // 5. Extract rejected reason
+      const rejectedReason = temp.rejected_reason || null;
+
+      await prisma.template.upsert({
+        where: {
+          metaId_userId: {
+            metaId: String(temp.id),
             userId: ownerId,
-            name: temp.name,
-            content: content,
-            language: temp.language,
-            category: temp.category,
-            status: temp.status,
           },
-        });
-        syncedCount++;
-      }
+        },
+        update: {
+          name: String(temp.name),
+          content: content,
+          language: String(temp.language),
+          category: String(temp.category),
+          status: String(temp.status).toUpperCase(),
+          headerType,
+          headerText,
+          footer,
+          buttons,
+          rejectedReason,
+          components: temp.components,
+          updatedAt: new Date()
+        },
+        create: {
+          metaId: String(temp.id),
+          userId: ownerId,
+          name: String(temp.name),
+          content: content,
+          language: String(temp.language),
+          category: String(temp.category),
+          status: String(temp.status).toUpperCase(),
+          headerType,
+          headerText,
+          footer,
+          buttons,
+          rejectedReason,
+          components: temp.components
+        },
+      });
+      syncedCount++;
     }
 
     revalidatePath("/dashboard/api");

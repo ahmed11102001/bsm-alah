@@ -232,6 +232,12 @@ model Template {
   metaId           String
   category         String            @default("MARKETING")
   language         String            @default("ar")
+  headerType       String?
+  headerText       String?
+  footer           String?
+  buttons          Json?
+  rejectedReason   String?
+  components       Json?
   automationRules  AutomationRule[]
   campaigns        Campaign[]
   storeAutomations StoreAutomation[]

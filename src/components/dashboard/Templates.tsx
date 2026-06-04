@@ -282,8 +282,8 @@ function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang }) {
 }
 
 // ─── Wani-Ready Card ──────────────────────────────────────────────────────────
-function WaniReadyCard({ template, lang, onView }: {
-  template: Template; lang: Lang; onView: () => void;
+function WaniReadyCard({ template, lang, onView, onSend }: {
+  template: Template; lang: Lang; onView: () => void; onSend: (tpl: Template) => Promise<boolean>;
 }) {
   const t = T[lang];
   const [sent, setSent] = useState(false);
@@ -295,10 +295,11 @@ function WaniReadyCard({ template, lang, onView }: {
   const handleSend = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200)); // TODO: real API
+    const success = await onSend(template);
     setLoading(false);
-    setSent(true);
-    toast.success(lang === "ar" ? "تم إرسال القالب للمراجعة" : "Template submitted for review");
+    if (success) {
+      setSent(true);
+    }
   };
 
   return (
@@ -356,12 +357,22 @@ function WaniReadyCard({ template, lang, onView }: {
 }
 
 // ─── Template Detail Modal ────────────────────────────────────────────────────
-function TemplateDetailModal({ template, open, onClose, lang }: {
-  template: Template | null; open: boolean; onClose: () => void; lang: Lang;
+function TemplateDetailModal({ template, open, onClose, onDelete, lang }: {
+  template: Template | null; open: boolean; onClose: () => void; onDelete: (id: string) => Promise<void>; lang: Lang;
 }) {
   const t = T[lang];
   if (!template) return null;
   const st = STATUS_CONFIG[template.status];
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteClick = async () => {
+    if (confirm(lang === "ar" ? "هل أنت متأكد من حذف هذا القالب؟" : "Are you sure you want to delete this template?")) {
+      setDeleting(true);
+      await onDelete(template.id);
+      setDeleting(false);
+      onClose();
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
@@ -434,6 +445,16 @@ function TemplateDetailModal({ template, open, onClose, lang }: {
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeleteClick}
+              disabled={deleting}
+              className="gap-1.5 border-red-200 dark:border-red-900/50 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              {t.detail.delete}
+            </Button>
             <Button size="sm" variant="outline" className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
               <Copy className="w-3.5 h-3.5" /> {t.detail.duplicate}
             </Button>
@@ -781,22 +802,15 @@ function Step2({ form, setForm, lang, onSubmit, onBack, submitting, success }: {
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
-const MOCK_TEMPLATES: Template[] = [
-  { id: "t1", name: "promo_eid_sale", category: "MARKETING", language: "ar", status: "APPROVED", body: "عروض عيد الأضحى 🐑\nخصم {{1}}٪ على كل المنتجات\nصالح حتى {{2}}", footer: "Wani Store", createdAt: "2025-05-10", updatedAt: "2025-05-10" },
-  { id: "t2", name: "otp_login",      category: "AUTHENTICATION", language: "ar", status: "APPROVED", body: "كود التحقق الخاص بك: {{1}}\nصالح لمدة 5 دقائق.", footer: "Wani Security", createdAt: "2025-04-22", updatedAt: "2025-04-22" },
-  { id: "t3", name: "invoice_ready",  category: "UTILITY", language: "ar", status: "PENDING",  body: "الفاتورة رقم {{1}} جاهزة للتحميل.", footer: "Wani Store", createdAt: "2025-05-28", updatedAt: "2025-05-28" },
-  { id: "t4", name: "flash_sale",     category: "MARKETING", language: "ar", status: "REJECTED", body: "عرض مجنون — خصم {{1}}٪", footer: "Wani", rejectedReason: "Template contains excessive promotional language", createdAt: "2025-05-20", updatedAt: "2025-05-21" },
-];
-
 export default function TemplatesPage() {
   const { dir } = useLanguage();
   const lang: Lang = dir === "rtl" ? "ar" : "en";
   const t = T[lang];
 
-  const [templates,    setTemplates]    = useState<Template[]>(MOCK_TEMPLATES);
+  const [templates,    setTemplates]    = useState<Template[]>([]);
   const [view,         setView]         = useState<View>("list");
   const [step,         setStep]         = useState<1|2>(1);
-  const [loading,      setLoading]      = useState(false);
+  const [loading,      setLoading]      = useState(true);
   const [syncing,      setSyncing]      = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
   const [submitSuccess,setSubmitSuccess]= useState(false);
@@ -808,6 +822,28 @@ export default function TemplatesPage() {
 
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
   const [form, setForm] = useState<FormState>(defaultForm);
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/templates");
+      if (!res.ok) throw new Error("Failed to fetch templates");
+      const data = await res.json();
+      const mapped = data.map((t: any) => ({
+        ...t,
+        body: t.content,
+      }));
+      setTemplates(mapped);
+    } catch (err: any) {
+      toast.error(lang === "ar" ? "فشل تحميل القوالب" : "Failed to load templates");
+    } finally {
+      setLoading(false);
+    }
+  }, [lang]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const stats = {
     total:    templates.length,
@@ -827,20 +863,89 @@ export default function TemplatesPage() {
 
   const handleSync = async () => {
     setSyncing(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSyncing(false);
-    toast.success(lang === "ar" ? "تمت المزامنة بنجاح" : "Sync successful");
+    try {
+      const res = await fetch("/api/templates/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      toast.success(lang === "ar" ? `تمت المزامنة بنجاح (${data.count} قالب)` : `Sync successful (${data.count} templates)`);
+      fetchTemplates();
+    } catch (err: any) {
+      toast.error(err.message || (lang === "ar" ? "فشل المزامنة" : "Sync failed"));
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSubmit = async (draft: boolean) => {
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setSubmitting(false);
-    if (!draft) {
-      setSubmitSuccess(true);
-    } else {
-      toast.success(lang === "ar" ? "تم الحفظ كمسودة" : "Saved as draft");
-      setView("list"); setStep(1); setForm(defaultForm);
+    try {
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          draft
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save template");
+
+      if (!draft) {
+        setSubmitSuccess(true);
+      } else {
+        toast.success(lang === "ar" ? "تم الحفظ كمسودة" : "Saved as draft");
+        setView("list"); setStep(1); setForm(defaultForm);
+      }
+      fetchTemplates();
+    } catch (err: any) {
+      toast.error(err.message || (lang === "ar" ? "فشل حفظ القالب" : "Failed to save template"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch("/api/templates", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete template");
+      toast.success(lang === "ar" ? "تم حذف القالب بنجاح" : "Template deleted successfully");
+      fetchTemplates();
+    } catch (err: any) {
+      toast.error(err.message || (lang === "ar" ? "فشل حذف القالب" : "Failed to delete template"));
+    }
+  };
+
+  const handleSendWani = async (tpl: Template) => {
+    try {
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: tpl.name,
+          category: tpl.category,
+          language: tpl.language,
+          headerType: tpl.headerType || "none",
+          headerText: tpl.headerText || "",
+          body: tpl.body || "",
+          footer: tpl.footer || "",
+          buttons: tpl.buttons || [],
+          exampleVars: tpl.exampleVars || [],
+          draft: false
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send template");
+      toast.success(lang === "ar" ? "تم إرسال القالب للمراجعة" : "Template submitted for review");
+      fetchTemplates();
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || (lang === "ar" ? "فشل إرسال القالب" : "Failed to send template"));
+      return false;
     }
   };
 
@@ -933,7 +1038,7 @@ export default function TemplatesPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {WANI_READY.map(tpl => (
-            <WaniReadyCard key={tpl.id} template={tpl} lang={lang} onView={() => setDetailTpl(tpl)} />
+            <WaniReadyCard key={tpl.id} template={tpl} lang={lang} onView={() => setDetailTpl(tpl)} onSend={handleSendWani} />
           ))}
         </div>
       </div>
@@ -942,7 +1047,14 @@ export default function TemplatesPage() {
       <div>
         <p className="text-sm font-bold text-gray-800 dark:text-white mb-3">{t.myTemplates}</p>
         <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Loader2 className="w-8 h-8 text-[#25D366] animate-spin mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {lang === "ar" ? "جاري تحميل القوالب..." : "Loading templates..."}
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center mb-4">
                 <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
@@ -993,7 +1105,7 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} lang={lang} />
+      <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />
     </div>
   );
 
