@@ -672,6 +672,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
     const message = locale === "ar"
       ? "اربط رقمك بميتا علشان تعمل حملة"
       : "Connect your Meta number to create a campaign.";
+    window.alert(message);
     setMetaPrompt(message);
     window.setTimeout(() => setMetaPrompt(null), 3500);
   };
@@ -1023,18 +1024,19 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const campaignAtMax = planLimits != null && campaignLimit !== -1 && campaignUsed >= campaignLimit;
   const canStore     = planLimits?.storeIntegration   ?? false;
   const canAI        = planLimits?.aiAgent             ?? false;
+  const hasMetaConnection = !!dashData?.whatsapp?.phoneNumberId && !!dashData?.whatsapp?.wabaId;
 
   const renderContent = () => {
     switch (activeSection) {
       case "home":       return dashData
-        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} whatsappConnected={!!dashData.whatsapp} />
+        ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={() => setShowSettings(true)} campaignAtLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat":       return <ChatPage />;
       case "contacts":   return <Contacts />;
       case "team":
         return <TeamPage canAddMembers={canTeam} atLimit={teamAtMax} />;
       case "templates":  return <Templates />;
-      case "campaigns":  return <Campaigns atLimit={campaignAtMax} whatsappConnected={!!dashData?.whatsapp} />;
+      case "campaigns":  return <Campaigns atLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />;
       case "reports":
         return (
           <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
@@ -1268,7 +1270,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             userId={session?.user?.id ?? ""}
             locale={locale as "ar" | "en"}
             activeSection={activeSection}
-            whatsappConnected={!!dashData?.whatsapp}
+            whatsappConnected={hasMetaConnection}
             totalContacts={dashData?.stats.totalContacts ?? 0}
             deliveryRate={dashData?.stats.deliveryRate ?? 0}
             planStatus={dashData?.plan.status ?? "active"}

@@ -613,6 +613,7 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
     const message = lang === "ar"
       ? "اربط رقمك بميتا علشان تعمل حملة"
       : "Connect your Meta number to create a campaign.";
+    window.alert(message);
     setMetaPrompt(message);
     window.setTimeout(() => setMetaPrompt(null), 3500);
   }
