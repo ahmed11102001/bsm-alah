@@ -12,7 +12,7 @@ import {
   Copy, Download, Check, XCircle, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn }   from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 type StoreAutomationType = "order_confirm" | "order_shipped" | "promo" | "cart_abandon";
 type Lang = "ar" | "en";
@@ -20,92 +20,112 @@ type Lang = "ar" | "en";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface StoreInfo {
-  id:              string;
-  storeName:       string;
-  source:          "shopify" | "easyorders" | "woocommerce";
-  totalOrders:     number;
-  totalCustomers:  number;
+  id: string;
+  storeName: string;
+  source: "shopify" | "easyorders" | "woocommerce";
+  totalOrders: number;
+  totalCustomers: number;
   campaignRevenue: number;
-  connectedAt:     string;
-  isActive?:       boolean;
-  lastSyncAt?:     string | null;
-  totalSynced?:    number;
+  connectedAt: string;
+  isActive?: boolean;
+  lastSyncAt?: string | null;
+  totalSynced?: number;
 }
 
 interface CustomerLastOrder {
   orderNumber: string | null;
-  total:       number | null;
-  status:      string | null;
-  orderedAt:   string;
+  total: number | null;
+  status: string | null;
+  orderedAt: string;
 }
 
 interface Customer {
-  phone:       string;
-  name:        string;
+  phone: string;
+  name: string;
   ordersCount: number;
-  totalSpent:  number;
-  currency:    string;
-  lastOrder:   CustomerLastOrder | null;
+  totalSpent: number;
+  currency: string;
+  lastOrder: CustomerLastOrder | null;
 }
 
 interface AutomationTemplate {
-  id:   string;
+  id: string;
   name: string;
 }
 
+interface DedicatedTemplate {
+  id: string;
+  name: string;
+  status: string;
+}
+
 interface AutomationItem {
-  id:         string | null;
-  type:       StoreAutomationType;
-  isEnabled:  boolean;
+  id: string | null;
+  type: StoreAutomationType;
+  isEnabled: boolean;
   templateId: string | null;
-  template:   AutomationTemplate | null;
-  sentCount:  number;
+  template: AutomationTemplate | null;
+  sentCount: number;
   failedCount: number;
   lastSentAt: string | null;
+  // حقول جديدة
+  isDedicated: boolean;
+  dedicatedTemplate: DedicatedTemplate | null;
 }
 
 interface StoreData {
-  shopify:     StoreInfo | null;
-  easyorders:  StoreInfo | null;
+  shopify: StoreInfo | null;
+  easyorders: StoreInfo | null;
   woocommerce: StoreInfo | null;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+// اسم القالب المخصص المطلوب لكل نوع أتمتة تلقائية
+// المستخدم لازم يعمل قوالب على ميتا بهذه الأسماء بالظبط
+const DEDICATED_TEMPLATE_NAMES: Record<string, string> = {
+  order_confirm: "order_confirmation",
+  order_shipped: "order_shipped",
+  cart_abandon: "cart_abandon",
+};
+
 const AUTO_LABELS: Record<StoreAutomationType, {
   label: { ar: string; en: string };
-  desc:  { ar: string; en: string };
-  icon:  string;
-  // Shopify فقط؟ — لو true بنعرض badge للمتاجر الأخرى
+  desc: { ar: string; en: string };
+  icon: string;
   shopifyOnly?: boolean;
+  isDedicated?: boolean; // لو true: قالب مخصص ثابت، مش اختيار حر
 }> = {
   order_confirm: {
-    label: { ar: "تأكيد الأوردر",     en: "Order Confirmation" },
-    desc:  { ar: "يُرسل فور إنشاء الطلب", en: "Sent instantly on order creation" },
-    icon:  "✅",
+    label: { ar: "تأكيد الأوردر", en: "Order Confirmation" },
+    desc: { ar: "يُرسل فور إنشاء الطلب", en: "Sent instantly on order creation" },
+    icon: "✅",
+    isDedicated: true,
   },
   order_shipped: {
-    label: { ar: "تحديث الشحن",       en: "Shipping Update" },
-    desc:  { ar: "يُرسل لما يتشحن الطلب", en: "Sent when order is shipped" },
-    icon:  "🚚",
+    label: { ar: "تحديث الشحن", en: "Shipping Update" },
+    desc: { ar: "يُرسل لما يتشحن الطلب", en: "Sent when order is shipped" },
+    icon: "🚚",
+    isDedicated: true,
   },
   promo: {
-    label: { ar: "عروض وخصومات",      en: "Promotions" },
-    desc:  { ar: "ترسله يدوياً للعملاء", en: "Send manually to customers" },
-    icon:  "🎁",
+    label: { ar: "عروض وخصومات", en: "Promotions" },
+    desc: { ar: "ترسله يدوياً للعملاء", en: "Send manually to customers" },
+    icon: "🎁",
   },
   cart_abandon: {
-    label: { ar: "استرداد السلة",      en: "Abandoned Cart" },
-    desc:  { ar: "يُرسل بعد ساعة من ترك السلة", en: "Sent 1 hour after cart is left" },
-    icon:  "🛒",
+    label: { ar: "استرداد السلة", en: "Abandoned Cart" },
+    desc: { ar: "يُرسل بعد ساعة من ترك السلة", en: "Sent 1 hour after cart is left" },
+    icon: "🛒",
     shopifyOnly: true,
+    isDedicated: true,
   },
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  pending:   "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   fulfilled: "bg-green-100  text-green-700  dark:bg-green-900/30  dark:text-green-400",
-  shipped:   "bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400",
+  shipped: "bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400",
   cancelled: "bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400",
 };
 
@@ -154,7 +174,7 @@ function formatPhone(p: string): string {
 function formatMoney(value: number, lang: Lang, currency = "EGP"): string {
   if (isNaN(value)) return "—";
   return value.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", {
-    style:              "currency",
+    style: "currency",
     currency,
     maximumFractionDigits: 0,
   });
@@ -162,19 +182,19 @@ function formatMoney(value: number, lang: Lang, currency = "EGP"): string {
 
 function formatDate(iso: string, lang: Lang): string {
   return new Date(iso).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", {
-    day:   "numeric",
+    day: "numeric",
     month: "short",
-    year:  "numeric",
+    year: "numeric",
   });
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
 interface KpiCardProps {
-  icon:  React.ReactNode;
+  icon: React.ReactNode;
   label: string;
   value: string | number;
-  sub?:  string;
+  sub?: string;
   color: string;
 }
 
@@ -230,7 +250,7 @@ function CopyPhonesButton({ customers, lang }: { customers: Customer[]; lang: La
     >
       {copied
         ? <Check className="w-3.5 h-3.5" />
-        : <Copy  className="w-3.5 h-3.5" />}
+        : <Copy className="w-3.5 h-3.5" />}
       {lang === "ar" ? "نسخ الأرقام" : "Copy numbers"}
     </button>
   );
@@ -254,12 +274,12 @@ function ExportExcelButton({
         toast.error((d as any).error ?? (lang === "ar" ? "فشل التصدير" : "Export failed"));
         return;
       }
-      const blob     = await r.blob();
-      const url      = URL.createObjectURL(blob);
-      const a        = document.createElement("a");
-      const today    = new Date().toISOString().slice(0, 10);
-      a.href         = url;
-      a.download     = `customers-${source}-${today}.xlsx`;
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `customers-${source}-${today}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -280,7 +300,7 @@ function ExportExcelButton({
       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:border-green-400 hover:text-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading
-        ? <Loader2  className="w-3.5 h-3.5 animate-spin" />
+        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
         : <Download className="w-3.5 h-3.5" />}
       {lang === "ar" ? "تصدير Excel" : "Export Excel"}
     </button>
@@ -291,16 +311,16 @@ function ExportExcelButton({
 
 interface CustomerCardProps {
   customer: Customer;
-  onChat:   (phone: string) => void;
+  onChat: (phone: string) => void;
   lang: Lang;
 }
 
 function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const statusKey   = customer.lastOrder?.status?.toLowerCase() ?? "";
+  const statusKey = customer.lastOrder?.status?.toLowerCase() ?? "";
   const statusClass = STATUS_BADGE[statusKey] ?? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-  const initial     = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
+  const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -351,7 +371,7 @@ function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
           className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           {expanded
-            ? <ChevronUp   className="w-3.5 h-3.5" />
+            ? <ChevronUp className="w-3.5 h-3.5" />
             : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
@@ -376,18 +396,18 @@ function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
 // ─── Promo Send Modal ─────────────────────────────────────────────────────────
 
 interface PromoSendModalProps {
-  source:    "shopify" | "easyorders" | "woocommerce";
+  source: "shopify" | "easyorders" | "woocommerce";
   customers: Customer[];
-  onClose:   () => void;
-  lang:      Lang;
-  onSent?:   (sent: number) => void;
+  onClose: () => void;
+  lang: Lang;
+  onSent?: (sent: number) => void;
 }
 
 function PromoSendModal({ source, customers, onClose, lang, onSent }: PromoSendModalProps) {
-  const [search,   setSearch]   = useState("");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sending,  setSending]  = useState(false);
-  const [result,   setResult]   = useState<{ sent: number; failed: number } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
 
   const filtered = customers.filter((c) => {
     const q = search.toLowerCase();
@@ -432,9 +452,9 @@ function PromoSendModal({ source, customers, onClose, lang, onSent }: PromoSendM
     setSending(true);
     try {
       const r = await fetch("/api/store/automation/send", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ source, phones: Array.from(selected) }),
+        body: JSON.stringify({ source, phones: Array.from(selected) }),
       });
       const d: { success?: boolean; sent?: number; failed?: number; error?: string } = await r.json();
       if (!r.ok) {
@@ -517,7 +537,7 @@ function PromoSendModal({ source, customers, onClose, lang, onSent }: PromoSendM
             >
               {allSelected
                 ? <CheckSquare className="w-4 h-4" />
-                : <Square      className="w-4 h-4" />}
+                : <Square className="w-4 h-4" />}
               {allSelected
                 ? (lang === "ar" ? "إلغاء تحديد الكل" : "Deselect all")
                 : (lang === "ar" ? "تحديد الكل" : "Select all")}
@@ -607,44 +627,130 @@ function PromoSendModal({ source, customers, onClose, lang, onSent }: PromoSendM
 
 interface AutomationCardProps {
   automation: AutomationItem;
-  templates:  AutomationTemplate[];
-  onSave:     (type: StoreAutomationType, isEnabled: boolean, templateId: string | null) => Promise<void>;
+  templates: AutomationTemplate[];  // للـ promo فقط
+  onSave: (type: StoreAutomationType, isEnabled: boolean, templateId: string | null) => Promise<void>;
   lang: Lang;
-  // للـ promo بس
   storeSource?: "shopify" | "easyorders" | "woocommerce";
-  customers?:   Customer[];
+  customers?: Customer[];
+}
+
+// ── مكوّن عرض القالب المخصص (للأتمتات التلقائية) ──────────────────────────────
+function DedicatedTemplateStatus({
+  dedicatedTemplate,
+  expectedName,
+  lang,
+}: {
+  dedicatedTemplate: DedicatedTemplate | null;
+  expectedName: string;
+  lang: Lang;
+}) {
+  if (!dedicatedTemplate) {
+    return (
+      <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
+        <p className="font-medium mb-0.5">
+          {lang === "ar" ? "⚠️ القالب المخصص غير موجود" : "⚠️ Dedicated template missing"}
+        </p>
+        <p className="opacity-80">
+          {lang === "ar"
+            ? <>أنشئ قالباً على ميتا باسم: <span className="font-mono font-bold">"{expectedName}"</span> ثم زامنه من صفحة القوالب</>
+            : <>Create a Meta template named: <span className="font-mono font-bold">"{expectedName}"</span> then sync it from Templates page</>
+          }
+        </p>
+      </div>
+    );
+  }
+
+  const status = dedicatedTemplate.status?.toLowerCase() ?? "";
+  const isApproved = status === "approved";
+
+  const statusConfig: Record<string, { bg: string; text: string; label: { ar: string; en: string }; icon: string }> = {
+    approved: { bg: "bg-green-50 dark:bg-green-900/10", text: "text-green-700 dark:text-green-400", label: { ar: "معتمد ✓", en: "Approved ✓" }, icon: "✓" },
+    pending: { bg: "bg-yellow-50 dark:bg-yellow-900/10", text: "text-yellow-700 dark:text-yellow-400", label: { ar: "قيد المراجعة", en: "Under Review" }, icon: "⏳" },
+    rejected: { bg: "bg-red-50 dark:bg-red-900/10", text: "text-red-700 dark:text-red-400", label: { ar: "مرفوض", en: "Rejected" }, icon: "✕" },
+    submitted: { bg: "bg-blue-50 dark:bg-blue-900/10", text: "text-blue-700 dark:text-blue-400", label: { ar: "تم الإرسال", en: "Submitted" }, icon: "📤" },
+  };
+
+  const cfg = statusConfig[status] ?? statusConfig["pending"];
+
+  return (
+    <div className={cn("rounded-xl border px-3 py-2.5", cfg.bg,
+      isApproved ? "border-green-200 dark:border-green-800" : "border-yellow-200 dark:border-yellow-800"
+    )}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-900/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span className="text-xs">{cfg.icon}</span>
+          </div>
+          <div className="min-w-0">
+            <p className={cn("text-[11px] font-semibold truncate", cfg.text)}>
+              {dedicatedTemplate.name}
+            </p>
+            <p className={cn("text-[10px] opacity-80", cfg.text)}>
+              {cfg.label[lang]}
+            </p>
+          </div>
+        </div>
+        {!isApproved && (
+          <span className="text-[10px] text-gray-400 flex-shrink-0">
+            {lang === "ar" ? "انتظر اعتماد ميتا" : "Awaiting Meta approval"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function AutomationCard({ automation, templates, onSave, lang, storeSource, customers = [] }: AutomationCardProps) {
-  const [enabled,      setEnabled]      = useState(automation.isEnabled);
-  const [templateId,   setTemplateId]   = useState(automation.templateId ?? "");
-  const [saving,       setSaving]       = useState(false);
-  const [showPromo,    setShowPromo]    = useState(false);
+  const [enabled, setEnabled] = useState(automation.isEnabled);
+  const [templateId, setTemplateId] = useState(automation.templateId ?? "");
+  const [saving, setSaving] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
   const [promoSentAdj, setPromoSentAdj] = useState(0);
 
-  const meta    = AUTO_LABELS[automation.type];
-  const label   = meta.label[lang];
-  const desc    = meta.desc[lang];
+  const meta = AUTO_LABELS[automation.type];
+  const label = meta.label[lang];
+  const desc = meta.desc[lang];
 
   // cart_abandon تشتغل بس مع Shopify
-  const isShopifyOnly    = meta.shopifyOnly === true;
-  const isUnsupported    = isShopifyOnly && storeSource !== "shopify";
+  const isShopifyOnly = meta.shopifyOnly === true;
+  const isUnsupported = isShopifyOnly && storeSource !== "shopify";
+
+  // هل هذه أتمتة لها قالب مخصص ثابت؟
+  const isDedicated = meta.isDedicated === true;
+
+  // القالب المخصص وحالته
+  const dedicatedTemplate = automation.dedicatedTemplate ?? null;
+  const dedicatedName = isDedicated ? DEDICATED_TEMPLATE_NAMES[automation.type] ?? "" : "";
+  const dedicatedIsApproved = dedicatedTemplate?.status?.toLowerCase() === "approved";
+
+  // هل يمكن تفعيل الأتمتة؟
+  const canToggle = isDedicated
+    ? dedicatedIsApproved && !isUnsupported  // فقط لو القالب المخصص معتمد
+    : !!templateId && !isUnsupported;        // promo: لازم يختار قالب
 
   async function handleToggle() {
-    if (isUnsupported) return;
-    if (!enabled && !templateId) {
-      toast.error(lang === "ar" ? "اختر قالباً من القائمة أولاً" : "Choose a template first");
+    if (isUnsupported || !canToggle) {
+      if (isDedicated && !dedicatedIsApproved) {
+        toast.error(
+          lang === "ar"
+            ? "لا يمكن التفعيل — القالب المخصص لم يُعتمد بعد من ميتا"
+            : "Cannot enable — dedicated template not approved by Meta yet"
+        );
+      } else if (!isDedicated && !templateId) {
+        toast.error(lang === "ar" ? "اختر قالباً من القائمة أولاً" : "Choose a template first");
+      }
       return;
     }
     const next = !enabled;
     setEnabled(next);
     setSaving(true);
-    await onSave(automation.type, next, templateId || null);
+    // للأتمتات المخصصة: الـ templateId يتحدد من السيرفر تلقائياً
+    await onSave(automation.type, next, isDedicated ? null : (templateId || null));
     setSaving(false);
   }
 
   async function handleTemplateChange(tid: string) {
-    if (isUnsupported) return;
+    if (isUnsupported || isDedicated) return;
     setTemplateId(tid);
     if (enabled && tid) {
       setSaving(true);
@@ -653,10 +759,9 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
     }
   }
 
-  const isPromo   = automation.type === "promo";
+  const isPromo = automation.type === "promo";
   const totalSent = (automation.sentCount ?? 0) + promoSentAdj;
 
-  // تنسيق تاريخ آخر إرسال
   function formatLastSent(iso: string | null): string {
     if (!iso) return lang === "ar" ? "لم يُرسل بعد" : "Not sent yet";
     const d = new Date(iso);
@@ -667,87 +772,134 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
 
   return (
     <>
-    <div className={cn(
-      "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all relative",
-      enabled && !isUnsupported
-        ? "border-[#25D366]/40 dark:border-[#25D366]/25"
-        : "border-gray-100 dark:border-gray-700",
-      isUnsupported && "opacity-70"
-    )}>
+      <div className={cn(
+        "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all relative",
+        enabled && !isUnsupported
+          ? "border-[#25D366]/40 dark:border-[#25D366]/25"
+          : "border-gray-100 dark:border-gray-700",
+        isUnsupported && "opacity-70"
+      )}>
 
-      {/* Badge: Shopify فقط */}
-      {isShopifyOnly && (
-        <span className={cn(
-          "absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full font-medium",
-          storeSource === "shopify"
-            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-            : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-        )}>
-          {storeSource === "shopify"
-            ? (lang === "ar" ? "Shopify ✓" : "Shopify ✓")
-            : (lang === "ar" ? "Shopify فقط" : "Shopify only")}
-        </span>
-      )}
+        {/* Badge: Shopify فقط */}
+        {isShopifyOnly && (
+          <span className={cn(
+            "absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full font-medium",
+            storeSource === "shopify"
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+          )}>
+            {storeSource === "shopify" ? "Shopify ✓" : (lang === "ar" ? "Shopify فقط" : "Shopify only")}
+          </span>
+        )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl leading-none">{meta.icon}</span>
-          <div>
-            <p className="font-semibold text-sm text-gray-800 dark:text-white">{label}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl leading-none">{meta.icon}</span>
+            <div>
+              <p className="font-semibold text-sm text-gray-800 dark:text-white">{label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+            </div>
           </div>
+          <button
+            onClick={handleToggle}
+            disabled={saving || isUnsupported || (isDedicated && !dedicatedIsApproved)}
+            title={
+              isDedicated && !dedicatedIsApproved
+                ? (lang === "ar" ? "انتظر اعتماد القالب من ميتا" : "Awaiting template approval from Meta")
+                : undefined
+            }
+            className="flex-shrink-0 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label={enabled
+              ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation")
+              : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
+          >
+            {saving
+              ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              : enabled && !isUnsupported
+                ? <ToggleRight className="w-8 h-8 text-[#25D366]" />
+                : <ToggleLeft className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+            }
+          </button>
         </div>
-        <button
-          onClick={handleToggle}
-          disabled={saving || isUnsupported}
-          className="flex-shrink-0 transition-opacity disabled:opacity-40"
-          aria-label={enabled
-            ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation")
-            : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
-        >
-          {saving
-            ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-            : enabled && !isUnsupported
-              ? <ToggleRight className="w-8 h-8 text-[#25D366]" />
-              : <ToggleLeft  className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-          }
-        </button>
-      </div>
 
-      {/* رسالة المتاجر غير المدعومة */}
-      {isUnsupported ? (
-        <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
-          {lang === "ar"
-            ? "⚠️ هذه الأتمتة متاحة فقط لمتاجر Shopify — يستلزم webhook السلة المهجورة"
-            : "⚠️ This automation is available for Shopify stores only — requires abandoned checkout webhook"}
-        </div>
-      ) : (
-        <>
-          {/* Template Selector */}
-          <div>
-            <label className="text-[11px] text-gray-400 mb-1.5 block">
-              {lang === "ar" ? "القالب المستخدم" : "Used template"}
-            </label>
-            <select
-              value={templateId}
-              onChange={(e) => handleTemplateChange(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
-            >
-              <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            {templates.length === 0 && (
-              <p className="text-[10px] text-orange-500 mt-1.5">
-                {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
-              </p>
-            )}
+        {/* رسالة المتاجر غير المدعومة */}
+        {isUnsupported ? (
+          <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
+            {lang === "ar"
+              ? "⚠️ هذه الأتمتة متاحة فقط لمتاجر Shopify — يستلزم webhook السلة المهجورة"
+              : "⚠️ This automation is available for Shopify stores only — requires abandoned checkout webhook"}
           </div>
+        ) : isDedicated ? (
+          /* ── الأتمتات ذات القالب المخصص الثابت ────────────────────────────── */
+          <>
+            <div className="mb-3">
+              <label className="text-[11px] text-gray-400 mb-1.5 block">
+                {lang === "ar" ? "القالب المخصص" : "Dedicated template"}
+              </label>
+              <DedicatedTemplateStatus
+                dedicatedTemplate={dedicatedTemplate}
+                expectedName={dedicatedName}
+                lang={lang}
+              />
+            </div>
 
-          {/* زر إرسال العروض — الـ promo فقط */}
-          {isPromo && (
+            {/* إحصائيات الإرسال */}
+            <div className="space-y-1.5">
+              {totalSent > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                    {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
+                  </span>
+                </div>
+              )}
+              {(automation.failedCount ?? 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                    {lang === "ar" ? "فشل" : "failed"}
+                  </span>
+                </div>
+              )}
+              {automation.lastSentAt && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
+                    {formatLastSent(automation.lastSentAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          /* ── العروض (promo): اختيار حر من القوالب المعتمدة ─────────────────── */
+          <>
+            <div>
+              <label className="text-[11px] text-gray-400 mb-1.5 block">
+                {lang === "ar" ? "القالب المستخدم" : "Used template"}
+              </label>
+              <select
+                value={templateId}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
+              >
+                <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              {templates.length === 0 && (
+                <p className="text-[10px] text-orange-500 mt-1.5">
+                  {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
+                </p>
+              )}
+            </div>
+
+            {/* زر إرسال العروض */}
             <button
               onClick={() => {
                 if (!enabled || !templateId) {
@@ -775,52 +927,51 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
                 </span>
               )}
             </button>
-          )}
 
-          {/* إحصائيات الإرسال */}
-          <div className="mt-3 space-y-1.5">
-            {totalSent > 0 && (
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
-                <span className="text-[11px] text-gray-400">
-                  {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                  {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
-                </span>
-              </div>
-            )}
-            {(automation.failedCount ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5">
-                <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                <span className="text-[11px] text-gray-400">
-                  {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                  {lang === "ar" ? "فشل" : "failed"}
-                </span>
-              </div>
-            )}
-            {automation.lastSentAt && (
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                <span className="text-[11px] text-gray-400">
-                  {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
-                  {formatLastSent(automation.lastSentAt)}
-                </span>
-              </div>
-            )}
-          </div>
-        </>
+            {/* إحصائيات الإرسال */}
+            <div className="mt-3 space-y-1.5">
+              {totalSent > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#25D366] flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                    {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
+                  </span>
+                </div>
+              )}
+              {(automation.failedCount ?? 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
+                    {lang === "ar" ? "فشل" : "failed"}
+                  </span>
+                </div>
+              )}
+              {automation.lastSentAt && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                  <span className="text-[11px] text-gray-400">
+                    {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
+                    {formatLastSent(automation.lastSentAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Promo Modal */}
+      {isPromo && showPromo && storeSource && (
+        <PromoSendModal
+          source={storeSource}
+          customers={customers}
+          lang={lang}
+          onClose={() => setShowPromo(false)}
+          onSent={(n) => setPromoSentAdj((p) => p + n)}
+        />
       )}
-    </div>
-
-    {/* Promo Modal */}
-    {isPromo && showPromo && storeSource && (
-      <PromoSendModal
-        source={storeSource}
-        customers={customers}
-        lang={lang}
-        onClose={() => setShowPromo(false)}
-        onSent={(n) => setPromoSentAdj((p) => p + n)}
-      />
-    )}
     </>
   );
 }
@@ -828,24 +979,24 @@ function AutomationCard({ automation, templates, onSave, lang, storeSource, cust
 // ─── Store Tab — المحتوى الكامل لكل متجر ─────────────────────────────────────
 
 interface StoreTabProps {
-  store:      StoreInfo;
+  store: StoreInfo;
   onOpenChat: (phone: string) => void;
   lang: Lang;
 }
 
 function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
-  const [customers,   setCustomers]   = useState<Customer[]>([]);
-  const [total,       setTotal]       = useState(0);
-  const [page,        setPage]        = useState(1);
-  const [hasMore,     setHasMore]     = useState(false);
-  const [loadingC,    setLoadingC]    = useState(true);
-  const [search,      setSearch]      = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingC, setLoadingC] = useState(true);
+  const [search, setSearch] = useState("");
 
   const [automations, setAutomations] = useState<AutomationItem[]>([]);
-  const [templates,   setTemplates]   = useState<AutomationTemplate[]>([]);
-  const [loadingA,    setLoadingA]    = useState(true);
+  const [templates, setTemplates] = useState<AutomationTemplate[]>([]);
+  const [loadingA, setLoadingA] = useState(true);
 
-  const [syncing,     setSyncing]     = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // ── Fetch Customers ─────────────────────────────────────────────────────
   const fetchCustomers = useCallback(async (p: number, q: string) => {
@@ -896,15 +1047,15 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
 
   // ── Save Automation ─────────────────────────────────────────────────────
   async function handleSaveAutomation(
-    type:       StoreAutomationType,
-    isEnabled:  boolean,
+    type: StoreAutomationType,
+    isEnabled: boolean,
     templateId: string | null
   ): Promise<void> {
     try {
       const r = await fetch("/api/store/automation", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ source: store.source, type, isEnabled, templateId }),
+        body: JSON.stringify({ source: store.source, type, isEnabled, templateId }),
       });
       const d: { success?: boolean; error?: string; automation?: AutomationItem } = await r.json();
 
@@ -932,9 +1083,9 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
     setSyncing(true);
     try {
       const r = await fetch("/api/easy-orders/sync", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ reuseStoredKey: true }),
+        body: JSON.stringify({ reuseStoredKey: true }),
       });
       const d: { success?: boolean; synced?: number; error?: string; hasMore?: boolean } = await r.json();
 
@@ -1161,9 +1312,9 @@ interface StoreProps {
 export default function Store({ onOpenChat }: StoreProps) {
   const { locale } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
-  const [storeData,  setStoreData]  = useState<StoreData | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [activeTab,  setActiveTab]  = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
+  const [storeData, setStoreData] = useState<StoreData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
 
   useEffect(() => {
     fetch("/api/store")
@@ -1201,11 +1352,11 @@ export default function Store({ onOpenChat }: StoreProps) {
   }
 
   const activeStore =
-    activeTab === "shopify"     ? storeData?.shopify    :
-    activeTab === "easyorders"  ? storeData?.easyorders :
-                                  storeData?.woocommerce;
-  const storeCount  = [storeData?.shopify, storeData?.easyorders, storeData?.woocommerce].filter(Boolean).length;
-  const hasBoth     = storeCount > 1;
+    activeTab === "shopify" ? storeData?.shopify :
+      activeTab === "easyorders" ? storeData?.easyorders :
+        storeData?.woocommerce;
+  const storeCount = [storeData?.shopify, storeData?.easyorders, storeData?.woocommerce].filter(Boolean).length;
+  const hasBoth = storeCount > 1;
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
@@ -1224,7 +1375,7 @@ export default function Store({ onOpenChat }: StoreProps) {
             <span className="text-xs text-gray-400">
               {activeStore?.source === "shopify" ? "Shopify"
                 : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
-                : "WooCommerce"}
+                  : "WooCommerce"}
             </span>
           </div>
         </div>
@@ -1250,7 +1401,7 @@ export default function Store({ onOpenChat }: StoreProps) {
                 {src === "shopify"
                   ? <ShoppingBag className="w-4 h-4" />
                   : src === "easyorders"
-                    ? <Zap   className="w-4 h-4" />
+                    ? <Zap className="w-4 h-4" />
                     : <Globe className="w-4 h-4" />}
                 {info.storeName}
               </button>
@@ -1263,7 +1414,7 @@ export default function Store({ onOpenChat }: StoreProps) {
       {activeStore && (
         <StoreTab
           store={activeStore}
-          onOpenChat={onOpenChat ?? (() => {})}
+          onOpenChat={onOpenChat ?? (() => { })}
           lang={lang}
         />
       )}
