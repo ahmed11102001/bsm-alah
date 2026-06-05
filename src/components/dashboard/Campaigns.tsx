@@ -134,6 +134,14 @@ const t = {
   errRepeat: { ar: "فشل التكرار", en: "Repeat failed" },
   repeatedOk: { ar: "تم تكرار الحملة ✅", en: "Campaign repeated ✅" },
   errAddNumbersFirst: { ar: "أضف أرقام أولاً", en: "Add numbers first" },
+  // cost estimate
+  estimatedCost: { ar: "التكلفة التقديرية", en: "Estimated Cost" },
+  costPerMsg: { ar: "السعر لكل محادثة", en: "Price per conversation" },
+  costNote: {
+    ar: "⚠️ تقديري فقط — الأسعار الدقيقة على Meta Business",
+    en: "⚠️ Estimate only — check Meta Business for exact prices"
+  },
+  costEgOnly: { ar: "يُحسب للأرقام المصرية (+20)", en: "Calculated for EG numbers (+20)" },
 };
 const tr = (key: keyof typeof t, lang: Lang) => t[key][lang];
 
@@ -162,6 +170,20 @@ const cleanNumber = (raw: string): string => {
 };
 const isValidPhone = (n: string) => /^20\d{10}$/.test(n);
 const safeRate = (num: number, den: number) => den > 0 ? Math.round((num / den) * 100) : 0;
+
+// ─── Egypt WhatsApp Conversation Pricing (USD) ────────────────────────────────
+// المصدر: Meta Business Help Center — أسعار تقديرية، راجع Meta للأسعار الدقيقة
+const EG_PRICES: Record<string, number> = {
+  MARKETING: 0.0125,
+  UTILITY: 0.0040,
+  AUTHENTICATION: 0.0175,
+  SERVICE: 0.0000, // مجاني من المستخدم
+};
+
+function estimateCost(count: number, category: string): number {
+  const price = EG_PRICES[category?.toUpperCase()] ?? EG_PRICES.MARKETING;
+  return count * price;
+}
 
 const statusConfig = (lang: Lang): Record<Campaign["status"], { label: string; color: string; dot: string }> => ({
   draft: { label: tr("statusDraft", lang), color: "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300", dot: "bg-gray-400" },
@@ -1083,6 +1105,39 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
                     </div>
                   ))}
                 </div>
+
+                {/* ── Cost Estimate ── */}
+                {numbers.length > 0 && selectedTemplate && (() => {
+                  const category = (selectedTemplate as any).category ?? "MARKETING";
+                  const cost = estimateCost(numbers.length, category);
+                  const pricePerMsg = EG_PRICES[category?.toUpperCase()] ?? EG_PRICES.MARKETING;
+                  return (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                          💰 {tr("estimatedCost", lang)}
+                        </span>
+                        <span className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                          ~${cost.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
+                        <span>{tr("costPerMsg", lang)}</span>
+                        <span className="font-medium">${pricePerMsg.toFixed(4)} × {numbers.length.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-amber-600 dark:text-amber-500">
+                        <span>{lang === "ar" ? "الكاتيجوري" : "Category"}</span>
+                        <span className="font-medium px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 rounded-full">{category}</span>
+                      </div>
+                      <p className="text-[11px] text-amber-600 dark:text-amber-500 pt-1 border-t border-amber-200 dark:border-amber-800/40 leading-relaxed">
+                        {tr("costNote", lang)}
+                      </p>
+                      <p className="text-[11px] text-amber-500 dark:text-amber-600">
+                        {tr("costEgOnly", lang)}
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1 gap-2 dark:border-gray-600 dark:text-gray-300" onClick={() => setStep(2)}>
                     {lang === "ar" ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />} {tr("prev", lang)}
