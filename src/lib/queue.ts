@@ -13,7 +13,7 @@ import {
 } from "@/types/enums";
 import { sendWhatsAppMessage, QUEUE_CONSTANTS } from "@/lib/whatsapp-api";
 import { notifyPlanLimitReached } from "@/lib/notifications";
-import { inngest }                from "@/inngest/client";
+import { inngest } from "@/inngest/client";
 
 const { DELAY_BETWEEN_MSGS, BACKOFF_STEPS_SEC, TIER_DAILY_LIMIT, TIER_BATCH_SIZE } = QUEUE_CONSTANTS;
 
@@ -21,9 +21,9 @@ const { DELAY_BETWEEN_MSGS, BACKOFF_STEPS_SEC, TIER_DAILY_LIMIT, TIER_BATCH_SIZE
 
 interface ProcessResult {
   processed: number;
-  sent:      number;
-  failed:    number;
-  skipped:   number;
+  sent: number;
+  failed: number;
+  skipped: number;
 }
 
 // ─── Helper: delay ────────────────────────────────────────────────────────────
@@ -31,16 +31,16 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ─── Helper: إعادة تصفير العداد اليومي لو تغير اليوم ────────────────────────
 async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
-  const now   = new Date();
+  const now = new Date();
   const reset = new Date(resetAt);
   if (
-    now.getUTCDate()  !== reset.getUTCDate()  ||
+    now.getUTCDate() !== reset.getUTCDate() ||
     now.getUTCMonth() !== reset.getUTCMonth() ||
     now.getUTCFullYear() !== reset.getUTCFullYear()
   ) {
     await prisma.whatsAppAccount.update({
       where: { id: accountId },
-      data:  { dailySentCount: 0, dailyResetAt: now },
+      data: { dailySentCount: 0, dailyResetAt: now },
     });
     return 0;
   }
@@ -49,13 +49,13 @@ async function resetDailyCounterIfNeeded(accountId: string, resetAt: Date) {
 
 // ─── handleRateLimit: تفعيل الـ Backoff على الرقم ───────────────────────────
 async function applyBackoff(accountId: string, currentCount: number) {
-  const step    = Math.min(currentCount, BACKOFF_STEPS_SEC.length - 1);
+  const step = Math.min(currentCount, BACKOFF_STEPS_SEC.length - 1);
   const seconds = BACKOFF_STEPS_SEC[step];
-  const until   = new Date(Date.now() + seconds * 1000);
+  const until = new Date(Date.now() + seconds * 1000);
 
   await prisma.whatsAppAccount.update({
     where: { id: accountId },
-    data:  {
+    data: {
       backoffUntil: until,
       backoffCount: { increment: 1 },
     },
@@ -68,7 +68,7 @@ async function applyBackoff(accountId: string, currentCount: number) {
 async function clearBackoff(accountId: string) {
   await prisma.whatsAppAccount.update({
     where: { id: accountId },
-    data:  { backoffUntil: null, backoffCount: 0 },
+    data: { backoffUntil: null, backoffCount: 0 },
   });
 }
 
@@ -88,7 +88,7 @@ export async function processQueue(): Promise<ProcessResult> {
   // جيب الـ pending items (غير محجوزة) مع account info
   const pendingItems = await prisma.messageQueue.findMany({
     where: {
-      status:      QueueStatus.pending,
+      status: QueueStatus.pending,
       scheduledAt: { lte: now },
       OR: [
         { nextRetryAt: null },
@@ -96,9 +96,9 @@ export async function processQueue(): Promise<ProcessResult> {
       ],
     },
     orderBy: { scheduledAt: "asc" },
-    take:    BATCH_LIMIT,
+    take: BATCH_LIMIT,
     select: {
-      id:            true,
+      id: true,
       phoneNumberId: true,
     },
   });
@@ -110,7 +110,7 @@ export async function processQueue(): Promise<ProcessResult> {
     pendingItems.map((item) => ({
       name: "queue/process-item",
       data: {
-        queueId:       item.id,
+        queueId: item.id,
         phoneNumberId: item.phoneNumberId,
       },
     }))
@@ -129,7 +129,7 @@ async function checkAndCompleteCampaigns(campaignIds: string[]) {
 
   // جيب كل الحملات دفعة واحدة (بدل N+1 query)
   const campaigns = await prisma.campaign.findMany({
-    where:  { id: { in: unique } },
+    where: { id: { in: unique } },
     select: { id: true, name: true, userId: true, queuedCount: true, status: true, sentCount: true, failedCount: true },
   });
 
@@ -139,11 +139,11 @@ async function checkAndCompleteCampaigns(campaignIds: string[]) {
 
     await prisma.campaign.update({
       where: { id: campaign.id },
-      data:  { status: CampaignStatus.completed, completedAt: new Date() },
+      data: { status: CampaignStatus.completed, completedAt: new Date() },
     });
 
     // إشعار حسب النتيجة
-    const sent   = campaign.sentCount;
+    const sent = campaign.sentCount;
     const failed = campaign.failedCount;
 
     try {
@@ -167,38 +167,50 @@ async function checkAndCompleteCampaigns(campaignIds: string[]) {
 // enqueueCampaign: إضافة حملة للـ Queue (يُستدعى من campaigns/route.ts)
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function enqueueCampaign(params: {
-  campaignId:   string;
-  userId:       string;
-  numbers:      string[];
+  campaignId: string;
+  userId: string;
+  numbers: string[];
+  recipients?: { phone: string; templateVars?: any }[];
   templateName: string;
   templateLang?: string;
   templateVars?: any;
   scheduledAt?: Date | null;
   whatsappAccountId: string;
-  phoneNumberId:     string;
-  accessToken:       string;
+  phoneNumberId: string;
+  accessToken: string;
 }): Promise<{ queued: number }> {
   const {
-    campaignId, userId, numbers, templateName,
+    campaignId, userId, numbers, recipients, templateName,
     templateLang = "ar", templateVars, scheduledAt,
     whatsappAccountId, phoneNumberId, accessToken,
   } = params;
 
   const sendAt = scheduledAt ?? new Date();
 
+  // Build a lookup map from recipients if provided (per-phone templateVars)
+  const recipientMap = new Map<string, any>();
+  if (Array.isArray(recipients)) {
+    for (const r of recipients) {
+      if (r.phone) recipientMap.set(r.phone, r.templateVars ?? null);
+    }
+  }
+
   // إنشاء الـ queue records دفعة واحدة
   const data = numbers.map((phone) => ({
     userId,
     whatsappAccountId,
     phoneNumberId,
-    toPhone:     phone,
+    toPhone: phone,
     messageType: "template",
     templateName,
     templateLang,
-    templateVars: templateVars ?? undefined,
+    // Use per-recipient vars if available, fall back to shared templateVars
+    templateVars: recipientMap.size > 0
+      ? (recipientMap.get(phone) ?? templateVars ?? undefined)
+      : (templateVars ?? undefined),
     campaignId,
     scheduledAt: sendAt,
-    status:      QueueStatus.pending,
+    status: QueueStatus.pending,
   }));
 
   // createMany لأداء أفضل
@@ -208,11 +220,11 @@ export async function enqueueCampaign(params: {
   await prisma.campaign.update({
     where: { id: campaignId },
     data: {
-      status:       scheduledAt ? CampaignStatus.scheduled : CampaignStatus.running,
-      totalQueued:  numbers.length,
-      queuedCount:  numbers.length,
-      startedAt:    scheduledAt ? null : new Date(),
-      scheduledAt:  scheduledAt ?? null,
+      status: scheduledAt ? CampaignStatus.scheduled : CampaignStatus.running,
+      totalQueued: numbers.length,
+      queuedCount: numbers.length,
+      startedAt: scheduledAt ? null : new Date(),
+      scheduledAt: scheduledAt ?? null,
     },
   });
 
@@ -224,14 +236,14 @@ export async function enqueueCampaign(params: {
 // الـ Cron هيبعتها خلال أقل من دقيقة مع نفس الـ rate-limit وbackoff logic
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function enqueueDirectMessage(params: {
-  messageId:        string;   // الـ Message record اللي اتحفظ pending
-  userId:           string;
-  contactId:        string;
-  toPhone:          string;
-  content:          string;
+  messageId: string;   // الـ Message record اللي اتحفظ pending
+  userId: string;
+  contactId: string;
+  toPhone: string;
+  content: string;
   whatsappAccountId: string;
-  phoneNumberId:    string;
-  accessToken:      string;
+  phoneNumberId: string;
+  accessToken: string;
 }): Promise<void> {
   const {
     messageId, userId, contactId, toPhone, content,
@@ -245,10 +257,10 @@ export async function enqueueDirectMessage(params: {
       phoneNumberId,
       toPhone,
       contactId,
-      messageType:      "text",
+      messageType: "text",
       content,
-      scheduledAt:      new Date(),
-      status:           QueueStatus.pending,
+      scheduledAt: new Date(),
+      status: QueueStatus.pending,
     },
   });
 }
@@ -262,7 +274,7 @@ export async function triggerScheduledCampaigns(): Promise<number> {
   // جيب الحملات المجدولة التي حان وقتها
   const due = await prisma.campaign.findMany({
     where: {
-      status:      CampaignStatus.scheduled,
+      status: CampaignStatus.scheduled,
       scheduledAt: { lte: now },
     },
     select: { id: true },
@@ -276,7 +288,7 @@ export async function triggerScheduledCampaigns(): Promise<number> {
       prisma.messageQueue.updateMany({
         where: {
           campaignId: campaign.id,
-          status:     QueueStatus.pending,
+          status: QueueStatus.pending,
         },
         data: {
           scheduledAt: now,
@@ -284,7 +296,7 @@ export async function triggerScheduledCampaigns(): Promise<number> {
       }),
       prisma.campaign.update({
         where: { id: campaign.id },
-        data:  { status: CampaignStatus.running, startedAt: now },
+        data: { status: CampaignStatus.running, startedAt: now },
       }),
     ]);
   }

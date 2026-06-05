@@ -2,28 +2,28 @@
 // ─── كود إرسال الرسائل — مكان واحد بيتاستخدم من Inngest والـ queue ────────────
 
 export interface SendMessageParams {
-  toPhone:       string;
+  toPhone: string;
   phoneNumberId: string;
-  accessToken:   string;
-  messageType:   string;
-  templateName:  string | null;
-  templateLang:  string;
-  templateVars:  any;
-  content:       string | null;
+  accessToken: string;
+  messageType: string;
+  templateName: string | null;
+  templateLang: string;
+  templateVars: any;
+  content: string | null;
 }
 
 export interface SendResult {
-  ok:             boolean;
+  ok: boolean;
   whatsappMsgId?: string;
-  error?:         string;
-  isRateLimit?:   boolean;
-  isTokenError?:  boolean;
+  error?: string;
+  isRateLimit?: boolean;
+  isTokenError?: boolean;
 }
 
 // ─── Constants — بتتقرأ من env أو بتستخدم قيم افتراضية ──────────────────────
 export const QUEUE_CONSTANTS = {
-  DELAY_BETWEEN_MSGS:  Number(process.env.QUEUE_DELAY_MS        ?? 350),
-  BACKOFF_STEPS_SEC:  (process.env.QUEUE_BACKOFF_STEPS ?? "60,300,900,3600").split(",").map(Number),
+  DELAY_BETWEEN_MSGS: Number(process.env.QUEUE_DELAY_MS ?? 350),
+  BACKOFF_STEPS_SEC: (process.env.QUEUE_BACKOFF_STEPS ?? "60,300,900,3600").split(",").map(Number),
   TIER_DAILY_LIMIT: {
     1: Number(process.env.TIER_1_DAILY_LIMIT ?? 1_000),
     2: Number(process.env.TIER_2_DAILY_LIMIT ?? 10_000),
@@ -44,50 +44,97 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
 
   if (item.messageType === "template" && item.templateName) {
     const components: object[] = [];
-    if (item.templateVars && Array.isArray(item.templateVars.body)) {
+    const vars = item.templateVars;
+
+    // ── HEADER: text variables (header_1, header_2 … stored as vars.header[]) ─
+    if (vars?.header && Array.isArray(vars.header) && vars.header.length > 0) {
       components.push({
-        type:       "body",
-        parameters: item.templateVars.body.map((v: string) => ({ type: "text", text: v })),
+        type: "header",
+        parameters: vars.header.map((v: string) => ({ type: "text", text: String(v) })),
       });
     }
+
+    // ── HEADER: media (image / video / document) from vars.headerMediaUrl ──────
+    if (vars?.headerMediaUrl) {
+      // Derive media type from URL extension, fallback to "image"
+      const url: string = vars.headerMediaUrl;
+      let mediaType: "image" | "video" | "document" = "image";
+      if (vars.headerMediaType) {
+        mediaType = vars.headerMediaType as typeof mediaType;
+      } else if (/\.(mp4|3gp)(\?|$)/i.test(url)) {
+        mediaType = "video";
+      } else if (/\.pdf(\?|$)/i.test(url)) {
+        mediaType = "document";
+      }
+      components.push({
+        type: "header",
+        parameters: [{ type: mediaType, [mediaType]: { link: url } }],
+      });
+    }
+
+    // ── BODY: text variables (body_1, body_2 … stored as vars.body[]) ──────────
+    if (vars?.body && Array.isArray(vars.body) && vars.body.length > 0) {
+      components.push({
+        type: "body",
+        parameters: vars.body.map((v: string) => ({ type: "text", text: String(v) })),
+      });
+    }
+
+    // ── BUTTONS: dynamic URL suffix (vars.buttons = [{index, value}] or string[]) ─
+    if (vars?.buttons && Array.isArray(vars.buttons)) {
+      vars.buttons.forEach((btn: any) => {
+        // Support both {index, value} objects and plain string array (legacy)
+        const idx = typeof btn === "object" ? String(btn.index ?? 0) : String(vars.buttons.indexOf(btn));
+        const value = typeof btn === "object" ? String(btn.value ?? "") : String(btn ?? "");
+        if (value) {
+          components.push({
+            type: "button",
+            sub_type: "url",
+            index: idx,
+            parameters: [{ type: "text", text: value }],
+          });
+        }
+      });
+    }
+
     payload = {
       messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "template",
+      to: item.toPhone,
+      type: "template",
       template: {
-        name:       item.templateName,
-        language:   { code: item.templateLang },
+        name: item.templateName,
+        language: { code: item.templateLang ?? "ar" },
         components: components.length ? components : undefined,
       },
     };
 
   } else if (item.messageType === "media" && item.content) {
-    const colonIdx  = item.content.indexOf(":");
+    const colonIdx = item.content.indexOf(":");
     const mediaType = colonIdx > -1 ? item.content.slice(0, colonIdx) : "document";
-    const mediaId   = colonIdx > -1 ? item.content.slice(colonIdx + 1) : item.content;
+    const mediaId = colonIdx > -1 ? item.content.slice(colonIdx + 1) : item.content;
     payload = {
       messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              mediaType,
-      [mediaType]:       { id: mediaId },
+      to: item.toPhone,
+      type: mediaType,
+      [mediaType]: { id: mediaId },
     };
 
   } else {
     payload = {
       messaging_product: "whatsapp",
-      to:                item.toPhone,
-      type:              "text",
-      text:              { body: item.content ?? "" },
+      to: item.toPhone,
+      type: "text",
+      text: { body: item.content ?? "" },
     };
   }
 
   try {
-    const res  = await fetch(
+    const res = await fetch(
       `https://graph.facebook.com/v21.0/${item.phoneNumberId}/messages`,
       {
-        method:  "POST",
+        method: "POST",
         headers: {
-          Authorization:  `Bearer ${item.accessToken}`,
+          Authorization: `Bearer ${item.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),

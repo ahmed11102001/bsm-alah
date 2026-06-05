@@ -9,8 +9,8 @@ import {
   incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
 import { enqueueCampaign } from "@/lib/queue";
-import { inngest }         from "@/inngest/client";
-import { decryptToken }    from "@/lib/crypto";
+import { inngest } from "@/inngest/client";
+import { decryptToken } from "@/lib/crypto";
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
 
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const limit  = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const page   = Math.max(parseInt(searchParams.get("page")  || "1"),  1);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const page = Math.max(parseInt(searchParams.get("page") || "1"), 1);
 
     const where: any = { userId };
     if (status && status !== "all") where.status = status;
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
       prisma.campaign.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip:    (page - 1) * limit,
-        take:    limit,
+        skip: (page - 1) * limit,
+        take: limit,
         include: {
           template: { select: { name: true, content: true } },
         },
@@ -57,24 +57,24 @@ export async function GET(req: NextRequest) {
       readCounts,
     ] = await Promise.all([
       prisma.messageQueue.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: campaignIds } },
         _count: { id: true },
       }),
       prisma.messageQueue.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: campaignIds }, status: QueueStatus.pending },
         _count: { id: true },
       }),
       // ✅ deliveredCount من Message table مباشرة — نفس منطق صفحة التقارير
       prisma.message.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: campaignIds }, status: MessageStatus.delivered },
         _count: { id: true },
       }),
       // ✅ readCount من Message table مباشرة — نفس منطق صفحة التقارير
       prisma.message.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: campaignIds }, status: MessageStatus.read },
         _count: { id: true },
       }),
@@ -98,25 +98,25 @@ export async function GET(req: NextRequest) {
 
     // ── شكّل الـ response بكل البيانات الحقيقية ──────────────────────────────
     const campaigns = rawCampaigns.map(c => {
-      const totalQueued    = totalMap.get(c.id)     ?? 0;
-      const queuedCount    = pendingMap.get(c.id)   ?? 0;
+      const totalQueued = totalMap.get(c.id) ?? 0;
+      const queuedCount = pendingMap.get(c.id) ?? 0;
       const deliveredCount = deliveredMap.get(c.id) ?? 0;  // ✅ من Message table
-      const readCount      = readMap.get(c.id)      ?? 0;  // ✅ من Message table
+      const readCount = readMap.get(c.id) ?? 0;  // ✅ من Message table
 
       return {
-        id:             c.id,
-        name:           c.name,
-        status:         c.status,
-        sentCount:      c.sentCount,
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        sentCount: c.sentCount,
         deliveredCount,                                       // ✅ من Message table
         readCount,                                            // ✅ من Message table
-        failedCount:    c.failedCount,
+        failedCount: c.failedCount,
         totalQueued,
         queuedCount,
-        scheduledAt:    c.scheduledAt,
-        createdAt:      c.createdAt,
-        completedAt:    c.completedAt,
-        template:       c.template,
+        scheduledAt: c.scheduledAt,
+        createdAt: c.createdAt,
+        completedAt: c.completedAt,
+        template: c.template,
       };
     });
 
@@ -180,7 +180,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction([
       prisma.messageQueue.updateMany({
         where: { campaignId: id, status: QueueStatus.pending },
-        data:  { status: QueueStatus.cancelled },
+        data: { status: QueueStatus.cancelled },
       }),
       prisma.message.deleteMany({ where: { campaignId: id } }),
       prisma.campaign.delete({ where: { id } }),
@@ -195,7 +195,7 @@ export async function DELETE(req: NextRequest) {
 
 // ─── handleCreate ─────────────────────────────────────────────────────────────
 async function handleCreate(userId: string, body: any) {
-  const { name, templateName, numbers, scheduledAt, templateVars, attributionHours } = body;
+  const { name, templateName, numbers, scheduledAt, templateVars, attributionHours, recipients } = body;
 
   // Validate attributionHours (1–168 ساعة = أسبوع)
   if (attributionHours !== undefined) {
@@ -208,7 +208,14 @@ async function handleCreate(userId: string, body: any) {
     return NextResponse.json({ error: "اسم الحملة مطلوب" }, { status: 400 });
   if (!templateName)
     return NextResponse.json({ error: "القالب مطلوب" }, { status: 400 });
-  if (!Array.isArray(numbers) || numbers.length === 0)
+
+  // Support both old-style `numbers[]` and new-style `recipients[{phone, templateVars}]`
+  const hasRecipients = Array.isArray(recipients) && recipients.length > 0;
+  const phoneList: string[] = hasRecipients
+    ? recipients.map((r: any) => r.phone)
+    : (Array.isArray(numbers) ? numbers : []);
+
+  if (phoneList.length === 0)
     return NextResponse.json({ error: "قائمة الأرقام مطلوبة" }, { status: 400 });
 
   const campaignCheck = await checkCampaignsLimit(userId);
@@ -216,7 +223,7 @@ async function handleCreate(userId: string, body: any) {
   if (campaignBlock) return campaignBlock;
 
   const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
-  const isScheduled   = scheduledDate ? scheduledDate > new Date() : false;
+  const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
 
   if (isScheduled) {
     const scheduleCheck = await checkFeature(userId, "scheduledCampaigns");
@@ -248,27 +255,34 @@ async function handleCreate(userId: string, body: any) {
       { status: 404 }
     );
 
+  // Build templateVariables snapshot for the campaign record
+  const templateVariablesSnapshot = hasRecipients
+    ? { mapping: body.recipients?.[0]?.templateVars ?? null, source: "per-recipient" }
+    : (templateVars ?? null);
+
   const campaign = await prisma.campaign.create({
     data: {
-      name:       name.trim(),
+      name: name.trim(),
       userId,
-      templateId:       template.id,
+      templateId: template.id,
       attributionHours: attributionHours ? Number(attributionHours) : 48,
-      status:     CampaignStatus.draft,
+      status: CampaignStatus.draft,
+      templateVariables: templateVariablesSnapshot ?? undefined,
     },
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId:        campaign.id,
+    campaignId: campaign.id,
     userId,
-    numbers,
-    templateName:      template.name,
-    templateLang:      template.language ?? "ar",
-    templateVars:      templateVars ?? null,
-    scheduledAt:       isScheduled ? scheduledDate : null,
+    numbers: phoneList,
+    recipients: hasRecipients ? recipients : undefined,
+    templateName: template.name,
+    templateLang: template.language ?? "ar",
+    templateVars: hasRecipients ? undefined : (templateVars ?? null),
+    scheduledAt: isScheduled ? scheduledDate : null,
     whatsappAccountId: account.id,
-    phoneNumberId:     account.phoneNumberId,
-    accessToken:       decryptToken(account.accessToken),
+    phoneNumberId: account.phoneNumberId,
+    accessToken: decryptToken(account.accessToken),
   });
 
   await incrementCampaignUsage(userId);
@@ -276,17 +290,17 @@ async function handleCreate(userId: string, body: any) {
   await inngest.send({
     name: "campaign/send",
     data: {
-      campaignId:  campaign.id,
+      campaignId: campaign.id,
       scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
     },
   });
 
   return NextResponse.json({
-    success:    true,
+    success: true,
     campaignId: campaign.id,
     queued,
-    scheduled:  isScheduled,
-    message:    isScheduled
+    scheduled: isScheduled,
+    message: isScheduled
       ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
       : `تم إنشاء الحملة — جاري الإرسال`,
   });
@@ -299,13 +313,13 @@ async function handleRepeat(userId: string, campaignId: string) {
   if (block) return block;
 
   const original = await prisma.campaign.findFirst({
-    where:   { id: campaignId, userId },
+    where: { id: campaignId, userId },
     include: {
       template: true,
       messages: {
-        where:  { direction: MessageDirection.outbound },
+        where: { direction: MessageDirection.outbound },
         select: { contact: { select: { phone: true } } },
-        take:   10_000,
+        take: 10_000,
       },
     },
   });
@@ -337,23 +351,23 @@ async function handleRepeat(userId: string, campaignId: string) {
 
   const newCampaign = await prisma.campaign.create({
     data: {
-      name:       `${original.name} (تكرار)`,
+      name: `${original.name} (تكرار)`,
       userId,
       templateId: original.template.id,
-      status:     CampaignStatus.draft,
+      status: CampaignStatus.draft,
     },
   });
 
   const { queued } = await enqueueCampaign({
-    campaignId:        newCampaign.id,
+    campaignId: newCampaign.id,
     userId,
     numbers,
-    templateName:      original.template.name,
-    templateLang:      original.template.language ?? "ar",
-    scheduledAt:       null,
+    templateName: original.template.name,
+    templateLang: original.template.language ?? "ar",
+    scheduledAt: null,
     whatsappAccountId: account.id,
-    phoneNumberId:     account.phoneNumberId,
-    accessToken:       decryptToken(account.accessToken),
+    phoneNumberId: account.phoneNumberId,
+    accessToken: decryptToken(account.accessToken),
   });
 
   await incrementCampaignUsage(userId);
@@ -364,9 +378,9 @@ async function handleRepeat(userId: string, campaignId: string) {
   });
 
   return NextResponse.json({
-    success:    true,
+    success: true,
     campaignId: newCampaign.id,
     queued,
-    message:    `تم تكرار الحملة — جاري الإرسال`,
+    message: `تم تكرار الحملة — جاري الإرسال`,
   });
 }
