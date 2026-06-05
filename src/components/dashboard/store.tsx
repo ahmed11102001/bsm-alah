@@ -652,7 +652,7 @@ function DedicatedTemplateStatus({
         </p>
         <p className="opacity-80">
           {lang === "ar"
-            ? <>أنشئ قالباً على ميتا باسم: <span className="font-mono font-bold">"{expectedName}"</span> ثم زامنه من صفحة القوالب</>
+            ? <>أنشئ قالباً باسم: <span className="font-mono font-bold">"{expectedName}"</span> ثم زامنه من صفحة القوالب</>
             : <>Create a Meta template named: <span className="font-mono font-bold">"{expectedName}"</span> then sync it from Templates page</>
           }
         </p>
