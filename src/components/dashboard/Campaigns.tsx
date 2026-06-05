@@ -156,7 +156,7 @@ interface Campaign {
   sentCount: number; deliveredCount: number; readCount: number;
   failedCount: number; totalQueued: number; queuedCount: number;
   scheduledAt: string | null; createdAt: string; completedAt: string | null;
-  template: { name: string; content: string } | null;
+  template: { name: string; content: string; category?: string } | null;
 }
 interface AudienceContact { phone: string;[key: string]: any; }
 interface AudienceOption { id: string; name: string; type: string; contactCount: number; }
@@ -390,6 +390,36 @@ function DetailsModal({ campaign, open, onClose, lang }: {
             )}
           </div>
         )}
+
+        {/* ── Cost Estimate ── */}
+        {campaign.sentCount > 0 && (() => {
+          const category = campaign.template?.category ?? "MARKETING";
+          const cost = estimateCost(campaign.sentCount, category);
+          const pricePerMsg = EG_PRICES[category.toUpperCase()] ?? EG_PRICES.MARKETING;
+          return (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  💰 {tr("estimatedCost", lang)}
+                </span>
+                <span className="text-base font-bold text-amber-700 dark:text-amber-300">
+                  ~${cost.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
+                <span>{tr("costPerMsg", lang)}</span>
+                <span className="font-medium">${pricePerMsg.toFixed(4)} × {campaign.sentCount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-amber-600 dark:text-amber-500">
+                <span>{lang === "ar" ? "الكاتيجوري" : "Category"}</span>
+                <span className="font-medium px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 rounded-full">{category}</span>
+              </div>
+              <p className="text-[10px] text-amber-500 dark:text-amber-600 pt-1 border-t border-amber-200 dark:border-amber-800/40 leading-relaxed">
+                {tr("costNote", lang)}
+              </p>
+            </div>
+          );
+        })()}
 
         <div className="text-xs text-gray-400 space-y-1 pt-1 border-t border-gray-100 dark:border-gray-700">
           <p>{tr("createdAt", lang)}: {new Date(campaign.createdAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}</p>

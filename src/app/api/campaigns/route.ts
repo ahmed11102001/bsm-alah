@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          template: { select: { name: true, content: true } },
+          template: { select: { name: true, content: true, category: true } },
         },
       }),
       prisma.campaign.count({ where }),
