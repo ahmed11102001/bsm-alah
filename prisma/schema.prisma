@@ -269,6 +269,7 @@ model Campaign {
   revenue          Float           @default(0)
   trackedUrl       String?
   attributionHours Int             @default(48)
+  templateVariables Json?
   template         Template?       @relation(fields: [templateId], references: [id])
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaignOrders   CampaignOrder[]
@@ -526,6 +527,7 @@ model StoreAutomation {
   shopifyStoreId     String?
   easyOrdersStoreId  String?
   wooCommerceStoreId String?
+  templateVariables  Json?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   easyOrdersStore    EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
