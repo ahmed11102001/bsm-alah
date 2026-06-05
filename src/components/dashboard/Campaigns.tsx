@@ -464,7 +464,7 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
       const res = await fetch("/api/templates");
       const data = await res.json();
       const list: Template[] = Array.isArray(data) ? data : (data.data ?? []);
-      const approved = list.filter(t => ["approved", "pending", "APPROVED", "PENDING"].includes(t.status ?? ""));
+      const approved = list.filter(t => ["approved", "APPROVED"].includes(t.status ?? ""));
       setTemplates(approved);
       if (approved.length > 0) setSelectedTemplate(approved[0]);
     } catch { toast.error(tr("errLoadTemplates", lang)); }
