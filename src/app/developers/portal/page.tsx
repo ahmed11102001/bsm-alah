@@ -4,9 +4,26 @@
 // يحتاج auth + apiAccess (Pro+)
 
 import { useState, useEffect, useRef } from "react";
-import { useSession }                  from "next-auth/react";
 import { useRouter }                   from "next/navigation";
 import Link                            from "next/link";
+
+// ── Dev session hook (بدل useSession من NextAuth) ──────────────────────────────
+function useDevSession() {
+  const [session, setSession] = useState<{ id: string; email: string; name: string | null } | null>(null);
+  const [status,  setStatus]  = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+
+  useEffect(() => {
+    fetch("/api/developers/auth/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.id) { setSession(data); setStatus("authenticated"); }
+        else            setStatus("unauthenticated");
+      })
+      .catch(() => setStatus("unauthenticated"));
+  }, []);
+
+  return { data: session ? { user: session } : null, status };
+}
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -355,7 +372,7 @@ type LogEntry = { id:number; ts:string; phone:string; type:string; status:string
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function DeveloperPortal() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useDevSession();
   const router = useRouter();
 
   const [apiKey,        setApiKey]        = useState("");
@@ -380,7 +397,7 @@ export default function DeveloperPortal() {
   // ── Auth redirect ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (status === "unauthenticated")
-      router.push("/auth/signin?callbackUrl=/developers/portal");
+      router.push("/developers/signin");
   }, [status, router]);
 
   // ── Load existing API key ─────────────────────────────────────────────────
