@@ -13,7 +13,7 @@ async function verifyApiKey(apiKey: string): Promise<string | null> {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const apiKey = req.headers.get("x-api-key");
@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: "API Key غير صحيح" }, { status: 401 });
     }
 
-    const { token } = params;
+    const { token } = await params;
 
     const otp = await prisma.otpLog.findFirst({
       where: { token, developerId },
