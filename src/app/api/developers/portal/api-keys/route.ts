@@ -15,7 +15,7 @@ function generateApiKey(): { prefix: string; fullKey: string; hash: string } {
 // ═══════════════════════════════════════════════════════════════════════════
 // GET  — List API Keys
 // ═══════════════════════════════════════════════════════════════════════════
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getDevSessionFromRequest(req);
     if (!session) {

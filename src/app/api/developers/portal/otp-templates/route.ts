@@ -5,7 +5,7 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 // ═══════════════════════════════════════════════════════════════════════════
 // GET — List OTP Templates
 // ═══════════════════════════════════════════════════════════════════════════
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getDevSessionFromRequest(req);
     if (!session) {
