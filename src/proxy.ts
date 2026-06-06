@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+import { getToken }                from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 
@@ -51,7 +51,17 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-// ─── Public developer routes (no auth needed) ────────────────────────────────
+// ─── Helper: apply security headers ──────────────────────────────────────────
+function applyHeaders(response: NextResponse, nonce: string): NextResponse {
+  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
+
+// ─── Developer public routes — لا تحتاج auth ─────────────────────────────────
 const PUBLIC_DEV_ROUTES = [
   "/developers",
   "/developers/signin",
@@ -66,115 +76,93 @@ function isPublicDevRoute(pathname: string): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN MIDDLEWARE
+// PROXY — الـ export المطلوب من Next.js 16
 // ═══════════════════════════════════════════════════════════════════════════════
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
-  // ── Step 0: توليد nonce عشوائي لكل request ─────────────────────────────────
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // 1. DEVELOPER ROUTES (/developers/*) — JWT Auth (مستقل عن NextAuth)
-  // ═════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
+  // 1. DEVELOPER ROUTES — JWT Cookie (مستقل عن NextAuth)
+  // ═══════════════════════════════════════════════════════════════════════
   if (pathname.startsWith("/developers")) {
-    // Public dev routes — allow through
+
+    // صفحات عامة — تمر بدون auth
     if (isPublicDevRoute(pathname)) {
-      return applySecurityHeaders(NextResponse.next(), nonce);
+      return applyHeaders(NextResponse.next(), nonce);
     }
 
-    // Check developer session (JWT + Cookie)
+    // تحقق من الـ dev session
     const devSession = await getDevSessionFromRequest(req);
 
-    // No session → redirect to signin
+    // مفيش session → signin
     if (!devSession) {
-      const signinUrl = new URL("/developers/signin", req.url);
-      signinUrl.searchParams.set("callbackUrl", pathname);
-      return applySecurityHeaders(NextResponse.redirect(signinUrl), nonce);
+      const url = new URL("/developers/signin", req.url);
+      url.searchParams.set("callbackUrl", pathname);
+      return applyHeaders(NextResponse.redirect(url), nonce);
     }
 
-    // PENDING_META → force connect-meta page
+    // SUSPENDED → منع الدخول
+    if (devSession.status === "SUSPENDED") {
+      const url = new URL("/developers/signin", req.url);
+      url.searchParams.set("error", "suspended");
+      return applyHeaders(NextResponse.redirect(url), nonce);
+    }
+
+    // PENDING_META → يروح يربط Meta أول
     if (
       devSession.status === "PENDING_META" &&
       !pathname.startsWith("/developers/connect-meta")
     ) {
-      return applySecurityHeaders(
+      return applyHeaders(
         NextResponse.redirect(new URL("/developers/connect-meta", req.url)),
         nonce
       );
     }
 
-    // ACTIVE/TRANSFERRED → block connect-meta, allow portal
+    // ACTIVE → منع رجوعه لـ connect-meta
     if (
       devSession.status === "ACTIVE" &&
       pathname.startsWith("/developers/connect-meta")
     ) {
-      return applySecurityHeaders(
+      return applyHeaders(
         NextResponse.redirect(new URL("/developers/portal", req.url)),
         nonce
       );
     }
 
-    // SUSPENDED → block everything
-    if (devSession.status === "SUSPENDED") {
-      return applySecurityHeaders(
-        NextResponse.redirect(new URL("/developers/signin?error=suspended", req.url)),
-        nonce
-      );
-    }
-
-    // Developer authenticated — apply security headers and continue
-    return applySecurityHeaders(NextResponse.next(), nonce);
+    // مصادق عليه → كمّل
+    return applyHeaders(NextResponse.next(), nonce);
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // 2. MARKETING ROUTES — NextAuth (اللي كان موجود)
-  // ═════════════════════════════════════════════════════════════════════════
-
-  // ── Dashboard Auth ────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════
+  // 2. MARKETING ROUTES — NextAuth (اللي كان موجود، ما اتغيرش)
+  // ═══════════════════════════════════════════════════════════════════════
   if (pathname.startsWith("/dashboard")) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    // مش مسجل دخول → وجّهه لصفحة الـ Login
     if (!token) {
-      return applySecurityHeaders(
-        NextResponse.redirect(new URL("/", req.url)),
-        nonce
-      );
+      return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce);
     }
 
-    // حماية صفحة Admin — غير Super يشوف 404
     if (pathname.startsWith("/dashboard/admin") && !token.isSuper) {
-      return applySecurityHeaders(
-        NextResponse.rewrite(new URL("/not-found", req.url)),
-        nonce
-      );
+      return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce);
     }
   }
 
-  // ── Apply security headers to all other routes ────────────────────────────
-  return applySecurityHeaders(NextResponse.next(), nonce);
+  // ═══════════════════════════════════════════════════════════════════════
+  // 3. باقي الـ routes — headers بس
+  // ═══════════════════════════════════════════════════════════════════════
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  return applyHeaders(response, nonce);
 }
 
-// ─── Helper: apply CSP + security headers ────────────────────────────────────
-function applySecurityHeaders(response: NextResponse, nonce: string): NextResponse {
-  response.headers.set("Content-Security-Policy", buildCsp(nonce));
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  );
-  return response;
-}
-
-// بنشغل الـ middleware على كل الصفحات ما عدا الـ static files
+// بنشغل الـ proxy على كل الصفحات ما عدا الـ static files
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
