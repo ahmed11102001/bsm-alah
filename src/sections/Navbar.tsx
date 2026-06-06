@@ -1,8 +1,9 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, Languages, Sparkles } from "lucide-react";
+import { Menu, X, User, Languages, Sparkles, Code2 } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 interface NavbarProps {
@@ -113,6 +114,25 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 {tr(t.nav.langSwitch, lang)}
               </button>
 
+              {/* Developers btn */}
+              <Link href="/developers" style={{ textDecoration: "none" }}>
+                <button
+                  className="h-9 text-sm gap-1.5 flex items-center transition-all duration-200 px-4 rounded-lg"
+                  style={{
+                    background:  "transparent",
+                    color:       isLight ? "#374151" : "rgba(255,255,255,0.75)",
+                    border:      `1px solid ${isLight ? "#e5e7eb" : "rgba(255,255,255,0.15)"}`,
+                    fontFamily:  "inherit",
+                    cursor:      "pointer",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#25D366"; (e.currentTarget as HTMLButtonElement).style.color = "#25D366"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = isLight ? "#e5e7eb" : "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLButtonElement).style.color = isLight ? "#374151" : "rgba(255,255,255,0.75)"; }}
+                >
+                  <Code2 className="w-3.5 h-3.5" />
+                  {isAr ? "المطورين" : "Developers"}
+                </button>
+              </Link>
+
               {/* Login btn — يتغير شكله بعد الـ fold */}
               <Button
                 onClick={onLoginClick}
@@ -186,6 +206,14 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
               ))}
 
               <div className="h-px bg-gray-100 my-2" />
+
+              <Link href="/developers" onClick={closeMobile}
+                className="flex items-center gap-2 w-full py-3 px-3 rounded-xl font-medium transition-colors text-sm"
+                style={{ color: "#25D366", animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 220ms both",
+                  textDecoration: "none" }}>
+                <Code2 className="w-4 h-4" />
+                {isAr ? "للمطورين — OTP API" : "Developers — OTP API"}
+              </Link>
 
               <button
                 onClick={() => { onLangChange(lang === "ar" ? "en" : "ar"); closeMobile(); }}
