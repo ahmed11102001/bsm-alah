@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getDevSession } from "@/lib/dev-auth";
+import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { randomBytes, createHash } from "crypto";
 
 // ── Generate secure API key ─────────────────────────────────────────────────
@@ -17,7 +17,7 @@ function generateApiKey(): { prefix: string; fullKey: string; hash: string } {
 // ═══════════════════════════════════════════════════════════════════════════
 export async function GET() {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
@@ -48,7 +48,7 @@ export async function GET() {
 // ═══════════════════════════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 // ═══════════════════════════════════════════════════════════════════════════
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }

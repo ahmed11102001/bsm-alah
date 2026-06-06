@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getDevSession } from "@/lib/dev-auth";
+import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }

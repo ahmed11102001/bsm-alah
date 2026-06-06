@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getDevSession } from "@/lib/dev-auth";
+import { getDevSessionFromRequest } from "@/lib/dev-auth";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GET — List OTP Templates
 // ═══════════════════════════════════════════════════════════════════════════
 export async function GET() {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
@@ -29,7 +29,7 @@ export async function GET() {
 // ═══════════════════════════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    const session = await getDevSession();
+    const session = await getDevSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
     }
