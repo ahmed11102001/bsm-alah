@@ -1,5 +1,4 @@
-// src/app/api/developers/auth/logout/route.ts
-import { NextResponse }        from "next/server";
+import { NextResponse } from "next/server";
 import { buildDevLogoutCookie } from "@/lib/dev-auth";
 
 export async function POST() {

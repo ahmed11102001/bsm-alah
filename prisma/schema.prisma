@@ -14,7 +14,7 @@ model User {
   phone            String?
   password         String?           // nullable — يوزر Google مش عنده password
   image            String?
-   emailVerified    DateTime?
+  emailVerified    DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   apiKey           String?           @unique
@@ -282,28 +282,28 @@ model Campaign {
 }
 
 model Message {
-  id          String           @id @default(cuid())
+  id          String            @id @default(cuid())
   content     String?
   userId      String
   campaignId  String?
   contactId   String
-  whatsappId  String?          @unique
-  createdAt   DateTime         @default(now())
+  whatsappId  String?           @unique
+  createdAt   DateTime          @default(now())
   deletedAt   DateTime?
   deliveredAt DateTime?
   error       String?
   mediaUrl    String?
   readAt      DateTime?
   sentAt      DateTime?
-  type        MessageType      @default(text)
-  updatedAt   DateTime         @updatedAt
-  status      MessageStatus    @default(pending)
-  direction   MessageDirection @default(outbound)
+  type        MessageType       @default(text)
+  updatedAt   DateTime          @updatedAt
+  status      MessageStatus     @default(pending)
+  direction   MessageDirection  @default(outbound)
   senderType  MessageSenderType @default(human)
-  reactions   Json?            @default("[]")
-  campaign    Campaign?        @relation(fields: [campaignId], references: [id])
-  contact     Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions   Json?             @default("[]")
+  campaign    Campaign?         @relation(fields: [campaignId], references: [id])
+  contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([contactId])
@@ -761,6 +761,7 @@ model DeveloperUser {
   metaConnection DeveloperMetaConnection?
   otpTemplates   DeveloperOtpTemplate[]
   apiKeys        DeveloperApiKey[]
+  otpLogs        OtpLog[] // ← NEW: relation to OTP logs
 
   @@map("developer_users")
 }
@@ -818,6 +819,39 @@ model DeveloperApiKey {
   @@map("developer_api_keys")
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// OTP Logs — لتتبع كل عمليات الإرسال والتحقق
+// ═══════════════════════════════════════════════════════════════════════════
+
+model OtpLog {
+  id            String       @id @default(cuid())
+  developerId   String
+
+  phone         String
+  token         String       @unique
+  code          String
+
+  status        OtpLogStatus @default(PENDING)
+
+  metaMessageId String?
+  error         String?
+
+  sentAt        DateTime?
+  verifiedAt    DateTime?
+  expiredAt     DateTime?
+  failedAt      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  developer     DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId, createdAt])
+  @@index([token])
+  @@index([phone, developerId])
+  @@index([status])
+  @@map("otp_logs")
+}
+
 // ── Developer Enums ───────────────────────────────────────────────────────────
 
 enum DeveloperStatus {
@@ -837,4 +871,12 @@ enum DeveloperTemplateStatus {
 enum DeveloperApiKeyStatus {
   ACTIVE
   REVOKED
+}
+
+enum OtpLogStatus {
+  PENDING
+  SENT
+  VERIFIED
+  EXPIRED
+  FAILED
 }

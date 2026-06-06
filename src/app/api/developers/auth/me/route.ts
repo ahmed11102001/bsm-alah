@@ -1,7 +1,5 @@
-// src/app/api/developers/auth/me/route.ts
-// ── Returns current dev session (used by useDevSession hook) ──────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getDevSessionFromRequest }  from "@/lib/dev-auth";
+import { getDevSessionFromRequest } from "@/lib/dev-auth";
 
 export async function GET(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);

@@ -1,139 +1,123 @@
-// src/app/developers/signup/page.tsx
 "use client";
 
-import { useState }  from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link          from "next/link";
+import Link from "next/link";
+import { ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 
-const C = {
-  bg: "#08090c", surface: "#0e1117", card: "#12151e",
-  border: "#1e2333", green: "#25D366", text: "#e8eaf0",
-  muted: "#6b7280", red: "#ef4444",
-};
-
-export default function DeveloperSignUp() {
+export default function DevSignUpPage() {
   const router = useRouter();
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const res  = await fetch("/api/developers/auth/register", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ email, password, name }),
-    });
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const res = await fetch("/api/developers/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
 
-    if (!res.ok) { setError(data.error); return; }
-    router.push(data.redirect);
-  };
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        setError(data.error || "حصل خطأ");
+        return;
+      }
+
+      router.push(data.redirect || "/developers/connect-meta");
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError("حصل خطأ في الاتصال");
+    }
+  }
 
   return (
-    <div dir="rtl" style={{
-      minHeight: "100vh", background: C.bg,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "'IBM Plex Mono', monospace", color: C.text, padding: "24px",
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        input {
-          width: 100%; background: ${C.surface}; color: ${C.text};
-          border: 1px solid ${C.border}; border-radius: 8px;
-          padding: 11px 14px; font-family: inherit; font-size: 14px;
-          outline: none; transition: border-color .15s;
-        }
-        input:focus { border-color: ${C.green}60; }
-      `}</style>
-
-      <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
-        borderRadius: 16, padding: "36px 32px", width: "100%", maxWidth: 420,
-      }}>
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
-          <Link href="/developers" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8, background: C.green,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14, fontWeight: 800, color: "#000",
-            }}>W</div>
-            <span style={{ color: C.text, fontWeight: 700 }}>وني</span>
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/developers" className="inline-flex items-center gap-2 text-white">
+            <span className="w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-black font-bold text-xl">W</span>
+            <span className="text-lg font-medium">وني<span className="text-white/40">/ Developer Portal</span></span>
           </Link>
-          <span style={{ color: C.muted, fontSize: 12 }}>/ Developer Portal</span>
         </div>
 
-        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>حساب جديد</h1>
-        <p style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
-          50 رسالة مجاناً — بدون كارت بنكي
-          {"  ·  "}
-          <Link href="/developers/signin" style={{ color: C.green, textDecoration: "none" }}>
-            دخول
-          </Link>
-        </p>
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+          <h1 className="text-2xl font-bold text-white mb-2 text-center">حساب جديد</h1>
+          <p className="text-white/50 text-center text-sm mb-6">50 رسالة مجاناً — بدون كارت بنكي</p>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 6, fontWeight: 600 }}>
-              الاسم (اختياري)
-            </label>
-            <input
-              type="text" value={name} onChange={e => setName(e.target.value)}
-              placeholder="Ahmed Developer"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-white/70 mb-1.5">الاسم (اختياري)</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ahmed Developer"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#25D366]/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-white/70 mb-1.5">الإيميل</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="dev@example.com"
+                dir="ltr"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#25D366]/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-white/70 mb-1.5">كلمة المرور</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="8 أحرف على الأقل"
+                  dir="ltr"
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#25D366]/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-[#25D366] text-black font-semibold hover:bg-[#1ea855] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <><Loader2 size={18} className="animate-spin" /> جاري التسجيل...</> : <><>سجّل</><ArrowRight size={18} /></>}
+            </button>
+          </form>
 
-          <div>
-            <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 6, fontWeight: 600 }}>
-              الإيميل
-            </label>
-            <input
-              type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="dev@example.com" dir="ltr" required
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 6, fontWeight: 600 }}>
-              كلمة المرور
-            </label>
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="8 أحرف على الأقل" dir="ltr" required minLength={8}
-            />
-          </div>
-
-          {error && (
-            <p style={{ fontSize: 12, color: C.red, background: `${C.red}10`,
-              border: `1px solid ${C.red}30`, borderRadius: 8, padding: "8px 12px" }}>
-              {error}
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-white/50 text-sm">
+              عندك حساب؟{" "}
+              <Link href="/developers/signin" className="text-[#25D366] hover:underline">دخول</Link>
             </p>
-          )}
-
-          <button type="submit" disabled={loading} style={{
-            width: "100%", padding: "12px", borderRadius: 10, marginTop: 4,
-            background: loading ? C.surface : C.green,
-            border: `1px solid ${loading ? C.border : C.green}`,
-            color: loading ? C.muted : "#000",
-            fontWeight: 700, fontSize: 14, cursor: loading ? "wait" : "pointer",
-            fontFamily: "inherit", transition: "all .2s",
-          }}>
-            {loading ? "جاري الإنشاء..." : "إنشاء الحساب ←"}
-          </button>
-
-          <p style={{ fontSize: 10, color: C.muted, textAlign: "center", lineHeight: 1.6 }}>
-            بالتسجيل أنت توافق على{" "}
-            <Link href="/terms" style={{ color: C.muted }}>الشروط والأحكام</Link>
-          </p>
-        </form>
+          </div>
+        </div>
       </div>
     </div>
   );
