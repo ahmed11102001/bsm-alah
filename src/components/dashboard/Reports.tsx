@@ -29,6 +29,7 @@ import {
   Bot,
 } from "lucide-react";
 import AutomationReportTab from "@/components/dashboard/AutomationReportTab";
+import CostReportTab       from "@/components/dashboard/CostReportTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Overview {
@@ -369,6 +370,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             { value: "logs",       label: "سجل النشاط",   icon: <Activity className="w-4 h-4" />,     minPlan: "pro"        },
             { value: "store",      label: "تقرير المتجر",  icon: <ShoppingBag className="w-4 h-4" />,  minPlan: "pro"        },
             { value: "automation", label: "تقرير الأتمتة", icon: <Bot className="w-4 h-4" />,          minPlan: "pro"        },
+            { value: "cost",       label: "التكلفة والإنفاق", icon: <DollarSign className="w-4 h-4" />, minPlan: "starter"    },
           ].map((t) => {
             const order = ["free","starter","pro","enterprise"];
             const allowed = order.indexOf(planTier) >= order.indexOf(t.minPlan);
@@ -1192,6 +1194,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
 
         <TabsContent value="automation">
           <AutomationReportTab />
+        </TabsContent>
+
+        <TabsContent value="cost">
+          <CostReportTab />
         </TabsContent>
       </Tabs>
     </div>
