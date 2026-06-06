@@ -66,8 +66,8 @@ export default function DevelopersLanding() {
   }, []);
 
   const handleStart = () => {
-    if (session) router.push("/dashboard");
-    else router.push("/auth/signin?callbackUrl=/dashboard");
+    if (session) router.push("/developers/portal");
+    else router.push("/auth/signin?callbackUrl=/developers/portal");
   };
 
   return (
@@ -160,7 +160,7 @@ export default function DevelopersLanding() {
             </Link>
             <button onClick={handleStart} className="cta-btn"
               style={{ padding: "8px 20px", fontSize: 12 }}>
-              ابدأ مجاناً ←
+              {session ? "فتح البورتال ←" : "ابدأ مجاناً ←"}
             </button>
           </div>
         </div>
