@@ -251,7 +251,7 @@ function Bubble({
   const textColor = dark ? "text-[#e9edef]" : "text-[#111b21]";
 
   return (
-    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`}>
+    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`} dir="ltr">
       <div className="relative inline-block max-w-[80%] sm:max-w-[68%]">
         {showReactions && onReact && (
           <div className={`absolute -top-10 z-20 flex items-center gap-1 rounded-full shadow-lg border px-2 py-1
@@ -358,7 +358,7 @@ function Bubble({
           )}
 
           {msg.content && (
-            <p className={`leading-relaxed whitespace-pre-wrap break-words ${textColor}`}>
+            <p className={`leading-relaxed whitespace-pre-wrap break-words ${textColor}`} dir="auto">
               {linkify(msg.content)}
             </p>
           )}
@@ -884,7 +884,7 @@ export default function ChatPage() {
 
             {/* Messages area */}
             <div
-              className="flex-1 overflow-y-auto px-3 sm:px-6 py-4"
+              className="flex-1 overflow-y-auto px-3 sm:px-6 py-4" dir="ltr"
               style={{
                 backgroundImage: dark
                   ? "none"
