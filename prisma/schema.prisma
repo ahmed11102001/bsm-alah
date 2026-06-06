@@ -210,6 +210,7 @@ model Contact {
   unreadCount       Int          @default(0)
   updatedAt         DateTime     @updatedAt
   voiceAgentEnabled Boolean      @default(false)
+  lastAiRepliedAt   DateTime?
   audience          Audience?    @relation(fields: [audienceId], references: [id])
   user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages          Message[]
@@ -298,6 +299,7 @@ model Message {
   updatedAt   DateTime         @updatedAt
   status      MessageStatus    @default(pending)
   direction   MessageDirection @default(outbound)
+  senderType  MessageSenderType @default(human)
   reactions   Json?            @default("[]")
   campaign    Campaign?        @relation(fields: [campaignId], references: [id])
   contact     Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
@@ -309,6 +311,7 @@ model Message {
   @@index([status])
   @@index([createdAt])
   @@index([contactId, createdAt])
+  @@index([senderType])
 }
 
 model WebhookLog {
@@ -605,6 +608,13 @@ enum MessageStatus {
 enum MessageDirection {
   inbound
   outbound
+}
+
+enum MessageSenderType {
+  human
+  ai
+  bot
+  system
 }
 
 enum CampaignStatus {

@@ -9,7 +9,7 @@ import {
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
-  ArrowLeft, ChevronLeft,
+  ArrowLeft, ChevronLeft, Bot,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/language-context";
@@ -27,7 +27,7 @@ const t: Record<Lang, Record<string, string>> = {
   ar: {
     search: "بحث بالاسم أو الرقم",
     all: "الكل", replied: "تم الرد", today: "اليوم",
-    unread: "غير مقروءة", archived: "الأرشيف",
+    unread: "غير مقروءة", archived: "الأرشيف", ai_replied: "رد AI 🤖",
     noConvs: "لا توجد محادثات حتى الآن",
     noConvsHint: "ستظهر المحادثات هنا بعد رد العملاء",
     startCampaign: "ابدأ حملة الآن",
@@ -71,7 +71,7 @@ const t: Record<Lang, Record<string, string>> = {
   en: {
     search: "Search by name or number",
     all: "All", replied: "Replied", today: "Today",
-    unread: "Unread", archived: "Archived",
+    unread: "Unread", archived: "Archived", ai_replied: "AI Replied 🤖",
     noConvs: "No conversations yet",
     noConvsHint: "Conversations will appear here after customers reply",
     startCampaign: "Start a Campaign",
@@ -133,7 +133,7 @@ interface Message {
   direction: string; status: string; mediaUrl: string | null; createdAt: string;
   reactions?: { emoji: string; senderId: string }[];
 }
-type FilterType = "all" | "replied" | "today" | "unread" | "archived";
+type FilterType = "all" | "replied" | "today" | "unread" | "archived" | "ai_replied";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const initials = (c: Contact) => (c.name ?? c.phone).slice(0, 2).toUpperCase();
@@ -706,7 +706,7 @@ export default function ChatPage() {
         </div>
 
         {/* Filters */}
-        <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto`}>
+        <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto scrollbar-hide`}>
           {(["all","replied","today","unread","archived"] as FilterType[]).map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
@@ -720,6 +720,19 @@ export default function ChatPage() {
               {t[lang][f]}
             </button>
           ))}
+          {/* AI Replied — فلتر مستقل بتصميم مميز */}
+          <button
+            onClick={() => setFilter("ai_replied")}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+              filter === "ai_replied"
+                ? "bg-violet-500 border-violet-500 text-white"
+                : dark
+                  ? "bg-[#2a3942] border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
+                  : "bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100"
+            }`}>
+            <Bot className="w-3 h-3" />
+            {t[lang].ai_replied}
+          </button>
         </div>
 
         {/* List */}

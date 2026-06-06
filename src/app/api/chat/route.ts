@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus, MessageType } from "@/types/enums";
+import { MessageDirection, MessageStatus, MessageType, MessageSenderType } from "@/types/enums";
 import { inngest } from "@/inngest/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { decryptToken } from "@/lib/crypto";
@@ -31,10 +31,11 @@ export async function GET(req: NextRequest) {
 async function getConversations(userId: string, sp: URLSearchParams) {
   const rawFilter = sp.get("filter");
   const filter =
-    rawFilter === "unread" ||
-    rawFilter === "replied" ||
-    rawFilter === "today" ||
-    rawFilter === "archived"
+    rawFilter === "unread"     ||
+    rawFilter === "replied"    ||
+    rawFilter === "today"      ||
+    rawFilter === "archived"   ||
+    rawFilter === "ai_replied"
       ? rawFilter
       : "all";
   const search = sp.get("search") ?? "";
@@ -75,6 +76,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       id: true, name: true, phone: true,
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
+      voiceAgentEnabled: true, lastAiRepliedAt: true,
       // آخر رسالة من العميل (inbound) — مش رسالة الأتمتة أو الكامبين
       messages: {
         take: 1,
@@ -95,7 +97,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     },
   });
 
-  // Extra filter for "replied" — contacts where we sent AND they replied
+  // Extra filters — post-query
   let result = contacts;
   if (filter === "replied") {
     const repliedIds = await prisma.message.findMany({
@@ -103,16 +105,31 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       select: { contactId: true },
       distinct: ["contactId"],
     });
-    const s = new Set(repliedIds.map(m => m.contactId));
-    result = contacts.filter(c => s.has(c.id));
+    const s = new Set(repliedIds.map((m: { contactId: string }) => m.contactId));
+    result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
+  }
+  if (filter === "ai_replied") {
+    // المحادثات التي رد عليها الـ AI Agent أو Voice Agent
+    const aiContactIds = await prisma.message.findMany({
+      where: {
+        userId,
+        direction:  MessageDirection.outbound,
+        senderType: { in: [MessageSenderType.ai, MessageSenderType.bot] },
+      },
+      select:   { contactId: true },
+      distinct: ["contactId"],
+    });
+    const s = new Set(aiContactIds.map((m: { contactId: string }) => m.contactId));
+    result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
   }
 
-  const conversations = result.map(c => ({
+  const conversations = result.map((c: typeof contacts[number]) => ({
     contact: { id: c.id, name: c.name, phone: c.phone },
     lastMessage: c.messages[0] ?? null,
     unreadCount: c._count.messages,
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
     isArchived: c.isArchived,
+    voiceAgentEnabled: (c as any).voiceAgentEnabled ?? false,
   }));
 
   return NextResponse.json({ conversations });

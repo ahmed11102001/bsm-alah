@@ -2,7 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
-import { MessageDirection, MessageStatus, MessageType, TriggerType, ReplyType } from "@/types/enums";
+import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
 import { notifyNewMessage } from "@/lib/notifications";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
@@ -448,19 +448,26 @@ async function handleAutomation(ctx: {
         const metaData      = await metaRes.json();
         const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
 
-        await prisma.message.create({
-          data: {
-            userId,
-            contactId:  contactRecord.id,
-            content:    aiResult.reply,
-            type:       MessageType.audio,
-            direction:  MessageDirection.outbound,
-            status:     MessageStatus.sent,
-            whatsappId: whatsappMsgId,
-            mediaUrl:   audioUrl,
-            sentAt:     new Date(),
-          },
-        });
+        await prisma.$transaction([
+          prisma.message.create({
+            data: {
+              userId,
+              contactId:  contactRecord.id,
+              content:    aiResult.reply,
+              type:       MessageType.audio,
+              direction:  MessageDirection.outbound,
+              status:     MessageStatus.sent,
+              senderType: MessageSenderType.ai,
+              whatsappId: whatsappMsgId,
+              mediaUrl:   audioUrl,
+              sentAt:     new Date(),
+            },
+          }),
+          prisma.contact.update({
+            where: { id: contactRecord.id },
+            data:  { lastAiRepliedAt: new Date() },
+          }),
+        ]);
 
         console.log(`[VOICE-AGENT] ✅ Audio reply sent to ${from} via ${agentSettings.provider}`);
       } else {
@@ -629,7 +636,7 @@ async function handleAutomation(ctx: {
     void incrementAITokens(userId, result.tokensUsed);
   }
 
-  await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}` });
+  await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}`, isAI: true });
 }
 
 // -----------------------------------------------------------------------------
@@ -642,8 +649,10 @@ async function sendReply(ctx: {
   replyMediaUrl?: string;
   accountOwner:  { accessToken: string; phoneNumberId: string };
   ruleName:      string;
+  isAI?:         boolean;   // true = AI Agent أو Voice Agent
 }) {
-  const { userId, from, replyText, replyMediaUrl, accountOwner, ruleName } = ctx;
+  const { userId, from, replyText, replyMediaUrl, accountOwner, ruleName, isAI = false } = ctx;
+  const senderType = isAI ? MessageSenderType.ai : MessageSenderType.bot;
   const apiBase = `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`;
   const headers = {
     "Content-Type":  "application/json",
@@ -721,20 +730,30 @@ async function sendReply(ctx: {
   const metaData      = await metaRes.json();
   const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
 
-  await prisma.message.create({
-    data: {
-      userId,
-      contactId:  contact.id,
-      content:    replyText,
-      type:       MessageType.text,
-      direction:  MessageDirection.outbound,
-      status:     MessageStatus.sent,
-      whatsappId: whatsappMsgId,
-      sentAt:     new Date(),
-    },
-  });
+  await prisma.$transaction([
+    prisma.message.create({
+      data: {
+        userId,
+        contactId:  contact.id,
+        content:    replyText,
+        type:       MessageType.text,
+        direction:  MessageDirection.outbound,
+        status:     MessageStatus.sent,
+        senderType,
+        whatsappId: whatsappMsgId,
+        sentAt:     new Date(),
+      },
+    }),
+    // تحديث lastAiRepliedAt لو الرد من AI أو bot
+    ...(isAI ? [
+      prisma.contact.update({
+        where: { id: contact.id },
+        data:  { lastAiRepliedAt: new Date() },
+      }),
+    ] : []),
+  ]);
 
-  console.log(`[AUTOMATION] Done — replied to ${from} via "${ruleName}"`);
+  console.log(`[AUTOMATION] Done — replied to ${from} via "${ruleName}" (senderType=${senderType})`);
 }
 
 // -----------------------------------------------------------------------------

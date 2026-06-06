@@ -35,6 +35,14 @@ export const MessageDirection = {
 } as const;
 export type MessageDirection = (typeof MessageDirection)[keyof typeof MessageDirection];
 
+export const MessageSenderType = {
+  human:  "human",
+  ai:     "ai",
+  bot:    "bot",
+  system: "system",
+} as const;
+export type MessageSenderType = (typeof MessageSenderType)[keyof typeof MessageSenderType];
+
 export const CampaignStatus = {
   draft:     "draft",
   scheduled: "scheduled",
