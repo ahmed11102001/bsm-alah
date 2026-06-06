@@ -18,20 +18,31 @@ function buildCsp(nonce: string): string {
     "'self'",
     `'nonce-${nonce}'`,
     "https://fonts.googleapis.com",
-    isDev ? "'unsafe-inline'" : "",
+    // inline styles في الـ developers pages و dev tools
+    "'unsafe-inline'",
   ]
     .filter(Boolean)
     .join(" ");
 
   const connectSrc = [
     "'self'",
+    // Meta / WhatsApp API
     "https://graph.facebook.com",
     "https://graph.instagram.com",
+    // Cloudinary
     "https://*.cloudinary.com",
+    // Resend
     "https://api.resend.com",
+    // Inngest
     "https://api.inngest.com",
+    // ElevenLabs
     "https://api.elevenlabs.io",
+    // Upstash Redis
     "https://*.upstash.io",
+    // Sentry
+    "https://*.sentry.io",
+    "https://o4511405530284032.ingest.us.sentry.io",
+    // WebSocket
     "wss:",
     isDev ? "http://localhost:*" : "",
   ]
