@@ -140,8 +140,8 @@ const initials = (c: Contact) => (c.name ?? c.phone).slice(0, 2).toUpperCase();
 
 const avatarColor = (id: string) => {
   const colors = [
-    "bg-teal-500","bg-green-500","bg-blue-500",
-    "bg-purple-500","bg-pink-500","bg-orange-500","bg-cyan-500",
+    "bg-teal-500", "bg-green-500", "bg-blue-500",
+    "bg-purple-500", "bg-pink-500", "bg-orange-500", "bg-cyan-500",
   ];
   const n = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return colors[n % colors.length];
@@ -174,11 +174,11 @@ function linkify(text: string) {
 
 function MsgTick({ status, isMe }: { status: string; isMe: boolean }) {
   if (!isMe) return null;
-  if (status === "pending")   return <Clock className="w-3 h-3 opacity-60" />;
-  if (status === "sent")      return <Check className="w-3 h-3" />;
+  if (status === "pending") return <Clock className="w-3 h-3 opacity-60" />;
+  if (status === "sent") return <Check className="w-3 h-3" />;
   if (status === "delivered") return <CheckCheck className="w-3 h-3" />;
-  if (status === "read")      return <CheckCheck className="w-3 h-3 text-[#53bdeb]" />;
-  if (status === "failed")    return <X className="w-3 h-3 text-red-400" />;
+  if (status === "read") return <CheckCheck className="w-3 h-3 text-[#53bdeb]" />;
+  if (status === "failed") return <X className="w-3 h-3 text-red-400" />;
   return null;
 }
 
@@ -195,7 +195,7 @@ function dateStr(iso: string, lang: Lang) {
   return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" });
 }
 
-const QUICK_REACTIONS = ["❤️","😂","😮","😢","🙏","👍"];
+const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 function Bubble({
@@ -335,9 +335,8 @@ function Bubble({
                 {([1, 1.5, 2] as const).map(r => (
                   <button key={r} type="button"
                     onClick={e => { e.stopPropagation(); setSpeed(r); }}
-                    className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${
-                      speed === r ? "bg-[#25d366] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}>{r}x</button>
+                    className={`px-2 py-0.5 rounded-full text-[10px] transition-colors ${speed === r ? "bg-[#25d366] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}>{r}x</button>
                 ))}
               </div>
             </>
@@ -392,44 +391,49 @@ export default function ChatPage() {
   const dark = resolvedTheme === "dark";
   const lang: Lang = locale === "en" ? "en" : "ar";
 
-  const [convs, setConvs]               = useState<Conversation[]>([]);
+  const [convs, setConvs] = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
-  const [search, setSearch]             = useState("");
-  const [filter, setFilter]             = useState<FilterType>("all");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterType>("all");
 
-  const [selected, setSelected]         = useState<Conversation | null>(null);
-  const [messages, setMessages]         = useState<Message[]>([]);
-  const [loadingMsgs, setLoadingMsgs]   = useState(false);
+  const [selected, setSelected] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
 
   // mobile: show chat panel over sidebar
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
-  const [text, setText]                 = useState("");
-  const [sending, setSending]           = useState(false);
-  const [showAttach, setShowAttach]     = useState(false);
-  const [showEmoji, setShowEmoji]       = useState(false);
-  const [recording, setRecording]       = useState(false);
-  const [showTpl, setShowTpl]           = useState(false);
-  const [templates, setTemplates]       = useState<Template[]>([]);
-  const [audiences, setAudiences]       = useState<Audience[]>([]);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [showAttach, setShowAttach] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [showTpl, setShowTpl] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [audiences, setAudiences] = useState<Audience[]>([]);
 
-  const endRef      = useRef<HTMLDivElement>(null);
-  const fileRef     = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
-  const chunksRef   = useRef<Blob[]>([]);
-  const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const msgAreaRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef<boolean>(true);
+  const isInitialLoad = useRef<boolean>(true);
+  const lastMsgCount = useRef<number>(0);
+  const [hasNewMsgs, setHasNewMsgs] = useState(false);
 
   // ── Theme classes ────────────────────────────────────────────────
-  const bg       = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
+  const bg = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
   const sidebarBg = dark ? "bg-[#1f2c34]" : "bg-white";
-  const headerBg  = dark ? "bg-[#202c33]" : "bg-[#f0f2f5]";
-  const inputBg   = dark ? "bg-[#2a3942]" : "bg-white";
-  const textMain  = dark ? "text-[#e9edef]" : "text-[#111b21]";
-  const textSub   = dark ? "text-[#8696a0]" : "text-gray-400";
-  const border    = dark ? "border-[#2a3942]" : "border-gray-200";
+  const headerBg = dark ? "bg-[#202c33]" : "bg-[#f0f2f5]";
+  const inputBg = dark ? "bg-[#2a3942]" : "bg-white";
+  const textMain = dark ? "text-[#e9edef]" : "text-[#111b21]";
+  const textSub = dark ? "text-[#8696a0]" : "text-gray-400";
+  const border = dark ? "border-[#2a3942]" : "border-gray-200";
   const borderLight = dark ? "border-[#2a3942]" : "border-gray-100";
-  const searchBg  = dark ? "bg-[#2a3942] text-[#d1d7db] placeholder-[#8696a0]" : "bg-[#f0f2f5] text-gray-800 placeholder-gray-400";
-  const hoverRow  = dark ? "hover:bg-[#2a3942]" : "hover:bg-[#f5f6f6]";
+  const searchBg = dark ? "bg-[#2a3942] text-[#d1d7db] placeholder-[#8696a0]" : "bg-[#f0f2f5] text-gray-800 placeholder-gray-400";
+  const hoverRow = dark ? "hover:bg-[#2a3942]" : "hover:bg-[#f5f6f6]";
   const selectedRow = dark ? "bg-[#2a3942]" : "bg-[#e8f5e9]";
   const msgAreaBg = dark ? "#0b141a" : "#efeae2";
 
@@ -449,15 +453,40 @@ export default function ChatPage() {
     try {
       const r = await fetch(`/api/chat?type=messages&contactId=${contactId}`);
       const d = await r.json();
-      setMessages(d.messages ?? []);
+      const newMsgs: Message[] = d.messages ?? [];
+
+      // حفظ الـ scroll position قبل أي update
+      const el = msgAreaRef.current;
+      const prevScrollTop = el?.scrollTop ?? 0;
+      const prevScrollH = el?.scrollHeight ?? 0;
+      const wasAtBottom = isAtBottom.current;
+
+      lastMsgCount.current = newMsgs.length;
+      setMessages(newMsgs);
       setConvs(prev => prev.map(c =>
         c.contact.id === contactId ? { ...c, unreadCount: 0 } : c
       ));
+
+      // لو المستخدم مش في الأسفل (بيقرأ رسايل قديمة) → رجّع نفس الـ position
+      if (!wasAtBottom && !isInitialLoad.current && el) {
+        // لو في رسايل جديدة فعلاً → أظهر indicator
+        if (newMsgs.length > (lastMsgCount.current || 0)) {
+          setHasNewMsgs(true);
+        }
+        requestAnimationFrame(() => {
+          el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollH);
+        });
+      } else {
+        setHasNewMsgs(false);
+      }
     } finally { setLoadingMsgs(false); }
   }, []);
 
   const selectConv = useCallback((conv: Conversation) => {
     setSelected(conv);
+    isInitialLoad.current = true;   // ← أول فتح للمحادثة → scroll للأسفل
+    isAtBottom.current = true;
+    lastMsgCount.current = 0;
     fetchMsgs(conv.contact.id);
     setShowTpl(false); setShowAttach(false);
     setMobileShowChat(true);
@@ -469,7 +498,7 @@ export default function ChatPage() {
     const r = await fetch("/api/templates");
     const d = await r.json();
     setTemplates(Array.isArray(d) ? d.filter((t: Template) =>
-      ["approved","APPROVED"].includes(t.status)) : []);
+      ["approved", "APPROVED"].includes(t.status)) : []);
   }, []);
 
   const fetchAudiences = useCallback(async () => {
@@ -483,19 +512,34 @@ export default function ChatPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
 
+  // ── Smart scroll — ينزل للأسفل بس في 3 حالات ─────────────────────
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+
+    // حالة 1: أول تحميل للمحادثة → scroll فوري بدون animation
+    if (isInitialLoad.current) {
+      endRef.current?.scrollIntoView({ behavior: "auto" });
+      isInitialLoad.current = false;
+      return;
+    }
+
+    // حالة 2: المستخدم في الأسفل → scroll smooth للرسائل الجديدة
+    // حالة 3: المستخدم بيقرأ من فوق → لا تحرك إيه (fetchMsgs هيرجع الـ position)
+    if (isAtBottom.current) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // ── Actions ──────────────────────────────────────────────────────
   const sendText = async () => {
     if (!text.trim() || !selected || sending) return;
     const body = text; setText(""); setSending(true);
+    isAtBottom.current = true; // بعد الإرسال نزل للأسفل
     try {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action:"send", contactId: selected.contact.id, content: body, type:"text" }),
+        body: JSON.stringify({ action: "send", contactId: selected.contact.id, content: body, type: "text" }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
       fetchMsgs(selected.contact.id);
@@ -514,7 +558,7 @@ export default function ChatPage() {
       await fetch("/api/chat", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action:"react", contactId: selected.contact.id, messageId: msgId, emoji }),
+        body: JSON.stringify({ action: "react", contactId: selected.contact.id, messageId: msgId, emoji }),
       });
     } catch { /* silent */ }
   };
@@ -526,7 +570,7 @@ export default function ChatPage() {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action:"send", contactId: selected.contact.id, type:"template", templateName: tpl.name, content: `[Template] ${tpl.name}` }),
+        body: JSON.stringify({ action: "send", contactId: selected.contact.id, type: "template", templateName: tpl.name, content: `[Template] ${tpl.name}` }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
       toast.success(t[lang].templateSent);
@@ -545,7 +589,7 @@ export default function ChatPage() {
         const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action:"send", contactId: selected.contact.id, type:"text", content: `📍 Location: https://maps.google.com/?q=${lat},${lng}` }),
+          body: JSON.stringify({ action: "send", contactId: selected.contact.id, type: "text", content: `📍 Location: https://maps.google.com/?q=${lat},${lng}` }),
         });
         if (!r.ok) throw new Error();
         toast.success(t[lang].locationSent);
@@ -656,9 +700,9 @@ export default function ChatPage() {
   }, [convs, search]);
 
   const ATTACH_OPTIONS = [
-    { key: "image",    label: t[lang].photoLabel,   icon: <ImageIcon className="w-4 h-4" />,  accept: "image/*",                       color: "bg-purple-500" },
-    { key: "video",    label: t[lang].videoLabel,   icon: <Video className="w-4 h-4" />,      accept: "video/*",                       color: "bg-red-500", disabled: true },
-    { key: "document", label: t[lang].docLabel,     icon: <FileText className="w-4 h-4" />,   accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
+    { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, accept: "image/*", color: "bg-purple-500" },
+    { key: "video", label: t[lang].videoLabel, icon: <Video className="w-4 h-4" />, accept: "video/*", color: "bg-red-500", disabled: true },
+    { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
   ];
 
   // ─────────────────────────────────────────────────────────────────
@@ -707,29 +751,27 @@ export default function ChatPage() {
 
         {/* Filters */}
         <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto scrollbar-hide`}>
-          {(["all","replied","today","unread","archived"] as FilterType[]).map(f => (
+          {(["all", "replied", "today", "unread", "archived"] as FilterType[]).map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                filter === f
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
                   ? "bg-[#25d366] text-white"
                   : dark
                     ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}>
+                }`}>
               {t[lang][f]}
             </button>
           ))}
           {/* AI Replied — فلتر مستقل بتصميم مميز */}
           <button
             onClick={() => setFilter("ai_replied")}
-            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
-              filter === "ai_replied"
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "ai_replied"
                 ? "bg-violet-500 border-violet-500 text-white"
                 : dark
                   ? "bg-[#2a3942] border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
                   : "bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100"
-            }`}>
+              }`}>
             <Bot className="w-3 h-3" />
             {t[lang].ai_replied}
           </button>
@@ -782,12 +824,12 @@ export default function ChatPage() {
                     <p className={`text-xs truncate ${isUnread ? textMain : textSub}`}>
                       {last
                         ? <>
-                            {last.direction === "outbound" && <span className={textSub}>{t[lang].you}</span>}
-                            {typePreviewMap[last.type] ?? last.content ?? ""}
-                          </>
+                          {last.direction === "outbound" && <span className={textSub}>{t[lang].you}</span>}
+                          {typePreviewMap[last.type] ?? last.content ?? ""}
+                        </>
                         : <span className={`italic ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>
-                            {t[lang].noMsgs}
-                          </span>}
+                          {t[lang].noMsgs}
+                        </span>}
                     </p>
                     {isUnread ? (
                       <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold ${dir === "rtl" ? "mr-2" : "ml-2"}`}>
@@ -884,7 +926,15 @@ export default function ChatPage() {
 
             {/* Messages area */}
             <div
+              ref={msgAreaRef}
               className="flex-1 overflow-y-auto px-3 sm:px-6 py-4" dir="ltr"
+              onScroll={() => {
+                const el = msgAreaRef.current;
+                if (!el) return;
+                const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                isAtBottom.current = atBottom;
+                if (atBottom) setHasNewMsgs(false);
+              }}
               style={{
                 backgroundImage: dark
                   ? "none"
@@ -905,7 +955,7 @@ export default function ChatPage() {
               ) : (
                 <>
                   {messages.map((msg, i) => {
-                    const showDate = i === 0 || dateStr(messages[i-1].createdAt, lang) !== dateStr(msg.createdAt, lang);
+                    const showDate = i === 0 || dateStr(messages[i - 1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                     return (
                       <div key={msg.id}>
                         {showDate && (
@@ -921,6 +971,22 @@ export default function ChatPage() {
                     );
                   })}
                   <div ref={endRef} />
+                  {/* ── New messages indicator ── */}
+                  {hasNewMsgs && (
+                    <div className="sticky bottom-3 flex justify-center z-10 pointer-events-none">
+                      <button
+                        onClick={() => {
+                          endRef.current?.scrollIntoView({ behavior: "smooth" });
+                          setHasNewMsgs(false);
+                          isAtBottom.current = true;
+                        }}
+                        className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-lg transition-all"
+                        style={{ background: dark ? "#005c4b" : "#25D366", color: "#fff" }}
+                      >
+                        ↓ رسائل جديدة
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -966,9 +1032,8 @@ export default function ChatPage() {
                       return (
                         <label key={a.key}
                           onClick={e => { if (isDisabled) e.preventDefault(); }}
-                          className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-                            isDisabled ? "opacity-50 cursor-not-allowed" : `cursor-pointer ${hoverRow}`
-                          }`}>
+                          className={`flex items-center gap-3 px-4 py-3 transition-colors ${isDisabled ? "opacity-50 cursor-not-allowed" : `cursor-pointer ${hoverRow}`
+                            }`}>
                           <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
                             {a.icon}
                           </span>
@@ -1024,7 +1089,7 @@ export default function ChatPage() {
                       </button>
                     </div>
                     <div className="grid grid-cols-7 sm:grid-cols-8 gap-1 max-h-44 overflow-y-auto">
-                      {["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🫣","🤭","🤫","🤥","😶","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","💀","☠️","👻","👽","🤖","💩","❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","👍","👎","👏","🙌","🤝","🙏","✌️","🤞","🤟","🤘","🤙","👋","🤚","🖐","✋","🖖","💪","🔥","⭐","✨","💥","💫","🎉","🎊","🎈"].map(em => (
+                      {["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🫣", "🤭", "🤫", "🤥", "😶", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "💀", "☠️", "👻", "👽", "🤖", "💩", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "👍", "👎", "👏", "🙌", "🤝", "🙏", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🤚", "🖐", "✋", "🖖", "💪", "🔥", "⭐", "✨", "💥", "💫", "🎉", "🎊", "🎈"].map(em => (
                         <button key={em} onClick={() => setText(t => t + em)}
                           className={`text-xl rounded-lg p-0.5 transition-colors ${dark ? "hover:bg-[#2a3942]" : "hover:bg-gray-100"}`}>
                           {em}
