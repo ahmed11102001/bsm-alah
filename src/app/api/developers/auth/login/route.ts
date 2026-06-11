@@ -7,19 +7,37 @@ import { rateLimit } from "@/lib/rate-limit";
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
-    if (!email || !password) return NextResponse.json({ error: "الإيميل وكلمة المرور مطلوبين" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: "الإيميل وكلمة المرور مطلوبين" }, { status: 400 });
+    }
 
     const key = `dev-login:${email.toLowerCase()}`;
     const rl = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
-    if (!rl.success) return NextResponse.json({ error: `كثير من المحاولات. حاول بعد ${rl.retryAfter} ثانية` }, { status: 429 });
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: `كثير من المحاولات. حاول بعد ${rl.retryAfter} ثانية` },
+        { status: 429 }
+      );
+    }
 
-    const developer = await prisma.developerUser.findUnique({ where: { email: email.toLowerCase() } });
-    if (!developer || !(await bcrypt.compare(password, developer.password))) return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
-    if (developer.status === "SUSPENDED") return NextResponse.json({ error: "الحساب موقف، تواصل مع الدعم" }, { status: 403 });
+    const developer = await prisma.developerUser.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    if (!developer || !(await bcrypt.compare(password, developer.password))) {
+      return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
+    }
+    if (developer.status === "SUSPENDED") {
+      return NextResponse.json({ error: "الحساب موقف، تواصل مع الدعم" }, { status: 403 });
+    }
 
-    const token = await signDevToken({ id: developer.id, email: developer.email, name: developer.name, status: developer.status });
-    const redirect = developer.status === "PENDING_META" ? "/developers/connect-meta" : "/developers/portal";
-    const res = NextResponse.json({ ok: true, redirect });
+    const token = await signDevToken({
+      id: developer.id,
+      email: developer.email,
+      name: `${developer.firstName} ${developer.lastName}`,
+      status: developer.status,
+    });
+
+    const res = NextResponse.json({ ok: true, redirect: "/developers/portal" });
     res.headers.set("Set-Cookie", buildDevSessionCookie(token));
     return res;
   } catch (err) {

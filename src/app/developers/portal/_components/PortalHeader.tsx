@@ -1,55 +1,124 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Copy, Check } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Copy, Check, Bell } from "lucide-react";
+import Link from "next/link";
+
+const BREADCRUMBS: Record<string, string> = {
+  "/developers/portal":                    "المشاريع",
+  "/developers/portal/api-keys":           "API Keys",
+  "/developers/portal/otp-templates":      "القوالب",
+  "/developers/portal/quick-start":        "Quick Start",
+  "/developers/portal/live-tester":        "Live Tester",
+  "/developers/portal/activity-logs":      "Activity Logs",
+  "/developers/portal/endpoints":          "API Docs",
+};
 
 export default function PortalHeader({ developer }: { developer: any }) {
   const [copied, setCopied] = useState(false);
+  const pathname = usePathname();
   const activeKey = developer.apiKeys?.[0];
+
+  const pageTitle = BREADCRUMBS[pathname]
+    ?? Object.entries(BREADCRUMBS).find(([k]) => pathname.startsWith(k))?.[1]
+    ?? "البورتال";
 
   async function copyKey() {
     if (!activeKey?.keyPrefix) return;
-    await navigator.clipboard.writeText(activeKey.keyPrefix + "_xxxxxxxx");
+    await navigator.clipboard.writeText(activeKey.keyPrefix + "_live_xxxxxxxx");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   return (
-    <header className="h-16 bg-[#0f0f0f] border-b border-white/5 flex items-center justify-between px-6">
-      {/* Left: Breadcrumb / Title */}
-      <div>
-        <h2 className="text-white font-medium">Developer Portal</h2>
-        <p className="text-white/40 text-xs">إدارة OTP API</p>
-      </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Fira+Code:wght@400&display=swap');
 
-      {/* Right: API Key + Notifications */}
-      <div className="flex items-center gap-4">
-        {/* API Key Badge */}
-        {activeKey ? (
-          <button
-            onClick={copyKey}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-sm font-mono hover:bg-[#25D366]/20 transition-all"
-          >
-            <span>{activeKey.keyPrefix}_••••••••</span>
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-          </button>
-        ) : (
-          <span className="text-amber-400/70 text-sm bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-            مفيش API Key — روح اعمل واحد
-          </span>
-        )}
+        .portal-header {
+          height: 56px;
+          background: rgba(6,8,16,0.9);
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 24px;
+          backdrop-filter: blur(12px);
+          font-family: 'IBM Plex Sans Arabic', sans-serif;
+          direction: rtl;
+          flex-shrink: 0;
+        }
 
-        {/* Notifications */}
-        <button className="relative p-2 rounded-lg hover:bg-white/5 transition-colors text-white/60 hover:text-white">
-          <Bell size={20} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#25D366]" />
-        </button>
+        .header-title {
+          font-size: 15px; font-weight: 600; color: #fff;
+        }
+        .header-subtitle { font-size: 12px; color: rgba(255,255,255,0.3); }
 
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-black font-bold text-xs">
-          {developer.name?.[0]?.toUpperCase() || developer.email[0].toUpperCase()}
+        .header-right { display: flex; align-items: center; gap: 10px; }
+
+        .api-key-badge {
+          display: flex; align-items: center; gap: 7px;
+          padding: 6px 12px;
+          background: rgba(32,211,120,0.06);
+          border: 1px solid rgba(32,211,120,0.15);
+          border-radius: 8px;
+          color: rgba(32,211,120,0.8);
+          font-size: 12px; font-family: 'Fira Code', monospace;
+          cursor: pointer; transition: background 0.2s;
+        }
+        .api-key-badge:hover { background: rgba(32,211,120,0.1); }
+
+        .no-key-badge {
+          display: flex; align-items: center; gap: 7px;
+          padding: 6px 12px;
+          background: rgba(245,158,11,0.06);
+          border: 1px solid rgba(245,158,11,0.15);
+          border-radius: 8px;
+          color: rgba(245,158,11,0.7); font-size: 12px;
+          text-decoration: none;
+        }
+        .no-key-badge:hover { background: rgba(245,158,11,0.1); }
+
+        .notif-btn {
+          width: 34px; height: 34px; border-radius: 8px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.07);
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(255,255,255,0.35); cursor: pointer;
+          transition: background 0.2s; position: relative;
+        }
+        .notif-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.6); }
+      `}</style>
+
+      <header className="portal-header">
+        <div>
+          <div className="header-title">{pageTitle}</div>
+          <div className="header-subtitle">
+            {developer.projects?.length
+              ? `${developer.projects.length} مشروع نشط`
+              : "لا توجد مشاريع بعد"}
+          </div>
         </div>
-      </div>
-    </header>
+
+        <div className="header-right">
+          {activeKey ? (
+            <button className="api-key-badge" onClick={copyKey} title="نسخ الـ API Key">
+              {activeKey.keyPrefix}_••••••
+              {copied
+                ? <Check size={13} />
+                : <Copy size={13} />
+              }
+            </button>
+          ) : (
+            <Link href="/developers/portal/api-keys" className="no-key-badge">
+              ⚡ إنشاء API Key
+            </Link>
+          )}
+
+          <button className="notif-btn" aria-label="إشعارات">
+            <Bell size={15} />
+          </button>
+        </div>
+      </header>
+    </>
   );
 }

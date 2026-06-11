@@ -746,13 +746,15 @@ model LeadBotConfig {
 // ============================================================
 
 model DeveloperUser {
-  id        String              @id @default(cuid())
-  email     String              @unique
-  name      String?
-  password  String              // hashed — credentials only, no OAuth هنا
-  status    DeveloperStatus     @default(PENDING_META)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id          String              @id @default(cuid())
+  email       String              @unique
+  firstName   String              // الاسم الأول
+  lastName    String              // الاسم الأخير
+  phone       String              // رقم الموبايل
+  password    String              // hashed — credentials only, no OAuth هنا
+  status      DeveloperStatus     @default(PENDING_META)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   // نقل الملكية — null = لسه عند المبرمج
   // بعد النقل = userId الـ marketing user اللي استلم
@@ -761,9 +763,36 @@ model DeveloperUser {
   metaConnection DeveloperMetaConnection?
   otpTemplates   DeveloperOtpTemplate[]
   apiKeys        DeveloperApiKey[]
-  otpLogs        OtpLog[] // ← NEW: relation to OTP logs
+  otpLogs        OtpLog[]
+  projects       DeveloperProject[]
 
   @@map("developer_users")
+}
+
+// ─── Projects — كل مبرمج عنده مشاريع منفصلة ────────────────────────────────
+model DeveloperProject {
+  id          String              @id @default(cuid())
+  developerId String
+  name        String              // اسم المشروع
+  description String?             // وصف اختياري
+  status      ProjectStatus       @default(ACTIVE)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // نقل الملكية للعميل
+  transferredToUserId String?
+  transferredAt       DateTime?
+
+  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId])
+  @@map("developer_projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  TRANSFERRED
+  ARCHIVED
 }
 
 model DeveloperMetaConnection {
@@ -785,20 +814,39 @@ model DeveloperMetaConnection {
 }
 
 model DeveloperOtpTemplate {
-  id             String                 @id @default(cuid())
+  id             String                  @id @default(cuid())
   developerId    String
 
-  metaTemplateId String?
-  name           String
-  language       String                 @default("ar")
-  status         DeveloperTemplateStatus @default(PENDING)
+  // ─── Meta identifiers ───────────────────────────────────────────────────
+  metaTemplateId String?                 // Meta يرجع ده بعد الإرسال
+  name           String                  // snake_case — Meta requirement
+  language       String                  @default("ar")
+  category       TemplateCategory        @default(AUTHENTICATION)
+  status         DeveloperTemplateStatus @default(LOCAL_DRAFT)
+
+  // ─── Content ─────────────────────────────────────────────────────────────
+  headerType     String?                 // "none" | "text"
+  headerText     String?
+  body           String                  @db.Text
+  bodyExample    String?                 @db.Text  // JSON array of example values for {{vars}}
+  footer         String?
+
+  // ─── Meta feedback ───────────────────────────────────────────────────────
+  rejectedReason String?                 // سبب الرفض من Meta لو REJECTED
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
 
+  @@index([developerId])
   @@map("developer_otp_templates")
+}
+
+enum TemplateCategory {
+  AUTHENTICATION  // OTP
+  UTILITY         // إشعارات
+  MARKETING       // تسويقي
 }
 
 model DeveloperApiKey {
@@ -862,10 +910,11 @@ enum DeveloperStatus {
 }
 
 enum DeveloperTemplateStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  DISABLED
+  LOCAL_DRAFT   // محفوظ محليًا — لسه ما اتبعتش لـ Meta
+  PENDING       // اتبعت لـ Meta وبتستنى الموافقة
+  APPROVED      // Meta وافقت — جاهز للاستخدام
+  REJECTED      // Meta رفضت — شوف السبب
+  DISABLED      // متوقف
 }
 
 enum DeveloperApiKeyStatus {

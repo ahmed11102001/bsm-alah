@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import prisma from "@/lib/prisma";
 
-async function verifyApiKey(apiKey: string): Promise<string | null> {
-  const hash = createHash("sha256").update(apiKey).digest("hex");
+// ─── Verify API Key ───────────────────────────────────────────────────────────
+async function verifyApiKey(raw: string): Promise<string | null> {
+  const hash = createHash("sha256").update(raw.trim()).digest("hex");
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
   });
@@ -11,41 +12,101 @@ async function verifyApiKey(apiKey: string): Promise<string | null> {
   return keyRecord.developerId;
 }
 
+// ─── Human-readable remaining time ───────────────────────────────────────────
+function secondsRemaining(expiredAt: Date | null): number | null {
+  if (!expiredAt) return null;
+  const diff = Math.floor((expiredAt.getTime() - Date.now()) / 1000);
+  return diff > 0 ? diff : 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GET /api/developers/otp/status/[token]
+//
+// Headers:  x-api-key: wani_live_xxxx
+// Response: { token, status, phone, sentAt, verifiedAt, expiresAt, secondsRemaining }
+// ═══════════════════════════════════════════════════════════════════════════
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  try {
-    const apiKey = req.headers.get("x-api-key");
-    if (!apiKey) {
-      return NextResponse.json({ error: "API Key مطلوب" }, { status: 401 });
-    }
-
-    const developerId = await verifyApiKey(apiKey);
-    if (!developerId) {
-      return NextResponse.json({ error: "API Key غير صحيح" }, { status: 401 });
-    }
-
-    const { token } = await params;
-
-    const otp = await prisma.otpLog.findFirst({
-      where: { token, developerId },
-    });
-
-    if (!otp) {
-      return NextResponse.json({ error: "Token مش موجود" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      token: otp.token,
-      status: otp.status.toLowerCase(),
-      phone: otp.phone,
-      sentAt: otp.sentAt?.toISOString() || null,
-      verifiedAt: otp.verifiedAt?.toISOString() || null,
-      expiresAt: otp.expiredAt?.toISOString() || null,
-    });
-  } catch (err: any) {
-    console.error("[otp-status]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+  // ── 1. Auth ──────────────────────────────────────────────────────────────
+  const rawKey = req.headers.get("x-api-key")?.trim();
+  if (!rawKey) {
+    return NextResponse.json(
+      { ok: false, error: "x-api-key header مطلوب" },
+      { status: 401 }
+    );
   }
+
+  const developerId = await verifyApiKey(rawKey);
+  if (!developerId) {
+    return NextResponse.json(
+      { ok: false, error: "API Key غير صحيح أو ملغي" },
+      { status: 401 }
+    );
+  }
+
+  // ── 2. Get token from params ──────────────────────────────────────────────
+  const { token } = await params;
+  if (!token) {
+    return NextResponse.json(
+      { ok: false, error: "token مطلوب في الـ URL" },
+      { status: 400 }
+    );
+  }
+
+  // ── 3. Find OTP ───────────────────────────────────────────────────────────
+  const otp = await prisma.otpLog.findFirst({
+    where: { token, developerId },
+    select: {
+      token:         true,
+      status:        true,
+      phone:         true,
+      sentAt:        true,
+      verifiedAt:    true,
+      expiredAt:     true,
+      createdAt:     true,
+      metaMessageId: true,
+      error:         true,
+    },
+  });
+
+  if (!otp) {
+    return NextResponse.json(
+      { ok: false, error: "Token غير موجود أو لا ينتمي لهذا الـ API Key" },
+      { status: 404 }
+    );
+  }
+
+  // ── 4. Auto-mark expired if past expiry ───────────────────────────────────
+  let currentStatus = otp.status;
+  if (
+    currentStatus === "SENT" &&
+    otp.expiredAt &&
+    new Date() > otp.expiredAt
+  ) {
+    await prisma.otpLog.updateMany({
+      where: { token, developerId, status: "SENT" },
+      data:  { status: "EXPIRED" },
+    });
+    currentStatus = "EXPIRED";
+  }
+
+  // ── 5. Build response ─────────────────────────────────────────────────────
+  const secs = secondsRemaining(otp.expiredAt);
+
+  return NextResponse.json({
+    ok:              true,
+    token:           otp.token,
+    status:          currentStatus.toLowerCase(),
+    phone:           otp.phone,
+    sentAt:          otp.sentAt?.toISOString()      ?? null,
+    verifiedAt:      otp.verifiedAt?.toISOString()  ?? null,
+    expiresAt:       otp.expiredAt?.toISOString()   ?? null,
+    secondsRemaining: secs,
+    meta: {
+      messageId: otp.metaMessageId ?? null,
+      error:     otp.error         ?? null,
+    },
+  });
 }

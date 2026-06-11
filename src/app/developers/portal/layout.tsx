@@ -5,48 +5,31 @@ import prisma from "@/lib/prisma";
 import PortalSidebar from "./_components/PortalSidebar";
 import PortalHeader from "./_components/PortalHeader";
 
-export default async function PortalLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default async function PortalLayout({ children }: { children: ReactNode }) {
   const session = await getDevSession();
+  if (!session) redirect("/developers/signin");
 
-  if (!session) {
-    redirect("/developers/signin");
-  }
-
-  // Fetch developer data
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
     include: {
       metaConnection: true,
-      apiKeys: {
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
+      apiKeys: { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" }, take: 1 },
+      projects: { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" } },
     },
   });
 
-  if (!developer) {
-    redirect("/developers/signin");
-  }
+  if (!developer) redirect("/developers/signin");
+  if (developer.status === "SUSPENDED") redirect("/developers/signin?error=suspended");
 
-  // If still pending meta, redirect
-  if (developer.status === "PENDING_META") {
-    redirect("/developers/connect-meta");
-  }
+  // ✅ لا redirect لـ connect-meta — المبرمج يدخل البورتال مباشرة
+  // ربط Meta بيبقى اختياري داخل كل مشروع
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
-      {/* Sidebar */}
+    <div style={{ minHeight: "100vh", background: "#060810", display: "flex" }}>
       <PortalSidebar developer={developer} />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <PortalHeader developer={developer} />
-        <main className="flex-1 p-6 overflow-auto">
+        <main style={{ flex: 1, overflow: "auto" }}>
           {children}
         </main>
       </div>
