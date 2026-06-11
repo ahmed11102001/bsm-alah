@@ -333,7 +333,7 @@ export default function QuickStartPage() {
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiCode, setAiCode]         = useState("");
   const [aiStreaming, setAiStreaming] = useState(false);
-  const codeRef = useRef<HTMLDivElement>(null);
+  const codeRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
     setMounted(true);
