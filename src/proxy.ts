@@ -16,9 +16,11 @@ function buildCsp(nonce: string): string {
 
   const styleSrc = [
     "'self'",
-    `'nonce-${nonce}'`,
     "https://fonts.googleapis.com",
-    // inline styles في الـ developers pages و dev tools
+    // ✅ inline <style> tags في الـ developers pages و dev tools
+    // ملاحظة: لازم نسيب الـ nonce بره الـ directive ده — وجود nonce-source
+    // في style-src بيخلي المتصفح يتجاهل 'unsafe-inline' تمامًا (CSP Level 2+)،
+    // وده كان السبب في عدم تطبيق <style> tags في صفحات الـ developer portal.
     "'unsafe-inline'",
   ]
     .filter(Boolean)
