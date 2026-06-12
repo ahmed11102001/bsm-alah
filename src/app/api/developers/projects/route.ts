@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getDevSession } from "@/lib/dev-auth";
+import { getDevSessionFromRequest } from "@/lib/dev-auth";
 
 // ── GET /api/developers/projects — جلب كل مشاريع المبرمج ─────────────────────
 export async function GET(req: NextRequest) {
-  const session = await getDevSession(req);
+  const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const projects = await prisma.developerProject.findMany({
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 // ── POST /api/developers/projects — إنشاء مشروع جديد ────────────────────────
 export async function POST(req: NextRequest) {
-  const session = await getDevSession(req);
+  const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const { name, description } = await req.json();
