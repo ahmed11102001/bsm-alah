@@ -746,44 +746,38 @@ model LeadBotConfig {
 // ============================================================
 
 model DeveloperUser {
-  id          String              @id @default(cuid())
-  email       String              @unique
-  firstName   String              // الاسم الأول
-  lastName    String              // الاسم الأخير
-  phone       String              // رقم الموبايل
-  password    String              // hashed — credentials only, no OAuth هنا
-  status      DeveloperStatus     @default(PENDING_META)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id        String          @id @default(cuid())
+  email     String          @unique
+  firstName String
+  lastName  String
+  phone     String
+  password  String
+  status    DeveloperStatus @default(PENDING_META)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
-  // نقل الملكية — null = لسه عند المبرمج
-  // بعد النقل = userId الـ marketing user اللي استلم
-  transferredToUserId String?
-
-  metaConnection DeveloperMetaConnection?
-  otpTemplates   DeveloperOtpTemplate[]
-  apiKeys        DeveloperApiKey[]
-  otpLogs        OtpLog[]
-  projects       DeveloperProject[]
+  projects DeveloperProject[]
+  otpLogs  OtpLog[]
 
   @@map("developer_users")
 }
 
-// ─── Projects — كل مبرمج عنده مشاريع منفصلة ────────────────────────────────
 model DeveloperProject {
-  id          String              @id @default(cuid())
+  id          String        @id @default(cuid())
   developerId String
-  name        String              // اسم المشروع
-  description String?             // وصف اختياري
-  status      ProjectStatus       @default(ACTIVE)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  // نقل الملكية للعميل
   transferredToUserId String?
   transferredAt       DateTime?
 
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  developer      DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  metaConnection DeveloperMetaConnection?
+  apiKeys        DeveloperApiKey[]
+  otpTemplates   DeveloperOtpTemplate[]
 
   @@index([developerId])
   @@map("developer_projects")
@@ -796,117 +790,108 @@ enum ProjectStatus {
 }
 
 model DeveloperMetaConnection {
-  id            String   @id @default(cuid())
-  developerId   String   @unique
+  id        String @id @default(cuid())
+  projectId String @unique
 
   accessToken   String   @db.Text
   phoneNumberId String
   wabaId        String
   displayPhone  String
 
-  isVerified    Boolean  @default(false)
-  connectedAt   DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isVerified  Boolean  @default(false)
+  connectedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("developer_meta_connections")
 }
 
 model DeveloperOtpTemplate {
-  id             String                  @id @default(cuid())
-  developerId    String
+  id        String @id @default(cuid())
+  projectId String
 
-  // ─── Meta identifiers ───────────────────────────────────────────────────
-  metaTemplateId String?                 // Meta يرجع ده بعد الإرسال
-  name           String                  // snake_case — Meta requirement
+  metaTemplateId String?
+  name           String
   language       String                  @default("ar")
   category       TemplateCategory        @default(AUTHENTICATION)
   status         DeveloperTemplateStatus @default(LOCAL_DRAFT)
 
-  // ─── Content ─────────────────────────────────────────────────────────────
-  headerType     String?                 // "none" | "text"
+  headerType     String?
   headerText     String?
-  body           String                  @db.Text
-  bodyExample    String?                 @db.Text  // JSON array of example values for {{vars}}
+  body           String  @db.Text
+  bodyExample    String? @db.Text
   footer         String?
-
-  // ─── Meta feedback ───────────────────────────────────────────────────────
-  rejectedReason String?                 // سبب الرفض من Meta لو REJECTED
+  rejectedReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@index([developerId])
+  @@index([projectId])
   @@map("developer_otp_templates")
 }
 
 enum TemplateCategory {
-  AUTHENTICATION  // OTP
-  UTILITY         // إشعارات
-  MARKETING       // تسويقي
+  AUTHENTICATION
+  UTILITY
+  MARKETING
 }
 
 model DeveloperApiKey {
-  id          String               @id @default(cuid())
-  developerId String
+  id        String @id @default(cuid())
+  projectId String
 
-  keyHash     String               @unique
-  keyPrefix   String               // wani_live_xxxx — للعرض فقط
-  name        String?
+  keyHash   String  @unique
+  keyPrefix String
+  name      String?
 
-  status      DeveloperApiKeyStatus @default(ACTIVE)
-  lastUsedAt  DateTime?
-  createdAt   DateTime             @default(now())
-  revokedAt   DateTime?
+  status     DeveloperApiKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?
+  createdAt  DateTime              @default(now())
+  revokedAt  DateTime?
 
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId])
   @@map("developer_api_keys")
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// OTP Logs — لتتبع كل عمليات الإرسال والتحقق
-// ═══════════════════════════════════════════════════════════════════════════
-
 model OtpLog {
-  id            String       @id @default(cuid())
-  developerId   String
+  id          String @id @default(cuid())
+  developerId String
+  projectId   String
 
   phone         String
   token         String       @unique
   code          String
-
   status        OtpLogStatus @default(PENDING)
-
   metaMessageId String?
   error         String?
 
-  sentAt        DateTime?
-  verifiedAt    DateTime?
-  expiredAt     DateTime?
-  failedAt      DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  sentAt     DateTime?
+  verifiedAt DateTime?
+  expiredAt  DateTime?
+  failedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  developer     DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
 
   @@index([developerId, createdAt])
+  @@index([projectId, createdAt])
   @@index([token])
   @@index([phone, developerId])
   @@index([status])
   @@map("otp_logs")
 }
 
-// ── Developer Enums ───────────────────────────────────────────────────────────
-
 enum DeveloperStatus {
-  PENDING_META  // سجل بس لسه ما ربطش Meta
-  ACTIVE        // ربط Meta وعنده API Key
+  PENDING_META
+  ACTIVE
   SUSPENDED
-  TRANSFERRED   // اتنقلت ملكيته
+  TRANSFERRED
 }
 
 enum DeveloperTemplateStatus {
