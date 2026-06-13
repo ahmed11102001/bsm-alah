@@ -2,19 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  FolderOpen, Key, FileText, Code, Zap, Activity, LogOut,
-  ChevronLeft, Webhook, BookOpen,
-} from "lucide-react";
+import { FolderOpen, LogOut, ChevronLeft } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "المشاريع",      href: "/developers/portal",              icon: FolderOpen,  exact: true },
-  { label: "API Keys",      href: "/developers/portal/api-keys",     icon: Key },
-  { label: "القوالب",       href: "/developers/portal/otp-templates",icon: FileText },
-  { label: "Quick Start",   href: "/developers/portal/quick-start",  icon: Code },
-  { label: "Live Tester",   href: "/developers/portal/live-tester",  icon: Zap },
-  { label: "Activity Logs", href: "/developers/portal/activity-logs",icon: Activity },
-  { label: "API Docs",      href: "/developers/portal/endpoints",    icon: BookOpen },
+  { label: "المشاريع", href: "/developers/portal", icon: FolderOpen, exact: true },
 ];
 
 export default function PortalSidebar({ developer }: { developer: any }) {
@@ -36,7 +27,6 @@ export default function PortalSidebar({ developer }: { developer: any }) {
     .slice(0, 2)
     .toUpperCase();
 
-  const metaConnected = !!developer.metaConnection?.isVerified;
 
   return (
     <>
@@ -187,18 +177,6 @@ export default function PortalSidebar({ developer }: { developer: any }) {
           })}
 
           <div className="divider" />
-          <div className="nav-section-label">الإعدادات</div>
-
-          {/* Meta status */}
-          <div className={`meta-badge ${metaConnected ? "connected" : "disconnected"}`}>
-            <div className="meta-dot" />
-            <span>{metaConnected ? "Meta متصل" : "Meta غير متصل"}</span>
-            {!metaConnected && (
-              <Link href="/developers/connect-meta" className="meta-badge-link">
-                ربط ←
-              </Link>
-            )}
-          </div>
 
           {/* Logout */}
           <button onClick={handleLogout} className="nav-item nav-item-logout">
