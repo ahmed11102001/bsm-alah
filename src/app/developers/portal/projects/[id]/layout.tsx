@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
 import prisma from "@/lib/prisma";
 import ProjectSidebar from "./_components/ProjectSidebar";
-import PortalHeader from "../../_components/PortalHeader";
 
 export default async function ProjectLayout({
   children,
@@ -55,16 +54,13 @@ export default async function ProjectLayout({
   if (!project) redirect("/developers/portal");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#060810", display: "flex" }}>
+    <div style={{ height: "100%", background: "#060810", display: "flex", overflow: "hidden" }}>
       <ProjectSidebar
         developer={developer}
         project={project}
         allProjects={developer.projects}
       />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <PortalHeader developer={developer} currentProject={project} />
-        <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
-      </div>
+      <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
     </div>
   );
 }

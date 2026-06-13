@@ -92,46 +92,6 @@ export default function ProjectsDashboard() {
           pointer-events: none;
         }
 
-        /* Top navbar */
-        .portal-nav {
-          position: sticky; top: 0; z-index: 50;
-          background: rgba(6,8,16,0.85);
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          backdrop-filter: blur(20px);
-          padding: 0 32px;
-          height: 60px;
-          display: flex; align-items: center; justify-content: space-between;
-        }
-        .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .nav-logo-icon {
-          width: 32px; height: 32px; border-radius: 8px;
-          background: linear-gradient(135deg, #20d378, #10b854);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 14px; font-weight: 700; color: #060810;
-          font-family: 'Fira Code', monospace;
-        }
-        .nav-logo-text { font-size: 15px; font-weight: 500; color: #fff; }
-        .nav-logo-badge {
-          font-size: 11px; color: rgba(255,255,255,0.35);
-          padding: 2px 8px; border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 20px;
-        }
-        .nav-right { display: flex; align-items: center; gap: 12px; }
-        .nav-docs-link {
-          font-size: 13px; color: rgba(255,255,255,0.45);
-          text-decoration: none; padding: 6px 12px; border-radius: 8px;
-          transition: color 0.2s, background 0.2s;
-        }
-        .nav-docs-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .nav-avatar {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: rgba(32,211,120,0.15);
-          border: 1px solid rgba(32,211,120,0.25);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; font-weight: 600; color: #20d378;
-          cursor: pointer;
-        }
-
         /* Main content */
         .portal-main {
           max-width: 1100px; margin: 0 auto;
@@ -373,25 +333,6 @@ export default function ProjectsDashboard() {
       `}</style>
 
       <div className="portal-root">
-        {/* Navbar */}
-        <nav className="portal-nav">
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <Link href="/developers" className="nav-logo">
-              <div className="nav-logo-icon">W</div>
-              <span className="nav-logo-text">وني</span>
-            </Link>
-            <span className="nav-logo-badge">Developer Portal</span>
-          </div>
-          <div className="nav-right">
-            <Link href="/developers/portal/quick-start" className="nav-docs-link">
-              Quick Start
-            </Link>
-            <Link href="/developers/portal/endpoints" className="nav-docs-link">
-              API Docs
-            </Link>
-            <div className="nav-avatar" title="الملف الشخصي">م</div>
-          </div>
-        </nav>
 
         {/* Main */}
         <main className={`portal-main ${mounted ? "visible" : ""}`}>
