@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Key, FileText, Activity, LogOut,
   ChevronLeft, ChevronDown, Check, Plus, BookOpen, Zap,
-  Share2,
+  Share2, Code,
 } from "lucide-react";
 
 interface Project {
@@ -22,8 +22,8 @@ function getNavItems(projectId: string) {
     { label: "القوالب",    href: `/developers/portal/projects/${projectId}/otp-templates`,      icon: FileText },
     { label: "السجلات",    href: `/developers/portal/projects/${projectId}/activity-logs`,      icon: Activity },
     { label: "تسليم المشروع", href: `/developers/portal/projects/${projectId}/transfer`,        icon: Share2 },
-    { label: "quick-tester", href: `/developers/portal/projects/${projectId}/quick-tester`, icon: Zap },
-    { label: "Live Tester", href: `/developers/portal/projects/${projectId}/live-tester`, icon: Zap },
+    { label: "البدء السريع",  href: `/developers/portal/projects/${projectId}/quick-start`,    icon: Code },
+    { label: "Live Tester",   href: `/developers/portal/projects/${projectId}/live-tester`,    icon: Zap },
   ];
 
 }

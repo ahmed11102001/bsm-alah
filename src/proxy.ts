@@ -41,8 +41,8 @@ function buildCsp(nonce: string): string {
     "https://api.elevenlabs.io",
     // Upstash Redis
     "https://*.upstash.io",
-    // Sentry
-    "https://*.sentry.io",
+    // Anthropic (Quick Start AI)
+    "https://api.anthropic.com",
     "https://o4511405530284032.ingest.us.sentry.io",
     // WebSocket
     "wss:",
@@ -62,6 +62,16 @@ function buildCsp(nonce: string): string {
     "frame-ancestors 'none'",
     "X-Content-Type-Options: nosniff",
   ].join("; ");
+}
+
+// ─── Helper: forward request with nonce for Next.js inline scripts ───────────
+function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+  return applyHeaders(
+    NextResponse.next({ request: { headers: requestHeaders } }),
+    nonce
+  );
 }
 
 // ─── Helper: apply security headers ──────────────────────────────────────────
@@ -102,7 +112,7 @@ export async function proxy(req: NextRequest) {
 
     // صفحات عامة — تمر بدون auth
     if (isPublicDevRoute(pathname)) {
-      return applyHeaders(NextResponse.next(), nonce);
+      return nextWithNonce(req, nonce);
     }
 
     // تحقق من الـ dev session
@@ -145,7 +155,7 @@ export async function proxy(req: NextRequest) {
     }
 
     // مصادق عليه → كمّل
-    return applyHeaders(NextResponse.next(), nonce);
+    return nextWithNonce(req, nonce);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -166,11 +176,7 @@ export async function proxy(req: NextRequest) {
   // ═══════════════════════════════════════════════════════════════════════
   // 3. باقي الـ routes — headers بس
   // ═══════════════════════════════════════════════════════════════════════
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-nonce", nonce);
-
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  return applyHeaders(response, nonce);
+  return nextWithNonce(req, nonce);
 }
 
 // بنشغل الـ proxy على كل الصفحات ما عدا الـ static files
