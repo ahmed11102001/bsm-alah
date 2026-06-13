@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TemplateStatus = "LOCAL_DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "DISABLED";
@@ -170,7 +171,10 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function TemplatesPage() {
+export default function ProjectTemplatesPage() {
+  const params = useParams();
+  const projectId = params.id as string;
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "create">("list");
@@ -195,11 +199,11 @@ export default function TemplatesPage() {
   useEffect(() => {
     setMounted(true);
     fetchTemplates();
-  }, []);
+  }, [projectId]);
 
   async function fetchTemplates() {
     try {
-      const res = await fetch("/api/developers/portal/otp-templates");
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`);
       const data = await res.json();
       setTemplates(data.templates || []);
     } catch { setTemplates([]); }
@@ -235,7 +239,7 @@ export default function TemplatesPage() {
     if (!form.body.trim()) { setFormError("محتوى القالب مطلوب"); return; }
     setSaving(true); setFormError("");
     try {
-      const res = await fetch("/api/developers/portal/otp-templates", {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: false }),
@@ -257,7 +261,7 @@ export default function TemplatesPage() {
     }
     setSubmitting(true); setFormError("");
     try {
-      const res = await fetch("/api/developers/portal/otp-templates", {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: true }),

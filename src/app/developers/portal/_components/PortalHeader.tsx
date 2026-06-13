@@ -15,7 +15,13 @@ const BREADCRUMBS: Record<string, string> = {
   "/developers/portal/endpoints":          "API Docs",
 };
 
-export default function PortalHeader({ developer }: { developer: any }) {
+export default function PortalHeader({
+  developer,
+  currentProject,
+}: {
+  developer: any;
+  currentProject?: any;
+}) {
   const [copied, setCopied] = useState(false);
   const pathname = usePathname();
   const activeKey = developer.apiKeys?.[0];
@@ -93,7 +99,9 @@ export default function PortalHeader({ developer }: { developer: any }) {
         <div>
           <div className="header-title">{pageTitle}</div>
           <div className="header-subtitle">
-            {developer.projects?.length
+            {currentProject
+              ? currentProject.name
+              : developer.projects?.length
               ? `${developer.projects.length} مشروع نشط`
               : "لا توجد مشاريع بعد"}
           </div>

@@ -342,9 +342,17 @@ export default function QuickStartPage() {
 
   async function loadData() {
     try {
+      // جيب أول مشروع نشط الأول
+      const projRes = await fetch("/api/developers/projects");
+      const projData = await projRes.json();
+      const activeProjects = (projData.projects || []).filter((p: any) => p.status === "ACTIVE");
+      if (!activeProjects.length) return;
+
+      const projectId = activeProjects[0].id;
+
       const [keysRes, tmplRes] = await Promise.all([
-        fetch("/api/developers/portal/api-keys"),
-        fetch("/api/developers/portal/otp-templates"),
+        fetch(`/api/developers/projects/${projectId}/api-keys`),
+        fetch(`/api/developers/projects/${projectId}/otp-templates`),
       ]);
       const keysData = await keysRes.json();
       const tmplData = await tmplRes.json();
