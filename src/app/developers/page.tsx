@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -213,7 +212,7 @@ export default function DevelopersLandingPage() {
               letterSpacing: "-0.2px",
             }}
           >
-            ابدأ مجاناً — 50 رسالة
+            ابدأ مجاناً — 20 رسالة
             <ArrowRight size={15} />
           </Link>
           <Link
@@ -435,6 +434,92 @@ export default function DevelopersLandingPage() {
         </div>
       </section>
 
+      {/* ── PRICING ─────────────────────────────────────────────────────── */}
+      <section style={{ maxWidth: "820px", margin: "0 auto", padding: "0 24px 96px" }}>
+        {/* label */}
+        <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "rgba(37,211,102,0.07)", border: "1px solid rgba(37,211,102,0.15)", marginBottom: "16px" }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#25D366", display: "inline-block" }}/>
+            <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em" }}>pricing</span>
+          </div>
+          <h2 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.8px", marginBottom: "10px" }}>سعر واضح، بدون مفاجآت</h2>
+          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.35)" }}>ابدأ مجاناً وانتقل للخطة المدفوعة وأنت مرتاح</p>
+        </div>
+
+        {/* cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+
+          {/* Trial */}
+          <div style={{ padding: "32px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", position: "relative", display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", marginBottom: "20px" }}>TRIAL</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
+              <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>0</span>
+              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>ج.م</span>
+            </div>
+            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>جرّب المنتج وتأكد إنه مناسب قبل ما تدفع أي حاجة</p>
+
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
+              {[
+                { t: "20 رسالة OTP", s: "كافية للتجربة الكاملة" },
+                { t: "API Key واحد", s: "للمشروع التجريبي" },
+                { t: "كل الـ Endpoints", s: "send · verify · status" },
+                { t: "Dashboard كامل", s: "سجلات، إحصائيات" },
+              ].map(({ t, s }) => (
+                <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>
+                  <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>{t} <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "12px" }}>— {s}</span></span>
+                </div>
+              ))}
+            </div>
+
+            <a href="/developers/signup" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px 0", borderRadius: "11px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", fontSize: "13px", fontWeight: 600, textDecoration: "none", transition: "all .2s" }}>
+              ابدأ مجاناً
+            </a>
+          </div>
+
+          {/* Developer */}
+          <div style={{ padding: "32px", borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", position: "relative", display: "flex", flexDirection: "column" }}>
+            {/* Popular badge */}
+            <div style={{ position: "absolute", top: "20px", left: "20px", padding: "3px 10px", borderRadius: "20px", background: "#25D366", color: "#000", fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em" }}>الأكثر طلباً</div>
+
+            <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em", marginBottom: "20px" }}>DEVELOPER</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
+              <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>300</span>
+              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>ج.م / شهر</span>
+            </div>
+            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>للمطورين الجادين — كل ما تحتاجه في مشروع production</p>
+
+            <div style={{ borderTop: "1px solid rgba(37,211,102,0.1)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
+              {[
+                { t: "API Key", s: "لكل مشروع بشكل منفصل" },
+                { t: "رسائل OTP غير محدودة*", s: "حسب باقة الواتساب" },
+                { t: "متعدد المشاريع", s: "كل مشروع معزول تماماً" },
+                { t: "ربط Meta مخصص", s: "رقم WhatsApp Business خاص" },
+                { t: "قوالب OTP مخصصة", s: "موافقة Meta مدمجة" },
+                { t: "تسليم المشروع للعميل", s: "Transfer ownership" },
+                { t: "سجلات وإحصائيات", s: "لكل مشروع على حدة" },
+                { t: "دعم فني", s: "واتساب مباشر" },
+              ].map(({ t, s }) => (
+                <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>
+                  <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>{t} <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "12px" }}>— {s}</span></span>
+                </div>
+              ))}
+            </div>
+
+            <a href="/developers/signup" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "13px 0", borderRadius: "11px", background: "#25D366", color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
+              اشترك دلوقتي
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+          </div>
+        </div>
+
+        {/* footnote */}
+        <p style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.2)", marginTop: "20px", lineHeight: 1.6 }}>
+          * عدد الرسائل مرتبط بباقة Meta Business الخاصة بيك — وني مش بيحدد الرسائل من جانبه
+        </p>
+      </section>
+
       {/* ── CTA STRIP ───────────────────────────────────────────────────── */}
       <section style={{ padding: "0 24px 80px" }}>
         <div
@@ -478,7 +563,7 @@ export default function DevelopersLandingPage() {
               marginBottom: "24px",
             }}
           >
-            50 رسالة مجانية — لا كارت بنكي، لا تعقيد
+            20 رسالة مجانية — بدون كارت بنكي، بدون تعقيد
           </p>
           <Link
             href="/developers/signup"
