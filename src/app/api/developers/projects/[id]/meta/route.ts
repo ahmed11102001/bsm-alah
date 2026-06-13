@@ -35,6 +35,8 @@ export async function POST(
     }
 
     // Upsert connection scoped to this project
+    // isVerified = true بمجرد ما المطور يحفظ البيانات
+    // (التحقق الفعلي من Meta بيحصل لما يحاول يرسل OTP — لو البيانات غلط هيجي خطأ من Meta)
     await prisma.developerMetaConnection.upsert({
       where: { projectId: id },
       update: {
@@ -42,7 +44,7 @@ export async function POST(
         phoneNumberId,
         wabaId,
         displayPhone: displayPhone || "",
-        isVerified: false,
+        isVerified: true,
         updatedAt: new Date(),
       },
       create: {
@@ -51,7 +53,7 @@ export async function POST(
         phoneNumberId,
         wabaId,
         displayPhone: displayPhone || "",
-        isVerified: false,
+        isVerified: true,
       },
     });
 

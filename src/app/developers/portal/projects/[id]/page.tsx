@@ -142,7 +142,9 @@ export default function ProjectOverviewPage() {
     );
   }
 
-  const metaConnected = !!project.metaConnection?.isVerified;
+  // مربوط لو في connection موجودة — بغض النظر عن isVerified
+  // isVerified بيتعمل true في الـ API لما يتحفظ، بس هنا نتأكد من وجود الـ connection
+  const metaConnected = !!project.metaConnection;
 
   return (
     <>
