@@ -6,15 +6,16 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 // تسليم المشروع لعميل (user في نظام وني الرئيسي)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     // Verify project ownership
     const project = await prisma.developerProject.findFirst({
-      where: { id: params.id, developerId: session.id, status: "ACTIVE" },
+      where: { id, developerId: session.id, status: "ACTIVE" },
       include: {
         metaConnection: true,
         apiKeys: { where: { status: "ACTIVE" } },
@@ -44,7 +45,7 @@ export async function POST(
 
     // Perform transfer: mark project as TRANSFERRED and record target user
     await prisma.developerProject.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "TRANSFERRED",
         transferredToUserId: targetUser.id,

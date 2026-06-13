@@ -6,15 +6,16 @@ import { rateLimit } from "@/lib/rate-limit";
 // ── POST — ربط Meta بمشروع معين ──────────────────────────────────────────────
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     // Verify project ownership
     const project = await prisma.developerProject.findFirst({
-      where: { id: params.id, developerId: session.id, status: "ACTIVE" },
+      where: { id, developerId: session.id, status: "ACTIVE" },
     });
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
@@ -35,7 +36,7 @@ export async function POST(
 
     // Upsert connection scoped to this project
     await prisma.developerMetaConnection.upsert({
-      where: { projectId: params.id },
+      where: { projectId: id },
       update: {
         accessToken,
         phoneNumberId,
@@ -45,7 +46,7 @@ export async function POST(
         updatedAt: new Date(),
       },
       create: {
-        projectId: params.id,
+        projectId: id,
         accessToken,
         phoneNumberId,
         wabaId,
@@ -64,19 +65,20 @@ export async function POST(
 // ── DELETE — إلغاء ربط Meta من مشروع ────────────────────────────────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     const project = await prisma.developerProject.findFirst({
-      where: { id: params.id, developerId: session.id },
+      where: { id, developerId: session.id },
     });
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     await prisma.developerMetaConnection.deleteMany({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     return NextResponse.json({ ok: true });

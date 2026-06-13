@@ -21,17 +21,18 @@ async function getProjectOrFail(developerId: string, projectId: string) {
 // ── GET — list API keys for project ──────────────────────────────────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await getProjectOrFail(session.id, params.id);
+    const project = await getProjectOrFail(session.id, id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const keys = await prisma.developerApiKey.findMany({
-      where: { projectId: params.id },
+      where: { projectId: id },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -54,19 +55,20 @@ export async function GET(
 // ── POST — generate new API key for project ───────────────────────────────────
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await getProjectOrFail(session.id, params.id);
+    const project = await getProjectOrFail(session.id, id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const { name } = await req.json();
 
     const activeCount = await prisma.developerApiKey.count({
-      where: { projectId: params.id, status: "ACTIVE" },
+      where: { projectId: id, status: "ACTIVE" },
     });
 
     if (activeCount >= 5) {
@@ -80,7 +82,7 @@ export async function POST(
 
     await prisma.developerApiKey.create({
       data: {
-        projectId: params.id,
+        projectId: id,
         keyHash: hash,
         keyPrefix: prefix,
         name: name || null,
@@ -102,13 +104,14 @@ export async function POST(
 // ── DELETE — revoke API key ────────────────────────────────────────────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await getProjectOrFail(session.id, params.id);
+    const project = await getProjectOrFail(session.id, id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const { searchParams } = new URL(req.url);
@@ -116,7 +119,7 @@ export async function DELETE(
     if (!keyId) return NextResponse.json({ error: "keyId مطلوب" }, { status: 400 });
 
     const key = await prisma.developerApiKey.findFirst({
-      where: { id: keyId, projectId: params.id },
+      where: { id: keyId, projectId: id },
     });
 
     if (!key) return NextResponse.json({ error: "API Key مش موجود" }, { status: 404 });

@@ -11,16 +11,17 @@ async function getProjectOrFail(developerId: string, projectId: string) {
 // ── GET — list templates for project ─────────────────────────────────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-  const project = await getProjectOrFail(session.id, params.id);
+  const project = await getProjectOrFail(session.id, id);
   if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
   const templates = await prisma.developerOtpTemplate.findMany({
-    where: { projectId: params.id },
+    where: { projectId: id },
     orderBy: { createdAt: "desc" },
   });
 
@@ -30,12 +31,13 @@ export async function GET(
 // ── POST — create template for project ────────────────────────────────────────
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-  const project = await getProjectOrFail(session.id, params.id);
+  const project = await getProjectOrFail(session.id, id);
   if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
   const {
@@ -59,7 +61,7 @@ export async function POST(
 
   const template = await prisma.developerOtpTemplate.create({
     data: {
-      projectId: params.id,
+      projectId: id,
       name: metaName,
       language,
       category,
@@ -74,7 +76,7 @@ export async function POST(
 
   if (submitToMeta) {
     const connection = await prisma.developerMetaConnection.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!connection?.isVerified || !connection.accessToken || !connection.wabaId) {
@@ -117,12 +119,13 @@ export async function POST(
 // ── DELETE — delete a template ─────────────────────────────────────────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-  const project = await getProjectOrFail(session.id, params.id);
+  const project = await getProjectOrFail(session.id, id);
   if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
@@ -130,7 +133,7 @@ export async function DELETE(
   if (!templateId) return NextResponse.json({ error: "templateId مطلوب" }, { status: 400 });
 
   const template = await prisma.developerOtpTemplate.findFirst({
-    where: { id: templateId, projectId: params.id },
+    where: { id: templateId, projectId: id },
   });
 
   if (!template) return NextResponse.json({ error: "القالب مش موجود" }, { status: 404 });

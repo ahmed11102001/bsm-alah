@@ -10,8 +10,9 @@ export default async function ProjectLayout({
   params,
 }: {
   children: ReactNode;
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await getDevSession();
   if (!session) redirect("/developers/signin");
 
@@ -30,7 +31,7 @@ export default async function ProjectLayout({
 
   // Verify this project belongs to this developer
   const project = await prisma.developerProject.findFirst({
-    where: { id: params.id, developerId: session.id },
+    where: { id, developerId: session.id },
     include: {
       metaConnection: {
         select: {

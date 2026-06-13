@@ -5,13 +5,14 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 // ── GET /api/developers/projects/[id] — جلب تفاصيل مشروع واحد ──────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const project = await prisma.developerProject.findFirst({
-    where: { id: params.id, developerId: session.id },
+    where: { id, developerId: session.id },
     include: {
       metaConnection: {
         select: {
@@ -41,7 +42,7 @@ export async function GET(
   startOfDay.setHours(0, 0, 0, 0);
   const otpToday = await prisma.otpLog.count({
     where: {
-      projectId: params.id,
+      projectId: id,
       createdAt: { gte: startOfDay },
     },
   });
@@ -52,13 +53,14 @@ export async function GET(
 // ── DELETE /api/developers/projects/[id] — حذف مشروع (archive) ──────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const project = await prisma.developerProject.findFirst({
-    where: { id: params.id, developerId: session.id },
+    where: { id, developerId: session.id },
   });
 
   if (!project) {
@@ -70,7 +72,7 @@ export async function DELETE(
   }
 
   await prisma.developerProject.update({
-    where: { id: params.id },
+    where: { id },
     data: { status: "ARCHIVED" },
   });
 
