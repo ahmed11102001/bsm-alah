@@ -6,6 +6,7 @@ import { FolderOpen, LogOut, ChevronLeft } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "المشاريع", href: "/developers/portal", icon: FolderOpen, exact: true },
+  { label: "API Docs", href: "/developers/portal/api-docs", icon: BookOpen, exact: true },
 ];
 
 export default function PortalSidebar({ developer }: { developer: any }) {
