@@ -12,8 +12,6 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
     include: {
-      metaConnection: true,
-      apiKeys: { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" }, take: 1 },
       projects: { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" } },
     },
   });

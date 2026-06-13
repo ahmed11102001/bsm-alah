@@ -3,13 +3,19 @@ import { createHash } from "crypto";
 import prisma from "@/lib/prisma";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
-async function verifyApiKey(raw: string): Promise<string | null> {
+async function verifyApiKey(raw: string): Promise<{ projectId: string; developerId: string } | null> {
   const hash = createHash("sha256").update(raw.trim()).digest("hex");
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
+    include: {
+      project: { select: { developerId: true } },
+    },
   });
   if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
-  return keyRecord.developerId;
+  return {
+    projectId: keyRecord.projectId,
+    developerId: keyRecord.project.developerId,
+  };
 }
 
 // ─── Human-readable remaining time ───────────────────────────────────────────
@@ -38,8 +44,8 @@ export async function GET(
     );
   }
 
-  const developerId = await verifyApiKey(rawKey);
-  if (!developerId) {
+  const auth = await verifyApiKey(rawKey);
+  if (!auth) {
     return NextResponse.json(
       { ok: false, error: "API Key غير صحيح أو ملغي" },
       { status: 401 }
@@ -57,7 +63,7 @@ export async function GET(
 
   // ── 3. Find OTP ───────────────────────────────────────────────────────────
   const otp = await prisma.otpLog.findFirst({
-    where: { token, developerId },
+    where: { token, projectId: auth.projectId },
     select: {
       token:         true,
       status:        true,
@@ -86,7 +92,7 @@ export async function GET(
     new Date() > otp.expiredAt
   ) {
     await prisma.otpLog.updateMany({
-      where: { token, developerId, status: "SENT" },
+      where: { token, projectId: auth.projectId, status: "SENT" },
       data:  { status: "EXPIRED" },
     });
     currentStatus = "EXPIRED";

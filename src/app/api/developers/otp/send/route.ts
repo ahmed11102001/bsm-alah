@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AuthResult {
+  projectId: string;
   developerId: string;
   metaConnection: {
     accessToken: string;
@@ -22,7 +23,7 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
     include: {
-      developer: {
+      project: {
         include: { metaConnection: true },
       },
     },
@@ -30,7 +31,7 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
 
   if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
 
-  const meta = keyRecord.developer.metaConnection;
+  const meta = keyRecord.project.metaConnection;
   if (!meta || !meta.isVerified) return null;
 
   // track last usage (non-blocking)
@@ -38,7 +39,11 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
     .update({ where: { id: keyRecord.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return { developerId: keyRecord.developerId, metaConnection: meta };
+  return {
+    projectId: keyRecord.projectId,
+    developerId: keyRecord.project.developerId,
+    metaConnection: meta,
+  };
 }
 
 // ─── Normalize phone → E.164 ──────────────────────────────────────────────────
@@ -62,10 +67,10 @@ function generateOtp(): string {
 }
 
 // ─── Resolve template: find APPROVED template by name ────────────────────────
-async function resolveTemplate(developerId: string, templateName: string) {
+async function resolveTemplate(projectId: string, templateName: string) {
   return prisma.developerOtpTemplate.findFirst({
     where: {
-      developerId,
+      projectId,
       name: templateName,
       status: "APPROVED",
     },
@@ -188,7 +193,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 4. Rate limit: 5 OTPs per phone per hour per developer ───────────────
-  const rlKey = `otp-send:${auth.developerId}:${normalizedPhone}`;
+  const rlKey = `otp-send:${auth.projectId}:${normalizedPhone}`;
   const rl = await rateLimit(rlKey, { limit: 5, windowSecs: 3600 });
   if (!rl.success) {
     return NextResponse.json(
@@ -205,7 +210,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 5. Resolve template ───────────────────────────────────────────────────
-  const template = await resolveTemplate(auth.developerId, templateName);
+  const template = await resolveTemplate(auth.projectId, templateName);
   if (!template) {
     return NextResponse.json(
       {
@@ -238,7 +243,8 @@ export async function POST(req: NextRequest) {
   // ── 8. Log to DB ──────────────────────────────────────────────────────────
   await prisma.otpLog.create({
     data: {
-      developerId:   auth.developerId,
+      developerId: auth.developerId,
+      projectId: auth.projectId,
       phone:         normalizedPhone,
       token,
       code:          otpCode,

@@ -4,10 +4,13 @@ import { createHash } from "crypto";
 import { rateLimit } from "@/lib/rate-limit";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
-async function verifyApiKey(raw: string): Promise<string | null> {
+async function verifyApiKey(raw: string): Promise<{ projectId: string; developerId: string } | null> {
   const hash = createHash("sha256").update(raw.trim()).digest("hex");
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
+    include: {
+      project: { select: { developerId: true } },
+    },
   });
   if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
 
@@ -15,7 +18,10 @@ async function verifyApiKey(raw: string): Promise<string | null> {
     .update({ where: { id: keyRecord.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return keyRecord.developerId;
+  return {
+    projectId: keyRecord.projectId,
+    developerId: keyRecord.project.developerId,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -35,8 +41,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const developerId = await verifyApiKey(rawKey);
-  if (!developerId) {
+  const auth = await verifyApiKey(rawKey);
+  if (!auth) {
     return NextResponse.json(
       { ok: false, error: "API Key غير صحيح أو ملغي" },
       { status: 401 }
@@ -74,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   // ── 4. Find OTP record ────────────────────────────────────────────────────
   const otp = await prisma.otpLog.findFirst({
-    where: { token, developerId },
+    where: { token, projectId: auth.projectId },
   });
 
   if (!otp) {
