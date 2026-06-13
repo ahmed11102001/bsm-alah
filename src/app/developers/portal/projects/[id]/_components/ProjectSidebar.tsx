@@ -20,12 +20,11 @@ function getNavItems(projectId: string) {
     { label: "نظرة عامة",  href: `/developers/portal/projects/${projectId}`,                    icon: LayoutDashboard, exact: true },
     { label: "API Keys",   href: `/developers/portal/projects/${projectId}/api-keys`,           icon: Key },
     { label: "القوالب",    href: `/developers/portal/projects/${projectId}/otp-templates`,      icon: FileText },
-    { label: "السجلات",    href: `/developers/portal/projects/${projectId}/activity-logs`,      icon: Activity },
+   { label: "البدء السريع",  href: `/developers/portal/projects/${projectId}/quick-start`,    icon: Code },
+   { label: "Live Tester",   href: `/developers/portal/projects/${projectId}/live-tester`,    icon: Zap },
+   { label: "السجلات",    href: `/developers/portal/projects/${projectId}/activity-logs`,      icon: Activity },
     { label: "تسليم المشروع", href: `/developers/portal/projects/${projectId}/transfer`,        icon: Share2 },
-    { label: "البدء السريع",  href: `/developers/portal/projects/${projectId}/quick-start`,    icon: Code },
-    { label: "Live Tester",   href: `/developers/portal/projects/${projectId}/live-tester`,    icon: Zap },
   ];
-
 }
 
 const DEV_NAV = [
