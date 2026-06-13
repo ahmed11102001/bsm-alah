@@ -212,7 +212,7 @@ export default function DevelopersLandingPage() {
               letterSpacing: "-0.2px",
             }}
           >
-            ابدأ مجاناً — 20 رسالة
+            ابدأ مجاناً — 14 يوم تجربة
             <ArrowRight size={15} />
           </Link>
           <Link
@@ -456,14 +456,27 @@ export default function DevelopersLandingPage() {
               <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>0</span>
               <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>ج.م</span>
             </div>
-            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>جرّب المنتج وتأكد إنه مناسب قبل ما تدفع أي حاجة</p>
+
+            {/* Trial counters */}
+            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+              <div style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
+                <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.5px" }}>14</div>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>يوم</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.2)", fontSize: "12px" }}>أو</div>
+              <div style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
+                <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.5px" }}>50</div>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>رسالة</div>
+              </div>
+            </div>
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginBottom: "24px", lineHeight: 1.6 }}>اللي ينتهي الأول يوقف الـ trial — وقت كافي تبني وتتأكد</p>
 
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
               {[
-                { t: "20 رسالة OTP", s: "كافية للتجربة الكاملة" },
                 { t: "API Key واحد", s: "للمشروع التجريبي" },
                 { t: "كل الـ Endpoints", s: "send · verify · status" },
                 { t: "Dashboard كامل", s: "سجلات، إحصائيات" },
+                { t: "بدون كارت بنكي", s: "بدون أي التزام" },
               ].map(({ t, s }) => (
                 <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                   <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>
@@ -563,7 +576,7 @@ export default function DevelopersLandingPage() {
               marginBottom: "24px",
             }}
           >
-            20 رسالة مجانية — بدون كارت بنكي، بدون تعقيد
+            14 يوم مجاناً أو 50 رسالة — اللي ينتهي الأول
           </p>
           <Link
             href="/developers/signup"
