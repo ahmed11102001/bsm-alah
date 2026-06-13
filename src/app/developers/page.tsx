@@ -28,7 +28,7 @@ const FEATURES = [
   {
     icon: Zap,
      title: "سطرين وخلاص",
-      desc: "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد." },
+      body: "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد." },
   {
     icon: Shield,
     title: "حماية مدمجة",
