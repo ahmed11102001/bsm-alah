@@ -22,12 +22,14 @@ function getNavItems(projectId: string) {
     { label: "القوالب",    href: `/developers/portal/projects/${projectId}/otp-templates`,      icon: FileText },
     { label: "السجلات",    href: `/developers/portal/projects/${projectId}/activity-logs`,      icon: Activity },
     { label: "تسليم المشروع", href: `/developers/portal/projects/${projectId}/transfer`,        icon: Share2 },
+    { label: "quick-tester", href: `/developers/portal/projects/${projectId}/quick-tester`, icon: Zap },
+    { label: "Live Tester", href: `/developers/portal/projects/${projectId}/live-tester`, icon: Zap },
   ];
+
 }
 
 const DEV_NAV = [
   { label: "API Docs",    href: "/developers/portal/endpoints",   icon: BookOpen },
-  { label: "Live Tester", href: "/developers/portal/live-tester", icon: Zap },
 ];
 
 export default function ProjectSidebar({
