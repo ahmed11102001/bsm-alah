@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderOpen, LogOut, ChevronLeft } from "lucide-react";
+import { FolderOpen, LogOut, ChevronLeft, BookOpen } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "المشاريع", href: "/developers/portal", icon: FolderOpen, exact: true },
