@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Terminal, Zap, Shield, BarChart2 } from "lucide-react";
+import HeroAnimation from "./_components/HeroAnimation";
 
 // ─── Code snippet displayed in the terminal block ───────────────────────────
 const LINES = [
@@ -53,6 +54,8 @@ export default function DevelopersLandingPage() {
         direction: "rtl",
       }}
     >
+      <HeroAnimation />
+
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <nav
         style={{
