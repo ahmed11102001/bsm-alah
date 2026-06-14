@@ -77,12 +77,33 @@ export default function DeveloperSettingsPage() {
   return (
     <>
       <style>{`
+        .settings-scroll-wrapper {
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        
+        .settings-scroll-wrapper::-webkit-scrollbar {
+          width: 8px;
+        }
+        .settings-scroll-wrapper::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .settings-scroll-wrapper::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+        .settings-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
         .settings-container {
           padding: 32px 48px;
           direction: rtl;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
           max-width: 900px;
           margin: 0 auto;
+          padding-bottom: 64px; /* extra space at bottom */
         }
         .settings-header {
           margin-bottom: 32px;
@@ -210,8 +231,9 @@ export default function DeveloperSettingsPage() {
         }
       `}</style>
 
-      <div className="settings-container">
-        <div className="settings-header">
+      <div className="settings-scroll-wrapper">
+        <div className="settings-container">
+          <div className="settings-header">
           <h1 className="settings-title">إعدادات الحساب</h1>
           <p className="settings-desc">إدارة معلوماتك الشخصية وكلمة المرور</p>
         </div>
@@ -300,8 +322,9 @@ export default function DeveloperSettingsPage() {
               {saving ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Save size={16} />}
               حفظ التعديلات
             </button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
       </div>
     </>
   );
