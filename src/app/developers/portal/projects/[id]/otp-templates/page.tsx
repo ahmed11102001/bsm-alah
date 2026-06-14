@@ -475,7 +475,7 @@ export default function ProjectTemplatesPage() {
                   </div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
                     صفحة القوالب دي مخصصة لـ OTP فقط. قوالب الإشعارات والتسويق متاحة في{" "}
-                    <a href="/templates" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>منصة وني التسويقية ←</a>
+                    <a href="/" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>منصة وني التسويقية ←</a>
                     {" "}— بتقدر تستخدمها في كامبينات الواتساب والأتمتة.
                   </div>
                 </div>
