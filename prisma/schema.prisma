@@ -761,9 +761,10 @@ model DeveloperUser {
   trialEndsAt         DateTime?     // set on first API key creation
   trialMessagesUsed   Int           @default(0)
 
-  projects      DeveloperProject[]
-  otpLogs       OtpLog[]
-  notifications DeveloperNotification[]
+  projects              DeveloperProject[]
+  otpLogs               OtpLog[]
+  notifications         DeveloperNotification[]
+  passwordResetTokens   DeveloperPasswordResetToken[]
 
   @@map("developer_users")
 }
@@ -950,4 +951,18 @@ model DeveloperNotification {
   @@index([developerId, isRead, createdAt])
   @@index([developerId, createdAt])
   @@map("developer_notifications")
+}
+
+model DeveloperPasswordResetToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  developerId String
+  expires     DateTime
+  createdAt   DateTime @default(now())
+
+  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([developerId])
+  @@map("developer_password_reset_tokens")
 }

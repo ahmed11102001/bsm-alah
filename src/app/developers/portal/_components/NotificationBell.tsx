@@ -184,8 +184,7 @@ export default function NotificationBell() {
         .nbell-panel {
           position: absolute;
           top: calc(100% + 10px);
-          left: 50%;
-          transform: translateX(-50%);
+          left: 0;
           width: 380px;
           max-height: 480px;
           background: #0d1117;
@@ -201,8 +200,8 @@ export default function NotificationBell() {
           flex-direction: column;
         }
         @keyframes nbell-panel-in {
-          0% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          0% { opacity: 0; transform: translateY(-6px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
 
         /* ── Header ───────────────────────────────────────────── */

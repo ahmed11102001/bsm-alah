@@ -371,6 +371,11 @@ export default function DevSignInPage() {
                     )}
                   </button>
                 </div>
+                <div style={{ textAlign: "left", marginTop: "8px" }}>
+                  <Link href="/developers/forgot-password" style={{ fontSize: "12px", color: "rgba(32,211,120,0.8)", textDecoration: "none" }}>
+                    نسيت كلمة المرور؟
+                  </Link>
+                </div>
               </div>
 
               {error && <div className="error-box">{error}</div>}
