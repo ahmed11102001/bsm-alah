@@ -36,8 +36,6 @@ const LANGUAGES = [
 
 const CATEGORIES: { value: TemplateCategory; label: string; desc: string; icon: string }[] = [
   { value: "AUTHENTICATION", label: "OTP / التحقق",  desc: "أكواد التحقق والمصادقة الثنائية", icon: "🔐" },
-  { value: "UTILITY",        label: "إشعارات",       desc: "تأكيد الطلبات والتحديثات",         icon: "⚡" },
-  { value: "MARKETING",      label: "تسويقي",         desc: "العروض والإعلانات",                icon: "📢" },
 ];
 
 const STATUS_CONFIG: Record<TemplateStatus, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -179,6 +177,8 @@ export default function ProjectTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "create">("list");
   const [mounted, setMounted] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -277,6 +277,19 @@ export default function ProjectTemplatesPage() {
       setTimeout(() => { setView("list"); resetForm(); }, 1800);
     } catch { setFormError("حصل خطأ في الاتصال"); }
     finally { setSubmitting(false); }
+  }
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates/sync`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setSyncMsg({ type: "err", text: data.error || "فشلت المزامنة" }); return; }
+      setSyncMsg({ type: "ok", text: `✅ تمت المزامنة — ${data.updated} قالب اتحدث من أصل ${data.total}` });
+      fetchTemplates();
+    } catch { setSyncMsg({ type: "err", text: "حصل خطأ في الاتصال" }); }
+    finally { setSyncing(false); setTimeout(() => setSyncMsg(null), 4000); }
   }
 
   function resetForm() {
@@ -400,14 +413,47 @@ export default function ProjectTemplatesPage() {
             <>
               <div className="tp-header">
                 <div>
-                  <h1 className="tp-title">قوالب WhatsApp</h1>
-                  <p className="tp-subtitle">أنشئ القالب، أرسله لـ Meta، وانتظر الموافقة — بيتحدث تلقائياً</p>
+                  <h1 className="tp-title">قوالب OTP</h1>
+                  <p className="tp-subtitle">أنشئ قوالب التحقق، أرسلها لـ Meta، وانتظر الموافقة</p>
                 </div>
-                <button className="btn-new" onClick={() => { setView("create"); resetForm(); }}>
-                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                  قالب جديد
-                </button>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button
+                    onClick={handleSync}
+                    disabled={syncing}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: syncing ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.65)", fontSize: 14, fontFamily: "inherit", cursor: syncing ? "not-allowed" : "pointer", transition: "all .2s" }}
+                  >
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ animation: syncing ? "spin .8s linear infinite" : "none" }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                    {syncing ? "جاري المزامنة..." : "مزامنة من Meta"}
+                  </button>
+                  <button className="btn-new" onClick={() => { setView("create"); resetForm(); }}>
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    قالب جديد
+                  </button>
+                </div>
               </div>
+
+              {/* Hook notice */}
+              <div style={{ marginBottom: 24, padding: "14px 18px", background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, display: "flex", alignItems: "flex-start", gap: 14 }}>
+                <span style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>🪝</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>
+                    محتاج قوالب إشعارات أو تسويق؟
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                    صفحة القوالب دي مخصصة لـ OTP فقط. قوالب الإشعارات والتسويق متاحة في{" "}
+                    <a href="/templates" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>منصة وني التسويقية ←</a>
+                    {" "}— بتقدر تستخدمها في كامبينات الواتساب والأتمتة.
+                  </div>
+                </div>
+              </div>
+
+              {syncMsg && (
+                <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 10, fontSize: 13, background: syncMsg.type === "ok" ? "rgba(32,211,120,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${syncMsg.type === "ok" ? "rgba(32,211,120,0.2)" : "rgba(239,68,68,0.2)"}`, color: syncMsg.type === "ok" ? "#20d378" : "#f87171" }}>
+                  {syncMsg.text}
+                </div>
+              )}
 
               {loading ? (
                 <div className="tmpl-grid">
@@ -475,22 +521,7 @@ export default function ProjectTemplatesPage() {
               <div className="create-layout">
                 {/* ── Left: Form ── */}
                 <div className="form-panel">
-                  <h2 className="form-title">قالب جديد</h2>
-
-                  {/* Category */}
-                  <div className="field">
-                    <label className="field-label">نوع القالب *</label>
-                    <div className="cat-pills">
-                      {CATEGORIES.map(c => (
-                        <button key={c.value} className={`cat-pill ${form.category === c.value ? "active" : ""}`}
-                          onClick={() => setField("category", c.value)}>
-                          {c.icon} {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="divider" />
+                  <h2 className="form-title">قالب OTP جديد</h2>
 
                   {/* Name */}
                   <div className="field">
