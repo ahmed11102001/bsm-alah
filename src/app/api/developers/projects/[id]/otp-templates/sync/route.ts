@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { decryptToken } from "@/lib/crypto";
 
 // ── POST /api/developers/projects/[id]/otp-templates/sync ────────────────────
 export async function POST(
@@ -28,10 +29,13 @@ export async function POST(
       );
     }
 
+    // فك تشفير الـ accessToken قبل الاستخدام مع Meta API
+    const plainAccessToken = decryptToken(connection.accessToken);
+
     // Fetch templates from Meta
     const metaUrl = `https://graph.facebook.com/v21.0/${connection.wabaId}/message_templates?limit=100&fields=id,name,status,category,language,rejected_reason`;
     const metaRes = await fetch(metaUrl, {
-      headers: { Authorization: `Bearer ${connection.accessToken}` },
+      headers: { Authorization: `Bearer ${plainAccessToken}` },
     });
 
     const metaData = await metaRes.json();

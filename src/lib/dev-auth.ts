@@ -2,9 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-const SECRET = new TextEncoder().encode(
-  process.env.DEV_JWT_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-fallback-secret"
-);
+const secretStr = process.env.DEV_JWT_SECRET ?? process.env.NEXTAUTH_SECRET;
+if (!secretStr) {
+  throw new Error(
+    "[dev-auth] DEV_JWT_SECRET أو NEXTAUTH_SECRET مطلوب — مش تستخدم fallback غير آمن في Production"
+  );
+}
+const SECRET = new TextEncoder().encode(secretStr);
 
 const COOKIE_NAME = "dev-session";
 const MAX_AGE = 30 * 24 * 60 * 60;

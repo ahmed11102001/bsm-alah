@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import prisma from "@/lib/prisma";
+import { getOtp, updateOtpStatus } from "@/lib/otp-redis";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
 async function verifyApiKey(raw: string): Promise<{ projectId: string; developerId: string } | null> {
@@ -19,9 +20,9 @@ async function verifyApiKey(raw: string): Promise<{ projectId: string; developer
 }
 
 // ─── Human-readable remaining time ───────────────────────────────────────────
-function secondsRemaining(expiredAt: Date | null): number | null {
-  if (!expiredAt) return null;
-  const diff = Math.floor((expiredAt.getTime() - Date.now()) / 1000);
+function secondsRemaining(expiresAt: string | null): number | null {
+  if (!expiresAt) return null;
+  const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000);
   return diff > 0 ? diff : 0;
 }
 
@@ -61,8 +62,47 @@ export async function GET(
     );
   }
 
-  // ── 3. Find OTP ───────────────────────────────────────────────────────────
-  const otp = await prisma.otpLog.findFirst({
+  // ── 3. Try Redis first ────────────────────────────────────────────────────
+  const otp = await getOtp(token);
+
+  if (otp && otp.projectId === auth.projectId) {
+    // Auto-mark expired if past expiry
+    let currentStatus = otp.status;
+    if (
+      currentStatus === "SENT" &&
+      otp.expiresAt &&
+      new Date() > new Date(otp.expiresAt)
+    ) {
+      await updateOtpStatus(token, "EXPIRED");
+      currentStatus = "EXPIRED";
+
+      // Update DB log too (non-blocking)
+      prisma.otpLog.updateMany({
+        where: { token, projectId: auth.projectId, status: "SENT" },
+        data: { status: "EXPIRED" },
+      }).catch(() => {});
+    }
+
+    const secs = secondsRemaining(otp.expiresAt);
+
+    return NextResponse.json({
+      ok:              true,
+      token,
+      status:          currentStatus.toLowerCase(),
+      phone:           otp.phone,
+      sentAt:          otp.sentAt ?? null,
+      verifiedAt:      otp.verifiedAt ?? null,
+      expiresAt:       otp.expiresAt ?? null,
+      secondsRemaining: secs,
+      meta: {
+        messageId: otp.metaMessageId ?? null,
+        error:     otp.error ?? null,
+      },
+    });
+  }
+
+  // ── 4. Fallback to DB (for old OTPs or expired Redis entries) ─────────────
+  const dbOtp = await prisma.otpLog.findFirst({
     where: { token, projectId: auth.projectId },
     select: {
       token:         true,
@@ -77,19 +117,19 @@ export async function GET(
     },
   });
 
-  if (!otp) {
+  if (!dbOtp) {
     return NextResponse.json(
       { ok: false, error: "Token غير موجود أو لا ينتمي لهذا الـ API Key" },
       { status: 404 }
     );
   }
 
-  // ── 4. Auto-mark expired if past expiry ───────────────────────────────────
-  let currentStatus = otp.status;
+  // Auto-mark expired
+  let currentStatus = dbOtp.status;
   if (
     currentStatus === "SENT" &&
-    otp.expiredAt &&
-    new Date() > otp.expiredAt
+    dbOtp.expiredAt &&
+    new Date() > dbOtp.expiredAt
   ) {
     await prisma.otpLog.updateMany({
       where: { token, projectId: auth.projectId, status: "SENT" },
@@ -98,21 +138,22 @@ export async function GET(
     currentStatus = "EXPIRED";
   }
 
-  // ── 5. Build response ─────────────────────────────────────────────────────
-  const secs = secondsRemaining(otp.expiredAt);
+  const secs = dbOtp.expiredAt
+    ? secondsRemaining(dbOtp.expiredAt.toISOString())
+    : null;
 
   return NextResponse.json({
     ok:              true,
-    token:           otp.token,
+    token:           dbOtp.token,
     status:          currentStatus.toLowerCase(),
-    phone:           otp.phone,
-    sentAt:          otp.sentAt?.toISOString()      ?? null,
-    verifiedAt:      otp.verifiedAt?.toISOString()  ?? null,
-    expiresAt:       otp.expiredAt?.toISOString()   ?? null,
+    phone:           dbOtp.phone,
+    sentAt:          dbOtp.sentAt?.toISOString()      ?? null,
+    verifiedAt:      dbOtp.verifiedAt?.toISOString()  ?? null,
+    expiresAt:       dbOtp.expiredAt?.toISOString()   ?? null,
     secondsRemaining: secs,
     meta: {
-      messageId: otp.metaMessageId ?? null,
-      error:     otp.error         ?? null,
+      messageId: dbOtp.metaMessageId ?? null,
+      error:     dbOtp.error         ?? null,
     },
   });
 }

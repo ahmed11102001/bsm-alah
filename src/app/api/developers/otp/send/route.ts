@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createHash, randomBytes } from "crypto";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, getIP } from "@/lib/rate-limit";
+import { decryptToken } from "@/lib/crypto";
+import { storeOtp } from "@/lib/otp-redis";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AuthResult {
   projectId: string;
   developerId: string;
   metaConnection: {
-    accessToken: string;
+    accessToken: string;   // encrypted in DB
     phoneNumberId: string;
     wabaId: string;
     displayPhone: string;
@@ -192,9 +194,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 4. Rate limit: 5 OTPs per phone per hour per developer ───────────────
-  const rlKey = `otp-send:${auth.projectId}:${normalizedPhone}`;
-  const rl = await rateLimit(rlKey, { limit: 5, windowSecs: 3600 });
+  // ── 4. Rate limit: per phone + per IP (distributed attack protection) ─────
+  const rlPhone = `otp-send:${auth.projectId}:${normalizedPhone}`;
+  const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 });
   if (!rl.success) {
     return NextResponse.json(
       {
@@ -206,6 +208,23 @@ export async function POST(req: NextRequest) {
         status: 429,
         headers: { "Retry-After": String(rl.retryAfter ?? 60) },
       }
+    );
+  }
+
+  // Rate limit per IP — حماية من distributed attacks
+  const ip = getIP(req);
+  const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 });
+  if (!rlIpMin.success) {
+    return NextResponse.json(
+      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", retryAfter: rlIpMin.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
+    );
+  }
+  const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 });
+  if (!rlIpHr.success) {
+    return NextResponse.json(
+      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", retryAfter: rlIpHr.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
     );
   }
 
@@ -259,7 +278,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 6. Generate OTP + token ───────────────────────────────────────────────
+  // ── 7. Generate OTP + token ───────────────────────────────────────────────
   const otpCode = generateOtp();
   const token   = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + Number(expiryMinutes) * 60 * 1000);
@@ -267,9 +286,12 @@ export async function POST(req: NextRequest) {
   // Count vars in template body
   const varCount = (template.body.match(/\{\{\d+\}\}/g) ?? []).length;
 
-  // ── 7. Send via Meta ──────────────────────────────────────────────────────
+  // ── 8. فك تشفير الـ accessToken من DB ────────────────────────────────────
+  const plainAccessToken = decryptToken(auth.metaConnection.accessToken);
+
+  // ── 9. Send via Meta ──────────────────────────────────────────────────────
   const sendResult = await sendWhatsAppOtp({
-    accessToken:   auth.metaConnection.accessToken,
+    accessToken:   plainAccessToken,
     phoneNumberId: auth.metaConnection.phoneNumberId,
     to:            normalizedPhone,
     code:          otpCode,
@@ -278,23 +300,37 @@ export async function POST(req: NextRequest) {
     varCount,
   });
 
-  // ── 8. Log to DB ──────────────────────────────────────────────────────────
+  // ── 10. Store in Redis (code hash only — no plain code stored) ────────────
+  await storeOtp({
+    token,
+    code:          otpCode,
+    phone:         normalizedPhone,
+    projectId:     auth.projectId,
+    developerId:   auth.developerId,
+    status:        sendResult.success ? "SENT" : "FAILED",
+    metaMessageId: sendResult.metaMessageId ?? null,
+    error:         sendResult.error ?? null,
+    sentAt:        sendResult.success ? new Date() : null,
+    expiryMinutes: Number(expiryMinutes),
+  });
+
+  // ── 11. Log to DB (without code — for analytics only) ─────────────────────
   await prisma.otpLog.create({
     data: {
       developerId: auth.developerId,
-      projectId: auth.projectId,
-      phone:         normalizedPhone,
+      projectId:   auth.projectId,
+      phone:       normalizedPhone,
       token,
-      code:          otpCode,
-      status:        sendResult.success ? "SENT" : "FAILED",
+      code:        "REDACTED", // الكود مش بيتخزن في DB — موجود في Redis فقط
+      status:      sendResult.success ? "SENT" : "FAILED",
       metaMessageId: sendResult.metaMessageId ?? null,
-      error:         sendResult.error ?? null,
-      sentAt:        sendResult.success ? new Date() : null,
-      expiredAt:     expiresAt,
+      error:       sendResult.error ?? null,
+      sentAt:      sendResult.success ? new Date() : null,
+      expiredAt:   expiresAt,
     },
   });
 
-  // ── 9. Increment trial counter (non-blocking) ─────────────────────────────
+  // ── 12. Increment trial counter (non-blocking) ────────────────────────────
   if (sendResult.success && developer.plan === "TRIAL") {
     prisma.developerUser
       .update({
@@ -304,7 +340,7 @@ export async function POST(req: NextRequest) {
       .catch(() => {});
   }
 
-  // ── 10. Return ────────────────────────────────────────────────────────────
+  // ── 13. Return ────────────────────────────────────────────────────────────
   if (!sendResult.success) {
     return NextResponse.json(
       { ok: false, error: "فشل الإرسال عبر WhatsApp: " + sendResult.error },

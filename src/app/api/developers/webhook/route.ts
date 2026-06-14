@@ -27,6 +27,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   // 1. Verify HMAC signature
   const appSecret = process.env.WHATSAPP_APP_SECRET;
+
+  // في Production، الـ WHATSAPP_APP_SECRET مطلوب — بدونه أي حد يقدر يبعت webhook مزيف
+  if (!appSecret && process.env.NODE_ENV === "production") {
+    console.error("[DEV-WEBHOOK] WHATSAPP_APP_SECRET is required in production");
+    return new NextResponse("Server misconfigured", { status: 500 });
+  }
+
   if (appSecret) {
     const sig = req.headers.get("x-hub-signature-256") ?? "";
     if (!sig.startsWith("sha256=")) {
@@ -41,7 +48,8 @@ export async function POST(req: NextRequest) {
     const payload = JSON.parse(rawBody);
     await processWebhook(payload);
   } else {
-    // No secret configured — still process (dev mode)
+    // No secret configured — dev mode only
+    console.warn("[DEV-WEBHOOK] ⚠️ WHATSAPP_APP_SECRET مش متحط — بيقبل webhooks بدون توقيع (dev mode فقط)");
     const payload = await req.json();
     await processWebhook(payload);
   }

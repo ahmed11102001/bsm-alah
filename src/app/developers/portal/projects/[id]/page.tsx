@@ -17,7 +17,6 @@ interface ProjectData {
     phoneNumberId: string;
     displayPhone: string;
     isVerified: boolean;
-    accessToken: string;
     connectedAt: string;
   } | null;
   _count: {
