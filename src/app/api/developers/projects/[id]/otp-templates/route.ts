@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { decryptToken } from "@/lib/crypto";
 
 async function getProjectOrFail(developerId: string, projectId: string) {
   return prisma.developerProject.findFirst({
@@ -88,8 +89,9 @@ export async function POST(
     }
 
     try {
+      const plainAccessToken = decryptToken(connection.accessToken);
       const metaResult = await submitTemplateToMeta({
-        accessToken: connection.accessToken,
+        accessToken: plainAccessToken,
         wabaId: connection.wabaId,
         template: { ...template, bodyExample: bodyExample || [] },
       });
@@ -137,6 +139,24 @@ export async function DELETE(
   });
 
   if (!template) return NextResponse.json({ error: "القالب مش موجود" }, { status: 404 });
+
+  if (template.metaTemplateId || template.status !== "LOCAL_DRAFT") {
+    const connection = await prisma.developerMetaConnection.findUnique({
+      where: { projectId: id },
+    });
+    if (connection?.accessToken && connection.wabaId) {
+      try {
+        const plainAccessToken = decryptToken(connection.accessToken);
+        await deleteTemplateFromMeta({
+          accessToken: plainAccessToken,
+          wabaId: connection.wabaId,
+          templateName: template.name,
+        });
+      } catch (err) {
+        console.error("[delete-meta-template] Error:", err);
+      }
+    }
+  }
 
   await prisma.developerOtpTemplate.delete({ where: { id: templateId } });
 
@@ -197,3 +217,28 @@ async function submitTemplateToMeta({
   }
   return data;
 }
+
+// ── Helper: Delete from Meta Graph API ─────────────────────────────────────────
+async function deleteTemplateFromMeta({
+  accessToken,
+  wabaId,
+  templateName,
+}: {
+  accessToken: string;
+  wabaId: string;
+  templateName: string;
+}) {
+  const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates?name=${templateName}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    console.error("[delete-meta-template] Meta API error:", data.error);
+    // لا نوقف الحذف المحلي حتى لو فشل الحذف في ميتا
+  }
+}

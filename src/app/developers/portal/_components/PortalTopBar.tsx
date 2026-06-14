@@ -63,15 +63,8 @@ export default function PortalTopBar({
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #20d378, #10b854);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          font-size: 14px;
-          color: #060810;
-          font-family: 'Fira Code', monospace;
           flex-shrink: 0;
+          object-fit: cover;
         }
         .ptopbar-brand-name {
           font-size: 15px;
@@ -246,7 +239,7 @@ export default function PortalTopBar({
       <header className="ptopbar">
         {/* 1. البراند */}
         <Link href="/developers/portal" className="ptopbar-brand">
-          <div className="ptopbar-brand-icon">W</div>
+          <img src="/favicon.svg" alt="وني" className="ptopbar-brand-icon" />
           <span className="ptopbar-brand-name">وني</span>
           <span className="ptopbar-brand-badge">Developer Portal</span>
         </Link>
