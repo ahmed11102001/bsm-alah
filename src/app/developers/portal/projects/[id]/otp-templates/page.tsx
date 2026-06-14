@@ -179,6 +179,7 @@ export default function ProjectTemplatesPage() {
   const [mounted, setMounted] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -199,6 +200,11 @@ export default function ProjectTemplatesPage() {
   useEffect(() => {
     setMounted(true);
     fetchTemplates();
+    // Check Meta connection status
+    fetch(`/api/developers/projects/${projectId}/meta`)
+      .then(r => r.json())
+      .then(d => setMetaConnected(!!d.connection?.isVerified))
+      .catch(() => setMetaConnected(false));
   }, [projectId]);
 
   async function fetchTemplates() {
@@ -259,7 +265,7 @@ export default function ProjectTemplatesPage() {
     if (varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
       setFormError(`أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`); return;
     }
-    setSubmitting(true); setFormError("");
+    setSubmitting(true); setFormError(""); setFormSuccess("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
@@ -268,12 +274,17 @@ export default function ProjectTemplatesPage() {
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || "حصل خطأ"); return; }
-      setTemplates(prev => [data.template, ...prev]);
+
+      // warning = Meta مش مربوطة أو فشل الإرسال → معاملها كـ error واضح
       if (data.warning) {
-        setFormSuccess(`⚠️ ${data.warning}`);
-      } else {
-        setFormSuccess("🚀 تم إرسال القالب لـ Meta — انتظر المراجعة");
+        setFormError(`⚠️ ${data.warning}`);
+        // القالب اتحفظ كمسودة — نضيفه للقائمة بس نفضل في الـ form
+        if (data.template) setTemplates(prev => [data.template, ...prev]);
+        return;
       }
+
+      setTemplates(prev => [data.template, ...prev]);
+      setFormSuccess("🚀 تم إرسال القالب لـ Meta — هيظهر قيد المراجعة قريباً");
       setTimeout(() => { setView("list"); resetForm(); }, 1800);
     } catch { setFormError("حصل خطأ في الاتصال"); }
     finally { setSubmitting(false); }
@@ -522,6 +533,20 @@ export default function ProjectTemplatesPage() {
                 {/* ── Left: Form ── */}
                 <div className="form-panel">
                   <h2 className="form-title">قالب OTP جديد</h2>
+
+                  {/* Meta not connected warning */}
+                  {metaConnected === false && (
+                    <div style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#f59e0b", marginBottom: 3 }}>Meta مش مربوط بالمشروع ده</div>
+                        <div style={{ fontSize: 12, color: "rgba(245,158,11,0.7)", lineHeight: 1.5 }}>
+                          القالب هيتحفظ كمسودة فقط ومش هيتبعت لـ Meta. {" "}
+                          <a href={`/developers/portal/projects/${projectId}`} style={{ color: "#f59e0b", fontWeight: 600, textDecoration: "underline" }}>اربط Meta من نظرة عامة ←</a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Name */}
                   <div className="field">
