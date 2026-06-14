@@ -287,7 +287,9 @@ export default function DevSignInPage() {
 
         @media (max-width: 768px) {
           .auth-brand { display: none; }
-          .auth-form-panel { padding: 24px 16px; }
+          .auth-form-panel { padding: 16px; align-items: flex-start; margin-top: 24px; }
+          .auth-card { padding: 24px; max-width: 100%; }
+          .form-title { font-size: 20px; }
         }
       `}</style>
 

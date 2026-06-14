@@ -6,8 +6,9 @@ import { useState } from "react";
 import {
   LayoutDashboard, Key, FileText, Activity,
   ChevronLeft, ChevronDown, Check, Plus,
-  Share2, Code, Zap,
+  Share2, Code, Zap, X
 } from "lucide-react";
+import { useMobileNav } from "../../../_components/MobileNavContext";
 
 interface Project {
   id: string;
@@ -38,6 +39,7 @@ export default function ProjectSidebar({
 }) {
   const pathname = usePathname();
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
 
   const NAV_ITEMS = getNavItems(project.id);
   const metaConnected = !!project.metaConnection?.isVerified;
@@ -181,9 +183,37 @@ export default function ProjectSidebar({
         }
         .user-name  { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7); }
         .user-email { font-size: 10px; color: rgba(255,255,255,0.3); direction: ltr; text-align: right; }
+
+        @media (max-width: 768px) {
+          .psidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            z-index: 100; display: block;
+          }
+          .psidebar {
+            position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #060810; border-left: none; width: 260px;
+          }
+          .psidebar.mobile-open { transform: translateX(0); }
+          .mobile-close-btn {
+            display: flex !important; align-items: center; justify-content: flex-end; padding: 16px 16px 0;
+          }
+          .mobile-close-btn button {
+            background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; padding: 4px; display: flex;
+          }
+        }
       `}</style>
 
-      <aside className="psidebar">
+      {isMobileNavOpen && (
+        <div className="psidebar-overlay" onClick={() => setMobileNavOpen(false)} />
+      )}
+
+      <aside className={`psidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}>
+        <div className="mobile-close-btn" style={{ display: 'none' }}>
+          <button onClick={() => setMobileNavOpen(false)}>
+             <X size={20} />
+          </button>
+        </div>
         {/* Project switcher — بدون لوجو لأنه موجود في TopBar */}
         <div
           className="project-switcher"

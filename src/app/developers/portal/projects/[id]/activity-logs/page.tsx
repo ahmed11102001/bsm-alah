@@ -151,10 +151,16 @@ export default function ProjectActivityLogsPage() {
         .filter-btn.active { background: rgba(32,211,120,0.1); border-color: rgba(32,211,120,0.25); color: #20d378; }
 
         /* Table */
-        .logs-table {
+        .logs-table-wrapper {
           background: rgba(255,255,255,0.02);
           border: 1px solid rgba(255,255,255,0.07);
           border-radius: 14px; overflow: hidden;
+        }
+        .logs-table-scroll {
+          overflow-x: auto;
+        }
+        .logs-table {
+          min-width: 600px;
         }
         .table-header {
           display: grid;
@@ -265,7 +271,9 @@ export default function ProjectActivityLogsPage() {
         </div>
 
         {/* Table */}
-        <div className="logs-table">
+        <div className="logs-table-wrapper">
+          <div className="logs-table-scroll">
+            <div className="logs-table">
           <div className="table-header">
             <span>الحالة</span>
             <span>الرقم</span>
@@ -325,6 +333,8 @@ export default function ProjectActivityLogsPage() {
               );
             })
           )}
+            </div>
+          </div>
         </div>
 
         {/* Pagination */}

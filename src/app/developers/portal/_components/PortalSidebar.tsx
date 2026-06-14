@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderOpen, ChevronLeft } from "lucide-react";
+import { FolderOpen, ChevronLeft, X } from "lucide-react";
+import { useMobileNav } from "./MobileNavContext";
 
 const NAV_ITEMS = [
   { label: "المشاريع", href: "/developers/portal", icon: FolderOpen, exact: true },
@@ -10,6 +11,7 @@ const NAV_ITEMS = [
 
 export default function PortalSidebar({ developer }: { developer: any }) {
   const pathname = usePathname();
+  const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
 
   const fullName =
     `${developer.firstName ?? ""} ${developer.lastName ?? ""}`.trim() ||
@@ -84,9 +86,37 @@ export default function PortalSidebar({ developer }: { developer: any }) {
         }
         .user-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.7); }
         .user-email { font-size: 11px; color: rgba(255,255,255,0.3); direction: ltr; text-align: right; }
+
+        @media (max-width: 768px) {
+          .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            z-index: 100; display: block;
+          }
+          .sidebar {
+            position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #060810; border-left: none; width: 260px;
+          }
+          .sidebar.mobile-open { transform: translateX(0); }
+          .mobile-close-btn {
+            display: flex !important; align-items: center; justify-content: flex-end; padding: 16px;
+          }
+          .mobile-close-btn button {
+            background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; padding: 4px; display: flex;
+          }
+        }
       `}</style>
 
-      <aside className="sidebar">
+      {isMobileNavOpen && (
+        <div className="sidebar-overlay" onClick={() => setMobileNavOpen(false)} />
+      )}
+
+      <aside className={`sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}>
+        <div className="mobile-close-btn" style={{ display: 'none' }}>
+          <button onClick={() => setMobileNavOpen(false)}>
+             <X size={20} />
+          </button>
+        </div>
         {/* Nav — التنقل السياقي فقط */}
         <nav className="sidebar-nav">
           <div className="nav-section-label">الرئيسية</div>

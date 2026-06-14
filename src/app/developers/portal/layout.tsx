@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
 import prisma from "@/lib/prisma";
 import PortalTopBar from "./_components/PortalTopBar";
+import { MobileNavProvider } from "./_components/MobileNavContext";
 
 // ── Portal layout: auth check + TopBar موحّد لكل الـ portal
 // كل route group بيعرض سيدباره الخاص:
@@ -28,19 +29,21 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   if (developer.status === "SUSPENDED") redirect("/developers/signin?error=suspended");
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        background: "#060810",
-      }}
-    >
-      <PortalTopBar developer={developer} />
-      <div style={{ flex: 1, overflow: "hidden" }}>
-        {children}
+    <MobileNavProvider>
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          background: "#060810",
+        }}
+      >
+        <PortalTopBar developer={developer} />
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          {children}
+        </div>
       </div>
-    </div>
+    </MobileNavProvider>
   );
 }

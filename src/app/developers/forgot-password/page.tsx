@@ -89,6 +89,12 @@ export default function ForgotPasswordPage() {
         .auth-footer { margin-top: 24px; text-align: center; font-size: 14px; }
         .auth-footer a { color: rgba(255,255,255,0.4); text-decoration: none; transition: 0.2s; }
         .auth-footer a:hover { color: #fff; }
+
+        @media (max-width: 768px) {
+          .auth-root { padding: 16px; align-items: flex-start; padding-top: 48px; }
+          .auth-card { padding: 24px; max-width: 100%; }
+          .form-title { font-size: 20px; }
+        }
       `}</style>
 
       <div className="auth-root">

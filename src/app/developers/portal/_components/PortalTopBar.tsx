@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BookOpen, LogOut, ChevronDown } from "lucide-react";
+import { BookOpen, LogOut, ChevronDown, Menu } from "lucide-react";
 import NotificationBell from "./NotificationBell";
+import { useMobileNav } from "./MobileNavContext";
 
 export default function PortalTopBar({
   developer,
@@ -13,6 +14,7 @@ export default function PortalTopBar({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
 
   const fullName = `${developer.firstName ?? ""} ${developer.lastName ?? ""}`.trim() || developer.email;
   const initials = fullName
@@ -235,15 +237,41 @@ export default function PortalTopBar({
           background: rgba(239, 68, 68, 0.07);
           color: rgba(239, 68, 68, 0.9);
         }
+        .mobile-menu-btn {
+          display: none;
+          background: none;
+          border: none;
+          color: #fff;
+          cursor: pointer;
+          padding: 8px;
+          margin-right: -8px;
+        }
+
+        @media (max-width: 768px) {
+          .ptopbar { padding: 0 16px; }
+          .ptopbar-links { display: none; }
+          .ptopbar-brand-name, .ptopbar-brand-badge { display: none; }
+          .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+        }
       `}</style>
 
       <header className="ptopbar">
-        {/* 1. البراند */}
-        <Link href="/developers/portal" className="ptopbar-brand">
-          <img src="/favicon.svg" alt="وني" className="ptopbar-brand-icon" />
-          <span className="ptopbar-brand-name">وني</span>
-          <span className="ptopbar-brand-badge">Developer Portal</span>
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button 
+            className="mobile-menu-btn" 
+            onClick={() => setMobileNavOpen(!isMobileNavOpen)}
+            aria-label="Toggle Menu"
+          >
+            <Menu size={20} />
+          </button>
+          
+          {/* 1. البراند */}
+          <Link href="/developers/portal" className="ptopbar-brand">
+            <img src="/favicon.svg" alt="وني" className="ptopbar-brand-icon" />
+            <span className="ptopbar-brand-name">وني</span>
+            <span className="ptopbar-brand-badge">Developer Portal</span>
+          </Link>
+        </div>
 
         {/* 2. روابط المطوّر العامة */}
         <nav className="ptopbar-links">

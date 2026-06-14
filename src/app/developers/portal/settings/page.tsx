@@ -226,8 +226,10 @@ export default function DeveloperSettingsPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 768px) {
-          .settings-container { padding: 24px 16px; }
-          .form-grid { grid-template-columns: 1fr; }
+          .settings-container { padding: 16px; }
+          .form-grid { grid-template-columns: 1fr; gap: 16px; }
+          .settings-title { font-size: 20px; }
+          .settings-desc { font-size: 13px; }
         }
       `}</style>
 

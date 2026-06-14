@@ -82,6 +82,12 @@ export default function ResetPasswordPage() {
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .error-box { padding: 12px 16px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #f87171; font-size: 13px; text-align: center; margin-bottom: 20px; }
         .success-box { padding: 16px; background: rgba(32,211,120,0.08); border: 1px solid rgba(32,211,120,0.2); border-radius: 10px; color: #20d378; font-size: 14px; text-align: center; line-height: 1.5; }
+
+        @media (max-width: 768px) {
+          .auth-root { padding: 16px; align-items: flex-start; padding-top: 48px; }
+          .auth-card { padding: 24px; max-width: 100%; }
+          .form-title { font-size: 20px; }
+        }
       `}</style>
 
       <div className="auth-root">
