@@ -27,8 +27,9 @@ const TYPE_STYLE: Record<string, string> = {
 const FEATURES = [
   {
     icon: Zap,
-     title: "سطرين وخلاص",
-      body: "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد." },
+    title: "سطرين وخلاص",
+    body: "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد."
+  },
   {
     icon: Shield,
     title: "حماية مدمجة",
@@ -390,12 +391,12 @@ export default function DevelopersLandingPage() {
                 transition: "border-color 0.2s",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLDivElement).style.borderColor =
-                  "rgba(37,211,102,0.2)")
+              ((e.currentTarget as HTMLDivElement).style.borderColor =
+                "rgba(37,211,102,0.2)")
               }
               onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLDivElement).style.borderColor =
-                  "rgba(255,255,255,0.07)")
+              ((e.currentTarget as HTMLDivElement).style.borderColor =
+                "rgba(255,255,255,0.07)")
               }
             >
               <div
@@ -442,7 +443,7 @@ export default function DevelopersLandingPage() {
         {/* label */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "rgba(37,211,102,0.07)", border: "1px solid rgba(37,211,102,0.15)", marginBottom: "16px" }}>
-            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#25D366", display: "inline-block" }}/>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#25D366", display: "inline-block" }} />
             <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em" }}>pricing</span>
           </div>
           <h2 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.8px", marginBottom: "10px" }}>سعر واضح، بدون مفاجآت</h2>
@@ -525,7 +526,7 @@ export default function DevelopersLandingPage() {
 
             <a href="/developers/signup" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "13px 0", borderRadius: "11px", background: "#25D366", color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
               اشترك دلوقتي
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </a>
           </div>
         </div>
