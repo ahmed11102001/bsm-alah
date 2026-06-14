@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Bell, BookOpen, LogOut, ChevronDown } from "lucide-react";
+import { BookOpen, LogOut, ChevronDown } from "lucide-react";
+import NotificationBell from "./NotificationBell";
 
 export default function PortalTopBar({
   developer,
@@ -257,9 +258,7 @@ export default function PortalTopBar({
 
         {/* 3. إجراءات الحساب */}
         <div className="ptopbar-actions">
-          <button className="ptopbar-icon-btn" aria-label="إشعارات">
-            <Bell size={16} />
-          </button>
+          <NotificationBell />
 
           <div className="ptopbar-profile">
             <button

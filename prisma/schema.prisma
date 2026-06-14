@@ -761,8 +761,9 @@ model DeveloperUser {
   trialEndsAt         DateTime?     // set on first API key creation
   trialMessagesUsed   Int           @default(0)
 
-  projects DeveloperProject[]
-  otpLogs  OtpLog[]
+  projects      DeveloperProject[]
+  otpLogs       OtpLog[]
+  notifications DeveloperNotification[]
 
   @@map("developer_users")
 }
@@ -923,4 +924,30 @@ enum OtpLogStatus {
   VERIFIED
   EXPIRED
   FAILED
+}
+
+// ── Developer Notifications ───────────────────────────────────────────────────
+
+enum DeveloperNotificationType {
+  META_UPDATE  // تحديثات Meta (قبول/رفض تمبلت، تغيير حالة WABA…)
+  BILLING      // فواتير، رصيد، دفعات
+  SECURITY     // تسجيل دخول، تغيير باسورد
+  SYSTEM       // إشعارات عامة من النظام
+}
+
+model DeveloperNotification {
+  id          String                    @id @default(cuid())
+  developerId String
+  type        DeveloperNotificationType
+  title       String
+  message     String                    @db.Text
+  isRead      Boolean                   @default(false)
+  link        String?
+  createdAt   DateTime                  @default(now())
+
+  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId, isRead, createdAt])
+  @@index([developerId, createdAt])
+  @@map("developer_notifications")
 }
