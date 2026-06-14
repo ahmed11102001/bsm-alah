@@ -309,6 +309,23 @@ export default function ProjectTemplatesPage() {
     setFormError(""); setFormSuccess("");
   }
 
+  async function handleDeleteTemplate(id: string) {
+    if (!confirm("متأكد إنك عايز تحذف القالب ده؟ لو تم قبوله في Meta، هيتم حذفه من هناك كمان.")) return;
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates?templateId=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setTemplates(prev => prev.filter(t => t.id !== id));
+      } else {
+        const data = await res.json();
+        alert(data.error || "حصل خطأ أثناء الحذف");
+      }
+    } catch {
+      alert("حصل خطأ في الاتصال");
+    }
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
@@ -337,6 +354,10 @@ export default function ProjectTemplatesPage() {
         .tmpl-body-preview { font-size:13px; color:rgba(255,255,255,0.5); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:500px; }
         .status-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; flex-shrink:0; }
         .rejected-reason { margin-top:6px; font-size:12px; color:#f87171; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:6px 10px; }
+
+        /* Delete Button */
+        .btn-delete { padding:6px; border-radius:8px; background:rgba(239,68,68,0.05); color:rgba(239,68,68,0.6); border:1px solid rgba(239,68,68,0.15); cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; }
+        .btn-delete:hover { background:rgba(239,68,68,0.15); color:rgba(239,68,68,0.9); border-color:rgba(239,68,68,0.3); }
 
         /* Empty */
         .empty { text-align:center; padding:80px 32px; }
@@ -510,8 +531,17 @@ export default function ProjectTemplatesPage() {
                             <div className="rejected-reason">❌ سبب الرفض: {t.rejectedReason}</div>
                           )}
                         </div>
-                        <div className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
-                          {s.icon} {s.label}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                          <div className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
+                            {s.icon} {s.label}
+                          </div>
+                          <button 
+                            className="btn-delete" 
+                            title="حذف القالب"
+                            onClick={() => handleDeleteTemplate(t.id)}
+                          >
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
                         </div>
                       </div>
                     );
