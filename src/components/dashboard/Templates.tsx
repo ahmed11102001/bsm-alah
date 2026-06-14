@@ -966,32 +966,50 @@ function Step1({ form, setForm, lang, onNext, onCancel }: {
       <div>
         <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 block">{t.categoryLabel} *</Label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {CATS.map(cat => (
-            <button key={cat.key}
-              onClick={() => setForm({ ...form, category: cat.key })}
-              className={`text-start rounded-2xl border-2 p-4 transition-all hover:shadow-sm
-                ${form.category === cat.key
-                  ? "border-[#25D366] bg-[#25D366]/5 dark:bg-[#25D366]/10 ring-1 ring-[#25D366]/30"
-                  : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800"
-                }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${cat.key === "MARKETING" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" :
-                  cat.key === "UTILITY" ? "bg-blue-100   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400" :
-                    "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
-                {cat.icon}
+          {CATS.map(cat => {
+            const isAuth = cat.key === "AUTHENTICATION";
+            return (
+              <div key={cat.key} className="relative">
+                <button
+                  disabled={isAuth}
+                  onClick={() => { if (!isAuth) setForm({ ...form, category: cat.key }); }}
+                  className={`w-full text-start rounded-2xl border-2 p-4 transition-all
+                    ${isAuth ? "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" : "hover:shadow-sm"}
+                    ${!isAuth && form.category === cat.key
+                      ? "border-[#25D366] bg-[#25D366]/5 dark:bg-[#25D366]/10 ring-1 ring-[#25D366]/30"
+                      : !isAuth ? "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800" : ""
+                    }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${cat.key === "MARKETING" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" :
+                      cat.key === "UTILITY" ? "bg-blue-100   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400" :
+                        "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
+                    {cat.icon}
+                  </div>
+                  <p className="font-bold text-sm text-gray-800 dark:text-white mb-2">
+                    {lang === "ar" ? cat.title_ar : cat.title_en}
+                  </p>
+                  <ul className="space-y-1">
+                    {(lang === "ar" ? cat.items_ar : cat.items_en).map(it => (
+                      <li key={it} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" /> {it}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+                {isAuth && (
+                  <div className="absolute -bottom-10 left-0 right-0 z-10 p-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-sm">
+                    <p className="text-[10px] text-indigo-700 dark:text-indigo-300 text-center leading-tight">
+                      {lang === "ar" ? "قوالب الـ OTP مخصصة للمطورين فقط." : "OTP templates are for developers only."}
+                      <br />
+                      <a href="/developers" className="font-bold underline hover:text-indigo-800 dark:hover:text-indigo-200">
+                        {lang === "ar" ? "اكتشف وني للمطورين ←" : "Explore Wani Developers ←"}
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
-              <p className="font-bold text-sm text-gray-800 dark:text-white mb-2">
-                {lang === "ar" ? cat.title_ar : cat.title_en}
-              </p>
-              <ul className="space-y-1">
-                {(lang === "ar" ? cat.items_ar : cat.items_en).map(it => (
-                  <li key={it} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" /> {it}
-                  </li>
-                ))}
-              </ul>
-            </button>
-          ))}
+            );
+          })}
         </div>
         {errors.cat && <p className="text-xs text-red-500 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.cat}</p>}
       </div>
