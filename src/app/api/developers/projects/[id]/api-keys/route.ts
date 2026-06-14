@@ -90,6 +90,21 @@ export async function POST(
       },
     });
 
+    // Start trial timer on first ever API key (non-blocking)
+    prisma.developerUser.findUnique({
+      where: { id: session.id },
+      select: { plan: true, trialEndsAt: true },
+    }).then(dev => {
+      if (dev?.plan === "TRIAL" && !dev.trialEndsAt) {
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+        return prisma.developerUser.update({
+          where: { id: session.id },
+          data: { trialEndsAt },
+        });
+      }
+    }).catch(() => {});
+
     return NextResponse.json({
       ok: true,
       key: { prefix, fullKey, name: name || null },

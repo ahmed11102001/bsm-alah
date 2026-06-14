@@ -209,7 +209,45 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 5. Resolve template ───────────────────────────────────────────────────
+  // ── 5. Trial enforcement ──────────────────────────────────────────────────
+  const developer = await prisma.developerUser.findUnique({
+    where: { id: auth.developerId },
+    select: { plan: true, trialEndsAt: true, trialMessagesUsed: true },
+  });
+
+  if (!developer) {
+    return NextResponse.json({ ok: false, error: "حساب المطور غير موجود" }, { status: 401 });
+  }
+
+  if (developer.plan === "TRIAL") {
+    const now = new Date();
+
+    if (developer.trialEndsAt && now > developer.trialEndsAt) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "انتهت فترة الـ Trial (14 يوم) — اشترك في خطة Developer للاستمرار",
+          code: "TRIAL_EXPIRED",
+          upgradeUrl: "/developers/upgrade",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (developer.trialMessagesUsed >= 50) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "وصلت للحد الأقصى للـ Trial (50 رسالة) — اشترك في خطة Developer للاستمرار",
+          code: "TRIAL_MESSAGES_EXHAUSTED",
+          upgradeUrl: "/developers/upgrade",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  // ── 6. Resolve template ───────────────────────────────────────────────────
   const template = await resolveTemplate(auth.projectId, templateName);
   if (!template) {
     return NextResponse.json(
@@ -256,7 +294,17 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // ── 9. Return ─────────────────────────────────────────────────────────────
+  // ── 9. Increment trial counter (non-blocking) ─────────────────────────────
+  if (sendResult.success && developer.plan === "TRIAL") {
+    prisma.developerUser
+      .update({
+        where: { id: auth.developerId },
+        data: { trialMessagesUsed: { increment: 1 } },
+      })
+      .catch(() => {});
+  }
+
+  // ── 10. Return ────────────────────────────────────────────────────────────
   if (!sendResult.success) {
     return NextResponse.json(
       { ok: false, error: "فشل الإرسال عبر WhatsApp: " + sendResult.error },
@@ -264,9 +312,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const remaining = developer.plan === "TRIAL"
+    ? { messagesLeft: 50 - (developer.trialMessagesUsed + 1) }
+    : {};
+
   return NextResponse.json({
     ok: true,
     token,
     expiresAt: expiresAt.toISOString(),
+    ...remaining,
   });
 }
