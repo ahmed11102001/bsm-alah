@@ -5,19 +5,20 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 // ── POST /api/developers/projects/[id]/otp-templates/sync ────────────────────
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     const project = await prisma.developerProject.findFirst({
-      where: { id: params.id, developerId: session.id },
+      where: { id, developerId: session.id },
     });
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const connection = await prisma.developerMetaConnection.findUnique({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     if (!connection?.isVerified || !connection.accessToken || !connection.wabaId) {
@@ -59,7 +60,7 @@ export async function POST(
     };
 
     const localTemplates = await prisma.developerOtpTemplate.findMany({
-      where: { projectId: params.id },
+      where: { projectId: id },
     });
 
     let updated = 0;
