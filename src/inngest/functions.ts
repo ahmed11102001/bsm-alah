@@ -734,3 +734,48 @@ export const handleNewLeadBot = inngest.createFunction(
     return { ok: result.ok, error: result.error };
   }
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Function 5: processDelayedStoreAutomation
+// ═══════════════════════════════════════════════════════════════════════════════
+export const processDelayedStoreAutomation = inngest.createFunction(
+  {
+    id:       "process-delayed-store-automation",
+    retries:  2,
+    triggers: [{ event: "store/automation.trigger" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const {
+      userId,
+      automationType,
+      storeSource,
+      storeId,
+      customerPhone,
+      contactId,
+      templateVars,
+      delayMinutes,
+    } = event.data;
+
+    // الانتظار للمدة المحددة بالدقائق
+    if (delayMinutes > 0) {
+      await step.sleep("wait-delay", `${delayMinutes}m`);
+    }
+
+    // تشغيل منطق الإرسال الفعلي
+    const result = await step.run("execute-send", async () => {
+      const { executeStoreAutomationSend } = await import("@/lib/store-automation");
+      return await executeStoreAutomationSend({
+        userId,
+        automationType,
+        storeSource,
+        storeId,
+        customerPhone,
+        contactId,
+        templateVars,
+      });
+    });
+
+    return result;
+  }
+);
+

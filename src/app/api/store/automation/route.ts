@@ -106,6 +106,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       sentCount: found?.sentCount ?? 0,
       failedCount: found?.failedCount ?? 0,
       lastSentAt: found?.lastSentAt ?? null,
+      delayMinutes: found?.delayMinutes ?? 0,
       // حقول جديدة
       isDedicated,
       dedicatedTemplate, // القالب المخصص (مع status) أو null لو مش موجود
@@ -135,11 +136,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  let body: { source?: string; type?: string; isEnabled?: boolean; templateId?: string | null };
+  let body: { source?: string; type?: string; isEnabled?: boolean; templateId?: string | null; delayMinutes?: number };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  const { source, type, isEnabled = false, templateId = null } = body;
+  const { source, type, isEnabled = false, templateId = null, delayMinutes = 0 } = body;
+
+  if (typeof delayMinutes !== "number" || delayMinutes < 0 || delayMinutes > 1440) {
+    return NextResponse.json({ error: "delayMinutes يجب أن يكون رقماً بين 0 و 1440" }, { status: 400 });
+  }
 
   if (!source || !type) {
     return NextResponse.json({ error: "source و type مطلوبين" }, { status: 400 });
@@ -220,11 +225,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const whereUnique = buildUniqueWhere(source as StoreSource, storeId, autoType);
-  const createPayload = buildCreatePayload(source as StoreSource, storeId, ownerId, autoType, isEnabled, resolvedTemplateId);
+  const createPayload = buildCreatePayload(source as StoreSource, storeId, ownerId, autoType, isEnabled, resolvedTemplateId, delayMinutes);
 
   const automation = await prisma.storeAutomation.upsert({
     where: whereUnique,
-    update: { isEnabled, templateId: resolvedTemplateId ?? null, updatedAt: new Date() },
+    update: { isEnabled, templateId: resolvedTemplateId ?? null, delayMinutes, updatedAt: new Date() },
     create: createPayload,
     include: { template: { select: { id: true, name: true } } },
   });
@@ -258,9 +263,10 @@ function buildCreatePayload(
   userId: string,
   type: StoreAutomationType,
   isEnabled: boolean,
-  templateId: string | null
+  templateId: string | null,
+  delayMinutes: number
 ) {
-  const base = { userId, type, isEnabled, templateId: templateId ?? null };
+  const base = { userId, type, isEnabled, templateId: templateId ?? null, delayMinutes };
   if (source === "shopify") return { ...base, shopifyStoreId: storeId };
   if (source === "easyorders") return { ...base, easyOrdersStoreId: storeId };
   return { ...base, wooCommerceStoreId: storeId };

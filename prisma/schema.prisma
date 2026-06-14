@@ -523,6 +523,7 @@ model StoreAutomation {
   userId             String
   type               StoreAutomationType
   isEnabled          Boolean             @default(false)
+  delayMinutes       Int                 @default(0)
   templateId         String?
   sentCount          Int                 @default(0)
   failedCount        Int                 @default(0)

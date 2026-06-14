@@ -45,7 +45,7 @@ function buildAutomationWhere(
   return   { wooCommerceStoreId_type: { wooCommerceStoreId: storeId, type } };
 }
 
-export async function triggerStoreAutomation(
+export async function executeStoreAutomationSend(
   params: TriggerStoreAutomationParams
 ): Promise<{ sent: boolean; reason?: string }> {
   const {
@@ -138,4 +138,53 @@ export async function triggerStoreAutomation(
   }
 
   return { sent: result.ok, reason: result.ok ? undefined : result.error };
+}
+
+export async function triggerStoreAutomation(
+  params: TriggerStoreAutomationParams
+): Promise<{ sent: boolean; reason?: string }> {
+  const {
+    userId,
+    automationType,
+    storeSource,
+    storeId,
+    customerPhone,
+    contactId,
+    templateVars = null,
+  } = params;
+
+  const automation = await prisma.storeAutomation.findUnique({
+    where:   buildAutomationWhere(storeSource, storeId, automationType),
+    select: {
+      id:           true,
+      isEnabled:    true,
+      delayMinutes: true,
+    },
+  });
+
+  if (!automation) return { sent: false, reason: "no_automation" };
+  if (!automation.isEnabled) return { sent: false, reason: "disabled" };
+
+  // إذا كان هناك تأخير محدد، قم بجدولة الإرسال عبر Inngest
+  if (automation.delayMinutes && automation.delayMinutes > 0) {
+    const { inngest } = await import("@/inngest/client");
+    await inngest.send({
+      name: "store/automation.trigger",
+      data: {
+        userId,
+        automationType,
+        storeSource,
+        storeId,
+        customerPhone,
+        contactId,
+        templateVars,
+        delayMinutes: automation.delayMinutes,
+      },
+    });
+    console.log(`[StoreAuto] ⏱ Scheduled ${automationType} to send in ${automation.delayMinutes} mins for ${customerPhone}`);
+    return { sent: false, reason: "scheduled" };
+  }
+
+  // إرسال فوري إذا لم يكن هناك تأخير
+  return executeStoreAutomationSend(params);
 }
