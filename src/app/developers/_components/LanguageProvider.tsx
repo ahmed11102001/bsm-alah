@@ -29,3 +29,4 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useLanguage = () => useContext(LangContext);
+export default LanguageProvider;

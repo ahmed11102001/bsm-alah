@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Terminal, Zap, Shield, BarChart2 } from "lucide-react";
 import HeroAnimation from "./_components/HeroAnimation";
+import { LanguageProvider, useLanguage } from "./_components/LanguageProvider";
 
 // ─── Code snippet displayed in the terminal block ───────────────────────────
 const LINES = [
