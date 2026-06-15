@@ -1,127 +1,380 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Activity, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
+import {
+  Activity, CheckCircle, XCircle, Clock, AlertTriangle,
+  Loader2, ChevronRight, ChevronLeft, RefreshCw,
+} from "lucide-react";
 import { useLanguage } from "../../_components/LanguageProvider";
+
+type LogStatus = "PENDING" | "VERIFIED" | "EXPIRED" | "FAILED";
 
 interface OtpLog {
   id: string;
   phone: string;
-  status: "sent" | "verified" | "expired" | "failed";
+  status: LogStatus;
+  error: string | null;
+  sentAt: string | null;
+  verifiedAt: string | null;
+  expiredAt: string | null;
+  failedAt: string | null;
   createdAt: string;
-  verifiedAt?: string;
-  error?: string;
 }
 
-export default function ActivityLogsPage() {
-  const [logs, setLogs] = useState<OtpLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
+interface Stats {
+  PENDING: number;
+  VERIFIED: number;
+  EXPIRED: number;
+  FAILED: number;
+}
+
+export default function ProjectActivityLogsPage() {
+  const params = useParams();
+  const projectId = params.id as string;
   const { language, t } = useLanguage();
 
+  const dir = language === "ar" ? "rtl" : "ltr";
+  const locale = language === "ar" ? "ar-EG" : "en-US";
+
+  // Status config uses t() — rebuilt on language change via useMemo-style inline call
+  const STATUS_CONFIG: Record<LogStatus, { icon: any; color: string; bg: string; label: string }> = {
+    PENDING: { icon: Clock, color: "#3b82f6", bg: "rgba(59,130,246,0.1)", label: t("Sent", "تم الإرسال") },
+    VERIFIED: { icon: CheckCircle, color: "#20d378", bg: "rgba(32,211,120,0.1)", label: t("Verified", "تم التحقق") },
+    EXPIRED: { icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.1)", label: t("Expired", "انتهى") },
+    FAILED: { icon: XCircle, color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: t("Failed", "فشل") },
+  };
+
+  const FILTERS = [
+    { key: "all", label: t("All", "الكل") },
+    { key: "PENDING", label: t("Sent", "تم الإرسال") },
+    { key: "VERIFIED", label: t("Verified", "تم التحقق") },
+    { key: "EXPIRED", label: t("Expired", "انتهى") },
+    { key: "FAILED", label: t("Failed", "فشل") },
+  ];
+
+  const [logs, setLogs] = useState<OtpLog[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchLogs = useCallback(
+    async (p = page, f = filter, silent = false) => {
+      if (!silent) setLoading(true);
+      else setRefreshing(true);
+      try {
+        const qs = new URLSearchParams({
+          page: String(p),
+          limit: "20",
+          ...(f !== "all" ? { status: f } : {}),
+        });
+        const res = await fetch(`/api/developers/projects/${projectId}/logs?${qs}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setLogs(data.logs || []);
+        setTotal(data.total || 0);
+        setPages(data.pages || 1);
+        if (data.stats) setStats(data.stats);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [projectId, page, filter]
+  );
+
   useEffect(() => {
-    // TODO: Fetch real logs from API
-    // For now, show empty state
-    setLoading(false);
-  }, []);
+    fetchLogs(page, filter);
+  }, [projectId, page, filter]);
 
-  const filteredLogs = filter === "all" ? logs : logs.filter((l) => l.status === filter);
+  function handleFilter(f: string) {
+    setFilter(f);
+    setPage(1);
+  }
 
-  const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-    sent: { icon: Clock, color: "#3b82f6", label: t("Sent", "تم الإرسال") },
-    verified: { icon: CheckCircle, color: "#25D366", label: t("Verified", "تم التحقق") },
-    expired: { icon: AlertTriangle, color: "#f59e0b", label: t("Expired", "انتهى") },
-    failed: { icon: XCircle, color: "#ef4444", label: t("Failed", "فشل") },
-  };
+  function formatTime(iso: string | null) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
-  const filterLabels: Record<string, string> = {
-    all: t("All", "الكل"),
-    sent: t("Sent", "تم الإرسال"),
-    verified: t("Verified", "تم التحقق"),
-    expired: t("Expired", "انتهى"),
-    failed: t("Failed", "فشل"),
-  };
+  function getEventTime(log: OtpLog) {
+    return log.verifiedAt || log.failedAt || log.expiredAt || log.sentAt || log.createdAt;
+  }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-2">{t("Activity Logs", "سجل النشاط")}</h1>
-        <p className="text-white/50">{t("Log of all OTP send and verify operations", "سجل كل عمليات إرسال وتحقق الـ OTP")}</p>
-      </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400&display=swap');
+        .logs-root {
+          max-width: 1000px; margin: 0 auto;
+          padding: 32px 24px;
+          font-family: 'IBM Plex Sans Arabic', sans-serif;
+          color: #fff;
+        }
+        .logs-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+        .logs-title { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .logs-sub { font-size: 13px; color: rgba(255,255,255,0.4); }
 
-      {/* Filters */}
-      <div className="flex items-center gap-2">
-        {["all", "sent", "verified", "expired", "failed"].map((f) => (
+        .refresh-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 10px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.5); font-size: 12px;
+          cursor: pointer; transition: all 0.2s;
+          font-family: inherit;
+        }
+        .refresh-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+        .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        @media (max-width: 640px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+          background: rgba(255,255,255,0.025);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 12px; padding: 14px 16px;
+          display: flex; align-items: center; gap: 12px;
+        }
+        .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stat-val { font-size: 22px; font-weight: 600; color: #fff; }
+        .stat-lbl { font-size: 11px; color: rgba(255,255,255,0.35); }
+
+        .filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-btn {
+          padding: 7px 14px; border-radius: 8px;
+          font-size: 12px; font-weight: 500;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(255,255,255,0.45);
+          cursor: pointer; transition: all 0.15s;
+          font-family: inherit;
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
+        .filter-btn.active { background: rgba(32,211,120,0.1); border-color: rgba(32,211,120,0.25); color: #20d378; }
+
+        .logs-table-wrapper {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 14px; overflow: hidden;
+        }
+        .logs-table-scroll { overflow-x: auto; }
+        .logs-table { min-width: 600px; }
+        .table-header {
+          display: grid;
+          grid-template-columns: 130px 1fr 110px 110px;
+          padding: 10px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          font-size: 11px; font-weight: 600;
+          color: rgba(255,255,255,0.3);
+          text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .table-row {
+          display: grid;
+          grid-template-columns: 130px 1fr 110px 110px;
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          align-items: center;
+          transition: background 0.1s;
+        }
+        .table-row:last-child { border-bottom: none; }
+        .table-row:hover { background: rgba(255,255,255,0.025); }
+
+        .status-badge {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 4px 10px; border-radius: 20px;
+          font-size: 11px; font-weight: 600;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+        .phone-cell { font-family: 'Fira Code', monospace; font-size: 13px; color: rgba(255,255,255,0.7); direction: ltr; text-align: left; }
+        .time-cell { font-size: 12px; color: rgba(255,255,255,0.35); }
+        .error-cell { font-size: 11px; color: rgba(239,68,68,0.7); }
+
+        .empty-state { text-align: center; padding: 60px 0; color: rgba(255,255,255,0.25); }
+
+        .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+        .pagination-info { font-size: 12px; color: rgba(255,255,255,0.3); }
+        .pagination-btns { display: flex; gap: 6px; }
+        .page-btn {
+          width: 32px; height: 32px; border-radius: 8px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(255,255,255,0.5); font-size: 12px;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: all 0.15s; font-family: inherit;
+        }
+        .page-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #fff; }
+        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .page-num { font-size: 12px; color: rgba(255,255,255,0.4); padding: 0 8px; align-self: center; }
+      `}</style>
+
+      <div className="logs-root" style={{ direction: dir }}>
+        {/* Header */}
+        <div className="logs-header">
+          <div>
+            <h1 className="logs-title">{t("Logs", "السجلات")}</h1>
+            <p className="logs-sub">
+              {t(
+                "A record of all OTP send and verify operations in this project",
+                "سجل كل عمليات إرسال وتحقق OTP في المشروع ده"
+              )}
+            </p>
+          </div>
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              filter === f
-                ? "bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20"
-                : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/70"
-            }`}
+            className={`refresh-btn ${refreshing ? "spinning" : ""}`}
+            onClick={() => fetchLogs(page, filter, true)}
           >
-            {filterLabels[f] || f}
+            <RefreshCw size={13} />
+            {t("Refresh", "تحديث")}
           </button>
-        ))}
-      </div>
+        </div>
 
-      {/* Table */}
-      <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Status", "الحالة")}</th>
-                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Phone", "الرقم")}</th>
-                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Time", "الوقت")}</th>
-                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Notes", "ملاحظات")}</th>
-              </tr>
-            </thead>
-            <tbody>
+        {/* Stats */}
+        {stats && (
+          <div className="stats-row">
+            {(Object.entries(STATUS_CONFIG) as [LogStatus, any][]).map(([key, cfg]) => {
+              const Icon = cfg.icon;
+              return (
+                <div key={key} className="stat-card">
+                  <div className="stat-icon" style={{ background: cfg.bg }}>
+                    <Icon size={16} style={{ color: cfg.color }} />
+                  </div>
+                  <div>
+                    <div className="stat-val">{stats[key] ?? 0}</div>
+                    <div className="stat-lbl">{cfg.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`filter-btn ${filter === f.key ? "active" : ""}`}
+              onClick={() => handleFilter(f.key)}
+            >
+              {f.label}
+              {f.key !== "all" && stats && (
+                <span style={{ marginInlineStart: 4, opacity: 0.6 }}>
+                  ({stats[f.key as LogStatus] ?? 0})
+                </span>
+              )}
+              {f.key === "all" && total > 0 && (
+                <span style={{ marginInlineStart: 4, opacity: 0.6 }}>({total})</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div className="logs-table-wrapper">
+          <div className="logs-table-scroll">
+            <div className="logs-table">
+              <div className="table-header">
+                <span>{t("Status", "الحالة")}</span>
+                <span>{t("Number", "الرقم")}</span>
+                <span>{t("Time", "الوقت")}</span>
+                <span>{t("Notes", "ملاحظات")}</span>
+              </div>
+
               {loading ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-12">
-                    <Loader2 size={24} className="animate-spin text-[#25D366] mx-auto" />
-                  </td>
-                </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-12">
-                    <Activity size={32} className="text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40">{t("No logs yet", "مفيش logs لسه")}</p>
-                    <p className="text-white/30 text-sm mt-1">{t("Logs will appear here once you send an OTP", "أول ما تبعت OTP هتظهر هنا")}</p>
-                  </td>
-                </tr>
+                <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(255,255,255,0.3)" }}>
+                  <Loader2 size={24} style={{ margin: "0 auto 8px", animation: "spin 0.8s linear infinite" }} />
+                  <p style={{ fontSize: 13 }}>{t("Loading...", "جاري التحميل...")}</p>
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="empty-state">
+                  <Activity size={36} style={{ opacity: 0.3, margin: "0 auto 16px" }} />
+                  <p style={{ fontSize: 14, marginBottom: 4 }}>
+                    {t("No logs yet", "مفيش سجلات لسه")}
+                  </p>
+                  <p style={{ fontSize: 12 }}>
+                    {t("Once you send an OTP, it will appear here", "أول ما تبعت OTP هتظهر هنا")}
+                  </p>
+                </div>
               ) : (
-                filteredLogs.map((log) => {
-                  const config = statusConfig[log.status];
-                  const Icon = config.icon;
+                logs.map((log) => {
+                  const cfg = STATUS_CONFIG[log.status] || STATUS_CONFIG.FAILED;
                   return (
-                    <tr key={log.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Icon size={16} style={{ color: config.color }} />
-                          <span className="text-sm" style={{ color: config.color }}>
-                            {config.label}
+                    <div key={log.id} className="table-row">
+                      {/* Status */}
+                      <div>
+                        <span className="status-badge" style={{ background: cfg.bg, color: cfg.color }}>
+                          <span className="status-dot" style={{ background: cfg.color }} />
+                          {cfg.label}
+                        </span>
+                      </div>
+
+                      {/* Phone — always LTR */}
+                      <div className="phone-cell">{log.phone}</div>
+
+                      {/* Time */}
+                      <div className="time-cell">{formatTime(getEventTime(log))}</div>
+
+                      {/* Notes */}
+                      <div>
+                        {log.error ? (
+                          <span className="error-cell" title={log.error}>
+                            {log.error.length > 30 ? log.error.slice(0, 30) + "…" : log.error}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-white/80 font-mono text-sm">{log.phone}</td>
-                      <td className="px-6 py-4 text-white/50 text-sm">
-                        {new Date(log.createdAt).toLocaleString(language === 'ar' ? "ar-EG" : "en-US")}
-                      </td>
-                      <td className="px-6 py-4 text-white/40 text-sm">
-                        {log.error || (log.verifiedAt ? `${t("Verified at", "تم التحقق في")} ${new Date(log.verifiedAt).toLocaleTimeString(language === 'ar' ? "ar-EG" : "en-US")}` : "—")}
-                      </td>
-                    </tr>
+                        ) : log.verifiedAt ? (
+                          <span style={{ fontSize: 11, color: "rgba(32,211,120,0.6)" }}>
+                            {t("Verified", "تحقق")} {formatTime(log.verifiedAt)}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>—</span>
+                        )}
+                      </div>
+                    </div>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
+
+        {/* Pagination */}
+        {pages > 1 && (
+          <div className="pagination">
+            <span className="pagination-info">
+              {/* Works for both LTR and RTL since numbers are always LTR */}
+              {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} {t("of", "من")} {total}
+            </span>
+            <div className="pagination-btns">
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page === 1}
+              >
+                {/* Flip chevron direction based on language */}
+                {language === "ar" ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+              </button>
+              <span className="page-num">{page} / {pages}</span>
+              <button
+                className="page-btn"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page === pages}
+              >
+                {language === "ar" ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

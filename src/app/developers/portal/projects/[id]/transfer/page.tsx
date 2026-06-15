@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Share2, AlertTriangle, Check, User, Mail, ArrowLeft } from "lucide-react";
+import { Share2, AlertTriangle, Check, Mail, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 export default function TransferProjectPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.id as string;
+  const { language, t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
@@ -17,9 +18,18 @@ export default function TransferProjectPage() {
   const [success, setSuccess] = useState<{ name: string; email: string } | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
+  const dir = language === "ar" ? "rtl" : "ltr";
+  const align = language === "ar" ? "right" : "left";
+
   async function handleTransfer() {
-    if (!email.trim()) { setError("إيميل العميل مطلوب"); return; }
-    if (!confirmed) { setError("لازم توافق على شروط التسليم الأول"); return; }
+    if (!email.trim()) {
+      setError(t("Client email is required", "إيميل العميل مطلوب"));
+      return;
+    }
+    if (!confirmed) {
+      setError(t("You must accept the transfer terms first", "لازم توافق على شروط التسليم الأول"));
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -30,7 +40,10 @@ export default function TransferProjectPage() {
         body: JSON.stringify({ targetEmail: email.trim(), note: note.trim() || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "حصل خطأ"); return; }
+      if (!res.ok) {
+        setError(data.error || t("An error occurred", "حصل خطأ"));
+        return;
+      }
       setSuccess(data.transferredTo);
     } finally {
       setLoading(false);
@@ -45,7 +58,7 @@ export default function TransferProjectPage() {
           max-width: 600px; margin: 0 auto;
           padding: 40px 24px;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl; color: #fff;
+          color: #fff;
         }
         .back-link {
           display: inline-flex; align-items: center; gap: 6px;
@@ -68,7 +81,7 @@ export default function TransferProjectPage() {
           font-size: 14px; font-weight: 600; color: #f59e0b;
           margin-bottom: 10px;
         }
-        .warning-box ul { margin: 0; padding-right: 16px; }
+        .warning-box ul { margin: 0; padding-inline-start: 16px; }
         .warning-box li { font-size: 13px; color: rgba(245,158,11,0.75); margin-bottom: 6px; line-height: 1.5; }
 
         .form-field { margin-bottom: 18px; }
@@ -123,7 +136,6 @@ export default function TransferProjectPage() {
         .btn-transfer:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-transfer:hover:not(:disabled) { background: #1bbf6b; }
 
-        /* Success */
         .success-box {
           background: rgba(32,211,120,0.07);
           border: 1px solid rgba(32,211,120,0.2);
@@ -160,10 +172,11 @@ export default function TransferProjectPage() {
         .btn-back:hover { background: rgba(255,255,255,0.09); }
       `}</style>
 
-      <div className="transfer-root">
+      <div className="transfer-root" style={{ direction: dir }}>
         <Link href={`/developers/portal/projects/${projectId}`} className="back-link">
+          {/* Arrow flips automatically with RTL direction */}
           <ArrowLeft size={14} />
-          رجوع للمشروع
+          {t("Back to project", "رجوع للمشروع")}
         </Link>
 
         {success ? (
@@ -172,11 +185,14 @@ export default function TransferProjectPage() {
             <div className="success-icon">
               <Check size={26} />
             </div>
-            <div className="success-title">تم تسليم المشروع بنجاح! 🎉</div>
+            <div className="success-title">
+              {t("Project transferred successfully! 🎉", "تم تسليم المشروع بنجاح! 🎉")}
+            </div>
             <div className="success-sub">
-              المشروع اتسلم لـ <strong style={{ color: "#fff" }}>{success.name || success.email}</strong>.
-              <br />
-              العميل دلوقتي يقدر يوصل للـ API Keys والقوالب وإعدادات Meta من حسابه.
+              {t(
+                <>The project was transferred to <strong style={{ color: "#fff" }}>{success.name || success.email}</strong>.<br />The client can now access API Keys, templates, and Meta settings from their account.</>,
+                <>المشروع اتسلم لـ <strong style={{ color: "#fff" }}>{success.name || success.email}</strong>.<br />العميل دلوقتي يقدر يوصل للـ API Keys والقوالب وإعدادات Meta من حسابه.</>
+              )}
             </div>
             <div className="success-email">
               <Mail size={13} />
@@ -185,39 +201,50 @@ export default function TransferProjectPage() {
             <br />
             <Link href="/developers/portal" className="btn-back">
               <ArrowLeft size={13} />
-              رجوع لكل المشاريع
+              {t("Back to all projects", "رجوع لكل المشاريع")}
             </Link>
           </div>
         ) : (
           /* ── Transfer form ── */
           <>
             <h1 className="transfer-title">
-              <Share2 size={20} style={{ display: "inline", marginLeft: 8, color: "#20d378", verticalAlign: "middle" }} />
-              تسليم المشروع لعميل
+              <Share2
+                size={20}
+                style={{
+                  display: "inline",
+                  [language === "ar" ? "marginLeft" : "marginRight"]: 8,
+                  color: "#20d378",
+                  verticalAlign: "middle",
+                }}
+              />
+              {t("Transfer project to client", "تسليم المشروع لعميل")}
             </h1>
-            <p className="transfer-sub">
-              بتسلّم المشروع ده بكل محتوياته — API Keys، القوالب، وربط Meta — لعميل عنده حساب في منصة وني.
-              <br />
-              بعد التسليم، أنت مش هتقدر تعدل فيه تاني.
+            <p className="transfer-sub" style={{ textAlign: align }}>
+              {t(
+                "You're transferring this project with all its contents — API Keys, templates, and Meta connection — to a client with an account on the Wani platform. After the transfer, you won't be able to edit it.",
+                "بتسلّم المشروع ده بكل محتوياته — API Keys، القوالب، وربط Meta — لعميل عنده حساب في منصة وني. بعد التسليم، أنت مش هتقدر تعدل فيه تاني."
+              )}
             </p>
 
             {/* Warning */}
             <div className="warning-box">
               <div className="warning-box-title">
                 <AlertTriangle size={15} />
-                مهم — اقرأ قبل التسليم
+                {t("Important — read before transferring", "مهم — اقرأ قبل التسليم")}
               </div>
               <ul>
-                <li>التسليم <strong>نهائي</strong> — مش هتقدر ترجعه لحسابك</li>
-                <li>العميل هياخد التحكم الكامل في المشروع</li>
-                <li>الـ API Keys والقوالب هتعدي للعميل زي ما هي</li>
-                <li>لازم العميل يكون عامل حساب في منصة وني بنفس الإيميل</li>
+                <li>{t(<>The transfer is <strong>final</strong> — you can't undo it</>, <>التسليم <strong>نهائي</strong> — مش هتقدر ترجعه لحسابك</>)}</li>
+                <li>{t("The client will have full control over the project", "العميل هياخد التحكم الكامل في المشروع")}</li>
+                <li>{t("API Keys and templates will transfer as-is", "الـ API Keys والقوالب هتعدي للعميل زي ما هي")}</li>
+                <li>{t("The client must have a Wani account with the same email", "لازم العميل يكون عامل حساب في منصة وني بنفس الإيميل")}</li>
               </ul>
             </div>
 
             {/* Form */}
             <div className="form-field">
-              <label className="form-label">إيميل العميل *</label>
+              <label className="form-label" style={{ textAlign: align }}>
+                {t("Client email *", "إيميل العميل *")}
+              </label>
               <input
                 className="form-input"
                 type="email"
@@ -225,17 +252,24 @@ export default function TransferProjectPage() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(""); }}
                 dir="ltr"
+                style={{ textAlign: "left" }}
               />
             </div>
 
             <div className="form-field">
-              <label className="form-label">ملاحظة للعميل (اختياري)</label>
+              <label className="form-label" style={{ textAlign: align }}>
+                {t("Note for client (optional)", "ملاحظة للعميل (اختياري)")}
+              </label>
               <textarea
-                className={`form-input form-textarea`}
-                placeholder="مثلاً: تقدر تبدأ على طول — الـ API Key الأول جاهز"
+                className="form-input form-textarea"
+                placeholder={t(
+                  "e.g. You can start right away — the first API Key is ready",
+                  "مثلاً: تقدر تبدأ على طول — الـ API Key الأول جاهز"
+                )}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={300}
+                style={{ textAlign: align }}
               />
             </div>
 
@@ -245,12 +279,14 @@ export default function TransferProjectPage() {
                 {confirmed && <Check size={11} style={{ color: "#20d378" }} />}
               </div>
               <span className="confirm-text">
-                أنا فاهم إن التسليم نهائي ومش هرجع المشروع لحسابي تاني، وإن العميل هياخد
-                التحكم الكامل في الـ API Keys والقوالب وربط Meta.
+                {t(
+                  "I understand that the transfer is final and I won't be able to reclaim the project, and that the client will have full control over the API Keys, templates, and Meta connection.",
+                  "أنا فاهم إن التسليم نهائي ومش هرجع المشروع لحسابي تاني، وإن العميل هياخد التحكم الكامل في الـ API Keys والقوالب وربط Meta."
+                )}
               </span>
             </div>
 
-            {error && <div className="form-error">{error}</div>}
+            {error && <div className="form-error" style={{ textAlign: align }}>{error}</div>}
 
             <button
               className="btn-transfer"
@@ -258,11 +294,11 @@ export default function TransferProjectPage() {
               disabled={loading || !email || !confirmed}
             >
               {loading ? (
-                "جاري التسليم..."
+                t("Transferring...", "جاري التسليم...")
               ) : (
                 <>
                   <Share2 size={16} />
-                  تسليم المشروع
+                  {t("Transfer project", "تسليم المشروع")}
                 </>
               )}
             </button>
