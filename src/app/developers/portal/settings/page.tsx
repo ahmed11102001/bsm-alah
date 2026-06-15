@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User, Shield, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLanguage } from "../../_components/LanguageProvider";
 
 export default function DeveloperSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { language, t } = useLanguage();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -53,14 +55,14 @@ export default function DeveloperSettingsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "حصل خطأ أثناء الحفظ");
+        toast.error(data.error || t("An error occurred while saving", "حصل خطأ أثناء الحفظ"));
       } else {
         toast.success(data.message);
         setForm((f) => ({ ...f, currentPassword: "", newPassword: "" })); // Clear passwords
         router.refresh(); // Refresh layout to update name
       }
     } catch {
-      toast.error("مشكلة في الاتصال بالخادم");
+      toast.error(t("Connection error with the server", "مشكلة في الاتصال بالخادم"));
     } finally {
       setSaving(false);
     }
@@ -99,7 +101,7 @@ export default function DeveloperSettingsPage() {
 
         .settings-container {
           padding: 32px 48px;
-          direction: rtl;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'};
           font-family: 'IBM Plex Sans Arabic', sans-serif;
           max-width: 900px;
           margin: 0 auto;
@@ -236,20 +238,20 @@ export default function DeveloperSettingsPage() {
       <div className="settings-scroll-wrapper">
         <div className="settings-container">
           <div className="settings-header">
-          <h1 className="settings-title">إعدادات الحساب</h1>
-          <p className="settings-desc">إدارة معلوماتك الشخصية وكلمة المرور</p>
+          <h1 className="settings-title">{t("Account Settings", "إعدادات الحساب")}</h1>
+          <p className="settings-desc">{t("Manage your personal information and password", "إدارة معلوماتك الشخصية وكلمة المرور")}</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* معلومات عامة */}
+          {/* Personal Info */}
           <div className="settings-card">
             <div className="card-header">
               <div className="card-icon"><User size={16} /></div>
-              <span className="card-title">المعلومات الشخصية</span>
+              <span className="card-title">{t("Personal Information", "المعلومات الشخصية")}</span>
             </div>
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label">الاسم الأول</label>
+                <label className="form-label">{t("First Name", "الاسم الأول")}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -259,7 +261,7 @@ export default function DeveloperSettingsPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">الاسم الأخير</label>
+                <label className="form-label">{t("Last Name", "الاسم الأخير")}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -269,34 +271,34 @@ export default function DeveloperSettingsPage() {
                 />
               </div>
               <div className="form-group full">
-                <label className="form-label">البريد الإلكتروني (غير قابل للتعديل)</label>
+                <label className="form-label">{t("Email (read-only)", "البريد الإلكتروني (غير قابل للتعديل)")}</label>
                 <input
                   type="email"
                   className="form-input"
                   value={form.email}
                   disabled
-                  style={{ direction: 'ltr', textAlign: 'right' }}
+                  style={{ direction: 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }}
                 />
               </div>
             </div>
           </div>
 
-          {/* كلمة المرور */}
+          {/* Password */}
           <div className="settings-card">
             <div className="card-header">
               <div className="card-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
                 <Shield size={16} />
               </div>
-              <span className="card-title">الأمان وكلمة المرور</span>
+              <span className="card-title">{t("Security & Password", "الأمان وكلمة المرور")}</span>
             </div>
             <div className="form-grid">
               <div className="form-group full">
                 <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>
-                  اترك الحقول فارغة إذا كنت لا ترغب بتغيير كلمة المرور.
+                  {t("Leave fields empty if you don't want to change the password.", "اترك الحقول فارغة إذا كنت لا ترغب بتغيير كلمة المرور.")}
                 </p>
               </div>
               <div className="form-group">
-                <label className="form-label">كلمة المرور الحالية</label>
+                <label className="form-label">{t("Current Password", "كلمة المرور الحالية")}</label>
                 <input
                   type="password"
                   className="form-input"
@@ -306,14 +308,14 @@ export default function DeveloperSettingsPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">كلمة المرور الجديدة</label>
+                <label className="form-label">{t("New Password", "كلمة المرور الجديدة")}</label>
                 <input
                   type="password"
                   className="form-input"
                   style={{ direction: 'ltr' }}
                   value={form.newPassword}
                   onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                  placeholder="8 أحرف كحد أدنى"
+                  placeholder={t("8 characters minimum", "8 أحرف كحد أدنى")}
                 />
               </div>
             </div>
@@ -322,7 +324,7 @@ export default function DeveloperSettingsPage() {
           <div className="submit-wrap">
             <button type="submit" className="btn-save" disabled={saving}>
               {saving ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Save size={16} />}
-              حفظ التعديلات
+              {t("Save Changes", "حفظ التعديلات")}
             </button>
             </div>
           </form>

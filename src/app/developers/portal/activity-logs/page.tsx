@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Activity, CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { useLanguage } from "../../_components/LanguageProvider";
 
 interface OtpLog {
   id: string;
@@ -16,6 +17,7 @@ export default function ActivityLogsPage() {
   const [logs, setLogs] = useState<OtpLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     // TODO: Fetch real logs from API
@@ -26,17 +28,25 @@ export default function ActivityLogsPage() {
   const filteredLogs = filter === "all" ? logs : logs.filter((l) => l.status === filter);
 
   const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-    sent: { icon: Clock, color: "#3b82f6", label: "تم الإرسال" },
-    verified: { icon: CheckCircle, color: "#25D366", label: "تم التحقق" },
-    expired: { icon: AlertTriangle, color: "#f59e0b", label: "انتهى" },
-    failed: { icon: XCircle, color: "#ef4444", label: "فشل" },
+    sent: { icon: Clock, color: "#3b82f6", label: t("Sent", "تم الإرسال") },
+    verified: { icon: CheckCircle, color: "#25D366", label: t("Verified", "تم التحقق") },
+    expired: { icon: AlertTriangle, color: "#f59e0b", label: t("Expired", "انتهى") },
+    failed: { icon: XCircle, color: "#ef4444", label: t("Failed", "فشل") },
+  };
+
+  const filterLabels: Record<string, string> = {
+    all: t("All", "الكل"),
+    sent: t("Sent", "تم الإرسال"),
+    verified: t("Verified", "تم التحقق"),
+    expired: t("Expired", "انتهى"),
+    failed: t("Failed", "فشل"),
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Activity Logs</h1>
-        <p className="text-white/50">سجل كل عمليات إرسال وتحقق الـ OTP</p>
+        <h1 className="text-2xl font-bold text-white mb-2">{t("Activity Logs", "سجل النشاط")}</h1>
+        <p className="text-white/50">{t("Log of all OTP send and verify operations", "سجل كل عمليات إرسال وتحقق الـ OTP")}</p>
       </div>
 
       {/* Filters */}
@@ -51,7 +61,7 @@ export default function ActivityLogsPage() {
                 : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/70"
             }`}
           >
-            {f === "all" ? "الكل" : statusConfig[f]?.label || f}
+            {filterLabels[f] || f}
           </button>
         ))}
       </div>
@@ -62,10 +72,10 @@ export default function ActivityLogsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="text-left text-white/40 text-sm font-medium px-6 py-4">الحالة</th>
-                <th className="text-left text-white/40 text-sm font-medium px-6 py-4">الرقم</th>
-                <th className="text-left text-white/40 text-sm font-medium px-6 py-4">الوقت</th>
-                <th className="text-left text-white/40 text-sm font-medium px-6 py-4">ملاحظات</th>
+                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Status", "الحالة")}</th>
+                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Phone", "الرقم")}</th>
+                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Time", "الوقت")}</th>
+                <th className={`${language === 'ar' ? 'text-right' : 'text-left'} text-white/40 text-sm font-medium px-6 py-4`}>{t("Notes", "ملاحظات")}</th>
               </tr>
             </thead>
             <tbody>
@@ -79,8 +89,8 @@ export default function ActivityLogsPage() {
                 <tr>
                   <td colSpan={4} className="text-center py-12">
                     <Activity size={32} className="text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40">مفيش logs لسه</p>
-                    <p className="text-white/30 text-sm mt-1">أول ما تبعت OTP هتظهر هنا</p>
+                    <p className="text-white/40">{t("No logs yet", "مفيش logs لسه")}</p>
+                    <p className="text-white/30 text-sm mt-1">{t("Logs will appear here once you send an OTP", "أول ما تبعت OTP هتظهر هنا")}</p>
                   </td>
                 </tr>
               ) : (
@@ -99,10 +109,10 @@ export default function ActivityLogsPage() {
                       </td>
                       <td className="px-6 py-4 text-white/80 font-mono text-sm">{log.phone}</td>
                       <td className="px-6 py-4 text-white/50 text-sm">
-                        {new Date(log.createdAt).toLocaleString("ar-EG")}
+                        {new Date(log.createdAt).toLocaleString(language === 'ar' ? "ar-EG" : "en-US")}
                       </td>
                       <td className="px-6 py-4 text-white/40 text-sm">
-                        {log.error || (log.verifiedAt ? "Verified at " + new Date(log.verifiedAt).toLocaleTimeString("ar-EG") : "—")}
+                        {log.error || (log.verifiedAt ? `${t("Verified at", "تم التحقق في")} ${new Date(log.verifiedAt).toLocaleTimeString(language === 'ar' ? "ar-EG" : "en-US")}` : "—")}
                       </td>
                     </tr>
                   );

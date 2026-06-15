@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useMobileNav } from "../../../_components/MobileNavContext";
 
-import { useLanguage } from "../../../_components/LanguageProvider";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 interface Project {
   id: string;
