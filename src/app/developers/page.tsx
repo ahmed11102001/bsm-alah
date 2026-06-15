@@ -94,6 +94,7 @@ export default function DevelopersLandingPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <Link
             href="/developers/signin"
+            className="nav-link-secondary"
             style={{
               padding: "8px 16px",
               fontSize: "13px",
@@ -107,6 +108,7 @@ export default function DevelopersLandingPage() {
           </Link>
           <Link
             href="/developers/signup"
+            className="nav-link-primary"
             style={{
               padding: "8px 18px",
               fontSize: "13px",
@@ -241,6 +243,7 @@ export default function DevelopersLandingPage() {
 
         {/* Micro-stats */}
         <div
+          className="hero-stats"
           style={{
             display: "flex",
             gap: "32px",
@@ -322,7 +325,7 @@ export default function DevelopersLandingPage() {
           </div>
 
           {/* Code */}
-          <div style={{ padding: "20px 20px 24px", direction: "ltr" }}>
+          <div className="terminal-body" style={{ padding: "20px 20px 24px", direction: "ltr", overflowX: "auto" }}>
             {LINES.map((line, i) => (
               <div
                 key={i}
@@ -379,7 +382,7 @@ export default function DevelopersLandingPage() {
           ليه Wani OTP؟
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+        <div className="features-grid">
           {FEATURES.map(({ icon: Icon, title, body }) => (
             <div
               key={title}
@@ -451,10 +454,10 @@ export default function DevelopersLandingPage() {
         </div>
 
         {/* cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <div className="pricing-grid">
 
           {/* Trial */}
-          <div style={{ padding: "32px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", position: "relative", display: "flex", flexDirection: "column" }}>
+          <div className="pricing-card" style={{ borderRadius: "20px", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", position: "relative", display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", marginBottom: "20px" }}>TRIAL</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
               <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>0</span>
@@ -495,7 +498,7 @@ export default function DevelopersLandingPage() {
           </div>
 
           {/* Developer */}
-          <div style={{ padding: "32px", borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", position: "relative", display: "flex", flexDirection: "column" }}>
+          <div className="pricing-card" style={{ borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", position: "relative", display: "flex", flexDirection: "column" }}>
             {/* Popular badge */}
             <div style={{ position: "absolute", top: "20px", left: "20px", padding: "3px 10px", borderRadius: "20px", background: "#25D366", color: "#000", fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em" }}>الأكثر طلباً</div>
 
@@ -640,13 +643,50 @@ export default function DevelopersLandingPage() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.3; }
         }
+        .pricing-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .features-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+        }
+        .pricing-card {
+          padding: 32px;
+        }
+        @media (max-width: 768px) {
+          .pricing-grid {
+            grid-template-columns: 1fr;
+          }
+          .features-grid {
+            grid-template-columns: 1fr;
+          }
+        }
         @media (max-width: 600px) {
           nav { padding: 16px 20px !important; }
           section { padding-left: 16px !important; padding-right: 16px !important; }
-          div[style*="gridTemplateColumns"] {
-            grid-template-columns: 1fr !important;
+          .pricing-card {
+            padding: 20px !important;
           }
           footer { flex-direction: column; gap: 12px; text-align: center; }
+        }
+        @media (max-width: 480px) {
+          .nav-link-secondary {
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+          }
+          .nav-link-primary {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+          }
+          .hero-stats {
+            gap: 16px !important;
+          }
+          .terminal-body {
+            padding: 12px 12px 16px !important;
+          }
         }
       `}</style>
     </div>
