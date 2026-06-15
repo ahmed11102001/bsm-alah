@@ -65,7 +65,7 @@ async function getMetaMediaHandle(accessToken: string, mediaType: string): Promi
 }
 
 // جلب القوالب للعرض
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -82,12 +82,23 @@ export async function GET() {
   }
 }
 
+// helper: resolves ownerId from session OR MCP internal header
+async function resolveOwner(req: Request): Promise<string | null> {
+  // MCP internal call — header set by MCP route itself (server-to-server)
+  const mcpInternal = (req as any).headers?.get?.("x-mcp-internal");
+  const mcpOwnerId = (req as any).headers?.get?.("x-mcp-user-id");
+  if (mcpInternal === "true" && mcpOwnerId) return mcpOwnerId;
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return null;
+  return (session.user as any).parentId || session.user.id;
+}
+
 // إنشاء قالب يدوي وإرساله لميتا
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-    const ownerId = (session.user as any).parentId || session.user.id;
+    const ownerId = await resolveOwner(req);
+    if (!ownerId) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
     const {
       name,
@@ -264,9 +275,8 @@ export async function POST(req: Request) {
 // حذف قالب
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-    const ownerId = (session.user as any).parentId || session.user.id;
+    const ownerId = await resolveOwner(req);
+    if (!ownerId) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     const { id } = await req.json();
 
     const template = await prisma.template.findFirst({
