@@ -2,11 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import {
-  Activity, CheckCircle, XCircle, Clock, AlertTriangle,
-  Loader2, ChevronRight, ChevronLeft, RefreshCw,
-} from "lucide-react";
-import { useLanguage } from "../../_components/LanguageProvider";
+import { Activity, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
+import { useLanguage } from "@/app/developers/_components/LanguageProvider";
 
 type LogStatus = "PENDING" | "VERIFIED" | "EXPIRED" | "FAILED";
 
@@ -29,80 +26,79 @@ interface Stats {
   FAILED: number;
 }
 
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const STATUS_LABELS: Record<LogStatus, { en: string; ar: string }> = {
+  PENDING: { en: "Sent", ar: "تم الإرسال" },
+  VERIFIED: { en: "Verified", ar: "تم التحقق" },
+  EXPIRED: { en: "Expired", ar: "انتهى" },
+  FAILED: { en: "Failed", ar: "فشل" },
+};
+
+const STATUS_COLORS: Record<LogStatus, { color: string; bg: string; icon: any }> = {
+  PENDING: { color: "#3b82f6", bg: "rgba(59,130,246,0.1)", icon: Clock },
+  VERIFIED: { color: "#20d378", bg: "rgba(32,211,120,0.1)", icon: CheckCircle },
+  EXPIRED: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", icon: AlertTriangle },
+  FAILED: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", icon: XCircle },
+};
+
+const FILTER_KEYS = ["all", "PENDING", "VERIFIED", "EXPIRED", "FAILED"] as const;
+type FilterKey = typeof FILTER_KEYS[number];
+
+const FILTER_LABELS: Record<FilterKey, { en: string; ar: string }> = {
+  all: { en: "All", ar: "الكل" },
+  PENDING: { en: "Sent", ar: "تم الإرسال" },
+  VERIFIED: { en: "Verified", ar: "تم التحقق" },
+  EXPIRED: { en: "Expired", ar: "انتهى" },
+  FAILED: { en: "Failed", ar: "فشل" },
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ProjectActivityLogsPage() {
   const params = useParams();
   const projectId = params.id as string;
   const { language, t } = useLanguage();
-
-  const dir = language === "ar" ? "rtl" : "ltr";
-  const locale = language === "ar" ? "ar-EG" : "en-US";
-
-  // Status config uses t() — rebuilt on language change via useMemo-style inline call
-  const STATUS_CONFIG: Record<LogStatus, { icon: any; color: string; bg: string; label: string }> = {
-    PENDING: { icon: Clock, color: "#3b82f6", bg: "rgba(59,130,246,0.1)", label: t("Sent", "تم الإرسال") },
-    VERIFIED: { icon: CheckCircle, color: "#20d378", bg: "rgba(32,211,120,0.1)", label: t("Verified", "تم التحقق") },
-    EXPIRED: { icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.1)", label: t("Expired", "انتهى") },
-    FAILED: { icon: XCircle, color: "#ef4444", bg: "rgba(239,68,68,0.1)", label: t("Failed", "فشل") },
-  };
-
-  const FILTERS = [
-    { key: "all", label: t("All", "الكل") },
-    { key: "PENDING", label: t("Sent", "تم الإرسال") },
-    { key: "VERIFIED", label: t("Verified", "تم التحقق") },
-    { key: "EXPIRED", label: t("Expired", "انتهى") },
-    { key: "FAILED", label: t("Failed", "فشل") },
-  ];
+  const isAr = language === "ar";
 
   const [logs, setLogs] = useState<OtpLog[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchLogs = useCallback(
-    async (p = page, f = filter, silent = false) => {
-      if (!silent) setLoading(true);
-      else setRefreshing(true);
-      try {
-        const qs = new URLSearchParams({
-          page: String(p),
-          limit: "20",
-          ...(f !== "all" ? { status: f } : {}),
-        });
-        const res = await fetch(`/api/developers/projects/${projectId}/logs?${qs}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setLogs(data.logs || []);
-        setTotal(data.total || 0);
-        setPages(data.pages || 1);
-        if (data.stats) setStats(data.stats);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [projectId, page, filter]
-  );
-
-  useEffect(() => {
-    fetchLogs(page, filter);
+  const fetchLogs = useCallback(async (p = page, f = filter, silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(p),
+        limit: "20",
+        ...(f !== "all" ? { status: f } : {}),
+      });
+      const res = await fetch(`/api/developers/projects/${projectId}/logs?${qs}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLogs(data.logs || []);
+      setTotal(data.total || 0);
+      setPages(data.pages || 1);
+      if (data.stats) setStats(data.stats);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [projectId, page, filter]);
 
-  function handleFilter(f: string) {
-    setFilter(f);
-    setPage(1);
-  }
+  useEffect(() => { fetchLogs(page, filter); }, [projectId, page, filter]);
+
+  function handleFilter(f: FilterKey) { setFilter(f); setPage(1); }
 
   function formatTime(iso: string | null) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleString(locale, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(iso).toLocaleString(isAr ? "ar-EG" : "en-US", {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
   }
 
@@ -110,10 +106,13 @@ export default function ProjectActivityLogsPage() {
     return log.verifiedAt || log.failedAt || log.expiredAt || log.sentAt || log.createdAt;
   }
 
+  const dir = isAr ? "rtl" : "ltr";
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400&display=swap');
+
         .logs-root {
           max-width: 1000px; margin: 0 auto;
           padding: 32px 24px;
@@ -121,8 +120,8 @@ export default function ProjectActivityLogsPage() {
           color: #fff;
         }
         .logs-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
-        .logs-title { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-        .logs-sub { font-size: 13px; color: rgba(255,255,255,0.4); }
+        .logs-title  { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .logs-sub    { font-size: 13px; color: rgba(255,255,255,0.4); }
 
         .refresh-btn {
           display: flex; align-items: center; gap: 6px;
@@ -130,8 +129,8 @@ export default function ProjectActivityLogsPage() {
           background: rgba(255,255,255,0.05);
           border: 1px solid rgba(255,255,255,0.1);
           color: rgba(255,255,255,0.5); font-size: 12px;
-          cursor: pointer; transition: all 0.2s;
-          font-family: inherit;
+          cursor: pointer; transition: all 0.2s; font-family: inherit;
+          flex-shrink: 0;
         }
         .refresh-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
         .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
@@ -146,8 +145,8 @@ export default function ProjectActivityLogsPage() {
           display: flex; align-items: center; gap: 12px;
         }
         .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .stat-val { font-size: 22px; font-weight: 600; color: #fff; }
-        .stat-lbl { font-size: 11px; color: rgba(255,255,255,0.35); }
+        .stat-val  { font-size: 22px; font-weight: 600; color: #fff; }
+        .stat-lbl  { font-size: 11px; color: rgba(255,255,255,0.35); }
 
         .filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
         .filter-btn {
@@ -156,22 +155,17 @@ export default function ProjectActivityLogsPage() {
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.08);
           color: rgba(255,255,255,0.45);
-          cursor: pointer; transition: all 0.15s;
-          font-family: inherit;
+          cursor: pointer; transition: all 0.15s; font-family: inherit;
         }
-        .filter-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
+        .filter-btn:hover  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
         .filter-btn.active { background: rgba(32,211,120,0.1); border-color: rgba(32,211,120,0.25); color: #20d378; }
 
-        .logs-table-wrapper {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 14px; overflow: hidden;
-        }
-        .logs-table-scroll { overflow-x: auto; }
-        .logs-table { min-width: 600px; }
+        .logs-table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; overflow: hidden; }
+        .logs-table-scroll  { overflow-x: auto; }
+        .logs-table         { min-width: 600px; }
+
         .table-header {
-          display: grid;
-          grid-template-columns: 130px 1fr 110px 110px;
+          display: grid; grid-template-columns: 130px 1fr 130px 130px;
           padding: 10px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
           font-size: 11px; font-weight: 600;
@@ -179,30 +173,25 @@ export default function ProjectActivityLogsPage() {
           text-transform: uppercase; letter-spacing: 0.5px;
         }
         .table-row {
-          display: grid;
-          grid-template-columns: 130px 1fr 110px 110px;
+          display: grid; grid-template-columns: 130px 1fr 130px 130px;
           padding: 12px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.04);
-          align-items: center;
-          transition: background 0.1s;
+          align-items: center; transition: background 0.1s;
         }
         .table-row:last-child { border-bottom: none; }
-        .table-row:hover { background: rgba(255,255,255,0.025); }
+        .table-row:hover      { background: rgba(255,255,255,0.025); }
 
-        .status-badge {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 4px 10px; border-radius: 20px;
-          font-size: 11px; font-weight: 600;
-        }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-dot   { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-        .phone-cell { font-family: 'Fira Code', monospace; font-size: 13px; color: rgba(255,255,255,0.7); direction: ltr; text-align: left; }
-        .time-cell { font-size: 12px; color: rgba(255,255,255,0.35); }
+        .phone-cell { font-family: 'Fira Code', monospace; font-size: 13px; color: rgba(255,255,255,0.7); direction: ltr; }
+        .time-cell  { font-size: 12px; color: rgba(255,255,255,0.35); }
         .error-cell { font-size: 11px; color: rgba(239,68,68,0.7); }
 
         .empty-state { text-align: center; padding: 60px 0; color: rgba(255,255,255,0.25); }
+        .empty-icon  { margin: 0 auto 16px; opacity: 0.3; }
 
-        .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+        .pagination      { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
         .pagination-info { font-size: 12px; color: rgba(255,255,255,0.3); }
         .pagination-btns { display: flex; gap: 6px; }
         .page-btn {
@@ -218,11 +207,12 @@ export default function ProjectActivityLogsPage() {
         .page-num { font-size: 12px; color: rgba(255,255,255,0.4); padding: 0 8px; align-self: center; }
       `}</style>
 
-      <div className="logs-root" style={{ direction: dir }}>
-        {/* Header */}
+      <div className="logs-root" dir={dir}>
+
+        {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="logs-header">
           <div>
-            <h1 className="logs-title">{t("Logs", "السجلات")}</h1>
+            <h1 className="logs-title">{t("Activity Logs", "السجلات")}</h1>
             <p className="logs-sub">
               {t(
                 "A record of all OTP send and verify operations in this project",
@@ -239,10 +229,10 @@ export default function ProjectActivityLogsPage() {
           </button>
         </div>
 
-        {/* Stats */}
+        {/* ── Stats ─────────────────────────────────────────────────────── */}
         {stats && (
           <div className="stats-row">
-            {(Object.entries(STATUS_CONFIG) as [LogStatus, any][]).map(([key, cfg]) => {
+            {(Object.entries(STATUS_COLORS) as [LogStatus, any][]).map(([key, cfg]) => {
               const Icon = cfg.icon;
               return (
                 <div key={key} className="stat-card">
@@ -251,7 +241,9 @@ export default function ProjectActivityLogsPage() {
                   </div>
                   <div>
                     <div className="stat-val">{stats[key] ?? 0}</div>
-                    <div className="stat-lbl">{cfg.label}</div>
+                    <div className="stat-lbl">
+                      {isAr ? STATUS_LABELS[key].ar : STATUS_LABELS[key].en}
+                    </div>
                   </div>
                 </div>
               );
@@ -259,38 +251,41 @@ export default function ProjectActivityLogsPage() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* ── Filters ───────────────────────────────────────────────────── */}
         <div className="filters">
-          {FILTERS.map((f) => (
+          {FILTER_KEYS.map((f) => (
             <button
-              key={f.key}
-              className={`filter-btn ${filter === f.key ? "active" : ""}`}
-              onClick={() => handleFilter(f.key)}
+              key={f}
+              className={`filter-btn ${filter === f ? "active" : ""}`}
+              onClick={() => handleFilter(f)}
             >
-              {f.label}
-              {f.key !== "all" && stats && (
+              {isAr ? FILTER_LABELS[f].ar : FILTER_LABELS[f].en}
+              {f !== "all" && stats && (
                 <span style={{ marginInlineStart: 4, opacity: 0.6 }}>
-                  ({stats[f.key as LogStatus] ?? 0})
+                  ({stats[f as LogStatus] ?? 0})
                 </span>
               )}
-              {f.key === "all" && total > 0 && (
+              {f === "all" && total > 0 && (
                 <span style={{ marginInlineStart: 4, opacity: 0.6 }}>({total})</span>
               )}
             </button>
           ))}
         </div>
 
-        {/* Table */}
+        {/* ── Table ─────────────────────────────────────────────────────── */}
         <div className="logs-table-wrapper">
           <div className="logs-table-scroll">
             <div className="logs-table">
+
+              {/* Table header */}
               <div className="table-header">
                 <span>{t("Status", "الحالة")}</span>
-                <span>{t("Number", "الرقم")}</span>
+                <span>{t("Phone", "الرقم")}</span>
                 <span>{t("Time", "الوقت")}</span>
                 <span>{t("Notes", "ملاحظات")}</span>
               </div>
 
+              {/* Rows */}
               {loading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(255,255,255,0.3)" }}>
                   <Loader2 size={24} style={{ margin: "0 auto 8px", animation: "spin 0.8s linear infinite" }} />
@@ -298,28 +293,30 @@ export default function ProjectActivityLogsPage() {
                 </div>
               ) : logs.length === 0 ? (
                 <div className="empty-state">
-                  <Activity size={36} style={{ opacity: 0.3, margin: "0 auto 16px" }} />
+                  <Activity size={36} className="empty-icon" />
                   <p style={{ fontSize: 14, marginBottom: 4 }}>
                     {t("No logs yet", "مفيش سجلات لسه")}
                   </p>
                   <p style={{ fontSize: 12 }}>
-                    {t("Once you send an OTP, it will appear here", "أول ما تبعت OTP هتظهر هنا")}
+                    {t("Logs will appear here once you send an OTP", "أول ما تبعت OTP هتظهر هنا")}
                   </p>
                 </div>
               ) : (
                 logs.map((log) => {
-                  const cfg = STATUS_CONFIG[log.status] || STATUS_CONFIG.FAILED;
+                  const cfg = STATUS_COLORS[log.status] || STATUS_COLORS.FAILED;
+                  const Icon = cfg.icon;
+                  const lbl = STATUS_LABELS[log.status] ?? STATUS_LABELS.FAILED;
                   return (
                     <div key={log.id} className="table-row">
                       {/* Status */}
                       <div>
                         <span className="status-badge" style={{ background: cfg.bg, color: cfg.color }}>
                           <span className="status-dot" style={{ background: cfg.color }} />
-                          {cfg.label}
+                          {isAr ? lbl.ar : lbl.en}
                         </span>
                       </div>
 
-                      {/* Phone — always LTR */}
+                      {/* Phone */}
                       <div className="phone-cell">{log.phone}</div>
 
                       {/* Time */}
@@ -329,7 +326,7 @@ export default function ProjectActivityLogsPage() {
                       <div>
                         {log.error ? (
                           <span className="error-cell" title={log.error}>
-                            {log.error.length > 30 ? log.error.slice(0, 30) + "…" : log.error}
+                            {log.error.length > 30 ? log.error.slice(0, 30) + "..." : log.error}
                           </span>
                         ) : log.verifiedAt ? (
                           <span style={{ fontSize: 11, color: "rgba(32,211,120,0.6)" }}>
@@ -347,12 +344,12 @@ export default function ProjectActivityLogsPage() {
           </div>
         </div>
 
-        {/* Pagination */}
+        {/* ── Pagination ────────────────────────────────────────────────── */}
         {pages > 1 && (
           <div className="pagination">
             <span className="pagination-info">
-              {/* Works for both LTR and RTL since numbers are always LTR */}
-              {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} {t("of", "من")} {total}
+              {((page - 1) * 20) + 1}–{Math.min(page * 20, total)}{" "}
+              {t("of", "من")} {total}
             </span>
             <div className="pagination-btns">
               <button
@@ -360,8 +357,7 @@ export default function ProjectActivityLogsPage() {
                 onClick={() => setPage((p) => p - 1)}
                 disabled={page === 1}
               >
-                {/* Flip chevron direction based on language */}
-                {language === "ar" ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                {isAr ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
               </button>
               <span className="page-num">{page} / {pages}</span>
               <button
@@ -369,11 +365,12 @@ export default function ProjectActivityLogsPage() {
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page === pages}
               >
-                {language === "ar" ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+                {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
               </button>
             </div>
           </div>
         )}
+
       </div>
     </>
   );
