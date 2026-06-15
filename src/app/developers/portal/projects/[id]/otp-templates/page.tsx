@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TemplateStatus = "LOCAL_DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "DISABLED";
@@ -23,33 +24,12 @@ interface Template {
   createdAt: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const LANGUAGES = [
-  { code: "ar",    label: "العربية 🇸🇦" },
-  { code: "en_US", label: "الإنجليزية 🇺🇸" },
-  { code: "en_GB", label: "الإنجليزية (UK) 🇬🇧" },
-  { code: "fr",    label: "الفرنسية 🇫🇷" },
-  { code: "de",    label: "الألمانية 🇩🇪" },
-  { code: "es",    label: "الإسبانية 🇪🇸" },
-  { code: "tr",    label: "التركية 🇹🇷" },
-];
-
-const CATEGORIES: { value: TemplateCategory; label: string; desc: string; icon: string }[] = [
-  { value: "AUTHENTICATION", label: "OTP / التحقق",  desc: "أكواد التحقق والمصادقة الثنائية", icon: "🔐" },
-];
-
-const STATUS_CONFIG: Record<TemplateStatus, { label: string; color: string; bg: string; border: string; icon: string }> = {
-  LOCAL_DRAFT: { label: "مسودة",         color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)", icon: "📝" },
-  PENDING:     { label: "قيد المراجعة",  color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)",  icon: "⏳" },
-  APPROVED:    { label: "موافق عليه",    color: "#20d378", bg: "rgba(32,211,120,0.08)",  border: "rgba(32,211,120,0.2)",  icon: "✅" },
-  REJECTED:    { label: "مرفوض",         color: "#ef4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)",   icon: "❌" },
-  DISABLED:    { label: "متوقف",         color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.2)", icon: "🚫" },
-};
-
 // ─── WhatsApp Live Preview ────────────────────────────────────────────────────
 function WAPreview({ headerType, headerText, body, footer, category }: {
   headerType: string; headerText: string; body: string; footer: string; category: TemplateCategory;
 }) {
+  const { language, t } = useLanguage();
+
   // Render {{N}} as colored pills
   function renderText(text: string) {
     return text.split(/(\{\{\d+\}\})/g).map((part, i) =>
@@ -82,13 +62,14 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
         background: "#128C7E",
         padding: "10px 14px",
         display: "flex", alignItems: "center", gap: 10,
+        flexDirection: language === 'ar' ? 'row' : 'row-reverse'
       }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#0d6e63", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
           {category === "AUTHENTICATION" ? "🔐" : category === "UTILITY" ? "⚡" : "📢"}
         </div>
-        <div>
-          <div style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>وني OTP</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>متصل الآن</div>
+        <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+          <div style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>{t("Wani OTP", "وني OTP")}</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>{t("online", "متصل الآن")}</div>
         </div>
       </div>
 
@@ -104,7 +85,7 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
         {/* Date chip */}
         <div style={{ textAlign: "center" }}>
           <span style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)", fontSize: 11, borderRadius: 10, padding: "3px 10px" }}>
-            اليوم
+            {t("TODAY", "اليوم")}
           </span>
         </div>
 
@@ -112,41 +93,41 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
         {hasContent ? (
           <div style={{
             background: "#1f2c3a",
-            borderRadius: "12px 12px 12px 2px",
+            borderRadius: language === 'ar' ? "12px 12px 12px 2px" : "12px 12px 2px 12px",
             padding: "10px 12px",
             maxWidth: "90%",
-            alignSelf: "flex-start",
+            alignSelf: language === 'ar' ? "flex-start" : "flex-end",
             boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
           }}>
             {/* Header */}
             {headerType === "text" && headerText && (
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6, textAlign: language === 'ar' ? 'right' : 'left' }}>
                 {renderText(headerText)}
               </div>
             )}
 
             {/* Body */}
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, direction: "rtl", whiteSpace: "pre-wrap" }}>
-              {renderText(body || "اكتب محتوى القالب...")}
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, direction: language === 'ar' ? "rtl" : "ltr", textAlign: language === 'ar' ? 'right' : 'left', whiteSpace: "pre-wrap" }}>
+              {renderText(body || t("Type message content...", "اكتب محتوى الرسالة..."))}
             </div>
 
             {/* Footer */}
             {footer && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 5 }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 5, textAlign: language === 'ar' ? 'right' : 'left' }}>
                 {footer}
               </div>
             )}
 
             {/* Meta timestamp */}
-            <div style={{ textAlign: "left", marginTop: 4 }}>
+            <div style={{ textAlign: language === 'ar' ? "left" : "right", marginTop: 4 }}>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
-                {new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })} ✓✓
+                {new Date().toLocaleTimeString(language === 'ar' ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })} ✓✓
               </span>
             </div>
           </div>
         ) : (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.15)", fontSize: 13, textAlign: "center", padding: "40px 16px" }}>
-            ابدأ الكتابة وشوف المعاينة هنا
+            {t("Start typing to see the preview here", "ابدأ الكتابة وشوف المعاينة هنا")}
           </div>
         )}
       </div>
@@ -156,9 +137,10 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
         background: "#1a2634",
         padding: "8px 12px",
         display: "flex", alignItems: "center", gap: 8,
+        flexDirection: language === 'ar' ? 'row' : 'row-reverse'
       }}>
-        <div style={{ flex: 1, background: "#2d3d4f", borderRadius: 20, height: 34, display: "flex", alignItems: "center", padding: "0 12px" }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>اكتب رسالة...</span>
+        <div style={{ flex: 1, background: "#2d3d4f", borderRadius: 20, height: 34, display: "flex", alignItems: "center", padding: "0 12px", justifyContent: language === 'ar' ? 'flex-start' : 'flex-end' }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>{t("Type a message...", "اكتب رسالة...")}</span>
         </div>
         <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#128C7E", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: 16 }}>🎤</span>
@@ -173,6 +155,7 @@ export default function ProjectTemplatesPage() {
   const params = useParams();
   const projectId = params.id as string;
 
+  const { language, t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "create">("list");
@@ -180,6 +163,29 @@ export default function ProjectTemplatesPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
+
+  // Constants
+  const LANGUAGES = [
+    { code: "ar",    label: t("Arabic 🇸🇦", "العربية 🇸🇦") },
+    { code: "en_US", label: t("English (US) 🇺🇸", "الإنجليزية 🇺🇸") },
+    { code: "en_GB", label: t("English (UK) 🇬🇧", "الإنجليزية (UK) 🇬🇧") },
+    { code: "fr",    label: t("French 🇫🇷", "الفرنسية 🇫🇷") },
+    { code: "de",    label: t("German 🇩🇪", "الألمانية 🇩🇪") },
+    { code: "es",    label: t("Spanish 🇪🇸", "الإسبانية 🇪🇸") },
+    { code: "tr",    label: t("Turkish 🇹🇷", "التركية 🇹🇷") },
+  ];
+
+  const CATEGORIES: { value: TemplateCategory; label: string; desc: string; icon: string }[] = [
+    { value: "AUTHENTICATION", label: t("OTP / Verification", "OTP / التحقق"),  desc: t("Verification codes and two-factor authentication", "أكواد التحقق والمصادقة الثنائية"), icon: "🔐" },
+  ];
+
+  const STATUS_CONFIG: Record<TemplateStatus, { label: string; color: string; bg: string; border: string; icon: string }> = {
+    LOCAL_DRAFT: { label: t("Draft", "مسودة"),         color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)", icon: "📝" },
+    PENDING:     { label: t("Pending Review", "قيد المراجعة"),  color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)",  icon: "⏳" },
+    APPROVED:    { label: t("Approved", "موافق عليه"),    color: "#20d378", bg: "rgba(32,211,120,0.08)",  border: "rgba(32,211,120,0.2)",  icon: "✅" },
+    REJECTED:    { label: t("Rejected", "مرفوض"),         color: "#ef4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)",   icon: "❌" },
+    DISABLED:    { label: t("Disabled", "متوقف"),         color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.2)", icon: "🚫" },
+  };
 
   // Form state
   const [form, setForm] = useState({
@@ -207,14 +213,14 @@ export default function ProjectTemplatesPage() {
       .catch(() => setMetaConnected(false));
   }, [projectId]);
 
-  async function fetchTemplates() {
+  const fetchTemplates = useCallback(async () => {
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`);
       const data = await res.json();
       setTemplates(data.templates || []);
     } catch { setTemplates([]); }
     finally { setLoading(false); }
-  }
+  }, [projectId]);
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }));
@@ -241,8 +247,8 @@ export default function ProjectTemplatesPage() {
   }
 
   async function handleSaveDraft() {
-    if (!form.name) { setFormError("اسم القالب مطلوب"); return; }
-    if (!form.body.trim()) { setFormError("محتوى القالب مطلوب"); return; }
+    if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
+    if (!form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
     setSaving(true); setFormError("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
@@ -251,19 +257,19 @@ export default function ProjectTemplatesPage() {
         body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: false }),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.error || "حصل خطأ"); return; }
+      if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
       setTemplates(prev => [data.template, ...prev]);
-      setFormSuccess("✅ القالب اتحفظ كمسودة");
+      setFormSuccess(t("✅ Template saved as draft", "✅ القالب اتحفظ كمسودة"));
       setTimeout(() => { setView("list"); resetForm(); }, 1200);
-    } catch { setFormError("حصل خطأ في الاتصال"); }
+    } catch { setFormError(t("Connection error occurred", "حصل خطأ في الاتصال")); }
     finally { setSaving(false); }
   }
 
   async function handleSubmitToMeta() {
-    if (!form.name) { setFormError("اسم القالب مطلوب"); return; }
-    if (!form.body.trim()) { setFormError("محتوى القالب مطلوب"); return; }
+    if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
+    if (!form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
     if (varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
-      setFormError(`أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`); return;
+      setFormError(t(`Add ${varCount} sample values for the variables — Meta requires this`, `أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`)); return;
     }
     setSubmitting(true); setFormError(""); setFormSuccess("");
     try {
@@ -273,7 +279,7 @@ export default function ProjectTemplatesPage() {
         body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: true }),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.error || "حصل خطأ"); return; }
+      if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
 
       // warning = Meta مش مربوطة أو فشل الإرسال → معاملها كـ error واضح
       if (data.warning) {
@@ -284,9 +290,9 @@ export default function ProjectTemplatesPage() {
       }
 
       setTemplates(prev => [data.template, ...prev]);
-      setFormSuccess("🚀 تم إرسال القالب لـ Meta — هيظهر قيد المراجعة قريباً");
+      setFormSuccess(t("🚀 Template submitted to Meta — it will appear as pending review soon", "🚀 تم إرسال القالب لـ Meta — هيظهر قيد المراجعة قريباً"));
       setTimeout(() => { setView("list"); resetForm(); }, 1800);
-    } catch { setFormError("حصل خطأ في الاتصال"); }
+    } catch { setFormError(t("Connection error occurred", "حصل خطأ في الاتصال")); }
     finally { setSubmitting(false); }
   }
 
@@ -296,10 +302,10 @@ export default function ProjectTemplatesPage() {
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates/sync`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) { setSyncMsg({ type: "err", text: data.error || "فشلت المزامنة" }); return; }
-      setSyncMsg({ type: "ok", text: `✅ تمت المزامنة — ${data.updated} قالب اتحدث من أصل ${data.total}` });
+      if (!res.ok) { setSyncMsg({ type: "err", text: data.error || t("Synchronization failed", "فشلت المزامنة") }); return; }
+      setSyncMsg({ type: "ok", text: t(`✅ Synchronized — ${data.updated} templates updated out of ${data.total}`, `✅ تمت المزامنة — ${data.updated} قالب اتحدث من أصل ${data.total}`) });
       fetchTemplates();
-    } catch { setSyncMsg({ type: "err", text: "حصل خطأ في الاتصال" }); }
+    } catch { setSyncMsg({ type: "err", text: t("Connection error occurred", "حصل خطأ في الاتصال") }); }
     finally { setSyncing(false); setTimeout(() => setSyncMsg(null), 4000); }
   }
 
@@ -310,19 +316,19 @@ export default function ProjectTemplatesPage() {
   }
 
   async function handleDeleteTemplate(id: string) {
-    if (!confirm("متأكد إنك عايز تحذف القالب ده؟ لو تم قبوله في Meta، هيتم حذفه من هناك كمان.")) return;
+    if (!confirm(t("Are you sure you want to delete this template? If it was approved in Meta, it will be deleted from there too.", "متأكد إنك عايز تحذف القالب ده؟ لو تم قبوله في Meta، هيتم حذفه من هناك كمان."))) return;
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates?templateId=${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setTemplates(prev => prev.filter(t => t.id !== id));
+        setTemplates(prev => prev.filter(tData => tData.id !== id));
       } else {
         const data = await res.json();
-        alert(data.error || "حصل خطأ أثناء الحذف");
+        alert(data.error || t("An error occurred during deletion", "حصل خطأ أثناء الحذف"));
       }
     } catch {
-      alert("حصل خطأ في الاتصال");
+      alert(t("Connection error occurred", "حصل خطأ في الاتصال"));
     }
   }
 
@@ -331,7 +337,7 @@ export default function ProjectTemplatesPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
-        .tp-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:rtl; color:#fff; }
+        .tp-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:${language === 'ar' ? 'rtl' : 'ltr'}; color:#fff; }
         .tp-root::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(32,211,120,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(32,211,120,0.025) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
         .tp-inner { max-width:1200px; margin:0 auto; padding:40px 32px; position:relative; z-index:1; opacity:0; transform:translateY(10px); transition:opacity .4s,transform .4s; }
         .tp-inner.visible { opacity:1; transform:translateY(0); }
@@ -443,46 +449,46 @@ export default function ProjectTemplatesPage() {
           {/* ── LIST VIEW ─────────────────────────────────────────────────── */}
           {view === "list" && (
             <>
-              <div className="tp-header">
-                <div>
-                  <h1 className="tp-title">قوالب OTP</h1>
-                  <p className="tp-subtitle">أنشئ قوالب التحقق، أرسلها لـ Meta، وانتظر الموافقة</p>
+              <div className="tp-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <h1 className="tp-title">{t("OTP Templates", "قوالب OTP")}</h1>
+                  <p className="tp-subtitle">{t("Create verification templates, send them to Meta, and wait for approval", "أنشئ قوالب التحقق، أرسلها لـ Meta، وانتظر الموافقة")}</p>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                   <button
                     onClick={handleSync}
                     disabled={syncing}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: syncing ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.65)", fontSize: 14, fontFamily: "inherit", cursor: syncing ? "not-allowed" : "pointer", transition: "all .2s" }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: syncing ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.65)", fontSize: 14, fontFamily: "inherit", cursor: syncing ? "not-allowed" : "pointer", transition: "all .2s", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}
                   >
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ animation: syncing ? "spin .8s linear infinite" : "none" }}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
                     </svg>
-                    {syncing ? "جاري المزامنة..." : "مزامنة من Meta"}
+                    {syncing ? t("Syncing...", "جاري المزامنة...") : t("Sync from Meta", "مزامنة من Meta")}
                   </button>
-                  <button className="btn-new" onClick={() => { setView("create"); resetForm(); }}>
+                  <button className="btn-new" onClick={() => { setView("create"); resetForm(); }} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                    قالب جديد
+                    <span>{t("New Template", "قالب جديد")}</span>
                   </button>
                 </div>
               </div>
 
               {/* Hook notice */}
-              <div style={{ marginBottom: 24, padding: "14px 18px", background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ marginBottom: 24, padding: "14px 18px", background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 14, display: "flex", alignItems: "flex-start", gap: 14, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                 <span style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>🪝</span>
-                <div>
+                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>
-                    محتاج قوالب إشعارات أو تسويق؟
+                    {t("Need notification or marketing templates?", "محتاج قوالب إشعارات أو تسويق؟")}
                   </div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
-                    صفحة القوالب دي مخصصة لـ OTP فقط. قوالب الإشعارات والتسويق متاحة في{" "}
-                    <a href="/" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>منصة وني التسويقية ←</a>
-                    {" "}— بتقدر تستخدمها في كامبينات الواتساب والأتمتة.
+                    {t("This templates page is dedicated to OTP only. Notification and marketing templates are available in the ", "صفحة القوالب دي مخصصة لـ OTP فقط. قوالب الإشعارات والتسويق متاحة في ")}
+                    <a href="/" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>{t("Wani Marketing Platform ←", "منصة وني التسويقية ←")}</a>
+                    {t(" — you can use them in WhatsApp campaigns and automation.", " — بتقدر تستخدمها في كامبينات الواتساب والأتمتة.")}
                   </div>
                 </div>
               </div>
 
               {syncMsg && (
-                <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 10, fontSize: 13, background: syncMsg.type === "ok" ? "rgba(32,211,120,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${syncMsg.type === "ok" ? "rgba(32,211,120,0.2)" : "rgba(239,68,68,0.2)"}`, color: syncMsg.type === "ok" ? "#20d378" : "#f87171" }}>
+                <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 10, fontSize: 13, background: syncMsg.type === "ok" ? "rgba(32,211,120,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${syncMsg.type === "ok" ? "rgba(32,211,120,0.2)" : "rgba(239,68,68,0.2)"}`, color: syncMsg.type === "ok" ? "#20d378" : "#f87171", textAlign: language === 'ar' ? 'right' : 'left' }}>
                   {syncMsg.text}
                 </div>
               )}
@@ -502,33 +508,33 @@ export default function ProjectTemplatesPage() {
               ) : templates.length === 0 ? (
                 <div className="empty">
                   <div className="empty-icon">📋</div>
-                  <h3 className="empty-title">لسه ماعندكش قوالب</h3>
-                  <p className="empty-sub">ابني أول قالب WhatsApp وابعته لـ Meta للمراجعة</p>
-                  <button className="btn-new" onClick={() => { setView("create"); resetForm(); }}>
+                  <h3 className="empty-title">{t("No templates yet", "لسه ماعندكش قوالب")}</h3>
+                  <p className="empty-sub">{t("Create your first WhatsApp template and submit it to Meta for review", "ابني أول قالب WhatsApp وابعته لـ Meta للمراجعة")}</p>
+                  <button className="btn-new" onClick={() => { setView("create"); resetForm(); }} style={{ margin: "0 auto", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                    إنشاء أول قالب
+                    <span>{t("Create First Template", "إنشاء أول قالب")}</span>
                   </button>
                 </div>
               ) : (
                 <div className="tmpl-grid">
-                  {templates.map((t) => {
-                    const s = STATUS_CONFIG[t.status];
-                    const cat = CATEGORIES.find(c => c.value === t.category);
+                  {templates.map((tData) => {
+                    const s = STATUS_CONFIG[tData.status] || STATUS_CONFIG.LOCAL_DRAFT;
+                    const cat = CATEGORIES.find(c => c.value === tData.category);
                     return (
-                      <div key={t.id} className="tmpl-card">
+                      <div key={tData.id} className="tmpl-card" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <div className="tmpl-icon">{cat?.icon ?? "📋"}</div>
-                        <div className="tmpl-info">
-                          <div className="tmpl-name">{t.name}</div>
-                          <div className="tmpl-meta">
-                            <span>{LANGUAGES.find(l => l.code === t.language)?.label ?? t.language}</span>
+                        <div className="tmpl-info" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                          <div className="tmpl-name">{tData.name}</div>
+                          <div className="tmpl-meta" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', justifyContent: language === 'ar' ? 'flex-start' : 'flex-end' }}>
+                            <span>{LANGUAGES.find(l => l.code === tData.language)?.label ?? tData.language}</span>
                             <span>{cat?.label}</span>
-                            {t.metaTemplateId && <span style={{ fontFamily: "Fira Code", fontSize:11, color:"rgba(255,255,255,0.25)" }}>ID: {t.metaTemplateId}</span>}
+                            {tData.metaTemplateId && <span style={{ fontFamily: "Fira Code", fontSize:11, color:"rgba(255,255,255,0.25)" }}>ID: {tData.metaTemplateId}</span>}
                           </div>
-                          {t.body && (
-                            <div className="tmpl-body-preview">{t.body.replace(/\{\{\d+\}\}/g, "●●●")}</div>
+                          {tData.body && (
+                            <div className="tmpl-body-preview" style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }}>{tData.body.replace(/\{\{\d+\}\}/g, "●●●")}</div>
                           )}
-                          {t.status === "REJECTED" && t.rejectedReason && (
-                            <div className="rejected-reason">❌ سبب الرفض: {t.rejectedReason}</div>
+                          {tData.status === "REJECTED" && tData.rejectedReason && (
+                            <div className="rejected-reason">{t("❌ Rejection Reason: ", "❌ سبب الرفض: ")}{tData.rejectedReason}</div>
                           )}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
@@ -537,8 +543,8 @@ export default function ProjectTemplatesPage() {
                           </div>
                           <button 
                             className="btn-delete" 
-                            title="حذف القالب"
-                            onClick={() => handleDeleteTemplate(t.id)}
+                            title={t("Delete Template", "حذف القالب")}
+                            onClick={() => handleDeleteTemplate(tData.id)}
                           >
                             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
@@ -554,25 +560,25 @@ export default function ProjectTemplatesPage() {
           {/* ── CREATE VIEW ───────────────────────────────────────────────── */}
           {view === "create" && (
             <>
-              <button className="btn-back" onClick={() => { setView("list"); resetForm(); }}>
+              <button className="btn-back" onClick={() => { setView("list"); resetForm(); }} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                رجوع للقوالب
+                <span>{t("Back to Templates", "رجوع للقوالب")}</span>
               </button>
 
-              <div className="create-layout">
+              <div className="create-layout" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
                 {/* ── Left: Form ── */}
-                <div className="form-panel">
-                  <h2 className="form-title">قالب OTP جديد</h2>
+                <div className="form-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <h2 className="form-title">{t("New OTP Template", "قالب OTP جديد")}</h2>
 
                   {/* Meta not connected warning */}
                   {metaConnected === false && (
-                    <div style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, display: "flex", alignItems: "flex-start", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#f59e0b", marginBottom: 3 }}>Meta مش مربوط بالمشروع ده</div>
+                      <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#f59e0b", marginBottom: 3 }}>{t("Meta is not connected to this project", "Meta مش مربوط بالمشروع ده")}</div>
                         <div style={{ fontSize: 12, color: "rgba(245,158,11,0.7)", lineHeight: 1.5 }}>
-                          القالب هيتحفظ كمسودة فقط ومش هيتبعت لـ Meta. {" "}
-                          <a href={`/developers/portal/projects/${projectId}`} style={{ color: "#f59e0b", fontWeight: 600, textDecoration: "underline" }}>اربط Meta من نظرة عامة ←</a>
+                          {t("The template will be saved as a draft only and will not be submitted to Meta. ", "القالب هيتحفظ كمسودة فقط ومش هيتبعت لـ Meta. ")}
+                          <a href={`/developers/portal/projects/${projectId}`} style={{ color: "#f59e0b", fontWeight: 600, textDecoration: "underline" }}>{t("Connect Meta from the Overview page ←", "اربط Meta من نظرة عامة ←")}</a>
                         </div>
                       </div>
                     </div>
@@ -580,15 +586,18 @@ export default function ProjectTemplatesPage() {
 
                   {/* Name */}
                   <div className="field">
-                    <label className="field-label">اسم القالب * <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400 }}>(snake_case — بيظهر في Meta)</span></label>
+                    <label className="field-label">
+                      {t("Template Name *", "اسم القالب *")}{" "}
+                      <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400 }}>(snake_case)</span>
+                    </label>
                     <input className="f-input mono" placeholder="otp_verification" value={form.name}
                       onChange={e => handleNameInput(e.target.value)} />
-                    <div className="field-hint">بيتحول تلقائياً لـ lowercase مع underscores — مثال: otp_verification</div>
+                    <div className="field-hint">{t("Automatically converted to lowercase with underscores — e.g. otp_verification", "بيتحول تلقائياً لـ lowercase مع underscores — مثال: otp_verification")}</div>
                   </div>
 
                   {/* Language */}
                   <div className="field">
-                    <label className="field-label">اللغة *</label>
+                    <label className="field-label">{t("Language *", "اللغة *")}</label>
                     <select className="f-select" value={form.language} onChange={e => setField("language", e.target.value)}>
                       {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
                     </select>
@@ -598,17 +607,17 @@ export default function ProjectTemplatesPage() {
 
                   {/* Header */}
                   <div className="field">
-                    <label className="field-label">الهيدر (اختياري)</label>
+                    <label className="field-label">{t("Header (Optional)", "الهيدر (اختياري)")}</label>
                     <div className="htype-row">
-                      {["none","text"].map(t => (
-                        <button key={t} className={`htype-btn ${form.headerType === t ? "active" : ""}`}
-                          onClick={() => setField("headerType", t)}>
-                          {t === "none" ? "بدون هيدر" : "نص"}
+                      {["none","text"].map(tType => (
+                        <button key={tType} className={`htype-btn ${form.headerType === tType ? "active" : ""}`}
+                          onClick={() => setField("headerType", tType)}>
+                          {tType === "none" ? t("No Header", "بدون هيدر") : t("Text", "نص")}
                         </button>
                       ))}
                     </div>
                     {form.headerType === "text" && (
-                      <input className="f-input" style={{ marginTop:10 }} placeholder="عنوان الرسالة..."
+                      <input className="f-input" style={{ marginTop:10 }} placeholder={t("Message header text...", "عنوان الرسالة...")}
                         value={form.headerText} onChange={e => setField("headerText", e.target.value)} />
                     )}
                   </div>
@@ -616,32 +625,32 @@ export default function ProjectTemplatesPage() {
                   {/* Body */}
                   <div className="field">
                     <label className="field-label">
-                      المحتوى * &nbsp;
+                      {t("Body Content *", "المحتوى *")}&nbsp;
                       <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400, fontSize:12 }}>
-                        استخدم {"{{1}}"} {"{{2}}"} للمتغيرات
+                        {t("Use {{1}} {{2}} for variables", "استخدم {{1}} {{2}} للمتغيرات")}
                       </span>
                     </label>
                     <textarea className="f-textarea" rows={5}
-                      placeholder={"كود التحقق الخاص بك هو: {{1}}\nصالح لمدة 10 دقائق.\nلا تشارك هذا الكود مع أي أحد."}
-                      value={form.body} onChange={e => setField("body", e.target.value)} />
+                      placeholder={t("Your verification code is: {{1}}\nValid for 10 minutes.\nDo not share this code with anyone.", "كود التحقق الخاص بك هو: {{1}}\nصالح لمدة 10 دقائق.\nلا تشارك هذا الكود مع أي أحد.")}
+                      value={form.body} onChange={e => setField("body", e.target.value)} style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }} />
                     <div className="field-hint">
                       {varCount > 0
-                        ? `🔢 تم اكتشاف ${varCount} متغير — أضف قيم تجريبية أسفل`
-                        : "لم يتم اكتشاف متغيرات بعد"}
+                        ? t(`Detected ${varCount} variables — add sample values below`, `تم اكتشاف ${varCount} متغير — أضف قيم تجريبية أسفل`)
+                        : t("No variables detected yet", "لم يتم اكتشاف متغيرات بعد")}
                     </div>
 
                     {/* Variable examples */}
                     {varCount > 0 && (
                       <div style={{ marginTop:12, background:"rgba(32,211,120,0.04)", border:"1px solid rgba(32,211,120,0.12)", borderRadius:12, padding:"12px 14px" }}>
                         <div style={{ fontSize:12, color:"#20d378", fontWeight:600, marginBottom:10 }}>
-                          ⚡ قيم تجريبية — Meta بتطلبها عشان تراجع القالب
+                          {t("Sample values — Meta requires these to review the template", "قيم تجريبية — Meta بتطلبها عشان تراجع القالب")}
                         </div>
                         {Array.from({ length: varCount }, (_, i) => (
-                          <div key={i} className="var-row">
+                          <div key={i} className="var-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                             <span className="var-tag">{`{{${i+1}}}`}</span>
-                            <input className="var-input" placeholder={`مثال: ${i === 0 ? "123456" : i === 1 ? "10" : "قيمة_" + (i+1)}`}
+                            <input className="var-input" placeholder={t("Example:", "مثال:") + ` ${i === 0 ? "123456" : i === 1 ? "10" : "val_" + (i+1)}`}
                               value={bodyExamples[i] || ""}
-                              onChange={e => setExample(i, e.target.value)} />
+                              onChange={e => setExample(i, e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
                           </div>
                         ))}
                       </div>
@@ -650,8 +659,8 @@ export default function ProjectTemplatesPage() {
 
                   {/* Footer */}
                   <div className="field">
-                    <label className="field-label">الفوتر (اختياري)</label>
-                    <input className="f-input" placeholder="لا تشارك هذا الكود مع أي شخص"
+                    <label className="field-label">{t("Footer (Optional)", "الفوتر (اختياري)")}</label>
+                    <input className="f-input" placeholder={t("Do not share this code with anyone", "لا تشارك هذا الكود مع أي شخص")}
                       value={form.footer} onChange={e => setField("footer", e.target.value)} />
                   </div>
 
@@ -659,23 +668,23 @@ export default function ProjectTemplatesPage() {
                   {formSuccess && <div className="form-success">{formSuccess}</div>}
 
                   {/* Actions */}
-                  <div className="form-actions">
+                  <div className="form-actions" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                     <button className="btn-draft" onClick={handleSaveDraft} disabled={saving || submitting}>
-                      {saving ? <><div className="spinner-dark"/>جاري الحفظ...</> : <>💾 حفظ مسودة</>}
+                      {saving ? <><div className="spinner-dark"/>{t("Saving...", "جاري الحفظ...")}</> : <>{t("Save Draft", "حفظ مسودة")}</>}
                     </button>
                     <button className="btn-submit" onClick={handleSubmitToMeta} disabled={saving || submitting}>
-                      {submitting ? <><div className="spinner"/>جاري الإرسال...</> : <>🚀 إرسال لـ Meta</>}
+                      {submitting ? <><div className="spinner"/>{t("Submitting...", "جاري الإرسال...")}</> : <>{t("Submit to Meta", "إرسال لـ Meta")}</>}
                     </button>
                   </div>
 
                   <div style={{ fontSize:12, color:"rgba(255,255,255,0.25)", marginTop:12, textAlign:"center" }}>
-                    "إرسال لـ Meta" بيحتاج ربط Meta أولاً — لو مش مربوط بيتحفظ كمسودة
+                    {t("Submitting to Meta requires connecting Meta first — if not connected, it will be saved as a draft", "إرسال لـ Meta بيحتاج ربط Meta أولاً — لو مش مربوط بيتحفظ كمسودة")}
                   </div>
                 </div>
 
                 {/* ── Right: Live Preview ── */}
                 <div className="preview-sticky">
-                  <div className="preview-label">معاينة مباشرة</div>
+                  <div className="preview-label">{t("Live Preview", "معاينة مباشرة")}</div>
                   <WAPreview
                     headerType={form.headerType}
                     headerText={form.headerText}
@@ -685,23 +694,23 @@ export default function ProjectTemplatesPage() {
                   />
 
                   {/* Meta submit flow info */}
-                  <div style={{ marginTop:20, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px" }}>
+                  <div style={{ marginTop:20, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px", textAlign: language === 'ar' ? 'right' : 'left' }}>
                     <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.5)", marginBottom:12, textTransform:"uppercase", letterSpacing:".5px" }}>
-                      دورة حياة القالب
+                      {t("Template Lifecycle", "دورة حياة القالب")}
                     </div>
                     {[
-                      { icon:"📝", label:"مسودة",        desc:"محفوظ محلياً فقط" },
-                      { icon:"🚀", label:"إرسال لـ Meta", desc:"يُرسل للمراجعة" },
-                      { icon:"⏳", label:"قيد المراجعة",  desc:"Meta بتراجع القالب" },
-                      { icon:"✅", label:"موافق عليه",    desc:"جاهز للاستخدام في API" },
-                    ].map((s, i) => (
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:i<3?10:0 }}>
-                        <span style={{ fontSize:16 }}>{s.icon}</span>
-                        <div>
-                          <div style={{ fontSize:12, color:"rgba(255,255,255,0.65)", fontWeight:500 }}>{s.label}</div>
-                          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)" }}>{s.desc}</div>
+                      { icon:"📝", label:t("Draft", "مسودة"),        desc:t("Saved locally only", "محفوظ محلياً فقط") },
+                      { icon:"🚀", label:t("Submit to Meta", "إرسال لـ Meta"), desc:t("Submitted for review", "يُرسل للمراجعة") },
+                      { icon:"⏳", label:t("Pending Review", "قيد المراجعة"),  desc:t("Meta is reviewing the template", "Meta بتراجع القالب") },
+                      { icon:"✅", label:t("Approved", "موافق عليه"),    desc:t("Ready for use in API", "جاهز للاستخدام في API") },
+                    ].map((sState, i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:i<3?10:0, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                        <span style={{ fontSize:16 }}>{sState.icon}</span>
+                        <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                          <div style={{ fontSize:12, color:"rgba(255,255,255,0.65)", fontWeight:500 }}>{sState.label}</div>
+                          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)" }}>{sState.desc}</div>
                         </div>
-                        {i<3 && <div style={{ marginRight:"auto", color:"rgba(255,255,255,0.15)", fontSize:12 }}>↓</div>}
+                        {i<3 && <div style={{ marginRight: language === 'ar' ? "auto" : "0", marginLeft: language === 'ar' ? "0" : "auto", color:"rgba(255,255,255,0.15)", fontSize:12 }}>↓</div>}
                       </div>
                     ))}
                   </div>

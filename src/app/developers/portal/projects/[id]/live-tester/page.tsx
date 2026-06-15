@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = "send" | "verify" | "status";
@@ -114,6 +115,7 @@ function OtpCodeInput({ value, onChange }: { value: string; onChange: (v: string
 // Main Page
 // ═══════════════════════════════════════════════════════════════════════════
 export default function LiveTesterPage() {
+  const { language, t } = useLanguage();
   const [mounted, setMounted] = useState(false);
 
   // Form state
@@ -205,8 +207,8 @@ export default function LiveTesterPage() {
 
   // ── Step 1: Send OTP ────────────────────────────────────────────────────
   async function handleSend() {
-    if (!apiKey.trim()) { alert("أدخل الـ API Key أولاً"); return; }
-    if (!phone.trim())  { alert("أدخل رقم الهاتف"); return; }
+    if (!apiKey.trim()) { alert(t("Please enter your API Key first", "أدخل الـ API Key أولاً")); return; }
+    if (!phone.trim())  { alert(t("Please enter the phone number", "أدخل رقم الهاتف")); return; }
 
     const { ok, data } = await callApi({
       step: "send",
@@ -224,7 +226,7 @@ export default function LiveTesterPage() {
 
   // ── Step 2: Verify OTP ──────────────────────────────────────────────────
   async function handleVerify() {
-    if (otpCode.replace(/\s/g, "").length < 6) { alert("أدخل الكود المكون من 6 أرقام"); return; }
+    if (otpCode.replace(/\s/g, "").length < 6) { alert(t("Please enter the 6-digit code", "أدخل الكود المكون من 6 أرقام")); return; }
 
     const { ok } = await callApi({
       step: "verify",
@@ -253,9 +255,9 @@ export default function LiveTesterPage() {
   }
 
   const stepLabels: Record<Step, string> = {
-    send:   "① إرسال OTP",
-    verify: "② التحقق من الكود",
-    status: "③ فحص الحالة",
+    send:   t("1. Send OTP", "① إرسال OTP"),
+    verify: t("2. Verify Code", "② التحقق من الكود"),
+    status: t("3. Check Status", "③ فحص الحالة"),
   };
 
   return (
@@ -263,7 +265,7 @@ export default function LiveTesterPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
-        .lt-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:rtl; color:#fff; }
+        .lt-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:${language === 'ar' ? 'rtl' : 'ltr'}; color:#fff; }
         .lt-root::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(32,211,120,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(32,211,120,0.025) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
         .lt-inner { max-width:1200px; margin:0 auto; padding:40px 32px; position:relative; z-index:1; opacity:0; transform:translateY(10px); transition:opacity .4s,transform .4s; }
         .lt-inner.visible { opacity:1; transform:translateY(0); }
@@ -400,18 +402,18 @@ export default function LiveTesterPage() {
       <div className="lt-root">
         <div className={`lt-inner ${mounted ? "visible" : ""}`}>
 
-          <div className="lt-header">
+          <div className="lt-header" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
             <h1 className="lt-title">Live Tester</h1>
-            <p className="lt-subtitle">جرب الـ OTP API مباشرة من البورتال — بدون Postman أو curl</p>
+            <p className="lt-subtitle">{t("Test the OTP API directly from the portal — without Postman or curl", "جرب الـ OTP API مباشرة من البورتال — بدون Postman أو curl")}</p>
           </div>
 
           {/* Steps indicator */}
-          <div className="steps-row">
+          <div className="steps-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
             {(["send", "verify", "status"] as Step[]).map((s, i) => {
               const done   = (step === "verify" && i === 0) || (step === "status" && i <= 1);
               const active = step === s;
               return (
-                <div key={s} className="step-item">
+                <div key={s} className="step-item" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                   {i > 0 && <div className="step-line" />}
                   <div className={`step-circle ${done ? "done" : active ? "active" : ""}`}>
                     {done ? "✓" : i + 1}
@@ -425,10 +427,10 @@ export default function LiveTesterPage() {
           <div className="lt-layout">
             {/* ── Left: Form ────────────────────────────────────────────── */}
             <div>
-              <div className="form-panel">
+              <div className="form-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                 {/* API Key — always visible */}
                 <div className="field">
-                  <label className="field-label">🔑 API Key</label>
+                  <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>🔑 API Key</label>
                   <input className="f-input mono" placeholder="wani_live_xxxxxxxxx"
                     value={apiKey} onChange={e => setApiKey(e.target.value)} />
                 </div>
@@ -438,25 +440,28 @@ export default function LiveTesterPage() {
                 {/* Step: SEND */}
                 {step === "send" && (
                   <>
-                    <div className="panel-title"><div className="panel-title-dot" />إرسال OTP</div>
-                    <div className="field">
-                      <label className="field-label">رقم الهاتف</label>
-                      <input className="f-input mono" placeholder="01xxxxxxxxx أو +20xxxxxxxxx"
-                        value={phone} onChange={e => setPhone(e.target.value)} />
+                    <div className="panel-title" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                      <div className="panel-title-dot" />
+                      <span>{t("Send OTP", "إرسال OTP")}</span>
                     </div>
                     <div className="field">
-                      <label className="field-label">اسم القالب (templateName)</label>
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Phone Number", "رقم الهاتف")}</label>
+                      <input className="f-input mono" placeholder={t("01xxxxxxxxx or +20xxxxxxxxx", "01xxxxxxxxx أو +20xxxxxxxxx")}
+                        value={phone} onChange={e => setPhone(e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
+                    </div>
+                    <div className="field">
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Template Name (templateName)", "اسم القالب (templateName)")}</label>
                       <input className="f-input mono" placeholder="otp_verification"
                         value={templateName} onChange={e => setTemplateName(e.target.value)} />
                     </div>
                     <div className="field">
-                      <label className="field-label">مدة الصلاحية (دقائق)</label>
-                      <select className="f-select" value={expiryMins} onChange={e => setExpiryMins(Number(e.target.value))}>
-                        {[5, 10, 15, 30].map(m => <option key={m} value={m}>{m} دقيقة</option>)}
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Expiry Time (Minutes)", "مدة الصلاحية (دقائق)")}</label>
+                      <select className="f-select" value={expiryMins} onChange={e => setExpiryMins(Number(e.target.value))} style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                        {[5, 10, 15, 30].map(m => <option key={m} value={m}>{t(`${m} minutes`, `${m} دقيقة`)}</option>)}
                       </select>
                     </div>
                     <button className="btn-send" onClick={handleSend} disabled={reqStatus === "loading"}>
-                      {reqStatus === "loading" ? <><div className="spinner" />جاري الإرسال...</> : <>🚀 إرسال OTP</>}
+                      {reqStatus === "loading" ? <><div className="spinner" />{t("Sending...", "جاري الإرسال...")}</> : <>{t("🚀 Send OTP", "🚀 إرسال OTP")}</>}
                     </button>
                   </>
                 )}
@@ -464,43 +469,49 @@ export default function LiveTesterPage() {
                 {/* Step: VERIFY */}
                 {step === "verify" && (
                   <>
-                    <div className="panel-title"><div className="panel-title-dot" />التحقق من الكود</div>
+                    <div className="panel-title" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                      <div className="panel-title-dot" />
+                      <span>{t("Verify Code", "التحقق من الكود")}</span>
+                    </div>
 
                     <div className="field">
-                      <label className="field-label">الـ Token (من الـ response)</label>
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Token (from response)", "الـ Token (من الـ response)")}</label>
                       <div className="token-box">{token || "—"}</div>
                       {expiresAt && (
                         <div className={`countdown ${countdown < 60 ? "urgent" : ""}`}>
-                          ⏱ الصلاحية تنتهي بعد: {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
+                          {t("⏱ Expires in: ", "⏱ الصلاحية تنتهي بعد: ")}{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
                         </div>
                       )}
                     </div>
 
                     <div className="field" style={{ marginTop: 20 }}>
-                      <label className="field-label" style={{ textAlign: "center", display: "block", marginBottom: 14 }}>الكود المرسل على WhatsApp</label>
+                      <label className="field-label" style={{ textAlign: "center", display: "block", marginBottom: 14 }}>{t("Code sent on WhatsApp", "الكود المرسل على WhatsApp")}</label>
                       <OtpCodeInput value={otpCode} onChange={setOtpCode} />
                     </div>
 
                     <button className="btn-send" style={{ marginTop: 20 }}
                       onClick={handleVerify} disabled={reqStatus === "loading" || otpCode.length < 6}>
-                      {reqStatus === "loading" ? <><div className="spinner" />جاري التحقق...</> : <>✅ تحقق من الكود</>}
+                      {reqStatus === "loading" ? <><div className="spinner" />{t("Verifying...", "جاري التحقق...")}</> : <>{t("✅ Verify Code", "✅ تحقق من الكود")}</>}
                     </button>
-                    <button className="btn-secondary" onClick={reset}>🔄 إرسال كود جديد</button>
+                    <button className="btn-secondary" onClick={reset}>{t("🔄 Send new code", "🔄 إرسال كود جديد")}</button>
                   </>
                 )}
 
                 {/* Step: STATUS */}
                 {step === "status" && (
                   <>
-                    <div className="panel-title"><div className="panel-title-dot" />فحص الحالة</div>
+                    <div className="panel-title" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                      <div className="panel-title-dot" />
+                      <span>{t("Check Status", "فحص الحالة")}</span>
+                    </div>
                     <div className="field">
-                      <label className="field-label">Token</label>
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>Token</label>
                       <div className="token-box">{token}</div>
                     </div>
                     <button className="btn-send" onClick={handleStatus} disabled={reqStatus === "loading"}>
-                      {reqStatus === "loading" ? <><div className="spinner" />جاري الفحص...</> : <>🔍 فحص الحالة</>}
+                      {reqStatus === "loading" ? <><div className="spinner" />{t("Checking...", "جاري الفحص...")}</> : <>{t("🔍 Check Status", "🔍 فحص الحالة")}</>}
                     </button>
-                    <button className="btn-secondary" onClick={reset}>🔄 تجربة جديدة</button>
+                    <button className="btn-secondary" onClick={reset}>{t("🔄 New Test", "🔄 تجربة جديدة")}</button>
                   </>
                 )}
               </div>
@@ -508,12 +519,12 @@ export default function LiveTesterPage() {
 
             {/* ── Right: Response ──────────────────────────────────────── */}
             <div>
-              <div className="response-panel">
+              <div className="response-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                 {lastLog ? (
                   <>
                     {/* Response header bar */}
-                    <div className="response-header">
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div className="response-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <span className={`response-method ${lastLog.method === "POST" ? "method-post" : "method-get"}`}>
                           {lastLog.method}
                         </span>
@@ -521,7 +532,7 @@ export default function LiveTesterPage() {
                           {lastLog.endpoint.replace("/api/developers/otp/status/", "/api/developers/otp/status/[token]")}
                         </span>
                       </div>
-                      <div className="response-meta">
+                      <div className="response-meta" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <StatusBadge code={lastLog.status} />
                         <span className="duration-tag">{lastLog.durationMs}ms</span>
                       </div>
@@ -529,14 +540,14 @@ export default function LiveTesterPage() {
 
                     {/* Response body */}
                     <div className="response-body">
-                      <div className="section-label">Response Body</div>
+                      <div className="section-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>Response Body</div>
                       <JsonView data={lastLog.responseBody} />
                     </div>
 
                     {/* Request body */}
                     {lastLog.requestBody && (
                       <div className="request-section">
-                        <div className="section-label">Request Body</div>
+                        <div className="section-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>Request Body</div>
                         <JsonView data={lastLog.requestBody} />
                       </div>
                     )}
@@ -545,10 +556,10 @@ export default function LiveTesterPage() {
                   <div className="idle-placeholder">
                     <div className="idle-icon">⚡</div>
                     <div style={{ fontSize: 15, fontWeight: 500, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>
-                      الـ Response هيظهر هنا
+                      {t("Response will appear here", "الـ Response هيظهر هنا")}
                     </div>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,0.2)" }}>
-                      أدخل الـ API Key واضغط إرسال OTP
+                      {t("Enter API Key and click Send OTP", "أدخل الـ API Key واضغط إرسال OTP")}
                     </div>
                   </div>
                 )}
@@ -556,10 +567,10 @@ export default function LiveTesterPage() {
 
               {/* Request history */}
               {logs.length > 0 && (
-                <div className="history-panel">
-                  <div className="history-header">سجل الطلبات ({logs.length})</div>
+                <div className="history-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <div className="history-header">{t(`Request History (${logs.length})`, `سجل الطلبات (${logs.length})`)}</div>
                   {logs.map(log => (
-                    <div key={log.id} className="history-item" onClick={() => setLastLog(log)}>
+                    <div key={log.id} className="history-item" onClick={() => setLastLog(log)} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <span className={`response-method history-step ${log.method === "POST" ? "method-post" : "method-get"}`}>
                         {log.method}
                       </span>
@@ -569,7 +580,7 @@ export default function LiveTesterPage() {
                       <StatusBadge code={log.status} />
                       <span className="duration-tag">{log.durationMs}ms</span>
                       <span className="history-time">
-                        {log.timestamp.toLocaleTimeString("ar-EG")}
+                        {log.timestamp.toLocaleTimeString(language === 'ar' ? "ar-EG" : "en-US")}
                       </span>
                     </div>
                   ))}

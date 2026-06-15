@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode     = "choose" | "ai" | "manual";
@@ -20,13 +21,13 @@ const LANGS: { id: Language; label: string; icon: string }[] = [
 ];
 
 // ─── Static manual snippets ───────────────────────────────────────────────────
-function buildSnippet(lang: Language, apiKey: string, template: string, host: string): string {
+function buildSnippet(lang: Language, apiKey: string, template: string, host: string, t: any): string {
   const k = apiKey || "wani_live_YOUR_KEY_HERE";
-  const t = template || "otp_verification";
+  const templateName = template || "otp_verification";
   const h = host || "https://your-domain.com";
 
   const snippets: Record<Language, string> = {
-    javascript: `// ① إرسال OTP
+    javascript: `${t("// 1. Send OTP", "// ① إرسال OTP")}
 const sendOtp = async (phone) => {
   const res = await fetch("${h}/api/developers/otp/send", {
     method: "POST",
@@ -36,7 +37,7 @@ const sendOtp = async (phone) => {
     },
     body: JSON.stringify({
       phone,
-      templateName: "${t}",
+      templateName: "${templateName}",
       expiryMinutes: 10,
     }),
   });
@@ -45,7 +46,7 @@ const sendOtp = async (phone) => {
   return data; // { ok, token, expiresAt }
 };
 
-// ② التحقق من الكود
+${t("// 2. Verify Code", "// ② التحقق من الكود")}
 const verifyOtp = async (token, code) => {
   const res = await fetch("${h}/api/developers/otp/verify", {
     method: "POST",
@@ -59,7 +60,7 @@ const verifyOtp = async (token, code) => {
   return data; // { ok, verified, phone }
 };
 
-// ③ فحص الحالة (اختياري)
+${t("// 3. Check Status (Optional)", "// ③ فحص الحالة (اختياري)")}
 const checkStatus = async (token) => {
   const res = await fetch(\`${h}/api/developers/otp/status/\${token}\`, {
     headers: { "x-api-key": "${k}" },
@@ -72,7 +73,7 @@ const checkStatus = async (token) => {
 const API_KEY  = "${k}";
 const BASE_URL = "${h}/api/developers/otp";
 
-// ① إرسال OTP
+${t("// 1. Send OTP", "// ① إرسال OTP")}
 export async function sendOtp(phone: string): Promise<OtpSendResponse> {
   const res = await fetch(\`\${BASE_URL}/send\`, {
     method: "POST",
@@ -82,7 +83,7 @@ export async function sendOtp(phone: string): Promise<OtpSendResponse> {
     },
     body: JSON.stringify({
       phone,
-      templateName: "${t}",
+      templateName: "${templateName}",
       expiryMinutes: 10,
     }),
   });
@@ -92,7 +93,7 @@ export async function sendOtp(phone: string): Promise<OtpSendResponse> {
   return data;
 }
 
-// ② التحقق من الكود
+${t("// 2. Verify Code", "// ② التحقق من الكود")}
 export async function verifyOtp(
   token: string,
   code: string
@@ -141,13 +142,13 @@ class OtpClient:
     def __init__(self):
         self.client = httpx.Client(headers=HEADERS, timeout=10.0)
 
-    # ① إرسال OTP
+    ${t("# 1. Send OTP", "# ① إرسال OTP")}
     def send_otp(self, phone: str, expiry_minutes: int = 10) -> dict:
         response = self.client.post(
             f"{BASE_URL}/send",
             json={
                 "phone": phone,
-                "templateName": "${t}",
+                "templateName": "${templateName}",
                 "expiryMinutes": expiry_minutes,
             },
         )
@@ -156,7 +157,7 @@ class OtpClient:
             raise ValueError(data.get("error", "Unknown error"))
         return data  # { ok, token, expiresAt }
 
-    # ② التحقق من الكود
+    ${t("# 2. Verify Code", "# ② التحقق من الكود")}
     def verify_otp(self, token: str, code: str) -> dict:
         response = self.client.post(
             f"{BASE_URL}/verify",
@@ -164,7 +165,7 @@ class OtpClient:
         )
         return response.json()  # { ok, verified, phone }
 
-    # ③ فحص الحالة
+    ${t("# 3. Check Status", "# ③ فحص الحالة")}
     def check_status(self, token: str) -> dict:
         response = self.client.get(
             f"{BASE_URL}/status/{token}",
@@ -172,10 +173,10 @@ class OtpClient:
         return response.json()
 
 
-# مثال الاستخدام
+# Usage Example
 otp = OtpClient()
 result = otp.send_otp("+201234567890")
-print(result["token"])  # احفظه في session`,
+print(result["token"])  # Save in session`,
 
     php: `<?php
 class WaniOtpClient
@@ -202,12 +203,12 @@ class WaniOtpClient
         return json_decode($response, true);
     }
 
-    // ① إرسال OTP
+    ${t("// 1. Send OTP", "// ① إرسال OTP")}
     public function sendOtp(string $phone, int $expiryMinutes = 10): array
     {
         $data = $this->request('POST', '/send', [
             'phone'          => $phone,
-            'templateName'   => '${t}',
+            'templateName'   => '${templateName}',
             'expiryMinutes'  => $expiryMinutes,
         ]);
 
@@ -217,7 +218,7 @@ class WaniOtpClient
         return $data; // ['ok', 'token', 'expiresAt']
     }
 
-    // ② التحقق من الكود
+    ${t("// 2. Verify Code", "// ② التحقق من الكود")}
     public function verifyOtp(string $token, string $code): array
     {
         return $this->request('POST', '/verify', [
@@ -226,25 +227,25 @@ class WaniOtpClient
         ]);
     }
 
-    // ③ فحص الحالة
+    ${t("// 3. Check Status", "// ③ فحص الحالة")}
     public function checkStatus(string $token): array
     {
         return $this->request('GET', "/status/{$token}");
     }
 }
 
-// مثال الاستخدام
+// Usage Example
 $wani = new WaniOtpClient();
 $result = $wani->sendOtp('+201234567890');
-$token  = $result['token']; // احفظه في session`,
+$token  = $result['token']; // Save in session`,
 
-    curl: `# ① إرسال OTP
+    curl: `${t("# 1. Send OTP", "# ① إرسال OTP")}
 curl -X POST "${h}/api/developers/otp/send" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${k}" \\
   -d '{
     "phone": "+201234567890",
-    "templateName": "${t}",
+    "templateName": "${templateName}",
     "expiryMinutes": 10
   }'
 
@@ -252,7 +253,7 @@ curl -X POST "${h}/api/developers/otp/send" \\
 # { "ok": true, "token": "abc123...", "expiresAt": "2025-..." }
 
 
-# ② التحقق من الكود
+${t("# 2. Verify Code", "# ② التحقق من الكود")}
 curl -X POST "${h}/api/developers/otp/verify" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${k}" \\
@@ -265,7 +266,7 @@ curl -X POST "${h}/api/developers/otp/verify" \\
 # { "ok": true, "verified": true, "phone": "+201234567890" }
 
 
-# ③ فحص الحالة (اختياري)
+${t("# 3. Check Status (Optional)", "# ③ فحص الحالة (اختياري)")}
 curl "${h}/api/developers/otp/status/TOKEN_FROM_STEP_1" \\
   -H "x-api-key: ${k}"
 
@@ -291,6 +292,7 @@ function highlight(code: string, lang: Language): React.ReactNode[] {
 
 // ─── Copy button ──────────────────────────────────────────────────────────────
 function CopyBtn({ text }: { text: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   async function copy() {
     await navigator.clipboard.writeText(text);
@@ -305,7 +307,7 @@ function CopyBtn({ text }: { text: string }) {
       fontSize: 12, cursor: "pointer", fontFamily: "inherit",
       display: "flex", alignItems: "center", gap: 5, transition: "all .2s",
     }}>
-      {copied ? "✓ تم النسخ" : "نسخ"}
+      {copied ? t("✓ Copied", "✓ تم النسخ") : t("Copy", "نسخ")}
     </button>
   );
 }
@@ -317,6 +319,7 @@ export default function QuickStartPage() {
   const params = useParams();
   const projectId = params.id as string;
 
+  const { language, t } = useLanguage();
   const [mounted, setMounted]       = useState(false);
   const [mode, setMode]             = useState<Mode>("choose");
   const [lang, setLang]             = useState<Language>("javascript");
@@ -354,7 +357,7 @@ export default function QuickStartPage() {
       const tmplData = await tmplRes.json();
 
       const activeKeys = (keysData.keys || []).filter((k: ApiKey) => k.status === "ACTIVE");
-      const approvedTmpl = (tmplData.templates || []).filter((t: Template) => t.status === "APPROVED");
+      const approvedTmpl = (tmplData.templates || []).filter((tData: Template) => tData.status === "APPROVED");
 
       setApiKeys(activeKeys);
       setTemplates(approvedTmpl);
@@ -386,10 +389,10 @@ export default function QuickStartPage() {
       django:  "Python / Django",
     };
 
-    const systemPrompt = `أنت خبير في تكامل WhatsApp OTP API. مهمتك توليد كود احترافي نظيف جاهز للإنتاج.
+    const systemPrompt = `You are an expert in WhatsApp OTP API integration. Your task is to generate clean, production-ready, professional integration code.
 
-معلومات النظام:
-- API Key: ${activeKey}_[SECRET]  (الـ SECRET يجب تخزينه في environment variable)
+System Info:
+- API Key: ${activeKey}_[SECRET]  (SECRET must be stored in environment variables)
 - Base URL: ${origin}/api/developers/otp
 - Template Name: ${approvedTmpl} (language: ${tmplLang})
 - Endpoints:
@@ -398,22 +401,22 @@ export default function QuickStartPage() {
   GET  /status/[token] → { ok, status, secondsRemaining, ... }
 - Header: x-api-key
 
-القواعد:
-1. الكود يجب أن يكون كامل وقابل للتشغيل مباشرة
-2. استخدم environment variables للـ API Key
-3. أضف error handling مناسب
-4. أضف تعليقات بالعربي تشرح كل خطوة
-5. لا تضف أي شرح خارج الكود — الكود فقط مع التعليقات داخله
-6. استخدم best practices للغة المطلوبة`;
+Rules:
+1. The code must be complete and runnable
+2. Use environment variables for the API Key
+3. Add proper error handling
+4. Add comments explaining each step
+5. Do not add any text outside of the code block. Return ONLY the code with comments
+6. Use the best practices for the chosen language`;
 
-    const userPrompt = `اكتب integration كاملة لـ WhatsApp OTP باستخدام ${LANGS.find(l=>l.id===aiLang)?.label} مع ${frameworkLabel[aiFramework]}.
-${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}` : ""}
+    const userPrompt = `Write a complete WhatsApp OTP integration using ${LANGS.find(l=>l.id===aiLang)?.label} with ${frameworkLabel[aiFramework]}.
+${aiContext ? `\nAdditional requirements:\n${aiContext}` : ""}
 
-المطلوب:
-1. دالة sendOtp(phone) → ترجع token
-2. دالة verifyOtp(token, code) → ترجع { verified, phone }
-3. مثال استخدام واقعي (login flow أو registration flow)
-4. أي setup مطلوب (packages، env vars، إلخ)`;
+Required:
+1. function sendOtp(phone) → returns token
+2. function verifyOtp(token, code) → returns { verified, phone }
+3. Practical usage example (login flow or registration flow)
+4. Any required setup (packages, env vars, etc)`;
 
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -439,7 +442,7 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
 
       setAiCode(cleaned);
     } catch (err: any) {
-      setAiCode(`// خطأ في توليد الكود: ${err.message}\n// حاول مرة تانية أو استخدم الكود اليدوي`);
+      setAiCode(`// Error generating code: ${err.message}\n// Please try again or use the manual code snippets`);
     } finally {
       setAiLoading(false);
       setAiStreaming(false);
@@ -447,14 +450,14 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
   }
 
   // ── Current manual snippet ─────────────────────────────────────────────────
-  const manualCode = buildSnippet(lang, customApiKey, customTemplate, customHost);
+  const manualCode = buildSnippet(lang, customApiKey, customTemplate, customHost, t);
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
-        .qs-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:rtl; color:#fff; }
+        .qs-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:${language === 'ar' ? 'rtl' : 'ltr'}; color:#fff; }
         .qs-root::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(32,211,120,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(32,211,120,0.025) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
         .qs-inner { max-width:1100px; margin:0 auto; padding:40px 32px; position:relative; z-index:1; opacity:0; transform:translateY(10px); transition:opacity .4s,transform .4s; }
         .qs-inner.visible { opacity:1; transform:translateY(0); }
@@ -473,7 +476,7 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
         .choice-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg, transparent 60%, rgba(32,211,120,0.04)); opacity:0; transition:opacity .3s; }
         .choice-card:hover { border-color:rgba(32,211,120,0.25); background:rgba(32,211,120,0.03); transform:translateY(-3px); }
         .choice-card:hover::before { opacity:1; }
-        .choice-card.ai-card:hover { border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.03); }
+        .choice-card.ai-card:hover { border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.03); transform:translateY(-3px); }
         .choice-card.ai-card::before { background:linear-gradient(135deg, transparent 60%, rgba(139,92,246,0.04)); }
         .choice-icon { font-size:44px; margin-bottom:18px; }
         .choice-title { font-size:18px; font-weight:600; margin-bottom:8px; }
@@ -553,14 +556,14 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
 
         /* AI empty state */
         .ai-empty { padding:48px 32px; text-align:center; }
-        .ai-empty-icon { font-size:44px; margin-bottom:16px; }
+        .ai-empty-icon { font-size:44px; margin-bottom:16px; opacity: .4; }
         .ai-empty-title { font-size:16px; font-weight:600; color:rgba(255,255,255,0.6); margin-bottom:8px; }
         .ai-empty-sub { font-size:13px; color:rgba(255,255,255,0.3); }
 
         /* divider */
         .divider { height:1px; background:rgba(255,255,255,0.06); margin:14px 0; }
 
-        /* no-meta warning */
+        /* warning-box */
         .warning-box { padding:12px 14px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:10px; font-size:12px; color:rgba(245,158,11,0.8); margin-bottom:14px; }
 
         @media(max-width:900px) {
@@ -576,9 +579,9 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
       <div className="qs-root">
         <div className={`qs-inner ${mounted ? "visible" : ""}`}>
 
-          <div className="qs-header">
-            <h1 className="qs-title">البدء السريع</h1>
-            <p className="qs-subtitle">ابدأ تستخدم الـ OTP API في دقائق — اختار الطريقة اللي تناسبك</p>
+          <div className="qs-header" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+            <h1 className="qs-title">{t("Quick Start", "البدء السريع")}</h1>
+            <p className="qs-subtitle">{t("Start using the OTP API in minutes — choose the method that suits you", "ابدأ تستخدم الـ OTP API في دقائق — اختار الطريقة اللي تناسبك")}</p>
           </div>
 
           {/* ═══ CHOOSE MODE ═══════════════════════════════════════════════ */}
@@ -587,9 +590,9 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
               {/* AI option */}
               <div className="choice-card ai-card" onClick={() => setMode("ai")}>
                 <div className="choice-icon">✨</div>
-                <div className="choice-title">وني يولد الكود</div>
+                <div className="choice-title">{t("Wani Generates Code", "وني يولد الكود")}</div>
                 <div className="choice-desc">
-                  بتختار اللغة والـ framework وبتكتب أي متطلبات إضافية — وني بيولد integration كاملة مخصصة لمشروعك بالـ API Key والقوالب الفعلية بتاعتك
+                  {t("Choose the language and framework, add any extra requirements, and Wani will generate a complete custom integration for your project with your actual API key and templates", "بتختار اللغة والـ framework وبتكتب أي متطلبات إضافية — وني بيولد integration كاملة مخصصة لمشروعك بالـ API Key والقوالب الفعلية بتاعتك")}
                 </div>
                 <span className="choice-badge badge-ai">AI-Powered ✦</span>
               </div>
@@ -597,9 +600,9 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
               {/* Manual option */}
               <div className="choice-card" onClick={() => setMode("manual")}>
                 <div className="choice-icon">📋</div>
-                <div className="choice-title">أنا أختار الكود</div>
+                <div className="choice-title">{t("I choose the code", "أنا أختار الكود")}</div>
                 <div className="choice-desc">
-                  Snippets جاهزة بـ JavaScript / TypeScript / Python / PHP / cURL — نسخ وتشغيل مباشرة مع بياناتك الفعلية
+                  {t("Ready-made snippets in JavaScript / TypeScript / Python / PHP / cURL — copy and paste to run directly with your actual project data", "Snippets جاهزة بـ JavaScript / TypeScript / Python / PHP / cURL — نسخ وتشغيل مباشرة مع بياناتك الفعلية")}
                 </div>
                 <span className="choice-badge badge-manual">Copy & Paste</span>
               </div>
@@ -609,43 +612,43 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
           {/* ═══ AI MODE ═══════════════════════════════════════════════════ */}
           {mode === "ai" && (
             <>
-              <button className="btn-back" onClick={() => { setMode("choose"); setAiCode(""); }}>
-                ← رجوع
+              <button className="btn-back" onClick={() => { setMode("choose"); setAiCode(""); }} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <span>{t("← Back", "← رجوع")}</span>
               </button>
 
-              <div className="qs-layout">
+              <div className="qs-layout" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
                 {/* Left config */}
-                <div className="config-panel">
-                  <div className="config-title">✨ توليد بـ AI</div>
+                <div className="config-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <div className="config-title">{t("✨ Generate with AI", "✨ توليد بـ AI")}</div>
 
                   {/* API Key status */}
                   {apiKeys.length > 0 ? (
-                    <div className="status-row" style={{ marginBottom: 12 }}>
+                    <div className="status-row" style={{ marginBottom: 12, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <div className="dot-green" />
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
                         API Key: {apiKeys[0].keyPrefix}…
                       </span>
                     </div>
                   ) : (
-                    <div className="warning-box">⚠️ مفيش API Key نشط — اعمل واحد من صفحة API Keys</div>
+                    <div className="warning-box">{t("No active API Key — create one from the API Keys page", "مفيش API Key نشط — اعمل واحد من صفحة API Keys")}</div>
                   )}
 
                   {templates.length > 0 ? (
-                    <div className="status-row" style={{ marginBottom: 14 }}>
+                    <div className="status-row" style={{ marginBottom: 14, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <div className="dot-green" />
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                        قالب: {templates[0].name}
+                        {t("Template: ", "قالب: ")}{templates[0].name}
                       </span>
                     </div>
                   ) : (
-                    <div className="warning-box">⚠️ مفيش قالب Approved — راجع صفحة القوالب</div>
+                    <div className="warning-box">{t("No approved templates — check the Templates page", "مفيش قالب Approved — راجع صفحة القوالب")}</div>
                   )}
 
                   <div className="divider" />
 
                   <div className="field">
-                    <label className="field-label">لغة البرمجة</label>
-                    <div className="lang-pills">
+                    <label className="field-label">{t("Programming Language", "لغة البرمجة")}</label>
+                    <div className="lang-pills" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       {LANGS.map(l => (
                         <button key={l.id} className={`lang-pill ai ${aiLang === l.id ? "active" : ""}`}
                           onClick={() => setAiLang(l.id)}>
@@ -668,46 +671,46 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
                   </div>
 
                   <div className="field">
-                    <label className="field-label">متطلبات إضافية (اختياري)</label>
+                    <label className="field-label">{t("Additional Requirements (Optional)", "متطلبات إضافية (اختياري)")}</label>
                     <textarea className="f-textarea" rows={4}
-                      placeholder={"مثال:\n- عاوز login page كاملة\n- استخدم TypeScript strict\n- أضف retry logic"}
+                      placeholder={t("Example:\n- I want a full login page\n- Use strict TypeScript\n- Add retry logic", "مثال:\n- عاوز login page كاملة\n- استخدم TypeScript strict\n- أضف retry logic")}
                       value={aiContext} onChange={e => setAiContext(e.target.value)} />
                   </div>
 
                   <button className="btn-gen" onClick={generateWithAI}
-                    disabled={aiLoading || apiKeys.length === 0}>
+                    disabled={aiLoading || apiKeys.length === 0} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                     {aiLoading
-                      ? <><div style={{ width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .7s linear infinite" }}/>بيولد الكود...</>
-                      : <>✨ ولّد الكود</>
+                      ? <><div style={{ width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .7s linear infinite" }}/><span>{t("Generating...", "بيولد الكود...")}</span></>
+                      : <><span>{t("✨ Generate Code", "✨ ولّد الكود")}</span></>
                     }
                   </button>
                 </div>
 
                 {/* Right: generated code */}
                 <div className="code-panel">
-                  <div className="code-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="code-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <div className="code-dots">
                         <div className="code-dot" style={{ background: "#ff5f57" }} />
                         <div className="code-dot" style={{ background: "#ffbd2e" }} />
                         <div className="code-dot" style={{ background: "#28c840" }} />
                       </div>
                       <span className="code-label">
-                        {LANGS.find(l => l.id === aiLang)?.label ?? aiLang} — AI Generated
+                        {LANGS.find(l => l.id === aiLang)?.label ?? aiLang} — {t("AI Generated", "توليد بـ AI")}
                       </span>
                     </div>
                     {aiCode && <CopyBtn text={aiCode} />}
                   </div>
 
                   {aiLoading ? (
-                    <div className="ai-thinking">
+                    <div className="ai-thinking" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <div className="dots-spin">
                         <span/><span/><span/>
                       </div>
-                      وني بيولد الكود المخصص لمشروعك...
+                      <span>{t("Wani is generating custom code for your project...", "Content generated by AI for your project...")}</span>
                     </div>
                   ) : aiCode ? (
-                    <div className="code-body">
+                    <div className="code-body" style={{ direction: "ltr" }}>
                       <pre className="code-pre" ref={codeRef}>
                         {highlight(aiCode, aiLang)}
                       </pre>
@@ -715,8 +718,8 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
                   ) : (
                     <div className="ai-empty">
                       <div className="ai-empty-icon">✨</div>
-                      <div className="ai-empty-title">اختار اللغة والـ Framework</div>
-                      <div className="ai-empty-sub">ثم اضغط "ولّد الكود" وهيجيلك integration كاملة بثواني</div>
+                      <div className="ai-empty-title">{t("Choose Language and Framework", "اختار اللغة والـ Framework")}</div>
+                      <div className="ai-empty-sub">{t("Then click \"Generate Code\" and you will get a complete integration in seconds", "ثم اضغط \"ولّد الكود\" وهيجيلك integration كاملة بثواني")}</div>
                     </div>
                   )}
                 </div>
@@ -727,18 +730,18 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
           {/* ═══ MANUAL MODE ═══════════════════════════════════════════════ */}
           {mode === "manual" && (
             <>
-              <button className="btn-back" onClick={() => setMode("choose")}>
-                ← رجوع
+              <button className="btn-back" onClick={() => setMode("choose")} style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <span>{t("← Back", "← رجوع")}</span>
               </button>
 
-              <div className="qs-layout">
+              <div className="qs-layout" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
                 {/* Left: config */}
-                <div className="config-panel">
-                  <div className="config-title">⚙️ إعداد الكود</div>
+                <div className="config-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <div className="config-title">{t("⚙️ Code Setup", "⚙️ إعداد الكود")}</div>
 
                   <div className="field">
-                    <label className="field-label">لغة البرمجة</label>
-                    <div className="lang-pills">
+                    <label className="field-label">{t("Programming Language", "لغة البرمجة")}</label>
+                    <div className="lang-pills" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       {LANGS.map(l => (
                         <button key={l.id} className={`lang-pill ${lang === l.id ? "active" : ""}`}
                           onClick={() => setLang(l.id)}>
@@ -757,40 +760,40 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
                       value={customApiKey}
                       onChange={e => setCustomApiKey(e.target.value)} />
                     {apiKeys.length > 0 && (
-                      <div className="status-row">
+                      <div className="status-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <div className="dot-green" />
                         <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)" }}>
-                          {apiKeys.length} key نشطة — اختار من صفحة API Keys
+                          {t(`${apiKeys.length} active keys — choose from API Keys page`, `${apiKeys.length} key نشطة — اختار من صفحة API Keys`)}
                         </span>
                       </div>
                     )}
                   </div>
 
                   <div className="field">
-                    <label className="field-label">اسم القالب</label>
+                    <label className="field-label">{t("Template Name", "اسم القالب")}</label>
                     <input className="f-input mono"
                       placeholder="otp_verification"
                       value={customTemplate}
                       onChange={e => setCustomTemplate(e.target.value)} />
                     {templates.length > 0 ? (
-                      <div className="status-row">
+                      <div className="status-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <div className="dot-green" />
                         <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)" }}>
                           {templates[0].name} — Approved ✓
                         </span>
                       </div>
                     ) : (
-                      <div className="status-row">
+                      <div className="status-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <div className="dot-amber" />
                         <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)" }}>
-                          مفيش قوالب Approved بعد
+                          {t("No approved templates yet", "مفيش قوالب Approved بعد")}
                         </span>
                       </div>
                     )}
                   </div>
 
                   <div className="field">
-                    <label className="field-label">الـ Domain (Base URL)</label>
+                    <label className="field-label">{t("Domain (Base URL)", "الـ Domain (Base URL)")}</label>
                     <input className="f-input mono"
                       placeholder="https://your-domain.com"
                       value={customHost}
@@ -800,8 +803,8 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
 
                 {/* Right: code */}
                 <div className="code-panel">
-                  <div className="code-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="code-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                       <div className="code-dots">
                         <div className="code-dot" style={{ background: "#ff5f57" }} />
                         <div className="code-dot" style={{ background: "#ffbd2e" }} />
@@ -813,7 +816,7 @@ ${aiContext ? `\nمتطلبات إضافية من المبرمج:\n${aiContext}`
                     </div>
                     <CopyBtn text={manualCode} />
                   </div>
-                  <div className="code-body">
+                  <div className="code-body" style={{ direction: "ltr" }}>
                     <pre className="code-pre">
                       {highlight(manualCode, lang)}
                     </pre>
