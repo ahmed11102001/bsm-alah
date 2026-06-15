@@ -45,6 +45,15 @@ const FEATURES = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DevelopersLandingPage() {
   return (
+    <LanguageProvider>
+      <PageContent />
+    </LanguageProvider>
+  );
+}
+
+function PageContent() {
+  const { language, toggleLanguage } = useLanguage();
+  return (
     <div
       style={{
         minHeight: "100vh",
@@ -52,7 +61,7 @@ export default function DevelopersLandingPage() {
         color: "#f0f0f0",
         fontFamily:
           "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        direction: "rtl",
+        direction: language === 'ar' ? "rtl" : "ltr",
       }}
     >
       <HeroAnimation />
@@ -104,7 +113,7 @@ export default function DevelopersLandingPage() {
               transition: "color 0.15s",
             }}
           >
-            تسجيل دخول
+            {language === 'ar' ? 'تسجيل دخول' : 'Sign In'}
           </Link>
           <Link
             href="/developers/signup"
@@ -122,9 +131,12 @@ export default function DevelopersLandingPage() {
               gap: "6px",
             }}
           >
-            ابدأ مجاناً
+            {language === 'ar' ? 'ابدأ مجاناً' : 'Start for Free'}
             <ArrowRight size={13} />
           </Link>
+          <button onClick={toggleLanguage} style={{ padding: "6px 10px", fontSize: "12px", background: "#333", color: "#fff", borderRadius: "6px", border: "none", cursor: "pointer" }}>
+            {language === 'ar' ? 'EN' : 'AR'}
+          </button>
         </div>
       </nav>
 
@@ -178,10 +190,10 @@ export default function DevelopersLandingPage() {
             color: "#f0f0f0",
           }}
         >
-          تحقق من عملائك
+          {language === 'ar' ? 'تحقق من عملائك' : 'Verify your customers'}
           <br />
-          <span style={{ color: "#25D366" }}>عبر واتساب</span>
-          <span style={{ color: "rgba(255,255,255,0.3)" }}> — في سطرين</span>
+          <span style={{ color: "#25D366" }}>{language === 'ar' ? 'عبر واتساب' : 'via WhatsApp'}</span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}> {language === 'ar' ? '— في سطرين' : '— in two lines'}</span>
         </h1>
 
         {/* Sub */}
@@ -194,8 +206,7 @@ export default function DevelopersLandingPage() {
             margin: "0 auto 36px",
           }}
         >
-          API خفيف يرسل OTP على واتساب المستخدم ويتحقق منه. بدون SMS، بدون
-          تعقيد — فقط الـ app اللي عنده 98% open rate.
+          {language === 'ar' ? 'API خفيف يرسل OTP على واتساب المستخدم ويتحقق منه. بدون SMS، بدون تعقيد — فقط الـ app اللي عنده 98% open rate.' : 'Lightweight API that sends OTP via WhatsApp and verifies it. No SMS, no hassle — just the app with 98% open rate.'}
         </p>
 
         {/* CTAs */}
@@ -218,7 +229,7 @@ export default function DevelopersLandingPage() {
               letterSpacing: "-0.2px",
             }}
           >
-            ابدأ مجاناً — 14 يوم تجربة
+            {language === 'ar' ? 'ابدأ مجاناً — 14 يوم تجربة' : 'Start for Free — 14 day trial'}
             <ArrowRight size={15} />
           </Link>
           <Link
@@ -237,7 +248,7 @@ export default function DevelopersLandingPage() {
               background: "transparent",
             }}
           >
-            شوف الـ Docs
+            {language === 'ar' ? 'شوف الـ Docs' : 'View Docs'}
           </Link>
         </div>
 
@@ -379,7 +390,7 @@ export default function DevelopersLandingPage() {
             textAlign: "center",
           }}
         >
-          ليه Wani OTP؟
+          {language === 'ar' ? 'ليه Wani OTP؟' : 'Why Wani OTP?'}
         </p>
 
         <div className="features-grid">
