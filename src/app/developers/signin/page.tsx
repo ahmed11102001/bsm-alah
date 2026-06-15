@@ -236,14 +236,45 @@ export default function DevSignInPage() {
 
         /* ── Mobile breakpoint ── */
         @media (max-width: 768px) {
-          .auth-brand { display: none !important; }
-          .auth-form-panel {
-            padding: 24px 16px 32px;
+          .auth-root {
+            flex-direction: column;
+            align-items: center;
             justify-content: flex-start;
-            padding-top: 40px;
+            overflow-y: auto;
+          }
+          .auth-brand {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 24px 20px;
+            border-left: none;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            flex-shrink: 0;
+          }
+          .brand-logo {
+            justify-content: center;
+            margin-bottom: 28px;
+          }
+          .brand-headline {
+            font-size: 28px;
+            text-align: center;
+          }
+          .brand-sub {
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 28px;
+          }
+          .feature-list {
+            max-width: 320px;
+            margin: 0 auto;
+          }
+          .auth-form-panel {
+            width: 100%;
+            max-width: 420px;
+            padding: 24px 16px 32px;
+            flex: none;
           }
           .auth-card { padding: 28px 22px; border-radius: 16px; }
-          .mobile-brand-logo { display: flex !important; }
+          .mobile-brand-logo { display: none !important; }
           .form-title { font-size: 19px; }
         }
 

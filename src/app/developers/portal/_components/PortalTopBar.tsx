@@ -109,6 +109,23 @@ export default function PortalTopBar({
           color: #20d378;
           background: rgba(32, 211, 120, 0.08);
         }
+        .ptopbar-link.docs-btn {
+          color: #20d378;
+          background: rgba(32, 211, 120, 0.08);
+          border: 1px solid rgba(32, 211, 120, 0.25);
+          font-weight: 500;
+          transition: all 0.15s ease;
+        }
+        .ptopbar-link.docs-btn:hover {
+          color: #060810;
+          background: #20d378;
+          border-color: #20d378;
+        }
+        .ptopbar-link.docs-btn.active {
+          color: #fff;
+          background: rgba(32, 211, 120, 0.18);
+          border-color: rgba(32, 211, 120, 0.45);
+        }
 
         /* ── Actions ────────────────────────────────────────────── */
         .ptopbar-actions {
@@ -277,7 +294,7 @@ export default function PortalTopBar({
         <nav className="ptopbar-links">
           <Link
             href="/developers/portal/endpoints"
-            className={`ptopbar-link ${docsActive ? "active" : ""}`}
+            className={`ptopbar-link docs-btn ${docsActive ? "active" : ""}`}
           >
             <BookOpen size={14} />
             API Docs
