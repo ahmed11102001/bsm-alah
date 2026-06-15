@@ -13,6 +13,7 @@ export default function DevSignUpPage() {
   );
 }
 
+
 function SignUpContent() {
   const router = useRouter();
   const { language, toggleLanguage, t } = useLanguage();
