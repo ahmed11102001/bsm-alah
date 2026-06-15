@@ -3,12 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
 
 export default function DevSignInPage() {
+  return (
+    <LanguageProvider>
+      <SignInContent />
+    </LanguageProvider>
+  );
+}
+
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/developers/portal";
   const errorParam = searchParams.get("error");
+  const { language, toggleLanguage, t } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +29,7 @@ export default function DevSignInPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (errorParam === "suspended") setError("الحساب موقف، تواصل مع الدعم");
+    if (errorParam === "suspended") setError(t("Account suspended, contact support", "الحساب موقف، تواصل مع الدعم"));
   }, [errorParam]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,12 +44,12 @@ export default function DevSignInPage() {
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) { setError(data.error || "حصل خطأ، حاول تاني"); return; }
+      if (!res.ok) { setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني")); return; }
       router.push(data.redirect || callbackUrl);
       router.refresh();
     } catch {
       setLoading(false);
-      setError("حصل خطأ في الاتصال، حاول تاني");
+      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
     }
   }
 
@@ -56,7 +66,7 @@ export default function DevSignInPage() {
           background: #060810;
           display: flex;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'};
           position: relative;
           overflow: hidden;
         }
@@ -74,12 +84,12 @@ export default function DevSignInPage() {
         .blob-1 {
           position: absolute; width: 500px; height: 500px; border-radius: 50%;
           background: radial-gradient(circle, rgba(32,211,120,0.07) 0%, transparent 70%);
-          top: -180px; left: -80px; pointer-events: none;
+          top: -180px; ${language === 'ar' ? 'left' : 'right'}: -80px; pointer-events: none;
         }
         .blob-2 {
           position: absolute; width: 350px; height: 350px; border-radius: 50%;
           background: radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 70%);
-          bottom: -80px; right: -80px; pointer-events: none;
+          bottom: -80px; ${language === 'ar' ? 'right' : 'left'}: -80px; pointer-events: none;
         }
 
         /* ── Brand panel ── */
@@ -87,7 +97,7 @@ export default function DevSignInPage() {
           width: 460px;
           padding: 56px 52px;
           display: flex; flex-direction: column; justify-content: center;
-          border-left: 1px solid rgba(255,255,255,0.04);
+          border-${language === 'ar' ? 'left' : 'right'}: 1px solid rgba(255,255,255,0.04);
           position: relative; z-index: 1;
           flex-shrink: 0;
         }
@@ -175,9 +185,9 @@ export default function DevSignInPage() {
         .field-input.ltr { direction: ltr; text-align: left; }
 
         .password-wrap { position: relative; }
-        .password-wrap .field-input { padding-left: 44px; }
+        .password-wrap .field-input { padding-${language === 'ar' ? 'left' : 'right'}: 44px; }
         .pass-toggle {
-          position: absolute; left: 12px; top: 50%;
+          position: absolute; ${language === 'ar' ? 'left' : 'right'}: 12px; top: 50%;
           transform: translateY(-50%);
           background: none; border: none;
           color: rgba(255,255,255,0.3);
@@ -186,6 +196,14 @@ export default function DevSignInPage() {
           -webkit-tap-highlight-color: transparent;
         }
         .pass-toggle:hover { color: rgba(255,255,255,0.6); }
+
+        .forgot-link {
+          display: block; text-align: ${language === 'ar' ? 'left' : 'right'};
+          font-size: 12px; color: rgba(32,211,120,0.7);
+          text-decoration: none; margin-top: -10px; margin-bottom: 18px;
+          transition: color 0.2s;
+        }
+        .forgot-link:hover { color: #20d378; }
 
         .error-box {
           padding: 11px 14px;
@@ -234,6 +252,16 @@ export default function DevSignInPage() {
         }
         .back-link:hover { color: rgba(255,255,255,0.6); }
 
+        .lang-toggle-corner {
+          position: absolute; top: 20px; ${language === 'ar' ? 'left' : 'right'}: 20px;
+          z-index: 10;
+          padding: 6px 12px; font-size: 12px; font-weight: 600;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; color: rgba(255,255,255,0.5);
+          cursor: pointer; transition: all 0.2s;
+        }
+        .lang-toggle-corner:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
         /* ── Mobile breakpoint ── */
         @media (max-width: 768px) {
           .auth-root {
@@ -247,6 +275,7 @@ export default function DevSignInPage() {
             max-width: 420px;
             padding: 40px 24px 20px;
             border-left: none;
+            border-right: none;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             flex-shrink: 0;
           }
@@ -289,29 +318,36 @@ export default function DevSignInPage() {
         <div className="blob-1" />
         <div className="blob-2" />
 
+        {/* Language toggle */}
+        <button className="lang-toggle-corner" onClick={toggleLanguage}>
+          {language === 'ar' ? 'EN' : 'AR'}
+        </button>
+
         {/* Desktop brand panel */}
         <div className="auth-brand">
           <div className="brand-logo">
             <div className="brand-logo-icon">W</div>
             <div>
-              <div className="brand-logo-text">وني</div>
+              <div className="brand-logo-text">{t("Wani", "وني")}</div>
               <div className="brand-logo-sub">Developer Portal</div>
             </div>
           </div>
           <h1 className="brand-headline">
-            ابني تطبيقك بـ<br />
+            {t("Build your app with", "ابني تطبيقك بـ")}<br />
             <span>WhatsApp OTP</span><br />
-            في دقائق
+            {t("in minutes", "في دقائق")}
           </h1>
           <p className="brand-sub">
-            منصة متكاملة لإرسال والتحقق من أكواد الـ OTP<br />
-            عبر WhatsApp مع API احترافية وتوثيق كامل.
+            {t(
+              "A complete platform to send and verify OTP codes via WhatsApp with a professional API and full documentation.",
+              "منصة متكاملة لإرسال والتحقق من أكواد الـ OTP عبر WhatsApp مع API احترافية وتوثيق كامل."
+            )}
           </p>
           <div className="feature-list">
-            <div className="feature-item"><div className="feature-dot" />إدارة مشاريع متعددة منفصلة</div>
-            <div className="feature-item"><div className="feature-dot" />قوالب WhatsApp مع مزامنة Meta</div>
-            <div className="feature-item"><div className="feature-dot" />API Keys مع Rate Limiting</div>
-            <div className="feature-item"><div className="feature-dot" />تسليم المشروع للعميل بضغطة</div>
+            <div className="feature-item"><div className="feature-dot" />{t("Manage multiple isolated projects", "إدارة مشاريع متعددة منفصلة")}</div>
+            <div className="feature-item"><div className="feature-dot" />{t("WhatsApp templates with Meta sync", "قوالب WhatsApp مع مزامنة Meta")}</div>
+            <div className="feature-item"><div className="feature-dot" />{t("API Keys with Rate Limiting", "API Keys مع Rate Limiting")}</div>
+            <div className="feature-item"><div className="feature-dot" />{t("Transfer project to client in one click", "تسليم المشروع للعميل بضغطة")}</div>
           </div>
         </div>
 
@@ -323,17 +359,17 @@ export default function DevSignInPage() {
             <div className="mobile-brand-logo">
               <div className="mobile-brand-logo-icon">W</div>
               <div>
-                <div className="mobile-brand-name">وني</div>
+                <div className="mobile-brand-name">{t("Wani", "وني")}</div>
                 <div className="mobile-brand-sub">Developer Portal</div>
               </div>
             </div>
 
-            <h2 className="form-title">تسجيل الدخول</h2>
-            <p className="form-desc">أهلاً بك مرة تانية في Developer Portal</p>
+            <h2 className="form-title">{t("Sign In", "تسجيل الدخول")}</h2>
+            <p className="form-desc">{t("Welcome back to the Developer Portal", "أهلاً بك مرة تانية في Developer Portal")}</p>
 
             <form onSubmit={handleSubmit}>
               <div className="field-group">
-                <label className="field-label">الإيميل</label>
+                <label className="field-label">{t("Email", "الإيميل")}</label>
                 <input
                   className="field-input ltr"
                   type="email"
@@ -347,7 +383,7 @@ export default function DevSignInPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">كلمة المرور</label>
+                <label className="field-label">{t("Password", "كلمة المرور")}</label>
                 <div className="password-wrap">
                   <input
                     className="field-input ltr"
@@ -360,7 +396,7 @@ export default function DevSignInPage() {
                   />
                   <button type="button" className="pass-toggle"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "إخفاء" : "إظهار"}>
+                    aria-label={showPassword ? t("Hide", "إخفاء") : t("Show", "إظهار")}>
                     {showPassword ? (
                       <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
@@ -375,27 +411,31 @@ export default function DevSignInPage() {
                 </div>
               </div>
 
+              <Link href="/developers/forgot-password" className="forgot-link">
+                {t("Forgot password?", "نسيت كلمة المرور؟")}
+              </Link>
+
               {error && <div className="error-box">{error}</div>}
 
               <button type="submit" className="submit-btn" disabled={loading}>
                 {loading ? (
-                  <><div className="spinner" />جاري الدخول...</>
+                  <><div className="spinner" />{t("Signing in...", "جاري الدخول...")}</>
                 ) : (
-                  <>دخول <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg></>
+                  <>{t("Sign In", "دخول")} <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d={language === 'ar' ? "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" : "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"} /></svg></>
                 )}
               </button>
             </form>
 
             <div className="auth-footer">
-              ماعندكش حساب؟ <Link href="/developers/signup">سجّل جديد</Link>
+              {t("Don't have an account? ", "ماعندكش حساب؟ ")}<Link href="/developers/signup">{t("Sign Up", "سجّل جديد")}</Link>
             </div>
           </div>
 
           <Link href="/developers" className="back-link">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              <path strokeLinecap="round" strokeLinejoin="round" d={language === 'ar' ? "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" : "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"} />
             </svg>
-            رجوع للصفحة الرئيسية
+            {t("Back to home page", "رجوع للصفحة الرئيسية")}
           </Link>
         </div>
       </div>

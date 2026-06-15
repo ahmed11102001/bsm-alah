@@ -4,16 +4,22 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 
 export type Language = "en" | "ar";
 
+// Overloaded t() — strings in, string out; ReactNode in, ReactNode out
+interface TranslateFn {
+  (en: string, ar: string): string;
+  (en: ReactNode, ar: ReactNode): ReactNode;
+}
+
 interface LangContextProps {
   language: Language;
   toggleLanguage: () => void;
-  t: (en: string, ar: string) => string;
+  t: TranslateFn;
 }
 
 const LangContext = createContext<LangContextProps>({
   language: "en",
   toggleLanguage: () => {},
-  t: (en) => en,
+  t: ((en: any) => en) as TranslateFn,
 });
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
@@ -33,7 +39,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const t = (en: string, ar: string) => (language === "ar" ? ar : en);
+  const t = ((en: any, ar: any) => (language === "ar" ? ar : en)) as TranslateFn;
 
   return (
     <LangContext.Provider value={{ language, toggleLanguage, t }}>

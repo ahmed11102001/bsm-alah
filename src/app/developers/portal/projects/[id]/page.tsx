@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Key, FileText, Wifi, WifiOff, Share2, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
+import { useLanguage } from "../../../_components/LanguageProvider";
 
 interface ProjectData {
   id: string;
@@ -45,6 +46,7 @@ export default function ProjectOverviewPage() {
   const params = useParams();
   const projectId = params.id as string;
 
+  const { language, t } = useLanguage();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [keys, setKeys] = useState<ApiKeyPreview[]>([]);
   const [templates, setTemplates] = useState<TemplatePreview[]>([]);
@@ -88,18 +90,18 @@ export default function ProjectOverviewPage() {
         body: JSON.stringify(metaForm),
       });
       const data = await res.json();
-      if (!res.ok) { setMetaError(data.error || "حصل خطأ"); return; }
+      if (!res.ok) { setMetaError(data.error || t("An error occurred", "حصل خطأ")); return; }
       setShowMetaForm(false);
       fetchAll();
     } catch {
-      setMetaError("حصل خطأ، حاول تاني");
+      setMetaError(t("An error occurred, try again", "حصل خطأ، حاول تاني"));
     } finally {
       setMetaLoading(false);
     }
   }
 
   async function disconnectMeta() {
-    if (!confirm("هتقطع ربط Meta من المشروع ده — متأكد؟")) return;
+    if (!confirm(t("You are about to disconnect Meta from this project — are you sure?", "هتقطع ربط Meta من المشروع ده — متأكد؟"))) return;
     await fetch(`/api/developers/projects/${projectId}/meta`, { method: "DELETE" });
     fetchAll();
   }
@@ -117,44 +119,43 @@ export default function ProjectOverviewPage() {
     LOCAL_DRAFT: "rgba(255,255,255,0.3)",
     DISABLED: "rgba(255,255,255,0.2)",
   };
+
   const statusLabel: Record<string, string> = {
-    APPROVED: "موافق عليه",
-    PENDING: "قيد المراجعة",
-    REJECTED: "مرفوض",
-    LOCAL_DRAFT: "مسودة",
-    DISABLED: "معطل",
+    APPROVED: t("Approved", "موافق عليه"),
+    PENDING: t("Pending", "قيد المراجعة"),
+    REJECTED: t("Rejected", "مرفوض"),
+    LOCAL_DRAFT: t("Draft", "مسودة"),
+    DISABLED: t("Disabled", "معطل"),
   };
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "rgba(255,255,255,0.3)", fontFamily: "IBM Plex Sans Arabic, sans-serif" }}>
-        جاري التحميل...
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "rgba(255,255,255,0.3)", fontFamily: "IBM Plex Sans Arabic, sans-serif", direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+        {t("Loading...", "جاري التحميل...")}
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "rgba(255,255,255,0.3)", fontFamily: "IBM Plex Sans Arabic, sans-serif" }}>
-        المشروع مش موجود
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "rgba(255,255,255,0.3)", fontFamily: "IBM Plex Sans Arabic, sans-serif", direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+        {t("Project not found", "المشروع مش موجود")}
       </div>
     );
   }
 
-  // مربوط لو في connection موجودة — بغض النظر عن isVerified
-  // isVerified بيتعمل true في الـ API لما يتحفظ، بس هنا نتأكد من وجود الـ connection
   const metaConnected = !!project.metaConnection;
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
-
+ 
         .pov-root {
           max-width: 1000px; margin: 0 auto;
           padding: 36px 28px;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl; color: #fff;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'}; color: #fff;
         }
 
         /* Header */
@@ -333,23 +334,23 @@ export default function ProjectOverviewPage() {
 
       <div className="pov-root">
         {/* Header */}
-        <div className="pov-header">
-          <h1 className="pov-title">نظرة عامة — {project.name}</h1>
-          <p className="pov-sub">كل البيانات دي خاصة بالمشروع ده بس</p>
+        <div className="pov-header" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+          <h1 className="pov-title">{t("Overview — ", "نظرة عامة — ")}{project.name}</h1>
+          <p className="pov-sub">{t("All of this data is specific to this project only", "كل البيانات دي خاصة بالمشروع ده بس")}</p>
         </div>
 
         {/* Stats */}
         <div className="pov-stats">
-          <div className="stat-card">
-            <div className="stat-label">API Keys نشطة</div>
+          <div className="stat-card" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+            <div className="stat-label">{t("Active API Keys", "API Keys نشطة")}</div>
             <div className="stat-value green">{project._count.apiKeys}</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-label">قوالب موافق عليها</div>
+          <div className="stat-card" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+            <div className="stat-label">{t("Approved Templates", "قوالب موافق عليها")}</div>
             <div className="stat-value">{project._count.otpTemplates}</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-label">OTP اليوم</div>
+          <div className="stat-card" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+            <div className="stat-label">{t("OTP Today", "OTP اليوم")}</div>
             <div className="stat-value">{project.otpToday}</div>
           </div>
         </div>
@@ -358,7 +359,7 @@ export default function ProjectOverviewPage() {
         <div className="pov-grid">
           {/* API Keys */}
           <div className="pov-section">
-            <div className="pov-section-header">
+            <div className="pov-section-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
               <span className="pov-section-title">
                 <Key size={14} />
                 API Keys
@@ -367,21 +368,21 @@ export default function ProjectOverviewPage() {
                 href={`/developers/portal/projects/${projectId}/api-keys`}
                 className="pov-section-link"
               >
-                عرض الكل ←
+                {t("View All ←", "عرض الكل ←")}
               </Link>
             </div>
 
             {keys.length === 0 ? (
-              <div className="empty-row">لا توجد API Keys — أنشئ واحد الآن</div>
+              <div className="empty-row">{t("No API Keys — create one now", "لا توجد API Keys — أنشئ واحد الآن")}</div>
             ) : (
               keys.map((k) => (
-                <div key={k.id} className="key-row">
+                <div key={k.id} className="key-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                   <span className="key-prefix">{k.keyPrefix}...</span>
                   {k.name && <span className="key-name">{k.name}</span>}
                   <button
                     className="copy-btn"
                     onClick={() => copyText(k.keyPrefix, k.id)}
-                    title="نسخ الـ prefix"
+                    title={t("Copy prefix", "نسخ الـ prefix")}
                   >
                     {copied === k.id ? <Check size={12} /> : <Copy size={12} />}
                   </button>
@@ -392,34 +393,34 @@ export default function ProjectOverviewPage() {
 
           {/* Templates */}
           <div className="pov-section">
-            <div className="pov-section-header">
+            <div className="pov-section-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
               <span className="pov-section-title">
                 <FileText size={14} />
-                القوالب
+                {t("Templates", "القوالب")}
               </span>
               <Link
                 href={`/developers/portal/projects/${projectId}/otp-templates`}
                 className="pov-section-link"
               >
-                عرض الكل ←
+                {t("View All ←", "عرض الكل ←")}
               </Link>
             </div>
 
             {templates.length === 0 ? (
-              <div className="empty-row">لا توجد قوالب — أنشئ قالب OTP الآن</div>
+              <div className="empty-row">{t("No templates — create an OTP template now", "لا توجد قوالب — أنشئ قالب OTP الآن")}</div>
             ) : (
-              templates.map((t) => (
-                <div key={t.id} className="tmpl-row">
-                  <span className="tmpl-name">{t.name}</span>
+              templates.map((tData) => (
+                <div key={tData.id} className="tmpl-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                  <span className="tmpl-name">{tData.name}</span>
                   <span
                     className="tmpl-badge"
                     style={{
-                      color: statusColor[t.status] || "rgba(255,255,255,0.3)",
-                      background: `${statusColor[t.status]}18` || "rgba(255,255,255,0.05)",
-                      border: `1px solid ${statusColor[t.status]}30` || "1px solid rgba(255,255,255,0.1)",
+                      color: statusColor[tData.status] || "rgba(255,255,255,0.3)",
+                      background: `${statusColor[tData.status]}18` || "rgba(255,255,255,0.05)",
+                      border: `1px solid ${statusColor[tData.status]}30` || "1px solid rgba(255,255,255,0.1)",
                     }}
                   >
-                    {statusLabel[t.status] || t.status}
+                    {statusLabel[tData.status] || tData.status}
                   </span>
                 </div>
               ))
@@ -429,22 +430,22 @@ export default function ProjectOverviewPage() {
 
         {/* Meta Connection */}
         <div className="meta-section">
-          <div className="pov-section-header">
+          <div className="pov-section-header" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
             <span className="pov-section-title" style={{ fontSize: 15 }}>
               {metaConnected ? <Wifi size={15} style={{ color: "#20d378" }} /> : <WifiOff size={15} style={{ color: "#f59e0b" }} />}
-              ربط Meta WhatsApp
+              {t("Meta WhatsApp Connection", "ربط Meta WhatsApp")}
             </span>
             {metaConnected && (
               <button className="btn-disconnect" onClick={disconnectMeta}>
-                قطع الاتصال
+                {t("Disconnect", "قطع الاتصال")}
               </button>
             )}
           </div>
 
           {metaConnected && project.metaConnection ? (
             <>
-              <div className="meta-connected-row">
-                <div>
+              <div className="meta-connected-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                   <div className="meta-field-label">WABA ID</div>
                   <div className="meta-field-value">{project.metaConnection.wabaId}</div>
                 </div>
@@ -452,8 +453,8 @@ export default function ProjectOverviewPage() {
                   {copied === "waba" ? <Check size={12} /> : <Copy size={12} />}
                 </button>
               </div>
-              <div className="meta-connected-row">
-                <div>
+              <div className="meta-connected-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                   <div className="meta-field-label">Phone Number ID</div>
                   <div className="meta-field-value">{project.metaConnection.phoneNumberId}</div>
                 </div>
@@ -462,30 +463,30 @@ export default function ProjectOverviewPage() {
                 </button>
               </div>
               {project.metaConnection.displayPhone && (
-                <div className="meta-connected-row">
-                  <div>
-                    <div className="meta-field-label">رقم الهاتف</div>
+                <div className="meta-connected-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                  <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                    <div className="meta-field-label">{t("Phone Number", "رقم الهاتف")}</div>
                     <div className="meta-field-value">{project.metaConnection.displayPhone}</div>
                   </div>
                 </div>
               )}
             </>
           ) : !showMetaForm ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(245,158,11,0.8)" }}>
                 <AlertTriangle size={14} />
-                المشروع ده مش مربوط بـ Meta — مش هيقدر يرسل OTP
+                {t("This project is not connected to Meta — it won't be able to send OTPs", "المشروع ده مش مربوط بـ Meta — مش هيقدر يرسل OTP")}
               </div>
               <button className="btn-connect-meta" onClick={() => setShowMetaForm(true)}>
                 <Wifi size={14} />
-                ربط Meta الآن
+                {t("Connect Meta Now", "ربط Meta الآن")}
               </button>
             </div>
           ) : (
-            <div className="meta-form">
+            <div className="meta-form" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
               {metaError && <div className="form-error">{metaError}</div>}
               <div className="form-field">
-                <label className="form-label">Access Token *</label>
+                <label className="form-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>Access Token *</label>
                 <input
                   className="form-input"
                   type="password"
@@ -495,7 +496,7 @@ export default function ProjectOverviewPage() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">WABA ID *</label>
+                <label className="form-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>WABA ID *</label>
                 <input
                   className="form-input"
                   placeholder="123456789012345"
@@ -504,7 +505,7 @@ export default function ProjectOverviewPage() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Phone Number ID *</label>
+                <label className="form-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>Phone Number ID *</label>
                 <input
                   className="form-input"
                   placeholder="987654321098765"
@@ -513,7 +514,7 @@ export default function ProjectOverviewPage() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">رقم الهاتف المعروض (اختياري)</label>
+                <label className="form-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Display Phone Number (Optional)", "رقم الهاتف المعروض (اختياري)")}</label>
                 <input
                   className="form-input"
                   placeholder="+20 10 xxxx xxxx"
@@ -521,10 +522,10 @@ export default function ProjectOverviewPage() {
                   onChange={(e) => setMetaForm((f) => ({ ...f, displayPhone: e.target.value }))}
                 />
               </div>
-              <div className="form-actions">
-                <button className="btn-cancel-form" onClick={() => setShowMetaForm(false)}>إلغاء</button>
+              <div className="form-actions" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <button className="btn-cancel-form" onClick={() => setShowMetaForm(false)}>{t("Cancel", "إلغاء")}</button>
                 <button className="btn-submit" onClick={connectMeta} disabled={metaLoading}>
-                  {metaLoading ? "جاري الربط..." : "ربط Meta"}
+                  {metaLoading ? t("Connecting...", "جاري الربط...") : t("Connect Meta", "ربط Meta")}
                 </button>
               </div>
             </div>
@@ -532,16 +533,16 @@ export default function ProjectOverviewPage() {
         </div>
 
         {/* Transfer project banner */}
-        <div className="transfer-banner">
+        <div className="transfer-banner" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', textAlign: language === 'ar' ? 'right' : 'left' }}>
           <div>
-            <div className="transfer-banner-title">تسليم المشروع لعميل</div>
+            <div className="transfer-banner-title">{t("Hand over project to a client", "تسليم المشروع لعميل")}</div>
             <div className="transfer-banner-text">
-              بعد خلاص المشروع — سلّمه للعميل بإيميله عشان يتحكم فيه من حسابه
+              {t("After completing the project, hand it over to the client using their email so they can manage it from their account", "بعد خلاص المشروع — سلّمه للعميل بإيميله عشان يتحكم فيه من حسابه")}
             </div>
           </div>
           <Link href={`/developers/portal/projects/${projectId}/transfer`} className="btn-transfer">
             <Share2 size={14} />
-            تسليم المشروع
+            {t("Hand over project", "تسليم المشروع")}
           </Link>
         </div>
       </div>

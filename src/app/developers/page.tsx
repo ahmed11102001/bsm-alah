@@ -5,43 +5,12 @@ import { ArrowRight, Terminal, Zap, Shield, BarChart2 } from "lucide-react";
 import HeroAnimation from "./_components/HeroAnimation";
 import { LanguageProvider, useLanguage } from "./_components/LanguageProvider";
 
-// ─── Code snippet displayed in the terminal block ───────────────────────────
-const LINES = [
-  { text: "// ١. أرسل OTP", type: "comment" },
-  { text: 'await fetch("/api/v1/otp/send", {', type: "code" },
-  { text: '  headers: { "x-api-key": "wani_live_••••" },', type: "key" },
-  { text: '  body: JSON.stringify({ phone: "+201234567890" })', type: "code" },
-  { text: "});", type: "code" },
-  { text: "", type: "blank" },
-  { text: "// ٢. تحقق من الكود — وخلاص", type: "comment" },
-  { text: 'await fetch("/api/v1/otp/verify", { ... });', type: "code" },
-];
-
 const TYPE_STYLE: Record<string, string> = {
   comment: "text-white/25 italic",
   code: "text-white/70",
   key: "text-[#25D366]",
   blank: "",
 };
-
-// ─── 3 focused features — not 6 scattered ones ──────────────────────────────
-const FEATURES = [
-  {
-    icon: Zap,
-    title: "سطرين وخلاص",
-    body: "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد."
-  },
-  {
-    icon: Shield,
-    title: "حماية مدمجة",
-    body: "Rate limiting تلقائي: 5 رسائل/رقم/ساعة. بدون ما تكتب سطر كود إضافي.",
-  },
-  {
-    icon: BarChart2,
-    title: "داشبورد حي",
-    body: "تتابع الإرسال والتحقق والفشل ومتوسط الاستجابة في الوقت الفعلي.",
-  },
-];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DevelopersLandingPage() {
@@ -53,7 +22,39 @@ export default function DevelopersLandingPage() {
 }
 
 function PageContent() {
-  const { language, toggleLanguage } = useLanguage();
+  const { language, toggleLanguage, t } = useLanguage();
+
+  // ─── Code snippet displayed in the terminal block ───────────────────────────
+  const LINES = [
+    { text: t("// 1. Send OTP", "// ١. أرسل OTP"), type: "comment" },
+    { text: 'await fetch("/api/v1/otp/send", {', type: "code" },
+    { text: '  headers: { "x-api-key": "wani_live_••••" },', type: "key" },
+    { text: '  body: JSON.stringify({ phone: "+201234567890" })', type: "code" },
+    { text: "});", type: "code" },
+    { text: "", type: "blank" },
+    { text: t("// 2. Verify OTP - that's it", "// ٢. تحقق من الكود — وخلاص"), type: "comment" },
+    { text: 'await fetch("/api/v1/otp/verify", { ... });', type: "code" },
+  ];
+
+  // ─── 3 focused features — not 6 scattered ones ──────────────────────────────
+  const FEATURES = [
+    {
+      icon: Zap,
+      title: t("Two Lines, Done", "سطرين وخلاص"),
+      body: t("One POST sends the code. One POST verifies it. No SDK or complex configuration required.", "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد.")
+    },
+    {
+      icon: Shield,
+      title: t("Built-in Protection", "حماية مدمجة"),
+      body: t("Automatic rate limiting: 5 messages/number/hour. Without writing an extra line of code.", "Rate limiting تلقائي: 5 رسائل/رقم/ساعة. بدون ما تكتب سطر كود إضافي."),
+    },
+    {
+      icon: BarChart2,
+      title: t("Live Dashboard", "داشبورد حي"),
+      body: t("Monitor delivery, verification, failure, and average response times in real time.", "تتابع الإرسال والتحقق والفشل ومتوسط الاستجابة في الوقت الفعلي."),
+    },
+  ];
+
   return (
     <div
       style={{
@@ -114,7 +115,7 @@ function PageContent() {
               transition: "color 0.15s",
             }}
           >
-            {language === 'ar' ? 'تسجيل دخول' : 'Sign In'}
+            {t('Sign In', 'تسجيل دخول')}
           </Link>
           <Link
             href="/developers/signup"
@@ -132,7 +133,7 @@ function PageContent() {
               gap: "6px",
             }}
           >
-            {language === 'ar' ? 'ابدأ مجاناً' : 'Start for Free'}
+            {t('Start for Free', 'ابدأ مجاناً')}
             <ArrowRight size={13} />
           </Link>
           <button onClick={toggleLanguage} style={{ padding: "6px 10px", fontSize: "12px", background: "#333", color: "#fff", borderRadius: "6px", border: "none", cursor: "pointer" }}>
@@ -191,10 +192,10 @@ function PageContent() {
             color: "#f0f0f0",
           }}
         >
-          {language === 'ar' ? 'تحقق من عملائك' : 'Verify your customers'}
+          {t('Verify your customers', 'تحقق من عملائك')}
           <br />
-          <span style={{ color: "#25D366" }}>{language === 'ar' ? 'عبر واتساب' : 'via WhatsApp'}</span>
-          <span style={{ color: "rgba(255,255,255,0.3)" }}> {language === 'ar' ? '— في سطرين' : '— in two lines'}</span>
+          <span style={{ color: "#25D366" }}>{t('via WhatsApp', 'عبر واتساب')}</span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}> {t('— in two lines', '— في سطرين')}</span>
         </h1>
 
         {/* Sub */}
@@ -207,7 +208,7 @@ function PageContent() {
             margin: "0 auto 36px",
           }}
         >
-          {language === 'ar' ? 'API خفيف يرسل OTP على واتساب المستخدم ويتحقق منه. بدون SMS، بدون تعقيد — فقط الـ app اللي عنده 98% open rate.' : 'Lightweight API that sends OTP via WhatsApp and verifies it. No SMS, no hassle — just the app with 98% open rate.'}
+          {t('Lightweight API that sends OTP via WhatsApp and verifies it. No SMS, no hassle — just the app with 98% open rate.', 'API خفيف يرسل OTP على واتساب المستخدم ويتحقق منه. بدون SMS، بدون تعقيد — فقط الـ app اللي عنده 98% open rate.')}
         </p>
 
         {/* CTAs */}
@@ -230,7 +231,7 @@ function PageContent() {
               letterSpacing: "-0.2px",
             }}
           >
-            {language === 'ar' ? 'ابدأ مجاناً — 14 يوم تجربة' : 'Start for Free — 14 day trial'}
+            {t('Start for Free — 14 day trial', 'ابدأ مجاناً — 14 يوم تجربة')}
             <ArrowRight size={15} />
           </Link>
           <Link
@@ -249,7 +250,7 @@ function PageContent() {
               background: "transparent",
             }}
           >
-            {language === 'ar' ? 'شوف الـ Docs' : 'View Docs'}
+            {t('View Docs', 'شوف الـ Docs')}
           </Link>
         </div>
 
@@ -266,9 +267,9 @@ function PageContent() {
           }}
         >
           {[
-            { n: "98%", l: "open rate" },
-            { n: "< 3ث", l: "وصول متوسط" },
-            { n: "50", l: "رسالة مجانية" },
+            { n: "98%", l: t("open rate", "معدل فتح") },
+            { n: t("< 3s", "< ٣ث"), l: t("avg delivery", "وصول متوسط") },
+            { n: "50", l: t("free messages", "رسالة مجانية") },
           ].map(({ n, l }) => (
             <div key={l} style={{ textAlign: "center" }}>
               <div

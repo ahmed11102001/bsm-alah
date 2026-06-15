@@ -4,8 +4,7 @@
 
 import { redirect }     from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
-
-const PUBLIC_PATHS = ["/developers", "/developers/signin", "/developers/signup"];
+import { LanguageProvider } from "./_components/LanguageProvider";
 
 export default async function DeveloperLayout({
   children,
@@ -14,5 +13,5 @@ export default async function DeveloperLayout({
 }) {
   // الصفحة دي server component — بنقرأ الـ cookie مباشرة
   // مفيش useSession، مفيش NextAuth هنا
-  return <>{children}</>;
+  return <LanguageProvider>{children}</LanguageProvider>;
 }

@@ -3,9 +3,19 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
 
 export default function DevSignUpPage() {
+  return (
+    <LanguageProvider>
+      <SignUpContent />
+    </LanguageProvider>
+  );
+}
+
+function SignUpContent() {
   const router = useRouter();
+  const { language, toggleLanguage, t } = useLanguage();
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -22,14 +32,14 @@ export default function DevSignUpPage() {
 
   function validate() {
     const errs: Record<string, string> = {};
-    if (!form.firstName.trim()) errs.firstName = "الاسم الأول مطلوب";
-    else if (form.firstName.trim().length < 2) errs.firstName = "حرفين على الأقل";
-    if (!form.lastName.trim()) errs.lastName = "الاسم الأخير مطلوب";
-    else if (form.lastName.trim().length < 2) errs.lastName = "حرفين على الأقل";
-    if (!form.phone.trim()) errs.phone = "رقم الموبايل مطلوب";
-    if (!form.email.trim()) errs.email = "الإيميل مطلوب";
-    if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (form.password.length < 8) errs.password = "8 أحرف على الأقل";
+    if (!form.firstName.trim()) errs.firstName = t("First name is required", "الاسم الأول مطلوب");
+    else if (form.firstName.trim().length < 2) errs.firstName = t("At least 2 characters", "حرفين على الأقل");
+    if (!form.lastName.trim()) errs.lastName = t("Last name is required", "الاسم الأخير مطلوب");
+    else if (form.lastName.trim().length < 2) errs.lastName = t("At least 2 characters", "حرفين على الأقل");
+    if (!form.phone.trim()) errs.phone = t("Phone number is required", "رقم الموبايل مطلوب");
+    if (!form.email.trim()) errs.email = t("Email is required", "الإيميل مطلوب");
+    if (!form.password) errs.password = t("Password is required", "كلمة المرور مطلوبة");
+    else if (form.password.length < 8) errs.password = t("At least 8 characters", "8 أحرف على الأقل");
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -46,12 +56,12 @@ export default function DevSignUpPage() {
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) { setError(data.error || "حصل خطأ، حاول تاني"); return; }
+      if (!res.ok) { setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني")); return; }
       router.push(data.redirect || "/developers/portal");
       router.refresh();
     } catch {
       setLoading(false);
-      setError("حصل خطأ في الاتصال، حاول تاني");
+      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
     }
   }
 
@@ -64,8 +74,16 @@ export default function DevSignUpPage() {
     if (/[^A-Za-z0-9]/.test(p)) s++;
     return s;
   })();
-  const strengthLabel = ["", "ضعيفة", "مقبولة", "جيدة", "قوية"][strengthScore];
+  const strengthLabels = ["", t("Weak", "ضعيفة"), t("Fair", "مقبولة"), t("Good", "جيدة"), t("Strong", "قوية")];
+  const strengthLabel = strengthLabels[strengthScore];
   const strengthColor = ["", "#ef4444", "#f59e0b", "#3b82f6", "#20d378"][strengthScore];
+
+  const STEPS = [
+    { n: language === 'ar' ? "١" : "1", t: t("Create account", "إنشاء الحساب"), d: t("Register your info and a strong password", "سجّل بياناتك وكلمة مرور قوية") },
+    { n: language === 'ar' ? "٢" : "2", t: t("Create your first project", "إنشاء مشروعك الأول"), d: t("Name your project and start working immediately", "سمّي مشروعك وابدأ العمل فوراً") },
+    { n: language === 'ar' ? "٣" : "3", t: t("Connect WhatsApp Business", "ربط WhatsApp Business"), d: t("Link your project's Meta account", "اربط حساب Meta الخاص بمشروعك") },
+    { n: language === 'ar' ? "٤" : "4", t: t("Use the API", "استخدم الـ API"), d: t("Send OTPs directly from your app", "أرسل OTPs مباشرة من تطبيقك") },
+  ];
 
   return (
     <>
@@ -80,7 +98,7 @@ export default function DevSignUpPage() {
           background: #060810;
           display: flex;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'};
           position: relative;
           overflow: hidden;
         }
@@ -97,19 +115,19 @@ export default function DevSignUpPage() {
         .blob-1 {
           position: absolute; width: 500px; height: 500px; border-radius: 50%;
           background: radial-gradient(circle, rgba(32,211,120,0.07) 0%, transparent 70%);
-          top: -180px; right: -80px; pointer-events: none;
+          top: -180px; ${language === 'ar' ? 'right' : 'left'}: -80px; pointer-events: none;
         }
         .blob-2 {
           position: absolute; width: 350px; height: 350px; border-radius: 50%;
           background: radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 70%);
-          bottom: -80px; left: -80px; pointer-events: none;
+          bottom: -80px; ${language === 'ar' ? 'left' : 'right'}: -80px; pointer-events: none;
         }
 
         /* ── Brand panel ── */
         .auth-brand {
           width: 400px; padding: 56px 44px;
           display: flex; flex-direction: column; justify-content: center;
-          border-left: 1px solid rgba(255,255,255,0.04);
+          border-${language === 'ar' ? 'left' : 'right'}: 1px solid rgba(255,255,255,0.04);
           position: relative; z-index: 1; flex-shrink: 0;
         }
         .brand-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 44px; }
@@ -131,7 +149,7 @@ export default function DevSignUpPage() {
         .step-item:not(:last-child)::after {
           content: '';
           position: absolute;
-          right: 17px; top: 50px;
+          ${language === 'ar' ? 'right' : 'left'}: 17px; top: 50px;
           width: 1px; height: calc(100% - 28px);
           background: rgba(255,255,255,0.08);
         }
@@ -208,9 +226,9 @@ export default function DevSignUpPage() {
         .field-error { font-size: 12px; color: #f87171; margin-top: 5px; }
 
         .password-wrap { position: relative; }
-        .password-wrap .field-input { padding-left: 42px; }
+        .password-wrap .field-input { padding-${language === 'ar' ? 'left' : 'right'}: 42px; }
         .pass-toggle {
-          position: absolute; left: 11px; top: 50%;
+          position: absolute; ${language === 'ar' ? 'left' : 'right'}: 11px; top: 50%;
           transform: translateY(-50%);
           background: none; border: none;
           color: rgba(255,255,255,0.3);
@@ -222,7 +240,7 @@ export default function DevSignUpPage() {
 
         .strength-bar { margin-top: 7px; display: flex; gap: 4px; align-items: center; }
         .strength-seg { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08); transition: background 0.3s; }
-        .strength-label { font-size: 11px; color: rgba(255,255,255,0.4); min-width: 36px; text-align: left; }
+        .strength-label { font-size: 11px; color: rgba(255,255,255,0.4); min-width: 36px; text-align: ${language === 'ar' ? 'right' : 'left'}; }
 
         .error-box {
           padding: 11px 14px;
@@ -260,6 +278,16 @@ export default function DevSignUpPage() {
         }
         .auth-footer a { color: #20d378; text-decoration: none; font-weight: 500; }
 
+        .lang-toggle-corner {
+          position: absolute; top: 20px; ${language === 'ar' ? 'left' : 'right'}: 20px;
+          z-index: 10;
+          padding: 6px 12px; font-size: 12px; font-weight: 600;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; color: rgba(255,255,255,0.5);
+          cursor: pointer; transition: all 0.2s;
+        }
+        .lang-toggle-corner:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
         /* ── Mobile ── */
         @media (max-width: 768px) {
           .auth-root {
@@ -273,6 +301,7 @@ export default function DevSignUpPage() {
             max-width: 440px;
             padding: 40px 24px 20px;
             border-left: none;
+            border-right: none;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             flex-shrink: 0;
           }
@@ -306,25 +335,25 @@ export default function DevSignUpPage() {
       <div className="auth-root">
         <div className="blob-1" /><div className="blob-2" />
 
+        {/* Language toggle */}
+        <button className="lang-toggle-corner" onClick={toggleLanguage}>
+          {language === 'ar' ? 'EN' : 'AR'}
+        </button>
+
         {/* Desktop brand */}
         <div className="auth-brand">
           <div className="brand-logo">
             <div className="brand-logo-icon">W</div>
             <div>
-              <div className="brand-logo-text">وني</div>
+              <div className="brand-logo-text">{t("Wani", "وني")}</div>
               <div className="brand-logo-sub">Developer Portal</div>
             </div>
           </div>
           <div className="step-list">
-            {[
-              { n: "١", t: "إنشاء الحساب", d: "سجّل بياناتك وكلمة مرور قوية" },
-              { n: "٢", t: "إنشاء مشروعك الأول", d: "سمّي مشروعك وابدأ العمل فوراً" },
-              { n: "٣", t: "ربط WhatsApp Business", d: "اربط حساب Meta الخاص بمشروعك" },
-              { n: "٤", t: "استخدم الـ API", d: "أرسل OTPs مباشرة من تطبيقك" },
-            ].map(({ n, t, d }) => (
+            {STEPS.map(({ n, t: title, d }) => (
               <div key={n} className="step-item">
                 <div className="step-num">{n}</div>
-                <div className="step-content"><h4>{t}</h4><p>{d}</p></div>
+                <div className="step-content"><h4>{title}</h4><p>{d}</p></div>
               </div>
             ))}
           </div>
@@ -338,31 +367,31 @@ export default function DevSignUpPage() {
             <div className="mobile-brand-logo">
               <div className="mobile-brand-logo-icon">W</div>
               <div>
-                <div className="mobile-brand-name">وني</div>
+                <div className="mobile-brand-name">{t("Wani", "وني")}</div>
                 <div className="mobile-brand-sub">Developer Portal</div>
               </div>
             </div>
 
-            <h2 className="form-title">إنشاء حساب جديد</h2>
-            <p className="form-desc">انضم لآلاف المطورين اللي بيستخدموا وني</p>
+            <h2 className="form-title">{t("Create New Account", "إنشاء حساب جديد")}</h2>
+            <p className="form-desc">{t("Join thousands of developers using Wani", "انضم لآلاف المطورين اللي بيستخدموا وني")}</p>
 
             <form onSubmit={handleSubmit} noValidate>
               <div className="name-row">
                 <div className="field-group">
-                  <label className="field-label">الاسم الأول</label>
+                  <label className="field-label">{t("First Name", "الاسم الأول")}</label>
                   <input
                     className={`field-input ${fieldErrors.firstName ? "has-error" : ""}`}
-                    type="text" placeholder="أحمد"
+                    type="text" placeholder={t("Ahmed", "أحمد")}
                     value={form.firstName} onChange={(e) => set("firstName", e.target.value)}
                     autoComplete="given-name" autoCapitalize="words"
                   />
                   {fieldErrors.firstName && <p className="field-error">{fieldErrors.firstName}</p>}
                 </div>
                 <div className="field-group">
-                  <label className="field-label">الاسم الأخير</label>
+                  <label className="field-label">{t("Last Name", "الاسم الأخير")}</label>
                   <input
                     className={`field-input ${fieldErrors.lastName ? "has-error" : ""}`}
-                    type="text" placeholder="محمد"
+                    type="text" placeholder={t("Mohamed", "محمد")}
                     value={form.lastName} onChange={(e) => set("lastName", e.target.value)}
                     autoComplete="family-name" autoCapitalize="words"
                   />
@@ -371,7 +400,7 @@ export default function DevSignUpPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">رقم الموبايل</label>
+                <label className="field-label">{t("Phone Number", "رقم الموبايل")}</label>
                 <input
                   className={`field-input ltr ${fieldErrors.phone ? "has-error" : ""}`}
                   type="tel" placeholder="01xxxxxxxxx"
@@ -382,7 +411,7 @@ export default function DevSignUpPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">الإيميل</label>
+                <label className="field-label">{t("Email", "الإيميل")}</label>
                 <input
                   className={`field-input ltr ${fieldErrors.email ? "has-error" : ""}`}
                   type="email" placeholder="dev@example.com"
@@ -393,12 +422,12 @@ export default function DevSignUpPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">كلمة المرور</label>
+                <label className="field-label">{t("Password", "كلمة المرور")}</label>
                 <div className="password-wrap">
                   <input
                     className={`field-input ltr ${fieldErrors.password ? "has-error" : ""}`}
                     type={showPassword ? "text" : "password"}
-                    placeholder="8 أحرف على الأقل"
+                    placeholder={t("At least 8 characters", "8 أحرف على الأقل")}
                     value={form.password} onChange={(e) => set("password", e.target.value)}
                     autoComplete="new-password"
                   />
@@ -424,12 +453,12 @@ export default function DevSignUpPage() {
               {error && <div className="error-box">{error}</div>}
 
               <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? <><div className="spinner" />جاري إنشاء الحساب...</> : <>إنشاء الحساب</>}
+                {loading ? <><div className="spinner" />{t("Creating account...", "جاري إنشاء الحساب...")}</> : <>{t("Create Account", "إنشاء الحساب")}</>}
               </button>
             </form>
 
             <div className="auth-footer">
-              عندك حساب بالفعل؟ <Link href="/developers/signin">تسجيل الدخول</Link>
+              {t("Already have an account? ", "عندك حساب بالفعل؟ ")}<Link href="/developers/signin">{t("Sign In", "تسجيل الدخول")}</Link>
             </div>
           </div>
         </div>
