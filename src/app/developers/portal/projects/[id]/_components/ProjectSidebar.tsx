@@ -10,21 +10,23 @@ import {
 } from "lucide-react";
 import { useMobileNav } from "../../../_components/MobileNavContext";
 
+import { useLanguage } from "../../../_components/LanguageProvider";
+
 interface Project {
   id: string;
   name: string;
   status: string;
 }
 
-function getNavItems(projectId: string) {
+function getNavItems(projectId: string, t: (en: string, ar: string) => string) {
   return [
-    { label: "نظرة عامة",    href: `/developers/portal/projects/${projectId}`,               icon: LayoutDashboard, exact: true },
+    { label: t("Overview", "نظرة عامة"),    href: `/developers/portal/projects/${projectId}`,               icon: LayoutDashboard, exact: true },
     { label: "API Keys",     href: `/developers/portal/projects/${projectId}/api-keys`,      icon: Key },
-    { label: "القوالب",      href: `/developers/portal/projects/${projectId}/otp-templates`, icon: FileText },
-    { label: "البدء السريع", href: `/developers/portal/projects/${projectId}/quick-start`,   icon: Code },
+    { label: t("Templates", "القوالب"),      href: `/developers/portal/projects/${projectId}/otp-templates`, icon: FileText },
+    { label: t("Quick Start", "البدء السريع"), href: `/developers/portal/projects/${projectId}/quick-start`,   icon: Code },
     { label: "Live Tester",  href: `/developers/portal/projects/${projectId}/live-tester`,   icon: Zap },
-    { label: "السجلات",      href: `/developers/portal/projects/${projectId}/activity-logs`, icon: Activity },
-    { label: "تسليم المشروع",href: `/developers/portal/projects/${projectId}/transfer`,      icon: Share2 },
+    { label: t("Activity Logs", "السجلات"),      href: `/developers/portal/projects/${projectId}/activity-logs`, icon: Activity },
+    { label: t("Transfer Project", "تسليم المشروع"),href: `/developers/portal/projects/${projectId}/transfer`,      icon: Share2 },
   ];
 }
 
@@ -40,8 +42,9 @@ export default function ProjectSidebar({
   const pathname = usePathname();
   const [showSwitcher, setShowSwitcher] = useState(false);
   const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
+  const { language, t } = useLanguage();
 
-  const NAV_ITEMS = getNavItems(project.id);
+  const NAV_ITEMS = getNavItems(project.id, t);
   const metaConnected = !!project.metaConnection?.isVerified;
 
   const fullName =
@@ -64,10 +67,11 @@ export default function ProjectSidebar({
           width: 240px;
           height: 100%;
           background: rgba(255,255,255,0.015);
-          border-left: 1px solid rgba(255,255,255,0.06);
+          border-left: ${language === 'ar' ? '1px solid rgba(255,255,255,0.06)' : 'none'};
+          border-right: ${language === 'en' ? '1px solid rgba(255,255,255,0.06)' : 'none'};
           display: flex; flex-direction: column;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl; flex-shrink: 0; position: relative;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'}; flex-shrink: 0; position: relative;
         }
 
         /* Project switcher */
@@ -136,7 +140,7 @@ export default function ProjectSidebar({
           transition: background 0.15s, color 0.15s;
           margin-bottom: 2px;
           cursor: pointer; border: none;
-          width: 100%; background: none; text-align: right;
+          width: 100%; background: none; text-align: ${language === 'ar' ? 'right' : 'left'};
           font-family: 'IBM Plex Sans Arabic', sans-serif;
         }
         .pnav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
@@ -182,7 +186,7 @@ export default function ProjectSidebar({
           font-size: 12px; font-weight: 600; color: #20d378; flex-shrink: 0;
         }
         .user-name  { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7); }
-        .user-email { font-size: 10px; color: rgba(255,255,255,0.3); direction: ltr; text-align: right; }
+        .user-email { font-size: 10px; color: rgba(255,255,255,0.3); direction: ltr; text-align: ${language === 'ar' ? 'right' : 'left'}; }
 
         @media (max-width: 768px) {
           .psidebar-overlay {
@@ -220,8 +224,8 @@ export default function ProjectSidebar({
           onClick={() => setShowSwitcher((v) => !v)}
         >
           <div>
-            <div className="project-switcher-label">المشروع الحالي</div>
-            <div className="project-switcher-name">{project.name}</div>
+            <div className="project-switcher-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Current Project", "المشروع الحالي")}</div>
+            <div className="project-switcher-name" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{project.name}</div>
           </div>
           <ChevronDown size={14} className="project-switcher-icon" />
         </div>
@@ -233,8 +237,8 @@ export default function ProjectSidebar({
               style={{ position: "fixed", inset: 0, zIndex: 99 }}
               onClick={() => setShowSwitcher(false)}
             />
-            <div className="project-dropdown">
-              <div className="dropdown-header">تغيير المشروع</div>
+            <div className="project-dropdown" style={{ direction: language === "ar" ? "rtl" : "ltr" }}>
+              <div className="dropdown-header" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Change Project", "تغيير المشروع")}</div>
               {allProjects.map((p) => (
                 <Link
                   key={p.id}
@@ -252,7 +256,7 @@ export default function ProjectSidebar({
                 onClick={() => setShowSwitcher(false)}
               >
                 <Plus size={12} />
-                مشروع جديد
+                {t("New Project", "مشروع جديد")}
               </Link>
             </div>
           </>
@@ -260,7 +264,7 @@ export default function ProjectSidebar({
 
         {/* Nav — تبويبات المشروع فقط */}
         <nav className="psidebar-nav">
-          <div className="nav-section-label">المشروع</div>
+          <div className="nav-section-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Project", "المشروع")}</div>
 
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -277,7 +281,7 @@ export default function ProjectSidebar({
                 <Icon size={14} />
                 {item.label}
                 {isActive && (
-                  <ChevronLeft size={12} style={{ marginRight: "auto", opacity: 0.5 }} />
+                  <ChevronLeft size={12} style={{ marginLeft: language === 'ar' ? "0" : "auto", marginRight: language === 'ar' ? "auto" : "0", opacity: 0.5, transform: language === 'ar' ? 'none' : 'rotate(180deg)' }} />
                 )}
               </Link>
             );
@@ -293,11 +297,11 @@ export default function ProjectSidebar({
             <div className="meta-dot" />
             <span>
               {metaConnected
-                ? `Meta • ${project.metaConnection?.displayPhone || "متصل"}`
-                : "غير مربوط • Meta"}
+                ? `Meta • ${project.metaConnection?.displayPhone || t("Connected", "متصل")}`
+                : t("Not Connected • Meta", "غير مربوط • Meta")}
             </span>
             {!metaConnected && (
-              <span style={{ fontSize: 11, marginRight: "auto", opacity: 0.7 }}>ربط ←</span>
+              <span style={{ fontSize: 11, marginLeft: language === 'ar' ? "0" : "auto", marginRight: language === 'ar' ? "auto" : "0", opacity: 0.7 }}>{t("Connect", "ربط")} {language === 'ar' ? '←' : '→'}</span>
             )}
           </Link>
         </nav>

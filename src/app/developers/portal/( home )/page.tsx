@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useLanguage } from "../../_components/LanguageProvider";
 
 interface Project {
   id: string;
@@ -13,6 +14,7 @@ interface Project {
 }
 
 export default function ProjectsDashboard() {
+  const { language, t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -46,7 +48,7 @@ export default function ProjectsDashboard() {
 
   async function createProject(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) { setCreateError("اسم المشروع مطلوب"); return; }
+    if (!newName.trim()) { setCreateError(t("Project name is required", "اسم المشروع مطلوب")); return; }
     setCreating(true);
     setCreateError("");
     try {
@@ -56,12 +58,12 @@ export default function ProjectsDashboard() {
         body: JSON.stringify({ name: newName.trim(), description: newDesc.trim() || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) { setCreateError(data.error || "حصل خطأ"); setCreating(false); return; }
+      if (!res.ok) { setCreateError(data.error || t("Something went wrong", "حصل خطأ")); setCreating(false); return; }
       setProjects((prev) => [data.project, ...prev]);
       setShowCreate(false);
       setNewName(""); setNewDesc("");
     } catch {
-      setCreateError("حصل خطأ، حاول تاني");
+      setCreateError(t("Something went wrong, try again", "حصل خطأ، حاول تاني"));
     } finally {
       setCreating(false);
     }
@@ -79,7 +81,7 @@ export default function ProjectsDashboard() {
           min-height: 100vh;
           background: #060810;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl;
+          direction: ${language === 'ar' ? 'rtl' : 'ltr'};
           position: relative;
         }
         .portal-root::before {
@@ -339,42 +341,42 @@ export default function ProjectsDashboard() {
           {/* Header */}
           <div className="page-header">
             <div>
-              <h1 className="page-title">مشاريعك</h1>
+              <h1 className="page-title">{t("Your Projects", "مشاريعك")}</h1>
               <p className="page-subtitle">
-                كل مشروع له API Keys وقوالب منفصلة — تقدر تسلّمه للعميل بعد ما تخلص
+                {t("Each project has its own API Keys and templates — transfer it to clients when done", "كل مشروع له API Keys وقوالب منفصلة — تقدر تسلّمه للعميل بعد ما تخلص")}
               </p>
             </div>
             <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateError(""); }}>
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              مشروع جديد
+              {t("New Project", "مشروع جديد")}
             </button>
           </div>
 
           {/* Stats */}
           <div className="stats-row">
             <div className="stat-card">
-              <div className="stat-label">المشاريع النشطة</div>
+              <div className="stat-label">{t("Active Projects", "المشاريع النشطة")}</div>
               <div className="stat-value green">{loading ? "–" : activeProjects.length}</div>
-              <div className="stat-sub">من أصل 10 كحد أقصى</div>
+              <div className="stat-sub">{t("out of 10 max", "من أصل 10 كحد أقصى")}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label">تم تسليمها</div>
+              <div className="stat-label">{t("Transferred", "تم تسليمها")}</div>
               <div className="stat-value">{loading ? "–" : transferredProjects.length}</div>
-              <div className="stat-sub">مشاريع منقولة للعملاء</div>
+              <div className="stat-sub">{t("Projects transferred to clients", "مشاريع منقولة للعملاء")}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label">الإجمالي</div>
+              <div className="stat-label">{t("Total", "الإجمالي")}</div>
               <div className="stat-value">{loading ? "–" : projects.length}</div>
-              <div className="stat-sub">كل المشاريع</div>
+              <div className="stat-sub">{t("All projects", "كل المشاريع")}</div>
             </div>
           </div>
 
           {/* Active Projects */}
           {loading ? (
             <>
-              <div className="section-label">جاري التحميل...</div>
+              <div className="section-label">{t("Loading...", "جاري التحميل...")}</div>
               <div className="projects-grid">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="skeleton-card">
@@ -389,34 +391,34 @@ export default function ProjectsDashboard() {
             /* Empty state */
             <div className="empty-state">
               <div className="empty-icon">📂</div>
-              <h3 className="empty-title">لسه ماعندكش مشاريع</h3>
-              <p className="empty-sub">ابدأ بإنشاء مشروعك الأول وابدأ تستخدم الـ OTP API</p>
+              <h3 className="empty-title">{t("No projects yet", "لسه ماعندكش مشاريع")}</h3>
+              <p className="empty-sub">{t("Start by creating your first project and using the OTP API", "ابدأ بإنشاء مشروعك الأول وابدأ تستخدم الـ OTP API")}</p>
               <button className="btn-primary" onClick={() => setShowCreate(true)}>
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                إنشاء أول مشروع
+                {t("Create first project", "إنشاء أول مشروع")}
               </button>
             </div>
           ) : (
             <>
               {activeProjects.length > 0 && (
                 <>
-                  <div className="section-label">نشطة — {activeProjects.length}</div>
+                  <div className="section-label">{t("Active", "نشطة")} — {activeProjects.length}</div>
                   <div className="projects-grid">
                     {activeProjects.map((project) => (
                       <Link key={project.id} href={`/developers/portal/projects/${project.id}`} className="project-card">
                         <div className="project-card-header">
                           <div className="project-icon">⚡</div>
-                          <span className="project-badge badge-active">نشط</span>
+                          <span className="project-badge badge-active">{t("Active", "نشط")}</span>
                         </div>
                         <div className="project-name">{project.name}</div>
                         <div className="project-desc">
-                          {project.description || <span style={{ opacity: 0.4 }}>لا يوجد وصف</span>}
+                          {project.description || <span style={{ opacity: 0.4 }}>{t("No description", "لا يوجد وصف")}</span>}
                         </div>
                         <div className="project-footer">
                           <span className="project-date">
-                            {new Date(project.createdAt).toLocaleDateString("ar-EG", {
+                            {new Date(project.createdAt).toLocaleDateString(language === 'ar' ? "ar-EG" : "en-US", {
                               year: "numeric", month: "short", day: "numeric",
                             })}
                           </span>
@@ -438,7 +440,7 @@ export default function ProjectsDashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                           </svg>
                         </div>
-                        <span className="create-label">مشروع جديد</span>
+                        <span className="create-label">{t("New Project", "مشروع جديد")}</span>
                       </button>
                     )}
                   </div>
@@ -447,20 +449,20 @@ export default function ProjectsDashboard() {
 
               {transferredProjects.length > 0 && (
                 <>
-                  <div className="section-label">تم تسليمها — {transferredProjects.length}</div>
+                  <div className="section-label">{t("Transferred", "تم تسليمها")} — {transferredProjects.length}</div>
                   <div className="projects-grid">
                     {transferredProjects.map((project) => (
                       <div key={project.id} className="project-card" style={{ opacity: 0.6, cursor: "default" }}>
                         <div className="project-card-header">
                           <div className="project-icon" style={{ opacity: 0.5 }}>📤</div>
-                          <span className="project-badge badge-transferred">مسلّم</span>
+                          <span className="project-badge badge-transferred">{t("Transferred", "مسلّم")}</span>
                         </div>
                         <div className="project-name">{project.name}</div>
                         <div className="project-desc">{project.description || "—"}</div>
                         <div className="project-footer">
                           <span className="project-date">
-                            سُلّم {project.transferredAt
-                              ? new Date(project.transferredAt).toLocaleDateString("ar-EG", { year: "numeric", month: "short" })
+                            {t("Transferred", "سُلّم")} {project.transferredAt
+                              ? new Date(project.transferredAt).toLocaleDateString(language === 'ar' ? "ar-EG" : "en-US", { year: "numeric", month: "short" })
                               : ""}
                           </span>
                         </div>
@@ -480,20 +482,20 @@ export default function ProjectsDashboard() {
         onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}
         style={{ display: showCreate ? "flex" : "none" }}
       >
-        <div className="modal">
-          <h3 className="modal-title">مشروع جديد</h3>
+        <div className="modal" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+          <h3 className="modal-title">{t("New Project", "مشروع جديد")}</h3>
           <p className="modal-sub">
-            كل مشروع له API Keys وقوالب مستقلة — تقدر تشتغل على أكتر من عميل في نفس الوقت
+            {t("Each project has independent API Keys and templates — work on multiple clients at once", "كل مشروع له API Keys وقوالب مستقلة — تقدر تشتغل على أكتر من عميل في نفس الوقت")}
           </p>
 
           <form onSubmit={createProject} noValidate>
             <div className="modal-field">
-              <label className="modal-label">اسم المشروع *</label>
+              <label className="modal-label">{t("Project Name *", "اسم المشروع *")}</label>
               <input
                 ref={inputRef}
                 className="modal-input"
                 type="text"
-                placeholder="مثال: تطبيق التوصيل أو موقع المتجر"
+                placeholder={t("e.g. Delivery App or Online Store", "مثال: تطبيق التوصيل أو موقع المتجر")}
                 value={newName}
                 onChange={(e) => { setNewName(e.target.value.slice(0, 60)); setCreateError(""); }}
                 maxLength={60}
@@ -502,10 +504,10 @@ export default function ProjectsDashboard() {
             </div>
 
             <div className="modal-field">
-              <label className="modal-label">وصف مختصر (اختياري)</label>
+              <label className="modal-label">{t("Short description (optional)", "وصف مختصر (اختياري)")}</label>
               <textarea
                 className="modal-textarea"
-                placeholder="بشرح سريع للمشروع ده..."
+                placeholder={t("Brief description of this project...", "بشرح سريع للمشروع ده...")}
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value.slice(0, 200))}
                 maxLength={200}
@@ -521,17 +523,17 @@ export default function ProjectsDashboard() {
                 className="btn-cancel"
                 onClick={() => { setShowCreate(false); setNewName(""); setNewDesc(""); setCreateError(""); }}
               >
-                إلغاء
+                {t("Cancel", "إلغاء")}
               </button>
               <button type="submit" className="btn-create" disabled={creating}>
                 {creating ? (
-                  <><div className="spinner" />جاري الإنشاء...</>
+                  <><div className="spinner" />{t("Creating...", "جاري الإنشاء...")}</>
                 ) : (
                   <>
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
-                    إنشاء المشروع
+                    {t("Create Project", "إنشاء المشروع")}
                   </>
                 )}
               </button>

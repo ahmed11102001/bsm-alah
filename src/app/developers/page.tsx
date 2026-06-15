@@ -461,8 +461,8 @@ function PageContent() {
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#25D366", display: "inline-block" }} />
             <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em" }}>pricing</span>
           </div>
-          <h2 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.8px", marginBottom: "10px" }}>سعر واضح، بدون مفاجآت</h2>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.35)" }}>ابدأ مجاناً وانتقل للخطة المدفوعة وأنت مرتاح</p>
+          <h2 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.8px", marginBottom: "10px" }}>{language === 'ar' ? 'سعر واضح، بدون مفاجآت' : 'Clear pricing, no surprises'}</h2>
+          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.35)" }}>{language === 'ar' ? 'ابدأ مجاناً وانتقل للخطة المدفوعة وأنت مرتاح' : 'Start for free, upgrade when you are ready'}</p>
         </div>
 
         {/* cards */}
@@ -473,29 +473,29 @@ function PageContent() {
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", marginBottom: "20px" }}>TRIAL</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
               <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>0</span>
-              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>ج.م</span>
+              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{language === 'ar' ? 'ج.م' : 'EGP'}</span>
             </div>
 
             {/* Trial counters */}
             <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
               <div style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
                 <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.5px" }}>14</div>
-                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>يوم</div>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>{language === 'ar' ? 'يوم' : 'Days'}</div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.2)", fontSize: "12px" }}>أو</div>
+              <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.2)", fontSize: "12px" }}>{language === 'ar' ? 'أو' : 'OR'}</div>
               <div style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
                 <div style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.5px" }}>50</div>
-                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>رسالة</div>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>{language === 'ar' ? 'رسالة' : 'Messages'}</div>
               </div>
             </div>
-            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginBottom: "24px", lineHeight: 1.6 }}>اللي ينتهي الأول يوقف الـ trial — وقت كافي تبني وتتأكد</p>
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginBottom: "24px", lineHeight: 1.6 }}>{language === 'ar' ? 'اللي ينتهي الأول يوقف الـ trial — وقت كافي تبني وتتأكد' : 'Whichever ends first stops the trial — enough time to build and verify'}</p>
 
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
               {[
-                { t: "API Key واحد", s: "للمشروع التجريبي" },
-                { t: "كل الـ Endpoints", s: "send · verify · status" },
-                { t: "Dashboard كامل", s: "سجلات، إحصائيات" },
-                { t: "بدون كارت بنكي", s: "بدون أي التزام" },
+                { t: language === 'ar' ? "API Key واحد" : "1 API Key", s: language === 'ar' ? "للمشروع التجريبي" : "for the trial project" },
+                { t: language === 'ar' ? "كل الـ Endpoints" : "All Endpoints", s: "send · verify · status" },
+                { t: language === 'ar' ? "Dashboard كامل" : "Full Dashboard", s: language === 'ar' ? "سجلات، إحصائيات" : "logs, stats" },
+                { t: language === 'ar' ? "بدون كارت بنكي" : "No credit card", s: language === 'ar' ? "بدون أي التزام" : "no commitments" },
               ].map(({ t, s }) => (
                 <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                   <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>
@@ -505,32 +505,32 @@ function PageContent() {
             </div>
 
             <a href="/developers/signup" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px 0", borderRadius: "11px", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.6)", fontSize: "13px", fontWeight: 600, textDecoration: "none", transition: "all .2s" }}>
-              ابدأ مجاناً
+              {language === 'ar' ? 'ابدأ مجاناً' : 'Start for free'}
             </a>
           </div>
 
           {/* Developer */}
           <div className="pricing-card" style={{ borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", position: "relative", display: "flex", flexDirection: "column" }}>
             {/* Popular badge */}
-            <div style={{ position: "absolute", top: "20px", left: "20px", padding: "3px 10px", borderRadius: "20px", background: "#25D366", color: "#000", fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em" }}>الأكثر طلباً</div>
+            <div style={{ position: "absolute", top: "20px", left: language === 'ar' ? "20px" : "auto", right: language === 'ar' ? "auto" : "20px", padding: "3px 10px", borderRadius: "20px", background: "#25D366", color: "#000", fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em" }}>{language === 'ar' ? 'الأكثر طلباً' : 'Most Popular'}</div>
 
             <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em", marginBottom: "20px" }}>DEVELOPER</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
               <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>300</span>
-              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>ج.م / شهر</span>
+              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{language === 'ar' ? 'ج.م / شهر' : 'EGP / month'}</span>
             </div>
-            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>للمطورين الجادين — كل ما تحتاجه في مشروع production</p>
+            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>{language === 'ar' ? 'للمطورين الجادين — كل ما تحتاجه في مشروع production' : 'For serious developers — everything you need for production'}</p>
 
             <div style={{ borderTop: "1px solid rgba(37,211,102,0.1)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
               {[
-                { t: "API Key", s: "لكل مشروع بشكل منفصل" },
-                { t: "رسائل OTP غير محدودة*", s: "حسب باقة الواتساب" },
-                { t: "متعدد المشاريع", s: "كل مشروع معزول تماماً" },
-                { t: "ربط Meta مخصص", s: "رقم WhatsApp Business خاص" },
-                { t: "قوالب OTP مخصصة", s: "موافقة Meta مدمجة" },
-                { t: "تسليم المشروع للعميل", s: "Transfer ownership" },
-                { t: "سجلات وإحصائيات", s: "لكل مشروع على حدة" },
-                { t: "دعم فني", s: "واتساب مباشر" },
+                { t: language === 'ar' ? "API Key" : "API Key", s: language === 'ar' ? "لكل مشروع بشكل منفصل" : "per project separately" },
+                { t: language === 'ar' ? "رسائل OTP غير محدودة*" : "Unlimited OTP*", s: language === 'ar' ? "حسب باقة الواتساب" : "based on WhatsApp plan" },
+                { t: language === 'ar' ? "متعدد المشاريع" : "Multi-project", s: language === 'ar' ? "كل مشروع معزول تماماً" : "fully isolated projects" },
+                { t: language === 'ar' ? "ربط Meta مخصص" : "Custom Meta connection", s: language === 'ar' ? "رقم WhatsApp Business خاص" : "custom WhatsApp Business number" },
+                { t: language === 'ar' ? "قوالب OTP مخصصة" : "Custom OTP templates", s: language === 'ar' ? "موافقة Meta مدمجة" : "integrated Meta approval" },
+                { t: language === 'ar' ? "تسليم المشروع للعميل" : "Project handover", s: "Transfer ownership" },
+                { t: language === 'ar' ? "سجلات وإحصائيات" : "Logs & Analytics", s: language === 'ar' ? "لكل مشروع على حدة" : "per project" },
+                { t: language === 'ar' ? "دعم فني" : "Technical Support", s: language === 'ar' ? "واتساب مباشر" : "direct WhatsApp" },
               ].map(({ t, s }) => (
                 <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                   <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>
@@ -540,7 +540,7 @@ function PageContent() {
             </div>
 
             <a href="/developers/signup" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "13px 0", borderRadius: "11px", background: "#25D366", color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
-              اشترك دلوقتي
+              {language === 'ar' ? 'اشترك دلوقتي' : 'Subscribe Now'}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </a>
           </div>
@@ -548,7 +548,7 @@ function PageContent() {
 
         {/* footnote */}
         <p style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.2)", marginTop: "20px", lineHeight: 1.6 }}>
-          * عدد الرسائل مرتبط بباقة Meta Business الخاصة بيك — وني مش بيحدد الرسائل من جانبه
+          * {language === 'ar' ? 'عدد الرسائل مرتبط بباقة Meta Business الخاصة بيك — وني مش بيحدد الرسائل من جانبه' : 'Message limits are tied to your Meta Business plan — Wani does not limit messages.'}
         </p>
       </section>
 
@@ -586,7 +586,7 @@ function PageContent() {
               marginBottom: "8px",
             }}
           >
-            جاهز تبدأ؟
+            {language === 'ar' ? 'جاهز تبدأ؟' : 'Ready to start?'}
           </h2>
           <p
             style={{
@@ -595,7 +595,7 @@ function PageContent() {
               marginBottom: "24px",
             }}
           >
-            14 يوم مجاناً أو 50 رسالة — اللي ينتهي الأول
+            {language === 'ar' ? '14 يوم مجاناً أو 50 رسالة — اللي ينتهي الأول' : '14 days free or 50 messages — whichever ends first'}
           </p>
           <Link
             href="/developers/signup"
@@ -613,7 +613,7 @@ function PageContent() {
               letterSpacing: "-0.2px",
             }}
           >
-            سجّل حساب مجاناً
+            {language === 'ar' ? 'سجّل حساب مجاناً' : 'Create a free account'}
             <ArrowRight size={15} />
           </Link>
         </div>
@@ -637,13 +637,13 @@ function PageContent() {
             href="/developers/portal/quick-start"
             style={{ color: "inherit", textDecoration: "none" }}
           >
-            Docs
+            {language === 'ar' ? 'Docs' : 'Docs'}
           </Link>
           <Link
             href="/developers/signin"
             style={{ color: "inherit", textDecoration: "none" }}
           >
-            تسجيل دخول
+            {language === 'ar' ? 'تسجيل دخول' : 'Sign In'}
           </Link>
         </div>
       </footer>

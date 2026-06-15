@@ -1,29 +1,48 @@
-// src/app/developers/_components/LanguageProvider.tsx
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-type Language = "en" | "ar";
+export type Language = "en" | "ar";
 
 interface LangContextProps {
   language: Language;
   toggleLanguage: () => void;
+  t: (en: string, ar: string) => string;
 }
 
-// Default context values – will be overridden by the provider
 const LangContext = createContext<LangContextProps>({
   language: "en",
   toggleLanguage: () => {},
+  t: (en) => en,
 });
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguage] = useState<Language>("en"); // English primary
-  const toggleLanguage = () =>
-    setLanguage((prev) => (prev === "en" ? "ar" : "en"));
+  const [language, setLanguage] = useState<Language>("en");
+
+  // Persist to localStorage so the preference survives navigation
+  useEffect(() => {
+    const saved = localStorage.getItem("dev-lang") as Language | null;
+    if (saved === "ar" || saved === "en") setLanguage(saved);
+  }, []);
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => {
+      const next = prev === "en" ? "ar" : "en";
+      localStorage.setItem("dev-lang", next);
+      return next;
+    });
+  };
+
+  const t = (en: string, ar: string) => (language === "ar" ? ar : en);
 
   return (
-    <LangContext.Provider value={{ language, toggleLanguage }}>
-      {children}
+    <LangContext.Provider value={{ language, toggleLanguage, t }}>
+      <div
+        style={{ direction: language === "ar" ? "rtl" : "ltr" }}
+        lang={language}
+      >
+        {children}
+      </div>
     </LangContext.Provider>
   );
 };

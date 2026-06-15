@@ -6,6 +6,7 @@ import { useState } from "react";
 import { BookOpen, LogOut, ChevronDown, Menu } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { useMobileNav } from "./MobileNavContext";
+import { useLanguage } from "../../_components/LanguageProvider";
 
 export default function PortalTopBar({
   developer,
@@ -15,6 +16,7 @@ export default function PortalTopBar({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
+  const { language, toggleLanguage, t } = useLanguage();
 
   const fullName = `${developer.firstName ?? ""} ${developer.lastName ?? ""}`.trim() || developer.email;
   const initials = fullName
@@ -284,9 +286,9 @@ export default function PortalTopBar({
           
           {/* 1. البراند */}
           <Link href="/developers/portal" className="ptopbar-brand">
-            <img src="/favicon.svg" alt="وني" className="ptopbar-brand-icon" />
-            <span className="ptopbar-brand-name">وني</span>
-            <span className="ptopbar-brand-badge">Developer Portal</span>
+            <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
+            <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
+            <span className="ptopbar-brand-badge">{t("Developer Portal", "بوابة المطورين")}</span>
           </Link>
         </div>
 
@@ -297,19 +299,27 @@ export default function PortalTopBar({
             className={`ptopbar-link docs-btn ${docsActive ? "active" : ""}`}
           >
             <BookOpen size={14} />
-            API Docs
+            {t("API Docs", "مستندات API")}
           </Link>
         </nav>
 
         {/* 3. إجراءات الحساب */}
         <div className="ptopbar-actions">
+          <button 
+            onClick={toggleLanguage} 
+            className="ptopbar-icon-btn"
+            style={{ fontSize: "12px", fontWeight: "bold" }}
+            aria-label={t("Toggle Language", "تغيير اللغة")}
+          >
+            {language === 'ar' ? 'EN' : 'AR'}
+          </button>
           <NotificationBell />
 
           <div className="ptopbar-profile">
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className="ptopbar-avatar-btn"
-              aria-label="الملف الشخصي"
+              aria-label={t("Profile", "الملف الشخصي")}
             >
               <div className="ptopbar-avatar">{initials}</div>
               <ChevronDown size={13} />
@@ -318,22 +328,22 @@ export default function PortalTopBar({
             {menuOpen && (
               <>
                 <div className="ptopbar-overlay" onClick={() => setMenuOpen(false)} />
-                <div className="ptopbar-menu">
+                <div className="ptopbar-menu" style={{ direction: language === "ar" ? "rtl" : "ltr" }}>
                   <div className="menu-user-info">
                     <div className="menu-name">{fullName}</div>
-                    <div className="menu-email">{developer.email}</div>
+                    <div className="menu-email" style={{ textAlign: language === "ar" ? "right" : "left" }}>{developer.email}</div>
                   </div>
                   <div className="menu-divider" />
-                  <Link href="/developers/portal/settings" className="menu-item" style={{ textDecoration: 'none' }}>
+                  <Link href="/developers/portal/settings" className="menu-item" style={{ textDecoration: 'none', textAlign: language === "ar" ? "right" : "left", flexDirection: language === "ar" ? "row" : "row-reverse", justifyContent: language === "ar" ? "flex-start" : "flex-end" }}>
+                    {t("Account Settings", "إعدادات الحساب")}
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    إعدادات الحساب
                   </Link>
-                  <button onClick={handleLogout} className="menu-item danger">
+                  <button onClick={handleLogout} className="menu-item danger" style={{ textAlign: language === "ar" ? "right" : "left", flexDirection: language === "ar" ? "row" : "row-reverse", justifyContent: language === "ar" ? "flex-start" : "flex-end" }}>
+                    {t("Logout", "تسجيل الخروج")}
                     <LogOut size={14} />
-                    تسجيل الخروج
                   </button>
                 </div>
               </>
