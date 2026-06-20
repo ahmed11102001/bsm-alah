@@ -42,6 +42,21 @@ describe("normalizePhone", () => {
     });
   });
 
+  // ─── أرقام دولية (غير مصرية) ─────────────────────────────────────────────
+  describe("valid international numbers", () => {
+    it("بيتعرف على رقم أمريكي صحيح", () => {
+      expect(normalizePhone("+12125551234")).toBe("12125551234");
+    });
+
+    it("بيتعرف على رقم سعودي صحيح", () => {
+      expect(normalizePhone("+966512345678")).toBe("966512345678");
+    });
+
+    it("بيتعرف على رقم إماراتي صحيح", () => {
+      expect(normalizePhone("+971501234567")).toBe("971501234567");
+    });
+  });
+
   // ─── حالات الفشل ─────────────────────────────────────────────────────────
   describe("invalid inputs — بيرجع null", () => {
     it("string فاضي", () => {
@@ -52,8 +67,8 @@ describe("normalizePhone", () => {
       expect(normalizePhone("   ")).toBeNull();
     });
 
-    it("رقم أجنبي (مش مصري)", () => {
-      expect(normalizePhone("+12125551234")).toBeNull();
+    it("رقم دولي غير صحيح (أرقام ناقصة)", () => {
+      expect(normalizePhone("+1212555")).toBeNull();
     });
 
     it("رقم ناقصة أرقام", () => {

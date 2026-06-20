@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const mode      = searchParams.get("hub.mode");
-  const token     = searchParams.get("hub.verify_token");
+  const mode = searchParams.get("hub.mode");
+  const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
   if (mode === "subscribe" && token === verifyToken) {
@@ -88,11 +88,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid object" }, { status: 404 });
     }
 
-    const entry   = body.entry?.[0];
+    const entry = body.entry?.[0];
     const changes = entry?.changes?.[0];
-    const value   = changes?.value;
+    const value = changes?.value;
 
-    const wabaIdFromMeta  = entry?.id;
+    const wabaIdFromMeta = entry?.id;
     const phoneIdFromMeta = value?.metadata?.phone_number_id;
 
     const accountOwner = await prisma.whatsAppAccount.findFirst({
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
       // ??? ??????? ????? ???? ???? ??? campaignId
       const relatedMsg = await prisma.message.findFirst({
-        where:  { whatsappId: status.id, userId },
+        where: { whatsappId: status.id, userId },
         select: { id: true, campaignId: true },
       });
 
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
         data: {
           status: mapStatus(status.status),
           ...(status.status === "delivered" && { deliveredAt: new Date() }),
-          ...(status.status === "read"      && { readAt:      new Date() }),
+          ...(status.status === "read" && { readAt: new Date() }),
         },
       });
 
@@ -138,12 +138,12 @@ export async function POST(req: NextRequest) {
         if (status.status === "delivered") {
           await prisma.campaign.update({
             where: { id: campaignId },
-            data:  { deliveredCount: { increment: 1 } },
+            data: { deliveredCount: { increment: 1 } },
           });
         } else if (status.status === "read") {
           await prisma.campaign.update({
             where: { id: campaignId },
-            data:  { readCount: { increment: 1 } },
+            data: { readCount: { increment: 1 } },
           });
         }
       }
@@ -151,33 +151,34 @@ export async function POST(req: NextRequest) {
 
     // Step 3: ??????? ??????? (Inbound Messages)
     if (value?.messages?.length) {
-      const msg  = value.messages[0];
+      const msg = value.messages[0];
       const from = normalizePhone(msg.from);
       if (!from) {
+        console.warn(`[WEBHOOK] رقم مرفوض من normalizePhone: "${msg.from}" (userId: ${userId}) — الرسالة اتجاهلت ولم تُسجَّل`);
         return NextResponse.json({ status: "invalid_phone_ignored" });
       }
 
       // ?????? ??? Reaction
       if (msg.type === "reaction") {
         const reactionEmoji = msg.reaction?.emoji ?? "";
-        const reactedMsgId  = msg.reaction?.message_id ?? "";
+        const reactedMsgId = msg.reaction?.message_id ?? "";
 
         if (reactedMsgId) {
           const original = await prisma.message.findFirst({
-            where:  { whatsappId: reactedMsgId, userId },
+            where: { whatsappId: reactedMsgId, userId },
             select: { id: true, reactions: true },
           });
 
           if (original) {
             const existingReactions = (original.reactions as any[] ?? []);
             const filtered = existingReactions.filter((r: any) => r.senderId !== from);
-            const updated  = reactionEmoji
+            const updated = reactionEmoji
               ? [...filtered, { emoji: reactionEmoji, senderId: from }]
               : filtered;
 
             await prisma.message.update({
               where: { id: original.id },
-              data:  { reactions: updated },
+              data: { reactions: updated },
             });
           }
         }
@@ -194,12 +195,12 @@ export async function POST(req: NextRequest) {
       }
 
       // ????? ??? ???????
-      let type: MessageType       = MessageType.text;
-      let content                 = msg.text?.body || "";
+      let type: MessageType = MessageType.text;
+      let content = msg.text?.body || "";
       let mediaUrl: string | null = null;
 
       if (msg.type === "image") {
-        type    = MessageType.image;
+        type = MessageType.image;
         content = msg.image?.caption || "Image";
         const metaImageId = msg.image?.id as string | undefined;
         if (metaImageId) {
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } else if (msg.type === "audio") {
-        type    = MessageType.audio;
+        type = MessageType.audio;
         content = "Audio message";
         const metaAudioId = msg.audio?.id as string | undefined;
         if (metaAudioId) {
@@ -227,7 +228,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } else if ((msg.type as string) === "video") {
-        type    = MessageType.video;
+        type = MessageType.video;
         content = (msg as any).video?.caption || "Video";
         const metaVideoId = (msg as any).video?.id as string | undefined;
         if (metaVideoId) {
@@ -240,7 +241,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } else if ((msg.type as string) === "document") {
-        type    = MessageType.document;
+        type = MessageType.document;
         content = (msg as any).document?.filename || "Document";
         const metaDocId = (msg as any).document?.id as string | undefined;
         if (metaDocId) {
@@ -253,7 +254,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } else if ((msg.type as string) === "sticker") {
-        type    = MessageType.sticker;
+        type = MessageType.sticker;
         content = "Sticker";
         const metaStickerId = (msg as any).sticker?.id as string | undefined;
         if (metaStickerId) {
@@ -269,7 +270,7 @@ export async function POST(req: NextRequest) {
 
       await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
-          where:  { phone_userId: { phone: from, userId } },
+          where: { phone_userId: { phone: from, userId } },
           // deletedAt: null ???? ?? ???????? ???? ?????? ???? ???? ??? ???? ????? ?????
           update: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, deletedAt: null },
           create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
@@ -278,17 +279,17 @@ export async function POST(req: NextRequest) {
         // ?? ?? ????? ????? ????????? ?? ?????? — ?????? ???? ???????? ???? ???????
         await tx.message.updateMany({
           where: { contactId: contact.id, userId, deletedAt: { not: null } },
-          data:  { deletedAt: null },
+          data: { deletedAt: null },
         });
 
         await tx.message.create({
           data: {
             userId,
-            contactId:  contact.id,
+            contactId: contact.id,
             content,
             type,
-            direction:  MessageDirection.inbound,
-            status:     MessageStatus.delivered,
+            direction: MessageDirection.inbound,
+            status: MessageStatus.delivered,
             whatsappId: msg.id,
             mediaUrl,
           },
@@ -328,9 +329,9 @@ export async function POST(req: NextRequest) {
 //   2. AI Agent       — ?? ??? ?? ???? keyword match
 // -----------------------------------------------------------------------------
 async function handleAutomation(ctx: {
-  userId:       string;
-  from:         string;
-  messageText:  string;
+  userId: string;
+  from: string;
+  messageText: string;
   accountOwner: { accessToken: string; phoneNumberId: string };
 }) {
   const { userId, from, messageText, accountOwner } = ctx;
@@ -338,7 +339,7 @@ async function handleAutomation(ctx: {
 
   // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
   const contactRecord = await prisma.contact.findFirst({
-    where:  { phone: from, userId },
+    where: { phone: from, userId },
     select: { id: true, voiceAgentEnabled: true },
   });
 
@@ -351,7 +352,7 @@ async function handleAutomation(ctx: {
     }
 
     const agentSettings = await prisma.aIAgent.findUnique({
-      where:  { userId },
+      where: { userId },
       select: {
         elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true,
         isEnabled: true, provider: true,
@@ -368,17 +369,17 @@ async function handleAutomation(ctx: {
     ) {
       // ── Step 1: ولّد الرد النصي عبر Gemini/OpenAI (بيتحسب في التوكن) ──
       const recentMsgs = await prisma.message.findMany({
-        where:   { contactId: contactRecord.id, userId, type: MessageType.text },
+        where: { contactId: contactRecord.id, userId, type: MessageType.text },
         orderBy: { createdAt: "desc" },
-        take:    20,
-        select:  { content: true, direction: true },
+        take: 20,
+        select: { content: true, direction: true },
       });
 
       const aiMessages: ConversationMessage[] = recentMsgs
         .reverse()
-         .filter(m => m.content)
+        .filter(m => m.content)
         .map(m => ({
-          role:    m.direction === "inbound" ? "user" as const : "assistant" as const,
+          role: m.direction === "inbound" ? "user" as const : "assistant" as const,
           content: m.content!,
         }));
 
@@ -387,12 +388,12 @@ async function handleAutomation(ctx: {
       const aiResult = await getAIReply(
         aiMessages,
         {
-          brandName:    agentSettings.brandName,
+          brandName: agentSettings.brandName,
           businessDesc: agentSettings.businessDesc,
           productsInfo: agentSettings.productsInfo,
-          pricingInfo:  agentSettings.pricingInfo,
+          pricingInfo: agentSettings.pricingInfo,
           workingHours: agentSettings.workingHours,
-          tone:         agentSettings.tone,
+          tone: agentSettings.tone,
           systemPrompt: agentSettings.systemPrompt,
         },
         agentSettings.provider as "gemini" | "openai",
@@ -410,8 +411,8 @@ async function handleAutomation(ctx: {
 
       // ── Step 2: حوّل النص لصوت عبر ElevenLabs TTS فقط ───────────────────
       const voiceResult = await callVoiceAgent({
-        agentId:   agentSettings.elevenLabsAgentId,
-        apiKey:    agentSettings.elevenLabsApiKey,
+        agentId: agentSettings.elevenLabsAgentId,
+        apiKey: agentSettings.elevenLabsApiKey,
         textReply: aiResult.reply,
       });
 
@@ -430,14 +431,14 @@ async function handleAutomation(ctx: {
       const metaRes = await fetch(
         `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
         {
-          method:  "POST",
+          method: "POST",
           headers: {
-            "Content-Type":  "application/json",
+            "Content-Type": "application/json",
             "Authorization": `Bearer ${accountOwner.accessToken}`,
           },
           body: JSON.stringify({
             messaging_product: "whatsapp",
-            to:   from,
+            to: from,
             type: "audio",
             audio: { link: audioUrl },
           }),
@@ -445,27 +446,27 @@ async function handleAutomation(ctx: {
       );
 
       if (metaRes.ok) {
-        const metaData      = await metaRes.json();
+        const metaData = await metaRes.json();
         const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
 
         await prisma.$transaction([
           prisma.message.create({
             data: {
               userId,
-              contactId:  contactRecord.id,
-              content:    aiResult.reply,
-              type:       MessageType.audio,
-              direction:  MessageDirection.outbound,
-              status:     MessageStatus.sent,
+              contactId: contactRecord.id,
+              content: aiResult.reply,
+              type: MessageType.audio,
+              direction: MessageDirection.outbound,
+              status: MessageStatus.sent,
               senderType: MessageSenderType.ai,
               whatsappId: whatsappMsgId,
-              mediaUrl:   audioUrl,
-              sentAt:     new Date(),
+              mediaUrl: audioUrl,
+              sentAt: new Date(),
             },
           }),
           prisma.contact.update({
             where: { id: contactRecord.id },
-            data:  { lastAiRepliedAt: new Date() },
+            data: { lastAiRepliedAt: new Date() },
           }),
         ]);
 
@@ -482,7 +483,7 @@ async function handleAutomation(ctx: {
   // ??????? ?????? ?? ??? DB ??? ?? handleAutomation ?????
   // ??? ??? ??????? = 1 ???? ?? ??? ????? ?? ?????? ??
   const contactForFirst = contactRecord ?? await prisma.contact.findFirst({
-    where:  { phone: from, userId },
+    where: { phone: from, userId },
     select: { id: true },
   });
 
@@ -493,19 +494,19 @@ async function handleAutomation(ctx: {
 
     if (msgCount === 1) {
       const welcomeRule = await prisma.automationRule.findFirst({
-        where:   { userId, triggerType: TriggerType.FIRST_MESSAGE, isEnabled: true },
+        where: { userId, triggerType: TriggerType.FIRST_MESSAGE, isEnabled: true },
         orderBy: { createdAt: "asc" },
-        select:  { id: true, name: true, replyContent: true, replyMediaUrl: true },
+        select: { id: true, name: true, replyContent: true, replyMediaUrl: true },
       });
 
       if (welcomeRule?.replyContent?.trim()) {
         console.log(`[BOT] FIRST_MESSAGE ? "${welcomeRule.name}" for ${from}`);
         await sendReply({
           userId, from,
-          replyText:    welcomeRule.replyContent.trim(),
+          replyText: welcomeRule.replyContent.trim(),
           replyMediaUrl: welcomeRule.replyMediaUrl ?? undefined,
           accountOwner,
-          ruleName:     welcomeRule.name,
+          ruleName: welcomeRule.name,
         });
         return; // ?? ???? ??? keyword ?? ??? AI
       }
@@ -516,16 +517,16 @@ async function handleAutomation(ctx: {
   const keywordRules = await prisma.automationRule.findMany({
     where: {
       userId,
-      isEnabled:   true,
+      isEnabled: true,
       triggerType: TriggerType.KEYWORD,
-      replyType:   ReplyType.TEXT,
+      replyType: ReplyType.TEXT,
     },
     orderBy: { createdAt: "asc" },
-    select:  { id: true, name: true, triggerValue: true, replyContent: true, replyMediaUrl: true, humanKeywords: true },
+    select: { id: true, name: true, triggerValue: true, replyContent: true, replyMediaUrl: true, humanKeywords: true },
   });
 
   // Human takeover — ?? ?????? ?? ?????? ?? ?????? ???? ?????
- const humanTriggered = keywordRules.some(r =>
+  const humanTriggered = keywordRules.some(r =>
     r.humanKeywords?.some(kw => {
       const kn = kw?.toLowerCase().trim();
       return !!kn && textLower.includes(kn);
@@ -538,7 +539,7 @@ async function handleAutomation(ctx: {
   }
 
   // Keyword match — ??? ?????
-   const matched = keywordRules.find(r =>
+  const matched = keywordRules.find(r =>
     r.triggerValue?.trim() &&
     textLower.includes(r.triggerValue.toLowerCase().trim())
   );
@@ -553,7 +554,7 @@ async function handleAutomation(ctx: {
 
   // -- 2: AI Agent — ?? ???? keyword match ---------------------------------
   const agent = await prisma.aIAgent.findUnique({
-    where:  { userId },
+    where: { userId },
     select: {
       isEnabled: true, provider: true,
       brandName: true, businessDesc: true, productsInfo: true,
@@ -574,9 +575,9 @@ async function handleAutomation(ctx: {
 
   // Pause check — ?? ???????? ??? ?????? ??????? ??? AI ????
   const lastManualOutbound = await prisma.messageQueue.findFirst({
-    where:   { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
+    where: { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
     orderBy: { sentAt: "desc" },
-    select:  { sentAt: true },
+    select: { sentAt: true },
   });
 
   if (lastManualOutbound?.sentAt) {
@@ -590,16 +591,16 @@ async function handleAutomation(ctx: {
   let aiMessages: ConversationMessage[] = [{ role: "user", content: messageText }];
   if (contactRecord) {
     const recentMsgs = await prisma.message.findMany({
-      where:   { contactId: contactRecord.id, userId, type: MessageType.text },
+      where: { contactId: contactRecord.id, userId, type: MessageType.text },
       orderBy: { createdAt: "desc" },
-      take:    20,
-      select:  { content: true, direction: true },
+      take: 20,
+      select: { content: true, direction: true },
     });
     const fromDb = recentMsgs
       .reverse()
-         .filter(m => m.content?.trim())
+      .filter(m => m.content?.trim())
       .map(m => ({
-        role:    m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
+        role: m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
         content: m.content!.trim(),
       }));
     if (fromDb.length) aiMessages = fromDb;
@@ -608,12 +609,12 @@ async function handleAutomation(ctx: {
   const result = await getAIReply(
     aiMessages,
     {
-      brandName:    agent.brandName,
+      brandName: agent.brandName,
       businessDesc: agent.businessDesc,
       productsInfo: agent.productsInfo,
-      pricingInfo:  agent.pricingInfo,
+      pricingInfo: agent.pricingInfo,
       workingHours: agent.workingHours,
-      tone:         agent.tone,
+      tone: agent.tone,
       systemPrompt: agent.systemPrompt,
     },
     agent.provider as "gemini" | "openai",
@@ -643,24 +644,24 @@ async function handleAutomation(ctx: {
 // Helper: ????? ???? ??? Meta API ????? ?? ??? DB
 // -----------------------------------------------------------------------------
 async function sendReply(ctx: {
-  userId:        string;
-  from:          string;
-  replyText:     string;
+  userId: string;
+  from: string;
+  replyText: string;
   replyMediaUrl?: string;
-  accountOwner:  { accessToken: string; phoneNumberId: string };
-  ruleName:      string;
-  isAI?:         boolean;   // true = AI Agent أو Voice Agent
+  accountOwner: { accessToken: string; phoneNumberId: string };
+  ruleName: string;
+  isAI?: boolean;   // true = AI Agent أو Voice Agent
 }) {
   const { userId, from, replyText, replyMediaUrl, accountOwner, ruleName, isAI = false } = ctx;
   const senderType = isAI ? MessageSenderType.ai : MessageSenderType.bot;
   const apiBase = `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`;
   const headers = {
-    "Content-Type":  "application/json",
+    "Content-Type": "application/json",
     "Authorization": `Bearer ${accountOwner.accessToken}`,
   };
 
   const contact = await prisma.contact.findFirst({
-    where:  { phone: from, userId },
+    where: { phone: from, userId },
     select: { id: true },
   });
   if (!contact) return;
@@ -668,14 +669,14 @@ async function sendReply(ctx: {
   // ── إرسال الصورة أولاً (لو موجودة) ──────────────────────────────────────
   if (replyMediaUrl?.trim()) {
     const imgRes = await fetch(apiBase, {
-      method:  "POST",
+      method: "POST",
       headers,
       body: JSON.stringify({
         messaging_product: "whatsapp",
-        to:   from,
+        to: from,
         type: "image",
         image: {
-          link:    replyMediaUrl.trim(),
+          link: replyMediaUrl.trim(),
           caption: replyText || undefined,   // النص يظهر كـ caption تحت الصورة
         },
       }),
@@ -686,19 +687,19 @@ async function sendReply(ctx: {
       console.error(`[AUTOMATION] Image send failed for ${from}:`, err);
       // fallback: أرسل النص فقط
     } else {
-      const imgData      = await imgRes.json();
+      const imgData = await imgRes.json();
       const whatsappMsgId = imgData?.messages?.[0]?.id as string | undefined;
       await prisma.message.create({
         data: {
           userId,
-          contactId:  contact.id,
-          content:    replyText || null,
-          mediaUrl:   replyMediaUrl,
-          type:       MessageType.image,
-          direction:  MessageDirection.outbound,
-          status:     MessageStatus.sent,
+          contactId: contact.id,
+          content: replyText || null,
+          mediaUrl: replyMediaUrl,
+          type: MessageType.image,
+          direction: MessageDirection.outbound,
+          status: MessageStatus.sent,
           whatsappId: whatsappMsgId,
-          sentAt:     new Date(),
+          sentAt: new Date(),
         },
       });
       console.log(`[AUTOMATION] Image sent to ${from} via "${ruleName}"`);
@@ -711,11 +712,11 @@ async function sendReply(ctx: {
   if (!replyText?.trim()) return;
 
   const metaRes = await fetch(apiBase, {
-    method:  "POST",
+    method: "POST",
     headers,
     body: JSON.stringify({
       messaging_product: "whatsapp",
-      to:   from,
+      to: from,
       type: "text",
       text: { body: replyText },
     }),
@@ -727,28 +728,28 @@ async function sendReply(ctx: {
     return;
   }
 
-  const metaData      = await metaRes.json();
+  const metaData = await metaRes.json();
   const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
 
   await prisma.$transaction([
     prisma.message.create({
       data: {
         userId,
-        contactId:  contact.id,
-        content:    replyText,
-        type:       MessageType.text,
-        direction:  MessageDirection.outbound,
-        status:     MessageStatus.sent,
+        contactId: contact.id,
+        content: replyText,
+        type: MessageType.text,
+        direction: MessageDirection.outbound,
+        status: MessageStatus.sent,
         senderType,
         whatsappId: whatsappMsgId,
-        sentAt:     new Date(),
+        sentAt: new Date(),
       },
     }),
     // تحديث lastAiRepliedAt لو الرد من AI أو bot
     ...(isAI ? [
       prisma.contact.update({
         where: { id: contact.id },
-        data:  { lastAiRepliedAt: new Date() },
+        data: { lastAiRepliedAt: new Date() },
       }),
     ] : []),
   ]);
@@ -761,10 +762,10 @@ async function sendReply(ctx: {
 // -----------------------------------------------------------------------------
 function mapStatus(waStatus: string): MessageStatus {
   const map: Record<string, MessageStatus> = {
-    sent:      MessageStatus.sent,
+    sent: MessageStatus.sent,
     delivered: MessageStatus.delivered,
-    read:      MessageStatus.read,
-    failed:    MessageStatus.failed,
+    read: MessageStatus.read,
+    failed: MessageStatus.failed,
   };
   return map[waStatus] || MessageStatus.pending;
 }
