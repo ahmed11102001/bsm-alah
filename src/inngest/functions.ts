@@ -3,11 +3,11 @@
 // بديل احترافي للـ Cron Job — كل حملة بتشتغل في مسارها الخاص
 // بدون Timeout + Automatic Retry + Built-in Scheduling
 
-import { inngest }   from "./client";
-import prisma        from "@/lib/prisma";
+import { inngest } from "./client";
+import prisma from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
-import { decryptToken }        from "@/lib/crypto";
+import { decryptToken } from "@/lib/crypto";
 import * as Sentry from "@sentry/nextjs";
 
 // ─── حجم كل chunk من الرسائل ─────────────────────────────────────────────────
@@ -17,25 +17,25 @@ import * as Sentry from "@sentry/nextjs";
 const CAMPAIGN_CHUNK_SIZE = 200;
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
-const QueueStatus      = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
-const CampaignStatus   = { running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
-const MessageStatus    = { sent: "sent", failed: "failed" } as const;
+const QueueStatus = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
+const CampaignStatus = { running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
+const MessageStatus = { sent: "sent", failed: "failed" } as const;
 const MessageDirection = { outbound: "outbound" } as const;
-const MessageType      = { template: "template" } as const;
+const MessageType = { template: "template" } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Function 1: processCampaign
 // ═══════════════════════════════════════════════════════════════════════════════
 export const processCampaign = inngest.createFunction(
   {
-    id:          "process-campaign",
-    retries:     2,
+    id: "process-campaign",
+    retries: 2,
     concurrency: { limit: 5 },
-    triggers:    [{ event: "campaign/send" }],
+    triggers: [{ event: "campaign/send" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
     const { campaignId, scheduledAt } = event.data as {
-      campaignId:  string;
+      campaignId: string;
       scheduledAt: string | null;
     };
 
@@ -47,25 +47,25 @@ export const processCampaign = inngest.createFunction(
     // ── Step 1: جيب بيانات الحملة والحساب ────────────────────────────────────
     const campaign = await step.run("get-campaign-data", async () => {
       return await prisma.campaign.findUnique({
-        where:  { id: campaignId },
+        where: { id: campaignId },
         select: {
-          id:           true,
-          name:         true,
-          userId:       true,
-          status:       true,
-          queuedCount:  true,
+          id: true,
+          name: true,
+          userId: true,
+          status: true,
+          queuedCount: true,
           user: {
             select: {
               whatsappAccount: {
                 select: {
-                  id:            true,
-                  accessToken:   true,
+                  id: true,
+                  accessToken: true,
                   phoneNumberId: true,
                   messagingTier: true,
                   dailySentCount: true,
-                  dailyResetAt:   true,
-                  backoffCount:   true,
-                  backoffUntil:   true,
+                  dailyResetAt: true,
+                  backoffCount: true,
+                  backoffUntil: true,
                 },
               },
             },
@@ -74,7 +74,7 @@ export const processCampaign = inngest.createFunction(
       });
     });
 
-    if (!campaign)          throw new Error(`Campaign ${campaignId} not found`);
+    if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
     if (!campaign.user?.whatsappAccount) throw new Error("No WhatsApp account linked");
     if (campaign.status === CampaignStatus.completed) return { skipped: true };
 
@@ -84,7 +84,7 @@ export const processCampaign = inngest.createFunction(
     await step.run("mark-running", async () => {
       await prisma.campaign.update({
         where: { id: campaignId },
-        data:  { status: CampaignStatus.running, startedAt: new Date() },
+        data: { status: CampaignStatus.running, startedAt: new Date() },
       });
     });
 
@@ -102,8 +102,8 @@ export const processCampaign = inngest.createFunction(
     //   قديم: 20,000 record في الذاكرة دفعة واحدة
     //   جديد: 200 record × 100 دورة — كل دورة تتحرر من الذاكرة قبل الجاية
 
-    let sent       = 0;
-    let failed     = 0;
+    let sent = 0;
+    let failed = 0;
     let tokenError = false;
     let chunkIndex = 0;           // رقم الـ chunk الحالية — بيدخل في اسم الـ step لضمان uniqueness
     let cursor: string | undefined; // id آخر عنصر في الـ chunk السابقة
@@ -120,24 +120,24 @@ export const processCampaign = inngest.createFunction(
             status: QueueStatus.pending,
           },
           orderBy: { id: "asc" },   // ترتيب ثابت بالـ id لضمان cursor صحيح
-          take:    CAMPAIGN_CHUNK_SIZE,
+          take: CAMPAIGN_CHUNK_SIZE,
           ...(capturedCursor
             ? { cursor: { id: capturedCursor }, skip: 1 }
             : {}),
           select: {
-            id:                true,
-            userId:            true,
-            toPhone:           true,
-            contactId:         true,
-            messageType:       true,
-            templateName:      true,
-            templateLang:      true,
-            templateVars:      true,
-            content:           true,
-            attempts:          true,
-            maxAttempts:       true,
+            id: true,
+            userId: true,
+            toPhone: true,
+            contactId: true,
+            messageType: true,
+            templateName: true,
+            templateLang: true,
+            templateVars: true,
+            content: true,
+            attempts: true,
+            maxAttempts: true,
             existingMessageId: true,
-            phoneNumberId:     true,
+            phoneNumberId: true,
             whatsappAccountId: true,
           },
         });
@@ -149,7 +149,7 @@ export const processCampaign = inngest.createFunction(
           await step.run("complete-empty", async () => {
             await prisma.campaign.update({
               where: { id: campaignId },
-              data:  { status: CampaignStatus.completed, completedAt: new Date() },
+              data: { status: CampaignStatus.completed, completedAt: new Date() },
             });
           });
           return { sent: 0, failed: 0 };
@@ -166,7 +166,7 @@ export const processCampaign = inngest.createFunction(
           await step.run(`skip-token-error-${msg.id}`, async () => {
             await prisma.messageQueue.update({
               where: { id: msg.id },
-              data:  { status: QueueStatus.failed, error: "Token error — campaign stopped" },
+              data: { status: QueueStatus.failed, error: "Token error — campaign stopped" },
             });
           });
           failed++;
@@ -176,14 +176,14 @@ export const processCampaign = inngest.createFunction(
         // إرسال الرسالة
         const result = await step.run(`send-${msg.id}`, async () => {
           return await sendWhatsAppMessage({
-            toPhone:       msg.toPhone,
+            toPhone: msg.toPhone,
             phoneNumberId: account.phoneNumberId,
-            accessToken:   decryptToken(account.accessToken),
-            messageType:   msg.messageType,
-            templateName:  msg.templateName,
-            templateLang:  msg.templateLang,
-            templateVars:  msg.templateVars,
-            content:       msg.content,
+            accessToken: decryptToken(account.accessToken),
+            messageType: msg.messageType,
+            templateName: msg.templateName,
+            templateLang: msg.templateLang,
+            templateVars: msg.templateVars,
+            content: msg.content,
           });
         });
 
@@ -195,37 +195,37 @@ export const processCampaign = inngest.createFunction(
               await tx.messageQueue.update({
                 where: { id: msg.id },
                 data: {
-                  status:        QueueStatus.sent,
+                  status: QueueStatus.sent,
                   whatsappMsgId: result.whatsappMsgId,
-                  sentAt:        new Date(),
-                  attempts:      { increment: 1 },
+                  sentAt: new Date(),
+                  attempts: { increment: 1 },
                 },
               });
 
               const contact = msg.contactId
                 ? await tx.contact.findFirst({ where: { id: msg.contactId }, select: { id: true } })
                 : await tx.contact.upsert({
-                    where:  { phone_userId: { phone: msg.toPhone, userId: msg.userId } },
-                    // لا نحدّث lastMessageAt عند الإرسال — بيتحدّث بس لما العميل يرد (inbound)
-                    update: {},
-                    create: { phone: msg.toPhone, userId: msg.userId },
-                  });
+                  where: { phone_userId: { phone: msg.toPhone, userId: msg.userId } },
+                  // لا نحدّث lastMessageAt عند الإرسال — بيتحدّث بس لما العميل يرد (inbound)
+                  update: {},
+                  create: { phone: msg.toPhone, userId: msg.userId },
+                });
 
               if (contact) {
                 // upsert بدل create — يحمي من unique constraint لو wamid اتكرر
                 await tx.message.upsert({
-                  where:  { whatsappId: result.whatsappMsgId ?? `no-wamid-${Date.now()}` },
+                  where: { whatsappId: result.whatsappMsgId ?? `no-wamid-${Date.now()}` },
                   update: {},   // لو موجود بالفعل — لا تعمل حاجة
                   create: {
-                    userId:     msg.userId,
-                    contactId:  contact.id,
+                    userId: msg.userId,
+                    contactId: contact.id,
                     campaignId: campaignId,
-                    content:    msg.templateName ? `[قالب] ${msg.templateName}` : msg.content,
-                    type:       MessageType.template,
-                    direction:  MessageDirection.outbound,
-                    status:     MessageStatus.sent,
+                    content: msg.templateName ? `[قالب] ${msg.templateName}` : msg.content,
+                    type: MessageType.template,
+                    direction: MessageDirection.outbound,
+                    status: MessageStatus.sent,
                     whatsappId: result.whatsappMsgId,
-                    sentAt:     new Date(),
+                    sentAt: new Date(),
                   },
                 });
                 // ❌ لا نحدّث lastMessageAt هنا — بيتحدّث بس لما العميل يرد من الـ webhook
@@ -233,12 +233,12 @@ export const processCampaign = inngest.createFunction(
 
               await tx.campaign.update({
                 where: { id: campaignId },
-                data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+                data: { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
               });
 
               await tx.whatsAppAccount.update({
                 where: { id: msg.whatsappAccountId },
-                data:  { dailySentCount: { increment: 1 } },
+                data: { dailySentCount: { increment: 1 } },
               });
             });
 
@@ -246,47 +246,47 @@ export const processCampaign = inngest.createFunction(
             // ── Token Error: وقف الحملة + إشعار العميل ──
             await prisma.messageQueue.update({
               where: { id: msg.id },
-              data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
+              data: { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
             });
             await prisma.campaign.update({
               where: { id: campaignId },
-              data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              data: { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
             });
 
             try {
               const { createNotification } = await import("@/lib/notifications");
               await createNotification({
                 userId: campaign.userId,
-                type:   "PLAN_LIMIT_REACHED" as any,
-                title:  "⚠️ توكن واتساب انتهت صلاحيته",
-                body:   `توقف إرسال حملة "${campaign.name}" — يرجى تحديث توكن واتساب`,
-                link:   "/dashboard?section=api",
+                type: "PLAN_LIMIT_REACHED" as any,
+                title: "⚠️ توكن واتساب انتهت صلاحيته",
+                body: `توقف إرسال حملة "${campaign.name}" — يرجى تحديث توكن واتساب`,
+                link: "/dashboard?section=api",
               });
-            } catch {}
+            } catch { }
 
           } else if (result.isRateLimit) {
             // ── Rate Limit: ارجع الرسالة لـ pending وحاول بعد شوية ──
             await prisma.messageQueue.update({
               where: { id: msg.id },
               data: {
-                status:      QueueStatus.pending,
+                status: QueueStatus.pending,
                 processedAt: null,
                 nextRetryAt: new Date(Date.now() + 60_000),
-                attempts:    { increment: 1 },
+                attempts: { increment: 1 },
               },
             });
 
           } else {
             // ── فشل عادي ──
             const newAttempts = msg.attempts + 1;
-            const isFinal     = newAttempts >= msg.maxAttempts;
+            const isFinal = newAttempts >= msg.maxAttempts;
 
             await prisma.messageQueue.update({
               where: { id: msg.id },
               data: {
-                status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
-                error:       result.error,
-                attempts:    { increment: 1 },
+                status: isFinal ? QueueStatus.failed : QueueStatus.pending,
+                error: result.error,
+                attempts: { increment: 1 },
                 nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000),
               },
             });
@@ -294,19 +294,19 @@ export const processCampaign = inngest.createFunction(
             if (isFinal) {
               await prisma.campaign.update({
                 where: { id: campaignId },
-                data:  { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+                data: { failedCount: { increment: 1 }, queuedCount: { decrement: 1 } },
               });
             }
           }
         });
 
-        if (result.ok)                { sent++; }
+        if (result.ok) { sent++; }
         else if (result.isTokenError) { tokenError = true; failed++; }
         else if (!result.isRateLimit) { failed++; }
 
         // delay بين الرسائل (مش في آخر رسالة في الـ chunk الأخيرة)
         const isLastInChunk = i === chunk.length - 1;
-        const isLastChunk   = chunk.length < CAMPAIGN_CHUNK_SIZE;
+        const isLastChunk = chunk.length < CAMPAIGN_CHUNK_SIZE;
         if (!(isLastInChunk && isLastChunk) && !tokenError) {
           await step.sleep(`delay-${chunkIndex}-${i}`, "350ms");
         }
@@ -329,7 +329,7 @@ export const processCampaign = inngest.createFunction(
 
       await prisma.campaign.update({
         where: { id: campaignId },
-        data:  { status: finalStatus, completedAt: new Date() },
+        data: { status: finalStatus, completedAt: new Date() },
       });
 
       try {
@@ -337,7 +337,7 @@ export const processCampaign = inngest.createFunction(
           await import("@/lib/notifications");
 
         const userId = campaign.userId;
-        const name   = campaign.name;
+        const name = campaign.name;
 
         if (failed === 0) {
           await notifyCampaignSuccess(userId, name, campaignId, sent);
@@ -364,8 +364,8 @@ export const processCampaign = inngest.createFunction(
 // ═══════════════════════════════════════════════════════════════════════════════
 export const sendDirectMessage = inngest.createFunction(
   {
-    id:       "send-direct-message",
-    retries:  3,
+    id: "send-direct-message",
+    retries: 3,
     triggers: [{ event: "message/send" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
@@ -373,17 +373,17 @@ export const sendDirectMessage = inngest.createFunction(
 
     const item = await step.run("get-message", async () => {
       return await prisma.messageQueue.findUnique({
-        where:  { id: queueId },
+        where: { id: queueId },
         select: {
-          id:               true,
-          userId:           true,
-          toPhone:          true,
-          contactId:        true,
-          messageType:      true,
-          templateName:     true,
-          templateLang:     true,
-          templateVars:     true,
-          content:          true,
+          id: true,
+          userId: true,
+          toPhone: true,
+          contactId: true,
+          messageType: true,
+          templateName: true,
+          templateLang: true,
+          templateVars: true,
+          content: true,
           existingMessageId: true,
           whatsappAccountId: true,
           whatsappAccount: {
@@ -397,14 +397,14 @@ export const sendDirectMessage = inngest.createFunction(
 
     const result = await step.run("send-message", async () => {
       return await sendWhatsAppMessage({
-        toPhone:       item.toPhone,
+        toPhone: item.toPhone,
         phoneNumberId: item.whatsappAccount!.phoneNumberId,
-        accessToken:   decryptToken(item.whatsappAccount!.accessToken),
-        messageType:   item.messageType,
-        templateName:  item.templateName,
-        templateLang:  item.templateLang,
-        templateVars:  item.templateVars,
-        content:       item.content,
+        accessToken: decryptToken(item.whatsappAccount!.accessToken),
+        messageType: item.messageType,
+        templateName: item.templateName,
+        templateLang: item.templateLang,
+        templateVars: item.templateVars,
+        content: item.content,
       });
     });
 
@@ -414,28 +414,28 @@ export const sendDirectMessage = inngest.createFunction(
           prisma.messageQueue.update({
             where: { id: item.id },
             data: {
-              status:        QueueStatus.sent,
+              status: QueueStatus.sent,
               whatsappMsgId: result.whatsappMsgId,
-              sentAt:        new Date(),
-              attempts:      { increment: 1 },
+              sentAt: new Date(),
+              attempts: { increment: 1 },
             },
           }),
           ...(item.existingMessageId ? [
             prisma.message.updateMany({
               where: { id: item.existingMessageId },
-              data:  { status: MessageStatus.sent, whatsappId: result.whatsappMsgId, sentAt: new Date() },
+              data: { status: MessageStatus.sent, whatsappId: result.whatsappMsgId, sentAt: new Date() },
             }),
           ] : []),
         ]);
       } else {
         await prisma.messageQueue.update({
           where: { id: item.id },
-          data:  { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
+          data: { status: QueueStatus.failed, error: result.error, attempts: { increment: 1 } },
         });
         if (item.existingMessageId) {
           await prisma.message.updateMany({
             where: { id: item.existingMessageId },
-            data:  { status: MessageStatus.failed, error: result.error },
+            data: { status: MessageStatus.failed, error: result.error },
           });
         }
         if (!result.ok) throw new Error(result.error); // Inngest هيعيد المحاولة
@@ -451,13 +451,13 @@ export const sendDirectMessage = inngest.createFunction(
 // ═══════════════════════════════════════════════════════════════════════════════
 export const processQueueItem = inngest.createFunction(
   {
-    id:      "process-queue-item",
+    id: "process-queue-item",
     retries: 2,
     triggers: [{ event: "queue/process-item" }],
     // حد الـ concurrency لكل phoneNumberId → مش بنفلود WhatsApp API
     concurrency: {
       limit: 3,
-      key:   "event.data.phoneNumberId",
+      key: "event.data.phoneNumberId",
     },
   },
   async ({ event, step }: { event: any; step: any }) => {
@@ -466,32 +466,32 @@ export const processQueueItem = inngest.createFunction(
     // ── Step 1: جيب الـ item وتحقق إنه لسه pending ────────────────────────────
     const item = await step.run("get-item", async () => {
       return prisma.messageQueue.findUnique({
-        where:  { id: queueId },
+        where: { id: queueId },
         select: {
-          id:               true,
-          userId:           true,
-          toPhone:          true,
-          contactId:        true,
-          phoneNumberId:    true,
-          messageType:      true,
-          templateName:     true,
-          templateLang:     true,
-          templateVars:     true,
-          content:          true,
-          campaignId:       true,
-          attempts:         true,
-          maxAttempts:      true,
+          id: true,
+          userId: true,
+          toPhone: true,
+          contactId: true,
+          phoneNumberId: true,
+          messageType: true,
+          templateName: true,
+          templateLang: true,
+          templateVars: true,
+          content: true,
+          campaignId: true,
+          attempts: true,
+          maxAttempts: true,
           existingMessageId: true,
-          status:           true,
+          status: true,
           whatsappAccount: {
             select: {
-              id:            true,
-              accessToken:   true,
+              id: true,
+              accessToken: true,
               phoneNumberId: true,
-              backoffCount:  true,
-              backoffUntil:  true,
+              backoffCount: true,
+              backoffUntil: true,
               dailySentCount: true,
-              dailyResetAt:  true,
+              dailyResetAt: true,
               messagingTier: true,
             },
           },
@@ -507,7 +507,7 @@ export const processQueueItem = inngest.createFunction(
     if (!item.whatsappAccount) {
       await prisma.messageQueue.update({
         where: { id: item.id },
-        data:  { status: QueueStatus.failed, error: "WhatsApp account not found" },
+        data: { status: QueueStatus.failed, error: "WhatsApp account not found" },
       });
       return { skipped: true, reason: "no_account" };
     }
@@ -518,7 +518,7 @@ export const processQueueItem = inngest.createFunction(
     if (account.backoffUntil && account.backoffUntil > new Date()) {
       await prisma.messageQueue.update({
         where: { id: item.id },
-        data:  { nextRetryAt: account.backoffUntil },
+        data: { nextRetryAt: account.backoffUntil },
       });
       return { skipped: true, reason: "backoff" };
     }
@@ -527,7 +527,7 @@ export const processQueueItem = inngest.createFunction(
     const claimed = await step.run("claim-item", async () => {
       const res = await prisma.messageQueue.updateMany({
         where: { id: item.id, status: QueueStatus.pending },
-        data:  { status: QueueStatus.processing, processedAt: new Date() },
+        data: { status: QueueStatus.processing, processedAt: new Date() },
       });
       return res.count === 1;
     });
@@ -537,14 +537,14 @@ export const processQueueItem = inngest.createFunction(
     // ── Step 2: إرسال الرسالة ──────────────────────────────────────────────────
     const sendResult = await step.run("send-message", async () => {
       return sendWhatsAppMessage({
-        toPhone:       item.toPhone,
+        toPhone: item.toPhone,
         phoneNumberId: account.phoneNumberId,
-        accessToken:   account.accessToken,
-        messageType:   item.messageType,
-        templateName:  item.templateName,
-        templateLang:  item.templateLang,
-        templateVars:  item.templateVars,
-        content:       item.content,
+        accessToken: account.accessToken,
+        messageType: item.messageType,
+        templateName: item.templateName,
+        templateLang: item.templateLang,
+        templateVars: item.templateVars,
+        content: item.content,
       });
     });
 
@@ -556,10 +556,10 @@ export const processQueueItem = inngest.createFunction(
           await tx.messageQueue.update({
             where: { id: item.id },
             data: {
-              status:        QueueStatus.sent,
+              status: QueueStatus.sent,
               whatsappMsgId: sendResult.whatsappMsgId,
-              sentAt:        new Date(),
-              attempts:      { increment: 1 },
+              sentAt: new Date(),
+              attempts: { increment: 1 },
             },
           });
 
@@ -567,37 +567,37 @@ export const processQueueItem = inngest.createFunction(
           const contact = item.contactId
             ? await tx.contact.findFirst({ where: { id: item.contactId }, select: { id: true } })
             : await tx.contact.upsert({
-                where:  { phone_userId: { phone: item.toPhone, userId: item.userId } },
-                update: { lastMessageAt: new Date() },
-                create: { phone: item.toPhone, userId: item.userId, lastMessageAt: new Date() },
-              });
+              where: { phone_userId: { phone: item.toPhone, userId: item.userId } },
+              update: { lastMessageAt: new Date() },
+              create: { phone: item.toPhone, userId: item.userId, lastMessageAt: new Date() },
+            });
 
           if (contact) {
             if (item.existingMessageId) {
               await tx.message.update({
                 where: { id: item.existingMessageId },
-                data:  { status: MessageStatus.sent, whatsappId: sendResult.whatsappMsgId, sentAt: new Date() },
+                data: { status: MessageStatus.sent, whatsappId: sendResult.whatsappMsgId, sentAt: new Date() },
               });
             } else {
               await tx.message.upsert({
-                where:  { whatsappId: sendResult.whatsappMsgId ?? `no-wamid-${Date.now()}` },
+                where: { whatsappId: sendResult.whatsappMsgId ?? `no-wamid-${Date.now()}` },
                 update: {},
                 create: {
-                  userId:     item.userId,
-                  contactId:  contact.id,
+                  userId: item.userId,
+                  contactId: contact.id,
                   campaignId: item.campaignId ?? undefined,
-                  content:    item.templateName ? `[قالب] ${item.templateName}` : (item.content ?? ""),
-                  type:       MessageType.template,
-                  direction:  MessageDirection.outbound,
-                  status:     MessageStatus.sent,
+                  content: item.templateName ? `[قالب] ${item.templateName}` : (item.content ?? ""),
+                  type: MessageType.template,
+                  direction: MessageDirection.outbound,
+                  status: MessageStatus.sent,
                   whatsappId: sendResult.whatsappMsgId,
-                  sentAt:     new Date(),
+                  sentAt: new Date(),
                 },
               });
             }
             await tx.contact.update({
               where: { id: contact.id },
-              data:  { lastMessageAt: new Date() },
+              data: { lastMessageAt: new Date() },
             });
           }
 
@@ -605,20 +605,20 @@ export const processQueueItem = inngest.createFunction(
           if (item.campaignId) {
             const updated = await tx.campaign.update({
               where: { id: item.campaignId },
-              data:  { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
+              data: { sentCount: { increment: 1 }, queuedCount: { decrement: 1 } },
               select: { queuedCount: true, status: true },
             });
             if (updated.queuedCount <= 0 && updated.status === CampaignStatus.running) {
               await tx.campaign.update({
                 where: { id: item.campaignId },
-                data:  { status: CampaignStatus.completed, completedAt: new Date() },
+                data: { status: CampaignStatus.completed, completedAt: new Date() },
               });
             }
           }
 
           await tx.whatsAppAccount.update({
             where: { id: account.id },
-            data:  { dailySentCount: { increment: 1 } },
+            data: { dailySentCount: { increment: 1 } },
           });
         });
 
@@ -626,23 +626,23 @@ export const processQueueItem = inngest.createFunction(
         // ── Rate Limited → backoff ───────────────────────────────────────────
         await prisma.whatsAppAccount.update({
           where: { id: account.id },
-          data:  { backoffUntil: new Date(Date.now() + 60_000), backoffCount: { increment: 1 } },
+          data: { backoffUntil: new Date(Date.now() + 60_000), backoffCount: { increment: 1 } },
         });
         await prisma.messageQueue.update({
           where: { id: item.id },
-          data:  { status: QueueStatus.pending, processedAt: null, nextRetryAt: new Date(Date.now() + 60_000), attempts: { increment: 1 } },
+          data: { status: QueueStatus.pending, processedAt: null, nextRetryAt: new Date(Date.now() + 60_000), attempts: { increment: 1 } },
         });
 
       } else {
         // ── فشل → retry أو failed نهائي ─────────────────────────────────────
         const newAttempts = item.attempts + 1;
-        const isFinal     = newAttempts >= item.maxAttempts;
+        const isFinal = newAttempts >= item.maxAttempts;
         await prisma.messageQueue.update({
           where: { id: item.id },
           data: {
-            status:      isFinal ? QueueStatus.failed : QueueStatus.pending,
-            error:       sendResult.error,
-            attempts:    { increment: 1 },
+            status: isFinal ? QueueStatus.failed : QueueStatus.pending,
+            error: sendResult.error,
+            attempts: { increment: 1 },
             nextRetryAt: isFinal ? null : new Date(Date.now() + 5 * 60_000),
             processedAt: null,
           },
@@ -665,14 +665,14 @@ export const processQueueItem = inngest.createFunction(
 // ═══════════════════════════════════════════════════════════════════════════════
 export const handleNewLeadBot = inngest.createFunction(
   {
-    id:      "handle-new-lead-bot",
+    id: "handle-new-lead-bot",
     retries: 1,
     triggers: [{ event: "lead/created" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
     const { leadId, leadName, leadPhone } = event.data as {
-      leadId:    string;
-      leadName:  string;
+      leadId: string;
+      leadName: string;
       leadPhone: string;
     };
 
@@ -698,20 +698,20 @@ export const handleNewLeadBot = inngest.createFunction(
     // ── Step 3: بعت الرسالة ──────────────────────────────────────────────────
     const result = await step.run("send-template", async () => {
       const { normalizePhone } = await import("@/lib/phone");
-      const { decryptToken }   = await import("@/lib/crypto");
+      const { decryptToken } = await import("@/lib/crypto");
 
       const normalizedPhone = normalizePhone(leadPhone);
       if (!normalizedPhone) return { ok: false, error: "invalid phone" };
 
       return await sendWhatsAppMessage({
-        toPhone:       normalizedPhone,
+        toPhone: normalizedPhone,
         phoneNumberId: wa.phoneNumberId,
-        accessToken:   decryptToken(wa.accessToken),
-        messageType:   "template",
-        templateName:  config.templateName!,
-        templateLang:  config.templateLang,
-        templateVars:  { body: [leadName] },
-        content:       null,
+        accessToken: decryptToken(wa.accessToken),
+        messageType: "template",
+        templateName: config.templateName!,
+        templateLang: config.templateLang,
+        templateVars: { body: [leadName] },
+        content: null,
       });
     });
 
@@ -721,12 +721,12 @@ export const handleNewLeadBot = inngest.createFunction(
         await Promise.all([
           prisma.lead.update({
             where: { id: leadId },
-            data:  { status: "CONTACTED" },
-          }).catch(() => {}),
+            data: { status: "CONTACTED" },
+          }).catch(() => { }),
           prisma.leadBotConfig.update({
             where: { id: config.id },
-            data:  { sentCount: { increment: 1 }, lastSentLeadId: leadId },
-          }).catch(() => {}),
+            data: { sentCount: { increment: 1 }, lastSentLeadId: leadId },
+          }).catch(() => { }),
         ]);
       });
     }
@@ -740,8 +740,8 @@ export const handleNewLeadBot = inngest.createFunction(
 // ═══════════════════════════════════════════════════════════════════════════════
 export const processDelayedStoreAutomation = inngest.createFunction(
   {
-    id:       "process-delayed-store-automation",
-    retries:  2,
+    id: "process-delayed-store-automation",
+    retries: 2,
     triggers: [{ event: "store/automation.trigger" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
