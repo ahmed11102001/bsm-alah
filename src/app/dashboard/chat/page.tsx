@@ -393,7 +393,8 @@ export default function ChatPage() {
 
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");   // قيمة خانة البحث الفورية (للعرض)
+  const [search, setSearch] = useState("");             // القيمة المؤجلة (debounced) اللي بتتبعت للسيرفر
   const [filter, setFilter] = useState<FilterType>("all");
 
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -507,10 +508,31 @@ export default function ChatPage() {
     setAudiences(Array.isArray(d) ? d : []);
   }, []);
 
+  // ── Debounce لخانة البحث ─────────────────────────────────────────
+  // search (اللي بيتبعت فعليًا للسيرفر) بيتحدث بعد توقف المستخدم عن
+  // الكتابة بـ 400ms، بدل ما يعمل fetch مع كل حرف.
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput), 400);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
   useEffect(() => {
     fetchConvs(); fetchTemplates(); fetchAudiences();
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
+
+  // ── بولينج دوري لقائمة المحادثات (sidebar) ─────────────────────────
+  // عشان الـ unread badges والمحادثات الجديدة تتحدث live حتى لو مفيش
+  // محادثة مفتوحة، أو المستخدم مش بيغيّر filter/search.
+  useEffect(() => {
+    const convsPollId = setInterval(() => {
+      // متستناش fetchConvs لو الصفحة في الخلفية (tab مش ظاهر) — وفّر طلبات لا داعي لها
+      if (document.visibilityState === "visible") {
+        fetchConvs();
+      }
+    }, 8000);
+    return () => clearInterval(convsPollId);
+  }, [fetchConvs]);
 
   // ── Smart scroll — ينزل للأسفل بس في 3 حالات ─────────────────────
   useEffect(() => {
@@ -690,14 +712,17 @@ export default function ChatPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  // فلترة فورية محلية باستخدام searchInput (مش search المؤجلة) — بتدي إحساس
+  // فوري للمستخدم وهو بيكتب لحد ما نتيجة البحث الفعلية من السيرفر توصل
+  // (بعد الـ debounce). البحث الحقيقي ضد كل قاعدة البيانات بيحصل في fetchConvs.
   const filteredConvs = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = searchInput.trim().toLowerCase();
+    if (!q) return convs;
     return convs.filter(c => {
       const name = (c.contact.name ?? c.contact.phone).toLowerCase();
-      if (q && !name.includes(q) && !c.contact.phone.includes(q)) return false;
-      return true;
+      return name.includes(q) || c.contact.phone.includes(q);
     });
-  }, [convs, search]);
+  }, [convs, searchInput]);
 
   const ATTACH_OPTIONS = [
     { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, accept: "image/*", color: "bg-purple-500" },
@@ -734,14 +759,14 @@ export default function ChatPage() {
           <div className="relative">
             <Search className={`absolute top-2.5 w-4 h-4 ${textSub} ${dir === "rtl" ? "right-3" : "left-3"}`} />
             <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder={t[lang].search}
               className={`w-full ${searchBg} rounded-xl py-2 text-sm outline-none
                 ${dir === "rtl" ? "pr-9 pl-4" : "pl-9 pr-4"}`}
             />
-            {search && (
-              <button onClick={() => setSearch("")}
+            {searchInput && (
+              <button onClick={() => setSearchInput("")}
                 className={`absolute top-2.5 ${textSub} hover:text-gray-600 ${dir === "rtl" ? "left-3" : "right-3"}`}>
                 <X className="w-4 h-4" />
               </button>
@@ -755,10 +780,10 @@ export default function ChatPage() {
             <button key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
-                  ? "bg-[#25d366] text-white"
-                  : dark
-                    ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-[#25d366] text-white"
+                : dark
+                  ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}>
               {t[lang][f]}
             </button>
@@ -767,10 +792,10 @@ export default function ChatPage() {
           <button
             onClick={() => setFilter("ai_replied")}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "ai_replied"
-                ? "bg-violet-500 border-violet-500 text-white"
-                : dark
-                  ? "bg-[#2a3942] border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
-                  : "bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100"
+              ? "bg-violet-500 border-violet-500 text-white"
+              : dark
+                ? "bg-[#2a3942] border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
+                : "bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100"
               }`}>
             <Bot className="w-3 h-3" />
             {t[lang].ai_replied}
