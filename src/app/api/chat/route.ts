@@ -41,13 +41,14 @@ async function getConversations(userId: string, sp: URLSearchParams) {
   const search = sp.get("search") ?? "";
   const isArchivedFilter = filter === "archived";
 
-  // Base where: كل المحادثات التي فيها رسائل (inbound أو outbound)
+  // Base where: المحادثات التي فيها رسالة inbound واحدة على الأقل
+  // (اللي ردوا على حملات/أتمتة + اللي بعتوا من أنفسهم)
   const where: any = {
     userId,
     isArchived: isArchivedFilter,
     deletedAt: null,
     messages: {
-      some: { deletedAt: null },
+      some: { direction: MessageDirection.inbound, deletedAt: null },
     },
   };
 
