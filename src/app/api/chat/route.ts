@@ -31,30 +31,29 @@ export async function GET(req: NextRequest) {
 async function getConversations(userId: string, sp: URLSearchParams) {
   const rawFilter = sp.get("filter");
   const filter =
-    rawFilter === "unread"     ||
-    rawFilter === "replied"    ||
-    rawFilter === "today"      ||
-    rawFilter === "archived"   ||
-    rawFilter === "ai_replied"
+    rawFilter === "unread" ||
+      rawFilter === "replied" ||
+      rawFilter === "today" ||
+      rawFilter === "archived" ||
+      rawFilter === "ai_replied"
       ? rawFilter
       : "all";
   const search = sp.get("search") ?? "";
   const isArchivedFilter = filter === "archived";
 
-  // Base where: only contacts that have at least one INBOUND message (replied)
+  // Base where: كل المحادثات التي فيها رسائل (inbound أو outbound)
   const where: any = {
     userId,
     isArchived: isArchivedFilter,
     deletedAt: null,
-    // Filer: only show contacts that have received at least one inbound message
     messages: {
-      some: { direction: MessageDirection.inbound },
+      some: { deletedAt: null },
     },
   };
 
   if (search) {
     where.OR = [
-      { name:  { contains: search, mode: "insensitive" } },
+      { name: { contains: search, mode: "insensitive" } },
       { phone: { contains: search } },
     ];
   }
@@ -71,16 +70,16 @@ async function getConversations(userId: string, sp: URLSearchParams) {
   const contacts = await prisma.contact.findMany({
     where,
     orderBy: [{ isPinned: "desc" }, { lastMessageAt: "desc" }],
-    take: 50,
+    take: 100,
     select: {
       id: true, name: true, phone: true,
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
       voiceAgentEnabled: true, lastAiRepliedAt: true,
-      // آخر رسالة من العميل (inbound) — مش رسالة الأتمتة أو الكامبين
+      // آخر رسالة فعلية (inbound أو outbound) — للـ preview الصح
       messages: {
         take: 1,
-        where: { direction: MessageDirection.inbound },
+        where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
         select: {
           id: true, content: true, type: true,
@@ -100,12 +99,13 @@ async function getConversations(userId: string, sp: URLSearchParams) {
   // Extra filters — post-query
   let result = contacts;
   if (filter === "replied") {
-    const repliedIds = await prisma.message.findMany({
-      where: { userId, direction: MessageDirection.inbound },
+    // المحادثات التي أنت رددت عليها (عندها outbound message بعد inbound)
+    const repliedContactIds = await prisma.message.findMany({
+      where: { userId, direction: MessageDirection.outbound, deletedAt: null },
       select: { contactId: true },
       distinct: ["contactId"],
     });
-    const s = new Set(repliedIds.map((m: { contactId: string }) => m.contactId));
+    const s = new Set(repliedContactIds.map((m: { contactId: string }) => m.contactId));
     result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
   }
   if (filter === "ai_replied") {
@@ -113,10 +113,10 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     const aiContactIds = await prisma.message.findMany({
       where: {
         userId,
-        direction:  MessageDirection.outbound,
+        direction: MessageDirection.outbound,
         senderType: { in: [MessageSenderType.ai, MessageSenderType.bot] },
       },
-      select:   { contactId: true },
+      select: { contactId: true },
       distinct: ["contactId"],
     });
     const s = new Set(aiContactIds.map((m: { contactId: string }) => m.contactId));
@@ -162,11 +162,11 @@ async function getMessages(userId: string, sp: URLSearchParams) {
   await prisma.$transaction([
     prisma.message.updateMany({
       where: { contactId, userId, direction: MessageDirection.inbound, status: { not: MessageStatus.read } },
-      data:  { status: MessageStatus.read, readAt: new Date() },
+      data: { status: MessageStatus.read, readAt: new Date() },
     }),
     prisma.contact.update({
       where: { id: contactId },
-      data:  { unreadCount: 0 },
+      data: { unreadCount: 0 },
     }),
   ]);
 
@@ -217,7 +217,7 @@ export async function PATCH(req: NextRequest) {
   if (action === "archive" || action === "unarchive") {
     await prisma.contact.update({
       where: { id: contactId },
-      data:  { isArchived: action === "archive" },
+      data: { isArchived: action === "archive" },
     });
     return NextResponse.json({ success: true });
   }
@@ -227,11 +227,11 @@ export async function PATCH(req: NextRequest) {
     await prisma.$transaction([
       prisma.message.updateMany({
         where: { contactId, userId },
-        data:  { deletedAt: new Date() },
+        data: { deletedAt: new Date() },
       }),
       prisma.contact.update({
         where: { id: contactId },
-        data:  { deletedAt: new Date() },
+        data: { deletedAt: new Date() },
       }),
     ]);
     return NextResponse.json({ success: true });
@@ -245,7 +245,7 @@ export async function PATCH(req: NextRequest) {
 
     await prisma.contact.update({
       where: { id: contactId },
-      data:  { audienceId },
+      data: { audienceId },
     });
     return NextResponse.json({ success: true });
   }
@@ -256,7 +256,7 @@ export async function PATCH(req: NextRequest) {
 
     // تأكد إن اليوزر عنده ElevenLabs مربوط
     const agentSettings = await prisma.aIAgent.findUnique({
-      where:  { userId },
+      where: { userId },
       select: { elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true },
     });
 
@@ -269,7 +269,7 @@ export async function PATCH(req: NextRequest) {
 
     await prisma.contact.update({
       where: { id: contactId, userId },
-      data:  { voiceAgentEnabled: enable },
+      data: { voiceAgentEnabled: enable },
     });
     return NextResponse.json({ success: true });
   }
@@ -280,7 +280,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "messageId و emoji مطلوبان" }, { status: 400 });
 
     const account = await prisma.whatsAppAccount.findUnique({
-      where:  { userId },
+      where: { userId },
       select: { phoneNumberId: true, accessToken: true },
     });
     if (!account)
@@ -288,7 +288,7 @@ export async function PATCH(req: NextRequest) {
 
     // جيب الـ whatsappId من الرسالة
     const message = await prisma.message.findFirst({
-      where:  { id: messageId, userId },
+      where: { id: messageId, userId },
       select: { whatsappId: true },
     });
     if (!message?.whatsappId)
@@ -296,7 +296,7 @@ export async function PATCH(req: NextRequest) {
 
     // ابعت الـ reaction لـ Meta
     const contactObj = await prisma.contact.findFirst({
-      where:  { id: contactId, userId },
+      where: { id: contactId, userId },
       select: { phone: true },
     });
     if (!contactObj)
@@ -305,16 +305,16 @@ export async function PATCH(req: NextRequest) {
     const metaRes = await fetch(
       `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
       {
-        method:  "POST",
+        method: "POST",
         headers: {
-          Authorization:  `Bearer ${decryptToken(account.accessToken)}`,
+          Authorization: `Bearer ${decryptToken(account.accessToken)}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           messaging_product: "whatsapp",
-          recipient_type:    "individual",
-          to:                contactObj.phone,
-          type:              "reaction",
+          recipient_type: "individual",
+          to: contactObj.phone,
+          type: "reaction",
           reaction: {
             message_id: message.whatsappId,
             emoji,
@@ -351,7 +351,7 @@ async function sendMessage(
   ]);
 
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
-  if (!account)  return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
+  if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
   const isTemplate = type === "template" && !!templateName;
   const msgType: MessageType = isTemplate ? MessageType.template : MessageType.text;
@@ -362,10 +362,10 @@ async function sendMessage(
     const msg = await tx.message.create({
       data: {
         userId, contactId,
-        content:   msgContent,
-        type:      msgType,
+        content: msgContent,
+        type: msgType,
         direction: MessageDirection.outbound,
-        status:    MessageStatus.pending,
+        status: MessageStatus.pending,
       },
     });
 
@@ -374,16 +374,16 @@ async function sendMessage(
       data: {
         userId,
         whatsappAccountId: account.id,
-        phoneNumberId:     account.phoneNumberId,
-        toPhone:           contact.phone,
+        phoneNumberId: account.phoneNumberId,
+        toPhone: contact.phone,
         contactId,
-        messageType:       isTemplate ? "template" : "text",
-        templateName:      isTemplate ? templateName : null,
-        templateLang:      "ar",
-        content:           isTemplate ? null : content!,
-        scheduledAt:       new Date(),
-        status:            "pending",
-        maxAttempts:       3,
+        messageType: isTemplate ? "template" : "text",
+        templateName: isTemplate ? templateName : null,
+        templateLang: "ar",
+        content: isTemplate ? null : content!,
+        scheduledAt: new Date(),
+        status: "pending",
+        maxAttempts: 3,
         existingMessageId: msg.id,
       },
     });
@@ -391,7 +391,7 @@ async function sendMessage(
     // حدّث lastMessageAt فوراً
     await tx.contact.update({
       where: { id: contactId },
-      data:  { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date() },
     });
 
     return { msg, queueId: queueItem.id };
@@ -409,10 +409,10 @@ async function sendMessage(
 // ─── Send media (file upload) ─────────────────────────────────────────────────
 async function sendMedia(userId: string, req: NextRequest) {
   try {
-    const formData  = await req.formData();
-    const file      = formData.get("file") as File | null;
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
     const contactId = formData.get("contactId") as string | null;
-    const fileType  = (formData.get("type") as string | null) ?? "document";
+    const fileType = (formData.get("type") as string | null) ?? "document";
 
     if (!file || !contactId)
       return NextResponse.json({ error: "file و contactId مطلوبان" }, { status: 400 });
@@ -424,7 +424,7 @@ async function sendMedia(userId: string, req: NextRequest) {
     ]);
 
     if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
-    if (!account)  return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
+    if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
     // ── Step 1: ارفع الملف على Meta عشان تجيب media_id ──────────────────────
     const uploadForm = new FormData();
@@ -454,19 +454,19 @@ async function sendMedia(userId: string, req: NextRequest) {
     let cloudinaryUrl: string | null = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const buffer      = Buffer.from(arrayBuffer);
-      const isImage     = file.type.startsWith("image/");
-      const isVideo     = file.type.startsWith("video/");
-      const isAudio     = file.type.startsWith("audio/");
+      const buffer = Buffer.from(arrayBuffer);
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const isAudio = file.type.startsWith("audio/");
       const resource_type: "image" | "video" | "raw" =
         isImage ? "image" : isVideo || isAudio ? "video" : "raw";
       const folder = isImage
         ? "whatsapp-media/images"
         : isAudio
-        ? "whatsapp-media/audio"
-        : isVideo
-        ? "whatsapp-media/video"
-        : "whatsapp-media/documents";
+          ? "whatsapp-media/audio"
+          : isVideo
+            ? "whatsapp-media/video"
+            : "whatsapp-media/documents";
 
       cloudinaryUrl = await uploadToCloudinary(buffer, {
         folder,
@@ -493,12 +493,12 @@ async function sendMedia(userId: string, req: NextRequest) {
       const msg = await tx.message.create({
         data: {
           userId, contactId,
-          content:   file.name,
-          type:      msgType,
+          content: file.name,
+          type: msgType,
           direction: MessageDirection.outbound,
-          status:    MessageStatus.pending,
+          status: MessageStatus.pending,
           // لو الـ Cloudinary upload نجح → حفظ الـ URL، غيره → حفظ الـ Meta ID كـ fallback
-          mediaUrl:  cloudinaryUrl ?? mediaId,
+          mediaUrl: cloudinaryUrl ?? mediaId,
         },
       });
 
@@ -507,21 +507,21 @@ async function sendMedia(userId: string, req: NextRequest) {
         data: {
           userId,
           whatsappAccountId: account.id,
-          phoneNumberId:     account.phoneNumberId,
-          toPhone:           contact.phone,
+          phoneNumberId: account.phoneNumberId,
+          toPhone: contact.phone,
           contactId,
-          messageType:       "media",
-          content:           `${metaType}:${mediaId}`,
-          scheduledAt:       new Date(),
-          status:            "pending",
-          maxAttempts:       3,
+          messageType: "media",
+          content: `${metaType}:${mediaId}`,
+          scheduledAt: new Date(),
+          status: "pending",
+          maxAttempts: 3,
           existingMessageId: msg.id,
         },
       });
 
       await tx.contact.update({
         where: { id: contactId },
-        data:  { lastMessageAt: new Date() },
+        data: { lastMessageAt: new Date() },
       });
 
       return { msg, queueId: queueItem.id };
