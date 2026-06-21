@@ -25,8 +25,9 @@ interface Template {
 }
 
 // ─── WhatsApp Live Preview ────────────────────────────────────────────────────
-function WAPreview({ headerType, headerText, body, footer, category }: {
+function WAPreview({ headerType, headerText, body, footer, category, addSecurityRecommendation, codeExpirationMinutes, otpType }: {
   headerType: string; headerText: string; body: string; footer: string; category: TemplateCategory;
+  addSecurityRecommendation?: boolean; codeExpirationMinutes?: number; otpType?: string;
 }) {
   const { language, t } = useLanguage();
 
@@ -39,7 +40,8 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
     );
   }
 
-  const hasContent = body.trim();
+  const isAuth = category === "AUTHENTICATION";
+  const hasContent = isAuth || body.trim();
 
   return (
     <div style={{
@@ -99,23 +101,52 @@ function WAPreview({ headerType, headerText, body, footer, category }: {
             alignSelf: language === 'ar' ? "flex-start" : "flex-end",
             boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
           }}>
-            {/* Header */}
-            {headerType === "text" && headerText && (
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6, textAlign: language === 'ar' ? 'right' : 'left' }}>
-                {renderText(headerText)}
-              </div>
-            )}
+            {isAuth ? (
+              /* OTP Preview */
+              <>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, direction: language === 'ar' ? "rtl" : "ltr", textAlign: language === 'ar' ? 'right' : 'left', whiteSpace: "pre-wrap" }}>
+                  <span style={{ background: "rgba(32,211,120,0.2)", color: "#20d378", borderRadius: 4, padding: "0 4px", fontSize: 12, fontWeight: 600 }}>{'{{1}}'}</span>
+                  {' '}{t("is your verification code.", "هو كود التحقق الخاص بك.")}
+                </div>
+                {addSecurityRecommendation && (
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, direction: language === 'ar' ? "rtl" : "ltr", textAlign: language === 'ar' ? 'right' : 'left' }}>
+                    {t("For your security, do not share this code.", "لأمانك، لا تشارك هذا الكود.")}
+                  </div>
+                )}
+                {codeExpirationMinutes && codeExpirationMinutes > 0 && (
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 5, textAlign: language === 'ar' ? 'right' : 'left' }}>
+                    {t(`This code expires in ${codeExpirationMinutes} minutes.`, `ينتهي هذا الكود خلال ${codeExpirationMinutes} دقيقة.`)}
+                  </div>
+                )}
+                {/* OTP Button */}
+                <div style={{ marginTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 8, textAlign: "center" }}>
+                  <div style={{ color: "#53bdeb", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    📋 {otpType === "COPY_CODE" ? t("Copy code", "نسخ الكود") : otpType === "ONE_TAP" ? t("Auto-fill", "ملء تلقائي") : t("Copy code", "نسخ الكود")}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Standard Preview */
+              <>
+                {/* Header */}
+                {headerType === "text" && headerText && (
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6, textAlign: language === 'ar' ? 'right' : 'left' }}>
+                    {renderText(headerText)}
+                  </div>
+                )}
 
-            {/* Body */}
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, direction: language === 'ar' ? "rtl" : "ltr", textAlign: language === 'ar' ? 'right' : 'left', whiteSpace: "pre-wrap" }}>
-              {renderText(body || t("Type message content...", "اكتب محتوى الرسالة..."))}
-            </div>
+                {/* Body */}
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, direction: language === 'ar' ? "rtl" : "ltr", textAlign: language === 'ar' ? 'right' : 'left', whiteSpace: "pre-wrap" }}>
+                  {renderText(body || t("Type message content...", "اكتب محتوى الرسالة..."))}
+                </div>
 
-            {/* Footer */}
-            {footer && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 5, textAlign: language === 'ar' ? 'right' : 'left' }}>
-                {footer}
-              </div>
+                {/* Footer */}
+                {footer && (
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 5, textAlign: language === 'ar' ? 'right' : 'left' }}>
+                    {footer}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Meta timestamp */}
@@ -197,11 +228,18 @@ export default function ProjectTemplatesPage() {
     body: "",
     footer: "",
   });
+  // OTP-specific state
+  const [addSecurityRecommendation, setAddSecurityRecommendation] = useState(true);
+  const [codeExpirationMinutes, setCodeExpirationMinutes] = useState(10);
+  const [otpType, setOtpType] = useState<"COPY_CODE" | "ONE_TAP" | "NO_BUTTON">("COPY_CODE");
+
   const [bodyExamples, setBodyExamples] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
+
+  const isAuthCategory = form.category === "AUTHENTICATION";
 
   useEffect(() => {
     setMounted(true);
@@ -248,13 +286,13 @@ export default function ProjectTemplatesPage() {
 
   async function handleSaveDraft() {
     if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
-    if (!form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
+    if (!isAuthCategory && !form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
     setSaving(true); setFormError("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: false }),
+        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: false, addSecurityRecommendation, codeExpirationMinutes, otpType }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -267,8 +305,8 @@ export default function ProjectTemplatesPage() {
 
   async function handleSubmitToMeta() {
     if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
-    if (!form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
-    if (varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
+    if (!isAuthCategory && !form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
+    if (!isAuthCategory && varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
       setFormError(t(`Add ${varCount} sample values for the variables — Meta requires this`, `أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`)); return;
     }
     setSubmitting(true); setFormError(""); setFormSuccess("");
@@ -276,7 +314,7 @@ export default function ProjectTemplatesPage() {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: true }),
+        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: true, addSecurityRecommendation, codeExpirationMinutes, otpType }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -311,6 +349,9 @@ export default function ProjectTemplatesPage() {
 
   function resetForm() {
     setForm({ name: "", language: "ar", category: "AUTHENTICATION", headerType: "none", headerText: "", body: "", footer: "" });
+    setAddSecurityRecommendation(true);
+    setCodeExpirationMinutes(10);
+    setOtpType("COPY_CODE");
     setBodyExamples([]);
     setFormError(""); setFormSuccess("");
   }
@@ -431,6 +472,26 @@ export default function ProjectTemplatesPage() {
         .preview-label { font-size:12px; font-weight:600; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:14px; text-align:center; }
 
         .divider { height:1px; background:rgba(255,255,255,0.06); margin:20px 0; }
+
+        /* OTP Toggle */
+        .otp-toggle { display:flex; align-items:center; gap:12px; padding:14px 16px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; cursor:pointer; transition:all .2s; }
+        .otp-toggle:hover { border-color:rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); }
+        .otp-toggle.active { border-color:rgba(32,211,120,0.3); background:rgba(32,211,120,0.05); }
+        .otp-switch { width:42px; height:24px; border-radius:12px; background:rgba(255,255,255,0.12); position:relative; transition:background .25s; flex-shrink:0; }
+        .otp-switch.on { background:#20d378; }
+        .otp-switch::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .25s; }
+        .otp-switch.on::after { transform:translateX(18px); }
+        .otp-info { flex:1; }
+        .otp-info-title { font-size:14px; font-weight:500; color:rgba(255,255,255,0.85); }
+        .otp-info-desc { font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px; }
+        .otp-section { background:rgba(32,211,120,0.03); border:1px solid rgba(32,211,120,0.1); border-radius:16px; padding:20px; margin-top:16px; }
+        .otp-section-title { font-size:13px; font-weight:600; color:#20d378; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+        .otp-btn-group { display:flex; gap:8px; flex-wrap:wrap; }
+        .otp-btn-opt { padding:10px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); cursor:pointer; font-size:13px; font-family:inherit; color:rgba(255,255,255,0.55); transition:all .2s; display:flex; align-items:center; gap:8px; }
+        .otp-btn-opt:hover { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.8); }
+        .otp-btn-opt.active { background:rgba(32,211,120,0.1); border-color:rgba(32,211,120,0.35); color:#20d378; }
+        .minutes-input { width:80px; padding:9px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:10px; color:#fff; font-size:14px; font-family:'Fira Code',monospace; outline:none; text-align:center; transition:border-color .2s; }
+        .minutes-input:focus { border-color:rgba(32,211,120,0.4); box-shadow:0 0 0 3px rgba(32,211,120,0.07); }
 
         @media(max-width:900px) {
           .create-layout { grid-template-columns:1fr; }
@@ -605,64 +666,151 @@ export default function ProjectTemplatesPage() {
 
                   <div className="divider" />
 
-                  {/* Header */}
-                  <div className="field">
-                    <label className="field-label">{t("Header (Optional)", "الهيدر (اختياري)")}</label>
-                    <div className="htype-row">
-                      {["none","text"].map(tType => (
-                        <button key={tType} className={`htype-btn ${form.headerType === tType ? "active" : ""}`}
-                          onClick={() => setField("headerType", tType)}>
-                          {tType === "none" ? t("No Header", "بدون هيدر") : t("Text", "نص")}
-                        </button>
-                      ))}
-                    </div>
-                    {form.headerType === "text" && (
-                      <input className="f-input" style={{ marginTop:10 }} placeholder={t("Message header text...", "عنوان الرسالة...")}
-                        value={form.headerText} onChange={e => setField("headerText", e.target.value)} />
-                    )}
-                  </div>
-
-                  {/* Body */}
-                  <div className="field">
-                    <label className="field-label">
-                      {t("Body Content *", "المحتوى *")}&nbsp;
-                      <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400, fontSize:12 }}>
-                        {t("Use {{1}} {{2}} for variables", "استخدم {{1}} {{2}} للمتغيرات")}
-                      </span>
-                    </label>
-                    <textarea className="f-textarea" rows={5}
-                      placeholder={t("Your verification code is: {{1}}\nValid for 10 minutes.\nDo not share this code with anyone.", "كود التحقق الخاص بك هو: {{1}}\nصالح لمدة 10 دقائق.\nلا تشارك هذا الكود مع أي أحد.")}
-                      value={form.body} onChange={e => setField("body", e.target.value)} style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }} />
-                    <div className="field-hint">
-                      {varCount > 0
-                        ? t(`Detected ${varCount} variables — add sample values below`, `تم اكتشاف ${varCount} متغير — أضف قيم تجريبية أسفل`)
-                        : t("No variables detected yet", "لم يتم اكتشاف متغيرات بعد")}
-                    </div>
-
-                    {/* Variable examples */}
-                    {varCount > 0 && (
-                      <div style={{ marginTop:12, background:"rgba(32,211,120,0.04)", border:"1px solid rgba(32,211,120,0.12)", borderRadius:12, padding:"12px 14px" }}>
-                        <div style={{ fontSize:12, color:"#20d378", fontWeight:600, marginBottom:10 }}>
-                          {t("Sample values — Meta requires these to review the template", "قيم تجريبية — Meta بتطلبها عشان تراجع القالب")}
+                  {isAuthCategory ? (
+                    /* ── OTP / AUTHENTICATION Fields ── */
+                    <>
+                      <div className="otp-section">
+                        <div className="otp-section-title">
+                          🔐 {t("OTP Template Configuration", "إعدادات قالب OTP")}
                         </div>
-                        {Array.from({ length: varCount }, (_, i) => (
-                          <div key={i} className="var-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-                            <span className="var-tag">{`{{${i+1}}}`}</span>
-                            <input className="var-input" placeholder={t("Example:", "مثال:") + ` ${i === 0 ? "123456" : i === 1 ? "10" : "val_" + (i+1)}`}
-                              value={bodyExamples[i] || ""}
-                              onChange={e => setExample(i, e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Footer */}
-                  <div className="field">
-                    <label className="field-label">{t("Footer (Optional)", "الفوتر (اختياري)")}</label>
-                    <input className="f-input" placeholder={t("Do not share this code with anyone", "لا تشارك هذا الكود مع أي شخص")}
-                      value={form.footer} onChange={e => setField("footer", e.target.value)} />
-                  </div>
+                        {/* Security Recommendation Toggle */}
+                        <div
+                          className={`otp-toggle ${addSecurityRecommendation ? "active" : ""}`}
+                          onClick={() => setAddSecurityRecommendation(!addSecurityRecommendation)}
+                          style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}
+                        >
+                          <div className={`otp-switch ${addSecurityRecommendation ? "on" : ""}`} />
+                          <div className="otp-info" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                            <div className="otp-info-title">
+                              {t("Add security recommendation", "إضافة توصية أمنية")}
+                            </div>
+                            <div className="otp-info-desc">
+                              {t("Adds 'For your security, do not share this code' message", "يضيف رسالة 'لأمانك، لا تشارك هذا الكود'")}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expiration Minutes */}
+                        <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
+                          <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 8, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                            ⏱ {t("Code expiration (minutes)", "مدة صلاحية الكود (دقائق)")}
+                          </label>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                            <input
+                              className="minutes-input"
+                              type="number"
+                              min={1}
+                              max={90}
+                              value={codeExpirationMinutes}
+                              onChange={e => setCodeExpirationMinutes(Math.max(1, Math.min(90, parseInt(e.target.value) || 10)))}
+                            />
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                              {t("minutes", "دقيقة")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="divider" />
+
+                        {/* OTP Button Type */}
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 8, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                            🔘 {t("OTP Button Type", "نوع زر OTP")}
+                          </label>
+                          <div className="otp-btn-group" style={{ marginTop: 8 }}>
+                            {[
+                              { value: "COPY_CODE", icon: "📋", label: t("Copy Code", "نسخ الكود"), desc: t("User copies the code manually", "المستخدم ينسخ الكود يدوياً") },
+                              { value: "ONE_TAP", icon: "⚡", label: t("One Tap (Auto-fill)", "نقرة واحدة (ملء تلقائي)"), desc: t("Auto-fills the code in your app", "يملأ الكود تلقائياً في التطبيق") },
+                              { value: "NO_BUTTON", icon: "🚫", label: t("No Button", "بدون زر"), desc: t("No button shown", "لا يظهر زر") },
+                            ].map(opt => (
+                              <button
+                                key={opt.value}
+                                className={`otp-btn-opt ${otpType === opt.value ? "active" : ""}`}
+                                onClick={() => setOtpType(opt.value as any)}
+                              >
+                                <span>{opt.icon}</span>
+                                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                                  <div style={{ fontWeight: 500 }}>{opt.label}</div>
+                                  <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>{opt.desc}</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Meta info for AUTHENTICATION */}
+                      <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 10, fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, textAlign: language === 'ar' ? 'right' : 'left' }}>
+                        💡 {t(
+                          "AUTHENTICATION templates use Meta's OTP format — body, header, and footer are auto-generated by Meta based on these settings.",
+                          "قوالب AUTHENTICATION تستخدم صيغة OTP الخاصة بـ Meta — المحتوى والعنوان والفوتر يتم إنشاؤها تلقائياً بواسطة Meta بناءً على هذه الإعدادات."
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* ── Standard Fields (UTILITY / MARKETING) ── */
+                    <>
+                      {/* Header */}
+                      <div className="field">
+                        <label className="field-label">{t("Header (Optional)", "الهيدر (اختياري)")}</label>
+                        <div className="htype-row">
+                          {["none","text"].map(tType => (
+                            <button key={tType} className={`htype-btn ${form.headerType === tType ? "active" : ""}`}
+                              onClick={() => setField("headerType", tType)}>
+                              {tType === "none" ? t("No Header", "بدون هيدر") : t("Text", "نص")}
+                            </button>
+                          ))}
+                        </div>
+                        {form.headerType === "text" && (
+                          <input className="f-input" style={{ marginTop:10 }} placeholder={t("Message header text...", "عنوان الرسالة...")}
+                            value={form.headerText} onChange={e => setField("headerText", e.target.value)} />
+                        )}
+                      </div>
+
+                      {/* Body */}
+                      <div className="field">
+                        <label className="field-label">
+                          {t("Body Content *", "المحتوى *")}&nbsp;
+                          <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400, fontSize:12 }}>
+                            {t("Use {{1}} {{2}} for variables", "استخدم {{1}} {{2}} للمتغيرات")}
+                          </span>
+                        </label>
+                        <textarea className="f-textarea" rows={5}
+                          placeholder={t("Your verification code is: {{1}}\nValid for 10 minutes.\nDo not share this code with anyone.", "كود التحقق الخاص بك هو: {{1}}\nصالح لمدة 10 دقائق.\nلا تشارك هذا الكود مع أي أحد.")}
+                          value={form.body} onChange={e => setField("body", e.target.value)} style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }} />
+                        <div className="field-hint">
+                          {varCount > 0
+                            ? t(`Detected ${varCount} variables — add sample values below`, `تم اكتشاف ${varCount} متغير — أضف قيم تجريبية أسفل`)
+                            : t("No variables detected yet", "لم يتم اكتشاف متغيرات بعد")}
+                        </div>
+
+                        {/* Variable examples */}
+                        {varCount > 0 && (
+                          <div style={{ marginTop:12, background:"rgba(32,211,120,0.04)", border:"1px solid rgba(32,211,120,0.12)", borderRadius:12, padding:"12px 14px" }}>
+                            <div style={{ fontSize:12, color:"#20d378", fontWeight:600, marginBottom:10 }}>
+                              {t("Sample values — Meta requires these to review the template", "قيم تجريبية — Meta بتطلبها عشان تراجع القالب")}
+                            </div>
+                            {Array.from({ length: varCount }, (_, i) => (
+                              <div key={i} className="var-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                                <span className="var-tag">{`{{${i+1}}}`}</span>
+                                <input className="var-input" placeholder={t("Example:", "مثال:") + ` ${i === 0 ? "123456" : i === 1 ? "10" : "val_" + (i+1)}`}
+                                  value={bodyExamples[i] || ""}
+                                  onChange={e => setExample(i, e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="field">
+                        <label className="field-label">{t("Footer (Optional)", "الفوتر (اختياري)")}</label>
+                        <input className="f-input" placeholder={t("Do not share this code with anyone", "لا تشارك هذا الكود مع أي شخص")}
+                          value={form.footer} onChange={e => setField("footer", e.target.value)} />
+                      </div>
+                    </>
+                  )}
 
                   {formError  && <div className="form-error">{formError}</div>}
                   {formSuccess && <div className="form-success">{formSuccess}</div>}
@@ -691,6 +839,9 @@ export default function ProjectTemplatesPage() {
                     body={form.body}
                     footer={form.footer}
                     category={form.category}
+                    addSecurityRecommendation={addSecurityRecommendation}
+                    codeExpirationMinutes={codeExpirationMinutes}
+                    otpType={otpType}
                   />
 
                   {/* Meta submit flow info */}

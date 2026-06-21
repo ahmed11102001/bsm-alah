@@ -51,26 +51,33 @@ export async function POST(
     bodyExample,
     footer,
     submitToMeta = false,
+    // OTP-specific fields for AUTHENTICATION
+    addSecurityRecommendation = true,
+    codeExpirationMinutes = 10,
+    otpType = "COPY_CODE",
   } = await req.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "اسم القالب مطلوب" }, { status: 400 });
-  if (!body?.trim()) return NextResponse.json({ error: "محتوى القالب مطلوب" }, { status: 400 });
+  // Body is only required for non-AUTHENTICATION categories
+  if (category !== "AUTHENTICATION" && !body?.trim()) return NextResponse.json({ error: "محتوى القالب مطلوب" }, { status: 400 });
 
   const metaName = name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
   if (metaName.length < 3)
     return NextResponse.json({ error: "اسم القالب قصير جداً أو يحتوي على أحرف غير مدعومة" }, { status: 400 });
 
+  // For AUTHENTICATION templates, store OTP config in body/footer fields
+  const isAuth = category === "AUTHENTICATION";
   const template = await prisma.developerOtpTemplate.create({
     data: {
       projectId: id,
       name: metaName,
       language,
       category,
-      headerType: headerType || "none",
-      headerText: headerType === "text" ? headerText?.trim() : null,
-      body: body.trim(),
-      bodyExample: bodyExample ? JSON.stringify(bodyExample) : null,
-      footer: footer?.trim() || null,
+      headerType: isAuth ? "none" : (headerType || "none"),
+      headerText: isAuth ? null : (headerType === "text" ? headerText?.trim() : null),
+      body: isAuth ? JSON.stringify({ addSecurityRecommendation, codeExpirationMinutes, otpType }) : body.trim(),
+      bodyExample: isAuth ? null : (bodyExample ? JSON.stringify(bodyExample) : null),
+      footer: isAuth ? null : (footer?.trim() || null),
       status: "LOCAL_DRAFT",
     },
   });
@@ -93,7 +100,7 @@ export async function POST(
       const metaResult = await submitTemplateToMeta({
         accessToken: plainAccessToken,
         wabaId: connection.wabaId,
-        template: { ...template, bodyExample: bodyExample || [] },
+        template: { ...template, bodyExample: bodyExample || [], addSecurityRecommendation, codeExpirationMinutes, otpType },
       });
 
       const updated = await prisma.developerOtpTemplate.update({
@@ -173,27 +180,63 @@ async function submitTemplateToMeta({
   wabaId: string;
   template: any;
 }) {
-  const components: any[] = [];
+  const isAuth = template.category === "AUTHENTICATION";
+  let components: any[];
 
-  if (template.headerType === "text" && template.headerText) {
-    components.push({ type: "HEADER", format: "TEXT", text: template.headerText });
-  }
+  if (isAuth) {
+    // ── AUTHENTICATION (OTP) template — Meta requires this exact structure ──
+    const addSecurity = template.addSecurityRecommendation ?? true;
+    const expirationMinutes = template.codeExpirationMinutes ?? 10;
+    const otpButtonType = template.otpType ?? "COPY_CODE";
 
-  const varMatches = template.body.match(/\{\{(\d+)\}\}/g) ?? [];
-  const varCount = varMatches.length;
-  const exampleVars: string[] = Array.isArray(template.bodyExample) ? template.bodyExample : [];
+    const bodyComp: any = { type: "BODY" };
+    if (addSecurity) {
+      bodyComp.add_security_recommendation = true;
+    }
+    components = [bodyComp];
 
-  const bodyComp: any = { type: "BODY", text: template.body };
-  if (varCount > 0) {
-    const filled = Array.from({ length: varCount }, (_, i) =>
-      exampleVars[i]?.trim() || `قيمة_${i + 1}`
-    );
-    bodyComp.example = { body_text: [filled] };
-  }
-  components.push(bodyComp);
+    // Add FOOTER with code_expiration_minutes if > 0
+    if (expirationMinutes && expirationMinutes > 0) {
+      components.push({
+        type: "FOOTER",
+        code_expiration_minutes: expirationMinutes,
+      });
+    }
 
-  if (template.footer) {
-    components.push({ type: "FOOTER", text: template.footer });
+    // Add BUTTONS with OTP type
+    components.push({
+      type: "BUTTONS",
+      buttons: [
+        {
+          type: "OTP",
+          otp_type: otpButtonType,
+        },
+      ],
+    });
+  } else {
+    // ── UTILITY / MARKETING — standard components ──
+    components = [];
+
+    if (template.headerType === "text" && template.headerText) {
+      components.push({ type: "HEADER", format: "TEXT", text: template.headerText });
+    }
+
+    const varMatches = template.body.match(/\{\{(\d+)\}\}/g) ?? [];
+    const varCount = varMatches.length;
+    const exampleVars: string[] = Array.isArray(template.bodyExample) ? template.bodyExample : [];
+
+    const bodyComp: any = { type: "BODY", text: template.body };
+    if (varCount > 0) {
+      const filled = Array.from({ length: varCount }, (_, i) =>
+        exampleVars[i]?.trim() || `قيمة_${i + 1}`
+      );
+      bodyComp.example = { body_text: [filled] };
+    }
+    components.push(bodyComp);
+
+    if (template.footer) {
+      components.push({ type: "FOOTER", text: template.footer });
+    }
   }
 
   const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates`;
