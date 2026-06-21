@@ -195,14 +195,6 @@ async function submitTemplateToMeta({
     }
     components = [bodyComp];
 
-    // Add FOOTER with code_expiration_minutes if > 0
-    if (expirationMinutes && expirationMinutes > 0) {
-      components.push({
-        type: "FOOTER",
-        code_expiration_minutes: expirationMinutes,
-      });
-    }
-
     // Add BUTTONS with OTP type
     if (otpButtonType !== "NO_BUTTON") {
       components.push({
