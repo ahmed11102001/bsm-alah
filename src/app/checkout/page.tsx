@@ -38,8 +38,8 @@ function CheckoutContent() {
 
   // ── استنتج نوع الـ checkout من الـ URL ──
   const rawPackageId = params.get("packageId");
-  const planSlug     = params.get("plan") as PlanSlug | null;
-  const cycleKey     = (params.get("cycle") ?? "monthly") as BillingCycle;
+  const planSlug = params.get("plan") as PlanSlug | null;
+  const cycleKey = (params.get("cycle") ?? "monthly") as BillingCycle;
 
   // ── MCP Addon purchase mode (id يبدأ بـ mcp_addon_) ──
   const mcpAddonPkg = rawPackageId?.startsWith("mcp_addon_")
@@ -52,45 +52,45 @@ function CheckoutContent() {
     : null;
 
   // ── Plan purchase mode ──
-  const plan  = planSlug && SUBSCRIPTION_PLANS[planSlug]
+  const plan = planSlug && SUBSCRIPTION_PLANS[planSlug]
     ? SUBSCRIPTION_PLANS[planSlug]
     : SUBSCRIPTION_PLANS.pro;
   const cycle = BILLING_CYCLES[cycleKey] ?? BILLING_CYCLES.monthly;
-  const Icon  = mcpAddonPkg ? Bot : tokenPkg ? Zap : plan.icon;
+  const Icon = mcpAddonPkg ? Bot : tokenPkg ? Zap : plan.icon;
 
   const pricePerMonth = computePrice(plan.monthly, cycleKey);
-  const totalDue      = mcpAddonPkg
+  const totalDue = mcpAddonPkg
     ? mcpAddonPkg.priceEGP
     : tokenPkg
-    ? tokenPkg.priceEGP
-    : pricePerMonth * cycle.months;
-  const savings       = !tokenPkg && !mcpAddonPkg && cycle.discount > 0
+      ? tokenPkg.priceEGP
+      : pricePerMonth * cycle.months;
+  const savings = !tokenPkg && !mcpAddonPkg && cycle.discount > 0
     ? Math.round(plan.monthly * cycle.discount * cycle.months)
     : 0;
 
   // ── UI state ──
-  const [coupon,          setCoupon]          = useState("");
-  const [couponApplied,   setCouponApplied]   = useState(false);
-  const [couponError,     setCouponError]     = useState("");
-  const [validatingCoupon,setValidatingCoupon]= useState(false);
-  const [couponData,      setCouponData]      = useState<{
+  const [coupon, setCoupon] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [couponData, setCouponData] = useState<{
     code: string; discountType: string; discountValue: number;
   } | null>(null);
-  const [showFeatures,  setShowFeatures]  = useState(false);
-  const [paying,        setPaying]        = useState(false);
-  const [success,       setSuccess]       = useState(false);
-  const [cardFocused,   setCardFocused]   = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [cardFocused, setCardFocused] = useState(false);
 
   useEffect(() => {
     track("InitiateCheckout", {
       content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
-      content_ids:  [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
+      content_ids: [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
       content_type: "product",
-      value:        totalDue,
-      currency:     "EGP",
-      num_items:    1,
+      value: totalDue,
+      currency: "EGP",
+      num_items: 1,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCardFocus = () => {
@@ -98,8 +98,8 @@ function CheckoutContent() {
     setCardFocused(true);
     track("AddPaymentInfo", {
       content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
-      value:        finalTotal,
-      currency:     "EGP",
+      value: finalTotal,
+      currency: "EGP",
     });
   };
 
@@ -114,10 +114,10 @@ function CheckoutContent() {
     const planSlug: string | undefined =
       !tokenPkg && !mcpAddonPkg ? plan.slug : undefined;
 
-    const res  = await fetch("/api/coupon/validate", {
-      method:  "POST",
+    const res = await fetch("/api/coupon/validate", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ code: trimmed, planSlug }),
+      body: JSON.stringify({ code: trimmed, planSlug }),
     });
     const data = await res.json();
     setValidatingCoupon(false);
@@ -135,60 +135,67 @@ function CheckoutContent() {
       ? Math.round(totalDue * couponData.discountValue / 100)
       : Math.min(couponData.discountValue, totalDue)
     : 0;
-  const finalTotal     = totalDue - couponDiscount;
+  const finalTotal = totalDue - couponDiscount;
+
+  const [payError, setPayError] = useState("");
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaying(true);
+    setPayError("");
+
+    // ── تحديد نوع ومعطيات العملية ──────────────────────────────────────────
+    let body: Record<string, string>;
 
     if (mcpAddonPkg) {
-      // ── شراء أوامر Claude غير محدودة ──
-      const res = await fetch("/api/mcp-addon/purchase", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ packageId: mcpAddonPkg.id }),
-      });
-      if (!res.ok) {
-        setPaying(false);
-        return;
-      }
+      body = { type: "mcp_addon", packageId: mcpAddonPkg.id };
     } else if (tokenPkg) {
-      // ── شراء توكن إضافية ──
-      const res = await fetch("/api/ai-credits/purchase", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ packageId: tokenPkg.id }),
-      });
-      if (!res.ok) {
-        setPaying(false);
-        return;
-      }
+      body = { type: "ai_credits", packageId: tokenPkg.id };
+    } else {
+      body = { type: "subscription", planSlug: plan.slug, cycle: cycleKey };
     }
 
-    // TODO: استبدل بـ PayMob iframe/API call هنا
-    await new Promise(r => setTimeout(r, 1800));
-
-    // ── سجّل استخدام الكوبون ──
+    // لو فيه كوبون أضفه للـ body
     if (couponApplied && couponData) {
-      await fetch("/api/coupon/use", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ code: couponData.code }),
-      }).catch(() => {}); // silent — لا يوقف الـ UX
+      body.couponCode = couponData.code;
     }
 
-    track("Purchase", {
-      content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
-      content_ids:  [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
-      content_type: "product",
-      value:        finalTotal,
-      currency:     "EGP",
-      num_items:    1,
+    // ── طلب إنشاء الفاتورة على فواتيرك ──────────────────────────────────────
+    const res = await fetch("/api/payment/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
-    setPaying(false);
-    setSuccess(true);
-    setTimeout(() => router.push("/dashboard"), 2500);
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.checkoutUrl) {
+      setPayError(data.error ?? "حدث خطأ، حاول مرة أخرى");
+      setPaying(false);
+      return;
+    }
+
+    // ── سجّل الكوبون قبل التوجيه ─────────────────────────────────────────────
+    if (couponApplied && couponData) {
+      await fetch("/api/coupon/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponData.code }),
+      }).catch(() => { });
+    }
+
+    // ── Pixel tracking ────────────────────────────────────────────────────────
+    track("Purchase", {
+      content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
+      content_ids: [mcpAddonPkg ? mcpAddonPkg.id : tokenPkg ? tokenPkg.id : plan.slug],
+      content_type: "product",
+      value: finalTotal,
+      currency: "EGP",
+      num_items: 1,
+    });
+
+    // ── توجيه اليوزر لصفحة الدفع على فواتيرك ────────────────────────────────
+    window.location.href = data.checkoutUrl;
   };
 
   // ── Success screen ──
@@ -204,8 +211,8 @@ function CheckoutContent() {
             {mcpAddonPkg
               ? `تمت إضافة أوامر Claude غير محدودة لحسابك لمدة شهر`
               : tokenPkg
-              ? `تمت إضافة ${tokenPkg.tokens.toLocaleString("ar-EG")} توكن لحسابك`
-              : `جاري تفعيل باقة ${plan.name}…`}
+                ? `تمت إضافة ${tokenPkg.tokens.toLocaleString("ar-EG")} توكن لحسابك`
+                : `جاري تفعيل باقة ${plan.name}…`}
           </p>
         </div>
       </div>
@@ -248,8 +255,8 @@ function CheckoutContent() {
                   {mcpAddonPkg
                     ? mcpAddonPkg.description
                     : tokenPkg
-                    ? `${tokenPkg.tokens.toLocaleString("ar-EG")} توكن — ${tokenPkg.description}`
-                    : plan.tagline}
+                      ? `${tokenPkg.tokens.toLocaleString("ar-EG")} توكن — ${tokenPkg.description}`
+                      : plan.tagline}
                 </p>
               </div>
             </div>
@@ -373,8 +380,8 @@ function CheckoutContent() {
           {/* Trust signals */}
           <div className="flex flex-col gap-2">
             {[
-              { icon: Shield,   text: "دفع آمن ومشفر بـ SSL 256-bit" },
-              { icon: Check,    text: "إلغاء الاشتراك في أي وقت" },
+              { icon: Shield, text: "دفع آمن ومشفر بـ SSL 256-bit" },
+              { icon: Check, text: "إلغاء الاشتراك في أي وقت" },
               { icon: Sparkles, text: "تفعيل فوري بعد الدفع" },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-xs text-gray-400">
@@ -392,38 +399,40 @@ function CheckoutContent() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 mb-4">بيانات الحساب</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CardField label="الاسم الكامل"       placeholder="أحمد محمد" />
-              <CardField label="البريد الإلكتروني"  placeholder="ahmed@example.com" type="email" />
+              <CardField label="الاسم الكامل" placeholder="أحمد محمد" />
+              <CardField label="البريد الإلكتروني" placeholder="ahmed@example.com" type="email" />
             </div>
           </div>
 
-          {/* Card info */}
+          {/* Payment info — Fawaterak redirect */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5" /> بيانات البطاقة
+                <CreditCard className="w-3.5 h-3.5" /> طريقة الدفع
               </p>
               <span className="text-[10px] font-bold text-gray-400 border border-gray-200 rounded-md px-2 py-0.5">
-                Powered by PayMob
+                Powered by Fawaterak
               </span>
             </div>
-            {/* TODO: استبدل بـ PayMob iFrame بعد الـ API Keys */}
-            <div className="space-y-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">رقم البطاقة</label>
-                <input
-                  type="text" placeholder="•••• •••• •••• ••••" maxLength={19}
-                  onFocus={handleCardFocus}
-                  className="h-10 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25D366]/40 focus:border-[#25D366] transition-all placeholder-gray-400"
-                />
+            <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-sm text-gray-600 space-y-3">
+              <p className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#25D366] flex-shrink-0" />
+                ستُحوَّل إلى صفحة الدفع الآمنة على منصة فواتيرك لإتمام الدفع.
+              </p>
+              <div className="flex flex-wrap gap-2 text-[11px] text-gray-400">
+                {["Visa", "MasterCard", "Meeza", "Fawry", "محافظ إلكترونية"].map(m => (
+                  <span key={m} className="bg-white border border-gray-200 rounded-md px-2 py-0.5 font-medium">{m}</span>
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <CardField label="تاريخ الانتهاء" placeholder="MM / YY" maxLength={5} />
-                <CardField label="CVV"             placeholder="•••"     type="password" maxLength={4} />
-              </div>
-              <CardField label="الاسم على البطاقة" placeholder="AHMED MOHAMED" />
             </div>
           </div>
+
+          {/* Error message */}
+          {payError && (
+            <div className="rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3">
+              {payError}
+            </div>
+          )}
 
           {/* Submit */}
           <button
@@ -434,7 +443,7 @@ function CheckoutContent() {
             {paying ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> جاري المعالجة…</>
             ) : (
-              <><Lock className="w-4 h-4" /> ادفع {finalTotal.toLocaleString("ar-EG")} ج الآن</>
+              <><Lock className="w-4 h-4" /> انتقل للدفع — {finalTotal.toLocaleString("ar-EG")} ج</>
             )}
           </button>
 
