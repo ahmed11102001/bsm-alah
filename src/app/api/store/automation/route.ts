@@ -69,8 +69,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const dedicatedTemplateNames = Object.values(DEDICATED_TEMPLATE_NAMES);
   const dedicatedTemplates = await prisma.template.findMany({
     where: {
-      userId: ownerId,
-      name: { in: dedicatedTemplateNames },
+      AND: [
+        { userId: ownerId },
+        {
+          OR: dedicatedTemplateNames.map(n => ({
+            name: { equals: n, mode: 'insensitive' as const },
+          })),
+        },
+      ],
     },
     select: { id: true, name: true, status: true },
   });
@@ -79,16 +85,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // If there are multiple templates with the same name, prioritize the APPROVED one
   const dedicatedMap = new Map<string, { id: string; name: string; status: string }>();
   for (const t of dedicatedTemplates) {
-    const key = t.name.toLowerCase();
-    const existing = dedicatedMap.get(key);
-    if (!existing || t.status.toUpperCase() === "APPROVED") {
+    const key = t.name.toLowerCase().trim();
+    const prev = dedicatedMap.get(key);
+    if (!prev || t.status.toUpperCase() === "APPROVED") {
       dedicatedMap.set(key, t);
     }
   }
 
+  console.log(`[StoreAuto GET] ownerId=${ownerId}, dedicatedTemplates found:`, dedicatedTemplates.map(t => `${t.name} (${t.status})`));
+
   // ─── للـ promo: كل القوالب المعتمدة ─────────────────────────────────────
   const promoTemplates = await prisma.template.findMany({
-    where: { userId: ownerId, status: "APPROVED" },
+    where: {
+      userId: ownerId,
+      status: { equals: "APPROVED", mode: 'insensitive' as const },
+    },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
@@ -174,7 +185,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (isDedicated) {
     const expectedName = DEDICATED_TEMPLATE_NAMES[autoType];
     const dedicatedTemplates = await prisma.template.findMany({
-      where: { userId: ownerId, name: expectedName },
+      where: {
+        userId: ownerId,
+        name: { equals: expectedName, mode: 'insensitive' as const },
+      },
       select: { id: true, status: true, name: true },
     });
 
