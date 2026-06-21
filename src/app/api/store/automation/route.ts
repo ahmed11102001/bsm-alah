@@ -76,9 +76,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   });
 
   // Map: templateName → template object
-  const dedicatedMap = new Map<string, { id: string; name: string; status: string }>(
-    dedicatedTemplates.map((t: { id: string; name: string; status: string }) => [t.name.toLowerCase(), t])
-  );
+  // If there are multiple templates with the same name, prioritize the APPROVED one
+  const dedicatedMap = new Map<string, { id: string; name: string; status: string }>();
+  for (const t of dedicatedTemplates) {
+    const key = t.name.toLowerCase();
+    const existing = dedicatedMap.get(key);
+    if (!existing || t.status.toUpperCase() === "APPROVED") {
+      dedicatedMap.set(key, t);
+    }
+  }
 
   // ─── للـ promo: كل القوالب المعتمدة ─────────────────────────────────────
   const promoTemplates = await prisma.template.findMany({
@@ -167,10 +173,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (isDedicated) {
     const expectedName = DEDICATED_TEMPLATE_NAMES[autoType];
-    const dedicatedTemplate = await prisma.template.findFirst({
+    const dedicatedTemplates = await prisma.template.findMany({
       where: { userId: ownerId, name: expectedName },
       select: { id: true, status: true, name: true },
     });
+
+    let dedicatedTemplate = dedicatedTemplates.find(t => t.status?.toUpperCase() === "APPROVED");
+    if (!dedicatedTemplate && dedicatedTemplates.length > 0) {
+      dedicatedTemplate = dedicatedTemplates[0]; // fallback if none is approved
+    }
 
     if (!dedicatedTemplate) {
       return NextResponse.json(
