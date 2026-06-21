@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import LandingPageSkeleton from "@/components/LandingPageSkeleton";
 
 import Navbar       from "@/sections/Navbar";
@@ -19,11 +19,23 @@ import AIAssistantWidget   from "@/components/AIAssistantWidget";
 import RevealSection       from "@/components/RevealSection";
 import type { Lang } from "@/lib/translations";
 
-export default function Home() {
+function HomeContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("ar");
   const { data: session, status } = useSession();
   const router = useRouter();
+  const params = useSearchParams();
+
+  // ── لو جاي من /checkout بدون session (عن طريق الـ middleware) ──────────────
+  // بيوصل هنا بـ ?openLogin=1&callbackUrl=/checkout?plan=... فنفتح اللوجين
+  // تلقائيًا ونحافظ على نفس الباقة المختارة عشان نرجّعه ليها بعد الدخول.
+  const callbackUrl = params.get("callbackUrl");
+  const shouldOpenLogin = params.get("openLogin") === "1";
+
+  useEffect(() => {
+    if (shouldOpenLogin) setIsLoginModalOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldOpenLogin]);
 
   // تغيير dir الصفحة كلها عند تغيير اللغة
   useEffect(() => {
@@ -32,7 +44,8 @@ export default function Home() {
   }, [lang]);
 
   useEffect(() => {
-    if (session) router.push("/dashboard");
+    if (session) router.push(callbackUrl || "/dashboard");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, router]);
 
   if (status === "loading") return <LandingPageSkeleton />;
@@ -58,10 +71,19 @@ export default function Home() {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
+        callbackUrl={callbackUrl ?? undefined}
       />
 
       {/* ── AI Assistant Widget ── */}
       <AIAssistantWidget lang={lang} />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<LandingPageSkeleton />}>
+      <HomeContent />
+    </Suspense>
   );
 }

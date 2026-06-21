@@ -21,6 +21,9 @@ type View = "login" | "register" | "join" | "forgot" | "reset-sent";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** لو موجودة، بنوجّه اليوزر ليها بعد نجاح الدخول/التسجيل بدل /dashboard
+   *  الثابتة — بتحافظ على نية اليوزر (مثلاً باقة مختارة في /checkout). */
+  callbackUrl?: string;
 }
 
 // ─── Animations ───────────────────────────────────────────────────────────────
@@ -117,7 +120,7 @@ function OrDivider() {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalProps) {
   const router  = useRouter();
   const [view,  setView]  = useState<View>("login");
   const [busy,  setBusy]  = useState(false);
@@ -157,9 +160,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleGoogle = async () => {
     setGBusy(true);
     try {
-      // NextAuth بيعمل redirect تلقائي لـ Google ثم يرجع
-      // بعد الرجوع، الـ session callback بيحدد هل يروح /onboarding أو /dashboard
-      await signIn("google", { callbackUrl: "/auth/callback" });
+      // NextAuth بيعمل redirect تلقائي لـ Google ثم يرجع لـ /auth/callback.
+      // لو عندنا callbackUrl (مثلاً جاي من /checkout) بنمررها كـ "next"
+      // جوه الـ URL عشان /auth/callback يحترمها بعد ما يتأكد من الـ session
+      // (بعد الـ onboarding لو محتاج، أو مباشرة لو لأ).
+      const authCallback = callbackUrl
+        ? `/auth/callback?next=${encodeURIComponent(callbackUrl)}`
+        : "/auth/callback";
+      await signIn("google", { callbackUrl: authCallback });
     } catch {
       setErr("حدث خطأ، حاول مرة أخرى");
       setGBusy(false);
@@ -174,7 +182,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         email: loginEmail.toLowerCase(), password: loginPass, redirect: false,
       });
       if (!res?.ok) { setErr(res?.error || "بيانات غير صحيحة"); return; }
-      onClose(); router.push("/dashboard");
+      onClose(); router.push(callbackUrl || "/dashboard");
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };
@@ -200,7 +208,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       toast.success("تم إنشاء الحساب بنجاح!");
       await signOut({ redirect: false });
       await signIn("credentials", { email: regEmail.toLowerCase(), password: regPass, redirect: false });
-      onClose(); router.push("/dashboard");
+      onClose(); router.push(callbackUrl || "/dashboard");
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };

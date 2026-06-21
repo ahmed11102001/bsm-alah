@@ -75,6 +75,32 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 يوم
   },
 
+  events: {
+    // ── createUser: بيتنفذ مرة واحدة بس من الـ PrismaAdapter وقت إنشاء
+    //    يوزر جديد (يعني أول تسجيل دخول بـ Google OAuth) ──────────────────────
+    //    يوزر الـ credentials provider مش بيعدي من هنا لأنه بيتعمل في
+    //    /api/register مباشرة (وعنده subscription "free" خلاص هناك).
+    //
+    //    بدون الـ hook ده، يوزر Google الجديد كان بيتعمله User بس من غير
+    //    Subscription خالص، وأي مكان بيعتمد على وجود الـ record (مش بس على
+    //    fallback القيمة) كان ممكن يطلع نتيجة غير متوقعة.
+    async createUser({ user }) {
+      await prisma.subscription.upsert({
+        where:  { userId: user.id },
+        update: {},   // لو موجودة بالفعل لأي سبب — متلمسهاش
+        create: {
+          userId:             user.id,
+          plan:               "free",
+          status:             "active",
+          campaignsUsedThisMonth: 0,
+          periodResetAt:      new Date(),
+          currentPeriodStart: new Date(),
+          currentPeriodEnd:   null, // free plan — لا ينتهي
+        },
+      });
+    },
+  },
+
   callbacks: {
 
     // ── signIn: تحقق قبل ما نكمل ────────────────────────────────────────────────

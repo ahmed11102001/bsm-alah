@@ -3,9 +3,9 @@
 // src/app/onboarding/page.tsx
 // بتظهر بس لليوزر الجديد اللي سجل بـ Google وناقصه رقم الواتساب
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession }  from "next-auth/react";
-import { useRouter }   from "next/navigation";
+import { useRouter, useSearchParams }   from "next/navigation";
 import { motion }      from "framer-motion";
 import { Button }      from "@/components/ui/button";
 import { Input }       from "@/components/ui/input";
@@ -13,20 +13,26 @@ import { Label }       from "@/components/ui/label";
 import { Loader2, Phone, MessageCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const params = useSearchParams();
+
+  // ── الصفحة اللي اليوزر كان قاصدها قبل ما يدخل onboarding (مثلاً
+  //    /checkout?plan=pro) — بنحترمها بعد ما يخلص بدل ما نوديه /dashboard
+  //    دايمًا ونضيع نية الدفع بتاعته. ────────────────────────────────────────
+  const next = params.get("next");
 
   const [phone, setPhone] = useState("");
   const [busy,  setBusy]  = useState(false);
   const [err,   setErr]   = useState("");
 
-  // لو مش محتاج onboarding → روح dashboard مباشرة
+  // لو مش محتاج onboarding → روح الوجهة المطلوبة (أو dashboard)
   useEffect(() => {
     if (status === "loading") return;
     if (!session) { router.replace("/"); return; }
-    if (!session.user.needsOnboarding) router.replace("/dashboard");
-  }, [session, status, router]);
+    if (!session.user.needsOnboarding) router.replace(next || "/dashboard");
+  }, [session, status, router, next]);
 
   if (status === "loading" || !session?.user.needsOnboarding) {
     return (
@@ -57,7 +63,7 @@ export default function OnboardingPage() {
       // حدّث الـ session عشان needsOnboarding يبقى false
       await update({ needsOnboarding: false });
       toast.success("مرحباً بك في WhatsPro 🎉");
-      router.replace("/dashboard");
+      router.replace(next || "/dashboard");
     } catch {
       setErr("حدث خطأ، حاول مرة أخرى");
     } finally {
@@ -166,5 +172,17 @@ export default function OnboardingPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+      </div>
+    }>
+      <OnboardingInner />
+    </Suspense>
   );
 }

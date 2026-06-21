@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Shield, Lock, Check, ChevronDown, ChevronUp,
   Loader2, CreditCard, Tag, ArrowRight,
@@ -14,18 +15,17 @@ import {
   type PlanSlug, type BillingCycle, type TokenPackageId,
 } from "@/lib/pricing";
 
-// ─── Card input field ─────────────────────────────────────────────────────────
-function CardField({ label, placeholder, type = "text", maxLength, onFocus }: {
-  label: string; placeholder: string; type?: string;
-  maxLength?: number; onFocus?: () => void;
-}) {
+// ─── Read-only account field — بيعرض بيانات الحساب المسجّل (مش فورم) ──────────
+// الدفع بيتعمل على حساب اليوزر اللي عمل login بيه، فمفيش داعي لحقول
+// قابلة للتعديل هنا — ده كان بيدي انطباع غلط إنها "مش بتكتب" لأنها أصلاً
+// معندهاش state ولا بتتبعت لأي مكان.
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-gray-500">{label}</label>
-      <input
-        type={type} placeholder={placeholder} maxLength={maxLength} onFocus={onFocus}
-        className="h-10 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25D366]/40 focus:border-[#25D366] transition-all placeholder-gray-400"
-      />
+      <div className="h-10 px-3 flex items-center text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-700">
+        {value || "—"}
+      </div>
     </div>
   );
 }
@@ -35,6 +35,7 @@ function CheckoutContent() {
   const params = useSearchParams();
   const router = useRouter();
   const { track } = usePixel();
+  const { data: session } = useSession();
 
   // ── استنتج نوع الـ checkout من الـ URL ──
   const rawPackageId = params.get("packageId");
@@ -399,8 +400,8 @@ function CheckoutContent() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 mb-4">بيانات الحساب</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CardField label="الاسم الكامل" placeholder="أحمد محمد" />
-              <CardField label="البريد الإلكتروني" placeholder="ahmed@example.com" type="email" />
+              <ReadOnlyField label="الاسم الكامل" value={session?.user?.name ?? ""} />
+              <ReadOnlyField label="البريد الإلكتروني" value={session?.user?.email ?? ""} />
             </div>
           </div>
 
