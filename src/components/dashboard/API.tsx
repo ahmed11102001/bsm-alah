@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { saveWhatsAppSettings, syncWhatsAppTemplates } from "@/app/actions/whatsapp";
 import { Button }   from "@/components/ui/button";
 import { Input }    from "@/components/ui/input";
@@ -10,7 +10,7 @@ import {
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
   Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
-  PlayCircle,
+  PlayCircle, Wifi, WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -122,34 +122,139 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
 }
 
 // ─── WhatsApp Content ─────────────────────────────────────────────────────────
-function WhatsAppContent({ initialData, loading, onSubmit, labels }: {
+function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, onDisconnect, locale }: {
   initialData?: any; loading: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   labels: { savingBtn: string; saveBtn: string };
+  connected: boolean;
+  onDisconnect: () => void;
+  locale: string;
 }) {
+  const [showForm, setShowForm] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyField = (text: string, id: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  // ── Connected state — show credentials like the Portal ──
+  if (connected && initialData && !showForm) {
+    return (
+      <div className="space-y-3">
+        {/* Connected badge */}
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-800/40 flex items-center justify-center flex-shrink-0">
+            <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+              {locale === "ar" ? "تم ربط Meta بنجاح ✅" : "Meta connected successfully ✅"}
+            </p>
+            <p className="text-[11px] text-green-600/70 dark:text-green-400/60">
+              {locale === "ar" ? "حسابك مربوط ويعمل" : "Your account is connected and active"}
+            </p>
+          </div>
+        </div>
+
+        {/* WABA ID */}
+        {initialData.wabaId && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">WABA ID</p>
+              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{initialData.wabaId}</p>
+            </div>
+            <button
+              onClick={() => copyField(initialData.wabaId, "waba")}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-green-500"
+            >
+              {copied === "waba" ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+
+        {/* Phone Number ID */}
+        {initialData.phoneNumberId && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Phone Number ID</p>
+              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{initialData.phoneNumberId}</p>
+            </div>
+            <button
+              onClick={() => copyField(initialData.phoneNumberId, "phone")}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-green-500"
+            >
+              {copied === "phone" ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
+          </button>
+          <button
+            onClick={onDisconnect}
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-red-200 dark:border-red-800/40 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {locale === "ar" ? "فك الربط" : "Disconnect"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Not connected / editing — show the form ──
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <div>
-        <Label className="text-xs dark:text-gray-400">Access Token</Label>
-        <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..."
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
-      </div>
-      <div>
-        <Label className="text-xs dark:text-gray-400">Phone Number ID</Label>
-        <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..."
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
-      </div>
-      <div>
-        <Label className="text-xs dark:text-gray-400">WABA ID</Label>
-        <Input name="wabaId" defaultValue={initialData?.wabaId || ""} placeholder="987654321..."
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
-      </div>
-      <Button disabled={loading} size="sm" className="w-full gap-2">
-        {loading
-          ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingBtn}</>
-          : <><CheckCircle className="w-4 h-4" /> {labels.saveBtn}</>}
-      </Button>
-    </form>
+    <div className="space-y-3">
+      {/* Hint when not connected */}
+      {!connected && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30">
+          <WifiOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            {locale === "ar" ? "Meta مش مربوط — أدخل البيانات عشان تربط" : "Meta is not connected — enter credentials to connect"}
+          </p>
+        </div>
+      )}
+      <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label className="text-xs dark:text-gray-400">Access Token</Label>
+          <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..."
+            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+        </div>
+        <div>
+          <Label className="text-xs dark:text-gray-400">Phone Number ID</Label>
+          <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..."
+            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+        </div>
+        <div>
+          <Label className="text-xs dark:text-gray-400">WABA ID</Label>
+          <Input name="wabaId" defaultValue={initialData?.wabaId || ""} placeholder="987654321..."
+            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+        </div>
+        <Button disabled={loading} size="sm" className="w-full gap-2">
+          {loading
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingBtn}</>
+            : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "ربط Meta" : "Connect Meta"}</>}
+        </Button>
+      </form>
+      {showForm && connected && (
+        <button
+          onClick={() => setShowForm(false)}
+          className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
+        >
+          {locale === "ar" ? "إلغاء" : "Cancel"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -550,6 +655,10 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const [openCard,     setOpenCard]     = useState<CardId | null>(null);
   const [isSyncing,    setIsSyncing]    = useState(false);
   const [waLoading,    setWaLoading]    = useState(false);
+  const [waConnected,  setWaConnected]  = useState(false);
+  const [waData,       setWaData]       = useState<{ phoneNumberId?: string; wabaId?: string } | null>(null);
+  const [waJustConnected, setWaJustConnected] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [eoApiKey,     setEoApiKey]     = useState("");
   const [eoStoreName,  setEoStoreName]  = useState("");
   const [eoWebhookUrl, setEoWebhookUrl] = useState("");
@@ -622,12 +731,21 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     }
   }, []);
 
+  // Check if WhatsApp/Meta is already connected
+  useEffect(() => {
+    if (initialData?.phoneNumberId && initialData?.wabaId) {
+      setWaConnected(true);
+      setWaData({ phoneNumberId: initialData.phoneNumberId, wabaId: initialData.wabaId });
+    }
+  }, [initialData]);
+
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
     fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => {});
     fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => {});
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
+    return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
   }, [loadShopifyStatus]);
 
   const loadEoWebhookUrl = useCallback(async () => {
@@ -685,15 +803,41 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setWaLoading(true);
     const fd = new FormData(e.currentTarget);
+    const phoneNumberId = fd.get("phoneNumberId") as string;
+    const wabaId = fd.get("wabaId") as string;
     try {
       await saveWhatsAppSettings({
         accessToken:   fd.get("accessToken")   as string,
-        phoneNumberId: fd.get("phoneNumberId") as string,
-        wabaId:        fd.get("wabaId")        as string,
+        phoneNumberId,
+        wabaId,
       });
-      toast.success(api.cards.whatsapp.savedMsg);
+      // Update connected state
+      setWaConnected(true);
+      setWaData({ phoneNumberId, wabaId });
+      setWaJustConnected(true);
+      toast.success(locale === "ar" ? "✅ تم ربط Meta بنجاح" : "✅ Meta connected successfully");
+      // Auto-close the card after 2 seconds (like the Portal)
+      closeTimerRef.current = setTimeout(() => {
+        setOpenCard(null);
+        setWaJustConnected(false);
+      }, 2000);
     } catch { toast.error(api.cards.whatsapp.saveErr); }
     finally  { setWaLoading(false); }
+  };
+
+  const handleDisconnectWhatsApp = async () => {
+    const msg = locale === "ar"
+      ? "هتفك ربط Meta — متأكد؟"
+      : "You are about to disconnect Meta — are you sure?";
+    if (!confirm(msg)) return;
+    try {
+      await saveWhatsAppSettings({ accessToken: "", phoneNumberId: "", wabaId: "" });
+      setWaConnected(false);
+      setWaData(null);
+      toast.success(locale === "ar" ? "تم فك الربط" : "Disconnected");
+    } catch {
+      toast.error(locale === "ar" ? "خطأ في فك الربط" : "Error disconnecting");
+    }
   };
 
   const handleEoSync = async () => {
@@ -954,12 +1098,29 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
             lockMessage={getCardLockMessage(card.id)}
           >
             {card.id === "whatsapp" && (
-              <WhatsAppContent
-                initialData={initialData}
-                loading={waLoading}
-                onSubmit={handleSaveWhatsApp}
-                labels={{ savingBtn: api.cards.whatsapp.savingBtn, saveBtn: api.cards.whatsapp.saveBtn }}
-              />
+              waJustConnected ? (
+                <div className="flex flex-col items-center justify-center py-6 gap-3 animate-in fade-in">
+                  <div className="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <CheckCircle className="w-7 h-7 text-green-500" />
+                  </div>
+                  <p className="text-sm font-bold text-green-600 dark:text-green-400">
+                    {locale === "ar" ? "تم ربط Meta بنجاح ✅" : "Meta connected successfully ✅"}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {locale === "ar" ? "جاري الإغلاق..." : "Closing..."}
+                  </p>
+                </div>
+              ) : (
+                <WhatsAppContent
+                  initialData={waData ?? initialData}
+                  loading={waLoading}
+                  onSubmit={handleSaveWhatsApp}
+                  labels={{ savingBtn: api.cards.whatsapp.savingBtn, saveBtn: api.cards.whatsapp.saveBtn }}
+                  connected={waConnected}
+                  onDisconnect={handleDisconnectWhatsApp}
+                  locale={locale}
+                />
+              )
             )}
             {card.id === "shopify" && (
               <ShopifyContent
