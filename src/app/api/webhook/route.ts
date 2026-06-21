@@ -199,6 +199,15 @@ export async function POST(req: NextRequest) {
       let content = msg.text?.body || "";
       let mediaUrl: string | null = null;
 
+      if (msg.type === "button") {
+        type = MessageType.text;
+        content = msg.button?.text || msg.button?.payload || "Button Click";
+      } else if (msg.type === "interactive") {
+        type = MessageType.text;
+        const interactive = msg.interactive;
+        content = interactive?.button_reply?.title || interactive?.list_reply?.title || "Interactive Reply";
+      }
+
       if (msg.type === "image") {
         type = MessageType.image;
         content = msg.image?.caption || "Image";
