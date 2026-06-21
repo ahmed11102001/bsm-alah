@@ -96,7 +96,7 @@ export async function POST(
     }
 
     try {
-      const plainAccessToken = decryptToken(connection.accessToken);
+      const plainAccessToken = decryptToken(connection.accessToken).trim();
       const metaResult = await submitTemplateToMeta({
         accessToken: plainAccessToken,
         wabaId: connection.wabaId,
@@ -153,7 +153,7 @@ export async function DELETE(
     });
     if (connection?.accessToken && connection.wabaId) {
       try {
-        const plainAccessToken = decryptToken(connection.accessToken);
+        const plainAccessToken = decryptToken(connection.accessToken).trim();
         await deleteTemplateFromMeta({
           accessToken: plainAccessToken,
           wabaId: connection.wabaId,
@@ -204,15 +204,17 @@ async function submitTemplateToMeta({
     }
 
     // Add BUTTONS with OTP type
-    components.push({
-      type: "BUTTONS",
-      buttons: [
-        {
-          type: "OTP",
-          otp_type: otpButtonType,
-        },
-      ],
-    });
+    if (otpButtonType !== "NO_BUTTON") {
+      components.push({
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "OTP",
+            otp_type: otpButtonType, // COPY_CODE or ONE_TAP
+          },
+        ],
+      });
+    }
   } else {
     // ── UTILITY / MARKETING — standard components ──
     components = [];
