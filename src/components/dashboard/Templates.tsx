@@ -149,7 +149,7 @@ const WANI_READY: Template[] = [
     id: "wani_cart_abandon", name: "wani_cart_abandon",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true,
     headerType: "none",
-    body: "مرحباً {{1}} 🛒\n\nنسيت *{{2}}* في سلتك!\nالإجمالي: *{{3}}*\n\nأكمل طلبك الآن قبل نفاد المخزون 👇\n{{4}}",
+    body: "مرحباً {{1}} 🛒\n\nنسيت *{{2}}* في سلتك!\nالإجمالي: *{{3}}*\n\nأكمل طلبك الآن قبل نفاد المخزون 👇\n{{4}}\n\nبانتظارك! 📦",
     exampleVars: ["سارة", "قميص قطني أزرق", "٢٤٠ ج.م", "https://store.example.com/cart"],
     footer: "Wani Store",
   },
