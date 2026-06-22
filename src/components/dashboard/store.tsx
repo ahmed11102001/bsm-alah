@@ -85,9 +85,9 @@ interface StoreData {
 // اسم القالب المخصص المطلوب لكل نوع أتمتة تلقائية
 // المستخدم لازم يعمل قوالب على ميتا بهذه الأسماء بالظبط
 const DEDICATED_TEMPLATE_NAMES: Record<string, string> = {
-  order_confirm: "order_confirmation",
-  order_shipped: "order_shipped",
-  cart_abandon: "cart_abandon",
+  order_confirm: "wani_order_confirm",
+  order_shipped: "wani_order_shipped",
+  cart_abandon: "wani_cart_abandon",
 };
 
 const AUTO_LABELS: Record<StoreAutomationType, {

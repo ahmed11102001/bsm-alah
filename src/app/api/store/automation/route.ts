@@ -15,9 +15,9 @@ const DEDICATED_TYPES: StoreAutomationType[] = ["order_confirm", "order_shipped"
 // أسماء القوالب المخصصة لكل نوع أتمتة
 // المستخدم لازم يعمل قوالب على ميتا بهذه الأسماء بالظبط
 export const DEDICATED_TEMPLATE_NAMES: Record<string, string> = {
-  order_confirm: "order_confirmation",
-  order_shipped: "order_shipped",
-  cart_abandon: "cart_abandon",
+  order_confirm: "wani_order_confirm",
+  order_shipped: "wani_order_shipped",
+  cart_abandon: "wani_cart_abandon",
 };
 
 type StoreSource = "shopify" | "easyorders" | "woocommerce";
