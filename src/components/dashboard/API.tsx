@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
+import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 
 type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude";
 
@@ -122,13 +123,14 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
 }
 
 // ─── WhatsApp Content ─────────────────────────────────────────────────────────
-function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, onDisconnect, locale }: {
+function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, onDisconnect, locale, onAutoConnectSuccess }: {
   initialData?: any; loading: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   labels: { savingBtn: string; saveBtn: string };
   connected: boolean;
   onDisconnect: () => void;
   locale: string;
+  onAutoConnectSuccess?: (phone_number_id: string, waba_id: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -224,6 +226,28 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
           </p>
         </div>
       )}
+
+      {/* ── زر الربط التلقائي (Embedded Signup) ── */}
+      {!connected && onAutoConnectSuccess && (
+        <EmbeddedSignupButton
+          locale={locale}
+          onSuccess={({ phone_number_id, waba_id }) => {
+            onAutoConnectSuccess(phone_number_id, waba_id);
+          }}
+        />
+      )}
+
+      {/* ── أو أدخل البيانات يدوياً ── */}
+      {!connected && onAutoConnectSuccess && (
+        <div className="relative flex items-center">
+          <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
+          <span className="mx-3 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+            {locale === "ar" ? "أو أدخل البيانات يدوياً" : "or enter credentials manually"}
+          </span>
+          <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label className="text-xs dark:text-gray-400">Access Token</Label>
@@ -1125,6 +1149,18 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
                   connected={waConnected}
                   onDisconnect={handleDisconnectWhatsApp}
                   locale={locale}
+                  onAutoConnectSuccess={(phoneId, wabaId) => {
+                    setWaConnected(true);
+                    setWaData({ phoneNumberId: phoneId, wabaId: wabaId });
+                    setWaJustConnected(true);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("refresh-dash"));
+                    }
+                    closeTimerRef.current = setTimeout(() => {
+                      setOpenCard(null);
+                      setWaJustConnected(false);
+                    }, 2000);
+                  }}
                 />
               )
             )}
