@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { CampaignStatus, MessageDirection, MessageStatus, QueueStatus } from "@/types/enums";
 import {
   checkCampaignsLimit, checkFeature,
+  consumeCampaignQuotaAtomic, refundCampaignQuota,
   incrementCampaignUsage, guardResponse,
 } from "@/lib/plan-guard";
 import { enqueueCampaign } from "@/lib/queue";
