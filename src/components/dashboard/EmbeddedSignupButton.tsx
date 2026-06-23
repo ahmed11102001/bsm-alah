@@ -38,6 +38,8 @@ export default function EmbeddedSignupButton({
     phone_number_id?: string;
     waba_id?: string;
   }>({});
+  
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   /* ── Load Facebook SDK (once) ─────────────────────────────────────────────── */
   useEffect(() => {
@@ -101,6 +103,13 @@ export default function EmbeddedSignupButton({
     return () => window.removeEventListener("message", handleMessageEvent);
   }, [handleMessageEvent]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   /* ── Launch the Embedded Signup popup ──────────────────────────────────── */
   const launchSignup = () => {
     if (!sdkReady || !window.FB) {
@@ -116,8 +125,21 @@ export default function EmbeddedSignupButton({
     messageDataRef.current = {};
     setLoading(true);
 
+    // Safety timeout: if popup is blocked and callback never fires
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      toast.error(
+        locale === "ar"
+          ? "يبدو أن المتصفح حظر النافذة المنبثقة (Popup) ⚠️ تأكد من السماح بها ثم حاول مجدداً."
+          : "Popup might be blocked by your browser ⚠️ Please allow popups and try again.",
+      );
+    }, 60000); // 60 seconds
+
     window.FB.login(
       async (response: any) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        
         if (!response.authResponse) {
           setLoading(false);
           // "unknown" = user just closed the popup without interacting
@@ -190,23 +212,37 @@ export default function EmbeddedSignupButton({
 
   /* ── Render ───────────────────────────────────────────────────────────────── */
   return (
-    <Button
-      type="button"
-      onClick={launchSignup}
-      disabled={!sdkReady || loading}
-      className="w-full gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold"
-    >
-      {loading ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          {locale === "ar" ? "جاري الربط..." : "Connecting..."}
-        </>
-      ) : (
-        <>
-          <Zap className="w-4 h-4" />
-          {locale === "ar" ? "ربط Meta تلقائياً" : "Connect Meta Automatically"}
-        </>
+    <div className="space-y-2">
+      <Button
+        type="button"
+        onClick={launchSignup}
+        disabled={!sdkReady || loading}
+        className="w-full gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {locale === "ar" ? "جاري الربط..." : "Connecting..."}
+          </>
+        ) : (
+          <>
+            <Zap className="w-4 h-4" />
+            {locale === "ar" ? "ربط Meta تلقائياً" : "Connect Meta Automatically"}
+          </>
+        )}
+      </Button>
+
+      {loading && (
+        <button
+          onClick={() => {
+            setLoading(false);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          }}
+          className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
+        >
+          {locale === "ar" ? "إلغاء الربط" : "Cancel"}
+        </button>
       )}
-    </Button>
+    </div>
   );
 }
