@@ -20,6 +20,22 @@ const requiredEnvVars = {
     optional: false,
   },
 
+  // Security
+  ENCRYPTION_KEY: {
+    description: "Key for encrypting sensitive data (like Meta tokens)",
+    optional: false,
+  },
+
+  // Google
+  GOOGLE_CLIENT_ID: {
+    description: "Google OAuth Client ID",
+    optional: true,
+  },
+  GOOGLE_CLIENT_SECRET: {
+    description: "Google OAuth Client Secret",
+    optional: true,
+  },
+
   // WhatsApp
   WHATSAPP_VERIFY_TOKEN: {
     description: "Token للتحقق من الـ Webhook مع Meta",

@@ -5,7 +5,7 @@
 import prisma from "@/lib/prisma";
 import {
   PLANS, PLAN_NAMES, FEATURE_REQUIRED_PLAN, planAtLeast,
-  isUnlimited, limitLabel, nextPlan,
+  isUnlimited, limitLabel,
   type PlanTier,
 } from "@/lib/plans";
 import { notifyPlanLimitReached } from "@/lib/notifications";
