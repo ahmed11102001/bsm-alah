@@ -5,7 +5,7 @@
 import prisma from "@/lib/prisma";
 import {
   PLANS, PLAN_NAMES, FEATURE_REQUIRED_PLAN, planAtLeast,
-  isUnlimited, limitLabel,
+  isUnlimited, limitLabel, nextPlan,
   type PlanTier,
 } from "@/lib/plans";
 import { notifyPlanLimitReached } from "@/lib/notifications";
@@ -99,28 +99,24 @@ export async function checkContactsLimit(
 
   if (isUnlimited(limit)) return { allowed: true };
 
-  // نعد الـ contacts اللي اتضافوا في الشهر الحالي فقط
-  const now            = new Date();
-  const startOfMonth   = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const addedThisMonth = await prisma.contact.count({
+  // نعد إجمالي الـ contacts الموجودة لليوزر (غير المحذوفة)
+  const totalContacts = await prisma.contact.count({
     where: {
       userId:    ownerId,
       deletedAt: null,
-      createdAt: { gte: startOfMonth },
     },
   });
 
-  if (addedThisMonth + addingCount > limit) {
+  if (totalContacts + addingCount > limit) {
     await notifyPlanLimitReached(ownerId, "contacts");
     return {
       allowed:      false,
       code:         "LIMIT_REACHED",
-      message:      `وصلت للحد الأقصى (${limitLabel(limit)} جهة اتصال) هذا الشهر في باقة ${PLAN_NAMES[plan]}. الحد يُجدَّد أول كل شهر أو قم بالترقية.`,
+      message:      `وصلت للحد الأقصى للإجمالي (${limitLabel(limit)} جهة اتصال) في باقة ${PLAN_NAMES[plan]}. قم بالترقية لإضافة المزيد.`,
       plan,
       requiredPlan: nextPlan(plan),
       limit,
-      used:         addedThisMonth,
+      used:         totalContacts,
     };
   }
 
@@ -163,7 +159,7 @@ export async function checkCampaignsLimit(ownerId: string): Promise<GuardResult>
   return { allowed: true };
 }
 
-/** زيادة عداد الحملات بعد الإنشاء الناجح */
+/** زيادة عداد الحملات بعد الإنشاء الناجح (Deprecated: استخدم consumeCampaignQuotaAtomic لمنع Race Conditions) */
 export async function incrementCampaignUsage(ownerId: string): Promise<void> {
   const sub = await getSubscription(ownerId);
   if (!sub) return;
@@ -173,6 +169,71 @@ export async function incrementCampaignUsage(ownerId: string): Promise<void> {
   await prisma.subscription.update({
     where: { userId: ownerId },
     data:  { campaignsUsedThisMonth: { increment: 1 } },
+  });
+}
+
+/** 
+ * خصم حصة حملة بشكل ذري (Atomic) لمنع الـ Race Condition. 
+ * يُستخدم بدلاً من check + increment منفصلين.
+ */
+export async function consumeCampaignQuotaAtomic(ownerId: string): Promise<GuardResult> {
+  // 1. حسابات مبدئية وباس للبيتا والسوبر أدمن
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
+
+  const sub = await getSubscription(ownerId);
+  const plan = safePlan(sub);
+  const limit = PLANS[plan].campaignsPerMonth;
+
+  if (isUnlimited(limit)) return { allowed: true };
+
+  // 2. تصفير العداد لو بدأ شهر جديد (نعملها قبل الـ updateMany الذري)
+  let used = sub?.campaignsUsedThisMonth ?? 0;
+  if (sub?.periodResetAt) {
+    const reset = await resetMonthlyCounterIfNeeded(ownerId, sub.periodResetAt);
+    if (reset !== null) used = 0;
+  }
+
+  // 3. Update ذري: نـ increment بشرط إن الـ used لسه أقل من الـ limit
+  const updated = await prisma.subscription.updateMany({
+    where: { 
+      userId: ownerId, 
+      campaignsUsedThisMonth: { lt: limit }
+    },
+    data: { campaignsUsedThisMonth: { increment: 1 } }
+  });
+
+  // لو الـ update مرجعش حاجة، معناه إن الشرط متحققش (وصل للـ limit)
+  if (updated.count === 0) {
+    await notifyPlanLimitReached(ownerId, "campaignsPerMonth");
+    return {
+      allowed:      false,
+      code:         "LIMIT_REACHED",
+      message:      `استهلكت كل الحملات المتاحة هذا الشهر (${limitLabel(limit)} حملة) في باقة ${PLAN_NAMES[plan]}. الحد يُجدَّد أول كل شهر أو قم بالترقية.`,
+      plan,
+      requiredPlan: nextPlan(plan),
+      limit,
+      used:         limit, // استهلك الـ limit بالكامل
+    };
+  }
+
+  return { allowed: true };
+}
+
+/** 
+ * استرجاع حصة حملة لو حصل خطأ أثناء إنشائها بعد ما خصمناها 
+ */
+export async function refundCampaignQuota(ownerId: string): Promise<void> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return;
+  const sub = await getSubscription(ownerId);
+  const plan = safePlan(sub);
+  if (isUnlimited(PLANS[plan].campaignsPerMonth)) return;
+
+  await prisma.subscription.updateMany({
+    where: { 
+      userId: ownerId, 
+      campaignsUsedThisMonth: { gt: 0 } // متقلش عن 0
+    },
+    data: { campaignsUsedThisMonth: { decrement: 1 } }
   });
 }
 
@@ -271,12 +332,9 @@ export async function getPlanStatus(ownerId: string) {
     if (reset !== null) campaignsUsed = 0;
   }
 
-  const now          = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const [contactsAddedThisMonth, teamCount] = await Promise.all([
+  const [totalContacts, teamCount] = await Promise.all([
     prisma.contact.count({
-      where: { userId: ownerId, deletedAt: null, createdAt: { gte: startOfMonth } },
+      where: { userId: ownerId, deletedAt: null },
     }),
     prisma.user.count({ where: { parentId: ownerId, deletedAt: null } }),
   ]);
@@ -288,7 +346,7 @@ export async function getPlanStatus(ownerId: string) {
     status:        sub?.status ?? "active",
     limits,
     usage: {
-      contacts:           contactsAddedThisMonth,  // اللي اتضافوا الشهر ده بس
+      contacts:           totalContacts,  // إجمالي جهات الاتصال
       teamMembers:        teamCount + 1,            // +1 للمالك
       campaignsThisMonth: campaignsUsed,
     },

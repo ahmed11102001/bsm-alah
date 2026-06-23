@@ -218,9 +218,7 @@ async function handleCreate(userId: string, body: any) {
   if (phoneList.length === 0)
     return NextResponse.json({ error: "قائمة الأرقام مطلوبة" }, { status: 400 });
 
-  const campaignCheck = await checkCampaignsLimit(userId);
-  const campaignBlock = guardResponse(campaignCheck);
-  if (campaignBlock) return campaignBlock;
+  // checkCampaignsLimit is replaced by atomic consume later.
 
   const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
   const isScheduled = scheduledDate ? scheduledDate > new Date() : false;
@@ -260,57 +258,63 @@ async function handleCreate(userId: string, body: any) {
     ? { mapping: body.recipients?.[0]?.templateVars ?? null, source: "per-recipient" }
     : (templateVars ?? null);
 
-  const campaign = await prisma.campaign.create({
-    data: {
-      name: name.trim(),
-      userId,
-      templateId: template.id,
-      attributionHours: attributionHours ? Number(attributionHours) : 48,
-      status: CampaignStatus.draft,
-      templateVariables: templateVariablesSnapshot ?? undefined,
-    },
-  });
+  // ── Atomic Quota Consumption ──
+  const campaignConsume = await consumeCampaignQuotaAtomic(userId);
+  const campaignBlock = guardResponse(campaignConsume);
+  if (campaignBlock) return campaignBlock;
 
-  const { queued } = await enqueueCampaign({
-    campaignId: campaign.id,
-    userId,
-    numbers: phoneList,
-    recipients: hasRecipients ? recipients : undefined,
-    templateName: template.name,
-    templateLang: template.language ?? "ar",
-    templateVars: hasRecipients ? undefined : (templateVars ?? null),
-    scheduledAt: isScheduled ? scheduledDate : null,
-    whatsappAccountId: account.id,
-    phoneNumberId: account.phoneNumberId,
-    accessToken: decryptToken(account.accessToken),
-  });
+  try {
+    const campaign = await prisma.campaign.create({
+      data: {
+        name: name.trim(),
+        userId,
+        templateId: template.id,
+        attributionHours: attributionHours ? Number(attributionHours) : 48,
+        status: CampaignStatus.draft,
+        templateVariables: templateVariablesSnapshot ?? undefined,
+      },
+    });
 
-  await incrementCampaignUsage(userId);
-
-  await inngest.send({
-    name: "campaign/send",
-    data: {
+    const { queued } = await enqueueCampaign({
       campaignId: campaign.id,
-      scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
-    },
-  });
+      userId,
+      numbers: phoneList,
+      recipients: hasRecipients ? recipients : undefined,
+      templateName: template.name,
+      templateLang: template.language ?? "ar",
+      templateVars: hasRecipients ? undefined : (templateVars ?? null),
+      scheduledAt: isScheduled ? scheduledDate : null,
+      whatsappAccountId: account.id,
+      phoneNumberId: account.phoneNumberId,
+      accessToken: decryptToken(account.accessToken),
+    });
 
-  return NextResponse.json({
-    success: true,
-    campaignId: campaign.id,
-    queued,
-    scheduled: isScheduled,
-    message: isScheduled
-      ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-      : `تم إنشاء الحملة — جاري الإرسال`,
-  });
+    await inngest.send({
+      name: "campaign/send",
+      data: {
+        campaignId: campaign.id,
+        scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      campaignId: campaign.id,
+      queued,
+      scheduled: isScheduled,
+      message: isScheduled
+        ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
+        : `تم إنشاء الحملة — جاري الإرسال`,
+    });
+  } catch (err) {
+    await refundCampaignQuota(userId);
+    throw err;
+  }
 }
 
 // ─── handleRepeat ─────────────────────────────────────────────────────────────
 async function handleRepeat(userId: string, campaignId: string) {
-  const check = await checkCampaignsLimit(userId);
-  const block = guardResponse(check);
-  if (block) return block;
+  // checkCampaignsLimit is replaced by atomic consume later.
 
   const original = await prisma.campaign.findFirst({
     where: { id: campaignId, userId },
@@ -349,38 +353,46 @@ async function handleRepeat(userId: string, campaignId: string) {
   if (numbers.length === 0)
     return NextResponse.json({ error: "لا توجد أرقام في الحملة الأصلية" }, { status: 400 });
 
-  const newCampaign = await prisma.campaign.create({
-    data: {
-      name: `${original.name} (تكرار)`,
+  // ── Atomic Quota Consumption ──
+  const campaignConsume = await consumeCampaignQuotaAtomic(userId);
+  const campaignBlock = guardResponse(campaignConsume);
+  if (campaignBlock) return campaignBlock;
+
+  try {
+    const newCampaign = await prisma.campaign.create({
+      data: {
+        name: `${original.name} (تكرار)`,
+        userId,
+        templateId: original.template.id,
+        status: CampaignStatus.draft,
+      },
+    });
+
+    const { queued } = await enqueueCampaign({
+      campaignId: newCampaign.id,
       userId,
-      templateId: original.template.id,
-      status: CampaignStatus.draft,
-    },
-  });
+      numbers,
+      templateName: original.template.name,
+      templateLang: original.template.language ?? "ar",
+      scheduledAt: null,
+      whatsappAccountId: account.id,
+      phoneNumberId: account.phoneNumberId,
+      accessToken: decryptToken(account.accessToken),
+    });
 
-  const { queued } = await enqueueCampaign({
-    campaignId: newCampaign.id,
-    userId,
-    numbers,
-    templateName: original.template.name,
-    templateLang: original.template.language ?? "ar",
-    scheduledAt: null,
-    whatsappAccountId: account.id,
-    phoneNumberId: account.phoneNumberId,
-    accessToken: decryptToken(account.accessToken),
-  });
+    await inngest.send({
+      name: "campaign/send",
+      data: { campaignId: newCampaign.id, scheduledAt: null },
+    });
 
-  await incrementCampaignUsage(userId);
-
-  await inngest.send({
-    name: "campaign/send",
-    data: { campaignId: newCampaign.id, scheduledAt: null },
-  });
-
-  return NextResponse.json({
-    success: true,
-    campaignId: newCampaign.id,
-    queued,
-    message: `تم تكرار الحملة — جاري الإرسال`,
-  });
+    return NextResponse.json({
+      success: true,
+      campaignId: newCampaign.id,
+      queued,
+      message: `تم تكرار الحملة — جاري الإرسال`,
+    });
+  } catch (err) {
+    await refundCampaignQuota(userId);
+    throw err;
+  }
 }
