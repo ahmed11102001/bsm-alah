@@ -815,6 +815,9 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       setWaConnected(true);
       setWaData({ phoneNumberId, wabaId });
       setWaJustConnected(true);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("refresh-dash"));
+      }
       toast.success(locale === "ar" ? "✅ تم ربط Meta بنجاح" : "✅ Meta connected successfully");
       // Auto-close the card after 2 seconds (like the Portal)
       closeTimerRef.current = setTimeout(() => {
@@ -834,6 +837,9 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       await saveWhatsAppSettings({ accessToken: "", phoneNumberId: "", wabaId: "" });
       setWaConnected(false);
       setWaData(null);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("refresh-dash"));
+      }
       toast.success(locale === "ar" ? "تم فك الربط" : "Disconnected");
     } catch {
       toast.error(locale === "ar" ? "خطأ في فك الربط" : "Error disconnecting");

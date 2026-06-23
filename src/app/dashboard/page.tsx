@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import ChatPage    from "@/app/dashboard/chat/page";
 import TeamPage    from "@/app/dashboard/team/page";
@@ -1024,6 +1024,12 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
     return () => window.removeEventListener("navigate-to", h);
   }, []);
 
+  useEffect(() => {
+    const h = () => fetchDash();
+    window.addEventListener("refresh-dash", h);
+    return () => window.removeEventListener("refresh-dash", h);
+  }, [fetchDash]);
+
   // Build sidebar items from translations
   const sidebarItems = SIDEBAR_IDS.map(item => ({
     ...item,
@@ -1071,7 +1077,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       case "store":
         return <Store />;
       case "api":
-        return <API canUseStoreIntegrations={canStore} canUseClaude={planAtLeast((dashData?.plan.plan ?? "free") as PlanTier, "pro")} />;
+        return <API initialData={dashData?.whatsapp} canUseStoreIntegrations={canStore} canUseClaude={planAtLeast((dashData?.plan.plan ?? "free") as PlanTier, "pro")} />;
       case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
       default:           return null;
     }
