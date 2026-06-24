@@ -9,6 +9,8 @@ function buildCsp(nonce: string): string {
   const scriptSrc = [
     `'nonce-${nonce}'`,
     "'strict-dynamic'",
+    "https://connect.facebook.net",
+    "https://www.facebook.com",
     isDev ? "'unsafe-eval'" : "",
   ]
     .filter(Boolean)
@@ -31,6 +33,8 @@ function buildCsp(nonce: string): string {
     // Meta / WhatsApp API
     "https://graph.facebook.com",
     "https://graph.instagram.com",
+    "https://www.facebook.com",
+    "https://connect.facebook.net",
     // Cloudinary
     "https://*.cloudinary.com",
     // Resend
@@ -57,6 +61,7 @@ function buildCsp(nonce: string): string {
     `style-src ${styleSrc}`,
     "img-src 'self' data: https: blob:",
     "media-src 'self' blob:",
+    "frame-src 'self' https://www.facebook.com https://connect.facebook.net",
     "font-src 'self' https://fonts.gstatic.com",
     `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",
