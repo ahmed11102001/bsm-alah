@@ -18,10 +18,11 @@ import { decryptToken } from "@/lib/crypto";
 async function verifyMetaSignature(
   req: NextRequest
 ): Promise<{ valid: boolean; rawBody: string }> {
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  // META_APP_SECRET is the canonical name — WHATSAPP_APP_SECRET kept as fallback
+  const appSecret = process.env.META_APP_SECRET ?? process.env.WHATSAPP_APP_SECRET;
 
   if (!appSecret) {
-    console.error("[WEBHOOK] WHATSAPP_APP_SECRET is not set — rejecting all requests");
+    console.error("[WEBHOOK] META_APP_SECRET is not set — rejecting all requests");
     return { valid: false, rawBody: "" };
   }
 
