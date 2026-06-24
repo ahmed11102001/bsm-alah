@@ -9,6 +9,8 @@ function buildCsp(nonce: string): string {
   const scriptSrc = [
     `'nonce-${nonce}'`,
     "'strict-dynamic'",
+    "'unsafe-inline'", // Fallback for older browsers, ignored by modern browsers when nonce/strict-dynamic is present
+    "'sha256-n46vPwSWuMC0W703pBofImv82Z26xo4LXymv0E9caPk='", // Allow Facebook SDK inline script
     "https://connect.facebook.net",
     "https://www.facebook.com",
     isDev ? "'unsafe-eval'" : "",
@@ -73,6 +75,8 @@ function buildCsp(nonce: string): string {
 function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
+  
   return applyHeaders(
     NextResponse.next({ request: { headers: requestHeaders } }),
     nonce
