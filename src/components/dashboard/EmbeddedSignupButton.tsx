@@ -35,6 +35,7 @@ export default function EmbeddedSignupButton({
 }: EmbeddedSignupButtonProps) {
   const [sdkReady, setSdkReady] = useState(false);
   const [loading,  setLoading]  = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Store phone_number_id & waba_id received via postMessage from Meta popup
   const messageDataRef = useRef<{
@@ -115,15 +116,28 @@ export default function EmbeddedSignupButton({
 
   /* ── Launch the Embedded Signup popup ──────────────────────────────────── */
   const launchSignup = () => {
+    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
+
     if (!sdkReady || !window.FB) {
-      toast.error(
-        locale === "ar"
-          ? "Facebook SDK لم يتحمل بعد — حاول مجدداً"
-          : "Facebook SDK not ready — please retry",
-      );
+      const message = locale === "ar"
+        ? "Facebook SDK لم يتحمل بعد — حاول مجدداً"
+        : "Facebook SDK not ready — please retry";
+      setError(message);
+      toast.error(message);
       return;
     }
 
+    if (!appId || !configId) {
+      const message = locale === "ar"
+        ? "إعدادات Meta ناقصة: تأكد من NEXT_PUBLIC_META_APP_ID و NEXT_PUBLIC_META_CONFIG_ID"
+        : "Meta setup is incomplete: check NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_CONFIG_ID";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setError(null);
     // Reset any previously captured data
     messageDataRef.current = {};
     setLoading(true);
@@ -139,11 +153,11 @@ export default function EmbeddedSignupButton({
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setLoading(false);
-      toast.error(
-        locale === "ar"
-          ? "يبدو أن المتصفح حظر النافذة المنبثقة (Popup) ⚠️ تأكد من السماح بها ثم حاول مجدداً."
-          : "Popup might be blocked by your browser ⚠️ Please allow popups and try again.",
-      );
+      const message = locale === "ar"
+        ? "يبدو أن المتصفح حظر النافذة المنبثقة أو أن Meta لم تُرجع الرد. تأكد من السماح بالـ Popup وأن إعدادات Meta صحيحة."
+        : "The popup was blocked or Meta did not return a response. Allow popups and verify your Meta settings.";
+      setError(message);
+      toast.error(message);
     }, 60000); // 60 seconds
 
     window.FB.login(
@@ -152,6 +166,13 @@ export default function EmbeddedSignupButton({
         
         if (!response.authResponse) {
           setLoading(false);
+          setError(
+            response.status === "unknown"
+              ? null
+              : (locale === "ar"
+                ? "Meta ألغت الربط أو لم تكتمل العملية. غالباً config_id أو صلاحيات الدومين غير صحيحة."
+                : "Meta canceled the flow or it did not complete. Most likely config_id or domain permissions are wrong.")
+          );
           // "unknown" = user just closed the popup without interacting
           if (response.status !== "unknown") {
             toast.error(
@@ -180,6 +201,7 @@ export default function EmbeddedSignupButton({
           const data = await res.json();
 
           if (!res.ok) {
+            setError(data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed"));
             toast.error(
               data.error ??
                 (locale === "ar" ? "فشل الربط" : "Connection failed"),
@@ -187,6 +209,7 @@ export default function EmbeddedSignupButton({
             return;
           }
 
+          setError(null);
           toast.success(
             locale === "ar"
               ? "✅ تم ربط Meta بنجاح"
@@ -198,6 +221,7 @@ export default function EmbeddedSignupButton({
             waba_id:         data.waba_id,
           });
         } catch {
+          setError(locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error");
           toast.error(
             locale === "ar"
               ? "خطأ في الاتصال بالسيرفر"
@@ -244,10 +268,17 @@ export default function EmbeddedSignupButton({
         )}
       </Button>
 
+      {error && (
+        <p className="text-xs leading-5 text-red-500">
+          {error}
+        </p>
+      )}
+
       {loading && (
         <button
           onClick={() => {
             setLoading(false);
+            setError(null);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
           }}
           className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
