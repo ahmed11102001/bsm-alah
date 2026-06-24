@@ -161,75 +161,77 @@ export default function EmbeddedSignupButton({
     }, 60000); // 60 seconds
 
     window.FB.login(
-      async (response: any) => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        
-        if (!response.authResponse) {
-          setLoading(false);
-          setError(
-            response.status === "unknown"
-              ? null
-              : (locale === "ar"
-                ? "Meta ألغت الربط أو لم تكتمل العملية. غالباً config_id أو صلاحيات الدومين غير صحيحة."
-                : "Meta canceled the flow or it did not complete. Most likely config_id or domain permissions are wrong.")
-          );
-          // "unknown" = user just closed the popup without interacting
-          if (response.status !== "unknown") {
-            toast.error(
-              locale === "ar"
-                ? "تم إلغاء الربط أو حدث خطأ"
-                : "Signup cancelled or failed",
+      (response: any) => {
+        (async () => {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          
+          if (!response.authResponse) {
+            setLoading(false);
+            setError(
+              response.status === "unknown"
+                ? null
+                : (locale === "ar"
+                  ? "Meta ألغت الربط أو لم تكتمل العملية. غالباً config_id أو صلاحيات الدومين غير صحيحة."
+                  : "Meta canceled the flow or it did not complete. Most likely config_id or domain permissions are wrong.")
             );
-          }
-          return;
-        }
-
-        const code: string = response.authResponse.code;
-
-        try {
-          const res = await fetch("/api/meta/embedded-signup-complete", {
-            method:  "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code,
-              redirect_uri:   redirectUri,           // ← FIX: required for token exchange
-              phone_number_id: messageDataRef.current.phone_number_id,
-              waba_id:         messageDataRef.current.waba_id,
-            }),
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            setError(data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed"));
-            toast.error(
-              data.error ??
-                (locale === "ar" ? "فشل الربط" : "Connection failed"),
-            );
+            // "unknown" = user just closed the popup without interacting
+            if (response.status !== "unknown") {
+              toast.error(
+                locale === "ar"
+                  ? "تم إلغاء الربط أو حدث خطأ"
+                  : "Signup cancelled or failed",
+              );
+            }
             return;
           }
 
-          setError(null);
-          toast.success(
-            locale === "ar"
-              ? "✅ تم ربط Meta بنجاح"
-              : "✅ Meta connected successfully",
-          );
+          const code: string = response.authResponse.code;
 
-          onSuccess({
-            phone_number_id: data.phone_number_id,
-            waba_id:         data.waba_id,
-          });
-        } catch {
-          setError(locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error");
-          toast.error(
-            locale === "ar"
-              ? "خطأ في الاتصال بالسيرفر"
-              : "Server connection error",
-          );
-        } finally {
-          setLoading(false);
-        }
+          try {
+            const res = await fetch("/api/meta/embedded-signup-complete", {
+              method:  "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                code,
+                redirect_uri:   redirectUri,           // ← FIX: required for token exchange
+                phone_number_id: messageDataRef.current.phone_number_id,
+                waba_id:         messageDataRef.current.waba_id,
+              }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              setError(data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed"));
+              toast.error(
+                data.error ??
+                  (locale === "ar" ? "فشل الربط" : "Connection failed"),
+              );
+              return;
+            }
+
+            setError(null);
+            toast.success(
+              locale === "ar"
+                ? "✅ تم ربط Meta بنجاح"
+                : "✅ Meta connected successfully",
+            );
+
+            onSuccess({
+              phone_number_id: data.phone_number_id,
+              waba_id:         data.waba_id,
+            });
+          } catch {
+            setError(locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error");
+            toast.error(
+              locale === "ar"
+                ? "خطأ في الاتصال بالسيرفر"
+                : "Server connection error",
+            );
+          } finally {
+            setLoading(false);
+          }
+        })();
       },
       {
         config_id: process.env.NEXT_PUBLIC_META_CONFIG_ID!,
