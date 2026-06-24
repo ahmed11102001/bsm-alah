@@ -5,6 +5,9 @@
 // Loads Facebook JS SDK, launches the Embedded Signup popup, and sends the
 // short-lived code (+ optional phone_number_id & waba_id from postMessage)
 // to the backend for exchange.
+//
+// FIX: pass `redirect_uri` (current page origin) in both FB.login extras AND
+// the backend fetch — Meta requires it to match for the code exchange to work.
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, Zap }                             from "lucide-react";
@@ -125,6 +128,13 @@ export default function EmbeddedSignupButton({
     messageDataRef.current = {};
     setLoading(true);
 
+    // ── FIX: Build redirect_uri from current page origin ──────────────────
+    // Meta requires redirect_uri to be passed both in FB.login extras AND
+    // in the backend token-exchange request — they must match exactly.
+    const redirectUri = typeof window !== "undefined"
+      ? window.location.origin
+      : "";
+
     // Safety timeout: if popup is blocked and callback never fires
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
@@ -161,7 +171,7 @@ export default function EmbeddedSignupButton({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               code,
-              // Forward IDs captured from the message event (if available)
+              redirect_uri:   redirectUri,           // ← FIX: required for token exchange
               phone_number_id: messageDataRef.current.phone_number_id,
               waba_id:         messageDataRef.current.waba_id,
             }),
@@ -205,6 +215,8 @@ export default function EmbeddedSignupButton({
           setup:              {},
           featureType:        "",
           sessionInfoVersion: "2",
+          // ── FIX: redirect_uri must be passed here too ──────────────────
+          redirect_uri: redirectUri,
         },
       },
     );

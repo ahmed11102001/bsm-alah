@@ -7,6 +7,13 @@
 // (encrypted) in the DB.
 //
 // The business token is NEVER sent back to the frontend.
+//
+// FIX: `redirect_uri` is now accepted from the request body and passed to the
+// Meta token-exchange endpoint — Meta requires it to match what was sent in
+// FB.login extras.  Without it the exchange silently fails and returns no token.
+//
+// FIX: WABA discovery now also tries /me/businesses?fields=whatsapp_business_accounts
+// as a fallback, which works for System Users and Business token flows.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
@@ -39,10 +46,12 @@ export async function POST(req: NextRequest) {
 
   const {
     code,
+    redirect_uri:    rawRedirectUri,
     phone_number_id: rawPhoneId,
-    waba_id: rawWabaId,
+    waba_id:         rawWabaId,
   } = body as {
     code?: string;
+    redirect_uri?: string;
     phone_number_id?: string;
     waba_id?: string;
   };
@@ -63,6 +72,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ── FIX: Build redirect_uri for the token exchange ────────────────────────
+  // Meta requires redirect_uri in the token exchange request and it must
+  // match exactly what was passed in FB.login extras.redirect_uri.
+  // We prefer the value sent from the frontend (window.location.origin),
+  // falling back to the request's own origin header.
+  const redirectUri =
+    (rawRedirectUri as string | undefined) ||
+    req.headers.get("origin") ||
+    "";
+
+  // Build token-exchange params
+  const tokenParams = new URLSearchParams({
+    client_id:     appId,
+    client_secret: appSecret,
+    code,
+  });
+  // Only attach redirect_uri when we have one (avoids sending empty string)
+  if (redirectUri) {
+    tokenParams.set("redirect_uri", redirectUri);
+  }
+
   let tokenData: any;
   try {
     const tokenRes = await fetch(
@@ -70,11 +100,7 @@ export async function POST(req: NextRequest) {
       {
         method:  "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id:     appId,
-          client_secret: appSecret,
-          code,
-        }),
+        body: tokenParams,
       },
     );
 
@@ -105,8 +131,8 @@ export async function POST(req: NextRequest) {
   let waba_id         = rawWabaId as string | undefined;
 
   if (!phone_number_id || !waba_id) {
+    // ── Strategy A: /me/whatsapp_business_accounts (works for most flows) ──
     try {
-      // GET /me/whatsapp_business_accounts → list of WABAs tied to this token
       const meRes = await fetch(
         `https://graph.facebook.com/${GRAPH_VERSION}/me/whatsapp_business_accounts` +
           `?fields=id,name,phone_numbers{id,display_phone_number}`,
@@ -119,11 +145,36 @@ export async function POST(req: NextRequest) {
         phone_number_id = phone_number_id ?? meData.data[0].phone_numbers?.data?.[0]?.id;
       }
     } catch (err) {
-      console.warn("[EmbeddedSignup] WABA discovery failed:", err);
+      console.warn("[EmbeddedSignup] Strategy A (WABA discovery) failed:", err);
+    }
+  }
+
+  // ── FIX: Strategy B — try /me/businesses as fallback ─────────────────────
+  // Some token types (e.g. user tokens via Embedded Signup) return the WABA
+  // under the business account, not directly on /me/whatsapp_business_accounts.
+  if (!phone_number_id || !waba_id) {
+    try {
+      const bizRes = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/me/businesses` +
+          `?fields=whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number}}`,
+        { headers: { Authorization: `Bearer ${businessToken}` } },
+      );
+      const bizData = await bizRes.json();
+
+      const firstBiz  = bizData.data?.[0];
+      const firstWaba = firstBiz?.whatsapp_business_accounts?.data?.[0];
+
+      if (firstWaba) {
+        waba_id         = waba_id         ?? firstWaba.id;
+        phone_number_id = phone_number_id ?? firstWaba.phone_numbers?.data?.[0]?.id;
+      }
+    } catch (err) {
+      console.warn("[EmbeddedSignup] Strategy B (businesses fallback) failed:", err);
     }
   }
 
   if (!phone_number_id || !waba_id) {
+    console.error("[EmbeddedSignup] Could not resolve WABA/Phone — rawPhoneId:", rawPhoneId, "rawWabaId:", rawWabaId);
     return NextResponse.json(
       { error: "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى" },
       { status: 502 },
