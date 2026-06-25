@@ -854,17 +854,27 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
 
   const handleDisconnectWhatsApp = async () => {
     const msg = locale === "ar"
-      ? "هتفك ربط Meta — متأكد؟"
-      : "You are about to disconnect Meta — are you sure?";
+      ? "هتفك ربط Meta — الكامبينز الشغّالة هتتوقف. متأكد؟"
+      : "You are about to disconnect Meta — running campaigns will be stopped. Sure?";
     if (!confirm(msg)) return;
     try {
-      await saveWhatsAppSettings({ accessToken: "", phoneNumberId: "", wabaId: "" });
+      const res  = await fetch("/api/settings/whatsapp", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+
       setWaConnected(false);
       setWaData(null);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("refresh-dash"));
-      }
-      toast.success(locale === "ar" ? "تم فك الربط" : "Disconnected");
+      window.dispatchEvent(new CustomEvent("refresh-dash"));
+
+      const stopped = data.stoppedCampaigns ?? 0;
+      const queued  = data.stoppedQueue ?? 0;
+      const detail  = stopped > 0 || queued > 0
+        ? (locale === "ar"
+            ? ` — تم إيقاف ${stopped} حملة و${queued} رسالة معلّقة`
+            : ` — stopped ${stopped} campaign(s) and ${queued} queued message(s)`)
+        : "";
+
+      toast.success((locale === "ar" ? "تم فك الربط" : "Disconnected") + detail);
     } catch {
       toast.error(locale === "ar" ? "خطأ في فك الربط" : "Error disconnecting");
     }
