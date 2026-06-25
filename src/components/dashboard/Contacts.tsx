@@ -419,6 +419,7 @@ function AudienceDetailModal({ audience, open, onClose, onSave }: {
       });
       if (!r.ok) throw new Error((await r.json()).error);
       toast.success(dm.saved);
+      window.dispatchEvent(new Event("trigger-review-prompt"));
       onSave({ ...audience, contacts, contactCount: contacts.length });
       setEditMode(false);
     } catch (e: any) { toast.error(e.message); }
@@ -605,6 +606,7 @@ export default function Contacts() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       toast.success(ct.excelDialog.saveSuccess(parsed.length));
+      window.dispatchEvent(new Event("trigger-review-prompt"));
       setShowAdd(false); resetExcel(); load();
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -633,6 +635,7 @@ export default function Contacts() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       toast.success(ct.customDialog.saveSuccess(valid.length));
+      window.dispatchEvent(new Event("trigger-review-prompt"));
       setShowCustom(false); setCustName(""); setCustInput(""); load();
     } catch (e: any) { toast.error(e.message); }
     finally { setCustSaving(false); }

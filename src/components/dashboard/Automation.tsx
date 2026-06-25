@@ -367,6 +367,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       if (!r.ok) throw new Error(d.error);
       if (editTarget) { toast.success(tx(lang, "تم التعديل", "Updated")); setRules(prev => prev.map(x => x.id === editTarget.id ? d : x)); }
       else             { toast.success(tx(lang, "تم الإضافة", "Added")); setRules(prev => [...prev, d]); }
+      window.dispatchEvent(new Event("trigger-review-prompt"));
       setShowDialog(false);
     } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed")); }
     finally { setSaving(false); }

@@ -1,4 +1,4 @@
-﻿// src/app/api/me/settings/route.ts
+// src/app/api/me/settings/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
@@ -20,7 +20,7 @@ export async function GET() {
   const [user, whatsapp, agent] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
-      select: { id: true, name: true, email: true, phone: true, image: true, role: true },
+      select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true },
     }),
     prisma.whatsAppAccount.findUnique({
       where:  { userId: ownerId },
@@ -44,7 +44,17 @@ export async function GET() {
     aiTone:       agent.tone,
   } : null;
 
-  return NextResponse.json({ user, whatsapp, brand });
+  const userResponse = user ? {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    image: user.image,
+    role: user.role,
+    hasPassword: !!user.password,
+  } : null;
+
+  return NextResponse.json({ user: userResponse, whatsapp, brand });
 }
 
 // PATCH /api/me/settings
@@ -91,6 +101,29 @@ export async function PATCH(req: NextRequest) {
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    return NextResponse.json({ success: true });
+  }
+
+  // Create Password
+  if (body.type === "create_password") {
+    const user = await prisma.user.findUnique({
+      where:  { id: userId },
+      select: { password: true },
+    });
+
+    if (user?.password) {
+      return NextResponse.json(
+        { error: "لديك كلمة مرور بالفعل، استخدم تغيير كلمة المرور" },
+        { status: 400 }
+      );
+    }
+
+    const hashed = await bcrypt.hash(body.newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data:  { password: hashed },
+    });
+
     return NextResponse.json({ success: true });
   }
 

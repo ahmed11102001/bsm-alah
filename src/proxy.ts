@@ -170,14 +170,26 @@ export async function proxy(req: NextRequest) {
   // ═══════════════════════════════════════════════════════════════════════
   // 2. MARKETING ROUTES — NextAuth (اللي كان موجود، ما اتغيرش)
   // ═══════════════════════════════════════════════════════════════════════
-  if (pathname.startsWith("/dashboard")) {
+  const isDashboard  = pathname.startsWith("/dashboard");
+  const isOnboarding = pathname.startsWith("/onboarding");
+
+  if (isDashboard || isOnboarding) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    if (!token) {
+    if (!token && isDashboard) {
       return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce);
     }
 
-    if (pathname.startsWith("/dashboard/admin") && !token.isSuper) {
+    if (token) {
+      if (isDashboard && token.needsOnboarding) {
+        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce);
+      }
+      if (isOnboarding && !token.needsOnboarding) {
+        return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce);
+      }
+    }
+
+    if (pathname.startsWith("/dashboard/admin") && token && !token.isSuper) {
       return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce);
     }
   }

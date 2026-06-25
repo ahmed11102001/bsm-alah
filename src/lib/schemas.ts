@@ -111,6 +111,13 @@ export const SettingsPasswordSchema = z.object({
 });
 export type SettingsPasswordInput = z.infer<typeof SettingsPasswordSchema>;
 
+/** PATCH /api/me/settings — type: "create_password" */
+export const SettingsCreatePasswordSchema = z.object({
+  type:        z.literal("create_password"),
+  newPassword: passwordField,
+});
+export type SettingsCreatePasswordInput = z.infer<typeof SettingsCreatePasswordSchema>;
+
 /** PATCH /api/me/settings — type: "whatsapp" */
 export const SettingsWhatsAppSchema = z.object({
   type:          z.literal("whatsapp"),
@@ -136,6 +143,7 @@ export type SettingsBrandInput = z.infer<typeof SettingsBrandSchema>;
 export const SettingsPatchSchema = z.discriminatedUnion("type", [
   SettingsProfileSchema,
   SettingsPasswordSchema,
+  SettingsCreatePasswordSchema,
   SettingsWhatsAppSchema,
   SettingsBrandSchema,
 ]);

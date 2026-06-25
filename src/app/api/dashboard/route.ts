@@ -30,6 +30,7 @@ export async function GET(_req: NextRequest) {
       planStatus,
       userRecord,
       whatsappAccount,
+      testimonialCount,
     ] = await Promise.all([
       // إجمالي الرسائل المرسلة
       prisma.message.count({
@@ -74,6 +75,10 @@ export async function GET(_req: NextRequest) {
         where:  { userId: ownerId },
         select: { phoneNumberId: true, wabaId: true },
       }),
+      // عدد آراء العميل
+      prisma.testimonial.count({
+        where: { userId: ownerId },
+      }),
     ]);
 
     const recentCampaignIds = recentCampaigns.map(c => c.id);
@@ -106,7 +111,7 @@ export async function GET(_req: NextRequest) {
       ? +((totalInbound / totalSent) * 100).toFixed(1) : 0;
 
     return NextResponse.json({
-      user: userRecord,
+      user: { ...userRecord, hasTestimonial: testimonialCount > 0 },
       whatsapp: whatsappAccount,
       stats: {
         totalSent,

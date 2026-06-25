@@ -43,10 +43,11 @@ import AdminPage       from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate         from "@/components/dashboard/PlanGate";
 import DashboardAssistant from "@/components/dashboard/assistant";
+import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
-  user: { id: string; name: string | null; email: string; phone: string | null; role: string };
+  user: { id: string; name: string | null; email: string; phone: string | null; role: string; hasPassword?: boolean; hasTestimonial?: boolean };
   whatsapp: { phoneNumberId: string; wabaId: string } | null;
   stats: {
     totalSent: number; totalDelivered: number; totalRead: number;
@@ -165,7 +166,8 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   open: boolean; onClose: () => void;
   data: DashboardData | null; onSaved: () => void;
 }) {
-  const { t, dir } = useLanguage();
+  const { t, dir, locale } = useLanguage();
+  const router = useRouter();
   const s = t.settings;
   const [saving, setSaving] = useState(false);
   const [name,  setName]  = useState("");
@@ -176,6 +178,9 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   const [wAccessToken,   setWAccessToken]   = useState("");
   const [wPhoneNumberId, setWPhoneNumberId] = useState("");
   const [wWabaId,        setWWabaId]        = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePw, setDeletePw] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -201,6 +206,23 @@ function SettingsModal({ open, onClose, data, onSaved }: {
       if (type === "password") { setCurPw(""); setNewPw(""); setConfPw(""); }
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const r = await fetch("/api/me/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePw }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      toast.success(locale === "ar" ? "تم حذف الحساب" : "Account deleted");
+      onClose();
+      router.push("/");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setDeleting(false); }
   };
 
   if (!data) return null;
@@ -263,17 +285,59 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
               {s.profile.saveBtn}
             </Button>
+
+            {/* ── Account Deletion ── */}
+            <div className="pt-4 mt-6 border-t border-red-100 dark:border-red-900/30 space-y-2">
+              {!showDeleteConfirm ? (
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} className="w-full rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 border-none shadow-none">
+                  {locale === "ar" ? "حذف الحساب نهائياً" : "Delete Account Permanently"}
+                </Button>
+              ) : (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 space-y-3 text-red-800 dark:text-red-300">
+                  <p className="text-sm font-bold flex items-center gap-1.5"><Shield className="w-4 h-4"/> {locale === "ar" ? "⚠️ حذف الحساب نهائياً" : "⚠️ Permanent Deletion"}</p>
+                  <p className="text-xs leading-relaxed">
+                    {locale === "ar" ? "سيتم حذف جميع حملاتك، جهات الاتصال، القوالب، بيانات الاشتراك، وربط الواتساب. هذا الإجراء لا يمكن التراجع عنه." : "All your campaigns, contacts, templates, subscription data, and WhatsApp connection will be deleted. This action cannot be undone."}
+                  </p>
+                  
+                  {data.user.hasPassword && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{locale === "ar" ? "أدخل كلمة المرور للتأكيد:" : "Enter password to confirm:"}</Label>
+                      <Input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} className="text-sm rounded-xl bg-white dark:bg-gray-800 border-red-200 dark:border-red-800" />
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} className="flex-1 rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {locale === "ar" ? "إلغاء" : "Cancel"}
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={deleteAccount} disabled={deleting || (data.user.hasPassword && !deletePw)} className="flex-1 rounded-xl">
+                      {deleting && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
+                      {locale === "ar" ? "نعم، احذف حسابي" : "Yes, delete my account"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* ── Password ── */}
           <TabsContent value="password" className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm">{s.password.current}</Label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
-                <Input type="password" value={curPw} onChange={e => setCurPw(e.target.value)} className="pr-9 text-sm rounded-xl" />
+            {!data.user.hasPassword ? (
+              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3 mb-2">
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-300">🔐 {locale === "ar" ? "إنشاء كلمة مرور" : "Create Password"}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+                  {locale === "ar" ? "حسابك مرتبط بـ Google فقط. يمكنك إنشاء كلمة مرور لتسجيل الدخول بالإيميل أيضاً." : "Your account is linked to Google. Create a password to also log in with email."}
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-sm">{s.password.current}</Label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <Input type="password" value={curPw} onChange={e => setCurPw(e.target.value)} className="pr-9 text-sm rounded-xl" />
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-sm">{s.password.new}</Label>
               <div className="relative">
@@ -302,11 +366,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               {confPw && newPw !== confPw && <p className="text-xs text-red-500">{s.password.mismatch}</p>}
             </div>
             <Button
-              onClick={() => { if (newPw !== confPw) { toast.error(s.password.mismatch); return; } save("password", { currentPassword: curPw, newPassword: newPw }); }}
-              disabled={saving || !curPw || !newPw || newPw !== confPw}
+              onClick={() => { if (newPw !== confPw) { toast.error(s.password.mismatch); return; } save(data.user.hasPassword ? "password" : "create_password", data.user.hasPassword ? { currentPassword: curPw, newPassword: newPw } : { newPassword: newPw }); }}
+              disabled={saving || (data.user.hasPassword && !curPw) || !newPw || newPw !== confPw}
               className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
               {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-              {s.password.changeBtn}
+              {data.user.hasPassword ? s.password.changeBtn : (locale === "ar" ? "إنشاء كلمة المرور" : "Create Password")}
             </Button>
           </TabsContent>
 
@@ -990,6 +1054,33 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const [loadingDash,    setLoadingDash]    = useState(true);
   const [showSettings,   setShowSettings]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+
+  useEffect(() => {
+    const handleTriggerReview = () => {
+      if (!dashData || dashData.user.hasTestimonial) return;
+      const lastPrompt = localStorage.getItem("last_review_prompt");
+      if (lastPrompt) {
+        const diffDays = (Date.now() - parseInt(lastPrompt)) / (1000 * 60 * 60 * 24);
+        if (diffDays < 1) return; // Cooldown is 1 day
+      }
+      setShowReviewPrompt(true);
+      localStorage.setItem("last_review_prompt", Date.now().toString());
+    };
+
+    window.addEventListener("trigger-review-prompt", handleTriggerReview);
+    return () => window.removeEventListener("trigger-review-prompt", handleTriggerReview);
+  }, [dashData]);
+
+  useEffect(() => {
+    const handleReviewSubmitted = () => {
+      if (dashData) {
+        setDashData({ ...dashData, user: { ...dashData.user, hasTestimonial: true } });
+      }
+    };
+    window.addEventListener("review-submitted", handleReviewSubmitted);
+    return () => window.removeEventListener("review-submitted", handleReviewSubmitted);
+  }, [dashData]);
 
   const openSettings = () => {
     setActiveTopPanel(null);
@@ -1321,6 +1412,12 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       </main>
 
       <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} onSaved={fetchDash} />
+      <ReviewPrompt 
+        open={showReviewPrompt} 
+        onClose={() => setShowReviewPrompt(false)} 
+        defaultName={dashData?.user.name ?? ""} 
+        defaultPhone={dashData?.user.phone ?? ""} 
+      />
     </div>
   );
 }

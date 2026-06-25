@@ -701,6 +701,7 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
           if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
           toast.dismiss(tid);
           toast.success(data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅");
+          window.dispatchEvent(new Event("trigger-review-prompt"));
           setDialogOpen(false); resetDialog(); await loadCampaigns();
           return;
         } else {
@@ -740,6 +741,7 @@ export default function Campaigns({ atLimit = false, whatsappConnected = false }
       if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
       toast.dismiss(tid);
       toast.success(data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅");
+      window.dispatchEvent(new Event("trigger-review-prompt"));
       setDialogOpen(false); resetDialog(); await loadCampaigns();
     } catch (err: any) { toast.dismiss(tid); toast.error(err.message); }
     finally { setSubmitting(false); }

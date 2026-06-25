@@ -155,7 +155,7 @@ export const authOptions: NextAuthOptions = {
       if (Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
           where:  { id: token.id as string },
-          select: { isSuper: true, role: true },
+          select: { isSuper: true, role: true, phone: true },
         });
 
         if (!freshUser) {
@@ -166,6 +166,7 @@ export const authOptions: NextAuthOptions = {
           token.role    = freshUser.role;
         }
 
+        token.needsOnboarding = !freshUser?.phone;
         token.isSuperVerifiedAt = Date.now();
       }
 
