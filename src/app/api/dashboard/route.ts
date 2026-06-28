@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest) {
     if (!session?.user)
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-    const userId  = session.user.id as string;
+    const userId = session.user.id as string;
     const ownerId = resolveOwnerId(session);
 
     const [
@@ -54,7 +54,7 @@ export async function GET(_req: NextRequest) {
       prisma.contact.count({ where: { userId: ownerId, deletedAt: null } }),
       // آخر 5 حملات
       prisma.campaign.findMany({
-        where:   { userId: ownerId },
+        where: { userId: ownerId },
         orderBy: { sentCount: "desc" },
         take: 3,
         select: {
@@ -67,12 +67,12 @@ export async function GET(_req: NextRequest) {
       getPlanStatus(ownerId),
       // بيانات المستخدم
       prisma.user.findUnique({
-        where:  { id: userId },
-        select: { id: true, name: true, email: true, phone: true, image: true, role: true, onboardingCompleted: true },
+        where: { id: userId },
+        select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true, onboardingCompleted: true },
       }),
       // حساب واتساب
       prisma.whatsAppAccount.findUnique({
-        where:  { userId: ownerId },
+        where: { userId: ownerId },
         select: { phoneNumberId: true, wabaId: true },
       }),
       // عدد آراء العميل
@@ -85,12 +85,12 @@ export async function GET(_req: NextRequest) {
 
     const [recentDeliveredCounts, recentReadCounts] = await Promise.all([
       prisma.message.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: recentCampaignIds }, status: MessageStatus.delivered },
         _count: { id: true },
       }),
       prisma.message.groupBy({
-        by:    ["campaignId"],
+        by: ["campaignId"],
         where: { campaignId: { in: recentCampaignIds }, status: MessageStatus.read },
         _count: { id: true },
       }),
@@ -111,7 +111,17 @@ export async function GET(_req: NextRequest) {
       ? +((totalInbound / totalSent) * 100).toFixed(1) : 0;
 
     return NextResponse.json({
-      user: { ...userRecord, hasTestimonial: testimonialCount > 0 },
+      user: {
+        id: userRecord?.id,
+        name: userRecord?.name,
+        email: userRecord?.email,
+        phone: userRecord?.phone,
+        image: userRecord?.image,
+        role: userRecord?.role,
+        hasPassword: !!userRecord?.password,         // boolean بدل الـ hash — لا نكشف كلمة المرور
+        onboardingCompleted: userRecord?.onboardingCompleted ?? false,
+        hasTestimonial: testimonialCount > 0,
+      },
       whatsapp: whatsappAccount,
       stats: {
         totalSent,
@@ -127,9 +137,9 @@ export async function GET(_req: NextRequest) {
       plan: {
         ...planStatus,
         aiTokens: {
-          monthlyLimit:  planStatus.limits.aiTokensPerMonth,
+          monthlyLimit: planStatus.limits.aiTokensPerMonth,
           usedThisMonth: (await prisma.subscription.findUnique({
-            where:  { userId: ownerId },
+            where: { userId: ownerId },
             select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true },
           })) ?? { aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0 },
         },
@@ -137,7 +147,7 @@ export async function GET(_req: NextRequest) {
       recentCampaigns: recentCampaigns.map(c => ({
         ...c,
         deliveredCount: recentDeliveredMap.get(c.id) ?? 0,  // ✅ من Message table
-        readCount:      recentReadMap.get(c.id)      ?? 0,  // ✅ من Message table
+        readCount: recentReadMap.get(c.id) ?? 0,  // ✅ من Message table
         createdAt: c.createdAt.toISOString(),
       })),
     });

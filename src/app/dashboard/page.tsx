@@ -1,7 +1,7 @@
 "use client";
 
-import ChatPage    from "@/app/dashboard/chat/page";
-import TeamPage    from "@/app/dashboard/team/page";
+import ChatPage from "@/app/dashboard/chat/page";
+import TeamPage from "@/app/dashboard/team/page";
 import { signOut, useSession } from "next-auth/react";
 import { TOKEN_PACKAGES, SUBSCRIPTION_PLANS } from "@/lib/pricing";
 import { useRouter } from "next/navigation";
@@ -12,12 +12,12 @@ import React from "react";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { planAtLeast, type PlanTier } from "@/lib/plans";
 import { toast } from "sonner";
-import { Button }   from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge }    from "@/components/ui/badge";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -32,16 +32,16 @@ import {
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
   Languages, Bot, Sparkles,
 } from "lucide-react";
-import Contacts        from "@/components/dashboard/Contacts";
-import Templates       from "@/components/dashboard/Templates";
-import Campaigns       from "@/components/dashboard/Campaigns";
-import Reports         from "@/components/dashboard/Reports";
-import Automation      from "@/components/dashboard/Automation";
-import API             from "@/components/dashboard/API";
-import Store           from "@/components/dashboard/store";
-import AdminPage       from "@/app/dashboard/admin/page";
+import Contacts from "@/components/dashboard/Contacts";
+import Templates from "@/components/dashboard/Templates";
+import Campaigns from "@/components/dashboard/Campaigns";
+import Reports from "@/components/dashboard/Reports";
+import Automation from "@/components/dashboard/Automation";
+import API from "@/components/dashboard/API";
+import Store from "@/components/dashboard/store";
+import AdminPage from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
-import PlanGate         from "@/components/dashboard/PlanGate";
+import PlanGate from "@/components/dashboard/PlanGate";
 import DashboardAssistant from "@/components/dashboard/assistant";
 import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
 
@@ -75,33 +75,33 @@ interface DashboardData {
 
 // ─── Sidebar items (built at render time from translations) ──────────────────
 const SIDEBAR_IDS = [
-  { icon: Home,          id: "home"       },
-  { icon: Users,         id: "team"       },
-  { icon: Users,         id: "contacts"   },
-  { icon: Send,          id: "campaigns"  },
-  { icon: FileText,      id: "templates"  },
-  { icon: MessageSquare, id: "chat"       },
-  { icon: BarChart3,     id: "reports"    },
-  { icon: Bot,           id: "automation" },
-  { icon: ShoppingBag,   id: "store"      },
-  { icon: Code,          id: "api"        },
+  { icon: Home, id: "home" },
+  { icon: Users, id: "team" },
+  { icon: Users, id: "contacts" },
+  { icon: Send, id: "campaigns" },
+  { icon: FileText, id: "templates" },
+  { icon: MessageSquare, id: "chat" },
+  { icon: BarChart3, id: "reports" },
+  { icon: Bot, id: "automation" },
+  { icon: ShoppingBag, id: "store" },
+  { icon: Code, id: "api" },
 ] as const;
 
 const adminItem = { icon: Shield, id: "admin" };
 
 const PLAN_COLORS: Record<string, string> = {
-  free:       "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-  starter:    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  pro:        "bg-[#25D366]/10 text-[#25D366]",
+  free: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  starter: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  pro: "bg-[#25D366]/10 text-[#25D366]",
   enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 
 const STATUS_BADGE: Record<string, string> = {
   completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  running:   "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  running: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   scheduled: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  failed:    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  draft:     "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  draft: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
 };
 
 
@@ -120,7 +120,7 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
   if (!mounted) return <div className={compact ? "w-9 h-9" : "w-full h-10"} />;
 
   const cycle = () => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
-  const icon  = theme === "dark" ? <Moon className="w-4 h-4" /> : theme === "light" ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  const icon = theme === "dark" ? <Moon className="w-4 h-4" /> : theme === "light" ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
   const label = theme === "dark" ? t.theme.dark : theme === "light" ? t.theme.light : t.theme.system;
 
   if (compact) return (
@@ -142,7 +142,7 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
 function LanguageToggle({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLanguage();
   const toggle = () => setLocale(locale === "ar" ? "en" : "ar");
-  const label  = locale === "ar" ? "EN" : "ع";
+  const label = locale === "ar" ? "EN" : "ع";
 
   if (compact) return (
     <button onClick={toggle} title={locale === "ar" ? "Switch to English" : "تبديل للعربية"}
@@ -170,14 +170,21 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   const router = useRouter();
   const s = t.settings;
   const [saving, setSaving] = useState(false);
-  const [name,  setName]  = useState("");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [curPw,  setCurPw]  = useState("");
-  const [newPw,  setNewPw]  = useState("");
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
   const [confPw, setConfPw] = useState("");
-  const [wAccessToken,   setWAccessToken]   = useState("");
+  // local state لـ hasPassword عشان الـ UI يتحدث فوراً بعد إنشاء كلمة المرور
+  const [hasPassword, setHasPassword] = useState(data?.user.hasPassword ?? false);
+
+  // لما data يتغير (مثلاً بعد fetchDash) — sync الـ state
+  useEffect(() => {
+    setHasPassword(data?.user.hasPassword ?? false);
+  }, [data?.user.hasPassword]);
+  const [wAccessToken, setWAccessToken] = useState("");
   const [wPhoneNumberId, setWPhoneNumberId] = useState("");
-  const [wWabaId,        setWWabaId]        = useState("");
+  const [wWabaId, setWWabaId] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -204,6 +211,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
       toast.success(s.profile.saved);
       onSaved();
       if (type === "password") { setCurPw(""); setNewPw(""); setConfPw(""); }
+      if (type === "create_password") {
+        // حدّث الـ UI فوراً بدون ما نستنى fetchDash
+        setHasPassword(true);
+        setNewPw(""); setConfPw("");
+      }
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
   };
@@ -240,7 +252,7 @@ function SettingsModal({ open, onClose, data, onSaved }: {
 
         <Tabs defaultValue="profile" dir={dir}>
           <TabsList className="w-full mb-4">
-            <TabsTrigger value="profile"  className="flex-1 text-xs">{s.tabs.profile}</TabsTrigger>
+            <TabsTrigger value="profile" className="flex-1 text-xs">{s.tabs.profile}</TabsTrigger>
             <TabsTrigger value="password" className="flex-1 text-xs">{s.tabs.password}</TabsTrigger>
             {isOwner && <TabsTrigger value="whatsapp" className="flex-1 text-xs">{s.tabs.whatsapp}</TabsTrigger>}
           </TabsList>
@@ -294,12 +306,12 @@ function SettingsModal({ open, onClose, data, onSaved }: {
                 </Button>
               ) : (
                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 space-y-3 text-red-800 dark:text-red-300">
-                  <p className="text-sm font-bold flex items-center gap-1.5"><Shield className="w-4 h-4"/> {locale === "ar" ? "⚠️ حذف الحساب نهائياً" : "⚠️ Permanent Deletion"}</p>
+                  <p className="text-sm font-bold flex items-center gap-1.5"><Shield className="w-4 h-4" /> {locale === "ar" ? "⚠️ حذف الحساب نهائياً" : "⚠️ Permanent Deletion"}</p>
                   <p className="text-xs leading-relaxed">
                     {locale === "ar" ? "سيتم حذف جميع حملاتك، جهات الاتصال، القوالب، بيانات الاشتراك، وربط الواتساب. هذا الإجراء لا يمكن التراجع عنه." : "All your campaigns, contacts, templates, subscription data, and WhatsApp connection will be deleted. This action cannot be undone."}
                   </p>
-                  
-                  {data.user.hasPassword && (
+
+                  {hasPassword && (
                     <div className="space-y-1.5">
                       <Label className="text-xs">{locale === "ar" ? "أدخل كلمة المرور للتأكيد:" : "Enter password to confirm:"}</Label>
                       <Input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} className="text-sm rounded-xl bg-white dark:bg-gray-800 border-red-200 dark:border-red-800" />
@@ -310,7 +322,7 @@ function SettingsModal({ open, onClose, data, onSaved }: {
                     <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} className="flex-1 rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                       {locale === "ar" ? "إلغاء" : "Cancel"}
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={deleteAccount} disabled={deleting || (data.user.hasPassword && !deletePw)} className="flex-1 rounded-xl">
+                    <Button variant="destructive" size="sm" onClick={deleteAccount} disabled={deleting || (hasPassword && !deletePw)} className="flex-1 rounded-xl">
                       {deleting && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
                       {locale === "ar" ? "نعم، احذف حسابي" : "Yes, delete my account"}
                     </Button>
@@ -322,7 +334,7 @@ function SettingsModal({ open, onClose, data, onSaved }: {
 
           {/* ── Password ── */}
           <TabsContent value="password" className="space-y-4">
-            {!data.user.hasPassword ? (
+            {!hasPassword ? (
               <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3 mb-2">
                 <p className="text-sm font-bold text-blue-800 dark:text-blue-300">🔐 {locale === "ar" ? "إنشاء كلمة مرور" : "Create Password"}</p>
                 <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
@@ -346,12 +358,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               </div>
               {newPw && (
                 <div className="flex gap-1 mt-1">
-                  {[4,6,8,10].map((threshold,i) => (
-                    <div key={i} className={`h-1 flex-1 rounded-full ${
-                      newPw.length >= threshold
-                        ? i<1 ? "bg-red-400" : i<2 ? "bg-orange-400" : i<3 ? "bg-yellow-400" : "bg-green-400"
+                  {[4, 6, 8, 10].map((threshold, i) => (
+                    <div key={i} className={`h-1 flex-1 rounded-full ${newPw.length >= threshold
+                        ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
                         : "bg-gray-200 dark:bg-gray-700"
-                    }`} />
+                      }`} />
                   ))}
                 </div>
               )}
@@ -366,11 +377,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               {confPw && newPw !== confPw && <p className="text-xs text-red-500">{s.password.mismatch}</p>}
             </div>
             <Button
-              onClick={() => { if (newPw !== confPw) { toast.error(s.password.mismatch); return; } save(data.user.hasPassword ? "password" : "create_password", data.user.hasPassword ? { currentPassword: curPw, newPassword: newPw } : { newPassword: newPw }); }}
-              disabled={saving || (data.user.hasPassword && !curPw) || !newPw || newPw !== confPw}
+              onClick={() => { if (newPw !== confPw) { toast.error(s.password.mismatch); return; } save(hasPassword ? "password" : "create_password", hasPassword ? { currentPassword: curPw, newPassword: newPw } : { newPassword: newPw }); }}
+              disabled={saving || (hasPassword && !curPw) || !newPw || newPw !== confPw}
               className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
               {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-              {data.user.hasPassword ? s.password.changeBtn : (locale === "ar" ? "إنشاء كلمة المرور" : "Create Password")}
+              {hasPassword ? s.password.changeBtn : (locale === "ar" ? "إنشاء كلمة المرور" : "Create Password")}
             </Button>
           </TabsContent>
 
@@ -415,10 +426,10 @@ function SettingsModal({ open, onClose, data, onSaved }: {
 function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   const { t } = useLanguage();
   const p = t.home.plan;
-  const contactsPct  = usagePct(plan.usage.contacts,           plan.limits.contacts);
+  const contactsPct = usagePct(plan.usage.contacts, plan.limits.contacts);
   const campaignsPct = usagePct(plan.usage.campaignsThisMonth, plan.limits.campaignsPerMonth);
-  const teamPct      = usagePct(plan.usage.teamMembers,        plan.limits.teamMembers);
-  const isNearLimit  = (pct: number) => pct >= 80;
+  const teamPct = usagePct(plan.usage.teamMembers, plan.limits.teamMembers);
+  const isNearLimit = (pct: number) => pct >= 80;
   const isEnterprise = plan.plan === "enterprise";
 
   return (
@@ -441,7 +452,7 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
             <div className="flex gap-2 flex-shrink-0">
               <Button size="sm" variant="outline"
                 className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
-                onClick={() => toast.info("قريباً — نظام الدفع")}> 
+                onClick={() => toast.info("قريباً — نظام الدفع")}>
                 <RefreshCw className="w-3 h-3" /> {p.changePlan}
               </Button>
               <Button size="sm"
@@ -455,9 +466,9 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: p.contacts,       used: plan.usage.contacts,           limit: plan.limits.contacts,          pct: contactsPct  },
+            { label: p.contacts, used: plan.usage.contacts, limit: plan.limits.contacts, pct: contactsPct },
             { label: p.campaignsMonth, used: plan.usage.campaignsThisMonth, limit: plan.limits.campaignsPerMonth, pct: campaignsPct },
-            { label: p.teamMembers,    used: plan.usage.teamMembers,         limit: plan.limits.teamMembers,       pct: teamPct      },
+            { label: p.teamMembers, used: plan.usage.teamMembers, limit: plan.limits.teamMembers, pct: teamPct },
           ].map(item => (
             <div key={item.label}>
               <div className="flex items-center justify-between mb-1.5">
@@ -475,10 +486,9 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
           {(Object.entries(p.features) as [keyof typeof p.features, string][]).map(([key, label]) => {
             const on = plan.limits[key as keyof typeof plan.limits] as boolean;
             return (
-              <span key={key} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                on ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                   : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
-              }`}>{label}</span>
+              <span key={key} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${on ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                  : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
+                }`}>{label}</span>
             );
           })}
         </div>
@@ -492,15 +502,15 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
   const { t, locale } = useLanguage();
   const ai = t.home.ai;
 
-  const aiData  = (data.plan as any).aiTokens;
-  const used    = aiData?.aiTokensUsedThisMonth ?? 0;
-  const bonus   = aiData?.aiTokensBonusBalance  ?? 0;
+  const aiData = (data.plan as any).aiTokens;
+  const used = aiData?.aiTokensUsedThisMonth ?? 0;
+  const bonus = aiData?.aiTokensBonusBalance ?? 0;
   const monthly = data.plan.limits.aiTokensPerMonth;
-  const pct     = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
-  const fmtK    = (n: number) =>
+  const pct = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
+  const fmtK = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
-    : n >= 1_000   ? `${Math.round(n / 1000)}K`
-    : `${n}`;
+      : n >= 1_000 ? `${Math.round(n / 1000)}K`
+        : `${n}`;
 
   return (
     <Card className="border border-purple-100 dark:border-purple-900/30 shadow-sm bg-gradient-to-br from-purple-50/60 to-white dark:from-purple-950/10 dark:to-gray-900">
@@ -556,12 +566,12 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
   const { locale } = useLanguage();
   const [activeTab, setActiveTab] = useState<"usage" | "buy">("usage");
 
-  const plan     = data.plan.plan as string;
-  const isEnt    = plan === "enterprise";
+  const plan = data.plan.plan as string;
+  const isEnt = plan === "enterprise";
   const mcpLimit = (data.plan.limits as any).mcpCommandsPerMonth ?? 0;
-  const mcpUsed  = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
+  const mcpUsed = (data.plan as any).mcpCommandsUsedThisMonth ?? 0;
   const isUnlimitedMcp = mcpLimit === -1 || isEnt;
-  const mcpPct   = (!isUnlimitedMcp && mcpLimit > 0) ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
+  const mcpPct = (!isUnlimitedMcp && mcpLimit > 0) ? Math.min(100, Math.round((mcpUsed / mcpLimit) * 100)) : 0;
 
   return (
     <Card className="border border-orange-200 dark:border-orange-900/40 shadow-sm bg-gradient-to-br from-orange-50/50 to-white dark:from-orange-950/10 dark:to-gray-900">
@@ -730,10 +740,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
 
   const kpis = [
-    { label: h.kpi.totalSent,    value: stats.totalSent,      sub: h.kpi.deliveryRate(stats.deliveryRate),   icon: <Send className="w-5 h-5 text-blue-600" />,          bg: "bg-blue-50 dark:bg-blue-900/20",    trend: stats.totalSent > 0 ? "up" : null },
-    { label: h.kpi.delivered,    value: stats.totalDelivered, sub: h.kpi.deliveredOf(stats.deliveryRate),    icon: <CheckCircle className="w-5 h-5 text-green-600" />,   bg: "bg-green-50 dark:bg-green-900/20",  trend: "up" },
-    { label: h.kpi.totalReplies, value: stats.totalInbound,   sub: h.kpi.replyRate(stats.replyRate),         icon: <MessageSquare className="w-5 h-5 text-purple-600" />, bg: "bg-purple-50 dark:bg-purple-900/20", trend: stats.totalInbound > 0 ? "up" : null },
-    { label: h.kpi.campaigns,    value: stats.totalCampaigns, sub: h.kpi.thisMonth(data.plan.usage.campaignsThisMonth), icon: <BarChart3 className="w-5 h-5 text-orange-600" />, bg: "bg-orange-50 dark:bg-orange-900/20", trend: null },
+    { label: h.kpi.totalSent, value: stats.totalSent, sub: h.kpi.deliveryRate(stats.deliveryRate), icon: <Send className="w-5 h-5 text-blue-600" />, bg: "bg-blue-50 dark:bg-blue-900/20", trend: stats.totalSent > 0 ? "up" : null },
+    { label: h.kpi.delivered, value: stats.totalDelivered, sub: h.kpi.deliveredOf(stats.deliveryRate), icon: <CheckCircle className="w-5 h-5 text-green-600" />, bg: "bg-green-50 dark:bg-green-900/20", trend: "up" },
+    { label: h.kpi.totalReplies, value: stats.totalInbound, sub: h.kpi.replyRate(stats.replyRate), icon: <MessageSquare className="w-5 h-5 text-purple-600" />, bg: "bg-purple-50 dark:bg-purple-900/20", trend: stats.totalInbound > 0 ? "up" : null },
+    { label: h.kpi.campaigns, value: stats.totalCampaigns, sub: h.kpi.thisMonth(data.plan.usage.campaignsThisMonth), icon: <BarChart3 className="w-5 h-5 text-orange-600" />, bg: "bg-orange-50 dark:bg-orange-900/20", trend: null },
   ] as const;
 
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
@@ -868,7 +878,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 ).map((f, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
                     <div className="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </div>
                     {f}
                   </div>
@@ -897,9 +907,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
       {/* ── Claude MCP Card ── */}
       {(() => {
-        const plan      = data.plan.plan as string;
-        const isPro     = plan === "pro" || plan === "pro";
-        const isEnt     = plan === "enterprise";
+        const plan = data.plan.plan as string;
+        const isPro = plan === "pro" || plan === "pro";
+        const isEnt = plan === "enterprise";
         const canClaude = isPro || isEnt;
 
         if (!canClaude) return (
@@ -907,8 +917,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <CardContent className="px-5 py-5 flex flex-col gap-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
-                  <img src="/claude-icon.png" className="w-6 h-6" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} alt="" />
-                  <Bot className="w-5 h-5 text-[#25D366]" style={{marginLeft: -24}} />
+                  <img src="/claude-icon.png" className="w-6 h-6" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} alt="" />
+                  <Bot className="w-5 h-5 text-[#25D366]" style={{ marginLeft: -24 }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -926,7 +936,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 ).map((f, i) => (
                   <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                     <div className="w-3.5 h-3.5 rounded-full bg-[#25D366]/15 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-2 h-2 text-[#25D366]" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-2 h-2 text-[#25D366]" fill="none" viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </div>
                     {f}
                   </div>
@@ -1046,13 +1056,13 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
     fetch("/api/me/api-key")
       .then(r => r.ok ? r.json() : { apiKey: "" })
       .then(d => setClaudeConnected(!!d.apiKey))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   const { t, dir, locale } = useLanguage();
-  const [activeSection,  setActiveSection]  = useState("home");
-  const [dashData,       setDashData]       = useState<DashboardData | null>(null);
-  const [loadingDash,    setLoadingDash]    = useState(true);
-  const [showSettings,   setShowSettings]   = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+  const [dashData, setDashData] = useState<DashboardData | null>(null);
+  const [loadingDash, setLoadingDash] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
 
@@ -1128,36 +1138,36 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   }));
 
   const displayName = dashData?.user.name ?? session?.user?.name ?? (locale === "ar" ? "المستخدم" : "User");
-  const initials    = displayName.slice(0, 2).toUpperCase();
-  const planName    = dashData?.plan.planName ?? "—";
-  const planColor   = PLAN_COLORS[dashData?.plan.plan ?? "free"];
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const planName = dashData?.plan.planName ?? "—";
+  const planColor = PLAN_COLORS[dashData?.plan.plan ?? "free"];
 
   // ── اختصارات لحالة الباقة ────────────────────────────────────────────────
-  const planLimits   = dashData?.plan.limits;
-  const isStarter    = planLimits != null; // starter+ = أي باقة مدفوعة (للـ team)
-  const canReports   = planLimits?.advancedReports   ?? false;
-  const teamLimit    = planLimits?.teamMembers ?? 0;
-  const teamUsed     = dashData?.plan.usage.teamMembers ?? 0;
-  const canTeam      = planLimits != null && (teamLimit === -1 || (teamLimit > 1 && teamUsed < teamLimit));
-  const teamAtMax    = planLimits != null && teamLimit !== -1 && teamLimit > 1 && teamUsed >= teamLimit;
+  const planLimits = dashData?.plan.limits;
+  const isStarter = planLimits != null; // starter+ = أي باقة مدفوعة (للـ team)
+  const canReports = planLimits?.advancedReports ?? false;
+  const teamLimit = planLimits?.teamMembers ?? 0;
+  const teamUsed = dashData?.plan.usage.teamMembers ?? 0;
+  const canTeam = planLimits != null && (teamLimit === -1 || (teamLimit > 1 && teamUsed < teamLimit));
+  const teamAtMax = planLimits != null && teamLimit !== -1 && teamLimit > 1 && teamUsed >= teamLimit;
   const campaignLimit = planLimits?.campaignsPerMonth ?? 0;
-  const campaignUsed  = dashData?.plan.usage.campaignsThisMonth ?? 0;
+  const campaignUsed = dashData?.plan.usage.campaignsThisMonth ?? 0;
   const campaignAtMax = planLimits != null && campaignLimit !== -1 && campaignUsed >= campaignLimit;
-  const canStore     = planLimits?.storeIntegration   ?? false;
-  const canAI        = planLimits?.aiAgent             ?? false;
+  const canStore = planLimits?.storeIntegration ?? false;
+  const canAI = planLimits?.aiAgent ?? false;
   const hasMetaConnection = !!dashData?.whatsapp?.phoneNumberId && !!dashData?.whatsapp?.wabaId;
 
   const renderContent = () => {
     switch (activeSection) {
-      case "home":       return dashData
+      case "home": return dashData
         ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={openSettings} campaignAtLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
-      case "chat":       return <ChatPage />;
-      case "contacts":   return <Contacts />;
+      case "chat": return <ChatPage />;
+      case "contacts": return <Contacts />;
       case "team":
         return <TeamPage canAddMembers={canTeam} atLimit={teamAtMax} />;
-      case "templates":  return <Templates />;
-      case "campaigns":  return <Campaigns atLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />;
+      case "templates": return <Templates />;
+      case "campaigns": return <Campaigns atLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />;
       case "reports":
         return (
           <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
@@ -1169,8 +1179,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         return <Store />;
       case "api":
         return <API initialData={dashData?.whatsapp} canUseStoreIntegrations={canStore} canUseClaude={planAtLeast((dashData?.plan.plan ?? "free") as PlanTier, "pro")} />;
-      case "admin":      return session?.user?.isSuper ? <AdminPage /> : null;
-      default:           return null;
+      case "admin": return session?.user?.isSuper ? <AdminPage /> : null;
+      default: return null;
     }
   };
 
@@ -1192,11 +1202,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           {sidebarItems.map((item) => (
             <button key={item.id} onClick={() => setActiveSection(item.id)}
               data-sidebar-id={item.id}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                activeSection === item.id
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${activeSection === item.id
                   ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
                   : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              }`}>
+                }`}>
               <item.icon className="w-[18px] h-[18px]" />
               <span>{item.label}</span>
             </button>
@@ -1204,11 +1213,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
 
           {session?.user?.isSuper && (
             <button onClick={() => setActiveSection("admin")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${
-                activeSection === "admin"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${activeSection === "admin"
                   ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
                   : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
-              }`}>
+                }`}>
               <adminItem.icon className="w-[18px] h-[18px]" />
               <span>{t.sidebar.admin}</span>
             </button>
@@ -1278,11 +1286,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 key={item.id}
                 data-sidebar-id={item.id}
                 onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${
-                  activeSection === item.id
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
                     ? "bg-[#25D366] text-white shadow-sm"
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
                 <span>{item.label}</span>
@@ -1292,11 +1299,10 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             {session?.user?.isSuper && (
               <button
                 onClick={() => { setActiveSection("admin"); setMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${
-                  activeSection === "admin"
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === "admin"
                     ? "bg-red-500 text-white shadow-sm"
                     : "bg-white dark:bg-gray-800 text-red-500"
-                }`}
+                  }`}
               >
                 <Shield className="w-5 h-5 flex-shrink-0" />
                 <span>{t.sidebar.admin}</span>
@@ -1314,7 +1320,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 <LanguageToggle />
               </div>
               <button
-              onClick={() => { openSettings(); setMobileMenuOpen(false); }}
+                onClick={() => { openSettings(); setMobileMenuOpen(false); }}
                 className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
               >
                 <Settings className="w-5 h-5 flex-shrink-0" />
@@ -1415,11 +1421,11 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       </main>
 
       <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} onSaved={fetchDash} />
-      <ReviewPrompt 
-        open={showReviewPrompt} 
-        onClose={() => setShowReviewPrompt(false)} 
-        defaultName={dashData?.user.name ?? ""} 
-        defaultPhone={dashData?.user.phone ?? ""} 
+      <ReviewPrompt
+        open={showReviewPrompt}
+        onClose={() => setShowReviewPrompt(false)}
+        defaultName={dashData?.user.name ?? ""}
+        defaultPhone={dashData?.user.phone ?? ""}
       />
     </div>
   );
