@@ -232,7 +232,9 @@ function SettingsModal({ open, onClose, data, onSaved }: {
       if (!r.ok) throw new Error(d.error);
       toast.success(locale === "ar" ? "تم حذف الحساب" : "Account deleted");
       onClose();
-      router.push("/");
+      await signOut({ redirect: false });
+      router.replace("/");
+      router.refresh();
     } catch (e: any) { toast.error(e.message); }
     finally { setDeleting(false); }
   };
