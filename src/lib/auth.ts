@@ -121,7 +121,12 @@ export const authOptions: NextAuthOptions = {
     },
 
     // ── jwt ──────────────────────────────────────────────────────────────────────
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      if (trigger === "update" && session) {
+        if (session.needsOnboarding !== undefined) {
+          token.needsOnboarding = session.needsOnboarding;
+        }
+      }
 
       // ── أول مرة: وقت الـ login ─────────────────────────────────────────────
       if (user && account) {

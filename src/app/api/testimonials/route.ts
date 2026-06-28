@@ -2,23 +2,23 @@
 // POST — العميل يسيب رأيه (لازم عنده اشتراك مدفوع)
 // GET  — جيب الآراء المعتمدة للـ landing page
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession }          from "next-auth";
-import { authOptions }               from "@/lib/auth";
-import prisma                        from "@/lib/prisma";
-import { rateLimit, getIP }          from "@/lib/rate-limit";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { rateLimit, getIP } from "@/lib/rate-limit";
 
 // ── GET: آراء معتمدة للـ landing page ────────────────────────────────────────
 export async function GET() {
   const testimonials = await prisma.testimonial.findMany({
-    where:   { approved: true },
+    where: { approved: true },
     orderBy: { createdAt: "desc" },
-    take:    20,
+    take: 20,
     select: {
-      id:        true,
-      name:      true,
+      id: true,
+      name: true,
       brandName: true,
-      rating:    true,
-      content:   true,
+      rating: true,
+      content: true,
       createdAt: true,
     },
   });
@@ -28,8 +28,8 @@ export async function GET() {
 // ── POST: إرسال رأي جديد ─────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   // Rate limit: 2 محاولات كل ساعة لنفس الـ IP
-  const ip     = getIP(req);
-  const rl     = await rateLimit(`testimonial:${ip}`, { limit: 2, windowSecs: 60 * 60 });
+  const ip = getIP(req);
+  const rl = await rateLimit(`testimonial:${ip}`, { limit: 2, windowSecs: 60 * 60 });
   if (!rl.success) {
     return NextResponse.json(
       { error: `حاول بعد ${rl.retryAfter} ثانية` },
@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
   // التحقق من عدم التكرار بالهاتف
   const { name, brandName, phone, rating, content } = await req.json();
 
-  if (!name?.trim())      return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
+  if (!name?.trim()) return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
   if (!brandName?.trim()) return NextResponse.json({ error: "اسم البراند مطلوب" }, { status: 400 });
-  if (!phone?.trim())     return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
-  if (!content?.trim())   return NextResponse.json({ error: "الرأي مطلوب" }, { status: 400 });
+  if (!phone?.trim()) return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
+  if (!content?.trim()) return NextResponse.json({ error: "الرأي مطلوب" }, { status: 400 });
   if (!rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "التقييم يجب أن يكون من 1 إلى 5" }, { status: 400 });
   }
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // منع التكرار بنفس رقم الهاتف
   const existing = await prisma.testimonial.findFirst({
-    where:  { phone: phone.trim() },
+    where: { phone: phone.trim() },
     select: { id: true },
   });
   if (existing) {
@@ -67,13 +67,13 @@ export async function POST(req: NextRequest) {
 
   const testimonial = await prisma.testimonial.create({
     data: {
-      name:      name.trim(),
+      name: name.trim(),
       brandName: brandName.trim(),
-      phone:     phone.trim(),
-      rating:    Number(rating),
-      content:   content.trim(),
-      userId:    session?.user?.id ?? null,
-      approved:  false,
+      phone: phone.trim(),
+      rating: Number(rating),
+      content: content.trim(),
+      userId: session?.user?.id ?? null,
+      approved: false,
     },
   });
 
