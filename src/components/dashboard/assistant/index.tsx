@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import WelcomeBanner from "./WelcomeBanner";
 import RuleBanner     from "./RuleBanner";
 import FloatingHelper from "./FloatingHelper";
+import OnboardingTour from "@/components/dashboard/OnboardingTour";
 import {
   ASSISTANT_RULES, evaluateRules,
   type AssistantRule, type RuleContext, type PageId,
@@ -23,19 +24,19 @@ interface Props {
   helperMountId?:    string;
   helperOpen?:       boolean;
   onHelperOpenChange?: (open: boolean) => void;
+  onboardingCompleted: boolean;
 }
 
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
-const WELCOMED_KEY  = (uid: string) => `wp_assistant_welcomed_${uid}`;
-const LAST_SHOWN_KEY = (uid: string) => `wp_assistant_welcome_last_shown_${uid}`;
-const WELCOME_INTERVAL_MS = 48 * 60 * 60 * 1000;
 
 export default function DashboardAssistant({
   userId, locale, activeSection,
   whatsappConnected, totalContacts, deliveryRate, planStatus, planName,
   onNavigate, helperMountId, helperOpen, onHelperOpenChange,
+  onboardingCompleted,
 }: Props) {
   const [showWelcome,  setShowWelcome]  = useState(false);
+  const [showTour,     setShowTour]     = useState(false);
   const [dismissed,    setDismissed]    = useState<Record<string, number>>({});
   const [assistCtx,    setAssistCtx]    = useState<Partial<RuleContext>>({});
   const [activeRules,  setActiveRules]  = useState<AssistantRule[]>([]);
@@ -47,19 +48,11 @@ export default function DashboardAssistant({
       if (raw) setDismissed(JSON.parse(raw));
     } catch { /* ignore */ }
 
-    // هل نعرض الـ welcome banner؟
-    const now = Date.now();
-    const lastShownRaw = localStorage.getItem(LAST_SHOWN_KEY(userId));
-    const lastShown = lastShownRaw ? Number(lastShownRaw) : 0;
-
-    if (!lastShown || Number.isNaN(lastShown) || now - lastShown >= WELCOME_INTERVAL_MS) {
+    // هل نعرض الـ welcome banner؟ فقط لو ما كملش الـ onboarding
+    if (!onboardingCompleted) {
       setShowWelcome(true);
-      try {
-        localStorage.setItem(LAST_SHOWN_KEY(userId), String(now));
-        localStorage.setItem(WELCOMED_KEY(userId), "1");
-      } catch { /* ignore */ }
     }
-  }, [userId]);
+  }, [userId, onboardingCompleted]);
 
   // ── جلب context data من الـ assistant API ───────────────────────────────
   useEffect(() => {
@@ -113,6 +106,20 @@ export default function DashboardAssistant({
     onNavigate(target);
   }, [onNavigate]);
 
+  // ── Start tour from welcome banner ─────────────────────────────────────
+  const handleStartTour = useCallback(() => {
+    setShowWelcome(false);
+    // Small delay so welcome banner exit animation plays
+    setTimeout(() => setShowTour(true), 350);
+  }, []);
+
+  // ── Tour completed ─────────────────────────────────────────────────────
+  const handleTourComplete = useCallback(() => {
+    setShowTour(false);
+    // Navigate back to home after tour ends
+    onNavigate("home");
+  }, [onNavigate]);
+
   // ── Banner rules (أعلى الصفحة) — أول critical بس علشان ما يكثرش ────────
   const bannerRules = activeRules
     .filter(r => r.displayAs === "banner")
@@ -120,17 +127,25 @@ export default function DashboardAssistant({
 
   return (
     <>
-      {/* Welcome modal */}
+      {/* Welcome modal — only if onboarding NOT completed */}
       {showWelcome && (
         <WelcomeBanner
-          userId={userId}
           locale={locale}
-          onClose={() => setShowWelcome(false)}
+          onStartTour={handleStartTour}
+        />
+      )}
+
+      {/* Onboarding Tour */}
+      {showTour && (
+        <OnboardingTour
+          locale={locale}
+          onNavigate={onNavigate}
+          onComplete={handleTourComplete}
         />
       )}
 
       {/* Top banners — بيتحطوا فوق الـ content */}
-      {bannerRules.length > 0 && (
+      {!showTour && bannerRules.length > 0 && (
         <div className="mb-4 space-y-2">
           {bannerRules.map(rule => (
             <RuleBanner
@@ -145,17 +160,19 @@ export default function DashboardAssistant({
         </div>
       )}
 
-      {/* Floating helper button (bottom right) */}
-      <FloatingHelper
-        rules={activeRules}
-        ctx={ctx}
-        locale={locale}
-        onDismiss={handleDismiss}
-        onAction={handleAction}
-        mountId={helperMountId}
-        isOpen={helperOpen}
-        onOpenChange={onHelperOpenChange}
-      />
+      {/* Floating helper button (bottom right) — hidden during tour */}
+      {!showTour && (
+        <FloatingHelper
+          rules={activeRules}
+          ctx={ctx}
+          locale={locale}
+          onDismiss={handleDismiss}
+          onAction={handleAction}
+          mountId={helperMountId}
+          isOpen={helperOpen}
+          onOpenChange={onHelperOpenChange}
+        />
+      )}
     </>
   );
 }

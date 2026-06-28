@@ -31,6 +31,7 @@ model User {
   pricingInfo      String?
   workingHours     String?
   aiTone           String            @default("friendly")
+  onboardingCompleted Boolean         @default(false)
   accounts         Account[]
   aiAgent          AIAgent?
   audiences        Audience[]

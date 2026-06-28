@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bot, X, Sparkles, ShieldCheck, Lightbulb, Zap } from "lucide-react";
+import { Bot, Sparkles, ShieldCheck, Lightbulb, Zap, Navigation } from "lucide-react";
 
 interface Props {
-  userId:  string;
-  locale:  "ar" | "en";
-  onClose: () => void;
+  locale:       "ar" | "en";
+  onStartTour:  () => void;
 }
 
 const T = {
@@ -18,8 +17,7 @@ const T = {
       { icon: Lightbulb,   text: "أديك نصايح مخصصة لنشاطك وعلى حسب الصفحة" },
       { icon: Zap,         text: "أعرفك على أفضل طريقة تستخدم كل feature" },
     ],
-    activate: "تمام، يلا نبدأ 🚀",
-    later:    "مش دلوقتي",
+    activate: "ابدأ الجولة",
     badge:    "مساعد ذكي جديد ✨",
   },
   en: {
@@ -30,13 +28,12 @@ const T = {
       { icon: Lightbulb,   text: "Give you personalized tips based on your activity and current page" },
       { icon: Zap,         text: "Help you get the most out of every feature" },
     ],
-    activate: "Got it, let's go 🚀",
-    later:    "Maybe later",
+    activate: "Start the Tour",
     badge:    "New Smart Assistant ✨",
   },
 };
 
-export default function WelcomeBanner({ userId, locale, onClose }: Props) {
+export default function WelcomeBanner({ locale, onStartTour }: Props) {
   const [visible, setVisible] = useState(false);
   const t = T[locale];
   const dir = locale === "ar" ? "rtl" : "ltr";
@@ -47,12 +44,9 @@ export default function WelcomeBanner({ userId, locale, onClose }: Props) {
     return () => clearTimeout(timer);
   }, []);
 
-  const dismiss = (save: boolean) => {
+  const handleStartTour = () => {
     setVisible(false);
-    if (save) {
-      localStorage.setItem(`wp_assistant_welcomed_${userId}`, "1");
-    }
-    setTimeout(onClose, 300);
+    setTimeout(onStartTour, 300);
   };
 
   if (!visible) return null;
@@ -74,13 +68,6 @@ export default function WelcomeBanner({ userId, locale, onClose }: Props) {
       >
         {/* Header gradient */}
         <div className="bg-gradient-to-br from-[#25D366] via-[#1fbe5c] to-[#128C7E] px-6 pt-6 pb-8 relative">
-          <button
-            onClick={() => dismiss(false)}
-            className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
               <Bot className="w-7 h-7 text-white" />
@@ -109,20 +96,14 @@ export default function WelcomeBanner({ userId, locale, onClose }: Props) {
           })}
         </div>
 
-        {/* Actions */}
-        <div className="px-6 pb-6 flex flex-col gap-2.5">
+        {/* Action — single "Start Tour" button */}
+        <div className="px-6 pb-6">
           <button
-            onClick={() => dismiss(true)}
+            onClick={handleStartTour}
             className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white font-semibold py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[.98] flex items-center justify-center gap-2"
           >
-            <Sparkles className="w-4 h-4" />
+            <Navigation className="w-4 h-4" />
             {t.activate}
-          </button>
-          <button
-            onClick={() => dismiss(false)}
-            className="w-full py-2.5 rounded-2xl text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
-          >
-            {t.later}
           </button>
         </div>
       </div>

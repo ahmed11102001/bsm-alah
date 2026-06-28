@@ -47,7 +47,7 @@ import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
-  user: { id: string; name: string | null; email: string; phone: string | null; role: string; hasPassword?: boolean; hasTestimonial?: boolean };
+  user: { id: string; name: string | null; email: string; phone: string | null; role: string; hasPassword?: boolean; hasTestimonial?: boolean; onboardingCompleted?: boolean };
   whatsapp: { phoneNumberId: string; wabaId: string } | null;
   stats: {
     totalSent: number; totalDelivered: number; totalRead: number;
@@ -1191,6 +1191,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto">
           {sidebarItems.map((item) => (
             <button key={item.id} onClick={() => setActiveSection(item.id)}
+              data-sidebar-id={item.id}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                 activeSection === item.id
                   ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
@@ -1275,6 +1276,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
+                data-sidebar-id={item.id}
                 onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${
                   activeSection === item.id
@@ -1406,6 +1408,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             helperMountId="assistant-header-slot"
             helperOpen={activeTopPanel === "assistant"}
             onHelperOpenChange={openAssistantPanel}
+            onboardingCompleted={dashData?.user.onboardingCompleted ?? false}
           />
           {renderContent()}
         </div>

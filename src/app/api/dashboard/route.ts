@@ -68,7 +68,7 @@ export async function GET(_req: NextRequest) {
       // بيانات المستخدم
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, email: true, phone: true, image: true, role: true },
+        select: { id: true, name: true, email: true, phone: true, image: true, role: true, onboardingCompleted: true },
       }),
       // حساب واتساب
       prisma.whatsAppAccount.findUnique({
