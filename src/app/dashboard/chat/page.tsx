@@ -57,6 +57,9 @@ const t: Record<Lang, Record<string, string>> = {
     voiceOn: "Voice ON", voice: "Voice",
     voiceOnMsg: "🎙️ Voice Agent مفعّل",
     voiceOffMsg: "Voice Agent موقوف",
+    aiOn: "AI ON", ai: "AI",
+    aiOnMsg: "🤖 الذكاء الاصطناعي مفعّل",
+    aiOffMsg: "الذكاء الاصطناعي موقوف",
     archiveConv: "أرشفة المحادثة",
     unarchiveConv: "إلغاء الأرشفة",
     deleteConv: "حذف المحادثة",
@@ -99,6 +102,9 @@ const t: Record<Lang, Record<string, string>> = {
     voiceOn: "Voice ON", voice: "Voice",
     voiceOnMsg: "🎙️ Voice Agent enabled",
     voiceOffMsg: "Voice Agent disabled",
+    aiOn: "AI ON", ai: "AI",
+    aiOnMsg: "🤖 AI Agent enabled",
+    aiOffMsg: "AI Agent disabled",
     archiveConv: "Archive conversation",
     unarchiveConv: "Unarchive",
     deleteConv: "Delete conversation",
@@ -127,6 +133,7 @@ interface Conversation {
   lastMessageAt: string | null;
   isArchived: boolean;
   voiceAgentEnabled?: boolean;
+  textAiEnabled?: boolean;
 }
 interface Message {
   id: string; content: string | null; type: string;
@@ -712,6 +719,24 @@ export default function ChatPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const toggleTextAi = async (contactId: string, enable: boolean) => {
+    try {
+      const r = await fetch("/api/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggleTextAi", contactId, enable }),
+      });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      setConvs(prev => prev.map(c =>
+        c.contact.id === contactId ? { ...c, textAiEnabled: enable } : c
+      ));
+      if (selected?.contact.id === contactId) {
+        setSelected(prev => prev ? { ...prev, textAiEnabled: enable } : prev);
+      }
+      toast.success(enable ? t[lang].aiOnMsg : t[lang].aiOffMsg);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   // فلترة فورية محلية باستخدام searchInput (مش search المؤجلة) — بتدي إحساس
   // فوري للمستخدم وهو بيكتب لحد ما نتيجة البحث الفعلية من السيرفر توصل
   // (بعد الـ debounce). البحث الحقيقي ضد كل قاعدة البيانات بيحصل في fetchConvs.
@@ -897,6 +922,16 @@ export default function ChatPage() {
               </div>
 
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => toggleTextAi(selected.contact.id, !selected.textAiEnabled)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
+                    ${selected.textAiEnabled !== false
+                      ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]"
+                      : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{selected.textAiEnabled !== false ? t[lang].aiOn : t[lang].ai}</span>
+                </button>
                 <button
                   onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all

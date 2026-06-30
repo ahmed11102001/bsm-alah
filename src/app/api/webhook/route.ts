@@ -417,7 +417,7 @@ async function handleAutomation(ctx: {
   // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
   const contactRecord = await prisma.contact.findFirst({
     where: { phone: from, userId },
-    select: { id: true, voiceAgentEnabled: true },
+    select: { id: true, voiceAgentEnabled: true, textAiEnabled: true },
   });
 
   if (contactRecord?.voiceAgentEnabled) {
@@ -645,6 +645,12 @@ async function handleAutomation(ctx: {
   });
 
   if (!agent?.isEnabled) return;
+
+  // -- 2a: Check if Text AI is specifically disabled for this contact --
+  if (contactRecord?.textAiEnabled === false) {
+    console.log(`[AI-AGENT] Paused — text AI is disabled for ${from}`);
+    return;
+  }
 
   // ── Plan guard: AI Token Quota ──
   const aiPlanGuard = await checkAITokensLimit(userId);

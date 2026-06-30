@@ -76,7 +76,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       id: true, name: true, phone: true,
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
-      voiceAgentEnabled: true, lastAiRepliedAt: true,
+      voiceAgentEnabled: true, textAiEnabled: true, lastAiRepliedAt: true,
       // آخر رسالة فعلية (inbound أو outbound) — للـ preview الصح
       messages: {
         take: 1,
@@ -131,6 +131,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
     isArchived: c.isArchived,
     voiceAgentEnabled: (c as any).voiceAgentEnabled ?? false,
+    textAiEnabled: (c as any).textAiEnabled ?? true,
   }));
 
   return NextResponse.json({ conversations });
@@ -271,6 +272,17 @@ export async function PATCH(req: NextRequest) {
     await prisma.contact.update({
       where: { id: contactId, userId },
       data: { voiceAgentEnabled: enable },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // ── Toggle Text AI Agent ───────────────────────────────────────────────────
+  if (action === "toggleTextAi") {
+    const enable = body.enable as boolean;
+
+    await prisma.contact.update({
+      where: { id: contactId, userId },
+      data: { textAiEnabled: enable },
     });
     return NextResponse.json({ success: true });
   }

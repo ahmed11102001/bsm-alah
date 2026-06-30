@@ -209,6 +209,7 @@ model Contact {
   unreadCount       Int          @default(0)
   updatedAt         DateTime     @updatedAt
   voiceAgentEnabled Boolean      @default(false)
+  textAiEnabled     Boolean      @default(true)
   lastAiRepliedAt   DateTime?
   audience          Audience?    @relation(fields: [audienceId], references: [id])
   user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
