@@ -12,27 +12,28 @@
 import * as Sentry from "@sentry/nextjs";
 
 export interface AgentContext {
-  brandName?:    string | null;
+  brandName?: string | null;
   businessDesc?: string | null;
   productsInfo?: string | null;
-  pricingInfo?:  string | null;
+  pricingInfo?: string | null;
   workingHours?: string | null;
-  tone?:         string | null;
+  tone?: string | null;
   systemPrompt?: string | null;
-  userId?:       string | null;
+  userId?: string | null;
 }
 
 // رسالة واحدة في تاريخ المحادثة
 export interface ConversationMessage {
-  role:    "user" | "assistant";
+  role: "user" | "assistant";
   content: string;
+  imageUrl?: string; // ← جديد: لو الرسالة فيها صورة (OpenAI Vision بس، Gemini بيتعامل لوحده)
 }
 
 export interface AgentResult {
-  ok:       boolean;
-  reply?:   string;
-  action?:  "handoff" | null;
-  error?:   string;
+  ok: boolean;
+  reply?: string;
+  action?: "handoff" | null;
+  error?: string;
   offTopic?: boolean;
   tokensUsed?: number;   // ← إجمالي التوكن المستهلكة (input + output)
 }
@@ -42,7 +43,7 @@ export interface AgentResult {
 function buildSystemPrompt(ctx: AgentContext): string {
   const toneMap: Record<string, string> = {
     friendly: "ودود ومساعد",
-    formal:   "رسمي واحترافي",
+    formal: "رسمي واحترافي",
     egyptian: "عامية مصرية خفيفة",
   };
   const toneLabel = toneMap[ctx.tone ?? "friendly"] ?? toneMap.friendly;
@@ -77,6 +78,7 @@ function buildSystemPrompt(ctx: AgentContext): string {
     "- لا تخترع أسعاراً أو معلومات مش موجودة في السياق أعلاه.",
     "- لا تذكر إنك AI أو مساعد آلي.",
     "- لو العميل سأل عن منتج مش موجود في قائمتك، قوله بأدب إنه مش متاح.",
+    "- لو العميل بعت صورة، حللها واربطها باحتياجه (مثلاً منتج، فاتورة، مشكلة) ورد عليه بناءً عليها.",
     "- لو الموضوع خرج تماماً عن نطاق البيزنس أو العميل محتاج دعم بشري متخصص، حدد action: handoff.",
     "",
     "── صيغة الرد المطلوبة ──",
@@ -103,7 +105,7 @@ async function callGemini(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing" };
 
-  const systemPrompt   = buildSystemPrompt(ctx);
+  const systemPrompt = buildSystemPrompt(ctx);
   const configuredModel = process.env.GEMINI_MODEL?.trim();
   const modelsToTry = [
     configuredModel,
@@ -114,7 +116,7 @@ async function callGemini(
 
   // Gemini بيستخدم "model" مش "assistant"
   const contents = messages.map((m) => ({
-    role:  m.role === "assistant" ? "model" : "user",
+    role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
 
@@ -123,19 +125,19 @@ async function callGemini(
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
-          method:  "POST",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents,
             generationConfig: {
               maxOutputTokens: 400,
-              temperature:     0.4,
-              topP:            0.8,
+              temperature: 0.4,
+              topP: 0.8,
             },
             safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
-              { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
               { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
               { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
             ],
@@ -184,21 +186,33 @@ async function callOpenAI(
 
   const chatMessages = [
     { role: "system", content: systemPrompt },
-    ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ...messages.map((m) => {
+      // لو الرسالة فيها صورة، ابعتها بصيغة Vision (content كـ array)
+      if (m.imageUrl && m.role === "user") {
+        return {
+          role: m.role,
+          content: [
+            { type: "text", text: m.content || "حلل الصورة دي ورد على العميل" },
+            { type: "image_url", image_url: { url: m.imageUrl } },
+          ],
+        };
+      }
+      return { role: m.role, content: m.content };
+    }),
   ];
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method:  "POST",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization:  `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model:       "gpt-4o-mini",
-        max_tokens:  400,
+        model: "gpt-4o-mini",
+        max_tokens: 400,
         temperature: 0.4,
-        messages:    chatMessages,
+        messages: chatMessages,
       }),
     });
 
@@ -257,9 +271,9 @@ function parseAgentJSON(raw: string): AgentResult {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function getAIReply(
-  messages:  ConversationMessage[],
-  ctx:       AgentContext,
-  provider:  "gemini" | "openai" = "gemini",
+  messages: ConversationMessage[],
+  ctx: AgentContext,
+  provider: "gemini" | "openai" = "gemini",
 ): Promise<AgentResult> {
   if (provider === "openai") return callOpenAI(messages, ctx);
   return callGemini(messages, ctx);

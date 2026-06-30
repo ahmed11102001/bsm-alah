@@ -8,6 +8,7 @@ import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
+import { transcribeAudio, estimateWhisperTokens } from "@/lib/whisper";
 import { decryptToken } from "@/lib/crypto";
 
 // -----------------------------------------------------------------------------
@@ -310,10 +311,22 @@ export async function POST(req: NextRequest) {
       await notifyNewMessage(userId, from);
 
       // Step 4: ????? ??????? ??? ????? ???? ?? Meta — ????? ??? Vercel
-      if (type === MessageType.text && content.trim()) {
+      const triggersAutomation =
+        (type === MessageType.text && content.trim()) ||
+        type === MessageType.image ||
+        type === MessageType.audio;
+
+      if (triggersAutomation) {
         after(async () => {
           try {
-            await handleAutomation({ userId, from, messageText: content, accountOwner });
+            await handleAutomation({
+              userId,
+              from,
+              messageText: content,
+              accountOwner,
+              mediaUrl,
+              mediaType: type, // text | image | audio
+            });
           } catch (err) {
             console.error("[AUTOMATION] Unhandled error:", err);
           }
@@ -343,8 +356,62 @@ async function handleAutomation(ctx: {
   from: string;
   messageText: string;
   accountOwner: { accessToken: string; phoneNumberId: string };
+  mediaUrl?: string | null;
+  mediaType?: MessageType;
 }) {
-  const { userId, from, messageText, accountOwner } = ctx;
+  const { userId, from, accountOwner, mediaUrl, mediaType } = ctx;
+  let messageText = ctx.messageText;
+  let imageUrl: string | undefined;
+
+  // ── Step 0: تحليل الصوت/الصورة (ChatGPT + Whisper بس) ──────────────────────
+  // Gemini بيقدر يحلل صوت وصورة من غير وسيط (native multimodal) — مش متعمول
+  // دلوقتي عشان ده محتاج تعديل تاني منفصل، فمؤقتاً بنسيبه زي ما هو.
+  // ChatGPT (gpt-4o-mini) مش بيفهم صوت مباشرة، فلازم Whisper STT الأول،
+  // والصور بتتبعتله كـ image_url عادي (Vision مدعومة أصلاً في الموديل).
+  if (mediaType === MessageType.audio || mediaType === MessageType.image) {
+    const providerRow = await prisma.aIAgent.findUnique({
+      where: { userId },
+      select: { provider: true },
+    });
+    const provider = providerRow?.provider ?? "gemini";
+
+    if (provider !== "openai") {
+      // TODO: تفعيل تحليل Gemini الأصلي للصوت/الصورة لاحقاً
+      console.log(`[AUTOMATION] provider=gemini — ${mediaType} analysis not wired yet, skipping`);
+      return;
+    }
+
+    if (mediaType === MessageType.audio) {
+      if (!mediaUrl) return;
+      const transcription = await transcribeAudio(mediaUrl, process.env.OPENAI_API_KEY ?? "");
+      if (!transcription.ok || !transcription.text) {
+        console.error("[WHISPER] Transcription failed:", transcription.error);
+        return; // متعرفناش نفهم الصوت، متكملش رد فاضي
+      }
+      messageText = transcription.text;
+      console.log(`[WHISPER] Transcribed audio → "${messageText}"`);
+
+      // ── سجّل تكلفة Whisper كـ "توكنز افتراضية" في نفس الـ quota ──────────
+      // Whisper بيتحاسب بالدقيقة ($0.006/دقيقة) مش بالتوكنز، فمفيش رقم توكنز
+      // حقيقي نسجله. بنحوّل تكلفته لتوكنز GPT-4o-mini "مكافئة" بنفس القيمة
+      // المادية تقريبًا، عشان الاستهلاك يدخل في نفس quota العميل ومايفضلش
+      // بيستخدم صوت من غير حد.
+      if (transcription.durationSeconds) {
+        const estimatedTokens = estimateWhisperTokens(transcription.durationSeconds);
+        void incrementAITokens(userId, estimatedTokens);
+        console.log(`[WHISPER] ~${estimatedTokens} token-equivalent خصمت (${transcription.durationSeconds.toFixed(1)}s)`);
+      }
+    }
+
+    if (mediaType === MessageType.image) {
+      if (!mediaUrl) return;
+      imageUrl = mediaUrl;
+      if (!messageText.trim() || messageText === "Image") {
+        messageText = "العميل بعت صورة، حللها ورد عليه بناءً عليها.";
+      }
+    }
+  }
+
   const textLower = messageText.toLowerCase().trim();
 
   // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
@@ -393,7 +460,11 @@ async function handleAutomation(ctx: {
           content: m.content!,
         }));
 
-      if (!aiMessages.length) aiMessages.push({ role: "user", content: messageText });
+      if (!aiMessages.length) aiMessages.push({ role: "user", content: messageText, imageUrl });
+      else if (mediaType === MessageType.audio || mediaType === MessageType.image) {
+        // الرسالة الحالية مش متخزنة كـ type=text، ضيفها يدوي
+        aiMessages.push({ role: "user", content: messageText, imageUrl });
+      }
 
       const aiResult = await getAIReply(
         aiMessages,
@@ -598,7 +669,7 @@ async function handleAutomation(ctx: {
     }
   }
 
-  let aiMessages: ConversationMessage[] = [{ role: "user", content: messageText }];
+  let aiMessages: ConversationMessage[] = [{ role: "user", content: messageText, imageUrl }];
   if (contactRecord) {
     const recentMsgs = await prisma.message.findMany({
       where: { contactId: contactRecord.id, userId, type: MessageType.text },
@@ -613,7 +684,14 @@ async function handleAutomation(ctx: {
         role: m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
         content: m.content!.trim(),
       }));
-    if (fromDb.length) aiMessages = fromDb;
+    if (fromDb.length) {
+      aiMessages = fromDb;
+      // الرسالة الحالية (صوت متحوّل لنص أو صورة) مش متخزنة كـ type=text في الـ DB،
+      // فلازم نضيفها يدوي آخر حاجة في الـ history عشان الموديل ميتجاهلهاش
+      if (mediaType === MessageType.audio || mediaType === MessageType.image) {
+        aiMessages.push({ role: "user", content: messageText, imageUrl });
+      }
+    }
   }
 
   const result = await getAIReply(
