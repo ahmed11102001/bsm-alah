@@ -193,7 +193,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
     const fullName = `${regFirst.trim()} ${regLast.trim()}`.trim();
     if (!regFirst.trim() || !regLast.trim()) { setErr("الاسم الثنائي مطلوب"); return; }
     if (!emailFormatOk)                       { setErr("صيغة البريد غير صحيحة"); return; }
-    if (!regPhone.trim())                     { setErr("رقم الهاتف مطلوب"); return; }
+    if (!/^\d{8,15}$/.test(regPhone.replace(/\D/g, ""))) { setErr("من فضلك أدخل رقم هاتف صحيح"); return; }
     if (regPass.length < 8)                   { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
     if (regPass !== regConfirm)               { setErr("كلمتا المرور غير متطابقتين"); return; }
     setBusy(true);

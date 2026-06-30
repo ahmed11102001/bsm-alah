@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Loader2, ChevronDown } from "lucide-react";
@@ -320,7 +320,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
   const handleSubmit = async () => {
     const errs: typeof formErr = {};
     if (!formName.trim())                         errs.name  = f.nameErr;
-    if (!/\d{7,15}/.test(formPhone.replace(/\D/g, ""))) errs.phone = f.phoneErr;
+    if (!/^\d{8,15}$/.test(formPhone.replace(/\D/g, ""))) errs.phone = f.phoneErr;
     if (Object.keys(errs).length) { setFormErr(errs); return; }
     setFormErr({});
 
