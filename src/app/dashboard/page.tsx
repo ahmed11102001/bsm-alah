@@ -1115,7 +1115,12 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
     setLoadingDash(true);
     try {
       const r = await fetch("/api/dashboard");
-      if (r.ok) setDashData(await r.json());
+      if (r.ok) {
+        setDashData(await r.json());
+      } else if (r.status === 401 || r.status === 404) {
+        // User might have been deleted, or session is invalid
+        signOut({ callbackUrl: "/" });
+      }
     } finally { setLoadingDash(false); }
   }, []);
 

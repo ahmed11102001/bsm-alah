@@ -81,6 +81,10 @@ export async function GET(_req: NextRequest) {
       }),
     ]);
 
+    if (!userRecord) {
+      return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+    }
+
     const recentCampaignIds = recentCampaigns.map(c => c.id);
 
     const [recentDeliveredCounts, recentReadCounts] = await Promise.all([
