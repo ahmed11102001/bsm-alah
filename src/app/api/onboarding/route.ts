@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "هذا الرقم مستخدم بالفعل" }, { status: 409 });
   }
 
-  await prisma.user.update({
+  await prisma.user.updateMany({
     where: { id: session.user.id },
     data:  { phone: cleaned },
   });

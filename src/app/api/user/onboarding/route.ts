@@ -25,10 +25,11 @@ export async function GET(_req: NextRequest) {
 export async function POST(_req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
+    if (!session?.user?.id)
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-    await prisma.user.update({
+    // Use updateMany to avoid P2025 error if user is somehow deleted
+    await prisma.user.updateMany({
       where: { id: session.user.id as string },
       data: { onboardingCompleted: true },
     });
