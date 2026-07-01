@@ -5,6 +5,7 @@ import WelcomeBanner from "./WelcomeBanner";
 import RuleBanner     from "./RuleBanner";
 import FloatingHelper from "./FloatingHelper";
 import OnboardingTour from "@/components/dashboard/OnboardingTour";
+import MobileOnboardingTour from "@/components/dashboard/MobileOnboardingTour";
 import {
   ASSISTANT_RULES, evaluateRules,
   type AssistantRule, type RuleContext, type PageId,
@@ -40,6 +41,7 @@ export default function DashboardAssistant({
   const [dismissed,    setDismissed]    = useState<Record<string, number>>({});
   const [assistCtx,    setAssistCtx]    = useState<Partial<RuleContext>>({});
   const [activeRules,  setActiveRules]  = useState<AssistantRule[]>([]);
+  const [isMobile,     setIsMobile]     = useState<boolean | null>(null);
 
   // ── تحميل الـ dismissed state من localStorage ────────────────────────────
   useEffect(() => {
@@ -55,6 +57,15 @@ export default function DashboardAssistant({
       setShowWelcome(false);
     }
   }, [userId, onboardingCompleted]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(mq.matches);
+
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // ── جلب context data من الـ assistant API ───────────────────────────────
   useEffect(() => {
@@ -147,8 +158,16 @@ export default function DashboardAssistant({
       )}
 
       {/* Onboarding Tour */}
-      {showTour && (
+      {showTour && isMobile === false && (
         <OnboardingTour
+          locale={locale}
+          onNavigate={onNavigate}
+          onComplete={handleTourComplete}
+        />
+      )}
+
+      {showTour && isMobile === true && (
+        <MobileOnboardingTour
           locale={locale}
           onNavigate={onNavigate}
           onComplete={handleTourComplete}
