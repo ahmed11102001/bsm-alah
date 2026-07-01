@@ -20,6 +20,7 @@ import {
     type FawaterakWebhookPayload,
     type FawaterakCancelWebhookPayload,
 } from "@/lib/fawaterak";
+import { notifySubscriptionSuccess } from "@/lib/notifications";
 import {
     TOKEN_PACKAGES,
     BILLING_CYCLES,
@@ -121,6 +122,7 @@ async function handlePaidWebhook(payload: FawaterakWebhookPayload) {
             });
 
             console.info(`[Webhook] ✅ Subscription — user=${userId} plan=${tier} cycle=${cycle}`);
+            await notifySubscriptionSuccess(userId, tier);
 
         } else if (type === "ai_credits") {
             const pkg = TOKEN_PACKAGES.find(p => p.id === meta.packageId);

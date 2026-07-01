@@ -11,6 +11,7 @@ import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { decryptToken } from "@/lib/crypto";
+import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyAiTokensLow } from "@/lib/notifications";
 
 // ─── Constants (string literals بدل enum لتجنب مشاكل prisma generate) ────────
 const QueueStatus = { sent: "sent", failed: "failed" } as const;
@@ -395,5 +396,155 @@ export const monthlyPlanReset = inngest.createFunction(
       downgradedCount: downgradeResult.downgradedCount,
       updatedSubscriptions: resetResult.updatedSubscriptions,
     };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cron 4: subscriptionExpiryWarning
+// يومياً الساعة 9 صباحاً: تحذير انتهاء الباقة
+// ═══════════════════════════════════════════════════════════════════════════════
+export const subscriptionExpiryWarning = inngest.createFunction(
+  {
+    id: "automation-subscription-expiry-warning",
+    retries: 1,
+    triggers: [{ cron: "0 7 * * *" }], // 7 UTC = 9 Cairo
+  },
+  async ({ step }) => {
+    const targetDateStart = new Date();
+    targetDateStart.setUTCDate(targetDateStart.getUTCDate() + 2);
+    targetDateStart.setUTCHours(0, 0, 0, 0);
+
+    const targetDateEnd = new Date(targetDateStart);
+    targetDateEnd.setUTCDate(targetDateEnd.getUTCDate() + 1);
+
+    const subscriptions = await step.run("get-expiring-subscriptions", async () => {
+      return await prisma.subscription.findMany({
+        where: {
+          status: "active",
+          plan: { not: "free" },
+          currentPeriodEnd: {
+            gte: targetDateStart,
+            lt: targetDateEnd,
+          },
+          OR: [
+            { expiryWarningSentAt: null },
+            { expiryWarningSentAt: { lt: targetDateStart } },
+          ],
+        },
+        select: { id: true, userId: true, plan: true },
+      });
+    });
+
+    if (subscriptions.length === 0) return { processed: 0 };
+
+    await step.run("send-expiry-warnings", async () => {
+      for (const sub of subscriptions) {
+        await notifySubscriptionExpiring(sub.userId, sub.plan, 2);
+        await prisma.subscription.update({
+          where: { id: sub.id },
+          data: { expiryWarningSentAt: new Date() },
+        });
+      }
+    });
+
+    return { processed: subscriptions.length };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cron 5: whatsappTokenExpiryCheck
+// يومياً الساعة 10 صباحاً: تحذير انتهاء توكن واتساب (Meta)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const whatsappTokenExpiryCheck = inngest.createFunction(
+  {
+    id: "automation-whatsapp-token-expiry-check",
+    retries: 1,
+    triggers: [{ cron: "0 8 * * *" }], // 8 UTC = 10 Cairo
+  },
+  async ({ step }) => {
+    const cutoffDate = new Date();
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 50);
+
+    const accounts = await step.run("get-expiring-whatsapp-tokens", async () => {
+      return await prisma.whatsAppAccount.findMany({
+        where: {
+          updatedAt: { lte: cutoffDate }, // آخر تحديث من 50 يوم أو أقدم
+        },
+        select: { id: true, userId: true, updatedAt: true },
+      });
+    });
+
+    if (accounts.length === 0) return { processed: 0 };
+
+    await step.run("send-token-expiry-warnings", async () => {
+      for (const acc of accounts) {
+        const diffMs = Date.now() - new Date(acc.updatedAt).getTime();
+        const daysSinceUpdate = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.max(0, 60 - daysSinceUpdate);
+        await notifyWhatsAppTokenExpiring(acc.userId, daysLeft);
+      }
+    });
+
+    return { processed: accounts.length };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cron 6: aiTokensLowCheck
+// يومياً الساعة 11 صباحاً: تحذير انخفاض رصيد الذكاء الاصطناعي
+// ═══════════════════════════════════════════════════════════════════════════════
+export const aiTokensLowCheck = inngest.createFunction(
+  {
+    id: "automation-ai-tokens-low-check",
+    retries: 1,
+    triggers: [{ cron: "0 9 * * *" }], // 9 UTC = 11 Cairo
+  },
+  async ({ step }) => {
+    const subscriptions = await step.run("get-low-ai-tokens-subs", async () => {
+      return await prisma.subscription.findMany({
+        where: {
+          status: "active",
+        },
+        select: { id: true, userId: true, plan: true, aiTokensUsedThisMonth: true },
+      });
+    });
+
+    let processed = 0;
+
+    await step.run("send-ai-tokens-low-warnings", async () => {
+      for (const sub of subscriptions) {
+        let aiTokensLimit = 0;
+        switch (sub.plan) {
+          case "starter": aiTokensLimit = 0; break;
+          case "pro": aiTokensLimit = 0; break;
+          case "enterprise": aiTokensLimit = 1_000_000; break;
+        }
+
+        if (aiTokensLimit > 0) {
+          const usedPct = (sub.aiTokensUsedThisMonth / aiTokensLimit) * 100;
+          if (usedPct >= 85) {
+             // To prevent sending multiple times a month, we check if we already sent it
+             // Here we just send it if it's over 85%. Ideally we'd have a flag like aiTokensLowWarningSentAt.
+             // For now we'll just send the notification.
+             // In a real app we'd add `aiTokensLowWarningSentAt` to the Subscription model.
+             // Since we didn't add it, we will just rely on the user seeing it. Let's send only once by looking at Notification history.
+             const recentWarning = await prisma.notification.findFirst({
+                where: {
+                  userId: sub.userId,
+                  type: "AI_TOKENS_LOW",
+                  createdAt: { gte: new Date(new Date().setDate(1)) } // beginning of month
+                }
+             });
+             
+             if (!recentWarning) {
+               await notifyAiTokensLow(sub.userId, Math.round(usedPct));
+               processed++;
+             }
+          }
+        }
+      }
+    });
+
+    return { processed };
   }
 );

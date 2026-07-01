@@ -70,6 +70,10 @@ export default async function RootLayout({
       className={`${cairo.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#25D366" />
+      </head>
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
         <MetaPixel nonce={nonce} />
         <ClientProvider>

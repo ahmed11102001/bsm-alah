@@ -44,6 +44,7 @@ import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate from "@/components/dashboard/PlanGate";
 import DashboardAssistant from "@/components/dashboard/assistant";
 import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
+import PushNotificationPrompt from "@/components/dashboard/PushNotificationPrompt";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DashboardData {
@@ -1423,6 +1424,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             onHelperOpenChange={openAssistantPanel}
             onboardingCompleted={dashData?.user.onboardingCompleted ?? false}
           />
+          <PushNotificationPrompt />
           {renderContent()}
         </div>
       </main>

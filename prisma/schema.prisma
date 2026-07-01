@@ -51,7 +51,8 @@ model User {
   trackedClicks    TrackedClick[]
   parent           User?             @relation("TeamHierarchy", fields: [parentId], references: [id])
   members          User[]            @relation("TeamHierarchy")
-  whatsappAccount  WhatsAppAccount?
+  whatsappAccount   WhatsAppAccount?
+  pushSubscriptions PushSubscription[]
 
   @@index([email])
   @@index([workspaceId])
@@ -96,6 +97,7 @@ model Subscription {
   currentPeriodEnd         DateTime?
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
+  expiryWarningSentAt      DateTime?
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -586,6 +588,20 @@ model Article {
   updatedAt   DateTime  @updatedAt
 }
 
+// ── Push Notification Subscriptions ───────────────────────────────────────────
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum MessageType {
@@ -661,6 +677,11 @@ enum NotificationType {
   NEW_MESSAGE
   STORE_AUTO_SENT
   STORE_AUTO_FAILED
+  SUBSCRIPTION_EXPIRING
+  PAYMENT_FAILED
+  WHATSAPP_TOKEN_EXPIRING
+  AI_TOKENS_LOW
+  SUBSCRIPTION_SUCCESS
 }
 
 enum StoreType {

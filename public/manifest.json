@@ -1,0 +1,11 @@
+{
+  "name": "WhatsPro - واتس برو",
+  "short_name": "WhatsPro",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#111b21",
+  "theme_color": "#25D366",
+  "icons": [
+    { "src": "/favicon.jpg", "sizes": "1200x1200", "type": "image/jpeg" }
+  ]
+}

@@ -3,9 +3,36 @@
 
 import prisma from "@/lib/prisma";
 import { NotificationType } from "@/types/enums";
+import { sendPushToUser } from "./push";
+
+const PUSH_ENABLED_TYPES = new Set<NotificationType>([
+  "SUBSCRIPTION_EXPIRING",
+  "PAYMENT_FAILED",
+  "WHATSAPP_TOKEN_EXPIRING",
+  "AI_TOKENS_LOW",
+  "CAMPAIGN_SUCCESS",
+  "CAMPAIGN_FAILED",
+  "CAMPAIGN_PARTIAL",
+  "PLAN_LIMIT_REACHED",
+  "STORE_AUTO_FAILED",
+  "SUBSCRIPTION_SUCCESS",
+]);
 
 // ─── Bilingual text helper ────────────────────────────────────────────────────
 const bi = (ar: string, en: string) => JSON.stringify({ ar, en });
+
+function safeParseBi(title: string, body: string) {
+  try {
+    const parsedTitle = JSON.parse(title);
+    const parsedBody = JSON.parse(body);
+    return {
+      title: parsedTitle.ar || title,
+      body: parsedBody.ar || body,
+    };
+  } catch {
+    return { title, body };
+  }
+}
 
 type CreateNotificationParams = {
   userId: string;
@@ -19,6 +46,15 @@ type CreateNotificationParams = {
 export async function createNotification(params: CreateNotificationParams) {
   try {
     await prisma.notification.create({ data: params });
+    
+    if (PUSH_ENABLED_TYPES.has(params.type)) {
+      const parsed = safeParseBi(params.title, params.body);
+      await sendPushToUser(params.userId, {
+        title: parsed.title,
+        body: parsed.body,
+        url: params.link ?? "/dashboard",
+      }).catch(err => console.error("[PUSH] Failed:", err));
+    }
   } catch (err) {
     console.error("[NOTIFY] Failed to create notification:", err);
   }
@@ -153,3 +189,70 @@ export async function notifyStoreAutoFailed(
     meta: { automationType, storeSource, customerPhone, templateName, reason },
   });
 }
+
+// ─── إشعارات النظام والباقة ───────────────────────────────────────────────────
+
+export async function notifySubscriptionExpiring(userId: string, planName: string, daysLeft: number) {
+  await createNotification({
+    userId,
+    type: NotificationType.SUBSCRIPTION_EXPIRING,
+    title: bi("⚠️ باقتك ستنتهي قريباً", "⚠️ Subscription expiring soon"),
+    body: bi(
+      `باقتك (${planName}) ستنتهي بعد ${daysLeft} أيام. يرجى التجديد لتجنب توقف الخدمة.`,
+      `Your (${planName}) plan expires in ${daysLeft} days. Please renew to avoid service interruption.`
+    ),
+    link: "/dashboard?section=api", // or billing section
+  });
+}
+
+export async function notifyPaymentFailed(userId: string, planName: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.PAYMENT_FAILED,
+    title: bi("❌ فشل عملية الدفع", "❌ Payment failed"),
+    body: bi(
+      `لم نتمكن من تجديد باقة (${planName}). يرجى التحقق من طريقة الدفع الخاصة بك.`,
+      `We couldn't renew your (${planName}) plan. Please check your payment method.`
+    ),
+    link: "/dashboard?section=api",
+  });
+}
+
+export async function notifyWhatsAppTokenExpiring(userId: string, daysLeft: number) {
+  await createNotification({
+    userId,
+    type: NotificationType.WHATSAPP_TOKEN_EXPIRING,
+    title: bi("⚠️ تنبيه: اقتراب انتهاء صلاحية ربط واتساب", "⚠️ WhatsApp token expiring soon"),
+    body: bi(
+      `ربط واتساب الخاص بك سينتهي خلال ${daysLeft} أيام. يرجى إعادة الربط لضمان استمرار البوت.`,
+      `Your WhatsApp connection will expire in ${daysLeft} days. Please reconnect to keep the bot running.`
+    ),
+    link: "/dashboard?section=api",
+  });
+}
+
+export async function notifyAiTokensLow(userId: string, usedPct: number) {
+  await createNotification({
+    userId,
+    type: NotificationType.AI_TOKENS_LOW,
+    title: bi("⚠️ رصيد الذكاء الاصطناعي منخفض", "⚠️ AI tokens low"),
+    body: bi(
+      `لقد استهلكت ${usedPct}% من رصيد الذكاء الاصطناعي لهذا الشهر.`,
+      `You have used ${usedPct}% of your AI tokens for this month.`
+    ),
+    link: "/dashboard?section=api",
+  });
+}
+
+export async function notifySubscriptionSuccess(userId: string, planName: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.SUBSCRIPTION_SUCCESS,
+    title: bi("🎉 تم تفعيل الباقة بنجاح", "🎉 Subscription activated successfully"),
+    body: bi(
+      `تم تفعيل باقة (${planName}) الخاصة بك بنجاح. استمتع بميزات واتس برو!`,
+      `Your (${planName}) plan has been activated successfully. Enjoy WhatsPro features!`
+    ),
+    link: "/dashboard?section=api",
+  });
+}

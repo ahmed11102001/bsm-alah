@@ -22,6 +22,9 @@ import {
   noReplyCron,
   timeBasedCron,
   monthlyPlanReset,
+  subscriptionExpiryWarning,
+  whatsappTokenExpiryCheck,
+  aiTokensLowCheck,
 } from "@/inngest/automation-cron-functions";
 
 const inngestHandler = serve({
@@ -43,6 +46,9 @@ const inngestHandler = serve({
     // ── Automation Crons ──
     noReplyCron,
     timeBasedCron,
+    subscriptionExpiryWarning,
+    whatsappTokenExpiryCheck,
+    aiTokensLowCheck,
     // ── Plan Reset ──
     monthlyPlanReset,
   ],

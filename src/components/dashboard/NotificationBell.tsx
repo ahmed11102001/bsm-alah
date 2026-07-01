@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag } from "lucide-react";
+import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 
 interface Notification {
@@ -22,6 +22,11 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   NEW_MESSAGE:      <MessageSquare className="w-4 h-4 text-blue-500"   />,
   STORE_AUTO_SENT:  <ShoppingBag   className="w-4 h-4 text-emerald-500" />,
   STORE_AUTO_FAILED:<ShoppingBag   className="w-4 h-4 text-red-500"     />,
+  SUBSCRIPTION_EXPIRING: <Clock className="w-4 h-4 text-amber-500" />,
+  PAYMENT_FAILED: <AlertTriangle className="w-4 h-4 text-red-600" />,
+  WHATSAPP_TOKEN_EXPIRING: <Wifi className="w-4 h-4 text-orange-500" />,
+  AI_TOKENS_LOW: <Sparkles className="w-4 h-4 text-yellow-500" />,
+  SUBSCRIPTION_SUCCESS: <CheckCircle2 className="w-4 h-4 text-green-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -32,6 +37,11 @@ const TYPE_BG: Record<NotificationType, string> = {
   NEW_MESSAGE:        "bg-blue-50",
   STORE_AUTO_SENT:    "bg-emerald-50",
   STORE_AUTO_FAILED:  "bg-red-50",
+  SUBSCRIPTION_EXPIRING: "bg-amber-50",
+  PAYMENT_FAILED: "bg-red-50",
+  WHATSAPP_TOKEN_EXPIRING: "bg-orange-50",
+  AI_TOKENS_LOW: "bg-yellow-50",
+  SUBSCRIPTION_SUCCESS: "bg-green-50",
 };
 
 function timeAgo(dateStr: string): string {

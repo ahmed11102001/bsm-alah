@@ -84,13 +84,18 @@ export const SubscriptionStatus = {
 export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
 
 export const NotificationType = {
-  CAMPAIGN_SUCCESS:   "CAMPAIGN_SUCCESS",
-  CAMPAIGN_FAILED:    "CAMPAIGN_FAILED",
-  CAMPAIGN_PARTIAL:   "CAMPAIGN_PARTIAL",
-  PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED",
-  NEW_MESSAGE:        "NEW_MESSAGE",
-  STORE_AUTO_SENT:    "STORE_AUTO_SENT",
-  STORE_AUTO_FAILED:  "STORE_AUTO_FAILED",
+  CAMPAIGN_SUCCESS:        "CAMPAIGN_SUCCESS",
+  CAMPAIGN_FAILED:         "CAMPAIGN_FAILED",
+  CAMPAIGN_PARTIAL:        "CAMPAIGN_PARTIAL",
+  PLAN_LIMIT_REACHED:      "PLAN_LIMIT_REACHED",
+  NEW_MESSAGE:             "NEW_MESSAGE",
+  STORE_AUTO_SENT:         "STORE_AUTO_SENT",
+  STORE_AUTO_FAILED:       "STORE_AUTO_FAILED",
+  SUBSCRIPTION_EXPIRING:   "SUBSCRIPTION_EXPIRING",
+  PAYMENT_FAILED:          "PAYMENT_FAILED",
+  WHATSAPP_TOKEN_EXPIRING: "WHATSAPP_TOKEN_EXPIRING",
+  AI_TOKENS_LOW:           "AI_TOKENS_LOW",
+  SUBSCRIPTION_SUCCESS:    "SUBSCRIPTION_SUCCESS",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
