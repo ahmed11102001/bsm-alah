@@ -253,7 +253,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 top-11 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+        <div className="absolute right-0 top-11 w-[min(20rem,calc(100vw-2rem))] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
