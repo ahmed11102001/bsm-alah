@@ -1347,7 +1347,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
       )}
 
       {/* ── Main ── */}
-      <main className={`flex-1 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
+      <main className={`flex-1 min-w-0 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
         {/* Header */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
 
