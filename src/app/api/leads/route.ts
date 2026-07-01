@@ -41,13 +41,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
-
     // 🔔 نشر event لـ Inngest عشان الـ lead bot يشتغل تلقائياً
     // (fire-and-forget — مش هيأثر على الـ response)
     inngest.send({
       name: "lead/created",
-      data: { leadId: lead.id, leadName: lead.name, leadPhone: lead.phone },
+      data: {
+        leadId: lead.id,
+        leadName: lead.name,
+        leadBusiness: lead.business,
+        leadPhone: lead.phone,
+      },
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });

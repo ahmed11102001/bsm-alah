@@ -670,9 +670,10 @@ export const handleNewLeadBot = inngest.createFunction(
     triggers: [{ event: "lead/created" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { leadId, leadName, leadPhone } = event.data as {
+    const { leadId, leadName, leadBusiness, leadPhone } = event.data as {
       leadId: string;
       leadName: string;
+      leadBusiness: string;
       leadPhone: string;
     };
 
@@ -684,6 +685,15 @@ export const handleNewLeadBot = inngest.createFunction(
     });
 
     if (!config) return { ok: false, reason: "bot not active or no template" };
+
+    const lead = await step.run("get-lead", async () => {
+      return await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { id: true, name: true, business: true, phone: true },
+      });
+    });
+
+    if (!lead) return { ok: false, reason: "lead not found" };
 
     // ── Step 2: جيب WhatsApp account ──────────────────────────────────────────
     const wa = await step.run("get-wa-account", async () => {
@@ -700,7 +710,7 @@ export const handleNewLeadBot = inngest.createFunction(
       const { normalizePhone } = await import("@/lib/phone");
       const { decryptToken } = await import("@/lib/crypto");
 
-      const normalizedPhone = normalizePhone(leadPhone);
+      const normalizedPhone = normalizePhone(leadPhone ?? lead.phone);
       if (!normalizedPhone) return { ok: false, error: "invalid phone" };
 
       return await sendWhatsAppMessage({
@@ -710,7 +720,7 @@ export const handleNewLeadBot = inngest.createFunction(
         messageType: "template",
         templateName: config.templateName!,
         templateLang: config.templateLang,
-        templateVars: { body: [leadName] },
+        templateVars: { body: [leadName ?? lead.name, leadBusiness ?? lead.business] },
         content: null,
       });
     });
@@ -778,4 +788,3 @@ export const processDelayedStoreAutomation = inngest.createFunction(
     return result;
   }
 );
-

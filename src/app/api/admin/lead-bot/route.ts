@@ -133,7 +133,7 @@ async function sendToAllPendingLeads(
       messageType:   "template",
       templateName,
       templateLang,
-      templateVars:  { body: [lead.name] }, // نمرر اسم الـ lead كمتغير {{1}}
+      templateVars:  { body: [lead.name, lead.business] }, // {{1}} الاسم، {{2}} النشاط
       content:       null,
     });
 
