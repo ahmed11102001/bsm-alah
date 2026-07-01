@@ -30,7 +30,7 @@ import {
   Home, CheckCircle,
   Loader2, ArrowUpRight, Shield, Phone, Mail,
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
-  Languages, Bot, Sparkles,
+  Languages, Bot, Sparkles, UserCheck,
 } from "lucide-react";
 import Contacts from "@/components/dashboard/Contacts";
 import Templates from "@/components/dashboard/Templates";
@@ -77,7 +77,7 @@ interface DashboardData {
 // ─── Sidebar items (built at render time from translations) ──────────────────
 const SIDEBAR_IDS = [
   { icon: Home, id: "home" },
-  { icon: Users, id: "team" },
+  { icon: UserCheck, id: "team" },
   { icon: Users, id: "contacts" },
   { icon: Send, id: "campaigns" },
   { icon: FileText, id: "templates" },
