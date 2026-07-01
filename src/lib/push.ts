@@ -5,9 +5,13 @@ import webpush from "web-push";
 import prisma from "@/lib/prisma";
 
 // ── Configure VAPID ─────────────────────────────────────────────────────────
-const VAPID_PUBLIC  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:support@whatspro.com";
+let VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:whatsprosystem@gmail.com";
+
+if (VAPID_SUBJECT && !VAPID_SUBJECT.startsWith("mailto:") && !VAPID_SUBJECT.startsWith("http")) {
+  VAPID_SUBJECT = `mailto:${VAPID_SUBJECT}`;
+}
 
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
@@ -16,10 +20,10 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 // ── Types ───────────────────────────────────────────────────────────────────
 interface PushPayload {
   title: string;
-  body:  string;
-  url?:  string;
+  body: string;
+  url?: string;
   icon?: string;
-  tag?:  string;
+  tag?: string;
 }
 
 // ── Send Push to all devices of a user ──────────────────────────────────────
