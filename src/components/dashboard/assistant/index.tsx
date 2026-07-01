@@ -114,8 +114,17 @@ export default function DashboardAssistant({
   }, []);
 
   // ── Tour completed ─────────────────────────────────────────────────────
-  const handleTourComplete = useCallback(() => {
+  const handleTourComplete = useCallback(async () => {
     setShowTour(false);
+    
+    // إرسال تحديث للسيرفر عشان الجولة متظهرش تاني
+    try {
+      await fetch("/api/user/onboarding", { method: "POST" });
+      window.dispatchEvent(new CustomEvent("refresh-dash"));
+    } catch (err) {
+      console.error("Failed to update onboarding state", err);
+    }
+
     // Navigate back to home after tour ends
     onNavigate("home");
   }, [onNavigate]);

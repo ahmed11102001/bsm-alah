@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2 } from "lucide-react";
+import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2, Smartphone } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 
 interface Notification {
@@ -72,6 +72,19 @@ function t(raw: string, lang: "ar" | "en"): string {
   return raw;
 }
 
+const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOpenChange }: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isOpen ?? internalOpen;
@@ -79,6 +92,9 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
   const [notifs,      setNotifs]      = useState<Notification[]>([]);
   const [unread,      setUnread]      = useState(0);
   const [loading,     setLoading]     = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushSupported, setPushSupported] = useState(true);
   const ref        = useRef<HTMLDivElement>(null);
   const prevUnread = useRef<number>(-1);   // -1 = أول تحميل، مش بنعزف فيه
 
@@ -135,6 +151,66 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Check Push Notification Status
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushSupported(false);
+      return;
+    }
+    if (Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setPushEnabled(!!sub);
+        });
+      });
+    }
+  }, []);
+
+  const togglePush = async () => {
+    if (!pushSupported || !VAPID_KEY) return;
+    
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+
+      if (pushEnabled) {
+        // Unsubscribe
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          const json = sub.toJSON();
+          await fetch("/api/push/unsubscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: json.endpoint }),
+          });
+          await sub.unsubscribe();
+        }
+        setPushEnabled(false);
+      } else {
+        // Subscribe
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_KEY) as any,
+          });
+          const json = sub.toJSON();
+          await fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+          });
+          setPushEnabled(true);
+        }
+      }
+    } catch (err) {
+      console.error("[PUSH] Toggle error:", err);
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const markAsRead = async (id: string) => {
     await fetch("/api/notifications", {
@@ -248,6 +324,25 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
               ))
             )}
           </div>
+
+          {/* Footer (Push Settings) */}
+          {pushSupported && VAPID_KEY && (
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-gray-500" />
+                <span className="text-xs text-gray-700 font-medium">إشعارات الجهاز</span>
+              </div>
+              <button
+                onClick={togglePush}
+                disabled={pushLoading}
+                className={`relative w-9 h-5 rounded-full transition-colors ${pushEnabled ? 'bg-[#25D366]' : 'bg-gray-300'} ${pushLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div 
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${pushEnabled ? 'left-0.5' : 'right-0.5'}`} 
+                />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
