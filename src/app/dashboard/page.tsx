@@ -1422,7 +1422,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             helperMountId="assistant-header-slot"
             helperOpen={activeTopPanel === "assistant"}
             onHelperOpenChange={openAssistantPanel}
-            onboardingCompleted={dashData?.user.onboardingCompleted ?? false}
+            onboardingCompleted={dashData?.user.onboardingCompleted}
           />
           <PushNotificationPrompt />
           {renderContent()}

@@ -24,7 +24,7 @@ interface Props {
   helperMountId?:    string;
   helperOpen?:       boolean;
   onHelperOpenChange?: (open: boolean) => void;
-  onboardingCompleted: boolean;
+  onboardingCompleted: boolean | undefined;
 }
 
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
@@ -49,8 +49,10 @@ export default function DashboardAssistant({
     } catch { /* ignore */ }
 
     // هل نعرض الـ welcome banner؟ فقط لو ما كملش الـ onboarding
-    if (!onboardingCompleted) {
+    if (onboardingCompleted === false) {
       setShowWelcome(true);
+    } else if (onboardingCompleted === true) {
+      setShowWelcome(false);
     }
   }, [userId, onboardingCompleted]);
 
