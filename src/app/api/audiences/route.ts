@@ -445,6 +445,18 @@ export async function PATCH(req: NextRequest) {
   const audience = await prisma.audience.findFirst({ where: { id, userId } });
   if (!audience) return NextResponse.json({ error: "الجمهور غير موجود" }, { status: 404 });
 
+  const limitCheck = await checkContactsLimit(userId, normalizedContacts.length);
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      {
+        error: limitCheck.message,
+        code: limitCheck.code,
+        requiredPlan: limitCheck.requiredPlan,
+      },
+      { status: 403 }
+    );
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.contact.updateMany({ where: { audienceId: id, userId }, data: { deletedAt: new Date() } });
 

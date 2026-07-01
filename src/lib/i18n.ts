@@ -7,7 +7,7 @@ export const translations = {
     sidebar: {
       home:       "الرئيسية",
       team:       "الفريق",
-      contacts:   "جهات الاتصال",
+      contacts:   "الجمهور",
       campaigns:  "الحملات",
       templates:  "القوالب",
       chat:       "المحادثات",
@@ -48,7 +48,7 @@ export const translations = {
         expired:        "منتهية",
         changePlan:     "تغيير الباقة",
         upgrade:        "ترقية",
-        contacts:       "جهات الاتصال",
+        contacts:       "الجمهور",
         campaignsMonth: "الحملات / شهر",
         teamMembers:    "أعضاء الفريق",
         features: {
@@ -165,22 +165,23 @@ export const translations = {
 
     // ── Contacts Page ─────────────────────────────────────────────────────────
     contacts: {
+      title: "الجمهور",
       stats: {
-        total:     "إجمالي جهات الاتصال",
+        total:     "إجمالي الجمهور",
         vip:       "عملاء VIP",
        engaged: "المتفاعلون",     
         noResp:    "لم يردوا",
       },
       searchPlaceholder: "البحث باسم الجمهور...",
       createCustom: "إنشاء جمهور مخصص",
-      addContacts:  "إضافة جهات اتصال",
+      addContacts:  "إضافة جمهور",
       sections: {
         smart:  "قوائم ذكية",
         custom: "جمهور مخصص",
-        excel:  "جهات الاتصال",
+        excel:  "الجمهور",
       },
       card: {
-        contact:    "جهة اتصال",
+        contact:    "عضو",
         viewDetails:"عرض التفاصيل",
         edit:       "تعديل الجمهور",
         delete:     "حذف",
@@ -192,9 +193,9 @@ export const translations = {
         custom:     "مخصص",
       },
       empty: {
-        title:   "لا توجد جهات اتصال بعد",
+        title:   "لا يوجد جمهور بعد",
         subtitle:"أضف جمهورك الأول عبر رفع ملف Excel أو إنشاء جمهور مخصص",
-        btn:     "إضافة جهات اتصال",
+        btn:     "إضافة جمهور",
       },
       dropzone: {
         drag:    "اسحب الملف هنا أو انقر للاختيار",
@@ -207,7 +208,7 @@ export const translations = {
         total:   "إجمالي",
       },
       excelDialog: {
-        title:      "إضافة جهات اتصال",
+        title:      "إضافة جمهور",
         step1Desc:  "ارفع ملف Excel أو CSV لاستخراج الأرقام",
         step2Desc:  "تأكيد البيانات وحفظ الجمهور",
         step1Label: "رفع الملف",
@@ -244,7 +245,7 @@ export const translations = {
         cancel:       "إلغاء",
         namePlaceholder:  "الاسم (اختياري)",
         phonePlaceholder: "201234567890",
-        noContacts:   "لا توجد جهات اتصال",
+        noContacts:   "لا توجد جهات",
         closeBtn:     "إغلاق",
         saveBtn:      "حفظ التغييرات",
         saved:        "تم الحفظ",
@@ -552,7 +553,7 @@ vipCriteria: {
     sidebar: {
       home:       "Home",
       team:       "Team",
-      contacts:   "Contacts",
+      contacts:   "Audience",
       campaigns:  "Campaigns",
       templates:  "Templates",
       chat:       "Conversations",
@@ -706,22 +707,23 @@ vipCriteria: {
     },
 
     contacts: {
+      title: "Audience",
       stats: {
-        total:  "Total Contacts",
+        total:  "Total Audience",
         vip:    "VIP Clients",
         engaged: "Engaged",
         noResp: "No Response",
       },
       searchPlaceholder: "Search audience name...",
       createCustom: "Create Custom Audience",
-      addContacts:  "Add Contacts",
+      addContacts:  "Add Audience",
       sections: {
         smart:  "Smart Lists",
         custom: "Custom Audiences",
-        excel:  "Contacts",
+        excel:  "Audience",
       },
       card: {
-        contact:    "contact",
+        contact:    "member",
         viewDetails:"View Details",
         edit:       "Edit Audience",
         delete:     "Delete",
@@ -733,9 +735,9 @@ vipCriteria: {
         custom:     "Custom",
       },
       empty: {
-        title:   "No contacts yet",
+        title:   "No audience yet",
         subtitle:"Add your first audience by uploading an Excel file or creating a custom audience",
-        btn:     "Add Contacts",
+        btn:     "Add Audience",
       },
       dropzone: {
         drag:    "Drag file here or click to choose",
@@ -748,7 +750,7 @@ vipCriteria: {
         total:   "total",
       },
       excelDialog: {
-        title:      "Add Contacts",
+        title:      "Add Audience",
         step1Desc:  "Upload an Excel or CSV file to extract numbers",
         step2Desc:  "Confirm data and save audience",
         step1Label: "Upload File",

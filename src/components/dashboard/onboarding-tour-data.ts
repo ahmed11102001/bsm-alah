@@ -33,10 +33,10 @@ export const TOUR_STEPS: TourStep[] = [
   {
     sidebarId: "contacts",
     icon: Users,
-    titleAr: "جهات الاتصال",
-    titleEn: "Contacts",
-    descAr: "جهات الاتصال - أضف وأدر كل جهات اتصالك وقوائمك.",
-    descEn: "Contacts - add and manage all your contacts and audience lists.",
+    titleAr: "الجمهور",
+    titleEn: "Audience",
+    descAr: "الجمهور - أضف وأدر كل جمهورك وقوائمك.",
+    descEn: "Audience - add and manage all your audience lists.",
   },
   {
     sidebarId: "campaigns",

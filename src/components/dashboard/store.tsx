@@ -148,7 +148,7 @@ const TX = {
   listTitle: { ar: "قائمة", en: "List" },
   syncedContacts: { ar: "جهة اتصال مزامَنة من المتجر", en: "contacts synced from store" },
   goContacts: { ar: "عرض القائمة", en: "View list" },
-  goContactsToast: { ar: "اذهب إلى صفحة جهات الاتصال", en: "Go to Contacts page" },
+  goContactsToast: { ar: "اذهب إلى صفحة الجمهور", en: "Go to Audience page" },
   manualSync: { ar: "مزامنة يدوية", en: "Manual Sync" },
   manualSyncSub: { ar: "سحب آخر 100 طلب من إيزي أوردرز", en: "Pull latest 100 orders from EasyOrders" },
   syncing: { ar: "جاري المزامنة...", en: "Syncing..." },

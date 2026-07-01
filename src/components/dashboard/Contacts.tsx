@@ -664,6 +664,14 @@ export default function Contacts() {
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-[#25D366] uppercase tracking-[0.2em] mb-2">
+          {ct.title}
+        </p>
+        <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white">
+          {ct.title}
+        </h1>
+      </div>
 
       {/* ── Stats strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
