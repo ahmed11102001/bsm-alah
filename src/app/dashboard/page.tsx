@@ -77,14 +77,14 @@ interface DashboardData {
 // ─── Sidebar items (built at render time from translations) ──────────────────
 const SIDEBAR_IDS = [
   { icon: Home, id: "home" },
-  { icon: UserCheck, id: "team" },
+  { icon: MessageSquare, id: "chat" },
   { icon: Users, id: "contacts" },
   { icon: Send, id: "campaigns" },
   { icon: FileText, id: "templates" },
-  { icon: MessageSquare, id: "chat" },
-  { icon: BarChart3, id: "reports" },
   { icon: Bot, id: "automation" },
   { icon: ShoppingBag, id: "store" },
+  { icon: BarChart3, id: "reports" },
+  { icon: UserCheck, id: "team" },
   { icon: Code, id: "api" },
 ] as const;
 

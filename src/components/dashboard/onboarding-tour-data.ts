@@ -89,10 +89,10 @@ export const TOUR_STEPS: TourStep[] = [
   {
     sidebarId: "api",
     icon: Code,
-    titleAr: "API",
-    titleEn: "API",
-    descAr: "API - للمطورين: وصّل واتساب بأنظمتك الخاصة وتحكم برمجيًا.",
-    descEn: "API - for developers: connect WhatsApp to your custom systems programmatically.",
+    titleAr: "التكاملات",
+    titleEn: "Integrations",
+    descAr: "التكاملات - للمطورين: وصّل واتساب بأنظمتك الخاصة وتحكم برمجيًا.",
+    descEn: "Integrations - for developers: connect WhatsApp to your custom systems programmatically.",
   },
 ];
 

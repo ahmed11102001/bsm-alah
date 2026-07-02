@@ -14,7 +14,7 @@ export const translations = {
       reports:    "التقارير",
       automation: "الأتمتة الذكية",
       store:      "المتجر",
-      api:        "API",
+      api:        "التكاملات",
       admin:      "Admin",
     },
     theme: {
@@ -269,7 +269,7 @@ vipCriteria: {
 
     // ── API / Integrations Page ───────────────────────────────────────────────
     api: {
-      title:      "الربط والـ API",
+      title:      "التكاملات",
       subtitle:   "اربط حساباتك وإدر التكاملات",
       syncBtn:    "تحديث القوالب",
       syncing:    "جاري المزامنة...",
@@ -560,7 +560,7 @@ vipCriteria: {
       reports:    "Reports",
       automation: "Smart Automation",
       store:      "Store",
-      api:        "API",
+      api:        "Integrations",
       admin:      "Admin",
     },
     theme: {
@@ -809,7 +809,7 @@ vipCriteria: {
 },
 
     api: {
-      title:      "API & Integrations",
+      title:      "Integrations",
       subtitle:   "Connect your accounts and manage integrations",
       syncBtn:    "Sync Templates",
       syncing:    "Syncing...",
