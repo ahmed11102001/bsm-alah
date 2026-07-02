@@ -1,4 +1,4 @@
-﻿// src/app/api/shopify/webhooks/route.ts
+// src/app/api/shopify/webhooks/route.ts
 // ─── ويب هوك Shopify — نظام uid+token زي EasyOrders ─────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac }                from "crypto";
@@ -229,6 +229,7 @@ async function handleOrderCreated(
       storeId:        shopifyStoreId,
       customerPhone:  cleanPhone,
       contactId:      contact.id,
+      storeOrderId:   storeOrder.id,
       // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
       templateVars: {
         body: [

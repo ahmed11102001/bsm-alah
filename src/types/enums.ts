@@ -96,6 +96,8 @@ export const NotificationType = {
   WHATSAPP_TOKEN_EXPIRING: "WHATSAPP_TOKEN_EXPIRING",
   AI_TOKENS_LOW:           "AI_TOKENS_LOW",
   SUBSCRIPTION_SUCCESS:    "SUBSCRIPTION_SUCCESS",
+  ORDER_CONFIRMED:         "ORDER_CONFIRMED",
+  ORDER_CANCELLED:         "ORDER_CANCELLED",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

@@ -27,6 +27,8 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   WHATSAPP_TOKEN_EXPIRING: <Wifi className="w-4 h-4 text-orange-500" />,
   AI_TOKENS_LOW: <Sparkles className="w-4 h-4 text-yellow-500" />,
   SUBSCRIPTION_SUCCESS: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+  ORDER_CONFIRMED: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+  ORDER_CANCELLED: <XCircle className="w-4 h-4 text-red-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -42,6 +44,8 @@ const TYPE_BG: Record<NotificationType, string> = {
   WHATSAPP_TOKEN_EXPIRING: "bg-orange-50",
   AI_TOKENS_LOW: "bg-yellow-50",
   SUBSCRIPTION_SUCCESS: "bg-green-50",
+  ORDER_CONFIRMED: "bg-green-50",
+  ORDER_CANCELLED: "bg-red-50",
 };
 
 function timeAgo(dateStr: string): string {

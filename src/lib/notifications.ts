@@ -255,4 +255,30 @@ export async function notifySubscriptionSuccess(userId: string, planName: string
     ),
     link: "/dashboard?section=api",
   });
+}
+
+export async function notifyOrderConfirmed(userId: string, orderNumber: string, customerPhone: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.ORDER_CONFIRMED,
+    title: bi(`✅ تم تأكيد الطلب #${orderNumber}`, `✅ Order #${orderNumber} confirmed`),
+    body: bi(
+      `قام العميل (${customerPhone}) بتأكيد الطلب #${orderNumber} بنجاح.`,
+      `Customer (${customerPhone}) successfully confirmed order #${orderNumber}.`
+    ),
+    link: "/dashboard?section=store",
+  });
+}
+
+export async function notifyOrderCancelled(userId: string, orderNumber: string, customerPhone: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.ORDER_CANCELLED,
+    title: NotificationType.ORDER_CANCELLED === "ORDER_CANCELLED" ? bi(`❌ تم إلغاء الطلب #${orderNumber}`, `❌ Order #${orderNumber} cancelled`) : "...", // using simple bi
+    body: bi(
+      `قام العميل (${customerPhone}) بإلغاء الطلب #${orderNumber}.`,
+      `Customer (${customerPhone}) cancelled order #${orderNumber}.`
+    ),
+    link: "/dashboard?section=store",
+  });
 }

@@ -133,8 +133,12 @@ const WANI_READY: Template[] = [
     id: "wani_order_confirm", name: "wani_order_confirm",
     category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true,
     headerType: "none",
-    body: "مرحباً {{1}} 👋\n\nتم تأكيد طلبك رقم *{{2}}* بنجاح ✅\nإجمالي الطلب: *{{3}}*\n\nشكراً لتسوقك معنا! سيصلك تحديث عند الشحن.",
+    body: "مرحباً {{1}} 👋\n\nاستلمنا طلبك رقم #{{2}} بإجمالي {{3}} جنيه.\n\nتأكيد إنك عايز الأوردر ده يتنفذ فعلاً؟",
     footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "أيوه، أكّد الأوردر ✅", value: "CONFIRM_ORDER" },
+      { type: "quick_reply", text: "لأ، إلغاء ❌", value: "CANCEL_ORDER" },
+    ],
     exampleVars: ["أحمد", "ORD-12345", "١٢٥ ج.م"],
   },
   {

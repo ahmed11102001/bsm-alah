@@ -30,6 +30,20 @@ export async function GET(req: NextRequest) {
     const to    = searchParams.get("to");
     const range = dateRange(from, to);
 
+    // ── Confirmed/Cancelled Orders ───────────────────────────────────
+    const ordersPage = parseInt(searchParams.get("ordersPage") || "1", 10);
+    const orderFilter = searchParams.get("orderFilter") || "all";
+    const pageSize = 50;
+
+    const ordersWhere: any = { userId, orderedAt: range };
+    if (orderFilter === "confirmed") {
+      ordersWhere.status = "confirmed";
+    } else if (orderFilter === "cancelled") {
+      ordersWhere.status = "cancelled";
+    } else {
+      ordersWhere.status = { in: ["confirmed", "cancelled"] };
+    }
+
     // ── جلب معلومات المتاجر ──────────────────────────────────────────
     const user = await prisma.user.findUnique({
       where:  { id: userId },
@@ -138,6 +152,29 @@ export async function GET(req: NextRequest) {
     if (eo)  stores.push({ source: "easyorders",  name: eo.storeName,  connectedAt: eo.lastSyncAt ?? null, isActive: eo.isActive });
     if (woo) stores.push({ source: "woocommerce", name: woo.storeName, connectedAt: woo.lastSyncAt ?? null, isActive: woo.isActive });
 
+    const [confirmedOrders, confirmedOrdersTotal] = await Promise.all([
+      prisma.storeOrder.findMany({
+        where: ordersWhere,
+        orderBy: { orderedAt: "desc" },
+        take: pageSize,
+        skip: (ordersPage - 1) * pageSize,
+        select: {
+          id: true,
+          orderNumber: true,
+          externalId: true,
+          customerName: true,
+          customerPhone: true,
+          status: true,
+          total: true,
+          currency: true,
+          orderedAt: true,
+        },
+      }),
+      prisma.storeOrder.count({
+        where: ordersWhere,
+      }),
+    ]);
+
     return NextResponse.json({
       summary: {
         totalOrders,
@@ -162,6 +199,8 @@ export async function GET(req: NextRequest) {
         revenue: s._sum.total ?? 0,
       })),
       dailyTrend,
+      confirmedOrders,
+      confirmedOrdersTotal,
     });
   } catch (err) {
     console.error("store-reports error:", err);

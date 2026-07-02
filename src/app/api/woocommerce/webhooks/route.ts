@@ -197,6 +197,7 @@ async function handleOrderCreated(
       storeId:        woocommerceStoreId,
       customerPhone:  cleanPhone,
       contactId:      contact.id,
+      storeOrderId:   storeOrder.id,
       // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
       templateVars: {
         body: [

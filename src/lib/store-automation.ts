@@ -31,6 +31,7 @@ export interface TriggerStoreAutomationParams {
   customerPhone:  string;
   contactId:      string;
   templateVars?:  TemplateVars | null;
+  storeOrderId?:  string;
 }
 
 function buildAutomationWhere(
@@ -56,6 +57,7 @@ export async function executeStoreAutomationSend(
     customerPhone,
     contactId,
     templateVars = null,
+    storeOrderId,
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
@@ -113,6 +115,16 @@ export async function executeStoreAutomationSend(
       where: { id: automation.id },
       data:  { sentCount: { increment: 1 }, lastSentAt: new Date() },
     }).catch(() => {});
+
+    if (automationType === "order_confirm" && storeOrderId && result.whatsappMsgId) {
+      await prisma.storeOrder.update({
+        where: { id: storeOrderId },
+        data: {
+          status: "awaiting_confirmation",
+          confirmationMessageId: result.whatsappMsgId,
+        },
+      }).catch((e) => console.error("[StoreAuto] Failed to update StoreOrder with confirmationMessageId", e));
+    }
   } else {
     await prisma.storeAutomation.update({
       where: { id: automation.id },
@@ -151,6 +163,7 @@ export async function triggerStoreAutomation(
     customerPhone,
     contactId,
     templateVars = null,
+    storeOrderId,
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
@@ -179,6 +192,7 @@ export async function triggerStoreAutomation(
         contactId,
         templateVars,
         delayMinutes: automation.delayMinutes,
+        storeOrderId,
       },
     });
     console.log(`[StoreAuto] ⏱ Scheduled ${automationType} to send in ${automation.delayMinutes} mins for ${customerPhone}`);

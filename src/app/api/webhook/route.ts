@@ -210,6 +210,40 @@ export async function POST(req: NextRequest) {
         content = interactive?.button_reply?.title || interactive?.list_reply?.title || "Interactive Reply";
       }
 
+      // ─── Order Confirmation Flow ───
+      const contextId = msg.context?.id as string | undefined;
+      const payload = msg.type === "button" ? msg.button?.payload : (msg.type === "interactive" ? msg.interactive?.button_reply?.id : undefined);
+
+      if (payload === "CONFIRM_ORDER" || payload === "CANCEL_ORDER") {
+        const newStatus = payload === "CONFIRM_ORDER" ? "confirmed" : "cancelled";
+        
+        let order = contextId 
+          ? await prisma.storeOrder.findFirst({ where: { userId, confirmationMessageId: contextId } })
+          : null;
+
+        // TODO: fallback لحد ما نتأكد إن كل الرسائل القديمة اتبعتت بعد التعديل ده
+        if (!order) {
+          order = await prisma.storeOrder.findFirst({
+            where: { userId, customerPhone: from, status: "awaiting_confirmation" },
+            orderBy: { orderedAt: "desc" },
+          });
+        }
+
+        if (order) {
+          await prisma.storeOrder.update({ where: { id: order.id }, data: { status: newStatus } });
+          
+          if (payload === "CONFIRM_ORDER") {
+            const { notifyOrderConfirmed } = await import("@/lib/notifications");
+            await notifyOrderConfirmed(userId, order.orderNumber || order.externalId, order.customerPhone);
+          } else {
+            const { notifyOrderCancelled } = await import("@/lib/notifications");
+            await notifyOrderCancelled(userId, order.orderNumber || order.externalId, order.customerPhone);
+          }
+          // TODO (مرحلة تانية): استدعاء API المتجر للإلغاء الفعلي عند CANCEL_ORDER
+        }
+      }
+      // ────────────────────────────────
+
       if (msg.type === "image") {
         type = MessageType.image;
         content = msg.image?.caption || "Image";

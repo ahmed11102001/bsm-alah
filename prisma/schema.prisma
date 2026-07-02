@@ -464,6 +464,7 @@ model StoreOrder {
   customerPhone      String
   currency           String            @default("EGP")
   status             String            @default("pending")
+  confirmationMessageId String?
   rawData            Json?
   contactId          String?
   createdAt          DateTime          @default(now())
@@ -487,6 +488,7 @@ model StoreOrder {
   @@index([source, userId])
   @@index([orderedAt])
   @@index([wooCommerceStoreId])
+  @@index([userId, confirmationMessageId])
 }
 
 model TrackedClick {
@@ -682,6 +684,8 @@ enum NotificationType {
   WHATSAPP_TOKEN_EXPIRING
   AI_TOKENS_LOW
   SUBSCRIPTION_SUCCESS
+  ORDER_CONFIRMED
+  ORDER_CANCELLED
 }
 
 enum StoreType {

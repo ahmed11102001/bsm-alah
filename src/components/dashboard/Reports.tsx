@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import ExcelJS from "exceljs";
@@ -79,10 +79,17 @@ interface TopCustomerRow {
 interface OrderStatusRow { status: string; count: number; revenue: number; }
 interface DailyTrendRow  { day: string; orders: number; revenue: number; }
 interface StoreInfoRow   { source: string; name: string; connectedAt: string | null; isActive: boolean; }
+interface ConfirmedOrderRow {
+  id: string; orderNumber: string | null; externalId: string;
+  customerName: string | null; customerPhone: string;
+  status: string; total: number; currency: string; orderedAt: string;
+}
 interface StoreReportData {
   summary: StoreReportSummary; stores: StoreInfoRow[];
   campaignRevenue: CampaignRevenueRow[]; topCustomers: TopCustomerRow[];
   ordersByStatus: OrderStatusRow[]; dailyTrend: DailyTrendRow[];
+  confirmedOrders: ConfirmedOrderRow[];
+  confirmedOrdersTotal: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -195,6 +202,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
   // ── Store Report ──────────────────────────────────────────────────
   const [storeReport, setStoreReport] = useState<StoreReportData | null>(null);
   const [loadingStore, setLS]         = useState(false);
+  const [ordersPage, setOrdersPage]   = useState(1);
+  const [orderFilter, setOrderFilter] = useState("all");
 
   // ── Fetchers ─────────────────────────────────────────────────────
   const fetchOverview = useCallback(async () => {
@@ -238,10 +247,15 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
   const fetchStoreReport = useCallback(async () => {
     setLS(true);
     try {
-      const r = await fetch(`/api/reports/store?from=${from}&to=${to}`);
+      const params = new URLSearchParams({
+        from, to,
+        ordersPage: String(ordersPage),
+        orderFilter: orderFilter
+      });
+      const r = await fetch(`/api/reports/store?${params}`);
       if (r.ok) setStoreReport(await r.json());
     } finally { setLS(false); }
-  }, [from, to]);
+  }, [from, to, ordersPage, orderFilter]);
 
   // Initial load per tab
   useEffect(() => {
@@ -251,7 +265,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
     if (tab === "logs")      fetchLogs(1);
     if (tab === "store")     fetchStoreReport();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, ordersPage, orderFilter]);
 
   // ── Chart colors ─────────────────────────────────────────────────
   const hourlyData = useMemo(() => {
@@ -1184,6 +1198,100 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                         ))}
                       </tbody>
                     </table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* ── Confirmed/Cancelled Orders ── */}
+              {storeReport.confirmedOrders && (
+                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mt-6">
+                  <CardHeader className="pb-2 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      الأوردرات المؤكدة والملغية
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Select value={orderFilter} onValueChange={(val) => { setOrderFilter(val); setOrdersPage(1); }}>
+                        <SelectTrigger className="w-32 h-8 text-xs">
+                          <SelectValue placeholder="الفلتر" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">الكل</SelectItem>
+                          <SelectItem value="confirmed">المؤكدة</SelectItem>
+                          <SelectItem value="cancelled">الملغية</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0 overflow-x-auto">
+                    {storeReport.confirmedOrders.length === 0 ? (
+                      <div className="text-center text-gray-500 py-8 text-sm">
+                        لا توجد أوردرات في هذه الحالة.
+                      </div>
+                    ) : (
+                      <>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 bg-gray-50/50 dark:bg-gray-800/50">
+                              <th className="text-right py-3 px-4 font-medium">رقم الأوردر</th>
+                              <th className="text-right py-3 px-4 font-medium">العميل</th>
+                              <th className="text-center py-3 px-4 font-medium">الهاتف</th>
+                              <th className="text-center py-3 px-4 font-medium">الحالة</th>
+                              <th className="text-left py-3 px-4 font-medium">الإجمالي</th>
+                              <th className="text-left py-3 px-4 font-medium">التاريخ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {storeReport.confirmedOrders.map((o) => (
+                              <tr key={o.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-800 transition-colors">
+                                <td className="py-3 px-4 text-gray-600 font-mono text-xs">{o.orderNumber || o.externalId}</td>
+                                <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{o.customerName || "—"}</td>
+                                <td className="py-3 px-4 text-center text-gray-500 dark:text-gray-400 text-xs font-mono" dir="ltr">{o.customerPhone}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    o.status === "confirmed" ? "bg-green-100 text-green-700" :
+                                    o.status === "cancelled" ? "bg-red-100 text-red-700" :
+                                    "bg-gray-100 text-gray-600"
+                                  }`}>
+                                    {o.status === "confirmed" ? "مؤكد" : o.status === "cancelled" ? "ملغى" : o.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-left font-bold text-green-600 text-xs">
+                                  {o.total.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} {o.currency}
+                                </td>
+                                <td className="py-3 px-4 text-left text-gray-400 text-xs" dir="ltr">
+                                  {new Date(o.orderedAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        
+                        {/* Pagination */}
+                        <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
+                          <div>
+                            إجمالي: <span className="font-medium text-gray-800 dark:text-gray-200">{storeReport.confirmedOrdersTotal.toLocaleString("ar-EG")}</span> أوردر
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline" size="sm" className="h-7 px-2"
+                              disabled={ordersPage <= 1}
+                              onClick={() => setOrdersPage(p => p - 1)}
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                            <span className="font-mono">{ordersPage}</span>
+                            <Button
+                              variant="outline" size="sm" className="h-7 px-2"
+                              disabled={ordersPage * 50 >= storeReport.confirmedOrdersTotal}
+                              onClick={() => setOrdersPage(p => p + 1)}
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               )}
