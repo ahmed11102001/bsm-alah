@@ -118,6 +118,52 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
     setMountEl(document.getElementById(mountId));
   }, [mountId]);
 
+  const renderPanel = () => (
+    isOpen && (
+      <div
+        dir={dir}
+        className={`
+          fixed top-16 ${side} z-50 w-80 bg-white dark:bg-gray-900
+          border border-gray-100 dark:border-gray-700 rounded-3xl shadow-2xl overflow-hidden
+          lg:absolute lg:top-full lg:mt-3 lg:left-auto lg:right-auto
+          ${locale === "ar" ? "lg:-left-2" : "lg:-right-2"}
+        `}
+        style={{ animation: "wpAssistSlideUp .25s ease forwards" }}
+      >
+        <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#25D366] to-[#128C7E]">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-white" />
+            <span className="text-white font-semibold text-sm">{t.title}</span>
+            {totalCount > 0 && (
+              <span className="bg-white/25 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCount}</span>
+            )}
+          </div>
+          <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="max-h-96 overflow-y-auto">
+          {rules.length === 0 ? (
+            <div className="px-5 py-8 text-center">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm">{t.noTips}</p>
+              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t.noTipsDesc}</p>
+            </div>
+          ) : (
+            rules.map(rule => (
+              <RuleRow
+                key={rule.id}
+                rule={rule} ctx={ctx} locale={locale}
+                onDismiss={onDismiss}
+                onAction={(target, type) => { onAction(target, type); setOpen(false); }}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    )
+  );
+
   return (
     <>
       <style>{`
@@ -131,88 +177,49 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
         }
       `}</style>
 
-      {/* ── Panel ── */}
-      {isOpen && (
-        <div
-          dir={dir}
-          className={`fixed top-16 ${side} z-50 w-80 bg-white dark:bg-gray-900
-                      border border-gray-100 dark:border-gray-700 rounded-3xl shadow-2xl overflow-hidden`}
-          style={{ animation: "wpAssistSlideUp .25s ease forwards" }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#25D366] to-[#128C7E]">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-white" />
-              <span className="text-white font-semibold text-sm">{t.title}</span>
-              {totalCount > 0 && (
-                <span className="bg-white/25 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCount}</span>
-              )}
-            </div>
-              <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Rules */}
-          <div className="max-h-96 overflow-y-auto">
-            {rules.length === 0 ? (
-              <div className="px-5 py-8 text-center">
-                <p className="text-2xl mb-2">✅</p>
-                <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm">{t.noTips}</p>
-                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t.noTipsDesc}</p>
-              </div>
-            ) : (
-              rules.map(rule => (
-                <RuleRow
-                  key={rule.id}
-                  rule={rule} ctx={ctx} locale={locale}
-                  onDismiss={onDismiss}
-                  onAction={(target, type) => { onAction(target, type); setOpen(false); }}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Floating button ── */}
       {mountEl ? createPortal(
-        <button
-          onClick={() => setOpen(!isOpen)}
-          className="relative h-9 w-9 rounded-xl
-                    flex items-center justify-center
-                    hover:scale-[1.03] active:scale-95 transition-transform duration-200
-                    hover:bg-gray-100 dark:hover:bg-gray-700"
-          style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
-        >
-          <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
-          {totalCount > 0 && (
-            <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
-                              text-white text-[9px] font-bold flex items-center justify-center
-                              ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
-              {totalCount}
-            </span>
-          )}
-        </button>,
+        <div className="relative flex items-center">
+          {renderPanel()}
+          <button
+            onClick={() => setOpen(!isOpen)}
+            className="relative h-9 w-9 rounded-xl
+                      flex items-center justify-center
+                      hover:scale-[1.03] active:scale-95 transition-transform duration-200
+                      hover:bg-gray-100 dark:hover:bg-gray-700"
+            style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
+          >
+            <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
+            {totalCount > 0 && (
+              <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
+                                text-white text-[9px] font-bold flex items-center justify-center
+                                ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
+                {totalCount}
+              </span>
+            )}
+          </button>
+        </div>,
         mountEl
       ) : (
-      <button
-        onClick={() => setOpen(!isOpen)}
-        className={`fixed top-3 ${side} z-[60] h-9 w-9 rounded-xl
-                    flex items-center justify-center
-                    hover:scale-[1.03] active:scale-95 transition-transform duration-200
-                    hover:bg-gray-100 dark:hover:bg-gray-700`}
-        style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
-      >
-        <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
-        {totalCount > 0 && (
-          <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
-                            text-white text-[9px] font-bold flex items-center justify-center
-                            ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
-            {totalCount}
-          </span>
-        )}
-      </button>
+        <>
+          {renderPanel()}
+          <button
+            onClick={() => setOpen(!isOpen)}
+            className={`fixed top-3 ${side} z-[60] h-9 w-9 rounded-xl
+                        flex items-center justify-center
+                        hover:scale-[1.03] active:scale-95 transition-transform duration-200
+                        hover:bg-gray-100 dark:hover:bg-gray-700`}
+            style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
+          >
+            <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
+            {totalCount > 0 && (
+              <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
+                                text-white text-[9px] font-bold flex items-center justify-center
+                                ${criticalCount > 0 ? "bg-red-500" : "bg-amber-400"}`}>
+                {totalCount}
+              </span>
+            )}
+          </button>
+        </>
       )}
     </>
   );
