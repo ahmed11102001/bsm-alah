@@ -108,7 +108,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
   // ── موضع ديناميكي — عكس الـ sidebar دايماً ─────────────────────────────
   // Sidebar في العربي على اليمين → الـ helper على اليسار
   // Sidebar في الإنجليزي على اليسار → الـ helper على اليمين
-  const side = locale === "ar" ? "left-4 sm:left-6 lg:left-[calc(16rem+1.5rem)]" : "right-4 sm:right-6";
+  const mobileSide = locale === "ar" ? "left-4 sm:left-6" : "right-4 sm:right-6";
 
   const criticalCount = rules.filter(r => r.severity === "critical").length;
   const totalCount    = rules.length;
@@ -123,10 +123,11 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
       <div
         dir={dir}
         className={`
-          fixed top-16 ${side} z-50 w-80 bg-white dark:bg-gray-900
+          z-50 w-80 bg-white dark:bg-gray-900
           border border-gray-100 dark:border-gray-700 rounded-3xl shadow-2xl overflow-hidden
-          lg:absolute lg:top-full lg:mt-3 lg:left-auto lg:right-auto
-          ${locale === "ar" ? "lg:-left-2" : "lg:-right-2"}
+          fixed top-16 ${mobileSide}
+          lg:absolute lg:top-[calc(100%+10px)] lg:mt-0 lg:inset-x-auto
+          ${locale === "ar" ? "lg:left-0 lg:right-auto" : "lg:right-0 lg:left-auto"}
         `}
         style={{ animation: "wpAssistSlideUp .25s ease forwards" }}
       >
@@ -204,7 +205,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
           {renderPanel()}
           <button
             onClick={() => setOpen(!isOpen)}
-            className={`fixed top-3 ${side} z-[60] h-9 w-9 rounded-xl
+            className={`fixed top-3 ${mobileSide} z-[60] h-9 w-9 rounded-xl
                         flex items-center justify-center
                         hover:scale-[1.03] active:scale-95 transition-transform duration-200
                         hover:bg-gray-100 dark:hover:bg-gray-700`}
