@@ -48,9 +48,16 @@ const TYPE_BG: Record<NotificationType, string> = {
   ORDER_CANCELLED: "bg-red-50",
 };
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
+  if (lang === "en") {
+    if (m < 1)  return "Just now";
+    if (m < 60) return `${m} mins ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} hours ago`;
+    return `${Math.floor(h / 24)} days ago`;
+  }
   if (m < 1)  return "الآن";
   if (m < 60) return `منذ ${m} دقيقة`;
   const h = Math.floor(m / 60);
@@ -241,7 +248,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
   };
 
   return (
-    <div className="relative" ref={ref} dir="rtl">
+    <div className="relative" ref={ref} dir={lang === "ar" ? "rtl" : "ltr"}>
       {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
@@ -257,15 +264,15 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
       {/* Dropdown */}
       {open && (
-        <div className="fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:left-0 md:right-auto md:top-[calc(100%+10px)] md:w-[24rem] md:max-w-[calc(100vw-2rem)] md:max-h-96 md:overflow-hidden">
+        <div className={`fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-[24rem] md:max-w-[calc(100vw-2rem)] md:max-h-96 md:overflow-hidden ${lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"}`}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-semibold text-gray-900">الإشعارات</span>
+              <span className="text-sm font-semibold text-gray-900">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
               {unread > 0 && (
                 <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                  {unread} جديد
+                  {unread} {lang === "ar" ? "جديد" : "New"}
                 </span>
               )}
             </div>
@@ -274,10 +281,10 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
                 <button
                   onClick={markAllRead}
                   className="text-xs text-[#25D366] hover:underline flex items-center gap-1"
-                  title="تحديد الكل كمقروء"
+                  title={lang === "ar" ? "تحديد الكل كمقروء" : "Mark all as read"}
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
-                  الكل مقروء
+                  {lang === "ar" ? "الكل مقروء" : "Mark all read"}
                 </button>
               )}
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 mr-1">
@@ -295,7 +302,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
             ) : notifs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <Bell className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-sm">مفيش إشعارات</p>
+                <p className="text-sm">{lang === "ar" ? "مفيش إشعارات" : "No notifications"}</p>
               </div>
             ) : (
               notifs.map(notif => (
@@ -317,7 +324,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
                       {t(notif.title, lang)}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 leading-snug">{t(notif.body, lang)}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt)}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt, lang)}</p>
                   </div>
 
                   {/* Unread dot */}
@@ -334,7 +341,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-gray-500" />
-                <span className="text-xs text-gray-700 font-medium">إشعارات الجهاز</span>
+                <span className="text-xs text-gray-700 font-medium">{lang === "ar" ? "إشعارات الجهاز" : "Device Notifications"}</span>
               </div>
               <button
                 onClick={togglePush}
@@ -342,7 +349,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
                 className={`relative w-9 h-5 rounded-full transition-colors ${pushEnabled ? 'bg-[#25D366]' : 'bg-gray-300'} ${pushLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 <div 
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${pushEnabled ? 'left-0.5' : 'right-0.5'}`} 
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${pushEnabled ? (lang === "ar" ? 'left-0.5' : 'right-0.5') : (lang === "ar" ? 'right-0.5' : 'left-0.5')}`} 
                 />
               </button>
             </div>
