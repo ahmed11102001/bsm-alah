@@ -257,7 +257,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
       {/* Dropdown */}
       {open && (
-        <div className="fixed right-4 left-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-[min(20rem,calc(100vw-2rem))] sm:max-h-96 sm:overflow-hidden">
+        <div className="fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:left-0 md:right-auto md:top-[calc(100%+10px)] md:w-[24rem] md:max-w-[calc(100vw-2rem)] md:max-h-96 md:overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
