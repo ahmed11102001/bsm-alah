@@ -1,13 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
 import { BarChart2 } from "lucide-react";
-import { useLanguage } from "../../../../_components/LanguageProvider";
+import { useLanguage } from "../../_components/LanguageProvider";
 
-export default function ReportsPage() {
-  const params = useParams();
-  const projectId = params.id as string;
+export default function DeveloperReportsPage() {
   const { language, t } = useLanguage();
   const dir = language === "ar" ? "rtl" : "ltr";
   const align = language === "ar" ? "right" : "left";
@@ -41,7 +37,7 @@ export default function ReportsPage() {
           {t("Developer Reports", "تقارير المطور")}
         </h1>
         <p className="page-sub" style={{ textAlign: align }}>
-          {t("View detailed analytics and OTP consumption over time.", "عرض تحليلات مفصلة واستهلاك الـ OTP بمرور الوقت.")}
+          {t("View detailed analytics and OTP consumption across all your projects.", "عرض تحليلات مفصلة واستهلاك الـ OTP عبر جميع مشاريعك.")}
         </p>
 
         <div className="empty-state">

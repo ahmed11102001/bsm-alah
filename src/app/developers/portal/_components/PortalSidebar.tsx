@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderOpen, ChevronLeft, X } from "lucide-react";
+import { FolderOpen, ChevronLeft, X, BarChart2 } from "lucide-react";
 import { useMobileNav } from "./MobileNavContext";
 import { useLanguage } from "../../_components/LanguageProvider";
 
@@ -13,6 +13,7 @@ export default function PortalSidebar({ developer }: { developer: any }) {
 
   const NAV_ITEMS = [
     { label: t("Projects", "المشاريع"), href: "/developers/portal", icon: FolderOpen, exact: true },
+    { label: t("Developer Reports", "تقارير المطور"), href: "/developers/portal/reports", icon: BarChart2 },
   ];
 
   const fullName =

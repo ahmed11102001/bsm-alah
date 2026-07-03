@@ -26,7 +26,6 @@ function getNavItems(projectId: string, t: (en: string, ar: string) => string) {
     { label: t("Quick Start", "البدء السريع"), href: `/developers/portal/projects/${projectId}/quick-start`,   icon: Code },
     { label: "Live Tester",  href: `/developers/portal/projects/${projectId}/live-tester`,   icon: Zap },
     { label: t("Activity Logs", "السجلات"),      href: `/developers/portal/projects/${projectId}/activity-logs`, icon: Activity },
-    { label: t("Developer Reports", "تقارير المطور"), href: `/developers/portal/projects/${projectId}/reports`, icon: BarChart2 },
     { label: t("Billing", "الباقة"), href: `/developers/portal/projects/${projectId}/billing`, icon: CreditCard },
     { label: t("Transfer Project", "تسليم المشروع"),href: `/developers/portal/projects/${projectId}/transfer`,      icon: Share2 },
   ];
