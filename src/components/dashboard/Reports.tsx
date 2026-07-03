@@ -28,6 +28,7 @@ import {
   Package, Star, Zap, Store, ArrowUpRight,
   Bot,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 import AutomationReportTab from "@/components/dashboard/AutomationReportTab";
 import CostReportTab       from "@/components/dashboard/CostReportTab";
 
@@ -104,24 +105,353 @@ const statusColor: Record<string, string> = {
   pending:   "bg-gray-100 text-gray-600",
 };
 
-const statusLabel: Record<string, string> = {
-  sent: "مرسل", delivered: "وصل", read: "قُرئ", failed: "فشل", pending: "انتظار",
+const statusLabels: Record<"ar" | "en", Record<string, string>> = {
+  ar: {
+    sent: "مرسل", delivered: "وصل", read: "قُرئ", failed: "فشل", pending: "انتظار",
+  },
+  en: {
+    sent: "Sent", delivered: "Delivered", read: "Read", failed: "Failed", pending: "Pending",
+  },
 };
 
-const dirLabel: Record<string, string> = { outbound: "صادر", inbound: "وارد" };
-const typeLabel: Record<string, string> = {
-  text: "نص", image: "صورة", audio: "صوت", document: "مستند", template: "قالب",
+const dirLabels: Record<"ar" | "en", Record<string, string>> = {
+  ar: { outbound: "صادر", inbound: "وارد" },
+  en: { outbound: "Outbound", inbound: "Inbound" },
+};
+
+const typeLabels: Record<"ar" | "en", Record<string, string>> = {
+  ar: { text: "نص", image: "صورة", audio: "صوت", document: "مستند", template: "قالب" },
+  en: { text: "Text", image: "Image", audio: "Audio", document: "Document", template: "Template" },
+};
+
+const pageText: Record<"ar" | "en", Record<string, any>> = {
+  ar: {
+    pageTitle: "التقارير والإحصائيات",
+    pageSubtitle: "نظرة شاملة على أداء عملياتك",
+    exportExcel: "Excel",
+    print: "طباعة",
+    from: "من",
+    to: "إلى",
+    refresh: "تحديث",
+    quickRanges: [
+      { label: "7 أيام", days: 7 },
+      { label: "30 يوم", days: 30 },
+      { label: "90 يوم", days: 90 },
+    ],
+    tabs: {
+      overview: "نظرة عامة",
+      customers: "العملاء",
+      team: "الفريق",
+      logs: "سجل النشاط",
+      store: "تقرير المتجر",
+      automation: "تقرير الأتمتة",
+      cost: "التكلفة والإنفاق",
+    },
+    kpis: {
+      totalSent: "إجمالي المرسل",
+      delivered: "تم التوصيل",
+      read: "تم القراءة",
+      failed: "فشل الإرسال",
+      inbound: "رسائل واردة",
+      newContacts: "عملاء جدد",
+      bestSendTime: "أفضل وقت للإرسال",
+      replyRate: "معدل الردود",
+      deliveryRate: (value: number) => `نسبة وصول ${value}%`,
+      deliveredOf: (value: number) => `${value}% من المرسل`,
+      readRate: (value: number) => `${value}% قرأوا`,
+      replyRateSub: (value: number) => `معدل رد ${value}%`,
+    },
+    charts: {
+      dailyTitle: "الرسائل يومياً",
+      sent: "مرسل",
+      received: "وارد",
+      bestSendTimeTitle: "أفضل أوقات الإرسال",
+      bestCampaignsTitle: "أفضل الحملات أداءً",
+      noData: "لا توجد بيانات",
+      campaignsLegendSent: "رسائل مرسلة",
+      campaignsLegendReceived: "رسائل واردة",
+      teamActivity: "نشاط الفريق",
+      teamSent: "رسائل مرسلة",
+      teamReplied: "ردود",
+      campaignRevenueTitle: "نسبة إيرادات حملات واتساب",
+      campaignRevenueLabel: "إيرادات الحملات:",
+      totalLabel: "إجمالي:",
+      ordersByStatusTitle: "الطلبات حسب الحالة",
+      dailyTrendTitle: "اتجاه الطلبات والإيرادات اليومي",
+      dailyTrendNoData: "لا توجد بيانات في هذه الفترة",
+      revenueComparison: "مقارنة إيرادات الحملات",
+      topCustomersTitle: "أفضل العملاء بالإنفاق (في الفترة المحددة)",
+      confirmedOrdersTitle: "الأوردرات المؤكدة والملغية",
+      filterPlaceholder: "الفلتر",
+      noOrders: "لا توجد أوردرات في هذه الحالة.",
+      totalOrders: "أوردر",
+      pageOfLabel: "من",
+      totalLabelShort: "إجمالي",
+      orders: "أوردر",
+      campaignRevenue: "الإيرادات",
+      ordersLabel: "الطلبات",
+      dayLabel: "يوم",
+      dateLabel: "التاريخ",
+    },
+    customers: {
+      segments: {
+        engaged: "الأكثر تفاعلاً",
+        noResponse: "لم يردوا",
+        new: "العملاء الجدد",
+        archived: "المحظورين/المؤرشفين",
+        followup: "يحتاجون متابعة",
+      },
+      noResults: "لا توجد نتائج",
+      phone: "الهاتف",
+      name: "الاسم",
+      messages: "الرسائل",
+      unread: "غير مقروء",
+      lastContact: "آخر تواصل",
+      noData: "لا توجد بيانات",
+    },
+    logs: {
+      status: "الحالة",
+      type: "نوع الرسالة",
+      searchPlaceholder: "بحث بالرقم",
+      searchButton: "بحث",
+      all: "الكل",
+      sent: "مرسل",
+      delivered: "وصل",
+      read: "قُرئ",
+      failed: "فشل",
+      text: "نص",
+      template: "قالب",
+      image: "صورة",
+      audio: "صوت",
+      noRecords: "لا توجد سجلات",
+      phone: "الهاتف",
+      customer: "العميل",
+      typeHeader: "النوع",
+      direction: "الاتجاه",
+      campaign: "الحملة",
+      sender: "المرسِل",
+      time: "التوقيت",
+      of: "من",
+      pagePrefix: "عرض",
+    },
+    store: {
+      noData: "لا يوجد بيانات متجر متاحة",
+      connectHint: "تأكد من ربط متجر Shopify أو EasyOrders أولاً",
+      connectedStores: "المتاجر المربوطة",
+      totalOrders: "إجمالي الطلبات",
+      totalRevenue: "إجمالي الإيرادات",
+      campaignRevenue: "إيرادات الحملات",
+      campaignShare: "نسبة الحملات",
+      uniqueCustomers: "العملاء الفريدون",
+      storesConnected: "المتاجر المربوطة",
+      whatsappCampaignRevenue: "نسبة إيرادات حملات واتساب",
+      whatsappCampaignRevenueHint: "كل حملة واتساب وقيمة الطلبات الناتجة عنها مباشرة",
+      campaignRevenueLabel: "إيرادات الحملات:",
+      totalLabel: "إجمالي:",
+      ordersByStatus: "الطلبات حسب الحالة",
+      revenue: "الإيرادات",
+      orders: "الطلبات",
+      noTrendData: "لا توجد بيانات في هذه الفترة",
+      campaignComparison: "مقارنة إيرادات الحملات",
+      topCustomersTitle: "أفضل العملاء بالإنفاق (في الفترة المحددة)",
+      confirmedOrdersTitle: "الأوردرات المؤكدة والملغية",
+      filterPlaceholder: "الفلتر",
+      all: "الكل",
+      confirmed: "المؤكدة",
+      cancelled: "الملغية",
+      noOrders: "لا توجد أوردرات في هذه الحالة.",
+      orderNumber: "رقم الأوردر",
+      customer: "العميل",
+      phone: "الهاتف",
+      status: "الحالة",
+      total: "الإجمالي",
+      date: "التاريخ",
+      orderTotalLabel: "أوردر",
+      active: "نشط",
+      inactive: "غير نشط",
+      revenueShare: "نسبة الحملات",
+    },
+  },
+  en: {
+    pageTitle: "Reports & Analytics",
+    pageSubtitle: "A comprehensive view of your performance.",
+    exportExcel: "Excel",
+    print: "Print",
+    from: "From",
+    to: "To",
+    refresh: "Refresh",
+    quickRanges: [
+      { label: "7 days", days: 7 },
+      { label: "30 days", days: 30 },
+      { label: "90 days", days: 90 },
+    ],
+    tabs: {
+      overview: "Overview",
+      customers: "Customers",
+      team: "Team",
+      logs: "Activity Log",
+      store: "Store Report",
+      automation: "Automation Report",
+      cost: "Cost & Spend",
+    },
+    kpis: {
+      totalSent: "Total Sent",
+      delivered: "Delivered",
+      read: "Read",
+      failed: "Failed",
+      inbound: "Inbound Messages",
+      newContacts: "New Contacts",
+      bestSendTime: "Best Send Time",
+      replyRate: "Reply Rate",
+      deliveryRate: (value: number) => `Delivery rate ${value}%`,
+      deliveredOf: (value: number) => `${value}% of sent`,
+      readRate: (value: number) => `${value}% read`,
+      replyRateSub: (value: number) => `Reply rate ${value}%`,
+    },
+    charts: {
+      dailyTitle: "Messages per day",
+      sent: "Sent",
+      received: "Received",
+      bestSendTimeTitle: "Best send times",
+      bestCampaignsTitle: "Top performing campaigns",
+      noData: "No data",
+      campaignsLegendSent: "Sent messages",
+      campaignsLegendReceived: "Inbound messages",
+      teamActivity: "Team activity",
+      teamSent: "Sent",
+      teamReplied: "Replied",
+      campaignRevenueTitle: "WhatsApp campaign revenue share",
+      campaignRevenueLabel: "Campaign revenue:",
+      totalLabel: "Total:",
+      ordersByStatusTitle: "Orders by status",
+      dailyTrendTitle: "Daily orders and revenue trend",
+      dailyTrendNoData: "No data for this period",
+      revenueComparison: "Campaign revenue comparison",
+      topCustomersTitle: "Top spending customers (selected period)",
+      confirmedOrdersTitle: "Confirmed and cancelled orders",
+      filterPlaceholder: "Filter",
+      noOrders: "No orders in this state.",
+      totalOrders: "orders",
+      pageOfLabel: "of",
+      totalLabelShort: "Total",
+      orders: "orders",
+      campaignRevenue: "Revenue",
+      ordersLabel: "Orders",
+      dayLabel: "Day",
+      dateLabel: "Date",
+    },
+    customers: {
+      segments: {
+        engaged: "Most engaged",
+        noResponse: "No reply",
+        new: "New customers",
+        archived: "Archived/banned",
+        followup: "Needs follow-up",
+      },
+      noResults: "No results",
+      phone: "Phone",
+      name: "Name",
+      messages: "Messages",
+      unread: "Unread",
+      lastContact: "Last contact",
+      noData: "No data",
+    },
+    logs: {
+      status: "Status",
+      type: "Type",
+      searchPlaceholder: "Search by number",
+      searchButton: "Search",
+      all: "All",
+      sent: "Sent",
+      delivered: "Delivered",
+      read: "Read",
+      failed: "Failed",
+      text: "Text",
+      template: "Template",
+      image: "Image",
+      audio: "Audio",
+      noRecords: "No logs found",
+      phone: "Phone",
+      customer: "Customer",
+      typeHeader: "Type",
+      direction: "Direction",
+      campaign: "Campaign",
+      sender: "Sender",
+      time: "Time",
+      of: "of",
+      pagePrefix: "Showing",
+    },
+    store: {
+      noData: "No store data available",
+      connectHint: "Connect a Shopify or EasyOrders store first",
+      connectedStores: "Connected stores",
+      totalOrders: "Total orders",
+      totalRevenue: "Total revenue",
+      campaignRevenue: "Campaign revenue",
+      campaignShare: "Campaign share",
+      uniqueCustomers: "Unique customers",
+      storesConnected: "Stores connected",
+      whatsappCampaignRevenue: "WhatsApp campaign revenue share",
+      whatsappCampaignRevenueHint: "Each WhatsApp campaign and the order value attributed directly to it",
+      campaignRevenueLabel: "Campaign revenue:",
+      totalLabel: "Total:",
+      ordersByStatus: "Orders by status",
+      revenue: "Revenue",
+      orders: "Orders",
+      noTrendData: "No data for this period",
+      campaignComparison: "Campaign revenue comparison",
+      topCustomersTitle: "Top spending customers (selected period)",
+      confirmedOrdersTitle: "Confirmed and cancelled orders",
+      filterPlaceholder: "Filter",
+      all: "All",
+      confirmed: "Confirmed",
+      cancelled: "Cancelled",
+      noOrders: "No orders in this state.",
+      orderNumber: "Order #",
+      customer: "Customer",
+      phone: "Phone",
+      status: "Status",
+      total: "Total",
+      date: "Date",
+      orderTotalLabel: "orders",
+      active: "Active",
+      inactive: "Inactive",
+      revenueShare: "Campaign share",
+    },
+  },
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) =>
   `${String(i).padStart(2, "0")}:00`
 );
 
+function formatNumber(value: number | string | null | undefined, locale: string, options?: Intl.NumberFormatOptions) {
+  if (value == null || value === "") return "—";
+  return Number(value).toLocaleString(locale, options);
+}
+
+function formatDate(value: string | null | undefined, locale: string, options?: Intl.DateTimeFormatOptions) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString(locale, options);
+}
+
+function getStatusLabel(locale: "ar" | "en", status: string) {
+  return statusLabels[locale][status] ?? status;
+}
+
+function getDirLabel(locale: "ar" | "en", direction: string) {
+  return dirLabels[locale][direction] ?? direction;
+}
+
+function getTypeLabel(locale: "ar" | "en", type: string) {
+  return typeLabels[locale][type] ?? type;
+}
+
 function StatCard({
-  label, value, sub, icon, color,
+  label, value, sub, icon, color, locale,
 }: {
   label: string; value: string | number; sub?: string;
-  icon: React.ReactNode; color: string;
+  icon: React.ReactNode; color: string; locale: "ar" | "en";
 }) {
   return (
     <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
@@ -129,7 +459,7 @@ function StatCard({
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {typeof value === "number" ? value.toLocaleString("ar-EG") : value}
+            {typeof value === "number" ? formatNumber(value, locale) : value}
           </p>
           {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
         </div>
@@ -143,10 +473,10 @@ function StatCard({
 
 
 // ─── Export helpers ────────────────────────────────────────────────────────────
-async function exportExcel(data: object[], filename: string) {
+async function exportExcel(data: object[], filename: string, sheetName = "Report") {
   const workbook = new ExcelJS.Workbook();
 
-  const worksheet = workbook.addWorksheet("تقرير");
+  const worksheet = workbook.addWorksheet(sheetName);
 
   if (!data || data.length === 0) {
     worksheet.addRow(["No Data"]);
@@ -173,6 +503,10 @@ function printPage() {
 }
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function Reports({ planTier = "free" }: { planTier?: string }) {
+  const { locale } = useLanguage();
+  const numberLocale = locale === "ar" ? "ar-EG" : "en-US";
+  const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
+
   // ── Filters ─────────────────────────────────────────────────────
   const [from, setFrom]   = useState(MONTH_AGO);
   const [to,   setTo]     = useState(TODAY);
@@ -283,13 +617,17 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
 
   // ─────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
+    <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={locale === "ar" ? "rtl" : "ltr"}>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">التقارير والإحصائيات</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">نظرة شاملة على أداء عملياتك</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {locale === "ar" ? "التقارير والإحصائيات" : "Reports & Analytics"}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {locale === "ar" ? "نظرة شاملة على أداء عملياتك" : "A comprehensive view of your performance."}
+          </p>
         </div>
         {/* Export */}
         <div className="flex gap-2">
@@ -297,28 +635,28 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             size="sm" variant="outline" className="gap-1.5"
             onClick={() => {
               if (tab === "overview" && overview)
-                exportExcel(overview.daily, "تقرير-الرسائل");
+                exportExcel(overview.daily, locale === "ar" ? "تقرير-الرسائل" : "message-report");
               else if (tab === "customers")
-                exportExcel(customers, "تقرير-العملاء");
+                exportExcel(customers, locale === "ar" ? "تقرير-العملاء" : "customer-report");
               else if (tab === "team")
-                exportExcel(team, "تقرير-الفريق");
+                exportExcel(team, locale === "ar" ? "تقرير-الفريق" : "team-report");
               else if (tab === "logs" && logs)
                 exportExcel(logs.messages.map((m) => ({
                   الهاتف:    m.contact?.phone,
                   العميل:    m.contact?.name ?? "—",
-                  الحالة:    statusLabel[m.status] ?? m.status,
-                  النوع:     typeLabel[m.type] ?? m.type,
-                  الاتجاه:   dirLabel[m.direction] ?? m.direction,
+                  الحالة:    getStatusLabel(locale, m.status),
+                  النوع:     getTypeLabel(locale, m.type),
+                  الاتجاه:   getDirLabel(locale, m.direction),
                   الحملة:    m.campaign?.name ?? "—",
                   المستخدم:  m.user?.name ?? m.user?.email ?? "—",
-                  التاريخ:   new Date(m.createdAt).toLocaleString("ar-EG"),
-                })), "سجل-النشاط");
+                  التاريخ:   formatDate(m.createdAt, dateLocale),
+                })), locale === "ar" ? "سجل-النشاط" : "activity-log");
             }}
           >
-            <FileSpreadsheet className="w-4 h-4" /> Excel
+            <FileSpreadsheet className="w-4 h-4" /> {locale === "ar" ? "Excel" : "Excel"}
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={printPage}>
-            <Printer className="w-4 h-4" /> طباعة
+            <Printer className="w-4 h-4" /> {locale === "ar" ? "طباعة" : "Print"}
           </Button>
         </div>
       </div>
@@ -413,14 +751,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             <div className="space-y-6">
               {/* KPI cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="إجمالي المرسل"   value={overview.totals.sent}         sub={`نسبة وصول ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />}   color="bg-blue-50" />
-                <StatCard label="تم التوصيل"       value={overview.totals.delivered}    sub={`${overview.totals.deliveryRate}% من المرسل`}   icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" />
-                <StatCard label="تم القراءة"       value={overview.totals.read}         sub={`${overview.totals.readRate}% قرأوا`}            icon={<Eye className="w-5 h-5 text-purple-600" />}  color="bg-purple-50" />
-                <StatCard label="فشل الإرسال"      value={overview.totals.failed}       icon={<XCircle className="w-5 h-5 text-red-500" />}   color="bg-red-50" />
-                <StatCard label="رسائل واردة"      value={overview.totals.inbound}      sub={`معدل رد ${overview.totals.replyRate}%`}          icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" />
-                <StatCard label="عملاء جدد"        value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" />
-                <StatCard label="أفضل وقت للإرسال" value={maxHour.hour}                sub={`${maxHour.cnt} رسالة`}                          icon={<Clock className="w-5 h-5 text-indigo-600" />}  color="bg-indigo-50" />
-                <StatCard label="معدل الردود"      value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" />
+                <StatCard label={locale === "ar" ? "إجمالي المرسل" : "Total Sent"}   value={overview.totals.sent}         sub={locale === "ar" ? `نسبة وصول ${overview.totals.deliveryRate}%` : `Delivery rate ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />}   color="bg-blue-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "تم التوصيل" : "Delivered"}       value={overview.totals.delivered}    sub={locale === "ar" ? `${overview.totals.deliveryRate}% من المرسل` : `${overview.totals.deliveryRate}% of sent`}   icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "تم القراءة" : "Read"}       value={overview.totals.read}         sub={locale === "ar" ? `${overview.totals.readRate}% قرأوا` : `${overview.totals.readRate}% read`}            icon={<Eye className="w-5 h-5 text-purple-600" />}  color="bg-purple-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "فشل الإرسال" : "Failed"}      value={overview.totals.failed}       icon={<XCircle className="w-5 h-5 text-red-500" />}   color="bg-red-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "رسائل واردة" : "Inbound Messages"}      value={overview.totals.inbound}      sub={locale === "ar" ? `معدل رد ${overview.totals.replyRate}%` : `Reply rate ${overview.totals.replyRate}%`}          icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "عملاء جدد" : "New Contacts"}        value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "أفضل وقت للإرسال" : "Best Send Time"} value={maxHour.hour}                sub={locale === "ar" ? `${maxHour.cnt} رسالة` : `${maxHour.cnt} messages`}                          icon={<Clock className="w-5 h-5 text-indigo-600" />}  color="bg-indigo-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "معدل الردود" : "Reply Rate"}      value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" locale={locale} />
               </div>
 
               {/* Daily chart */}
@@ -469,7 +807,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                          <YAxis tick={{ fontSize: 10 }} />
                          <Tooltip
                           formatter={(value: any, name: any) => [
-                         value != null ? Number(value).toLocaleString("ar-EG") : "0",
+                         value != null ? formatNumber(Number(value), numberLocale) : "0",
                          name === "sent" ? "مرسل" : "رد"
                          ]}
 />
@@ -666,8 +1004,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                 {m.role === "OWNER" ? "مالك" : m.role === "FULL_ACCESS" ? "وصول كامل" : "دردشة فقط"}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-gray-700 font-medium">{m.sent.toLocaleString("ar-EG")}</td>
-                            <td className="py-3 px-4 text-gray-700">{m.replied.toLocaleString("ar-EG")}</td>
+                            <td className="py-3 px-4 text-gray-700 font-medium">{formatNumber(m.sent, numberLocale)}</td>
+                            <td className="py-3 px-4 text-gray-700">{formatNumber(m.replied, numberLocale)}</td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -768,19 +1106,19 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               <td className="py-2.5 px-3 text-gray-600">{m.contact?.name ?? "—"}</td>
                               <td className="py-2.5 px-3">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[m.status] ?? "bg-gray-100 text-gray-600"}`}>
-                                  {statusLabel[m.status] ?? m.status}
+                                  {getStatusLabel(locale, m.status)}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{typeLabel[m.type] ?? m.type}</td>
+                              <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{getTypeLabel(locale, m.type)}</td>
                               <td className="py-2.5 px-3">
                                 <span className={`px-2 py-0.5 rounded-full text-xs ${m.direction === "outbound" ? "bg-blue-50 text-blue-600" : "bg-teal-50 text-teal-600"}`}>
-                                  {dirLabel[m.direction]}
+                                  {getDirLabel(locale, m.direction)}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400 truncate max-w-[100px]">{m.campaign?.name ?? "—"}</td>
                               <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{m.user?.name ?? m.user?.email ?? "—"}</td>
                               <td className="py-2.5 px-3 text-gray-400 whitespace-nowrap">
-                                {new Date(m.createdAt).toLocaleString("ar-EG", {
+                                {formatDate(m.createdAt, dateLocale, {
                                   month: "short", day: "numeric",
                                   hour: "2-digit", minute: "2-digit",
                                 })}
@@ -794,9 +1132,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     {/* Pagination */}
                     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                       <span className="text-xs text-gray-400">
-                        {((logs.page - 1) * logs.limit + 1).toLocaleString("ar-EG")} –{" "}
-                        {Math.min(logs.page * logs.limit, logs.total).toLocaleString("ar-EG")} من{" "}
-                        {logs.total.toLocaleString("ar-EG")}
+                        {formatNumber((logs.page - 1) * logs.limit + 1, numberLocale)} –{" "}
+                        {formatNumber(Math.min(logs.page * logs.limit, logs.total), numberLocale)} {locale === "ar" ? "من" : "of"} {formatNumber(logs.total, numberLocale)}
                       </span>
                       <div className="flex gap-1">
                         <Button
@@ -874,7 +1211,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الطلبات</p>
                       <p className="text-xl font-bold text-gray-800">
-                        {storeReport.summary.totalOrders.toLocaleString("ar-EG")}
+                        {formatNumber(storeReport.summary.totalOrders, numberLocale)}
                       </p>
                     </div>
                   </CardContent>
@@ -887,7 +1224,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الإيرادات</p>
                       <p className="text-xl font-bold text-gray-800">
-                        {storeReport.summary.totalRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
+                        {formatNumber(storeReport.summary.totalRevenue, numberLocale, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </CardContent>
@@ -900,7 +1237,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">إيرادات الحملات</p>
                       <p className="text-xl font-bold text-[#25D366]">
-                        {storeReport.summary.totalCampaignRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })}
+                        {formatNumber(storeReport.summary.totalCampaignRevenue, numberLocale, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </CardContent>
@@ -926,7 +1263,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">العملاء الفريدون</p>
                       <p className="text-xl font-bold text-gray-800">
-                        {storeReport.summary.totalUniqueCustomers.toLocaleString("ar-EG")}
+                        {formatNumber(storeReport.summary.totalUniqueCustomers, numberLocale)}
                       </p>
                     </div>
                   </CardContent>
@@ -971,10 +1308,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       </div>
                       <div className="flex justify-between mt-2 text-xs text-gray-400">
                         <span>
-                          إيرادات الحملات: {storeReport.summary.totalCampaignRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                          {locale === "ar" ? "إيرادات الحملات:" : "Campaign revenue:"} {formatNumber(storeReport.summary.totalCampaignRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
                         </span>
                         <span>
-                          إجمالي: {storeReport.summary.totalRevenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                          {locale === "ar" ? "إجمالي:" : "Total:"} {formatNumber(storeReport.summary.totalRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
                         </span>
                       </div>
                     </div>
@@ -1038,7 +1375,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               const value = typeof val === "number" ? val : Number(val ?? 0);
                               return [
                                 name === "revenue"
-                                  ? `${value.toLocaleString("ar-EG")} EGP`
+                                  ? `${formatNumber(value, numberLocale)} EGP`
                                   : value,
                                 name === "revenue" ? "الإيرادات" : "الطلبات",
                               ];
@@ -1095,7 +1432,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               </td>
                               <td className="py-3 text-center">
                                 <span className="font-bold text-[#25D366]">
-                                  {c.revenue.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} EGP
+                                  {formatNumber(c.revenue, numberLocale, { maximumFractionDigits: 0 })} EGP
                                 </span>
                               </td>
                               <td className="py-3 text-center">
@@ -1103,8 +1440,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                   {c.ordersCount}
                                 </span>
                               </td>
-                              <td className="py-3 text-center text-gray-600">{c.sentCount.toLocaleString("ar-EG")}</td>
-                              <td className="py-3 text-center text-gray-600">{c.readCount.toLocaleString("ar-EG")}</td>
+                              <td className="py-3 text-center text-gray-600">{formatNumber(c.sentCount, numberLocale)}</td>
+                              <td className="py-3 text-center text-gray-600">{formatNumber(c.readCount, numberLocale)}</td>
                               <td className="py-3 text-center">
                                 <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${
                                   parseFloat(convRate) >= 5 ? "bg-green-50 text-green-600"
@@ -1117,7 +1454,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               <td className="py-3 text-center text-gray-500 dark:text-gray-400 text-xs">{revPerMsg} EGP</td>
                               <td className="py-3 pl-2 text-right text-xs text-gray-400">
                                 {c.completedAt
-                                  ? new Date(c.completedAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })
+                                  ? formatDate(c.completedAt, dateLocale, { day: "numeric", month: "short" })
                                   : "—"}
                               </td>
                             </tr>
@@ -1140,7 +1477,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                             formatter={(value: any) => {
                               const num = typeof value === "number" ? value : Number(value);
                               return !isNaN(num)
-                                ? [`${num.toLocaleString("ar-EG")} EGP`, "الإيراد"]
+                                ? [`${formatNumber(num, numberLocale)} EGP`, locale === "ar" ? "الإيراد" : "Revenue"]
                                 : ["", ""];
                             }}
                           />
@@ -1192,7 +1529,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               </span>
                             </td>
                             <td className="py-3 pl-2 text-left font-bold text-green-600">
-                              {c.totalSpent.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} {c.currency}
+                              {formatNumber(c.totalSpent, numberLocale, { maximumFractionDigits: 0 })} {c.currency}
                             </td>
                           </tr>
                         ))}
@@ -1257,10 +1594,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-left font-bold text-green-600 text-xs">
-                                  {o.total.toLocaleString("ar-EG", { maximumFractionDigits: 0 })} {o.currency}
+                                  {formatNumber(o.total, numberLocale, { maximumFractionDigits: 0 })} {o.currency}
                                 </td>
                                 <td className="py-3 px-4 text-left text-gray-400 text-xs" dir="ltr">
-                                  {new Date(o.orderedAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}
+                                  {formatDate(o.orderedAt, dateLocale, { dateStyle: "short", timeStyle: "short" })}
                                 </td>
                               </tr>
                             ))}
@@ -1270,7 +1607,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                         {/* Pagination */}
                         <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
                           <div>
-                            إجمالي: <span className="font-medium text-gray-800 dark:text-gray-200">{storeReport.confirmedOrdersTotal.toLocaleString("ar-EG")}</span> أوردر
+                            {locale === "ar" ? "إجمالي:" : "Total:"} <span className="font-medium text-gray-800 dark:text-gray-200">{formatNumber(storeReport.confirmedOrdersTotal, numberLocale)}</span> {locale === "ar" ? "أوردر" : "orders"}
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
