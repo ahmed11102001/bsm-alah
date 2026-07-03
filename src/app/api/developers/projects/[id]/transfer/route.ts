@@ -37,10 +37,24 @@ export async function POST(
         where: { id, developerId: session.id, status: "ACTIVE" },
       });
       if (!project) return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+
+      if (project.ownerId) {
+        return NextResponse.json(
+          { error: "المشروع عنده مالك بالفعل — لازم يشيل نفسه أو تتواصل مع الدعم قبل تعيين مالك جديد" },
+          { status: 409 }
+        );
+      }
     } else {
       // الطالب لازم يكون ownerId
       project = await getProjectForOwner(id, session.id);
       if (!project) return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+
+      if (project.developerRemovedAt === null) {
+        return NextResponse.json(
+          { error: "المشروع عنده مطور نشط بالفعل — لازم تشيله الأول قبل ما تدعو مطور جديد" },
+          { status: 409 }
+        );
+      }
     }
 
     const normalizedEmail = email.trim().toLowerCase();

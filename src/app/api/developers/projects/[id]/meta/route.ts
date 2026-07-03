@@ -77,9 +77,7 @@ export async function DELETE(
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await prisma.developerProject.findFirst({
-      where: { id, developerId: session.id },
-    });
+    const project = await getProjectForOwnerOrDeveloper(id, session.id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     await prisma.developerMetaConnection.deleteMany({
@@ -103,9 +101,7 @@ export async function GET(
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await prisma.developerProject.findFirst({
-      where: { id, developerId: session.id },
-    });
+    const project = await getProjectForOwnerOrDeveloper(id, session.id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const connection = await prisma.developerMetaConnection.findUnique({

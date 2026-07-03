@@ -48,7 +48,6 @@ export default async function ProjectLayout({
           isVerified: true,
           wabaId: true,
           phoneNumberId: true,
-          accessToken: true,
         },
       },
       _count: {
