@@ -253,14 +253,16 @@ export default function ProjectSidebar({
                   {p.name}
                 </Link>
               ))}
-              <Link
-                href="/developers/portal"
-                className="dropdown-item dropdown-item-new"
-                onClick={() => setShowSwitcher(false)}
-              >
-                <Plus size={12} />
-                {t("New Project", "مشروع جديد")}
-              </Link>
+              {viewerRole === "developer" && (
+                <Link
+                  href="/developers/portal"
+                  className="dropdown-item dropdown-item-new"
+                  onClick={() => setShowSwitcher(false)}
+                >
+                  <Plus size={12} />
+                  {t("New Project", "مشروع جديد")}
+                </Link>
+              )}
             </div>
           </>
         )}

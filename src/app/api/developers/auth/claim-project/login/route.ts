@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       status: existingUser.status || "ACTIVE"
     });
     const response = NextResponse.json({ redirect: `/developers/portal/projects/${invite.projectId}` });
-    response.cookies.set("dev_session", token, {
+    response.cookies.set("dev-session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 30, // 30 days

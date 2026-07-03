@@ -25,6 +25,7 @@ interface ProjectData {
     otpTemplates: number;
   };
   otpToday: number;
+  viewerRole?: "owner" | "developer";
 }
 
 interface ApiKeyPreview {
@@ -532,19 +533,21 @@ export default function ProjectOverviewPage() {
           )}
         </div>
 
-        {/* Transfer project banner */}
-        <div className="transfer-banner" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', textAlign: language === 'ar' ? 'right' : 'left' }}>
-          <div>
-            <div className="transfer-banner-title">{t("Hand over project to a client", "تسليم المشروع لعميل")}</div>
-            <div className="transfer-banner-text">
-              {t("After completing the project, hand it over to the client using their email so they can manage it from their account", "بعد خلاص المشروع — سلّمه للعميل بإيميله عشان يتحكم فيه من حسابه")}
+        {/* Transfer project banner — developers only */}
+        {project.viewerRole !== "owner" && (
+          <div className="transfer-banner" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', textAlign: language === 'ar' ? 'right' : 'left' }}>
+            <div>
+              <div className="transfer-banner-title">{t("Hand over project to a client", "تسليم المشروع لعميل")}</div>
+              <div className="transfer-banner-text">
+                {t("After completing the project, hand it over to the client using their email so they can manage it from their account", "بعد خلاص المشروع — سلّمه للعميل بإيميله عشان يتحكم فيه من حسابه")}
+              </div>
             </div>
+            <Link href={`/developers/portal/projects/${projectId}/transfer`} className="btn-transfer">
+              <Share2 size={14} />
+              {t("Hand over project", "تسليم المشروع")}
+            </Link>
           </div>
-          <Link href={`/developers/portal/projects/${projectId}/transfer`} className="btn-transfer">
-            <Share2 size={14} />
-            {t("Hand over project", "تسليم المشروع")}
-          </Link>
-        </div>
+        )}
       </div>
     </>
   );
