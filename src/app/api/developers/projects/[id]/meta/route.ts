@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { encryptToken } from "@/lib/crypto";
 
@@ -15,9 +16,7 @@ export async function POST(
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     // Verify project ownership
-    const project = await prisma.developerProject.findFirst({
-      where: { id, developerId: session.id, status: "ACTIVE" },
-    });
+    const project = await getProjectForOwnerOrDeveloper(id, session.id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const { accessToken, phoneNumberId, wabaId, displayPhone } = await req.json();

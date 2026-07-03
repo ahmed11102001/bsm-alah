@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+
 // ── GET /api/developers/projects/[id] — جلب تفاصيل مشروع واحد ──────────────
 export async function GET(
   req: NextRequest,
@@ -11,8 +13,13 @@ export async function GET(
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-  const project = await prisma.developerProject.findFirst({
-    where: { id, developerId: session.id },
+  const project = await getProjectForOwnerOrDeveloper(id, session.id);
+  if (!project) {
+    return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+  }
+
+  const projectWithDetails = await prisma.developerProject.findFirst({
+    where: { id: project.id },
     include: {
       metaConnection: {
         select: {
@@ -30,10 +37,12 @@ export async function GET(
           otpTemplates: { where: { status: "APPROVED" } },
         },
       },
+      owner: { select: { id: true, firstName: true, lastName: true, email: true } },
+      developer: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 
-  if (!project) {
+  if (!projectWithDetails) {
     return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
   }
 
@@ -47,7 +56,9 @@ export async function GET(
     },
   });
 
-  return NextResponse.json({ project: { ...project, otpToday } });
+  const viewerRole = projectWithDetails.ownerId === session.id ? "owner" : "developer";
+
+  return NextResponse.json({ project: { ...projectWithDetails, otpToday, viewerRole } });
 }
 
 // ── DELETE /api/developers/projects/[id] — حذف مشروع (archive) ──────────────
@@ -59,9 +70,7 @@ export async function DELETE(
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-  const project = await prisma.developerProject.findFirst({
-    where: { id, developerId: session.id },
-  });
+  const project = await getProjectForOwnerOrDeveloper(id, session.id);
 
   if (!project) {
     return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });

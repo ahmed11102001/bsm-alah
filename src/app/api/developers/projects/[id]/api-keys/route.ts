@@ -11,11 +11,11 @@ function generateApiKey(): { prefix: string; fullKey: string; hash: string } {
   return { prefix, fullKey, hash };
 }
 
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+
 // ── helper: verify project ownership ─────────────────────────────────────────
-async function getProjectOrFail(developerId: string, projectId: string) {
-  return prisma.developerProject.findFirst({
-    where: { id: projectId, developerId, status: "ACTIVE" },
-  });
+async function getProjectOrFail(userId: string, projectId: string) {
+  return getProjectForOwnerOrDeveloper(projectId, userId);
 }
 
 // ── GET — list API keys for project ──────────────────────────────────────────

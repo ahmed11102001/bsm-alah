@@ -788,6 +788,7 @@ model DeveloperUser {
   trialMessagesUsed   Int           @default(0)
 
   projects              DeveloperProject[]
+  ownedProjects         DeveloperProject[] @relation("ProjectOwner")
   otpLogs               OtpLog[]
   notifications         DeveloperNotification[]
   passwordResetTokens   DeveloperPasswordResetToken[]
@@ -807,13 +808,40 @@ model DeveloperProject {
   transferredToUserId String?
   transferredAt       DateTime?
 
+  ownerId            String?
+  owner              DeveloperUser? @relation("ProjectOwner", fields: [ownerId], references: [id])
+  developerRemovedAt DateTime?
+
   developer      DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
   metaConnection DeveloperMetaConnection?
   apiKeys        DeveloperApiKey[]
   otpTemplates   DeveloperOtpTemplate[]
+  invites        DeveloperProjectInvite[]
 
   @@index([developerId])
+  @@index([ownerId])
   @@map("developer_projects")
+}
+
+model DeveloperProjectInvite {
+  id          String   @id @default(cuid())
+
+  projectId   String
+  project     DeveloperProject @relation(fields: [projectId], references: [id])
+
+  email       String
+  codeHash    String              // hash للكود، مش plain text — زي الباسورد بالظبط
+  role        String              // "OWNER" | "DEVELOPER"
+  status      String   @default("PENDING")   // PENDING | ACCEPTED | REVOKED | EXPIRED
+
+  createdById String              // DeveloperUser.id اللي بعت الدعوة
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime            // مثلًا createdAt + 7 أيام
+  acceptedAt  DateTime?
+
+  @@index([projectId, status])
+  @@index([email, status])
+  @@map("developer_project_invites")
 }
 
 enum ProjectStatus {

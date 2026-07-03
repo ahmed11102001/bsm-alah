@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Key, FileText, Activity,
   ChevronLeft, ChevronDown, Check, Plus,
-  Share2, Code, Zap, X
+  Share2, Code, Zap, X, BarChart2, CreditCard
 } from "lucide-react";
 import { useMobileNav } from "../../../_components/MobileNavContext";
 
@@ -26,6 +26,8 @@ function getNavItems(projectId: string, t: (en: string, ar: string) => string) {
     { label: t("Quick Start", "البدء السريع"), href: `/developers/portal/projects/${projectId}/quick-start`,   icon: Code },
     { label: "Live Tester",  href: `/developers/portal/projects/${projectId}/live-tester`,   icon: Zap },
     { label: t("Activity Logs", "السجلات"),      href: `/developers/portal/projects/${projectId}/activity-logs`, icon: Activity },
+    { label: t("Developer Reports", "تقارير المطور"), href: `/developers/portal/projects/${projectId}/reports`, icon: BarChart2 },
+    { label: t("Billing", "الباقة"), href: `/developers/portal/projects/${projectId}/billing`, icon: CreditCard },
     { label: t("Transfer Project", "تسليم المشروع"),href: `/developers/portal/projects/${projectId}/transfer`,      icon: Share2 },
   ];
 }
@@ -34,10 +36,12 @@ export default function ProjectSidebar({
   developer,
   project,
   allProjects,
+  viewerRole,
 }: {
   developer: any;
   project: any;
   allProjects: Project[];
+  viewerRole: "owner" | "developer";
 }) {
   const pathname = usePathname();
   const [showSwitcher, setShowSwitcher] = useState(false);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 
 // ── POST /api/developers/projects/[id]/otp-templates/sync ────────────────────
 export async function POST(
@@ -13,9 +14,7 @@ export async function POST(
     const session = await getDevSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-    const project = await prisma.developerProject.findFirst({
-      where: { id, developerId: session.id },
-    });
+    const project = await getProjectForOwnerOrDeveloper(id, session.id);
     if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
     const connection = await prisma.developerMetaConnection.findUnique({

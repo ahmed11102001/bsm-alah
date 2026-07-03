@@ -8,7 +8,12 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const projects = await prisma.developerProject.findMany({
-    where: { developerId: session.id },
+    where: { 
+      OR: [
+        { developerId: session.id },
+        { ownerId: session.id }
+      ]
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -18,10 +23,19 @@ export async function GET(req: NextRequest) {
       createdAt: true,
       transferredAt: true,
       transferredToUserId: true,
+      developerId: true,
+      ownerId: true,
+      developerRemovedAt: true,
     },
   });
 
-  return NextResponse.json({ projects });
+  const enrichedProjects = projects.map(p => {
+    const viewerRole = p.ownerId === session.id ? "owner" : "developer";
+    const canEnter = !(viewerRole === "developer" && p.developerRemovedAt !== null);
+    return { ...p, viewerRole, canEnter };
+  });
+
+  return NextResponse.json({ projects: enrichedProjects });
 }
 
 // ── POST /api/developers/projects — إنشاء مشروع جديد ────────────────────────

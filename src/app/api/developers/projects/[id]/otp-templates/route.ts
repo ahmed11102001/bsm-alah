@@ -3,10 +3,10 @@ import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
 
-async function getProjectOrFail(developerId: string, projectId: string) {
-  return prisma.developerProject.findFirst({
-    where: { id: projectId, developerId, status: "ACTIVE" },
-  });
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+
+async function getProjectOrFail(userId: string, projectId: string) {
+  return getProjectForOwnerOrDeveloper(projectId, userId);
 }
 
 // ── GET — list templates for project ─────────────────────────────────────────

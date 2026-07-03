@@ -9,6 +9,7 @@ import { storeOtp } from "@/lib/otp-redis";
 interface AuthResult {
   projectId: string;
   developerId: string;
+  ownerId: string | null;
   metaConnection: {
     accessToken: string;   // encrypted in DB
     phoneNumberId: string;
@@ -44,6 +45,7 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
   return {
     projectId: keyRecord.projectId,
     developerId: keyRecord.project.developerId,
+    ownerId: keyRecord.project.ownerId,
     metaConnection: meta,
   };
 }
@@ -229,8 +231,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 5. Trial enforcement ──────────────────────────────────────────────────
+  const billingUserId = auth.ownerId ?? auth.developerId;
   const developer = await prisma.developerUser.findUnique({
-    where: { id: auth.developerId },
+    where: { id: billingUserId },
     select: { plan: true, trialEndsAt: true, trialMessagesUsed: true },
   });
 
@@ -334,7 +337,7 @@ export async function POST(req: NextRequest) {
   if (sendResult.success && developer.plan === "TRIAL") {
     prisma.developerUser
       .update({
-        where: { id: auth.developerId },
+        where: { id: billingUserId },
         data: { trialMessagesUsed: { increment: 1 } },
       })
       .catch(() => {});

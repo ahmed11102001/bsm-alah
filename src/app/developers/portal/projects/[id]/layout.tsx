@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
 import prisma from "@/lib/prisma";
 import ProjectSidebar from "./_components/ProjectSidebar";
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 
 export default async function ProjectLayout({
   children,
@@ -17,20 +18,28 @@ export default async function ProjectLayout({
 
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
-    include: {
-      projects: {
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, name: true, status: true },
-      },
-    },
   });
 
   if (!developer) redirect("/developers/signin");
 
-  // Verify this project belongs to this developer
+  const allProjects = await prisma.developerProject.findMany({
+    where: { 
+      status: "ACTIVE",
+      OR: [
+        { developerId: session.id },
+        { ownerId: session.id }
+      ]
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, status: true },
+  });
+
+  // Verify this project belongs to this developer or owner
+  const baseProject = await getProjectForOwnerOrDeveloper(id, session.id);
+  if (!baseProject) redirect("/developers/portal");
+
   const project = await prisma.developerProject.findFirst({
-    where: { id, developerId: session.id },
+    where: { id: baseProject.id },
     include: {
       metaConnection: {
         select: {
@@ -53,12 +62,15 @@ export default async function ProjectLayout({
 
   if (!project) redirect("/developers/portal");
 
+  const viewerRole = project.ownerId === session.id ? "owner" : "developer";
+
   return (
     <div style={{ height: "100%", background: "#060810", display: "flex", overflow: "hidden" }}>
       <ProjectSidebar
         developer={developer}
         project={project}
-        allProjects={developer.projects}
+        allProjects={allProjects}
+        viewerRole={viewerRole}
       />
       <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
     </div>

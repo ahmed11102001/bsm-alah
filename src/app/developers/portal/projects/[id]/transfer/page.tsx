@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Share2, AlertTriangle, Check, Mail, ArrowLeft } from "lucide-react";
+import { Share2, AlertTriangle, Check, Mail, ArrowLeft, Copy, UserX } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 
@@ -10,50 +10,108 @@ export default function TransferProjectPage() {
   const params = useParams();
   const projectId = params.id as string;
   const { language, t } = useLanguage();
+  const router = useRouter();
 
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
-  const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<{ name: string; email: string } | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState(false);
 
   const dir = language === "ar" ? "rtl" : "ltr";
   const align = language === "ar" ? "right" : "left";
 
-  async function handleTransfer() {
-    if (!email.trim()) {
-      setError(t("Client email is required", "إيميل العميل مطلوب"));
-      return;
+  useEffect(() => {
+    fetchProject();
+  }, []);
+
+  async function fetchProject() {
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}`);
+      const data = await res.json();
+      if (data.project) setProject(data.project);
+    } finally {
+      setLoading(false);
     }
-    if (!confirmed) {
-      setError(t("You must accept the transfer terms first", "لازم توافق على شروط التسليم الأول"));
+  }
+
+  async function handleInvite(role: "OWNER" | "DEVELOPER") {
+    if (!email.trim()) {
+      setError(t("Email is required", "الإيميل مطلوب"));
       return;
     }
 
-    setLoading(true);
+    setActionLoading(true);
     setError("");
+    setInviteCode(null);
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/transfer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetEmail: email.trim(), note: note.trim() || undefined }),
+        body: JSON.stringify({ email: email.trim(), role }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || t("An error occurred", "حصل خطأ"));
         return;
       }
-      setSuccess(data.transferredTo);
+      setInviteCode(data.code);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }
+
+  async function handleRemoveDeveloper() {
+    setActionLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/transfer`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t("An error occurred", "حصل خطأ"));
+        return;
+      }
+      // Refresh project data
+      await fetchProject();
+      setRemoveConfirm(false);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function copyCode() {
+    if (inviteCode) {
+      navigator.clipboard.writeText(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ color: "rgba(255,255,255,0.5)", padding: 40, textAlign: "center", fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+        {t("Loading...", "جاري التحميل...")}
+      </div>
+    );
+  }
+
+  if (!project) return null;
+
+  const isDeveloper = project.viewerRole === "developer";
+  const isOwner = project.viewerRole === "owner";
+  
+  const hasOwner = !!project.owner;
+  const hasDeveloper = !!project.developer && !project.developerRemovedAt;
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
         .transfer-root {
           max-width: 600px; margin: 0 auto;
           padding: 40px 24px;
@@ -97,24 +155,6 @@ export default function TransferProjectPage() {
         }
         .form-input::placeholder { color: rgba(255,255,255,0.2); }
         .form-input:focus { border-color: rgba(32,211,120,0.4); }
-        .form-textarea { resize: none; height: 90px; line-height: 1.5; }
-
-        .confirm-row {
-          display: flex; align-items: flex-start; gap: 10px;
-          margin-bottom: 20px; cursor: pointer;
-        }
-        .confirm-checkbox {
-          width: 18px; height: 18px; border-radius: 5px;
-          border: 1.5px solid rgba(255,255,255,0.2);
-          background: rgba(255,255,255,0.04);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; margin-top: 1px;
-          cursor: pointer; transition: border-color 0.2s, background 0.2s;
-        }
-        .confirm-checkbox.checked {
-          border-color: #20d378; background: rgba(32,211,120,0.15);
-        }
-        .confirm-text { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
 
         .form-error {
           font-size: 13px; color: #f87171;
@@ -124,7 +164,7 @@ export default function TransferProjectPage() {
           margin-bottom: 16px;
         }
 
-        .btn-transfer {
+        .btn-action {
           width: 100%; padding: 14px;
           background: #20d378; color: #060810;
           border: none; border-radius: 12px;
@@ -133,175 +173,190 @@ export default function TransferProjectPage() {
           display: flex; align-items: center; justify-content: center; gap: 10px;
           transition: background 0.2s;
         }
-        .btn-transfer:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-transfer:hover:not(:disabled) { background: #1bbf6b; }
+        .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-action:hover:not(:disabled) { background: #1bbf6b; }
 
-        .success-box {
-          background: rgba(32,211,120,0.07);
-          border: 1px solid rgba(32,211,120,0.2);
-          border-radius: 16px; padding: 32px;
-          text-align: center;
+        .btn-danger {
+          background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);
         }
-        .success-icon {
-          width: 56px; height: 56px; border-radius: 50%;
-          background: rgba(32,211,120,0.12);
-          border: 1px solid rgba(32,211,120,0.2);
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 16px; color: #20d378;
+        .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,0.15); }
+
+        .code-box {
+          background: rgba(32,211,120,0.08); border: 1px solid rgba(32,211,120,0.2);
+          border-radius: 16px; padding: 24px; text-align: center; margin-top: 24px;
         }
-        .success-title { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px; }
-        .success-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; line-height: 1.6; }
-        .success-email {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 8px 16px;
-          background: rgba(32,211,120,0.08);
-          border: 1px solid rgba(32,211,120,0.15);
-          border-radius: 20px; font-size: 13px; color: #20d378;
-          font-family: 'Fira Code', monospace;
-          margin-bottom: 24px;
+        .code-title { font-size: 14px; color: #20d378; margin-bottom: 12px; font-weight: 600; }
+        .code-value {
+          font-family: 'Fira Code', monospace; font-size: 28px; font-weight: 600; color: #fff;
+          letter-spacing: 2px; margin-bottom: 20px;
         }
-        .btn-back {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 10px 20px;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 10px; color: rgba(255,255,255,0.6);
-          font-size: 13px; font-family: inherit; cursor: pointer;
-          text-decoration: none; transition: background 0.2s;
+        .btn-copy {
+          display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
+          background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
+          color: #fff; font-size: 13px; cursor: pointer; font-family: inherit;
         }
-        .btn-back:hover { background: rgba(255,255,255,0.09); }
+        .btn-copy:hover { background: rgba(255,255,255,0.15); }
+
+        .user-card {
+          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px;
+        }
+        .user-avatar {
+          width: 48px; height: 48px; border-radius: 50%; background: rgba(32,211,120,0.1);
+          color: #20d378; display: flex; align-items: center; justify-content: center;
+          font-size: 18px; font-weight: 600; flex-shrink: 0;
+        }
+        .user-info { flex: 1; }
+        .user-name { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .user-email { font-size: 13px; color: rgba(255,255,255,0.5); }
       `}</style>
 
       <div className="transfer-root" style={{ direction: dir }}>
         <Link href={`/developers/portal/projects/${projectId}`} className="back-link">
-          {/* Arrow flips automatically with RTL direction */}
           <ArrowLeft size={14} />
           {t("Back to project", "رجوع للمشروع")}
         </Link>
 
-        {success ? (
-          /* ── Success state ── */
-          <div className="success-box">
-            <div className="success-icon">
-              <Check size={26} />
-            </div>
-            <div className="success-title">
-              {t("Project transferred successfully! 🎉", "تم تسليم المشروع بنجاح! 🎉")}
-            </div>
-            <div className="success-sub">
-              {t(
-                <>The project was transferred to <strong style={{ color: "#fff" }}>{success.name || success.email}</strong>.<br />The client can now access API Keys, templates, and Meta settings from their account.</>,
-                <>المشروع اتسلم لـ <strong style={{ color: "#fff" }}>{success.name || success.email}</strong>.<br />العميل دلوقتي يقدر يوصل للـ API Keys والقوالب وإعدادات Meta من حسابه.</>
-              )}
-            </div>
-            <div className="success-email">
-              <Mail size={13} />
-              {success.email}
-            </div>
-            <br />
-            <Link href="/developers/portal" className="btn-back">
-              <ArrowLeft size={13} />
-              {t("Back to all projects", "رجوع لكل المشاريع")}
-            </Link>
-          </div>
-        ) : (
-          /* ── Transfer form ── */
+        {isDeveloper && (
           <>
             <h1 className="transfer-title">
-              <Share2
-                size={20}
-                style={{
-                  display: "inline",
-                  [language === "ar" ? "marginLeft" : "marginRight"]: 8,
-                  color: "#20d378",
-                  verticalAlign: "middle",
-                }}
-              />
-              {t("Transfer project to client", "تسليم المشروع لعميل")}
+              {t("Project Transfer", "تسليم المشروع")}
             </h1>
             <p className="transfer-sub" style={{ textAlign: align }}>
-              {t(
-                "You're transferring this project with all its contents — API Keys, templates, and Meta connection — to a client with an account on the Wani platform. After the transfer, you won't be able to edit it.",
-                "بتسلّم المشروع ده بكل محتوياته — API Keys، القوالب، وربط Meta — لعميل عنده حساب في منصة وني. بعد التسليم، أنت مش هتقدر تعدل فيه تاني."
-              )}
+              {hasOwner 
+                ? t("This project has already been claimed by an owner.", "تم استلام هذا المشروع من قِبل مالك.")
+                : t("Invite a client to claim ownership of this project.", "قم بدعوة عميل لاستلام ملكية هذا المشروع.")}
             </p>
 
-            {/* Warning */}
-            <div className="warning-box">
-              <div className="warning-box-title">
-                <AlertTriangle size={15} />
-                {t("Important — read before transferring", "مهم — اقرأ قبل التسليم")}
+            {hasOwner ? (
+              <div className="user-card">
+                <div className="user-avatar">{project.owner.firstName?.[0] || project.owner.email[0].toUpperCase()}</div>
+                <div className="user-info">
+                  <div className="user-name">{project.owner.firstName} {project.owner.lastName}</div>
+                  <div className="user-email">{project.owner.email}</div>
+                </div>
               </div>
-              <ul>
-                <li>{t(<>The transfer is <strong>final</strong> — you can't undo it</>, <>التسليم <strong>نهائي</strong> — مش هتقدر ترجعه لحسابك</>)}</li>
-                <li>{t("The client will have full control over the project", "العميل هياخد التحكم الكامل في المشروع")}</li>
-                <li>{t("API Keys and templates will transfer as-is", "الـ API Keys والقوالب هتعدي للعميل زي ما هي")}</li>
-                <li>{t("The client must have a Wani account with the same email", "لازم العميل يكون عامل حساب في منصة وني بنفس الإيميل")}</li>
-              </ul>
-            </div>
-
-            {/* Form */}
-            <div className="form-field">
-              <label className="form-label" style={{ textAlign: align }}>
-                {t("Client email *", "إيميل العميل *")}
-              </label>
-              <input
-                className="form-input"
-                type="email"
-                placeholder="ahmed@example.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                dir="ltr"
-                style={{ textAlign: "left" }}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="form-label" style={{ textAlign: align }}>
-                {t("Note for client (optional)", "ملاحظة للعميل (اختياري)")}
-              </label>
-              <textarea
-                className="form-input form-textarea"
-                placeholder={t(
-                  "e.g. You can start right away — the first API Key is ready",
-                  "مثلاً: تقدر تبدأ على طول — الـ API Key الأول جاهز"
-                )}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={300}
-                style={{ textAlign: align }}
-              />
-            </div>
-
-            {/* Confirm checkbox */}
-            <div className="confirm-row" onClick={() => setConfirmed((v) => !v)}>
-              <div className={`confirm-checkbox ${confirmed ? "checked" : ""}`}>
-                {confirmed && <Check size={11} style={{ color: "#20d378" }} />}
+            ) : inviteCode ? (
+              <div className="code-box">
+                <div className="code-title">{t("Invite Code Generated", "تم إنشاء كود الدعوة")}</div>
+                <div className="code-value">{inviteCode}</div>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
+                  {t("Send this code to the client. They will use it to claim the project.", "أرسل هذا الكود للعميل ليقوم باستخدامه لاستلام المشروع.")}
+                </p>
+                <button className="btn-copy" onClick={copyCode}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? t("Copied!", "تم النسخ!") : t("Copy Code", "نسخ الكود")}
+                </button>
               </div>
-              <span className="confirm-text">
-                {t(
-                  "I understand that the transfer is final and I won't be able to reclaim the project, and that the client will have full control over the API Keys, templates, and Meta connection.",
-                  "أنا فاهم إن التسليم نهائي ومش هرجع المشروع لحسابي تاني، وإن العميل هياخد التحكم الكامل في الـ API Keys والقوالب وربط Meta."
+            ) : (
+              <>
+                <div className="form-field">
+                  <label className="form-label" style={{ textAlign: align }}>
+                    {t("Client email *", "إيميل العميل *")}
+                  </label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="client@example.com"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    dir="ltr"
+                    style={{ textAlign: "left" }}
+                  />
+                </div>
+                {error && <div className="form-error" style={{ textAlign: align }}>{error}</div>}
+                <button
+                  className="btn-action"
+                  onClick={() => handleInvite("OWNER")}
+                  disabled={actionLoading || !email}
+                >
+                  {actionLoading ? t("Generating...", "جاري الإنشاء...") : t("Generate Invite Code", "إنشاء كود الدعوة")}
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {isOwner && (
+          <>
+            <h1 className="transfer-title">
+              {t("Developer Management", "إدارة المطورين")}
+            </h1>
+            <p className="transfer-sub" style={{ textAlign: align }}>
+              {hasDeveloper 
+                ? t("Manage the developer who currently has access to this project.", "إدارة المطور الذي لديه وصول إلى هذا المشروع حالياً.")
+                : t("Invite a new developer to manage this project for you.", "قم بدعوة مطور جديد لإدارة هذا المشروع لك.")}
+            </p>
+
+            {hasDeveloper ? (
+              <div className="user-card" style={{ flexDirection: "column", alignItems: "stretch", gap: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div className="user-avatar">{project.developer.firstName?.[0] || project.developer.email[0].toUpperCase()}</div>
+                  <div className="user-info">
+                    <div className="user-name">{project.developer.firstName} {project.developer.lastName}</div>
+                    <div className="user-email">{project.developer.email}</div>
+                  </div>
+                </div>
+                
+                {removeConfirm ? (
+                  <div style={{ background: "rgba(239,68,68,0.1)", padding: 16, borderRadius: 12, border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <p style={{ fontSize: 13, color: "#ef4444", marginBottom: 12 }}>
+                      {t("Are you sure you want to remove this developer? They will lose access to the project immediately.", "هل أنت متأكد من إزالة هذا المطور؟ سيفقد الوصول للمشروع فوراً.")}
+                    </p>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button className="btn-action btn-danger" onClick={handleRemoveDeveloper} disabled={actionLoading} style={{ flex: 1, padding: 10, fontSize: 13 }}>
+                        {actionLoading ? t("Removing...", "جاري الإزالة...") : t("Yes, Remove", "نعم، أزل المطور")}
+                      </button>
+                      <button className="btn-action" onClick={() => setRemoveConfirm(false)} style={{ flex: 1, padding: 10, fontSize: 13, background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+                        {t("Cancel", "إلغاء")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="btn-action btn-danger" onClick={() => setRemoveConfirm(true)}>
+                    <UserX size={16} />
+                    {t("Remove Developer Access", "إزالة وصول المطور")}
+                  </button>
                 )}
-              </span>
-            </div>
-
-            {error && <div className="form-error" style={{ textAlign: align }}>{error}</div>}
-
-            <button
-              className="btn-transfer"
-              onClick={handleTransfer}
-              disabled={loading || !email || !confirmed}
-            >
-              {loading ? (
-                t("Transferring...", "جاري التسليم...")
-              ) : (
-                <>
-                  <Share2 size={16} />
-                  {t("Transfer project", "تسليم المشروع")}
-                </>
-              )}
-            </button>
+              </div>
+            ) : inviteCode ? (
+              <div className="code-box">
+                <div className="code-title">{t("Invite Code Generated", "تم إنشاء كود الدعوة")}</div>
+                <div className="code-value">{inviteCode}</div>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
+                  {t("Send this code to the developer. They will use it to access the project.", "أرسل هذا الكود للمطور ليقوم باستخدامه للوصول للمشروع.")}
+                </p>
+                <button className="btn-copy" onClick={copyCode}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? t("Copied!", "تم النسخ!") : t("Copy Code", "نسخ الكود")}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="form-field">
+                  <label className="form-label" style={{ textAlign: align }}>
+                    {t("Developer email *", "إيميل المطور *")}
+                  </label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="dev@example.com"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    dir="ltr"
+                    style={{ textAlign: "left" }}
+                  />
+                </div>
+                {error && <div className="form-error" style={{ textAlign: align }}>{error}</div>}
+                <button
+                  className="btn-action"
+                  onClick={() => handleInvite("DEVELOPER")}
+                  disabled={actionLoading || !email}
+                >
+                  {actionLoading ? t("Generating...", "جاري الإنشاء...") : t("Generate Invite Code", "إنشاء كود الدعوة")}
+                </button>
+              </>
+            )}
           </>
         )}
       </div>

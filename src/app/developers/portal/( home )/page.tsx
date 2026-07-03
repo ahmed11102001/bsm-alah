@@ -11,6 +11,8 @@ interface Project {
   status: "ACTIVE" | "TRANSFERRED" | "ARCHIVED";
   createdAt: string;
   transferredAt: string | null;
+  viewerRole?: "owner" | "developer";
+  canEnter?: boolean;
 }
 
 export default function ProjectsDashboard() {
@@ -189,6 +191,7 @@ export default function ProjectsDashboard() {
           font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
         }
         .badge-active { background: rgba(32,211,120,0.12); color: #20d378; border: 1px solid rgba(32,211,120,0.2); }
+        .badge-role { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); margin-right: 8px; margin-left: 8px; }
         .badge-transferred { background: rgba(56,189,248,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.2); }
         .badge-archived { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.1); }
 
@@ -407,10 +410,28 @@ export default function ProjectsDashboard() {
                   <div className="section-label">{t("Active", "نشطة")} — {activeProjects.length}</div>
                   <div className="projects-grid">
                     {activeProjects.map((project) => (
-                      <Link key={project.id} href={`/developers/portal/projects/${project.id}`} className="project-card">
+                      <Link 
+                        key={project.id} 
+                        href={`/developers/portal/projects/${project.id}`} 
+                        className="project-card"
+                        onClick={(e) => {
+                          if (project.canEnter === false) {
+                            e.preventDefault();
+                            alert(t("The owner has removed your access to this project.", "المالك أزال وصولك لهذا المشروع."));
+                          }
+                        }}
+                        style={project.canEnter === false ? { opacity: 0.5, filter: "grayscale(1)" } : {}}
+                      >
                         <div className="project-card-header">
                           <div className="project-icon">⚡</div>
-                          <span className="project-badge badge-active">{t("Active", "نشط")}</span>
+                          <div>
+                            <span className="project-badge badge-active">
+                              {project.canEnter === false ? t("Access Removed", "مُزال الوصول") : t("Active", "نشط")}
+                            </span>
+                            <span className="project-badge badge-role">
+                              {project.viewerRole === "owner" ? t("Owner", "مالك") : t("Developer", "مطوّر")}
+                            </span>
+                          </div>
                         </div>
                         <div className="project-name">{project.name}</div>
                         <div className="project-desc">
