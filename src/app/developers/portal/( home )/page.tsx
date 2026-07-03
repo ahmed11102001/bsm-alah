@@ -73,6 +73,8 @@ export default function ProjectsDashboard() {
 
   const activeProjects = projects.filter((p) => p.status === "ACTIVE");
   const transferredProjects = projects.filter((p) => p.status === "TRANSFERRED");
+  // أونر بس: مالوش أي مشروع هو "مطوّره" — كل مشاريعه viewerRole = owner
+  const ownerOnly = projects.length > 0 && projects.every((p) => p.viewerRole === "owner");
 
   return (
     <>
@@ -349,12 +351,14 @@ export default function ProjectsDashboard() {
                 {t("Each project has its own API Keys and templates — transfer it to clients when done", "كل مشروع له API Keys وقوالب منفصلة — تقدر تسلّمه للعميل بعد ما تخلص")}
               </p>
             </div>
-            <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateError(""); }}>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              {t("New Project", "مشروع جديد")}
-            </button>
+            {!ownerOnly && (
+              <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateError(""); }}>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                {t("New Project", "مشروع جديد")}
+              </button>
+            )}
           </div>
 
           {/* Stats */}
@@ -451,7 +455,7 @@ export default function ProjectsDashboard() {
                     ))}
 
                     {/* Create new card */}
-                    {activeProjects.length < 10 && (
+                    {activeProjects.length < 10 && !ownerOnly && (
                       <button
                         className="project-card-create"
                         onClick={() => { setShowCreate(true); setCreateError(""); }}

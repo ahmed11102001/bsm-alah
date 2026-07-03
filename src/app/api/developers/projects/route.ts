@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { isOwnerOnlyAccount } from "@/lib/dev-role";
 
 // ── GET /api/developers/projects — جلب كل مشاريع المبرمج ─────────────────────
 export async function GET(req: NextRequest) {
@@ -42,6 +43,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  // الأونر (عميل استلم مشروع جاهز) مش يقدر ينشئ مشاريع جديدة — الإنشاء للمطور بس
+  if (await isOwnerOnlyAccount(session.id)) {
+    return NextResponse.json(
+      { error: "حساب الأونر مش يقدر ينشئ مشاريع جديدة" },
+      { status: 403 }
+    );
+  }
 
   const { name, description } = await req.json();
 

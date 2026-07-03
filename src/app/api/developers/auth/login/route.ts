@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signDevToken, buildDevSessionCookie } from "@/lib/dev-auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { isOwnerOnlyAccount, getLatestOwnedProjectId } from "@/lib/dev-role";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +38,14 @@ export async function POST(req: NextRequest) {
       status: developer.status,
     });
 
-    const res = NextResponse.json({ ok: true, redirect: "/developers/portal" });
+    // أونر بس (مالوش أي مشروع هو مطوّره) → يدخل مباشرة لبورتال مشروعه، مش لصفحة القائمة
+    let redirect = "/developers/portal";
+    if (await isOwnerOnlyAccount(developer.id)) {
+      const projectId = await getLatestOwnedProjectId(developer.id);
+      if (projectId) redirect = `/developers/portal/projects/${projectId}`;
+    }
+
+    const res = NextResponse.json({ ok: true, redirect });
     res.headers.set("Set-Cookie", buildDevSessionCookie(token));
     return res;
   } catch (err) {
