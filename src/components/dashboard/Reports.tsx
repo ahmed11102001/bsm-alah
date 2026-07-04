@@ -1402,6 +1402,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
+                        <tr className="border-b border-gray-100 text-xs text-gray-400">
                           <th className="text-right py-2 pr-2">{pageText[locale].logs.campaign}</th>
                           <th className="text-center py-2">{locale === "ar" ? "الإيراد المنسوب" : "Attributed Revenue"}</th>
                           <th className="text-center py-2">{pageText[locale].charts.orders}</th>
@@ -1502,6 +1503,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
+                        <tr className="border-b border-gray-100 text-xs text-gray-400">
                           <th className="text-right py-2 pr-2">#</th>
                           <th className="text-right py-2">{pageText[locale].store.customer}</th>
                           <th className="text-center py-2">{pageText[locale].store.phone}</th>
