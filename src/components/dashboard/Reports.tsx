@@ -687,14 +687,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
               if (tab === "logs")      fetchLogs(1);
             }}
           >
-            <RefreshCw className="w-3.5 h-3.5" /> تحديث
+            <RefreshCw className="w-3.5 h-3.5" /> {pageText[locale].refresh}
           </Button>
           {/* Quick ranges */}
-          {[
-            { label: "7 أيام",  days: 7  },
-            { label: "30 يوم",  days: 30 },
-            { label: "90 يوم",  days: 90 },
-          ].map((r) => (
+          {pageText[locale].quickRanges.map((r: {label: string; days: number}) => (
             <button
               key={r.days}
               className="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 hover:underline"
@@ -714,15 +710,15 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
         <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl h-auto flex-wrap gap-1">
           {[
             // free+
-            { value: "overview",   label: "نظرة عامة",    icon: <BarChart3 className="w-4 h-4" />,    minPlan: "free"       },
+            { value: "overview",   label: pageText[locale].tabs.overview,    icon: <BarChart3 className="w-4 h-4" />,    minPlan: "free"       },
             // starter+
-            { value: "customers",  label: "العملاء",       icon: <Users className="w-4 h-4" />,        minPlan: "starter"    },
-            { value: "team",       label: "الفريق",        icon: <Shield className="w-4 h-4" />,       minPlan: "starter"    },
+            { value: "customers",  label: pageText[locale].tabs.customers,       icon: <Users className="w-4 h-4" />,        minPlan: "starter"    },
+            { value: "team",       label: pageText[locale].tabs.team,        icon: <Shield className="w-4 h-4" />,       minPlan: "starter"    },
             // pro+
-            { value: "logs",       label: "سجل النشاط",   icon: <Activity className="w-4 h-4" />,     minPlan: "pro"        },
-            { value: "store",      label: "تقرير المتجر",  icon: <ShoppingBag className="w-4 h-4" />,  minPlan: "pro"        },
-            { value: "automation", label: "تقرير الأتمتة", icon: <Bot className="w-4 h-4" />,          minPlan: "pro"        },
-            { value: "cost",       label: "التكلفة والإنفاق", icon: <DollarSign className="w-4 h-4" />, minPlan: "starter"    },
+            { value: "logs",       label: pageText[locale].tabs.logs,   icon: <Activity className="w-4 h-4" />,     minPlan: "pro"        },
+            { value: "store",      label: pageText[locale].tabs.store,  icon: <ShoppingBag className="w-4 h-4" />,  minPlan: "pro"        },
+            { value: "automation", label: pageText[locale].tabs.automation, icon: <Bot className="w-4 h-4" />,          minPlan: "pro"        },
+            { value: "cost",       label: pageText[locale].tabs.cost, icon: <DollarSign className="w-4 h-4" />, minPlan: "starter"    },
           ].map((t) => {
             const order = ["free","starter","pro","enterprise"];
             const allowed = order.indexOf(planTier) >= order.indexOf(t.minPlan);
@@ -764,7 +760,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
               {/* Daily chart */}
               <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">الرسائل يومياً</CardTitle>
+                  <CardTitle className="text-base font-semibold">{pageText[locale].charts.dailyTitle}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={240}>
@@ -774,19 +770,19 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                         tickFormatter={(v) => v.slice(5)} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip
-                        formatter={(value,name) => [
-                          value,("ar-EG"),
-                          name === "sent" ? "مرسل" : "وارد",
+                        formatter={(value: any, name: any) => [
+                          value,
+                          name === "sent" ? pageText[locale].charts.sent : pageText[locale].charts.received,
                         ]}
-                        labelFormatter={(l) => `يوم ${l}`}
+                        labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
                       />
                       <Line type="monotone" dataKey="sent"     stroke="#22c55e" strokeWidth={2} dot={false} name="sent" />
                       <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" />
                     </LineChart>
                   </ResponsiveContainer>
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> رسائل مرسلة</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> رسائل واردة</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> {pageText[locale].charts.campaignsLegendSent}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> {pageText[locale].charts.campaignsLegendReceived}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -795,7 +791,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                 {/* Hourly heatmap */}
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-semibold">أفضل أوقات الإرسال</CardTitle>
+                    <CardTitle className="text-base font-semibold">{pageText[locale].charts.bestSendTimeTitle}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={200}>
@@ -808,7 +804,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                          <Tooltip
                           formatter={(value: any, name: any) => [
                          value != null ? formatNumber(Number(value), numberLocale) : "0",
-                         name === "sent" ? "مرسل" : "رد"
+                         name === "sent" ? pageText[locale].charts.sent : pageText[locale].charts.received
                          ]}
 />
                         <Bar dataKey="cnt" radius={[3, 3, 0, 0]}>
@@ -827,11 +823,11 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                 {/* Best campaigns */}
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-semibold">أفضل الحملات أداءً</CardTitle>
+                    <CardTitle className="text-base font-semibold">{pageText[locale].charts.bestCampaignsTitle}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {overview.bestCampaigns.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات</p>
+                      <p className="text-sm text-gray-400 text-center py-8">{pageText[locale].charts.noData}</p>
                     ) : (
                       <div className="space-y-3">
                         {overview.bestCampaigns.map((c, i) => (
@@ -863,11 +859,11 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             {/* Segment selector */}
             <div className="flex flex-wrap gap-2">
               {[
-                { value: "engaged",    label: "الأكثر تفاعلاً",     icon: <TrendingUp className="w-4 h-4" /> },
-                { value: "no-response",label: "لم يردوا",            icon: <AlertCircle className="w-4 h-4" /> },
-                { value: "new",        label: "العملاء الجدد",       icon: <UserCheck className="w-4 h-4" /> },
-                { value: "archived",   label: "المحظورين/المؤرشفين", icon: <Archive className="w-4 h-4" /> },
-                { value: "followup",   label: "يحتاجون متابعة",      icon: <RefreshCw className="w-4 h-4" /> },
+                { value: "engaged",    label: pageText[locale].customers.segments.engaged,     icon: <TrendingUp className="w-4 h-4" /> },
+                { value: "no-response",label: pageText[locale].customers.segments.noResponse,            icon: <AlertCircle className="w-4 h-4" /> },
+                { value: "new",        label: pageText[locale].customers.segments.new,       icon: <UserCheck className="w-4 h-4" /> },
+                { value: "archived",   label: pageText[locale].customers.segments.archived, icon: <Archive className="w-4 h-4" /> },
+                { value: "followup",   label: pageText[locale].customers.segments.followup,      icon: <RefreshCw className="w-4 h-4" /> },
               ].map((s) => (
                 <button
                   key={s.value}
@@ -891,19 +887,19 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                 {loadingCust ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
                 ) : customers.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 text-sm">لا توجد نتائج</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">{pageText[locale].customers.noResults}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="border-b border-gray-100">
                         <tr>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الهاتف</th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الاسم</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.phone}</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.name}</th>
                           {custSegment === "engaged" && (
-                            <><th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الرسائل</th>
-                              <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">غير مقروء</th></>
+                            <><th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.messages}</th>
+                              <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.unread}</th></>
                           )}
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">آخر تواصل</th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.lastContact}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -944,14 +940,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
           ) : team.length === 0 ? (
             <div className="text-center py-20">
               <Shield className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">لا يوجد أعضاء فريق حتى الآن</p>
+              <p className="text-gray-400 text-sm">{locale === "ar" ? "لا يوجد أعضاء فريق حتى الآن" : "No team members yet"}</p>
             </div>
           ) : (
             <div className="space-y-5">
               {/* Team chart */}
               <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">نشاط الفريق</CardTitle>
+                  <CardTitle className="text-base font-semibold">{pageText[locale].charts.teamActivity}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={220}>
@@ -961,8 +957,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={100} />
                        <Tooltip
                        formatter={(value: any, name: any) => [
-                       value != null ? Number(value).toLocaleString("ar-EG") : "0",
-                       name === "sent" ? "مرسل" : "رد"
+                       value != null ? Number(value).toLocaleString(numberLocale) : "0",
+                       name === "sent" ? pageText[locale].charts.teamSent : pageText[locale].charts.teamReplied
                        ]}
 />
                       <Bar dataKey="sent"    fill="#22c55e" radius={[0, 3, 3, 0]} name="sent"    />
@@ -970,8 +966,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     </BarChart>
                   </ResponsiveContainer>
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> رسائل مرسلة</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> ردود</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> {pageText[locale].charts.teamSent}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> {pageText[locale].charts.teamReplied}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -982,11 +978,11 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <table className="w-full text-sm">
                     <thead className="border-b border-gray-100">
                       <tr>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الاسم</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الصلاحية</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الرسائل المرسلة</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">الردود</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">معدل الرد</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الاسم" : "Name"}</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الصلاحية" : "Role"}</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الرسائل المرسلة" : "Sent Messages"}</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الردود" : "Replies"}</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "معدل الرد" : "Reply Rate"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1001,7 +997,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                 m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700"    :
                                                            "bg-gray-100 text-gray-600"
                               }`}>
-                                {m.role === "OWNER" ? "مالك" : m.role === "FULL_ACCESS" ? "وصول كامل" : "دردشة فقط"}
+                                {m.role === "OWNER" ? (locale === "ar" ? "مالك" : "Owner") : m.role === "FULL_ACCESS" ? (locale === "ar" ? "وصول كامل" : "Full Access") : (locale === "ar" ? "دردشة فقط" : "Chat Only")}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-gray-700 font-medium">{formatNumber(m.sent, numberLocale)}</td>
@@ -1032,33 +1028,33 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-4 flex flex-wrap gap-3 items-end">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500 dark:text-gray-400">الحالة</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].logs.status}</Label>
                   <Select value={logStatus} onValueChange={setLogStatus}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      <SelectItem value="sent">مرسل</SelectItem>
-                      <SelectItem value="delivered">وصل</SelectItem>
-                      <SelectItem value="read">قُرئ</SelectItem>
-                      <SelectItem value="failed">فشل</SelectItem>
+                      <SelectItem value="all">{pageText[locale].logs.all}</SelectItem>
+                      <SelectItem value="sent">{pageText[locale].logs.sent}</SelectItem>
+                      <SelectItem value="delivered">{pageText[locale].logs.delivered}</SelectItem>
+                      <SelectItem value="read">{pageText[locale].logs.read}</SelectItem>
+                      <SelectItem value="failed">{pageText[locale].logs.failed}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500 dark:text-gray-400">نوع الرسالة</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].logs.type}</Label>
                   <Select value={logType} onValueChange={setLogType}>
                     <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      <SelectItem value="text">نص</SelectItem>
-                      <SelectItem value="template">قالب</SelectItem>
-                      <SelectItem value="image">صورة</SelectItem>
-                      <SelectItem value="audio">صوت</SelectItem>
+                      <SelectItem value="all">{pageText[locale].logs.all}</SelectItem>
+                      <SelectItem value="text">{pageText[locale].logs.text}</SelectItem>
+                      <SelectItem value="template">{pageText[locale].logs.template}</SelectItem>
+                      <SelectItem value="image">{pageText[locale].logs.image}</SelectItem>
+                      <SelectItem value="audio">{pageText[locale].logs.audio}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-gray-500 dark:text-gray-400">بحث بالرقم</Label>
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].logs.searchPlaceholder}</Label>
                   <Input
                     className="w-40 text-sm" placeholder="201234..."
                     value={logSearch}
@@ -1071,7 +1067,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
                   onClick={() => fetchLogs(1)}
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> بحث
+                  <RefreshCw className="w-3.5 h-3.5" /> {pageText[locale].logs.searchButton}
                 </Button>
               </CardContent>
             </Card>
@@ -1082,21 +1078,21 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                 {loadingLogs ? (
                   <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
                 ) : !logs || logs.messages.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 text-sm">لا توجد سجلات</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">{pageText[locale].logs.noRecords}</div>
                 ) : (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead className="border-b border-gray-100 bg-gray-50/50">
                           <tr>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الهاتف</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">العميل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الحالة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">النوع</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الاتجاه</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">الحملة</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">المرسِل</th>
-                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">التوقيت</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.phone}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.customer}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.status}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.typeHeader}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.direction}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.campaign}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.sender}</th>
+                            <th className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].logs.time}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1141,14 +1137,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                           disabled={logs.page <= 1}
                           onClick={() => { setLogPage(p => p - 1); fetchLogs(logPage - 1); }}
                         >
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          {locale === "ar" ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
                         </Button>
                         <Button
                           size="sm" variant="outline" className="h-7 w-7 p-0"
                           disabled={logs.page * logs.limit >= logs.total}
                           onClick={() => { setLogPage(p => p + 1); fetchLogs(logPage + 1); }}
                         >
-                          <ChevronLeft className="w-3.5 h-3.5" />
+                          {locale === "ar" ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </Button>
                       </div>
                     </div>
@@ -1169,8 +1165,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-12 text-center text-gray-400">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">لا يوجد بيانات متجر متاحة</p>
-                <p className="text-xs mt-1">تأكد من ربط متجر Shopify أو EasyOrders أولاً</p>
+                <p className="text-sm">{pageText[locale].store.noData}</p>
+                <p className="text-xs mt-1">{pageText[locale].store.connectHint}</p>
               </CardContent>
             </Card>
           ) : (
@@ -1194,7 +1190,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         s.isActive ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
                       }`}>
-                        {s.isActive ? "نشط" : "غير نشط"}
+                        {s.isActive ? pageText[locale].store.active : pageText[locale].store.inactive}
                       </span>
                     </div>
                   ))}
@@ -1209,7 +1205,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <Package className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الطلبات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.totalOrders}</p>
                       <p className="text-xl font-bold text-gray-800">
                         {formatNumber(storeReport.summary.totalOrders, numberLocale)}
                       </p>
@@ -1222,7 +1218,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <DollarSign className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">إجمالي الإيرادات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.totalRevenue}</p>
                       <p className="text-xl font-bold text-gray-800">
                         {formatNumber(storeReport.summary.totalRevenue, numberLocale, { maximumFractionDigits: 0 })}
                       </p>
@@ -1235,7 +1231,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <Zap className="w-4 h-4 text-[#25D366]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">إيرادات الحملات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.campaignRevenue}</p>
                       <p className="text-xl font-bold text-[#25D366]">
                         {formatNumber(storeReport.summary.totalCampaignRevenue, numberLocale, { maximumFractionDigits: 0 })}
                       </p>
@@ -1248,7 +1244,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">نسبة الحملات</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.campaignShare}</p>
                       <p className="text-xl font-bold text-purple-700">
                         {storeReport.summary.campaignRevenueShare}%
                       </p>
@@ -1261,7 +1257,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <Users className="w-4 h-4 text-orange-500" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">العملاء الفريدون</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.uniqueCustomers}</p>
                       <p className="text-xl font-bold text-gray-800">
                         {formatNumber(storeReport.summary.totalUniqueCustomers, numberLocale)}
                       </p>
@@ -1274,7 +1270,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <Store className="w-4 h-4 text-teal-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">المتاجر المربوطة</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{pageText[locale].store.storesConnected}</p>
                       <p className="text-xl font-bold text-gray-800">
                         {storeReport.summary.storesConnected}
                       </p>
@@ -1291,7 +1287,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Zap className="w-4 h-4 text-[#25D366]" />
-                      نسبة إيرادات حملات واتساب
+                      {pageText[locale].store.whatsappCampaignRevenue}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1319,7 +1315,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     {/* Orders by Status */}
                     {storeReport.ordersByStatus.length > 0 && (
                       <div className="mt-4 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">الطلبات حسب الحالة</p>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{pageText[locale].store.ordersByStatus}</p>
                         {storeReport.ordersByStatus.map((s) => {
                           const total = storeReport.summary.totalOrders || 1;
                           const pct = Math.round((s.count / total) * 100);
@@ -1337,7 +1333,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                             <div key={s.status}>
                               <div className="flex justify-between text-xs mb-0.5">
                                 <span className="text-gray-600">{labels[s.status] ?? s.status}</span>
-                                <span className="text-gray-500 dark:text-gray-400">{s.count} طلب ({pct}%)</span>
+                                <span className="text-gray-500 dark:text-gray-400">{s.count} {pageText[locale].charts.orders} ({pct}%)</span>
                               </div>
                               <div className="w-full bg-gray-100 rounded-full h-2">
                                 <div
@@ -1363,7 +1359,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   </CardHeader>
                   <CardContent>
                     {storeReport.dailyTrend.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-8">لا توجد بيانات في هذه الفترة</p>
+                      <p className="text-sm text-gray-400 text-center py-8">{pageText[locale].charts.dailyTrendNoData}</p>
                     ) : (
                       <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={storeReport.dailyTrend}>
@@ -1377,7 +1373,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                 name === "revenue"
                                   ? `${formatNumber(value, numberLocale)} EGP`
                                   : value,
-                                name === "revenue" ? "الإيرادات" : "الطلبات",
+                                name === "revenue" ? pageText[locale].store.revenue : pageText[locale].store.orders,
                               ];
                             }}
                             labelFormatter={(l) => `يوم: ${l}`}
@@ -1406,15 +1402,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 text-xs text-gray-400">
-                          <th className="text-right py-2 pr-2">الحملة</th>
-                          <th className="text-center py-2">الإيراد المنسوب</th>
-                          <th className="text-center py-2">الطلبات</th>
-                          <th className="text-center py-2">مرسل</th>
-                          <th className="text-center py-2">قُرئ</th>
-                          <th className="text-center py-2">معدل التحويل</th>
-                          <th className="text-center py-2">الإيراد/رسالة</th>
-                          <th className="text-right py-2 pl-2">التاريخ</th>
+                          <th className="text-right py-2 pr-2">{pageText[locale].logs.campaign}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "الإيراد المنسوب" : "Attributed Revenue"}</th>
+                          <th className="text-center py-2">{pageText[locale].charts.orders}</th>
+                          <th className="text-center py-2">{pageText[locale].logs.sent}</th>
+                          <th className="text-center py-2">{pageText[locale].logs.read}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "معدل التحويل" : "Conversion Rate"}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "الإيراد/رسالة" : "Rev/Message"}</th>
+                          <th className="text-right py-2 pl-2">{pageText[locale].store.date}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1465,7 +1460,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
 
                     {/* Revenue Bar Chart */}
                     <div className="mt-6">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">مقارنة إيرادات الحملات</p>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">{pageText[locale].charts.revenueComparison}</p>
                       <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={storeReport.campaignRevenue.slice(0, 8)} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
@@ -1501,18 +1496,17 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Star className="w-4 h-4 text-amber-500" />
-                      أفضل العملاء بالإنفاق (في الفترة المحددة)
+                      {pageText[locale].charts.topCustomersTitle}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 text-xs text-gray-400">
                           <th className="text-right py-2 pr-2">#</th>
-                          <th className="text-right py-2">العميل</th>
-                          <th className="text-center py-2">الهاتف</th>
-                          <th className="text-center py-2">الطلبات</th>
-                          <th className="text-left py-2 pl-2">إجمالي الإنفاق</th>
+                          <th className="text-right py-2">{pageText[locale].store.customer}</th>
+                          <th className="text-center py-2">{pageText[locale].store.phone}</th>
+                          <th className="text-center py-2">{pageText[locale].charts.orders}</th>
+                          <th className="text-left py-2 pl-2">{locale === "ar" ? "إجمالي الإنفاق" : "Total Spent"}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1545,17 +1539,17 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardHeader className="pb-2 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500" />
-                      الأوردرات المؤكدة والملغية
+                      {pageText[locale].charts.confirmedOrdersTitle}
                     </CardTitle>
                     <div className="flex gap-2">
                       <Select value={orderFilter} onValueChange={(val) => { setOrderFilter(val); setOrdersPage(1); }}>
                         <SelectTrigger className="w-32 h-8 text-xs">
-                          <SelectValue placeholder="الفلتر" />
+                          <SelectValue placeholder={pageText[locale].charts.filterPlaceholder} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">الكل</SelectItem>
-                          <SelectItem value="confirmed">المؤكدة</SelectItem>
-                          <SelectItem value="cancelled">الملغية</SelectItem>
+                          <SelectItem value="all">{pageText[locale].store.all}</SelectItem>
+                          <SelectItem value="confirmed">{pageText[locale].store.confirmed}</SelectItem>
+                          <SelectItem value="cancelled">{pageText[locale].store.cancelled}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1563,19 +1557,19 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardContent className="p-0 overflow-x-auto">
                     {storeReport.confirmedOrders.length === 0 ? (
                       <div className="text-center text-gray-500 py-8 text-sm">
-                        لا توجد أوردرات في هذه الحالة.
+                        {pageText[locale].store.noOrders}
                       </div>
                     ) : (
                       <>
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 bg-gray-50/50 dark:bg-gray-800/50">
-                              <th className="text-right py-3 px-4 font-medium">رقم الأوردر</th>
-                              <th className="text-right py-3 px-4 font-medium">العميل</th>
-                              <th className="text-center py-3 px-4 font-medium">الهاتف</th>
-                              <th className="text-center py-3 px-4 font-medium">الحالة</th>
-                              <th className="text-left py-3 px-4 font-medium">الإجمالي</th>
-                              <th className="text-left py-3 px-4 font-medium">التاريخ</th>
+                              <th className="text-right py-3 px-4 font-medium">{pageText[locale].store.orderNumber}</th>
+                              <th className="text-right py-3 px-4 font-medium">{pageText[locale].store.customer}</th>
+                              <th className="text-center py-3 px-4 font-medium">{pageText[locale].store.phone}</th>
+                              <th className="text-center py-3 px-4 font-medium">{pageText[locale].store.status}</th>
+                              <th className="text-left py-3 px-4 font-medium">{pageText[locale].store.total}</th>
+                              <th className="text-left py-3 px-4 font-medium">{pageText[locale].store.date}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1590,7 +1584,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                     o.status === "cancelled" ? "bg-red-100 text-red-700" :
                                     "bg-gray-100 text-gray-600"
                                   }`}>
-                                    {o.status === "confirmed" ? "مؤكد" : o.status === "cancelled" ? "ملغى" : o.status}
+                                    {o.status === "confirmed" ? (locale === "ar" ? "مؤكد" : "Confirmed") : o.status === "cancelled" ? (locale === "ar" ? "ملغى" : "Cancelled") : o.status}
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-left font-bold text-green-600 text-xs">
@@ -1615,7 +1609,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               disabled={ordersPage <= 1}
                               onClick={() => setOrdersPage(p => p - 1)}
                             >
-                              <ChevronRight className="w-4 h-4" />
+                              {locale === "ar" ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                             </Button>
                             <span className="font-mono">{ordersPage}</span>
                             <Button
@@ -1623,7 +1617,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               disabled={ordersPage * 50 >= storeReport.confirmedOrdersTotal}
                               onClick={() => setOrdersPage(p => p + 1)}
                             >
-                              <ChevronLeft className="w-4 h-4" />
+                              {locale === "ar" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                             </Button>
                           </div>
                         </div>

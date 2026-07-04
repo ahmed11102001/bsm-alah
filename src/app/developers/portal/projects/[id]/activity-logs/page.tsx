@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Activity, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, ChevronRight, ChevronLeft, RefreshCw } from "lucide-react";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 
 type LogStatus = "PENDING" | "VERIFIED" | "EXPIRED" | "FAILED";
 
@@ -25,24 +26,27 @@ interface Stats {
   FAILED: number;
 }
 
-const STATUS_CONFIG: Record<LogStatus, { icon: any; color: string; bg: string; label: string }> = {
-  PENDING:  { icon: Clock,         color: "#3b82f6", bg: "rgba(59,130,246,0.1)",   label: "تم الإرسال" },
-  VERIFIED: { icon: CheckCircle,   color: "#20d378", bg: "rgba(32,211,120,0.1)",   label: "تم التحقق" },
-  EXPIRED:  { icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.1)",   label: "انتهى" },
-  FAILED:   { icon: XCircle,       color: "#ef4444", bg: "rgba(239,68,68,0.1)",    label: "فشل" },
-};
-
-const FILTERS = [
-  { key: "all",      label: "الكل" },
-  { key: "PENDING",  label: "تم الإرسال" },
-  { key: "VERIFIED", label: "تم التحقق" },
-  { key: "EXPIRED",  label: "انتهى" },
-  { key: "FAILED",   label: "فشل" },
-];
-
 export default function ProjectActivityLogsPage() {
   const params = useParams();
   const projectId = params.id as string;
+  const { language, t } = useLanguage();
+  const dir = language === "ar" ? "rtl" : "ltr";
+  const align = language === "ar" ? "right" : "left";
+
+  const STATUS_CONFIG: Record<LogStatus, { icon: any; color: string; bg: string; label: string }> = {
+    PENDING:  { icon: Clock,         color: "#3b82f6", bg: "rgba(59,130,246,0.1)",   label: t("Sent", "تم الإرسال") },
+    VERIFIED: { icon: CheckCircle,   color: "#20d378", bg: "rgba(32,211,120,0.1)",   label: t("Verified", "تم التحقق") },
+    EXPIRED:  { icon: AlertTriangle, color: "#f59e0b", bg: "rgba(245,158,11,0.1)",   label: t("Expired", "انتهى") },
+    FAILED:   { icon: XCircle,       color: "#ef4444", bg: "rgba(239,68,68,0.1)",    label: t("Failed", "فشل") },
+  };
+
+  const FILTERS = [
+    { key: "all",      label: t("All", "الكل") },
+    { key: "PENDING",  label: t("Sent", "تم الإرسال") },
+    { key: "VERIFIED", label: t("Verified", "تم التحقق") },
+    { key: "EXPIRED",  label: t("Expired", "انتهى") },
+    { key: "FAILED",   label: t("Failed", "فشل") },
+  ];
 
   const [logs, setLogs]     = useState<OtpLog[]>([]);
   const [stats, setStats]   = useState<Stats | null>(null);
@@ -86,7 +90,7 @@ export default function ProjectActivityLogsPage() {
 
   function formatTime(iso: string | null) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleString("ar-EG", {
+    return new Date(iso).toLocaleString(language === "ar" ? "ar-EG" : "en-US", {
       month: "short", day: "numeric",
       hour: "2-digit", minute: "2-digit",
     });
@@ -104,7 +108,7 @@ export default function ProjectActivityLogsPage() {
           max-width: 1000px; margin: 0 auto;
           padding: 32px 24px;
           font-family: 'IBM Plex Sans Arabic', sans-serif;
-          direction: rtl; color: #fff;
+          direction: ${dir}; color: #fff;
         }
         .logs-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
         .logs-title { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
@@ -189,7 +193,7 @@ export default function ProjectActivityLogsPage() {
         }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-        .phone-cell { font-family: 'Fira Code', monospace; font-size: 13px; color: rgba(255,255,255,0.7); direction: ltr; text-align: right; }
+        .phone-cell { font-family: 'Fira Code', monospace; font-size: 13px; color: rgba(255,255,255,0.7); direction: ltr; text-align: ${align}; }
         .time-cell { font-size: 12px; color: rgba(255,255,255,0.35); }
         .error-cell { font-size: 11px; color: rgba(239,68,68,0.7); }
 
@@ -216,16 +220,16 @@ export default function ProjectActivityLogsPage() {
       <div className="logs-root">
         {/* Header */}
         <div className="logs-header">
-          <div>
-            <h1 className="logs-title">السجلات</h1>
-            <p className="logs-sub">سجل كل عمليات إرسال وتحقق OTP في المشروع ده</p>
+          <div style={{ textAlign: align }}>
+            <h1 className="logs-title">{t("Activity Logs", "السجلات")}</h1>
+            <p className="logs-sub">{t("Log of all OTP send and verification operations in this project", "سجل كل عمليات إرسال وتحقق OTP في المشروع ده")}</p>
           </div>
           <button
             className={`refresh-btn ${refreshing ? "spinning" : ""}`}
             onClick={() => fetchLogs(page, filter, true)}
           >
             <RefreshCw size={13} />
-            تحديث
+            {t("Refresh", "تحديث")}
           </button>
         </div>
 
@@ -259,12 +263,12 @@ export default function ProjectActivityLogsPage() {
             >
               {f.label}
               {f.key !== "all" && stats && (
-                <span style={{ marginRight: 4, opacity: 0.6 }}>
+                <span style={{ marginInlineStart: 4, opacity: 0.6 }}>
                   ({stats[f.key as LogStatus] ?? 0})
                 </span>
               )}
               {f.key === "all" && total > 0 && (
-                <span style={{ marginRight: 4, opacity: 0.6 }}>({total})</span>
+                <span style={{ marginInlineStart: 4, opacity: 0.6 }}>({total})</span>
               )}
             </button>
           ))}
@@ -275,22 +279,22 @@ export default function ProjectActivityLogsPage() {
           <div className="logs-table-scroll">
             <div className="logs-table">
           <div className="table-header">
-            <span>الحالة</span>
-            <span>الرقم</span>
-            <span>الوقت</span>
-            <span>ملاحظات</span>
+            <span>{t("Status", "الحالة")}</span>
+            <span>{t("Number", "الرقم")}</span>
+            <span>{t("Time", "الوقت")}</span>
+            <span>{t("Notes", "ملاحظات")}</span>
           </div>
 
           {loading ? (
             <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(255,255,255,0.3)" }}>
               <Loader2 size={24} style={{ margin: "0 auto 8px", animation: "spin 0.8s linear infinite" }} />
-              <p style={{ fontSize: 13 }}>جاري التحميل...</p>
+              <p style={{ fontSize: 13 }}>{t("Loading...", "جاري التحميل...")}</p>
             </div>
           ) : logs.length === 0 ? (
             <div className="empty-state">
               <Activity size={36} className="empty-icon" />
-              <p style={{ fontSize: 14, marginBottom: 4 }}>مفيش سجلات لسه</p>
-              <p style={{ fontSize: 12 }}>أول ما تبعت OTP هتظهر هنا</p>
+              <p style={{ fontSize: 14, marginBottom: 4 }}>{t("No logs yet", "مفيش سجلات لسه")}</p>
+              <p style={{ fontSize: 12 }}>{t("Logs will appear here once you send an OTP", "أول ما تبعت OTP هتظهر هنا")}</p>
             </div>
           ) : (
             logs.map((log) => {
@@ -323,7 +327,7 @@ export default function ProjectActivityLogsPage() {
                       </span>
                     ) : log.verifiedAt ? (
                       <span style={{ fontSize: 11, color: "rgba(32,211,120,0.6)" }}>
-                        تحقق {formatTime(log.verifiedAt)}
+                        {t("Verified", "تحقق")} {formatTime(log.verifiedAt)}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>—</span>
@@ -341,7 +345,7 @@ export default function ProjectActivityLogsPage() {
         {pages > 1 && (
           <div className="pagination">
             <span className="pagination-info">
-              {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} من {total}
+              {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} {t("of", "من")} {total}
             </span>
             <div className="pagination-btns">
               <button
@@ -349,7 +353,7 @@ export default function ProjectActivityLogsPage() {
                 onClick={() => setPage((p) => p - 1)}
                 disabled={page === 1}
               >
-                <ChevronRight size={14} />
+                {language === "ar" ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
               </button>
               <span className="page-num">{page} / {pages}</span>
               <button
@@ -357,7 +361,7 @@ export default function ProjectActivityLogsPage() {
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page === pages}
               >
-                <ChevronLeft size={14} />
+                {language === "ar" ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
               </button>
             </div>
           </div>
