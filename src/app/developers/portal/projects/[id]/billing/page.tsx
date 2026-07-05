@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { CreditCard, Check, AlertTriangle, ShieldCheck, X, Activity } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 
 export default function BillingPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const projectId = params.id as string;
   const statusParam = searchParams.get("status");
   const { language, t } = useLanguage();
@@ -35,26 +36,7 @@ export default function BillingPage() {
 
   async function handleCheckout() {
     setCheckoutLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/developers/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "حصل خطأ");
-        setCheckoutLoading(false);
-        return;
-      }
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      }
-    } catch {
-      setError("حصل خطأ في الاتصال");
-      setCheckoutLoading(false);
-    }
+    router.push(`/developers/portal/projects/${projectId}/checkout`);
   }
 
   if (loading) {
