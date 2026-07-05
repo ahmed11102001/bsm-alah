@@ -313,6 +313,11 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 <tr>
+                  <td>{t("Price", "السعر")}</td>
+                  <td>{t("Free", "مجاناً")}</td>
+                  <td style={{ color: '#20d378', fontWeight: 600 }}>249 {t("EGP / month", "ج / شهر")}</td>
+                </tr>
+                <tr>
                   <td>{t("OTP Messages", "رسائل OTP")}</td>
                   <td>50</td>
                   <td style={{ color: '#20d378', fontWeight: 600 }}>{t("Unlimited", "غير محدود")}</td>

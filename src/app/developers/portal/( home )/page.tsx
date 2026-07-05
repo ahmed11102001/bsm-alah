@@ -15,6 +15,22 @@ interface Project {
   canEnter?: boolean;
 }
 
+function toRoman(num: number): string {
+  const rules: { [key: string]: number } = {
+    M: 1000, CM: 900, D: 500, CD: 400,
+    C: 100, XC: 90, L: 50, XL: 40,
+    X: 10, IX: 9, V: 5, IV: 4, I: 1
+  };
+  let res = '';
+  for (let r in rules) {
+    while (num >= rules[r]) {
+      res += r;
+      num -= rules[r];
+    }
+  }
+  return res;
+}
+
 export default function ProjectsDashboard() {
   const { language, t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -427,7 +443,9 @@ export default function ProjectsDashboard() {
                         style={project.canEnter === false ? { opacity: 0.5, filter: "grayscale(1)" } : {}}
                       >
                         <div className="project-card-header">
-                          <div className="project-icon">⚡</div>
+                          <div className="project-icon" style={{ fontFamily: 'Fira Code, monospace', fontWeight: 600 }}>
+                            {toRoman(projects.length - projects.findIndex(p => p.id === project.id))}
+                          </div>
                           <div>
                             <span className="project-badge badge-active">
                               {project.canEnter === false ? t("Access Removed", "مُزال الوصول") : t("Active", "نشط")}
@@ -479,7 +497,9 @@ export default function ProjectsDashboard() {
                     {transferredProjects.map((project) => (
                       <div key={project.id} className="project-card" style={{ opacity: 0.6, cursor: "default" }}>
                         <div className="project-card-header">
-                          <div className="project-icon" style={{ opacity: 0.5 }}>📤</div>
+                          <div className="project-icon" style={{ opacity: 0.5, fontFamily: 'Fira Code, monospace', fontWeight: 600 }}>
+                            {toRoman(projects.length - projects.findIndex(p => p.id === project.id))}
+                          </div>
                           <span className="project-badge badge-transferred">{t("Transferred", "مسلّم")}</span>
                         </div>
                         <div className="project-name">{project.name}</div>
