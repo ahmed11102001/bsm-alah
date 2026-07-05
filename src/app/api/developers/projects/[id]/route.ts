@@ -39,7 +39,6 @@ export async function GET(
       },
       owner: { select: { id: true, firstName: true, lastName: true, email: true } },
       developer: { select: { id: true, firstName: true, lastName: true, email: true } },
-      transactions: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
@@ -59,7 +58,14 @@ export async function GET(
 
   const viewerRole = projectWithDetails.ownerId === session.id ? "owner" : "developer";
 
-  return NextResponse.json({ project: { ...projectWithDetails, otpToday, viewerRole } });
+  return NextResponse.json({
+    project: {
+      ...projectWithDetails,
+      otpToday,
+      viewerRole,
+      transactions: [],
+    },
+  });
 }
 
 // ── DELETE /api/developers/projects/[id] — حذف مشروع (archive) ──────────────

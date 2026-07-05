@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const token = await signDevToken({ 
+    const token = await signDevToken({
       id: existingUser.id,
       email: existingUser.email,
       name: `${existingUser.firstName || ""} ${existingUser.lastName || ""}`.trim() || null,
