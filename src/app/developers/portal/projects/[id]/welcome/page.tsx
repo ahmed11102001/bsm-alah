@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useLanguage } from "../../../../../_components/LanguageProvider";
+import { useLanguage } from "../../../../_components/LanguageProvider";
 import { CheckCircle2, ChevronRight, Server, Shield, FileText, ArrowRight } from "lucide-react";
 
 export default function WelcomePage() {
