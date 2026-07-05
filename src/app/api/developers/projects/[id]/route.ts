@@ -39,6 +39,7 @@ export async function GET(
       },
       owner: { select: { id: true, firstName: true, lastName: true, email: true } },
       developer: { select: { id: true, firstName: true, lastName: true, email: true } },
+      transactions: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
