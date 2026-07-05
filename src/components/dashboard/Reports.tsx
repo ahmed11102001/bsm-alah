@@ -1293,7 +1293,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardContent>
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500 dark:text-gray-400">حملات واتساب</span>
+                        <span className="text-gray-500 dark:text-gray-400">{locale === "ar" ? "حملات واتساب" : "WhatsApp Campaigns"}</span>
                         <span className="font-bold text-[#25D366]">{storeReport.summary.campaignRevenueShare}%</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
@@ -1326,8 +1326,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                             cancelled: "bg-red-400",
                           };
                           const labels: Record<string, string> = {
-                            pending: "انتظار", fulfilled: "مكتمل",
-                            shipped: "تم الشحن", cancelled: "ملغي",
+                            pending: locale === "ar" ? "انتظار" : "Pending", fulfilled: locale === "ar" ? "مكتمل" : "Fulfilled",
+                            shipped: locale === "ar" ? "تم الشحن" : "Shipped", cancelled: locale === "ar" ? "ملغي" : "Cancelled",
                           };
                           return (
                             <div key={s.status}>
@@ -1354,7 +1354,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-blue-500" />
-                      اتجاه الطلبات والإيرادات اليومي
+                      {pageText[locale].charts.dailyTrendTitle}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1376,7 +1376,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                 name === "revenue" ? pageText[locale].store.revenue : pageText[locale].store.orders,
                               ];
                             }}
-                            labelFormatter={(l) => `يوم: ${l}`}
+                            labelFormatter={(l) => `${pageText[locale].charts.dayLabel}: ${l}`}
                           />
                           <Line type="monotone" dataKey="orders"  stroke="#3b82f6" strokeWidth={2} dot={false} />
                           <Line type="monotone" dataKey="revenue" stroke="#25D366" strokeWidth={2} dot={false} />
@@ -1393,10 +1393,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <ArrowUpRight className="w-4 h-4 text-[#25D366]" />
-                      Revenue Attribution — الإيرادات المنسوبة للحملات
+                      {locale === "ar" ? "Revenue Attribution — الإيرادات المنسوبة للحملات" : "Revenue Attribution"}
                     </CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      كل حملة واتساب وقيمة الطلبات الناتجة عنها مباشرة
+                      {pageText[locale].store.whatsappCampaignRevenueHint}
                     </p>
                   </CardHeader>
                   <CardContent className="overflow-x-auto">

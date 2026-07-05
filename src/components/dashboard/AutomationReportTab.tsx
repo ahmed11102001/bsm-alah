@@ -6,6 +6,7 @@ import {
   Loader2, Zap, Bot, ToggleLeft, ToggleRight,
   CheckCircle, XCircle, Cpu, Clock, MessageSquare,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 interface AutomationRule {
   id: string;
@@ -57,26 +58,70 @@ function StatCard({
   );
 }
 
-const triggerLabel: Record<string, string> = {
-  KEYWORD: "كلمة مفتاحية",
-  FIRST_MESSAGE: "أول رسالة",
-  NO_REPLY: "عدم الرد",
-  TIME_BASED: "مجدول زمني",
+const triggerLabel: Record<"ar" | "en", Record<string, string>> = {
+  ar: { KEYWORD: "كلمة مفتاحية", FIRST_MESSAGE: "أول رسالة", NO_REPLY: "عدم الرد", TIME_BASED: "مجدول زمني" },
+  en: { KEYWORD: "Keyword", FIRST_MESSAGE: "First Message", NO_REPLY: "No Reply", TIME_BASED: "Time Based" },
 };
 
-const replyLabel: Record<string, string> = {
-  AI: "ذكاء اصطناعي",
-  TEXT: "نص",
-  TEMPLATE: "قالب",
+const replyLabel: Record<"ar" | "en", Record<string, string>> = {
+  ar: { AI: "ذكاء اصطناعي", TEXT: "نص", TEMPLATE: "قالب" },
+  en: { AI: "AI", TEXT: "Text", TEMPLATE: "Template" },
 };
 
-const toneLabel: Record<string, string> = {
-  friendly: "ودود",
-  formal: "رسمي",
-  egyptian: "عامية مصرية",
+const toneLabel: Record<"ar" | "en", Record<string, string>> = {
+  ar: { friendly: "ودود", formal: "رسمي", egyptian: "عامية مصرية" },
+  en: { friendly: "Friendly", formal: "Formal", egyptian: "Egyptian Slang" },
+};
+
+const text: Record<"ar" | "en", any> = {
+  ar: {
+    totalRules: "إجمالي قواعد الأتمتة",
+    activeRules: "قواعد نشطة",
+    ofTotal: "من الإجمالي",
+    disabledRules: "قواعد معطلة",
+    aiRules: "قواعد ذكاء اصطناعي",
+    aiRulesSub: "تعتمد على AI للرد",
+    triggersDist: "توزيع المُشغِّلات",
+    noRules: "لا توجد قواعد",
+    replyTypes: "أنواع الردود",
+    aiSettings: "إعدادات الذكاء الاصطناعي",
+    noData: "لا توجد بيانات",
+    status: "الحالة",
+    enabled: "مفعّل",
+    disabled: "معطّل",
+    provider: "المزود",
+    brand: "البراند",
+    replyTone: "أسلوب الرد",
+    pauseAfterHuman: "إيقاف مؤقت بعد رد بشري",
+    minutes: "دقيقة",
+    voiceReplies: "ردود صوتية (ElevenLabs)",
+  },
+  en: {
+    totalRules: "Total Automation Rules",
+    activeRules: "Active Rules",
+    ofTotal: "of Total",
+    disabledRules: "Disabled Rules",
+    aiRules: "AI Rules",
+    aiRulesSub: "Relies on AI for replies",
+    triggersDist: "Triggers Distribution",
+    noRules: "No rules",
+    replyTypes: "Reply Types",
+    aiSettings: "AI Settings",
+    noData: "No data",
+    status: "Status",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    provider: "Provider",
+    brand: "Brand",
+    replyTone: "Reply Tone",
+    pauseAfterHuman: "Pause after human reply",
+    minutes: "minutes",
+    voiceReplies: "Voice Replies (ElevenLabs)",
+  }
 };
 
 export default function AutomationReportTab() {
+  const { locale } = useLanguage();
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [agent, setAgent] = useState<AIAgentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,23 +160,23 @@ export default function AutomationReportTab() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="إجمالي قواعد الأتمتة" value={totalRules} icon={<Zap className="w-5 h-5 text-yellow-600" />} color="bg-yellow-50 dark:bg-yellow-900/20" />
-        <StatCard label="قواعد نشطة" value={activeRules} sub={totalRules > 0 ? `${Math.round((activeRules / totalRules) * 100)}% من الإجمالي` : undefined} icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50 dark:bg-green-900/20" />
-        <StatCard label="قواعد معطلة" value={totalRules - activeRules} icon={<XCircle className="w-5 h-5 text-red-500" />} color="bg-red-50 dark:bg-red-900/20" />
-        <StatCard label="قواعد ذكاء اصطناعي" value={aiRules} sub="تعتمد على AI للرد" icon={<Bot className="w-5 h-5 text-purple-600" />} color="bg-purple-50 dark:bg-purple-900/20" />
+        <StatCard label={text[locale].totalRules} value={totalRules} icon={<Zap className="w-5 h-5 text-yellow-600" />} color="bg-yellow-50 dark:bg-yellow-900/20" />
+        <StatCard label={text[locale].activeRules} value={activeRules} sub={totalRules > 0 ? `${Math.round((activeRules / totalRules) * 100)}% ${text[locale].ofTotal}` : undefined} icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50 dark:bg-green-900/20" />
+        <StatCard label={text[locale].disabledRules} value={totalRules - activeRules} icon={<XCircle className="w-5 h-5 text-red-500" />} color="bg-red-50 dark:bg-red-900/20" />
+        <StatCard label={text[locale].aiRules} value={aiRules} sub={text[locale].aiRulesSub} icon={<Bot className="w-5 h-5 text-purple-600" />} color="bg-purple-50 dark:bg-purple-900/20" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
-          <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">توزيع المُشغِّلات</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{text[locale].triggersDist}</CardTitle></CardHeader>
           <CardContent>
-            {totalRules === 0 ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">لا توجد قواعد</p> : (
+            {totalRules === 0 ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">{text[locale].noRules}</p> : (
               <div className="space-y-3">
                 {Object.entries(byTrigger).map(([type, count]) => {
                   const pct = Math.round((count / totalRules) * 100);
                   return (
                     <div key={type} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 dark:text-gray-300 w-36 flex-shrink-0">{triggerLabel[type] ?? type}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300 w-36 flex-shrink-0">{triggerLabel[locale][type] ?? type}</span>
                       <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-yellow-400 rounded-full" style={{ width: `${pct}%` }} /></div>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 w-8 text-left">{count}</span>
                     </div>
@@ -143,16 +188,16 @@ export default function AutomationReportTab() {
         </Card>
 
         <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
-          <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">أنواع الردود</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{text[locale].replyTypes}</CardTitle></CardHeader>
           <CardContent>
-            {totalRules === 0 ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">لا توجد قواعد</p> : (
+            {totalRules === 0 ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">{text[locale].noRules}</p> : (
               <div className="space-y-3">
                 {Object.entries(byReplyType).map(([type, count]) => {
                   const pct = Math.round((count / totalRules) * 100);
                   const colors: Record<string, string> = { AI: "bg-purple-400", TEXT: "bg-blue-400", TEMPLATE: "bg-green-400" };
                   return (
                     <div key={type} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 dark:text-gray-300 w-36 flex-shrink-0">{replyLabel[type] ?? type}</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300 w-36 flex-shrink-0">{replyLabel[locale][type] ?? type}</span>
                       <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${colors[type] ?? "bg-gray-400"}`} style={{ width: `${pct}%` }} />
                       </div>
@@ -168,34 +213,34 @@ export default function AutomationReportTab() {
 
       <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"><Bot className="w-5 h-5 text-purple-500" />إعدادات الذكاء الاصطناعي</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2"><Bot className="w-5 h-5 text-purple-500" />{text[locale].aiSettings}</CardTitle>
         </CardHeader>
         <CardContent>
-          {!agent ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">لا توجد بيانات</p> : (
+          {!agent ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">{text[locale].noData}</p> : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 {agent.isEnabled ? <ToggleRight className="w-6 h-6 text-green-500 flex-shrink-0" /> : <ToggleLeft className="w-6 h-6 text-gray-400 flex-shrink-0" />}
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">الحالة</p><p className={`text-sm font-semibold ${agent.isEnabled ? "text-green-600" : "text-gray-500 dark:text-gray-300"}`}>{agent.isEnabled ? "مفعّل" : "معطّل"}</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].status}</p><p className={`text-sm font-semibold ${agent.isEnabled ? "text-green-600" : "text-gray-500 dark:text-gray-300"}`}>{agent.isEnabled ? text[locale].enabled : text[locale].disabled}</p></div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 <Cpu className="w-6 h-6 text-blue-500 flex-shrink-0" />
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">المزود</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100 capitalize">{agent.provider === "gemini" ? "Google Gemini" : "OpenAI"}</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].provider}</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100 capitalize">{agent.provider === "gemini" ? "Google Gemini" : "OpenAI"}</p></div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 <MessageSquare className="w-6 h-6 text-teal-500 flex-shrink-0" />
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">البراند</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[150px]">{agent.brandName || "—"}</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].brand}</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[150px]">{agent.brandName || "—"}</p></div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 <Zap className="w-6 h-6 text-yellow-500 flex-shrink-0" />
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">أسلوب الرد</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{toneLabel[agent.tone] ?? agent.tone}</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].replyTone}</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{toneLabel[locale][agent.tone] ?? agent.tone}</p></div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 <Clock className="w-6 h-6 text-orange-500 flex-shrink-0" />
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">إيقاف مؤقت بعد رد بشري</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{agent.pauseMinutes} دقيقة</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].pauseAfterHuman}</p><p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{agent.pauseMinutes} {text[locale].minutes}</p></div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                 <Bot className="w-6 h-6 text-indigo-500 flex-shrink-0" />
-                <div><p className="text-xs text-gray-500 dark:text-gray-400">ردود صوتية (ElevenLabs)</p><p className={`text-sm font-semibold ${agent.elevenLabsEnabled ? "text-green-600" : "text-gray-400 dark:text-gray-300"}`}>{agent.elevenLabsEnabled ? "مفعّل" : "معطّل"}</p></div>
+                <div><p className="text-xs text-gray-500 dark:text-gray-400">{text[locale].voiceReplies}</p><p className={`text-sm font-semibold ${agent.elevenLabsEnabled ? "text-green-600" : "text-gray-400 dark:text-gray-300"}`}>{agent.elevenLabsEnabled ? text[locale].enabled : text[locale].disabled}</p></div>
               </div>
             </div>
           )}
