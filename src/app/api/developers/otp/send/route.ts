@@ -5,11 +5,16 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { decryptToken } from "@/lib/crypto";
 import { storeOtp } from "@/lib/otp-redis";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface AuthResult {
   projectId: string;
   developerId: string;
   ownerId: string | null;
+  plan: string;
+  planRenewsAt: Date | null;
+  trialStartedAt: Date | null;
+  trialEndsAt: Date | null;
+  trialMessagesUsed: number;
+  trialWarningNotifiedAt: Date | null;
   metaConnection: {
     accessToken: string;   // encrypted in DB
     phoneNumberId: string;
