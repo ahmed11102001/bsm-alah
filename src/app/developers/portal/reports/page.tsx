@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart2, FolderKanban, CheckCircle2, XCircle, Archive, Users, Clock, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BarChart2, FolderKanban, CheckCircle2, XCircle, Archive, Users, Clock, TrendingUp, ArrowRight, ArrowLeft } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useLanguage } from "../../_components/LanguageProvider";
 
@@ -33,6 +34,7 @@ export default function DeveloperReportsPage() {
   const { language, t } = useLanguage();
   const dir = language === "ar" ? "rtl" : "ltr";
   const align = language === "ar" ? "right" : "left";
+  const router = useRouter();
 
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [monthly, setMonthly] = useState<MonthPoint[]>([]);
@@ -108,7 +110,11 @@ export default function DeveloperReportsPage() {
         }
         .panel-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 
-        table.reports-table { width: 100%; border-collapse: collapse; }
+        .table-responsive {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        table.reports-table { width: 100%; border-collapse: collapse; min-width: 600px; }
         .reports-table th {
           font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
           color: rgba(255,255,255,0.35); text-align: ${align}; font-weight: 500;
@@ -138,13 +144,33 @@ export default function DeveloperReportsPage() {
         .empty-icon { color: rgba(255,255,255,0.2); margin-bottom: 16px; }
         .empty-text { font-size: 14px; color: rgba(255,255,255,0.5); }
 
+        .back-button {
+          display: inline-flex; align-items: center; gap: 8px;
+          color: rgba(255,255,255,0.6); font-size: 14px;
+          background: none; border: none; cursor: pointer;
+          margin-bottom: 24px; padding: 0;
+          transition: color 0.2s ease;
+        }
+        .back-button:hover {
+          color: #fff;
+        }
+
         @media (max-width: 720px) {
           .kpi-grid { grid-template-columns: repeat(2, 1fr); }
           .reports-table { font-size: 12px; }
+          .reports-root { padding: 24px 16px 80px; }
+        }
+        @media (max-width: 480px) {
+          .kpi-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
       <div className="reports-root">
+        <button onClick={() => router.back()} className="back-button">
+          {language === "ar" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+          {t("Go Back", "رجوع للخلف")}
+        </button>
+
         <h1 className="page-title">
           <BarChart2 size={24} style={{ color: "#20d378" }} />
           {t("Developer Reports", "تقارير المطور")}
@@ -258,7 +284,8 @@ export default function DeveloperReportsPage() {
                 <FolderKanban size={16} style={{ color: "#20d378" }} />
                 {t("All Your Projects", "كل مشاريعك")}
               </div>
-              <table className="reports-table">
+              <div className="table-responsive">
+                <table className="reports-table">
                 <thead>
                   <tr>
                     <th>{t("Project", "المشروع")}</th>
@@ -286,7 +313,8 @@ export default function DeveloperReportsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </>
         )}
