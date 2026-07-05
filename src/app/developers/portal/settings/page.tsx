@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Shield, Save } from "lucide-react";
+import { User, Shield, Save, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLanguage } from "../../_components/LanguageProvider";
 
@@ -106,6 +106,24 @@ export default function DeveloperSettingsPage() {
           max-width: 900px;
           margin: 0 auto;
           padding-bottom: 64px; /* extra space at bottom */
+        }
+        .back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.7);
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+          margin-bottom: 24px;
+        }
+        .back-btn:hover {
+          background: rgba(255,255,255,0.1);
+          color: #fff;
         }
         .settings-header {
           margin-bottom: 32px;
@@ -237,6 +255,11 @@ export default function DeveloperSettingsPage() {
 
       <div className="settings-scroll-wrapper">
         <div className="settings-container">
+          <button className="back-btn" onClick={() => router.back()}>
+            <ArrowRight size={16} style={{ transform: language === 'ar' ? 'rotate(180deg)' : 'none' }} />
+            {t("Back", "رجوع")}
+          </button>
+          
           <div className="settings-header">
           <h1 className="settings-title">{t("Account Settings", "إعدادات الحساب")}</h1>
           <p className="settings-desc">{t("Manage your personal information and password", "إدارة معلوماتك الشخصية وكلمة المرور")}</p>
