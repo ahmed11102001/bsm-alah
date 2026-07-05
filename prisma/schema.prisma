@@ -812,6 +812,16 @@ model DeveloperProject {
   owner              DeveloperUser? @relation("ProjectOwner", fields: [ownerId], references: [id])
   developerRemovedAt DateTime?
 
+  // ── Plan & Trial (Project-level) ───────────────────────────
+  plan                   DeveloperPlan @default(TRIAL)
+  planStartedAt          DateTime?
+  planRenewsAt           DateTime?
+  
+  trialStartedAt         DateTime?
+  trialEndsAt            DateTime?
+  trialMessagesUsed      Int           @default(0)
+  trialWarningNotifiedAt DateTime?
+
   developer      DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
   metaConnection DeveloperMetaConnection?
   apiKeys        DeveloperApiKey[]
@@ -951,6 +961,7 @@ model OtpLog {
 enum DeveloperPlan {
   TRIAL
   DEVELOPER
+  OWNER_PLAN
 }
 
 enum DeveloperStatus {

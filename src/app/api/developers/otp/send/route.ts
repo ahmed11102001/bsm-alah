@@ -46,6 +46,12 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
     projectId: keyRecord.projectId,
     developerId: keyRecord.project.developerId,
     ownerId: keyRecord.project.ownerId,
+    plan: keyRecord.project.plan,
+    planRenewsAt: keyRecord.project.planRenewsAt,
+    trialStartedAt: keyRecord.project.trialStartedAt,
+    trialEndsAt: keyRecord.project.trialEndsAt,
+    trialMessagesUsed: keyRecord.project.trialMessagesUsed,
+    trialWarningNotifiedAt: keyRecord.project.trialWarningNotifiedAt,
     metaConnection: meta,
   };
 }
@@ -230,43 +236,59 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 5. Trial enforcement ──────────────────────────────────────────────────
-  const billingUserId = auth.ownerId ?? auth.developerId;
-  const developer = await prisma.developerUser.findUnique({
-    where: { id: billingUserId },
-    select: { plan: true, trialEndsAt: true, trialMessagesUsed: true },
-  });
+  // ── 5. Plan & Trial enforcement (Project-level) ───────────────────────────
+  let isAllowed = false;
+  let incrementField = false;
 
-  if (!developer) {
-    return NextResponse.json({ ok: false, error: "حساب المطور غير موجود" }, { status: 401 });
-  }
-
-  if (developer.plan === "TRIAL") {
-    const now = new Date();
-
-    if (developer.trialEndsAt && now > developer.trialEndsAt) {
+  if (auth.plan === "OWNER_PLAN") {
+    // Check if subscription expired
+    if (auth.planRenewsAt && new Date() > auth.planRenewsAt) {
+      return NextResponse.json(
+        { ok: false, error: "انتهى اشتراك باقة الأونر — يرجى التجديد للاستمرار", code: "NO_ACTIVE_PLAN" },
+        { status: 403 }
+      );
+    }
+    isAllowed = true;
+  } else {
+    // Trial logic
+    if (!auth.trialStartedAt) {
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      await prisma.developerProject.update({
+        where: { id: auth.projectId },
+        data: { trialStartedAt: new Date(), trialEndsAt },
+      });
+      auth.trialStartedAt = new Date();
+      auth.trialEndsAt = trialEndsAt;
+    } else if (new Date() > auth.trialEndsAt! || auth.trialMessagesUsed >= 50) {
       return NextResponse.json(
         {
           ok: false,
-          error: "انتهت فترة الـ Trial (14 يوم) — اشترك في خطة Developer للاستمرار",
+          error: "انتهت فترة الـ Trial (أو وصلت للحد الأقصى) — اشترك في باقة الأونر للاستمرار",
           code: "TRIAL_EXPIRED",
-          upgradeUrl: "/developers/upgrade",
+          upgradeUrl: `/developers/portal/projects/${auth.projectId}/billing`,
         },
         { status: 403 }
       );
     }
 
-    if (developer.trialMessagesUsed >= 50) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "وصلت للحد الأقصى للـ Trial (50 رسالة) — اشترك في خطة Developer للاستمرار",
-          code: "TRIAL_MESSAGES_EXHAUSTED",
-          upgradeUrl: "/developers/upgrade",
-        },
-        { status: 403 }
-      );
+    if (auth.trialMessagesUsed === 40 && !auth.trialWarningNotifiedAt) {
+      await prisma.developerNotification.create({
+        data: {
+          developerId: auth.developerId,
+          type: "BILLING",
+          title: "تنبيه استهلاك الباقة المجانية",
+          message: "وصلت لـ 80% من رصيد الرسائل المجانية (40 من 50) لمشروعك.",
+          link: `/developers/portal/projects/${auth.projectId}/billing`
+        }
+      });
+      await prisma.developerProject.update({
+        where: { id: auth.projectId },
+        data: { trialWarningNotifiedAt: new Date() },
+      });
     }
+
+    isAllowed = true;
+    incrementField = true;
   }
 
   // ── 6. Resolve template ───────────────────────────────────────────────────
@@ -334,10 +356,10 @@ export async function POST(req: NextRequest) {
   });
 
   // ── 12. Increment trial counter (non-blocking) ────────────────────────────
-  if (sendResult.success && developer.plan === "TRIAL") {
-    prisma.developerUser
+  if (sendResult.success && incrementField) {
+    prisma.developerProject
       .update({
-        where: { id: billingUserId },
+        where: { id: auth.projectId },
         data: { trialMessagesUsed: { increment: 1 } },
       })
       .catch(() => {});
@@ -351,8 +373,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const remaining = developer.plan === "TRIAL"
-    ? { messagesLeft: 50 - (developer.trialMessagesUsed + 1) }
+  const remaining = incrementField
+    ? { messagesLeft: 50 - (auth.trialMessagesUsed + 1) }
     : {};
 
   return NextResponse.json({

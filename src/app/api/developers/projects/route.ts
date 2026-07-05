@@ -61,13 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "اسم المشروع 3 أحرف على الأقل" }, { status: 400 });
   }
 
-  // حد أقصى 10 مشاريع نشطة للمبرمج الواحد
-  const count = await prisma.developerProject.count({
-    where: { developerId: session.id, status: "ACTIVE" },
-  });
-  if (count >= 10) {
-    return NextResponse.json({ error: "وصلت للحد الأقصى (10 مشاريع نشطة)" }, { status: 400 });
-  }
+
 
   const project = await prisma.developerProject.create({
     data: {

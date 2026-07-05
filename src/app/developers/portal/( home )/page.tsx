@@ -366,7 +366,7 @@ export default function ProjectsDashboard() {
             <div className="stat-card">
               <div className="stat-label">{t("Active Projects", "المشاريع النشطة")}</div>
               <div className="stat-value green">{loading ? "–" : activeProjects.length}</div>
-              <div className="stat-sub">{t("out of 10 max", "من أصل 10 كحد أقصى")}</div>
+              <div className="stat-sub">{t("Projects you are working on", "مشاريع تعمل عليها")}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">{t("Transferred", "تم تسليمها")}</div>
@@ -455,7 +455,7 @@ export default function ProjectsDashboard() {
                     ))}
 
                     {/* Create new card */}
-                    {activeProjects.length < 10 && !ownerOnly && (
+                    {!ownerOnly && (
                       <button
                         className="project-card-create"
                         onClick={() => { setShowCreate(true); setCreateError(""); }}

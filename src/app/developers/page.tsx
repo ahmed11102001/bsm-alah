@@ -510,28 +510,26 @@ function PageContent() {
             </a>
           </div>
 
-          {/* Developer */}
+          {/* Owner Plan */}
           <div className="pricing-card" style={{ borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", position: "relative", display: "flex", flexDirection: "column" }}>
             {/* Popular badge */}
             <div style={{ position: "absolute", top: "20px", left: language === 'ar' ? "20px" : "auto", right: language === 'ar' ? "auto" : "20px", padding: "3px 10px", borderRadius: "20px", background: "#25D366", color: "#000", fontSize: "10px", fontWeight: 700, letterSpacing: "0.05em" }}>{language === 'ar' ? 'الأكثر طلباً' : 'Most Popular'}</div>
 
-            <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em", marginBottom: "20px" }}>DEVELOPER</div>
+            <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em", marginBottom: "20px" }}>OWNER PLAN</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>300</span>
-              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{language === 'ar' ? 'ج.م / شهر' : 'EGP / month'}</span>
+              <span style={{ fontSize: "40px", fontWeight: 800, letterSpacing: "-1.5px" }}>249</span>
+              <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{language === 'ar' ? 'ج.م / شهر / للمشروع' : 'EGP / month / project'}</span>
             </div>
-            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>{language === 'ar' ? 'للمطورين الجادين — كل ما تحتاجه في مشروع production' : 'For serious developers — everything you need for production'}</p>
+            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginBottom: "28px", lineHeight: 1.5 }}>{language === 'ar' ? 'لأصحاب المشاريع — كل ما تحتاجه للإنتاج بلا حدود' : 'For project owners — everything you need for production without limits'}</p>
 
             <div style={{ borderTop: "1px solid rgba(37,211,102,0.1)", paddingTop: "24px", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px", flex: 1 }}>
               {[
-                { t: language === 'ar' ? "API Key" : "API Key", s: language === 'ar' ? "لكل مشروع بشكل منفصل" : "per project separately" },
                 { t: language === 'ar' ? "رسائل OTP غير محدودة*" : "Unlimited OTP*", s: language === 'ar' ? "حسب باقة الواتساب" : "based on WhatsApp plan" },
-                { t: language === 'ar' ? "متعدد المشاريع" : "Multi-project", s: language === 'ar' ? "كل مشروع معزول تماماً" : "fully isolated projects" },
                 { t: language === 'ar' ? "ربط Meta مخصص" : "Custom Meta connection", s: language === 'ar' ? "رقم WhatsApp Business خاص" : "custom WhatsApp Business number" },
                 { t: language === 'ar' ? "قوالب OTP مخصصة" : "Custom OTP templates", s: language === 'ar' ? "موافقة Meta مدمجة" : "integrated Meta approval" },
-                { t: language === 'ar' ? "تسليم المشروع للعميل" : "Project handover", s: "Transfer ownership" },
-                { t: language === 'ar' ? "سجلات وإحصائيات" : "Logs & Analytics", s: language === 'ar' ? "لكل مشروع على حدة" : "per project" },
-                { t: language === 'ar' ? "دعم فني" : "Technical Support", s: language === 'ar' ? "واتساب مباشر" : "direct WhatsApp" },
+                { t: language === 'ar' ? "API Key منفصل" : "Dedicated API Key", s: "Production ready" },
+                { t: language === 'ar' ? "سجلات وإحصائيات" : "Logs & Analytics", s: language === 'ar' ? "داشبورد تفاعلي" : "interactive dashboard" },
+                { t: language === 'ar' ? "دعم فني" : "Technical Support", s: language === 'ar' ? "أولوية في الرد" : "priority support" },
               ].map(({ t, s }) => (
                 <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                   <span style={{ color: "#25D366", marginTop: "1px", flexShrink: 0, fontSize: "14px" }}>✓</span>

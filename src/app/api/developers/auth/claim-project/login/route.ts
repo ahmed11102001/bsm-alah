@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       name: `${existingUser.firstName || ""} ${existingUser.lastName || ""}`.trim() || null,
       status: existingUser.status || "ACTIVE"
     });
-    const response = NextResponse.json({ redirect: `/developers/portal/projects/${invite.projectId}` });
+    const response = NextResponse.json({ redirect: `/developers/portal/projects/${invite.projectId}/welcome` });
     response.cookies.set("dev-session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

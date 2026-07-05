@@ -12,11 +12,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (payload.invoice_status === "paid") {
-      const customData = payload.pay_load as any;
-      if (customData?.projectId) {
-        // Here we would upgrade the project plan based on customData.planId
+      const customData = payload.pay_load as { ownerId?: string; projectId?: string; type?: string } | null;
+
+      if (customData?.type === "owner_plan_subscription" && customData.projectId) {
         console.log(`[fawaterak-dev-webhook] Payment received for project ${customData.projectId}`);
-        // TODO: Update database (e.g. create subscription record, update limits)
+        
+        await prisma.developerProject.update({
+          where: { id: customData.projectId },
+          data: {
+            plan: "OWNER_PLAN",
+            planStartedAt: new Date(),
+            planRenewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          },
+        });
       }
     }
 
