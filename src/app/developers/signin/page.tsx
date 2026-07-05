@@ -173,11 +173,9 @@ function SignInContent() {
         }
         .brand-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 56px; }
         .brand-logo-icon {
-          width: 44px; height: 44px; border-radius: 12px;
-          background: linear-gradient(135deg, #20d378 0%, #10b854 100%);
+          width: 44px; height: 44px;
           display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 20px; color: #060810;
-          font-family: 'Fira Code', monospace; flex-shrink: 0;
+          flex-shrink: 0;
         }
         .brand-logo-text { font-size: 18px; font-weight: 500; color: #fff; }
         .brand-logo-sub  { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
@@ -223,11 +221,8 @@ function SignInContent() {
           justify-content: center;
         }
         .mobile-brand-logo-icon {
-          width: 36px; height: 36px; border-radius: 10px;
-          background: linear-gradient(135deg, #20d378 0%, #10b854 100%);
+          width: 36px; height: 36px;
           display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 16px; color: #060810;
-          font-family: 'Fira Code', monospace;
         }
         .mobile-brand-name { font-size: 16px; font-weight: 600; color: #fff; }
         .mobile-brand-sub  { font-size: 11px; color: rgba(255,255,255,0.35); }
@@ -359,7 +354,7 @@ function SignInContent() {
 
         <div className="auth-brand">
           <div className="brand-logo">
-            <div className="brand-logo-icon">W</div>
+            <div className="brand-logo-icon"><img src="/favicon.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div>
               <div className="brand-logo-text">{t("Wani", "وني")}</div>
               <div className="brand-logo-sub">Developer Portal</div>
@@ -387,7 +382,7 @@ function SignInContent() {
         <div className="auth-form-panel">
           <div className={`auth-card ${mounted ? "visible" : ""}`}>
             <div className="mobile-brand-logo">
-              <div className="mobile-brand-logo-icon">W</div>
+              <div className="mobile-brand-logo-icon"><img src="/favicon.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
               <div>
                 <div className="mobile-brand-name">{t("Wani", "وني")}</div>
                 <div className="mobile-brand-sub">Developer Portal</div>

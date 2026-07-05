@@ -89,13 +89,13 @@ function PageContent() {
               width: "28px",
               height: "28px",
               borderRadius: "8px",
-              background: "#25D366",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
             }}
           >
-            <Terminal size={14} color="#000" />
+            <img src="/favicon.svg" alt="Wani API" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <span style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.3px" }}>
             Wani <span style={{ color: "#25D366" }}>API</span>
