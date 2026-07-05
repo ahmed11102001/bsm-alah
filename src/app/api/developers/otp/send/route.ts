@@ -280,7 +280,7 @@ export async function POST(req: NextRequest) {
       await prisma.developerNotification.create({
         data: {
           developerId: auth.developerId,
-          type: "BILLING",
+          type: "TRIAL_WARNING",
           title: "تنبيه استهلاك الباقة المجانية",
           message: "وصلت لـ 80% من رصيد الرسائل المجانية (40 من 50) لمشروعك.",
           link: `/developers/portal/projects/${auth.projectId}/billing`

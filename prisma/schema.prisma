@@ -997,6 +997,7 @@ enum OtpLogStatus {
 enum DeveloperNotificationType {
   META_UPDATE  // تحديثات Meta (قبول/رفض تمبلت، تغيير حالة WABA…)
   BILLING      // فواتير، رصيد، دفعات
+  TRIAL_WARNING// تحذير اقتراب انتهاء الباقة التجريبية
   SECURITY     // تسجيل دخول، تغيير باسورد
   SYSTEM       // إشعارات عامة من النظام
 }

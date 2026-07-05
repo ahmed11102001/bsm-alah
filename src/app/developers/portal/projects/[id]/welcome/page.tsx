@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
-import { CheckCircle2, ChevronRight, Server, Shield, FileText, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 export default function WelcomePage() {
   const params = useParams();
@@ -27,8 +27,8 @@ export default function WelcomePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#060810", color: "#fff", fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-        {t("Loading project...", "جاري تحميل المشروع...")}
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#060810", color: "rgba(255,255,255,0.5)", fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+        {t("Loading...", "جاري التحميل...")}
       </div>
     );
   }
@@ -36,13 +36,13 @@ export default function WelcomePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap');
         
         .welcome-root {
           min-height: 100vh;
           background: #060810;
-          color: #e6edf3;
-          font-family: ${language === 'ar' ? "'IBM Plex Sans Arabic', sans-serif" : "'Inter', sans-serif"};
+          color: #fff;
+          font-family: 'IBM Plex Sans Arabic', sans-serif;
           direction: ${dir};
           display: flex;
           align-items: center;
@@ -52,162 +52,87 @@ export default function WelcomePage() {
 
         .welcome-container {
           width: 100%;
-          max-width: 600px;
+          max-width: 460px;
+          text-align: center;
         }
 
-        .header-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
+        .check-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
           background: rgba(32,211,120,0.1);
           color: #20d378;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 24px;
+          margin: 0 auto 28px;
         }
 
         .welcome-title {
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 600;
           color: #ffffff;
-          margin-bottom: 8px;
+          margin-bottom: 20px;
         }
 
-        .welcome-subtitle {
+        .welcome-body {
           font-size: 15px;
-          color: #7d8590;
-          margin-bottom: 32px;
-          line-height: 1.5;
+          color: rgba(255,255,255,0.5);
+          line-height: 1.8;
+          margin-bottom: 36px;
         }
 
-        .steps-box {
-          background: #0d1117;
-          border: 1px solid #30363d;
-          border-radius: 12px;
-          overflow: hidden;
-          margin-bottom: 32px;
+        .welcome-body strong {
+          color: rgba(255,255,255,0.8);
+          font-weight: 500;
         }
 
-        .step-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 16px;
-          padding: 20px;
-          border-bottom: 1px solid #30363d;
-        }
-
-        .step-item:last-child {
-          border-bottom: none;
-        }
-
-        .step-icon-wrapper {
-          color: #7d8590;
-          margin-top: 2px;
-        }
-
-        .step-content {
-          flex: 1;
-        }
-
-        .step-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: #e6edf3;
-          margin-bottom: 4px;
-        }
-
-        .step-desc {
-          font-size: 14px;
-          color: #7d8590;
-          line-height: 1.5;
-        }
-
-        .btn-continue {
+        .btn-enter {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
           width: 100%;
-          padding: 12px 24px;
-          background: #238636;
-          color: #ffffff;
+          padding: 14px 24px;
+          background: #20d378;
+          color: #060810;
           font-size: 15px;
           font-weight: 600;
           font-family: inherit;
-          border: 1px solid rgba(240,246,252,0.1);
-          border-radius: 8px;
+          border: none;
+          border-radius: 12px;
           cursor: pointer;
           transition: background 0.2s;
-          text-decoration: none;
         }
 
-        .btn-continue:hover {
-          background: #2ea043;
+        .btn-enter:hover {
+          background: #1bbf6b;
         }
       `}</style>
 
       <div className="welcome-root">
         <div className="welcome-container">
-          <div className="header-icon">
-            <CheckCircle2 size={24} />
+          <div className="check-icon">
+            <CheckCircle2 size={28} />
           </div>
           
           <h1 className="welcome-title">
-            {language === 'ar' ? `مرحباً بك في مشروع ${project?.name || ''}` : `Welcome to ${project?.name || 'Project'}`}
+            {t("Your project has been delivered ✅", "تم استلام مشروعك ✅")}
           </h1>
           
-          <p className="welcome-subtitle">
+          <p className="welcome-body">
             {t(
-              "Your project has been successfully transferred. You are now the owner and have full access to its resources.",
-              "تم نقل المشروع إليك بنجاح. أنت الآن المالك ولديك الصلاحية الكاملة لإدارته."
+              <>The project <strong>&quot;{project?.name || "Project"}&quot;</strong> has been set up and transferred to you successfully.<br /><br />You can now monitor sending status and manage your project subscription.</>,
+              <>تم تجهيز مشروع <strong>&quot;{project?.name || "المشروع"}&quot;</strong> وتسليمه إليك بنجاح.<br /><br />يمكنك الآن متابعة حالة الإرسال وإدارة اشتراك المشروع.</>
             )}
           </p>
 
-          <div className="steps-box">
-            <div className="step-item">
-              <div className="step-icon-wrapper">
-                <Server size={20} />
-              </div>
-              <div className="step-content">
-                <div className="step-title">{t("API Keys", "مفاتيح الربط (API Keys)")}</div>
-                <div className="step-desc">
-                  {t("Access your API keys for integration with your systems.", "احصل على مفاتيح الربط الخاصة بك لاستخدامها في أنظمتك.")}
-                </div>
-              </div>
-            </div>
-
-            <div className="step-item">
-              <div className="step-icon-wrapper">
-                <FileText size={20} />
-              </div>
-              <div className="step-content">
-                <div className="step-title">{t("OTP Templates", "قوالب الرسائل")}</div>
-                <div className="step-desc">
-                  {t("Manage your WhatsApp OTP templates directly from the portal.", "أدر قوالب رسائل الـ OTP الخاصة بك مباشرة من البوابة.")}
-                </div>
-              </div>
-            </div>
-
-            <div className="step-item">
-              <div className="step-icon-wrapper">
-                <Shield size={20} />
-              </div>
-              <div className="step-content">
-                <div className="step-title">{t("Billing & Limits", "الباقة والاستهلاك")}</div>
-                <div className="step-desc">
-                  {t("Monitor your usage and upgrade your plan when needed.", "تابع استهلاكك وقم بترقية الباقة عند الحاجة.")}
-                </div>
-              </div>
-            </div>
-          </div>
-
           <button 
-            className="btn-continue"
+            className="btn-enter"
             onClick={() => router.push(`/developers/portal/projects/${projectId}`)}
           >
-            {t("Go to Project Dashboard", "الدخول إلى لوحة التحكم")}
-            {language === 'ar' ? <ChevronRight size={18} /> : <ArrowRight size={18} />}
+            {t("Go to your project", "ادخل إلى مشروعك")}
+            <ArrowLeft size={18} style={{ transform: language === 'ar' ? 'none' : 'rotate(180deg)' }} />
           </button>
         </div>
       </div>
