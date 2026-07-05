@@ -455,6 +455,74 @@ export const subscriptionExpiryWarning = inngest.createFunction(
 // Cron 5: whatsappTokenExpiryCheck
 // يومياً الساعة 10 صباحاً: تحذير انتهاء توكن واتساب (Meta)
 // ═══════════════════════════════════════════════════════════════════════════════
+export const ownerPlanRenewalCheck = inngest.createFunction(
+  {
+    id: "owner-plan-renewal-check",
+    retries: 1,
+    triggers: [{ cron: "0 8 * * *" }], // 8 UTC = 10 Cairo
+  },
+  async ({ step }) => {
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    const expiringSoon = await step.run("get-expiring-soon-projects", async () => {
+      return await prisma.developerProject.findMany({
+        where: {
+          plan: "OWNER_PLAN",
+          planRenewsAt: { lte: threeDaysFromNow, gt: now },
+          planExpiringNotifiedAt: null,
+        },
+        select: { id: true, name: true, ownerId: true },
+      });
+    });
+
+    for (const project of expiringSoon) {
+      await prisma.developerNotification.create({
+        data: {
+          developerId: project.ownerId!,
+          type: "PLAN_EXPIRING_SOON",
+          title: "تذكير بتجديد الباقة",
+          message: `يتبقى 3 أيام على انتهاء باقة مشروع "${project.name}".`,
+          link: `/developers/portal/projects/${project.id}/billing`,
+        },
+      });
+      await prisma.developerProject.update({
+        where: { id: project.id },
+        data: { planExpiringNotifiedAt: now },
+      });
+    }
+
+    const justExpired = await step.run("get-just-expired-projects", async () => {
+      return await prisma.developerProject.findMany({
+        where: {
+          plan: "OWNER_PLAN",
+          planRenewsAt: { lt: now },
+          planExpiredNotifiedAt: null,
+        },
+        select: { id: true, name: true, ownerId: true },
+      });
+    });
+
+    for (const project of justExpired) {
+      await prisma.developerNotification.create({
+        data: {
+          developerId: project.ownerId!,
+          type: "PLAN_EXPIRED",
+          title: "انتهت باقة الأونر",
+          message: `انتهت باقة مشروع "${project.name}" وتوقف إرسال رسائل OTP حتى التجديد.`,
+          link: `/developers/portal/projects/${project.id}/billing`,
+        },
+      });
+      await prisma.developerProject.update({
+        where: { id: project.id },
+        data: { planExpiredNotifiedAt: now },
+      });
+    }
+
+    return { processed: expiringSoon.length + justExpired.length };
+  }
+);
+
 export const whatsappTokenExpiryCheck = inngest.createFunction(
   {
     id: "automation-whatsapp-token-expiry-check",

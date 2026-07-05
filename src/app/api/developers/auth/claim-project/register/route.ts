@@ -82,7 +82,10 @@ export async function POST(req: NextRequest) {
       name: `${newUser.firstName || ""} ${newUser.lastName || ""}`.trim() || null,
       status: newUser.status || "ACTIVE"
     });
-    const response = NextResponse.json({ redirect: `/developers/welcome/${invite.projectId}` });
+    const redirectPath = invite.role === "OWNER"
+      ? `/developers/welcome/${invite.projectId}`
+      : `/developers/portal/projects/${invite.projectId}`;
+    const response = NextResponse.json({ redirect: redirectPath });
     response.cookies.set("dev-session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

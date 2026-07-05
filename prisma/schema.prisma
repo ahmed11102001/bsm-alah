@@ -782,11 +782,6 @@ model DeveloperUser {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  // ── Plan ──────────────────────────────────────────────────
-  plan                DeveloperPlan @default(TRIAL)
-  trialEndsAt         DateTime?     // set on first API key creation
-  trialMessagesUsed   Int           @default(0)
-
   projects              DeveloperProject[]
   ownedProjects         DeveloperProject[] @relation("ProjectOwner")
   otpLogs               OtpLog[]
@@ -816,11 +811,14 @@ model DeveloperProject {
   plan                   DeveloperPlan @default(TRIAL)
   planStartedAt          DateTime?
   planRenewsAt           DateTime?
+  planExpiringNotifiedAt DateTime?
+  planExpiredNotifiedAt  DateTime?
   
   trialStartedAt         DateTime?
   trialEndsAt            DateTime?
   trialMessagesUsed      Int           @default(0)
   trialWarningNotifiedAt DateTime?
+  ownerWelcomeSeenAt     DateTime?
 
   developer      DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
   metaConnection DeveloperMetaConnection?
@@ -998,6 +996,8 @@ enum DeveloperNotificationType {
   META_UPDATE  // تحديثات Meta (قبول/رفض تمبلت، تغيير حالة WABA…)
   BILLING      // فواتير، رصيد، دفعات
   TRIAL_WARNING// تحذير اقتراب انتهاء الباقة التجريبية
+  PLAN_EXPIRING_SOON // تذكير بموعد انتهاء الباقة قريباً
+  PLAN_EXPIRED // انتهت الباقة وتوقف الإرسال
   SECURITY     // تسجيل دخول، تغيير باسورد
   SYSTEM       // إشعارات عامة من النظام
 }

@@ -23,6 +23,7 @@ import {
   timeBasedCron,
   monthlyPlanReset,
   subscriptionExpiryWarning,
+  ownerPlanRenewalCheck,
   whatsappTokenExpiryCheck,
   aiTokensLowCheck,
 } from "@/inngest/automation-cron-functions";

@@ -121,35 +121,51 @@ export default function WelcomePage() {
   const { language, t } = useLanguage();
   const dir = language === "ar" ? "rtl" : "ltr";
 
-  const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [developerFirstName, setDeveloperFirstName] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/developers/projects/${projectId}`)
+    let active = true;
+
+    fetch(`/api/developers/projects/${projectId}/welcome-info`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.project) setProject(data.project);
+        if (!active) return;
+        if (data.alreadySeen || data.error) {
+          router.replace(`/developers/portal/projects/${projectId}`);
+          return;
+        }
+
+        setProjectName(data.projectName || t("Project", "المشروع"));
+        setDeveloperFirstName(data.developerFirstName || null);
+        setReady(true);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [projectId]);
+      .catch(() => {
+        if (active) {
+          router.replace(`/developers/portal/projects/${projectId}`);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [projectId, router, t]);
 
   useEffect(() => {
-    if (!loading) {
-      requestAnimationFrame(() => setMounted(true));
-      const timer = setTimeout(() => setShowContent(true), 200);
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
+    if (!ready) return;
 
-  // Get developer name
-  const developerName = project?.developer
-    ? `${project.developer.firstName || ""} ${project.developer.lastName || ""}`.trim()
-    : null;
+    requestAnimationFrame(() => setMounted(true));
+    const timer = setTimeout(() => setShowContent(true), 200);
+    return () => clearTimeout(timer);
+  }, [ready]);
 
-  const projectName = project?.name || t("Project", "المشروع");
+  const developerName = developerFirstName || null;
+  const displayProjectName = projectName || t("Project", "المشروع");
 
   if (loading) {
     return (
@@ -192,13 +208,13 @@ export default function WelcomePage() {
           <p className={`welcome-body ${showContent ? "fade-in delay-1" : ""}`}>
             {developerName ? (
               t(
-                <><strong>{developerName}</strong> has set up project <strong>&quot;{projectName}&quot;</strong> and delivered it to you successfully.</>,
-                <>قام <strong>{developerName}</strong> بتجهيز مشروع <strong>&quot;{projectName}&quot;</strong><br />وتسليمه إليك بالكامل.</>
+                <><strong>{developerName}</strong> has set up project <strong>&quot;{displayProjectName}&quot;</strong> and delivered it to you successfully.</>,
+                <>قام <strong>{developerName}</strong> بتجهيز مشروع <strong>&quot;{displayProjectName}&quot;</strong><br />وتسليمه إليك بالكامل.</>
               )
             ) : (
               t(
-                <>Project <strong>&quot;{projectName}&quot;</strong> has been set up and delivered to you successfully.</>,
-                <>تم تجهيز مشروع <strong>&quot;{projectName}&quot;</strong> وتسليمه إليك بنجاح.</>
+                <>Project <strong>&quot;{displayProjectName}&quot;</strong> has been set up and delivered to you successfully.</>,
+                <>تم تجهيز مشروع <strong>&quot;{displayProjectName}&quot;</strong> وتسليمه إليك بنجاح.</>
               )
             )}
           </p>

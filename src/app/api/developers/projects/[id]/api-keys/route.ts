@@ -91,15 +91,15 @@ export async function POST(
     });
 
     // Start trial timer on first ever API key (non-blocking)
-    prisma.developerUser.findUnique({
-      where: { id: session.id },
+    prisma.developerProject.findUnique({
+      where: { id },
       select: { plan: true, trialEndsAt: true },
-    }).then(dev => {
-      if (dev?.plan === "TRIAL" && !dev.trialEndsAt) {
+    }).then(project => {
+      if (project?.plan === "TRIAL" && !project.trialEndsAt) {
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + 14);
-        return prisma.developerUser.update({
-          where: { id: session.id },
+        return prisma.developerProject.update({
+          where: { id },
           data: { trialEndsAt },
         });
       }

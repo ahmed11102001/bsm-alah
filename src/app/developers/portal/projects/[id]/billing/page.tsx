@@ -5,6 +5,37 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { CreditCard, Check, AlertTriangle, ShieldCheck, X, Activity } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 
+function getRenewalCTA(plan: string, planRenewsAt: string | null, language: "ar" | "en") {
+  if (plan !== "OWNER_PLAN") {
+    return {
+      label: language === "ar" ? "اشترك في باقة الأونر — 249ج/شهر" : "Subscribe — 249 EGP/mo",
+      urgent: false,
+    };
+  }
+
+  const renewsAt = planRenewsAt ? new Date(planRenewsAt) : null;
+  const daysLeft = renewsAt ? Math.ceil((renewsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+
+  if (daysLeft !== null && daysLeft < 0) {
+    return {
+      label: language === "ar" ? "انتهت الباقة — جدد الآن" : "Plan expired — Renew now",
+      urgent: true,
+    };
+  }
+
+  if (daysLeft !== null && daysLeft <= 3) {
+    return {
+      label: language === "ar" ? `جدد الآن — باقي ${daysLeft} يوم` : `Renew now — ${daysLeft} days left`,
+      urgent: true,
+    };
+  }
+
+  return {
+    label: language === "ar" ? "تجديد مبكر" : "Renew early",
+    urgent: false,
+  };
+}
+
 export default function BillingPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -86,6 +117,7 @@ export default function BillingPage() {
   const isTrialExpired = !isOwnerPlan && (isTrialExpiredByDate || isTrialExpiredByUsage);
 
   const lastPayment = project?.transactions?.[0];
+  const renewalCta = getRenewalCTA(isOwnerPlan ? "OWNER_PLAN" : "TRIAL", project?.planRenewsAt ?? null, language === "ar" ? "ar" : "en");
 
   return (
     <>
@@ -142,6 +174,14 @@ export default function BillingPage() {
         }
         .btn-subscribe:hover:not(:disabled) { background: #1bbf6b; }
         .btn-subscribe:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-subscribe.urgent {
+          background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+          color: #fff;
+          box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+        }
+        .btn-subscribe.urgent:hover:not(:disabled) {
+          filter: brightness(1.05);
+        }
 
         .sub-help { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; margin-top: 16px; line-height: 1.6; }
 
@@ -286,8 +326,8 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <button className="btn-subscribe" onClick={handleCheckout} disabled={checkoutLoading}>
-              {checkoutLoading ? t("Redirecting...", "جاري التحويل...") : t("Subscribe Now", "اشترك الآن")}
+            <button className={`btn-subscribe${renewalCta.urgent ? " urgent" : ""}`} onClick={handleCheckout} disabled={checkoutLoading}>
+              {checkoutLoading ? t("Redirecting...", "جاري التحويل...") : renewalCta.label}
             </button>
             {error && <div className="error-text">{error}</div>}
 

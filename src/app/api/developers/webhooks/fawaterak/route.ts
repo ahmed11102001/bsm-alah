@@ -17,12 +17,25 @@ export async function POST(req: NextRequest) {
       if (customData?.type === "owner_plan_subscription" && customData.projectId) {
         console.log(`[fawaterak-dev-webhook] Payment received for project ${customData.projectId}`);
         
+        const project = await prisma.developerProject.findUnique({
+          where: { id: customData.projectId },
+          select: { planRenewsAt: true },
+        });
+
+        const baseDate = project?.planRenewsAt && project.planRenewsAt > new Date()
+          ? project.planRenewsAt
+          : new Date();
+
+        const newRenewsAt = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+
         await prisma.developerProject.update({
           where: { id: customData.projectId },
           data: {
             plan: "OWNER_PLAN",
             planStartedAt: new Date(),
-            planRenewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            planRenewsAt: newRenewsAt,
+            planExpiringNotifiedAt: null,
+            planExpiredNotifiedAt: null,
           },
         });
       }
