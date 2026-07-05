@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
 import prisma from "@/lib/prisma";
+import { isOwnerOnlyAccount } from "@/lib/dev-role";
 import PortalTopBar from "./_components/PortalTopBar";
 import { MobileNavProvider } from "./_components/MobileNavContext";
 import { LanguageProvider } from "../_components/LanguageProvider";
@@ -29,6 +30,8 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   if (!developer) redirect("/developers/signin");
   if (developer.status === "SUSPENDED") redirect("/developers/signin?error=suspended");
 
+  const ownerOnly = await isOwnerOnlyAccount(developer.id);
+
   return (
     <LanguageProvider>
       <MobileNavProvider>
@@ -41,7 +44,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
             background: "#060810",
           }}
         >
-          <PortalTopBar developer={developer} />
+          <PortalTopBar developer={developer} ownerOnly={ownerOnly} />
           <div style={{ flex: 1, overflow: "hidden" }}>
             {children}
           </div>

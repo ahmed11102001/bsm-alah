@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight, X, Navigation } from "lucide-react";
-import { TOUR_STEPS, TOUR_TEXT } from "./onboarding-tour-data";
+import { TOUR_STEPS, TOUR_TEXT } from "@/lib/onboarding-tour-data";
 
 interface Props {
   locale: "ar" | "en";
@@ -32,7 +32,7 @@ export default function MobileOnboardingTour({ locale, onNavigate, onComplete }:
   }, []);
 
   const handleFinish = useCallback(() => {
-    fetch("/api/user/onboarding", { method: "POST" }).catch(() => {});
+    fetch("/api/user/onboarding", { method: "POST" }).catch(() => { });
     onComplete();
   }, [onComplete]);
 
@@ -108,13 +108,12 @@ export default function MobileOnboardingTour({ locale, onNavigate, onComplete }:
                   <button
                     key={i}
                     onClick={() => goToStep(i)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      i === step
+                    className={`h-2 rounded-full transition-all duration-300 ${i === step
                         ? "w-6 bg-[#25D366]"
                         : i < step
                           ? "w-2.5 bg-[#25D366]/45"
                           : "w-2 bg-gray-300 dark:bg-gray-600"
-                    }`}
+                      }`}
                     aria-label={`${t.tourTitle} ${i + 1}`}
                   />
                 ))}
@@ -146,11 +145,10 @@ export default function MobileOnboardingTour({ locale, onNavigate, onComplete }:
                     }
                     goToStep(step + 1);
                   }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-[.98] ${
-                    isLast
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-[.98] ${isLast
                       ? "bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white shadow-lg shadow-green-500/20"
                       : "bg-[#25D366] text-white"
-                  }`}
+                    }`}
                 >
                   {isLast ? t.finish : t.next}
                   {!isLast && (dir === "rtl" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}

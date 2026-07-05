@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type HttpMethod = "POST" | "GET";
 
 interface Param {
-  name:     string;
-  type:     string;
+  name: string;
+  type: string;
   required: boolean;
-  desc:     string;
-  descAr?:  string;
+  desc: string;
+  descAr?: string;
   example?: string;
 }
 
@@ -23,51 +25,51 @@ interface ResponseField {
 }
 
 interface Endpoint {
-  id:       string;
-  method:   HttpMethod;
-  path:     string;
-  summary:  string;
+  id: string;
+  method: HttpMethod;
+  path: string;
+  summary: string;
   summaryAr: string;
-  desc:     string;
-  descAr:   string;
-  auth:     boolean;
-  headers:  Param[];
-  body:     Param[];
+  desc: string;
+  descAr: string;
+  auth: boolean;
+  headers: Param[];
+  body: Param[];
   response: { success: object; error: object };
-  fields:   ResponseField[];
-  notes?:   string[];
+  fields: ResponseField[];
+  notes?: string[];
   notesAr?: string[];
 }
 
 // ─── Endpoints definition ─────────────────────────────────────────────────────
 const ENDPOINTS: Endpoint[] = [
   {
-    id:      "send",
-    method:  "POST",
-    path:    "/api/developers/otp/send",
+    id: "send",
+    method: "POST",
+    path: "/api/developers/otp/send",
     summary: "Send OTP",
     summaryAr: "إرسال OTP",
-    desc:    "Generates an OTP code and sends it to the user via WhatsApp using a Meta-approved template.",
-    descAr:  "يولد كود OTP ويرسله للمستخدم عبر WhatsApp باستخدام قالب مُوافق عليه من Meta.",
-    auth:    true,
+    desc: "Generates an OTP code and sends it to the user via WhatsApp using a Meta-approved template.",
+    descAr: "يولد كود OTP ويرسله للمستخدم عبر WhatsApp باستخدام قالب مُوافق عليه من Meta.",
+    auth: true,
     headers: [
-      { name: "x-api-key",     type: "string", required: true,  desc: "Your project API key",       descAr: "مفتاح الـ API الخاص بمشروعك",       example: "wani_live_xxxx_yyyy" },
-      { name: "Content-Type",  type: "string", required: true,  desc: "Content type",                descAr: "نوع البيانات",                        example: "application/json" },
+      { name: "x-api-key", type: "string", required: true, desc: "Your project API key", descAr: "مفتاح الـ API الخاص بمشروعك", example: "wani_live_xxxx_yyyy" },
+      { name: "Content-Type", type: "string", required: true, desc: "Content type", descAr: "نوع البيانات", example: "application/json" },
     ],
     body: [
-      { name: "phone",          type: "string",  required: true,  desc: "Phone number — E.164 or Egyptian format", descAr: "رقم الهاتف — E.164 أو الصيغة المصرية", example: "+201234567890 or 01234567890" },
-      { name: "templateName",   type: "string",  required: true,  desc: "APPROVED template name in Meta",       descAr: "اسم القالب الـ APPROVED في Meta",       example: "otp_verification" },
-      { name: "expiryMinutes",  type: "number",  required: false, desc: "Code validity duration in minutes",             descAr: "مدة صلاحية الكود بالدقائق",             example: "10 (default)" },
+      { name: "phone", type: "string", required: true, desc: "Phone number — E.164 or Egyptian format", descAr: "رقم الهاتف — E.164 أو الصيغة المصرية", example: "+201234567890 or 01234567890" },
+      { name: "templateName", type: "string", required: true, desc: "APPROVED template name in Meta", descAr: "اسم القالب الـ APPROVED في Meta", example: "otp_verification" },
+      { name: "expiryMinutes", type: "number", required: false, desc: "Code validity duration in minutes", descAr: "مدة صلاحية الكود بالدقائق", example: "10 (default)" },
     ],
     response: {
       success: { ok: true, token: "a3f9c2e1...64hex...", expiresAt: "2025-01-15T14:30:00.000Z" },
-      error:   { ok: false, error: "Template \"otp_verification\" not found or not yet approved" },
+      error: { ok: false, error: "Template \"otp_verification\" not found or not yet approved" },
     },
     fields: [
-      { name: "ok",         type: "boolean", desc: "true on success", descAr: "true عند النجاح" },
-      { name: "token",      type: "string",  desc: "64-char hex token — save it for the verify step", descAr: "64-char hex token — احتفظ بيه لخطوة التحقق" },
-      { name: "expiresAt",  type: "string",  desc: "ISO 8601 — code expiration time", descAr: "ISO 8601 — وقت انتهاء صلاحية الكود" },
-      { name: "retryAfter", type: "number",  desc: "Only present on 429 — seconds to wait before retrying", descAr: "موجود فقط عند 429 — عدد الثواني المطلوب الانتظار قبل إعادة المحاولة" },
+      { name: "ok", type: "boolean", desc: "true on success", descAr: "true عند النجاح" },
+      { name: "token", type: "string", desc: "64-char hex token — save it for the verify step", descAr: "64-char hex token — احتفظ بيه لخطوة التحقق" },
+      { name: "expiresAt", type: "string", desc: "ISO 8601 — code expiration time", descAr: "ISO 8601 — وقت انتهاء صلاحية الكود" },
+      { name: "retryAfter", type: "number", desc: "Only present on 429 — seconds to wait before retrying", descAr: "موجود فقط عند 429 — عدد الثواني المطلوب الانتظار قبل إعادة المحاولة" },
     ],
     notes: [
       "Rate limit: 5 messages per phone per developer per hour",
@@ -81,32 +83,32 @@ const ENDPOINTS: Endpoint[] = [
     ],
   },
   {
-    id:      "verify",
-    method:  "POST",
-    path:    "/api/developers/otp/verify",
+    id: "verify",
+    method: "POST",
+    path: "/api/developers/otp/verify",
     summary: "Verify Code",
     summaryAr: "التحقق من الكود",
-    desc:    "Verifies the entered code against the token issued from /send.",
-    descAr:  "يتحقق من صحة الكود المُدخل مقابل الـ token الصادر من /send.",
-    auth:    true,
+    desc: "Verifies the entered code against the token issued from /send.",
+    descAr: "يتحقق من صحة الكود المُدخل مقابل الـ token الصادر من /send.",
+    auth: true,
     headers: [
-      { name: "x-api-key",    type: "string", required: true, desc: "API key",  descAr: "مفتاح الـ API",  example: "wani_live_xxxx_yyyy" },
-      { name: "Content-Type", type: "string", required: true, desc: "Content type",   descAr: "نوع البيانات",   example: "application/json" },
+      { name: "x-api-key", type: "string", required: true, desc: "API key", descAr: "مفتاح الـ API", example: "wani_live_xxxx_yyyy" },
+      { name: "Content-Type", type: "string", required: true, desc: "Content type", descAr: "نوع البيانات", example: "application/json" },
     ],
     body: [
-      { name: "token", type: "string", required: true, desc: "Token from /send response",      descAr: "الـ token من استجابة /send",      example: "a3f9c2e1..." },
-      { name: "code",  type: "string", required: true, desc: "6-digit code",         descAr: "الكود المكوّن من 6 أرقام",         example: "123456" },
+      { name: "token", type: "string", required: true, desc: "Token from /send response", descAr: "الـ token من استجابة /send", example: "a3f9c2e1..." },
+      { name: "code", type: "string", required: true, desc: "6-digit code", descAr: "الكود المكوّن من 6 أرقام", example: "123456" },
     ],
     response: {
       success: { ok: true, verified: true, message: "OTP verified successfully", phone: "+201234567890" },
-      error:   { ok: false, verified: false, error: "Invalid code" },
+      error: { ok: false, verified: false, error: "Invalid code" },
     },
     fields: [
-      { name: "ok",         type: "boolean", desc: "true on success", descAr: "true عند النجاح" },
-      { name: "verified",   type: "boolean", desc: "true if code is correct", descAr: "true لو الكود صحيح" },
-      { name: "phone",      type: "string",  desc: "Verified phone number (on success only)", descAr: "رقم الهاتف المُتحقَّق منه (عند النجاح فقط)" },
-      { name: "message",    type: "string",  desc: "Descriptive message", descAr: "رسالة نصية توضيحية" },
-      { name: "retryAfter", type: "number",  desc: "Only present on 429 — seconds to wait before retrying", descAr: "موجود فقط عند 429 — عدد الثواني المطلوب الانتظار قبل إعادة المحاولة" },
+      { name: "ok", type: "boolean", desc: "true on success", descAr: "true عند النجاح" },
+      { name: "verified", type: "boolean", desc: "true if code is correct", descAr: "true لو الكود صحيح" },
+      { name: "phone", type: "string", desc: "Verified phone number (on success only)", descAr: "رقم الهاتف المُتحقَّق منه (عند النجاح فقط)" },
+      { name: "message", type: "string", desc: "Descriptive message", descAr: "رسالة نصية توضيحية" },
+      { name: "retryAfter", type: "number", desc: "Only present on 429 — seconds to wait before retrying", descAr: "موجود فقط عند 429 — عدد الثواني المطلوب الانتظار قبل إعادة المحاولة" },
     ],
     notes: [
       "Brute-force protection: 10 attempts per 15 minutes per token",
@@ -120,14 +122,14 @@ const ENDPOINTS: Endpoint[] = [
     ],
   },
   {
-    id:      "status",
-    method:  "GET",
-    path:    "/api/developers/otp/status/:token",
+    id: "status",
+    method: "GET",
+    path: "/api/developers/otp/status/:token",
     summary: "Check OTP Status",
     summaryAr: "فحص حالة الـ OTP",
-    desc:    "Returns the current status of a specific OTP with the remaining time before expiry.",
-    descAr:  "يُرجع الحالة الحالية لـ OTP معين مع الوقت المتبقي قبل انتهاء الصلاحية.",
-    auth:    true,
+    desc: "Returns the current status of a specific OTP with the remaining time before expiry.",
+    descAr: "يُرجع الحالة الحالية لـ OTP معين مع الوقت المتبقي قبل انتهاء الصلاحية.",
+    auth: true,
     headers: [
       { name: "x-api-key", type: "string", required: true, desc: "API key", descAr: "مفتاح الـ API", example: "wani_live_xxxx_yyyy" },
     ],
@@ -145,12 +147,12 @@ const ENDPOINTS: Endpoint[] = [
       error: { ok: false, error: "Token not found or does not belong to this API Key" },
     },
     fields: [
-      { name: "status",           type: "string",        desc: "pending | sent | verified | expired | failed", descAr: "pending | sent | verified | expired | failed" },
+      { name: "status", type: "string", desc: "pending | sent | verified | expired | failed", descAr: "pending | sent | verified | expired | failed" },
       { name: "secondsRemaining", type: "number | null", desc: "Seconds remaining before expiry (0 if expired)", descAr: "الثواني المتبقية قبل انتهاء الصلاحية (0 لو انتهت)" },
-      { name: "sentAt",           type: "string | null", desc: "Send time ISO 8601", descAr: "وقت الإرسال ISO 8601" },
-      { name: "verifiedAt",       type: "string | null", desc: "Verification time ISO 8601 (null if not yet)", descAr: "وقت التحقق ISO 8601 (null لو لسه)" },
-      { name: "meta.messageId",   type: "string | null", desc: "Meta WhatsApp message ID", descAr: "Meta WhatsApp message ID" },
-      { name: "meta.error",       type: "string | null", desc: "Failure reason if status = failed", descAr: "سبب الفشل لو status = failed" },
+      { name: "sentAt", type: "string | null", desc: "Send time ISO 8601", descAr: "وقت الإرسال ISO 8601" },
+      { name: "verifiedAt", type: "string | null", desc: "Verification time ISO 8601 (null if not yet)", descAr: "وقت التحقق ISO 8601 (null لو لسه)" },
+      { name: "meta.messageId", type: "string | null", desc: "Meta WhatsApp message ID", descAr: "Meta WhatsApp message ID" },
+      { name: "meta.error", type: "string | null", desc: "Failure reason if status = failed", descAr: "سبب الفشل لو status = failed" },
     ],
     notes: [
       "Token automatically becomes expired if it exceeds expiresAt",
@@ -189,7 +191,7 @@ function CopyBtn({ text, small, lang }: { text: string; small?: boolean; lang: s
 function MethodBadge({ method }: { method: HttpMethod }) {
   const cfg = {
     POST: { bg: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "rgba(245,158,11,0.25)" },
-    GET:  { bg: "rgba(56,189,248,0.12)", color: "#38bdf8", border: "rgba(56,189,248,0.25)" },
+    GET: { bg: "rgba(56,189,248,0.12)", color: "#38bdf8", border: "rgba(56,189,248,0.25)" },
   }[method];
   return (
     <span style={{
@@ -208,12 +210,12 @@ function JsonBlock({ data }: { data: object }) {
     <pre style={{ margin: 0, fontFamily: "Fira Code, monospace", fontSize: 12, lineHeight: 1.7 }}>
       {lines.map((line, i) => {
         let color = "rgba(255,255,255,0.75)";
-        if (/"(ok|verified)":\s*true/.test(line))   color = "#20d378";
-        if (/"(ok|verified)":\s*false/.test(line))  color = "#f87171";
-        if (/"error":/.test(line))                  color = "#f87171";
-        else if (/:\s*"/.test(line))                color = "#86efac";
-        else if (/:\s*\d/.test(line))               color = "#93c5fd";
-        else if (/:\s*(true|false|null)/.test(line))color = "#f9a8d4";
+        if (/"(ok|verified)":\s*true/.test(line)) color = "#20d378";
+        if (/"(ok|verified)":\s*false/.test(line)) color = "#f87171";
+        if (/"error":/.test(line)) color = "#f87171";
+        else if (/:\s*"/.test(line)) color = "#86efac";
+        else if (/:\s*\d/.test(line)) color = "#93c5fd";
+        else if (/:\s*(true|false|null)/.test(line)) color = "#f9a8d4";
         return <div key={i} style={{ color }}>{line || " "}</div>;
       })}
     </pre>
@@ -223,7 +225,7 @@ function JsonBlock({ data }: { data: object }) {
 // ─── Endpoint Card ────────────────────────────────────────────────────────────
 function EndpointCard({ ep, lang, t }: { ep: Endpoint; lang: string; t: (en: string, ar: string) => string }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab]   = useState<"success" | "error">("success");
+  const [tab, setTab] = useState<"success" | "error">("success");
 
   return (
     <div style={{
@@ -396,33 +398,34 @@ export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
   const [section, setSection] = useState<"endpoints" | "statuses" | "errors" | "auth">("endpoints");
   const { language, t } = useLanguage();
+  const router = useRouter();
 
   useEffect(() => { setMounted(true); }, []);
 
   const sections = [
     { id: "endpoints" as const, label: t("Endpoints", "الـ Endpoints") },
-    { id: "auth" as const,      label: t("Authentication", "المصادقة") },
-    { id: "statuses" as const,  label: t("OTP Statuses", "حالات الـ OTP") },
-    { id: "errors" as const,    label: t("Error Codes", "أكواد الأخطاء") },
+    { id: "auth" as const, label: t("Authentication", "المصادقة") },
+    { id: "statuses" as const, label: t("OTP Statuses", "حالات الـ OTP") },
+    { id: "errors" as const, label: t("Error Codes", "أكواد الأخطاء") },
   ];
 
   // ─── Status values reference ──────────────────────────────────────────────────
   const STATUS_VALUES = [
     { value: "pending", color: "#94a3b8", desc: t("OTP created but not yet sent", "OTP أُنشئ لكن لم يُرسَل بعد") },
-    { value: "sent",    color: "#f59e0b", desc: t("Sent via WhatsApp — awaiting verification", "تم الإرسال عبر WhatsApp — ينتظر التحقق") },
-    { value: "verified",color: "#20d378", desc: t("Successfully verified", "تم التحقق بنجاح") },
+    { value: "sent", color: "#f59e0b", desc: t("Sent via WhatsApp — awaiting verification", "تم الإرسال عبر WhatsApp — ينتظر التحقق") },
+    { value: "verified", color: "#20d378", desc: t("Successfully verified", "تم التحقق بنجاح") },
     { value: "expired", color: "#6b7280", desc: t("Code has expired", "انتهت صلاحية الكود") },
-    { value: "failed",  color: "#ef4444", desc: t("Failed to send via Meta", "فشل الإرسال عبر Meta") },
+    { value: "failed", color: "#ef4444", desc: t("Failed to send via Meta", "فشل الإرسال عبر Meta") },
   ];
 
   // ─── Error codes reference ────────────────────────────────────────────────────
   const ERROR_CODES = [
-    { code: 400, label: "Bad Request",    desc: t("Missing or invalid data in the request body", "بيانات ناقصة أو غير صحيحة في الـ body") },
-    { code: 401, label: "Unauthorized",   desc: t("x-api-key missing, invalid, or revoked", "x-api-key مفقود أو غير صحيح أو ملغي") },
-    { code: 404, label: "Not Found",      desc: t("Token not found or does not belong to this Key", "Token غير موجود أو لا ينتمي لهذا الـ Key") },
-    { code: 429, label: "Too Many Req.",  desc: t("Rate limit — wait before retrying (Retry-After header)", "Rate limit — انتظر قبل المحاولة مجددًا (Retry-After header)") },
-    { code: 502, label: "Bad Gateway",    desc: t("Failed to send via Meta WhatsApp API", "فشل الإرسال عبر Meta WhatsApp API") },
-    { code: 500, label: "Server Error",   desc: t("Internal error — contact support", "خطأ داخلي — تواصل مع الدعم") },
+    { code: 400, label: "Bad Request", desc: t("Missing or invalid data in the request body", "بيانات ناقصة أو غير صحيحة في الـ body") },
+    { code: 401, label: "Unauthorized", desc: t("x-api-key missing, invalid, or revoked", "x-api-key مفقود أو غير صحيح أو ملغي") },
+    { code: 404, label: "Not Found", desc: t("Token not found or does not belong to this Key", "Token غير موجود أو لا ينتمي لهذا الـ Key") },
+    { code: 429, label: "Too Many Req.", desc: t("Rate limit — wait before retrying (Retry-After header)", "Rate limit — انتظر قبل المحاولة مجددًا (Retry-After header)") },
+    { code: 502, label: "Bad Gateway", desc: t("Failed to send via Meta WhatsApp API", "فشل الإرسال عبر Meta WhatsApp API") },
+    { code: 500, label: "Server Error", desc: t("Internal error — contact support", "خطأ داخلي — تواصل مع الدعم") },
   ];
 
   return (
@@ -438,6 +441,14 @@ export default function ApiDocsPage() {
         .docs-header { margin-bottom:32px; }
         .docs-title { font-size:26px; font-weight:600; }
         .docs-subtitle { font-size:14px; color:rgba(255,255,255,0.4); margin-top:4px; }
+        .docs-back-btn {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
+          padding: 7px 14px; border-radius: 8px; cursor: pointer;
+          margin-bottom: 20px; transition: all 0.15s ease;
+        }
+        .docs-back-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
 
         /* Section tabs */
         .tabs { display:flex; gap:4px; padding:4px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; width:fit-content; margin-bottom:32px; }
@@ -487,6 +498,11 @@ export default function ApiDocsPage() {
 
       <div className="docs-root">
         <div className={`docs-inner ${mounted ? "visible" : ""}`}>
+
+          <button className="docs-back-btn" onClick={() => router.back()}>
+            {language === "ar" ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
+            {t("Back", "رجوع")}
+          </button>
 
           <div className="docs-header">
             <h1 className="docs-title">API Reference</h1>
@@ -565,9 +581,9 @@ export default function ApiDocsPage() {
                 border: "1px solid rgba(255,255,255,0.07)", marginTop: 12,
               }}>
                 {[
-                  { action: "POST /otp/send",   limit: t("5 requests / hour per phone per developer", "5 طلبات / ساعة لكل رقم لكل مبرمج") },
+                  { action: "POST /otp/send", limit: t("5 requests / hour per phone per developer", "5 طلبات / ساعة لكل رقم لكل مبرمج") },
                   { action: "POST /otp/verify", limit: t("10 attempts / 15 min per token", "10 محاولات / 15 دقيقة لكل token") },
-                  { action: "GET /otp/status",  limit: t("No limit (read-only)", "بدون حد (read-only)") },
+                  { action: "GET /otp/status", limit: t("No limit (read-only)", "بدون حد (read-only)") },
                 ].map(r => (
                   <div key={r.action} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: 13 }}>
                     <span style={{ fontFamily: "Fira Code, monospace", color: "#86efac", fontSize: 12 }}>{r.action}</span>
@@ -600,11 +616,11 @@ export default function ApiDocsPage() {
                       </td>
                       <td>{s.desc}</td>
                       <td style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>
-                        {s.value === "sent"     && t("Request code from user → POST /verify", "اطلب الكود من المستخدم → POST /verify")}
-                        {s.value === "pending"  && t("Wait a moment and try /status again", "انتظر لحظة وحاول /status تاني")}
+                        {s.value === "sent" && t("Request code from user → POST /verify", "اطلب الكود من المستخدم → POST /verify")}
+                        {s.value === "pending" && t("Wait a moment and try /status again", "انتظر لحظة وحاول /status تاني")}
                         {s.value === "verified" && t("Proceed with login or complete the flow", "اعمل login أو أكمل الـ flow")}
-                        {s.value === "expired"  && t("Send a new POST /send", "اعمل POST /send جديدة")}
-                        {s.value === "failed"   && t("Check Meta connection — send a new /send", "تحقق من ربط Meta — اعمل /send جديدة")}
+                        {s.value === "expired" && t("Send a new POST /send", "اعمل POST /send جديدة")}
+                        {s.value === "failed" && t("Check Meta connection — send a new /send", "تحقق من ربط Meta — اعمل /send جديدة")}
                       </td>
                     </tr>
                   ))}

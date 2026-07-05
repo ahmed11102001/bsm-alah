@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight, Navigation } from "lucide-react";
-import { TOUR_STEPS, TOUR_TEXT } from "./onboarding-tour-data";
+import { TOUR_STEPS, TOUR_TEXT } from "@/lib/onboarding-tour-data";
 
 interface Props {
   locale: "ar" | "en";
@@ -56,7 +56,7 @@ export default function OnboardingTour({ locale, onNavigate, onComplete }: Props
   }, []);
 
   const handleFinish = useCallback(() => {
-    fetch("/api/user/onboarding", { method: "POST" }).catch(() => {});
+    fetch("/api/user/onboarding", { method: "POST" }).catch(() => { });
     onComplete();
   }, [onComplete]);
 
@@ -207,11 +207,10 @@ export default function OnboardingTour({ locale, onNavigate, onComplete }: Props
 
               <button
                 onClick={handleNext}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-[.97] ${
-                  isLast
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-[.97] ${isLast
                     ? "bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white shadow-lg shadow-green-500/20"
                     : "bg-[#25D366] hover:bg-[#20bb5a] text-white"
-                }`}
+                  }`}
               >
                 {isLast ? t.finish : t.next}
                 {!isLast && (dir === "rtl" ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />)}
@@ -226,13 +225,12 @@ export default function OnboardingTour({ locale, onNavigate, onComplete }: Props
           <button
             key={i}
             onClick={() => goToStep(i)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              i === step
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${i === step
                 ? "w-6 bg-[#25D366]"
                 : i < step
                   ? "bg-[#25D366]/40"
                   : "bg-gray-300 dark:bg-gray-600"
-            }`}
+              }`}
           />
         ))}
       </div>

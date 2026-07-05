@@ -10,8 +10,10 @@ import { useLanguage } from "../../_components/LanguageProvider";
 
 export default function PortalTopBar({
   developer,
+  ownerOnly = false,
 }: {
   developer: { firstName: string; lastName: string; email: string };
+  ownerOnly?: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -276,20 +278,27 @@ export default function PortalTopBar({
 
       <header className="ptopbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button 
-            className="mobile-menu-btn" 
+          <button
+            className="mobile-menu-btn"
             onClick={() => setMobileNavOpen(!isMobileNavOpen)}
             aria-label="Toggle Menu"
           >
             <Menu size={20} />
           </button>
-          
-          {/* 1. البراند */}
-          <Link href="/developers/portal" className="ptopbar-brand">
-            <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
-            <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
-            <span className="ptopbar-brand-badge">{t("Developer Portal", "بوابة المطورين")}</span>
-          </Link>
+
+          {/* 1. البراند — الرابط للقائمة العامة يظهر للمطور بس، مش للأونر */}
+          {ownerOnly ? (
+            <div className="ptopbar-brand" style={{ cursor: "default" }}>
+              <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
+              <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
+            </div>
+          ) : (
+            <Link href="/developers/portal" className="ptopbar-brand">
+              <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
+              <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
+              <span className="ptopbar-brand-badge">{t("Developer Portal", "بوابة المطورين")}</span>
+            </Link>
+          )}
         </div>
 
         {/* 2. روابط المطوّر العامة */}
@@ -305,8 +314,8 @@ export default function PortalTopBar({
 
         {/* 3. إجراءات الحساب */}
         <div className="ptopbar-actions">
-          <button 
-            onClick={toggleLanguage} 
+          <button
+            onClick={toggleLanguage}
             className="ptopbar-icon-btn"
             style={{ fontSize: "12px", fontWeight: "bold" }}
             aria-label={t("Toggle Language", "تغيير اللغة")}
