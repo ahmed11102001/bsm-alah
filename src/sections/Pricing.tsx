@@ -7,29 +7,29 @@ import { t, tr, type Lang } from "@/lib/translations";
 import { usePixel } from "@/hooks/usePixel";
 
 // ─── config ───────────────────────────────────────────────────────────────────
-const BASE_PRICES    = [0, 249, 599, 1199];
+const BASE_PRICES = [0, 249, 599, 1199];
 const ENTERPRISE_OFFER = 999;
 
 const CYCLES = [
-  { key: "monthly",   label: { ar: "شهري",      en: "Monthly"   }, discount: 0    },
-  { key: "quarterly", label: { ar: "ربع سنوي",  en: "Quarterly" }, discount: 0.15 },
-  { key: "annual",    label: { ar: "سنوي",       en: "Annual"    }, discount: 0.25 },
+  { key: "monthly", label: { ar: "شهري", en: "Monthly" }, discount: 0 },
+  { key: "quarterly", label: { ar: "ربع سنوي", en: "Quarterly" }, discount: 0.15 },
+  { key: "annual", label: { ar: "سنوي", en: "Annual" }, discount: 0.25 },
 ] as const;
 type Cycle = typeof CYCLES[number]["key"];
 
 const PLAN_STYLES = [
-  { card: "bg-rose-50 border border-rose-200",                                                         accent: "text-rose-500",    iconBg: "bg-rose-100",        dark: false, highlight: false, cta: "border border-rose-300 text-rose-600 hover:border-rose-500 hover:text-rose-800"                       },
-  { card: "bg-sky-50 border border-sky-200",                                                            accent: "text-sky-600",     iconBg: "bg-sky-100",         dark: false, highlight: false, cta: "border-2 border-sky-500 text-sky-700 hover:bg-sky-500 hover:text-white"                               },
-  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50",                          accent: "text-[#25D366]",   iconBg: "bg-green-50",        dark: false, highlight: true,  cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]"                                                          },
-  { card: "bg-gray-950 border border-amber-700/50",                                                    accent: "text-amber-400",   iconBg: "bg-amber-900/30",    dark: true,  highlight: false, cta: "bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold hover:from-amber-400 hover:to-yellow-300" },
+  { card: "bg-rose-50 border border-rose-200", accent: "text-rose-500", iconBg: "bg-rose-100", dark: false, highlight: false, cta: "border border-rose-300 text-rose-600 hover:border-rose-500 hover:text-rose-800" },
+  { card: "bg-sky-50 border border-sky-200", accent: "text-sky-600", iconBg: "bg-sky-100", dark: false, highlight: false, cta: "border-2 border-sky-500 text-sky-700 hover:bg-sky-500 hover:text-white" },
+  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", accent: "text-[#25D366]", iconBg: "bg-green-50", dark: false, highlight: true, cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]" },
+  { card: "bg-gray-950 border border-amber-700/50", accent: "text-amber-400", iconBg: "bg-amber-900/30", dark: true, highlight: false, cta: "bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold hover:from-amber-400 hover:to-yellow-300" },
 ];
 
 // social proof لكل plan
 const SOCIAL_PROOF = [
-  { ar: "١٢٠+ مستخدم نشط",      en: "120+ active users"    },
-  { ar: "٢٨٠+ متجر مشترك",      en: "280+ stores"          },
-  { ar: "الأكثر اختياراً ⭐",    en: "Most popular ⭐"      },
-  { ar: "للشركات الكبيرة 🏢",    en: "For large teams 🏢"   },
+  { ar: "١٢٠+ مستخدم نشط", en: "120+ active users" },
+  { ar: "٢٨٠+ براند مشترك", en: "280+ brand" },
+  { ar: "الأكثر اختياراً ⭐", en: "Most popular ⭐" },
+  { ar: "للشركات الكبيرة 🏢", en: "For large teams 🏢" },
 ];
 
 const PLAN_ICONS = [Sparkles, Bot, Store, Brain];
@@ -44,39 +44,39 @@ function PricingCard({
   index, plan, s, base, price, slug, isFree, isEnterprise,
   Icon, saving, cycle, lang, isAr, numLocale, visible, onCTA,
 }: {
-  index:       number;
-  plan:        (typeof t.pricing.plans)[number];
-  s:           typeof PLAN_STYLES[number];
-  base:        number;
-  price:       number;
-  slug:        string;
-  isFree:      boolean;
-  isEnterprise:boolean;
-  Icon:        React.ElementType;
-  saving:      number;
-  cycle:       Cycle;
-  lang:        Lang;
-  isAr:        boolean;
-  numLocale:   string;
-  visible:     boolean;
-  onCTA:       (slug: string, isFree: boolean, price: number) => void;
+  index: number;
+  plan: (typeof t.pricing.plans)[number];
+  s: typeof PLAN_STYLES[number];
+  base: number;
+  price: number;
+  slug: string;
+  isFree: boolean;
+  isEnterprise: boolean;
+  Icon: React.ElementType;
+  saving: number;
+  cycle: Cycle;
+  lang: Lang;
+  isAr: boolean;
+  numLocale: string;
+  visible: boolean;
+  onCTA: (slug: string, isFree: boolean, price: number) => void;
 }) {
-  const cardRef   = useRef<HTMLDivElement>(null);
-  const rafRef    = useRef<number>(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
   const [tilt, setTilt] = useState({ x: 0, y: 0, shine: { x: 50, y: 50 } });
   const [hovered, setHovered] = useState(false);
 
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el   = cardRef.current;
+    const el = cardRef.current;
     if (!el) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const rect = el.getBoundingClientRect();
-      const cx   = (e.clientX - rect.left) / rect.width  - 0.5;   // -0.5 → 0.5
-      const cy   = (e.clientY - rect.top)  / rect.height - 0.5;
+      const cx = (e.clientX - rect.left) / rect.width - 0.5;   // -0.5 → 0.5
+      const cy = (e.clientY - rect.top) / rect.height - 0.5;
       setTilt({
-        x:     cy * -14,    // rotateX
-        y:     cx *  14,    // rotateY
+        x: cy * -14,    // rotateX
+        y: cx * 14,    // rotateY
         shine: { x: (cx + 0.5) * 100, y: (cy + 0.5) * 100 },
       });
     });
@@ -89,7 +89,7 @@ function PricingCard({
   };
 
   const fadeUp = (delay: number): React.CSSProperties => ({
-    opacity:   visible ? 1 : 0,
+    opacity: visible ? 1 : 0,
     transform: visible ? "translateY(0) scale(1)" : "translateY(32px) scale(0.97)",
     transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
   });
@@ -108,7 +108,7 @@ function PricingCard({
             ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(1.025)`
             : "rotateX(0deg) rotateY(0deg) scale(1)",
           transformStyle: "preserve-3d",
-          transition:     hovered
+          transition: hovered
             ? "transform 0.1s ease-out, box-shadow 0.2s ease"
             : "transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s ease",
           boxShadow: hovered
@@ -143,9 +143,8 @@ function PricingCard({
 
         {/* icon + name */}
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            s.dark ? "bg-white/10" : s.highlight ? "bg-green-50" : "bg-gray-100"
-          }`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${s.dark ? "bg-white/10" : s.highlight ? "bg-green-50" : "bg-gray-100"
+            }`}>
             <Icon className={`w-4 h-4 ${s.dark ? "text-white" : s.highlight ? "text-[#25D366]" : "text-gray-500"}`} />
           </div>
           <div>
@@ -223,12 +222,10 @@ function PricingCard({
         )}
 
         {/* social proof */}
-        <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${
-          s.dark ? "text-amber-400/80" : s.highlight ? "text-[#25D366]" : "text-gray-400"
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${
-            s.dark ? "bg-amber-400" : s.highlight ? "bg-[#25D366]" : "bg-gray-300"
-          }`} />
+        <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${s.dark ? "text-amber-400/80" : s.highlight ? "text-[#25D366]" : "text-gray-400"
+          }`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${s.dark ? "bg-amber-400" : s.highlight ? "bg-[#25D366]" : "bg-gray-300"
+            }`} />
           {isAr ? SOCIAL_PROOF[index].ar : SOCIAL_PROOF[index].en}
         </div>
 
@@ -240,15 +237,13 @@ function PricingCard({
           {(plan.features as ReadonlyArray<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
             <li key={fi} className="flex items-start gap-2.5">
               {f.ok ? (
-                <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                  s.highlight ? "text-[#25D366]" : s.dark ? "text-green-400" : "text-gray-400"
-                }`} />
+                <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${s.highlight ? "text-[#25D366]" : s.dark ? "text-green-400" : "text-gray-400"
+                  }`} />
               ) : (
                 <Minus className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-300" />
               )}
-              <span className={`text-sm leading-snug ${
-                !f.ok ? "text-gray-300" : s.dark ? "text-gray-200" : "text-gray-700"
-              }`}>
+              <span className={`text-sm leading-snug ${!f.ok ? "text-gray-300" : s.dark ? "text-gray-200" : "text-gray-700"
+                }`}>
                 {tr(f, lang)}
               </span>
             </li>
@@ -262,13 +257,13 @@ function PricingCard({
 interface PricingProps { lang: Lang }
 
 export default function Pricing({ lang }: PricingProps) {
-  const isAr      = lang === "ar";
+  const isAr = lang === "ar";
   const numLocale = isAr ? "ar-EG" : "en-US";
-  const router    = useRouter();
+  const router = useRouter();
   const { track } = usePixel();
-  const plans     = t.pricing.plans;
+  const plans = t.pricing.plans;
 
-  const [cycle,   setCycle]   = useState<Cycle>("monthly");
+  const [cycle, setCycle] = useState<Cycle>("monthly");
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -293,7 +288,7 @@ export default function Pricing({ lang }: PricingProps) {
   };
 
   const fadeUp = (delay: number): React.CSSProperties => ({
-    opacity:   visible ? 1 : 0,
+    opacity: visible ? 1 : 0,
     transform: visible ? "translateY(0) scale(1)" : "translateY(32px) scale(0.97)",
     transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
   });
@@ -317,7 +312,7 @@ export default function Pricing({ lang }: PricingProps) {
                   d="M0 6 Q50 0 100 6"
                   stroke="#25D366" strokeWidth="2.5" fill="none" strokeLinecap="round"
                   style={{
-                    strokeDasharray:  120,
+                    strokeDasharray: 120,
                     strokeDashoffset: visible ? 0 : 120,
                     transition: "stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1) 400ms",
                   }}
@@ -333,9 +328,8 @@ export default function Pricing({ lang }: PricingProps) {
               <button
                 key={c.key}
                 onClick={() => setCycle(c.key)}
-                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  cycle === c.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${cycle === c.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 {tr(c.label, lang)}
                 {c.discount > 0 && (
@@ -351,15 +345,15 @@ export default function Pricing({ lang }: PricingProps) {
         {/* ── Cards ── */}
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
           {plans.map((plan, i) => {
-            const s            = PLAN_STYLES[i];
-            const base         = BASE_PRICES[i];
-            const price        = computePrice(base, cycle);
-            const slug         = (plan as any).slug as string;
-            const isFree       = base === 0;
+            const s = PLAN_STYLES[i];
+            const base = BASE_PRICES[i];
+            const price = computePrice(base, cycle);
+            const slug = (plan as any).slug as string;
+            const isFree = base === 0;
             const isEnterprise = slug === "enterprise";
-            const Icon         = PLAN_ICONS[i];
-            const disc         = CYCLES.find(c => c.key === cycle)!.discount;
-            const saving       = base > 0 && disc > 0
+            const Icon = PLAN_ICONS[i];
+            const disc = CYCLES.find(c => c.key === cycle)!.discount;
+            const saving = base > 0 && disc > 0
               ? Math.round(base * disc * (cycle === "quarterly" ? 3 : 12))
               : 0;
 
@@ -391,8 +385,8 @@ export default function Pricing({ lang }: PricingProps) {
         <div className="mt-12 flex flex-wrap items-center justify-center gap-x-10 gap-y-4" style={fadeUp(400)}>
           {[
             { icon: <Shield className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar1, lang) },
-            { icon: <Check  className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar2, lang) },
-            { icon: <Zap    className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
+            { icon: <Check className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar2, lang) },
+            { icon: <Zap className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-sm text-gray-500">
               {item.icon}{item.text}
