@@ -53,14 +53,15 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
     overflow-x: hidden;
   }
+
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
   }
 }
 
@@ -69,13 +70,16 @@
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
@@ -84,9 +88,11 @@
 .dark ::-webkit-scrollbar-track {
   background: #1f2937;
 }
+
 .dark ::-webkit-scrollbar-thumb {
   background: #4b5563;
 }
+
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
@@ -95,17 +101,25 @@
 [dir="rtl"] {
   text-align: right;
 }
-[dir="rtl"] .space-x-2 > * + *,
-[dir="rtl"] .space-x-4 > * + *,
-[dir="rtl"] .space-x-8 > * + * {
+
+[dir="rtl"] .space-x-2>*+*,
+[dir="rtl"] .space-x-4>*+*,
+[dir="rtl"] .space-x-8>*+* {
   --tw-space-x-reverse: 1;
 }
 
 /* UX */
-button, [role="button"], a, input[type="submit"], input[type="button"], .cursor-pointer {
+button,
+[role="button"],
+a,
+input[type="submit"],
+input[type="button"],
+.cursor-pointer {
   cursor: pointer !important;
 }
-input:focus, textarea:focus {
+
+input:focus,
+textarea:focus {
   outline: none;
   border-color: #22c55e;
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
@@ -115,12 +129,14 @@ input:focus, textarea:focus {
    @layer utilities - جميع الأنيميشنات هنا
    ============================================ */
 @layer utilities {
+
   /* أنيميشنات الدخول (Slide) */
   @keyframes slide-in-right {
     from {
       opacity: 0;
       transform: translateX(30px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -132,6 +148,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateX(-30px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -143,6 +160,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateY(30px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -154,6 +172,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateY(-30px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -165,6 +184,7 @@ input:focus, textarea:focus {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -175,6 +195,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -186,6 +207,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateY(-20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -197,6 +219,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: scale(0.9);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -205,54 +228,72 @@ input:focus, textarea:focus {
 
   /* أنيميشنات الحركة المستمرة */
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-12px);
     }
   }
 
   @keyframes float-reverse {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(12px);
     }
   }
 
   @keyframes bounce-slow {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-15px);
     }
   }
 
   @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 10px rgba(37, 211, 102, 0.3);
     }
+
     50% {
       box-shadow: 0 0 30px rgba(37, 211, 102, 0.7);
     }
   }
 
   @keyframes pulse-soft {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.7;
     }
   }
 
   @keyframes pulse-scale {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: scale(1);
     }
+
     50% {
       transform: scale(1.05);
     }
@@ -263,18 +304,23 @@ input:focus, textarea:focus {
     from {
       transform: rotate(0deg);
     }
+
     to {
       transform: rotate(360deg);
     }
   }
 
   @keyframes shake {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateX(0);
     }
+
     25% {
       transform: translateX(-5px);
     }
+
     75% {
       transform: translateX(5px);
     }
@@ -286,10 +332,12 @@ input:focus, textarea:focus {
       transform: scale(1);
       box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
     }
+
     50% {
       transform: scale(1.03);
       box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
     }
+
     100% {
       transform: scale(1);
       box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
@@ -300,6 +348,7 @@ input:focus, textarea:focus {
     0% {
       background-position: -100% 0;
     }
+
     100% {
       background-position: 200% 0;
     }
@@ -310,6 +359,7 @@ input:focus, textarea:focus {
       transform: scale(0);
       opacity: 0.5;
     }
+
     100% {
       transform: scale(4);
       opacity: 0;
@@ -317,9 +367,12 @@ input:focus, textarea:focus {
   }
 
   @keyframes btn-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 5px #25D366, 0 0 10px #25D366, 0 0 15px #25D366;
     }
+
     50% {
       box-shadow: 0 0 10px #25D366, 0 0 20px #25D366, 0 0 30px #25D366;
     }
@@ -327,10 +380,14 @@ input:focus, textarea:focus {
 
   /* أنيميشنات شبه واتساب */
   @keyframes typing-dot {
-    0%, 60%, 100% {
+
+    0%,
+    60%,
+    100% {
       transform: translateY(0);
       opacity: 0.4;
     }
+
     30% {
       transform: translateY(-6px);
       opacity: 1;
@@ -342,6 +399,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateX(-20px) scale(0.95);
     }
+
     100% {
       opacity: 1;
       transform: translateX(0) scale(1);
@@ -353,6 +411,7 @@ input:focus, textarea:focus {
       opacity: 0;
       transform: translateX(20px) scale(0.95);
     }
+
     100% {
       opacity: 1;
       transform: translateX(0) scale(1);
@@ -363,12 +422,15 @@ input:focus, textarea:focus {
   .animate-slide-in-right {
     animation: slide-in-right 0.4s ease-out forwards;
   }
+
   .animate-slide-in-left {
     animation: slide-in-left 0.4s ease-out forwards;
   }
+
   .animate-slide-in-up {
     animation: slide-in-up 0.4s ease-out forwards;
   }
+
   .animate-slide-in-down {
     animation: slide-in-down 0.4s ease-out forwards;
   }
@@ -377,12 +439,15 @@ input:focus, textarea:focus {
   .animate-fade-in {
     animation: fade-in 0.3s ease-out forwards;
   }
+
   .animate-fade-in-up {
     animation: fade-in-up 0.4s ease-out forwards;
   }
+
   .animate-fade-in-down {
     animation: fade-in-down 0.4s ease-out forwards;
   }
+
   .animate-fade-in-scale {
     animation: fade-in-scale 0.3s ease-out forwards;
   }
@@ -391,18 +456,23 @@ input:focus, textarea:focus {
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+
   .animate-float-reverse {
     animation: float-reverse 3s ease-in-out infinite;
   }
+
   .animate-bounce-slow {
     animation: bounce-slow 2s ease-in-out infinite;
   }
+
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
+
   .animate-pulse-soft {
     animation: pulse-soft 1.5s ease-in-out infinite;
   }
+
   .animate-pulse-scale {
     animation: pulse-scale 1.5s ease-in-out infinite;
   }
@@ -411,6 +481,7 @@ input:focus, textarea:focus {
   .animate-rotate-slow {
     animation: rotate-slow 8s linear infinite;
   }
+
   .animate-shake {
     animation: shake 0.5s ease-in-out;
   }
@@ -419,11 +490,13 @@ input:focus, textarea:focus {
   .animate-btn-pulse {
     animation: btn-pulse 1.5s ease-in-out infinite;
   }
+
   .animate-btn-shine {
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     background-size: 200% 100%;
     animation: btn-shine 2s ease-in-out infinite;
   }
+
   .animate-btn-glow {
     animation: btn-glow 1.5s ease-in-out infinite;
   }
@@ -432,56 +505,104 @@ input:focus, textarea:focus {
   .animate-typing-dot {
     animation: typing-dot 1.2s ease-in-out infinite;
   }
+
   .animate-message-received {
     animation: message-received 0.3s ease-out forwards;
   }
+
   .animate-message-sent {
     animation: message-sent 0.3s ease-out forwards;
   }
 
   /* تأخيرات (Delays) */
-  .delay-0 { animation-delay: 0ms; }
-  .delay-75 { animation-delay: 75ms; }
-  .delay-100 { animation-delay: 100ms; }
-  .delay-150 { animation-delay: 150ms; }
-  .delay-200 { animation-delay: 200ms; }
-  .delay-300 { animation-delay: 300ms; }
-  .delay-500 { animation-delay: 500ms; }
-  .delay-700 { animation-delay: 700ms; }
-  .delay-1000 { animation-delay: 1000ms; }
+  .delay-0 {
+    animation-delay: 0ms;
+  }
+
+  .delay-75 {
+    animation-delay: 75ms;
+  }
+
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .delay-700 {
+    animation-delay: 700ms;
+  }
+
+  .delay-1000 {
+    animation-delay: 1000ms;
+  }
 
   /* مدة التشغيل (Durations) */
-  .duration-fast { animation-duration: 0.2s; }
-  .duration-normal { animation-duration: 0.3s; }
-  .duration-slow { animation-duration: 0.5s; }
-  .duration-slower { animation-duration: 0.8s; }
+  .duration-fast {
+    animation-duration: 0.2s;
+  }
+
+  .duration-normal {
+    animation-duration: 0.3s;
+  }
+
+  .duration-slow {
+    animation-duration: 0.5s;
+  }
+
+  .duration-slower {
+    animation-duration: 0.8s;
+  }
 
   /* عدد مرات التكرار */
-  .infinite { animation-iteration-count: infinite; }
-  .once { animation-iteration-count: 1; }
-  .twice { animation-iteration-count: 2; }
+  .infinite {
+    animation-iteration-count: infinite;
+  }
+
+  .once {
+    animation-iteration-count: 1;
+  }
+
+  .twice {
+    animation-iteration-count: 2;
+  }
 }
 
 /* ============================================
    @layer components - أنيميشنات للزرار
    ============================================ */
 @layer components {
+
   /* زر ابدأ الآن - أنيميشن احترافي */
   .btn-start {
     @apply relative overflow-hidden transition-all duration-300;
   }
-  
+
   .btn-start::before {
     content: '';
     @apply absolute inset-0 bg-white/20 rounded-full;
     transform: scale(0);
     transition: transform 0.5s ease-out;
   }
-  
+
   .btn-start:hover::before {
     transform: scale(4);
   }
-  
+
   .btn-start:active {
     transform: scale(0.97);
   }
@@ -501,7 +622,7 @@ input:focus, textarea:focus {
     position: relative;
     overflow: hidden;
   }
-  
+
   .btn-ripple-effect::after {
     content: '';
     position: absolute;
@@ -514,7 +635,7 @@ input:focus, textarea:focus {
     transform: translate(-50%, -50%);
     transition: width 0.4s, height 0.4s;
   }
-  
+
   .btn-ripple-effect:active::after {
     width: 200%;
     height: 200%;
@@ -523,8 +644,15 @@ input:focus, textarea:focus {
 
 /* ── Feature card active line ─────────────────────────────────────────────── */
 @keyframes expand-line {
-  from { transform: scaleX(0); opacity: 0; }
-  to   { transform: scaleX(1); opacity: 1; }
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 
 /* ── Scroll Reveal ─────────────────────────────────────────────────────────── */
@@ -532,7 +660,7 @@ input:focus, textarea:focus {
   opacity: 0;
   transform: translateY(40px);
   transition:
-    opacity  0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
@@ -547,7 +675,8 @@ input:focus, textarea:focus {
 .reveal-section .feature-card {
   opacity: 0;
   transform: translateY(24px);
-  transition: none; /* الـ animation هتتحكم */
+  transition: none;
+  /* الـ animation هتتحكم */
 }
 
 /* لما الـ section يتكشف → stagger animation تبدأ */
@@ -558,41 +687,58 @@ input:focus, textarea:focus {
 
 /* ── Partners Marquee ──────────────────────────────────────────────────────── */
 @keyframes marquee-ltr {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
+
 @keyframes marquee-rtl {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(50%);
+  }
 }
 
 .marquee-track-ltr {
   animation: marquee-ltr 18s linear infinite;
   will-change: transform;
 }
+
 .marquee-track-rtl {
   animation: marquee-rtl 18s linear infinite;
   will-change: transform;
 }
+
 /* الـ row الثاني — نفس الـ keyframe بس بـ reverse ← seamless في الاتجاهين */
 .marquee-track-ltr-reverse {
   animation: marquee-ltr 22s linear infinite reverse;
   will-change: transform;
 }
+
 .marquee-track-rtl-reverse {
   animation: marquee-rtl 22s linear infinite reverse;
   will-change: transform;
 }
+
 .marquee-track-ltr:hover,
 .marquee-track-rtl:hover,
 .marquee-track-ltr-reverse:hover,
 .marquee-track-rtl-reverse:hover {
   animation-play-state: paused;
 }
+
 .partner-pill {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
+
 .partner-pill:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
 }
