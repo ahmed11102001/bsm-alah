@@ -451,7 +451,7 @@ async function handleAutomation(ctx: {
   // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
   const contactRecord = await prisma.contact.findFirst({
     where: { phone: from, userId },
-    select: { id: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
+    select: { id: true, name: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
   });
 
   if (contactRecord?.voiceAgentEnabled) {
