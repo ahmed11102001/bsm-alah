@@ -139,9 +139,9 @@ function TemplatePicker({ templates, value, onChange, lang }: {
   );
 }
 
-function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
+function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, lang }: {
   rule: AutomationRule; onToggle: () => void; onEdit: () => void;
-  onDelete: () => void; showKeyword?: boolean;
+  onDelete: () => void; showKeyword?: boolean; lang: Lang;
 }) {
   return (
     <div className={`bg-white dark:bg-gray-800 border rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all
@@ -168,9 +168,9 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
               <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400"><MoreVertical className="w-4 h-4" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-36">
-              <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onEdit}><Edit2 className="w-4 h-4" /> تعديل</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onEdit}><Edit2 className="w-4 h-4" /> {tx(lang, "تعديل", "Edit")}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600" onClick={onDelete}><Trash2 className="w-4 h-4" /> حذف</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600" onClick={onDelete}><Trash2 className="w-4 h-4" /> {tx(lang, "حذف", "Delete")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -188,7 +188,7 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
       {!rule.replyMediaUrl && rule.replyContent && (
         <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed">{rule.replyContent}</p>
       )}
-      {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg w-fit">قالب واتساب معتمد</span>}
+      {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg w-fit">{tx(lang, "قالب واتساب معتمد", "Approved WhatsApp template")}</span>}
     </div>
   );
 }
@@ -463,6 +463,14 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     ab: 0,
   };
 
+  useEffect(() => {
+    setAbForm(prev => ({
+      ...prev,
+      varAName: prev.varAName === "نسخة أ" || prev.varAName === "Variant A" ? tx(lang, "نسخة أ", "Variant A") : prev.varAName,
+      varBName: prev.varBName === "نسخة ب" || prev.varBName === "Variant B" ? tx(lang, "نسخة ب", "Variant B") : prev.varBName,
+    }));
+  }, [lang]);
+
   if (loading) return (
     <div className="flex justify-center items-center py-32">
       <Loader2 className="w-10 h-10 animate-spin text-gray-300" />
@@ -475,22 +483,22 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">بوت الكلمات المفتاحية</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{kwRules.length > 0 ? `${kwRules.filter(r => r.isEnabled).length} مفعّلة من ${kwRules.length}` : "ردود ثابتة فورية على كلمات بعينها"}</p>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "بوت الكلمات المفتاحية", "Keyword bot")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{kwRules.length > 0 ? tx(lang, `${kwRules.filter(r => r.isEnabled).length} مفعّلة من ${kwRules.length}`, `${kwRules.filter(r => r.isEnabled).length} active out of ${kwRules.length}`) : tx(lang, "ردود ثابتة فورية على كلمات بعينها", "Instant fixed replies for specific keywords")}</p>
           </div>
-          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("keywords")}><Plus className="w-4 h-4" /> كلمة جديدة</Button>
+          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("keywords")}><Plus className="w-4 h-4" /> {tx(lang, "كلمة جديدة", "New keyword")}</Button>
         </div>
         <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 mb-4 text-sm text-blue-700 dark:text-blue-300">
           <Zap className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-          <span>لما العميل يكتب الكلمة، البوت يرد <strong>فوراً</strong> تلقائياً بغض النظر عن أي حاجة تانية.</span>
+          <span>{tx(lang, "لما العميل يكتب الكلمة، البوت يرد فوراً تلقائياً بغض النظر عن أي حاجة تانية.", "When a customer sends the keyword, the bot replies instantly regardless of anything else.")}</span>
         </div>
         {kwRules.length === 0 ? (
-          <EmptyState icon={<MessageSquare className="w-10 h-10 text-green-300" />} title="لا توجد كلمات بعد" desc="أضف كلمة مفتاحية وردّها الثابت"
-            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("keywords")}><Plus className="w-4 h-4" /> أضف أول كلمة</Button>} />
+          <EmptyState icon={<MessageSquare className="w-10 h-10 text-green-300" />} title={tx(lang, "لا توجد كلمات بعد", "No keywords yet")} desc={tx(lang, "أضف كلمة مفتاحية وردّها الثابت", "Add a keyword and its fixed reply")}
+            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("keywords")}><Plus className="w-4 h-4" /> {tx(lang, "أضف أول كلمة", "Add your first keyword")}</Button>} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {kwRules.map(rule => (
-              <RuleCard key={rule.id} rule={rule} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "keywords")} onDelete={() => deleteRule(rule.id)} />
+              <RuleCard key={rule.id} rule={rule} lang={lang} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "keywords")} onDelete={() => deleteRule(rule.id)} />
             ))}
           </div>
         )}
@@ -501,25 +509,25 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">رسالة الترحيب التلقائية</h3>
-            <p className="text-xs text-gray-400 mt-0.5">ترد تلقائياً على أول رسالة من أي عميل جديد</p>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "رسالة الترحيب التلقائية", "Automatic welcome message")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{tx(lang, "ترد تلقائياً على أول رسالة من أي عميل جديد", "Replies automatically to the first message from any new customer")}</p>
           </div>
-          {welcomeRules.length === 0 && <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("welcome")}><Plus className="w-4 h-4" /> إضافة ترحيب</Button>}
+          {welcomeRules.length === 0 && <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("welcome")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة ترحيب", "Add welcome")}</Button>}
         </div>
         <WelcomeInfo lang={lang} />
         <div className="mt-4">
           {welcomeRules.length === 0 ? (
-            <EmptyState icon={<Hand className="w-10 h-10 text-green-300" />} title="لا يوجد ترحيب تلقائي" desc="أضف رسالة ترحيب تُرسل فور تواصل أي عميل جديد"
-              action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("welcome")}><Plus className="w-4 h-4" /> إضافة رسالة الترحيب</Button>} />
+            <EmptyState icon={<Hand className="w-10 h-10 text-green-300" />} title={tx(lang, "لا يوجد ترحيب تلقائي", "No automatic welcome yet")} desc={tx(lang, "أضف رسالة ترحيب تُرسل فور تواصل أي عميل جديد", "Add a welcome message sent as soon as any new customer contacts you")}
+              action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("welcome")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة رسالة الترحيب", "Add welcome message")}</Button>} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {welcomeRules.map(rule => (
-                <RuleCard key={rule.id} rule={rule} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "welcome")} onDelete={() => deleteRule(rule.id)} />
+                <RuleCard key={rule.id} rule={rule} lang={lang} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "welcome")} onDelete={() => deleteRule(rule.id)} />
               ))}
               {welcomeRules.length < 3 && (
                 <button onClick={() => openCreate("welcome")}
                   className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col items-center gap-2 text-gray-400 hover:border-green-300 hover:text-green-500 transition-all">
-                  <Plus className="w-6 h-6" /><span className="text-sm">إضافة رسالة ترحيب أخرى</span>
+                  <Plus className="w-6 h-6" /><span className="text-sm">{tx(lang, "إضافة رسالة ترحيب أخرى", "Add another welcome message")}</span>
                 </button>
               )}
             </div>
@@ -532,23 +540,23 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">متابعة العملاء الصامتين</h3>
-            <p className="text-xs text-gray-400 mt-0.5">ترسل قالباً تلقائياً للعملاء الذين لم يردوا منذ عدد من الأيام</p>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "متابعة العملاء الصامتين", "Follow up with silent customers")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{tx(lang, "ترسل قالباً تلقائياً للعملاء الذين لم يردوا منذ عدد من الأيام", "Sends a template automatically to customers who have been silent for several days")}</p>
           </div>
-          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> قاعدة جديدة</Button>
+          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> {tx(lang, "قاعدة جديدة", "New rule")}</Button>
         </div>
         <OutboundWarning lang={lang} />
         <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          تُفعَّل هذه القواعد بشكل تلقائي يومياً عبر Inngest scheduler — تأكد من إعداد الـ cron function في السيرفر.
+          {tx(lang, "تُفعَّل هذه القواعد بشكل تلقائي يومياً عبر Inngest scheduler — تأكد من إعداد الـ cron function في السيرفر.", "These rules run automatically every day via Inngest scheduler — make sure the cron function is configured on the server.")}
         </div>
         {noReplyRules.length === 0 ? (
-          <EmptyState icon={<Clock className="w-10 h-10 text-amber-300" />} title="لا توجد قواعد متابعة" desc="أضف قاعدة لمتابعة العملاء الذين لم يردوا"
-            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> إضافة قاعدة متابعة</Button>} />
+          <EmptyState icon={<Clock className="w-10 h-10 text-amber-300" />} title={tx(lang, "لا توجد قواعد متابعة", "No follow-up rules yet")} desc={tx(lang, "أضف قاعدة لمتابعة العملاء الذين لم يردوا", "Add a rule to follow up with customers who have not replied")}
+            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة قاعدة متابعة", "Add follow-up rule")}</Button>} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             {noReplyRules.map(rule => (
-              <RuleCard key={rule.id} rule={rule} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "noreply")} onDelete={() => deleteRule(rule.id)} />
+              <RuleCard key={rule.id} rule={rule} lang={lang} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "noreply")} onDelete={() => deleteRule(rule.id)} />
             ))}
           </div>
         )}
@@ -559,19 +567,19 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">الأتمتة الزمنية</h3>
-            <p className="text-xs text-gray-400 mt-0.5">إرسال قوالب في أوقات وأيام محددة أسبوعياً</p>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "الأتمتة الزمنية", "Scheduled automation")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{tx(lang, "إرسال قوالب في أوقات وأيام محددة أسبوعياً", "Send templates at specific times and days each week")}</p>
           </div>
-          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> جدولة جديدة</Button>
+          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> {tx(lang, "جدولة جديدة", "New schedule")}</Button>
         </div>
         <OutboundWarning lang={lang} />
         <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          الأتمتة الزمنية تحتاج Inngest cron function تشتغل كل ساعة لفحص القواعد المجدولة.
+          {tx(lang, "الأتمتة الزمنية تحتاج Inngest cron function تشتغل كل ساعة لفحص القواعد المجدولة.", "Scheduled automation needs an Inngest cron function running every hour to scan the scheduled rules.")}
         </div>
         {timeRules.length === 0 ? (
-          <EmptyState icon={<CalendarClock className="w-10 h-10 text-purple-300" />} title="لا توجد جدولة بعد" desc="أضف قاعدة لإرسال رسائل في وقت وأيام محددة"
-            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> إضافة جدولة</Button>} />
+          <EmptyState icon={<CalendarClock className="w-10 h-10 text-purple-300" />} title={tx(lang, "لا توجد جدولة بعد", "No schedules yet")} desc={tx(lang, "أضف قاعدة لإرسال رسائل في وقت وأيام محددة", "Add a rule to send messages at a specific time and days")}
+            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة جدولة", "Add schedule")}</Button>} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             {timeRules.map(rule => {
@@ -604,14 +612,14 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400"><MoreVertical className="w-4 h-4" /></button></DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-36">
-                          <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={() => openEdit(rule, "timebased")}><Edit2 className="w-4 h-4" /> تعديل</DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={() => openEdit(rule, "timebased")}><Edit2 className="w-4 h-4" /> {tx(lang, "تعديل", "Edit")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600" onClick={() => deleteRule(rule.id)}><Trash2 className="w-4 h-4" /> حذف</DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600" onClick={() => deleteRule(rule.id)}><Trash2 className="w-4 h-4" /> {tx(lang, "حذف", "Delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
-                  {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">قالب معتمد</span>}
+                  {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">{tx(lang, "قالب معتمد", "Approved template")}</span>}
                 </div>
               );
             })}
@@ -623,42 +631,42 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     if (activeSubTab === "ab") return (
       <div>
         <div className="mb-4">
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">اختبار A/B للرسائل</h3>
-          <p className="text-xs text-gray-400 mt-0.5">اختبر قالبين مختلفين على عينة عشوائية من جهات اتصالك</p>
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "اختبار A/B للرسائل", "A/B test for messages")}</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{tx(lang, "اختبر قالبين مختلفين على عينة عشوائية من جهات اتصالك", "Test two different templates on a random sample of your contacts")}</p>
         </div>
         <div className="flex items-start gap-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 mb-5 text-sm text-blue-700 dark:text-blue-300">
           <FlaskConical className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
           <div>
-            <p className="font-semibold mb-0.5">كيف يعمل</p>
-            <p className="text-xs leading-relaxed">يختار عشوائياً عدداً من جهات اتصالك ويقسّمهم بين نسختين، ثم يطلق حملتين منفصلتين. تتبّع النتائج في صفحة التقارير.</p>
+            <p className="font-semibold mb-0.5">{tx(lang, "كيف يعمل", "How it works")}</p>
+            <p className="text-xs leading-relaxed">{tx(lang, "يختار عشوائياً عدداً من جهات اتصالك ويقسّمهم بين نسختين، ثم يطلق حملتين منفصلتين. تتبّع النتائج في صفحة التقارير.", "It randomly selects a number of your contacts, splits them into two versions, and launches two separate campaigns. Track the results in the reports page.")}</p>
           </div>
         </div>
         <div className="space-y-5">
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 text-sm">إعدادات الاختبار</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 text-sm">{tx(lang, "إعدادات الاختبار", "Test settings")}</h4>
             <div className="space-y-4">
               <div>
-                <Label className="text-sm mb-1.5 block">اسم الاختبار *</Label>
-                <Input value={abForm.name} onChange={e => setAbForm(f => ({ ...f, name: e.target.value }))} placeholder="مثال: اختبار عرض رمضان" />
+                <Label className="text-sm mb-1.5 block">{tx(lang, "اسم الاختبار", "Test name")} *</Label>
+                <Input value={abForm.name} onChange={e => setAbForm(f => ({ ...f, name: e.target.value }))} placeholder={tx(lang, "مثال: اختبار عرض رمضان", "Example: Ramadan offer test")} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-sm mb-1.5 block">الجمهور المستهدف *</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "الجمهور المستهدف", "Target audience")} *</Label>
                   <Select value={abForm.audienceId} onValueChange={v => setAbForm(f => ({ ...f, audienceId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="اختر جمهوراً..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={tx(lang, "اختر جمهوراً...", "Choose an audience...")} /></SelectTrigger>
                     <SelectContent>
                       {audiences.map(a => <SelectItem key={a.id} value={a.id}>{a.name} {a._count ? `(${a._count.contacts})` : ""}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">حجم العينة</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "حجم العينة", "Sample size")}</Label>
                   <Input type="number" min={10} max={10000} dir="ltr" value={abForm.sampleSize} onChange={e => setAbForm(f => ({ ...f, sampleSize: e.target.value }))} />
                 </div>
               </div>
               <div>
                 <Label className="text-sm mb-1.5 block flex items-center justify-between">
-                  <span>نسبة التقسيم — أ / ب</span>
+                  <span>{tx(lang, "نسبة التقسيم — أ / ب", "Split ratio — A / B")}</span>
                   <span className="font-mono text-gray-500">{abForm.splitRatio}% / {100 - Number(abForm.splitRatio)}%</span>
                 </Label>
                 <input type="range" min="10" max="90" step="5" dir="ltr" value={abForm.splitRatio}
@@ -672,28 +680,28 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">أ</div>
+                <div className="w-7 h-7 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">A</div>
                 <Input value={abForm.varAName} onChange={e => setAbForm(f => ({ ...f, varAName: e.target.value }))} className="font-semibold border-0 p-0 h-7 focus-visible:ring-0 bg-transparent dark:bg-transparent" />
               </div>
-              <p className="text-xs text-gray-400 mb-2">القالب</p>
+              <p className="text-xs text-gray-400 mb-2">{tx(lang, "القالب", "Template")}</p>
               <TemplatePicker templates={templates} value={abForm.varATemplate} onChange={v => setAbForm(f => ({ ...f, varATemplate: v }))} lang={lang} />
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * Number(abForm.splitRatio) / 100)} جهة اتصال</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * Number(abForm.splitRatio) / 100)} {tx(lang, "جهة اتصال", "contacts")}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 border-2 border-amber-200 dark:border-amber-700 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">ب</div>
+                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">B</div>
                 <Input value={abForm.varBName} onChange={e => setAbForm(f => ({ ...f, varBName: e.target.value }))} className="font-semibold border-0 p-0 h-7 focus-visible:ring-0 bg-transparent dark:bg-transparent" />
               </div>
-              <p className="text-xs text-gray-400 mb-2">القالب</p>
+              <p className="text-xs text-gray-400 mb-2">{tx(lang, "القالب", "Template")}</p>
               <TemplatePicker templates={templates} value={abForm.varBTemplate} onChange={v => setAbForm(f => ({ ...f, varBTemplate: v }))} lang={lang} />
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * (100 - Number(abForm.splitRatio)) / 100)} جهة اتصال</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">≈ {Math.round(Number(abForm.sampleSize) * (100 - Number(abForm.splitRatio)) / 100)} {tx(lang, "جهة اتصال", "contacts")}</p>
             </div>
           </div>
 
           <Button onClick={launchABTest} disabled={launchingAb}
             className="w-full bg-green-500 hover:bg-green-600 text-white gap-2 py-6 text-base font-semibold shadow-lg">
             {launchingAb ? <Loader2 className="w-5 h-5 animate-spin" /> : <FlaskConical className="w-5 h-5" />}
-            {launchingAb ? "جاري إطلاق الاختبار..." : "إطلاق اختبار A/B"}
+            {launchingAb ? tx(lang, "جاري إطلاق الاختبار...", "Launching the test...") : tx(lang, "إطلاق اختبار A/B", "Launch A/B test")}
           </Button>
         </div>
       </div>
@@ -805,7 +813,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           </div>
           <div className="space-y-5">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-purple-500" /> مزوّد الذكاء الاصطناعي</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2"><Bot className="w-4 h-4 text-purple-500" /> {tx(lang, "مزوّد الذكاء الاصطناعي", "AI provider")}</h3>
               <div className="grid grid-cols-2 gap-3">
                 {(["gemini", "openai"] as const).map(p => (
                   <button key={p} onClick={() => updateAgent({ provider: p })}
@@ -813,91 +821,87 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${agent.provider === p ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>{p === "gemini" ? "G" : "AI"}</div>
                     <div>
                       <p className={`font-semibold text-sm ${agent.provider === p ? "text-purple-800 dark:text-purple-200" : "text-gray-700 dark:text-gray-300"}`}>{p === "gemini" ? "Google Gemini" : "ChatGPT (GPT-4o mini)"}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{p === "gemini" ? "سريع ومجاني نسبياً" : "دقيق وقوي"}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{p === "gemini" ? tx(lang, "سريع وسيرش قوي", "Fast and strong") : tx(lang, "دقيق وقوي", "Accurate and powerful")}</p>
                     </div>
                     {agent.provider === p && <CheckCircle className="w-4 h-4 text-purple-500 mr-auto" />}
                   </button>
                 ))}
               </div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
-                <Key className="w-3.5 h-3.5 flex-shrink-0" />
-
-              </div>
             </div>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-500" /> بيانات البراند
-                <span className="text-xs font-normal text-gray-400">(بتتبعت للـ AI عشان يعرف يرد)</span>
+                <Sparkles className="w-4 h-4 text-blue-500" /> {tx(lang, "بيانات البراند", "Brand details")}
+                <span className="text-xs font-normal text-gray-400">{tx(lang, "(بتتبعت للـ AI عشان يعرف يرد)", "(Used by the AI so it can reply properly)")}</span>
               </h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm mb-1.5 block">اسم البراند</Label>
-                    <Input value={agent.brandName} onChange={e => updateAgent({ brandName: e.target.value })} placeholder="مثال: متجر الأناقة" />
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "اسم البراند", "Brand name")}</Label>
+                    <Input value={agent.brandName} onChange={e => updateAgent({ brandName: e.target.value })} placeholder={tx(lang, "مثال: متجر الأناقة", "Example: Elegance Store")} />
                   </div>
                   <div>
-                    <Label className="text-sm mb-1.5 block">ساعات العمل</Label>
-                    <Input value={agent.workingHours} onChange={e => updateAgent({ workingHours: e.target.value })} placeholder="مثال: 9 ص – 10 م" />
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "ساعات العمل", "Working hours")}</Label>
+                    <Input value={agent.workingHours} onChange={e => updateAgent({ workingHours: e.target.value })} placeholder={tx(lang, "مثال: 9 ص – 10 م", "Example: 9 AM – 10 PM")} />
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">وصف النشاط <span className="text-red-500">*</span></Label>
-                  <Textarea value={agent.businessDesc} onChange={e => updateAgent({ businessDesc: e.target.value })} placeholder="مثال: نحن متجر ملابس نسائية، نوفر شحن سريع لجميع محافظات مصر" className="min-h-[80px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "وصف النشاط", "Business description")} <span className="text-red-500">*</span></Label>
+                  <Textarea value={agent.businessDesc} onChange={e => updateAgent({ businessDesc: e.target.value })} placeholder={tx(lang, "مثال: نحن متجر ملابس نسائية، نوفر شحن سريع لجميع محافظات مصر", "Example: We are a women's clothing store and offer fast shipping across all regions")} className="min-h-[80px] resize-none text-sm" dir="rtl" />
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">المنتجات والخدمات</Label>
-                  <Textarea value={agent.productsInfo} onChange={e => updateAgent({ productsInfo: e.target.value })} placeholder="مثال: فساتين سهرة، عبايات، ملابس كاجوال" className="min-h-[60px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "المنتجات والخدمات", "Products and services")}</Label>
+                  <Textarea value={agent.productsInfo} onChange={e => updateAgent({ productsInfo: e.target.value })} placeholder={tx(lang, "مثال: فساتين سهرة، عبايات، ملابس كاجوال", "Example: evening dresses, abayas, casual wear")} className="min-h-[60px] resize-none text-sm" dir="rtl" />
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">الأسعار</Label>
-                  <Textarea value={agent.pricingInfo} onChange={e => updateAgent({ pricingInfo: e.target.value })} placeholder="مثال: الأسعار من 200 لـ 2000 جنيه، الشحن 60 جنيه" className="min-h-[60px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "الأسعار", "Pricing")}</Label>
+                  <Textarea value={agent.pricingInfo} onChange={e => updateAgent({ pricingInfo: e.target.value })} placeholder={tx(lang, "مثال: الأسعار من 200 لـ 2000 جنيه، الشحن 60 جنيه", "Example: Prices start from 200 to 2000 EGP, shipping 60 EGP")} className="min-h-[60px] resize-none text-sm" dir="rtl" />
                 </div>
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">إعدادات متقدمة</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">{tx(lang, "إعدادات متقدمة", "Advanced settings")}</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm mb-1.5 block">لهجة الرد</Label>
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "لهجة الرد", "Reply tone")}</Label>
                     <Select value={agent.tone} onValueChange={v => updateAgent({ tone: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="friendly">ودود وقريب</SelectItem>
-                        <SelectItem value="formal">رسمي ومهني</SelectItem>
-                        <SelectItem value="egyptian">عامية مصرية</SelectItem>
+                        <SelectItem value="friendly">{tx(lang, "ودود وقريب", "Friendly and warm")}</SelectItem>
+                        <SelectItem value="formal">{tx(lang, "رسمي ومهني", "Formal and professional")}</SelectItem>
+                        <SelectItem value="egyptian">{tx(lang, "عامية مصرية", "Egyptian colloquial")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-sm mb-1.5 block">وقف الرد بعد ردك (دقائق)</Label>
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "وقف الرد بعد ردك (دقائق)", "Pause replies after your reply (minutes)")}</Label>
                     <Input type="number" min={1} max={1440} dir="ltr" value={agent.pauseMinutes} onChange={e => updateAgent({ pauseMinutes: Number(e.target.value) || 10 })} />
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">System Prompt إضافي (اختياري)</Label>
-                  <Textarea value={agent.systemPrompt} onChange={e => updateAgent({ systemPrompt: e.target.value })} placeholder="مثال: لا تذكر المنافسين. لو سألوا عن التوصيل الدولي قول مش متاح." className="min-h-[80px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "System Prompt إضافي (اختياري)", "Additional System Prompt (optional)")}</Label>
+                  <Textarea value={agent.systemPrompt} onChange={e => updateAgent({ systemPrompt: e.target.value })} placeholder={tx(lang, "مثال: لا تذكر المنافسين. لو سألوا عن التوصيل الدولي قول مش متاح.", "Example: Do not mention competitors. If they ask about international delivery, say it is not available.")} className="min-h-[80px] resize-none text-sm" dir="rtl" />
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
-                    <Label className="text-sm mb-1.5 block">وضع اللغة</Label>
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "وضع اللغة", "Language mode")}</Label>
                     <Select value={agent.languageMode} onValueChange={v => updateAgent({ languageMode: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">تلقائي (حسب لغة العميل)</SelectItem>
-                        <SelectItem value="ar">دايمًا عربي</SelectItem>
-                        <SelectItem value="en">English always</SelectItem>
+                        <SelectItem value="auto">{tx(lang, "تلقائي (حسب لغة العميل)", "Automatic (based on customer language)")}</SelectItem>
+                        <SelectItem value="ar">{tx(lang, "دايمًا عربي", "Always Arabic")}</SelectItem>
+                        <SelectItem value="en">{tx(lang, "English always", "English always")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-sm mb-1.5 block">رابط الموقع (اختياري)</Label>
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "رابط الموقع (اختياري)", "Website link (optional)")}</Label>
                     <Input value={agent.websiteUrl} onChange={e => updateAgent({ websiteUrl: e.target.value })} placeholder="https://example.com" dir="ltr" />
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">نص الزرار (اختياري)</Label>
-                  <Input value={agent.websiteButtonText} onChange={e => updateAgent({ websiteButtonText: e.target.value })} placeholder="تصفح المنتجات" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "نص الزرار (اختياري)", "Button text (optional)")}</Label>
+                  <Input value={agent.websiteButtonText} onChange={e => updateAgent({ websiteButtonText: e.target.value })} placeholder={tx(lang, "تصفح المنتجات", "Browse products")} />
                 </div>
               </div>
             </div>
@@ -935,7 +939,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 <div className="space-y-3">
                   <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
                     <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                    اعمل Agent على ElevenLabs وحط الـ API Key والـ Agent ID هنا. لما تفعّل Voice Agent في محادثة معينة، هيرد بصوت الـ Agent على كل الرسائل.
+                    {tx(lang, "اعمل Agent على ElevenLabs وحط الـ API Key والـ Agent ID هنا. لما تفعّل Voice Agent في محادثة معينة، هيرد بصوت الـ Agent على كل الرسائل.", "Create an Agent in ElevenLabs and place the API Key and Agent ID here. When you enable Voice Agent in a specific conversation, it will reply with the Agent's voice to all messages.")}
                   </div>
                   <div>
                     <Label className="text-sm mb-1.5 block">ElevenLabs API Key *</Label>
@@ -956,7 +960,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                       dir="ltr"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID
+                      {tx(lang, "من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID", "From ElevenLabs Dashboard → Conversational AI → Agent → Copy ID")}
                     </p>
                   </div>
                 </div>
@@ -968,7 +972,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
       {/* Dialog — shared for keyword / welcome / noreply / timebased */}
       <Dialog open={showDialog} onOpenChange={v => { if (!v) setShowDialog(false); }}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent className="max-w-md" dir={lang === "ar" ? "rtl" : "ltr"}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               {dialogMode === "keywords" && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
@@ -977,10 +981,10 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
               {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? tx(lang, "تعديل الجدولة", "Edit schedule") : tx(lang, "جدولة زمنية جديدة", "New schedule")}</>}
             </DialogTitle>
             <DialogDescription>
-              {dialogMode === "keywords" && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When customer sends this keyword, bot replies instantly")}
-              {dialogMode === "welcome" && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on first customer message")}
-              {dialogMode === "noreply" && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after no-reply days")}
-              {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends template at selected weekly time slots")}
+              {dialogMode === "keywords" && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When the customer sends this keyword, the bot replies instantly")}
+              {dialogMode === "welcome" && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on the first message from a new customer")}
+              {dialogMode === "noreply" && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after a number of days of silence")}
+              {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends a template at selected weekly time slots")}
             </DialogDescription>
           </DialogHeader>
 
@@ -993,20 +997,19 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
             {dialogMode === "keywords" && (
               <>
                 <div>
-                  <Label className="text-sm mb-1.5 block">الكلمة المفتاحية *</Label>
-                  <Input value={ruleForm.keyword} onChange={e => setRuleForm(f => ({ ...f, keyword: e.target.value }))} placeholder="مثال: سعر" dir="rtl" />
-                  <p className="text-xs text-gray-400 mt-1">يُفعَّل لو الرسالة فيها الكلمة في أي مكان</p>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "الكلمة المفتاحية", "Keyword")} *</Label>
+                  <Input value={ruleForm.keyword} onChange={e => setRuleForm(f => ({ ...f, keyword: e.target.value }))} placeholder={tx(lang, "مثال: سعر", "Example: price")} dir="rtl" />
+                  <p className="text-xs text-gray-400 mt-1">{tx(lang, "يُفعَّل لو الرسالة فيها الكلمة في أي مكان", "It activates if the message contains the keyword anywhere")}</p>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">نص الرد *</Label>
-                  <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder="اكتب الرد اللي هيتبعت تلقائياً..." className="min-h-[100px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "نص الرد", "Reply text")} *</Label>
+                  <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder={tx(lang, "اكتب الرد اللي هيتبعت تلقائياً...", "Write the reply that will be sent automatically...")} className="min-h-[100px] resize-none text-sm" dir="rtl" />
                 </div>
 
-                {/* ── صورة اختيارية ── */}
                 <div>
                   <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                    صورة مرفقة <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+                    {tx(lang, "صورة مرفقة", "Attached image")} <span className="text-gray-400 font-normal text-xs">{tx(lang, "(اختياري)", "(optional)")}</span>
                   </Label>
                   {ruleForm.replyMediaUrl ? (
                     <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
@@ -1016,7 +1019,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                         onClick={() => setRuleForm(f => ({ ...f, replyMediaUrl: "" }))}
                         className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
                       ><X className="w-3 h-3" /></button>
-                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">صورة مرفقة ✓</div>
+                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">{tx(lang, "صورة مرفقة", "Attached image")} ✓</div>
                     </div>
                   ) : (
                     <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition
@@ -1024,13 +1027,13 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                       <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} />
                       {mediaUploading
-                        ? <><Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" /><span className="text-xs text-blue-500">جاري الرفع...</span></>
-                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">اضغط لرفع صورة (JPG/PNG/WebP — max 5MB)</span></>}
+                        ? <><Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" /><span className="text-xs text-blue-500">{tx(lang, "جاري الرفع...", "Uploading...")}</span></>
+                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">{tx(lang, "اضغط لرفع صورة (JPG/PNG/WebP — max 5MB)", "Click to upload an image (JPG/PNG/WebP — max 5MB)")}</span></>}
                     </label>
                   )}
                   {ruleForm.replyMediaUrl && ruleForm.reply && (
                     <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                      <Info className="w-3 h-3" /> النص هيظهر كـ caption تحت الصورة في واتساب
+                      <Info className="w-3 h-3" /> {tx(lang, "النص هيظهر كـ caption تحت الصورة في واتساب", "The text will appear as a caption under the image in WhatsApp")}
                     </p>
                   )}
                 </div>
@@ -1041,14 +1044,13 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
               <>
                 <WelcomeInfo lang={lang} />
                 <div>
-                  <Label className="text-sm mb-1.5 block">نص رسالة الترحيب *</Label>
-                  <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder="مثال: أهلاً وسهلاً! 👋 نورت متجرنا. كيف يمكنني مساعدتك؟" className="min-h-[120px] resize-none text-sm" dir="rtl" />
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "نص رسالة الترحيب", "Welcome message text")} *</Label>
+                  <Textarea value={ruleForm.reply} onChange={e => setRuleForm(f => ({ ...f, reply: e.target.value }))} placeholder={tx(lang, "مثال: أهلاً وسهلاً! 👋 نورت متجرنا. كيف يمكنني مساعدتك؟", "Example: Welcome! 👋 Thank you for reaching our store. How can I help you?")} className="min-h-[120px] resize-none text-sm" dir="rtl" />
                 </div>
-                {/* صورة ترحيب اختيارية */}
                 <div>
                   <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                    صورة مرفقة <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+                    {tx(lang, "صورة مرفقة", "Attached image")} <span className="text-gray-400 font-normal text-xs">{tx(lang, "(اختياري)", "(optional)")}</span>
                   </Label>
                   {ruleForm.replyMediaUrl ? (
                     <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
@@ -1065,7 +1067,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                         onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} />
                       {mediaUploading
                         ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">رفع صورة (اختياري)</span></>}
+                        : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">{tx(lang, "رفع صورة (اختياري)", "Upload image (optional)")}</span></>}
                     </label>
                   )}
                 </div>
@@ -1076,14 +1078,14 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
               <>
                 <OutboundWarning lang={lang} />
                 <div>
-                  <Label className="text-sm mb-1.5 block">عدد أيام الصمت *</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "عدد أيام الصمت", "Days of silence")} *</Label>
                   <div className="flex items-center gap-2">
                     <Input type="number" min={1} max={365} dir="ltr" className="w-24 text-center" value={ruleForm.noReplyDays} onChange={e => setRuleForm(f => ({ ...f, noReplyDays: e.target.value }))} />
-                    <span className="text-sm text-gray-500">يوم بدون رد من العميل</span>
+                    <span className="text-sm text-gray-500">{tx(lang, "يوم بدون رد من العميل", "day(s) without a reply from the customer")}</span>
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">القالب المعتمد *</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "القالب المعتمد", "Approved template")} *</Label>
                   <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} lang={lang} />
                 </div>
               </>
@@ -1093,7 +1095,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
               <>
                 <OutboundWarning lang={lang} />
                 <div>
-                  <Label className="text-sm mb-2 block">أيام الإرسال *</Label>
+                  <Label className="text-sm mb-2 block">{tx(lang, "أيام الإرسال", "Send days")} *</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {DAYS_AR.map(d => (
                       <button key={d.key} onClick={() => toggleDay(d.key)}
@@ -1104,7 +1106,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">وقت الإرسال</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "وقت الإرسال", "Send time")}</Label>
                   <div className="flex items-center gap-2">
                     <Select value={ruleForm.hour} onValueChange={v => setRuleForm(f => ({ ...f, hour: v }))}>
                       <SelectTrigger className="w-20 font-mono"><SelectValue /></SelectTrigger>
@@ -1118,13 +1120,13 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">الجمهور المستهدف *</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "الجمهور المستهدف", "Target audience")} *</Label>
                   <Select value={ruleForm.tbAudienceId} onValueChange={v => setRuleForm(f => ({ ...f, tbAudienceId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="اختر جمهوراً..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={tx(lang, "اختر جمهوراً...", "Choose an audience...")} /></SelectTrigger>
                     <SelectContent>
                       {audiences.map(a => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.name} {a._count ? `(${a._count.contacts} جهة اتصال)` : ""}
+                          {a.name} {a._count ? `(${a._count.contacts} ${tx(lang, "جهة اتصال", "contacts")})` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1132,23 +1134,23 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 </div>
                 <div>
                   <Label className="text-sm mb-1.5 block flex items-center justify-between">
-                    <span>الحد الأقصى لعدد المُرسَل إليهم *</span>
+                    <span>{tx(lang, "الحد الأقصى لعدد المُرسَل إليهم", "Maximum recipients")} *</span>
                     {ruleForm.tbAudienceId && (() => {
                       const aud = audiences.find(a => a.id === ruleForm.tbAudienceId);
                       const total = aud?._count?.contacts ?? 0;
-                      return total > 0 ? <span className="text-xs text-gray-400 font-normal">إجمالي الجمهور: {total.toLocaleString()}</span> : null;
+                      return total > 0 ? <span className="text-xs text-gray-400 font-normal">{tx(lang, "إجمالي الجمهور", "Total audience")}: {total.toLocaleString()}</span> : null;
                     })()}
                   </Label>
                   <Input type="number" min={1} max={100000} dir="ltr"
                     value={ruleForm.tbMaxContacts}
                     onChange={e => setRuleForm(f => ({ ...f, tbMaxContacts: e.target.value }))}
-                    placeholder="مثال: 500" />
+                    placeholder={tx(lang, "مثال: 500", "Example: 500")} />
                   <p className="text-xs text-gray-400 mt-1">
-                    لو الجمهور أكبر من العدد ده، يتاختار منهم عشوائياً
+                    {tx(lang, "لو الجمهور أكبر من العدد ده، يتاختار منهم عشوائياً", "If the audience is larger than this number, contacts will be selected randomly")}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm mb-1.5 block">القالب المعتمد *</Label>
+                  <Label className="text-sm mb-1.5 block">{tx(lang, "القالب المعتمد", "Approved template")} *</Label>
                   <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} lang={lang} />
                 </div>
               </>
@@ -1156,11 +1158,11 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>{tx(lang, "إلغاء", "Cancel")}</Button>
             <div className="flex-1" />
             <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={saveRule} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              {editTarget ? "حفظ التعديلات" : "إضافة"}
+              {editTarget ? tx(lang, "حفظ التعديلات", "Save changes") : tx(lang, "إضافة", "Add")}
             </Button>
           </div>
         </DialogContent>
