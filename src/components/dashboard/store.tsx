@@ -156,10 +156,10 @@ const TX = {
   webhookTitle: { ar: "الطلبات تصل تلقائياً عبر Webhook", en: "Orders arrive automatically via Webhook" },
   webhookSub: { ar: "كل أوردر جديد في WooCommerce بيوصل فوراً", en: "Every new WooCommerce order arrives instantly" },
   active: { ar: "نشط", en: "Active" },
-  webhookHint: { ar: "لو محتاج تضيف الـ Webhook من جديد، روح صفحة API وانسخ الرابط من قسم WooCommerce.", en: "If you need to add the webhook again, go to API page and copy the WooCommerce URL." },
+  webhookHint: { ar: "لو محتاج تضيف الـ Webhook من جديد، روح صفحة التكاملات  وانسخ الرابط من قسم WooCommerce.", en: "If you need to add the webhook again, go to Integrations page and copy the WooCommerce URL." },
   storeLoadErr: { ar: "تعذر تحميل بيانات المتجر", en: "Failed to load store data" },
   noStore: { ar: "لم يتم ربط أي متجر بعد", en: "No store connected yet" },
-  noStoreSub: { ar: "اذهب إلى صفحة API لربط متجر Shopify أو EasyOrders أو WooCommerce", en: "Go to API page to connect Shopify, EasyOrders, or WooCommerce" },
+  noStoreSub: { ar: "اذهب إلى صفحة التكاملات لربط متجر Shopify أو EasyOrders أو WooCommerce", en: "Go to Integrations page to connect Shopify, EasyOrders, or WooCommerce" },
   connected: { ar: "متصل", en: "Connected" },
   storeFallback: { ar: "المتجر", en: "Store" },
 };
@@ -735,8 +735,8 @@ function DelayPickerModal({ currentDelay, onClose, onConfirm, lang }: DelayPicke
           {lang === "ar" ? "تحديد وقت إرسال الأتمتة" : "Set Automation Delay"}
         </h3>
         <p className="text-xs text-gray-400 mb-4 text-center">
-          {lang === "ar" 
-            ? "سيتم إرسال الرسالة التلقائية للعميل بعد مرور الوقت المحدد من استلاف الطلب/التحديث." 
+          {lang === "ar"
+            ? "سيتم إرسال الرسالة التلقائية للعميل بعد مرور الوقت المحدد من استلاف الطلب/التحديث."
             : "The automated message will be sent after the specified delay once the event occurs."}
         </p>
 
@@ -1209,12 +1209,12 @@ function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         prev.map((a) =>
           a.type === type
             ? {
-                ...a,
-                isEnabled,
-                templateId,
-                template: d.automation?.template ?? null,
-                delayMinutes: d.automation?.delayMinutes ?? delayMinutes ?? 0,
-              }
+              ...a,
+              isEnabled,
+              templateId,
+              template: d.automation?.template ?? null,
+              delayMinutes: d.automation?.delayMinutes ?? delayMinutes ?? 0,
+            }
             : a
         )
       );

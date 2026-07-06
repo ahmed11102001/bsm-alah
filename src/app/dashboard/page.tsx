@@ -810,9 +810,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           <p className="text-gray-500 dark:text-gray-400 text-sm">{h.subtitle}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Button size="sm" variant="outline" onClick={onOpenSettings} className="gap-1.5 text-sm hidden sm:flex">
-            <Settings className="w-4 h-4" /> {h.settingsBtn}
-          </Button>
           <Button
             size="sm"
             className={campaignLimitActive

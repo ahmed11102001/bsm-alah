@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { saveWhatsAppSettings, syncWhatsAppTemplates } from "@/app/actions/whatsapp";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Copy, CheckCircle2, RefreshCw, ShoppingBag, Zap, Eye, EyeOff,
   Loader2, CheckCircle, ChevronDown,
@@ -49,12 +49,12 @@ interface CardVisual {
 }
 
 const CARD_VISUALS: CardVisual[] = [
-  { id: "whatsapp",    icon: <img src="/partners/meta.svg" alt="Meta" className="w-6 h-6 object-contain" />, accentColor: "text-green-600 dark:text-green-400",   bgLight: "bg-green-50",   bgDark: "dark:bg-green-900/20",   borderLight: "border-green-200",   borderDark: "dark:border-green-800"   },
-  { id: "shopify",     icon: <img src="/partners/shopify.svg" alt="Shopify" className="w-6 h-6 object-contain" />, accentColor: "text-blue-600 dark:text-blue-400",     bgLight: "bg-blue-50",    bgDark: "dark:bg-blue-900/20",    borderLight: "border-blue-200",    borderDark: "dark:border-blue-800"    },
-  { id: "easyorders",  icon: <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
-  { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-6 h-6 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50",  bgDark: "dark:bg-purple-900/20",  borderLight: "border-purple-200",  borderDark: "dark:border-purple-800"  },
-  { id: "webhook",     icon: <Webhook className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400",     bgLight: "bg-gray-50",    bgDark: "dark:bg-gray-900/20",    borderLight: "border-gray-200",    borderDark: "dark:border-gray-800"    },
-  { id: "claude",      icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50",  bgDark: "dark:bg-orange-900/20",  borderLight: "border-orange-200",  borderDark: "dark:border-orange-800"  },
+  { id: "whatsapp", icon: <img src="/partners/meta.svg" alt="Meta" className="w-6 h-6 object-contain" />, accentColor: "text-green-600 dark:text-green-400", bgLight: "bg-green-50", bgDark: "dark:bg-green-900/20", borderLight: "border-green-200", borderDark: "dark:border-green-800" },
+  { id: "shopify", icon: <img src="/partners/shopify.svg" alt="Shopify" className="w-6 h-6 object-contain" />, accentColor: "text-blue-600 dark:text-blue-400", bgLight: "bg-blue-50", bgDark: "dark:bg-blue-900/20", borderLight: "border-blue-200", borderDark: "dark:border-blue-800" },
+  { id: "easyorders", icon: <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
+  { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-6 h-6 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
+  { id: "webhook", icon: <Webhook className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400", bgLight: "bg-gray-50", bgDark: "dark:bg-gray-900/20", borderLight: "border-gray-200", borderDark: "dark:border-gray-800" },
+  { id: "claude", icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
 ];
 
 function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
@@ -284,10 +284,10 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
 
 // ─── Shopify Content — Webhook فقط، زي EasyOrders بالظبط ────────────────────
 interface ShopifyStatus {
-  connected:    boolean;
-  storeName?:   string;
+  connected: boolean;
+  storeName?: string;
   connectedAt?: string | null;
-  webhookUrl?:  string;
+  webhookUrl?: string;
 }
 
 function ShopifyContent({
@@ -295,19 +295,19 @@ function ShopifyContent({
   accessToken, setAccessToken,
   webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
 }: {
-  storeName:       string;
-  setStoreName:    (v: string) => void;
-  shopDomain:      string;
-  setShopDomain:   (v: string) => void;
-  accessToken:     string;
-  setAccessToken:  (v: string) => void;
-  webhookUrl:      string;
-  status:          ShopifyStatus | null;
-  onConnect:       () => void;
-  onRefresh:       () => void;
-  onSyncWebhooks:  () => void;
-  loading:         boolean;
-  syncing:         boolean;
+  storeName: string;
+  setStoreName: (v: string) => void;
+  shopDomain: string;
+  setShopDomain: (v: string) => void;
+  accessToken: string;
+  setAccessToken: (v: string) => void;
+  webhookUrl: string;
+  status: ShopifyStatus | null;
+  onConnect: () => void;
+  onRefresh: () => void;
+  onSyncWebhooks: () => void;
+  loading: boolean;
+  syncing: boolean;
 }) {
   const [showToken, setShowToken] = useState(false);
 
@@ -315,7 +315,7 @@ function ShopifyContent({
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
     const r = await fetch("/api/shopify/install", { method: "DELETE" });
     if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
-    else       toast.error("فشل فك الربط");
+    else toast.error("فشل فك الربط");
   }
 
   return (
@@ -515,10 +515,10 @@ function EasyOrdersContent({ apiKey, setApiKey, storeName, setStoreName, webhook
 
 // ─── WooCommerce Content ──────────────────────────────────────────────────────
 interface WooStatus {
-  connected:   boolean;
-  storeName?:  string;
+  connected: boolean;
+  storeName?: string;
   totalSynced?: number;
-  lastSyncAt?:  string | null;
+  lastSyncAt?: string | null;
 }
 
 function WooCommerceContent({ status, onRefresh, locale }: {
@@ -527,11 +527,11 @@ function WooCommerceContent({ status, onRefresh, locale }: {
   locale: string;
 }) {
   const [storeName, setStoreName] = useState("");
-  const [storeUrl,  setStoreUrl]  = useState("");
+  const [storeUrl, setStoreUrl] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [loading,   setLoading]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const [urlLoaded, setUrlLoaded] = useState(false);
-  const [error,     setError]     = useState("");
+  const [error, setError] = useState("");
 
   const loadWebhookUrl = useCallback(async () => {
     if (urlLoaded) return;
@@ -539,7 +539,7 @@ function WooCommerceContent({ status, onRefresh, locale }: {
       const r = await fetch("/api/woocommerce/URL");
       const d = await r.json();
       if (d.url) { setWebhookUrl(d.url); setUrlLoaded(true); }
-    } catch {}
+    } catch { }
   }, [urlLoaded]);
 
   useEffect(() => { loadWebhookUrl(); }, [loadWebhookUrl]);
@@ -550,23 +550,23 @@ function WooCommerceContent({ status, onRefresh, locale }: {
     setLoading(true);
     try {
       const r = await fetch("/api/woocommerce/connect", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ storeName: storeName.trim(), storeUrl: storeUrl.trim() }),
+        body: JSON.stringify({ storeName: storeName.trim(), storeUrl: storeUrl.trim() }),
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error ?? "فشل الحفظ"); return; }
       toast.success("✅ تم حفظ بيانات المتجر — افتح WooCommerce وأضف الـ Webhook URL");
       onRefresh();
     } catch { setError("خطأ في الاتصال"); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   }
 
   async function handleDisconnect() {
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
     const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
     if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
-    else       toast.error("فشل فك الربط");
+    else toast.error("فشل فك الربط");
   }
 
   const dateStr = status?.lastSyncAt
@@ -676,39 +676,39 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 
-  const [openCard,     setOpenCard]     = useState<CardId | null>(null);
-  const [isSyncing,    setIsSyncing]    = useState(false);
-  const [waLoading,    setWaLoading]    = useState(false);
-  const [waConnected,  setWaConnected]  = useState(false);
-  const [waData,       setWaData]       = useState<{ phoneNumberId?: string; wabaId?: string } | null>(null);
+  const [openCard, setOpenCard] = useState<CardId | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waConnected, setWaConnected] = useState(false);
+  const [waData, setWaData] = useState<{ phoneNumberId?: string; wabaId?: string } | null>(null);
   const [waJustConnected, setWaJustConnected] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [eoApiKey,     setEoApiKey]     = useState("");
-  const [eoStoreName,  setEoStoreName]  = useState("");
+  const [eoApiKey, setEoApiKey] = useState("");
+  const [eoStoreName, setEoStoreName] = useState("");
   const [eoWebhookUrl, setEoWebhookUrl] = useState("");
-  const [eoUrlLoaded,  setEoUrlLoaded]  = useState(false);
-  const [eoSyncing,    setEoSyncing]    = useState(false);
-  const [eoStatus,     setEoStatus]     = useState<{
+  const [eoUrlLoaded, setEoUrlLoaded] = useState(false);
+  const [eoSyncing, setEoSyncing] = useState(false);
+  const [eoStatus, setEoStatus] = useState<{
     connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string;
   } | null>(null);
-  const [shopifyStatus,    setShopifyStatus]    = useState<{
+  const [shopifyStatus, setShopifyStatus] = useState<{
     connected: boolean; storeName?: string; connectedAt?: string | null; webhookUrl?: string;
   } | null>(null);
-  const [shStoreName,      setShStoreName]      = useState("");
-  const [shShopDomain,     setShShopDomain]     = useState("");
-  const [shAccessToken,    setShAccessToken]    = useState("");
-  const [shWebhookUrl,     setShWebhookUrl]     = useState("");
-  const [shUrlLoaded,      setShUrlLoaded]      = useState(false);
-  const [shConnecting,     setShConnecting]     = useState(false);
-  const [shSyncing,        setShSyncing]        = useState(false);
-  const [wooStatus,    setWooStatus]    = useState<{
+  const [shStoreName, setShStoreName] = useState("");
+  const [shShopDomain, setShShopDomain] = useState("");
+  const [shAccessToken, setShAccessToken] = useState("");
+  const [shWebhookUrl, setShWebhookUrl] = useState("");
+  const [shUrlLoaded, setShUrlLoaded] = useState(false);
+  const [shConnecting, setShConnecting] = useState(false);
+  const [shSyncing, setShSyncing] = useState(false);
+  const [wooStatus, setWooStatus] = useState<{
     connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string | null;
   } | null>(null);
-  const [verifyToken,  setVerifyToken]  = useState("");
-  const [webhookUrl,   setWebhookUrl]   = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [claudeApiKey, setClaudeApiKey] = useState("");
   const [claudeLoading, setClaudeLoading] = useState(false);
-  const [claudeCopied,  setClaudeCopied]  = useState<"key"|"config"|null>(null);
+  const [claudeCopied, setClaudeCopied] = useState<"key" | "config" | null>(null);
   const [showStoreUpgrade, setShowStoreUpgrade] = useState(false);
   const [storeUpgradeTitle, setStoreUpgradeTitle] = useState("");
   const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
@@ -717,8 +717,8 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   const loadShopifyStatus = useCallback(async () => {
     try {
       // جيب الـ Webhook URL أول حاجة وحده عشان مش يأثرش على باقي الداتا لو فشل
-      const shUrlRes  = await fetch("/api/shopify/URL").catch(() => null);
-      const shUrl     = shUrlRes?.ok ? await shUrlRes.json() : {};
+      const shUrlRes = await fetch("/api/shopify/URL").catch(() => null);
+      const shUrl = shUrlRes?.ok ? await shUrlRes.json() : {};
       const webhookUrl = shUrl?.url ?? "";
 
       setShWebhookUrl(webhookUrl);
@@ -726,8 +726,8 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
 
       if (shUrl?.connected) {
         setShopifyStatus({
-          connected:   true,
-          storeName:   shUrl.storeName,
+          connected: true,
+          storeName: shUrl.storeName,
           connectedAt: shUrl.connectedAt,
           webhookUrl,
         });
@@ -742,10 +742,10 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
 
       if (d.woocommerce) {
         setWooStatus({
-          connected:   true,
-          storeName:   d.woocommerce.storeName,
+          connected: true,
+          storeName: d.woocommerce.storeName,
           totalSynced: d.woocommerce.totalSynced,
-          lastSyncAt:  d.woocommerce.lastSyncAt,
+          lastSyncAt: d.woocommerce.lastSyncAt,
         });
       } else {
         setWooStatus({ connected: false });
@@ -764,9 +764,9 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
   }, [initialData]);
 
   useEffect(() => {
-    fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
-    fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => {});
-    fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => {});
+    fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => { });
+    fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => { });
+    fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => { });
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
     return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
@@ -778,7 +778,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       const r = await fetch("/api/easy-orders/URL");
       const d = await r.json();
       if (d.url) { setEoWebhookUrl(d.url); setEoUrlLoaded(true); }
-    } catch {}
+    } catch { }
   }, [eoUrlLoaded]);
 
   const lockMessage = locale === "ar"
@@ -821,7 +821,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       if (result.success) toast.success(api.syncSuccess(result.count ?? 0));
       else toast.error(result.error || api.syncError);
     } catch { toast.error(api.syncError); }
-    finally  { setIsSyncing(false); }
+    finally { setIsSyncing(false); }
   };
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -831,7 +831,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     const wabaId = fd.get("wabaId") as string;
     try {
       await saveWhatsAppSettings({
-        accessToken:   fd.get("accessToken")   as string,
+        accessToken: fd.get("accessToken") as string,
         phoneNumberId,
         wabaId,
       });
@@ -849,7 +849,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
         setWaJustConnected(false);
       }, 2000);
     } catch { toast.error(api.cards.whatsapp.saveErr); }
-    finally  { setWaLoading(false); }
+    finally { setWaLoading(false); }
   };
 
   const handleDisconnectWhatsApp = async () => {
@@ -858,7 +858,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       : "You are about to disconnect Meta — running campaigns will be stopped. Sure?";
     if (!confirm(msg)) return;
     try {
-      const res  = await fetch("/api/settings/whatsapp", { method: "DELETE" });
+      const res = await fetch("/api/settings/whatsapp", { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error");
 
@@ -867,11 +867,11 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       window.dispatchEvent(new CustomEvent("refresh-dash"));
 
       const stopped = data.stoppedCampaigns ?? 0;
-      const queued  = data.stoppedQueue ?? 0;
-      const detail  = stopped > 0 || queued > 0
+      const queued = data.stoppedQueue ?? 0;
+      const detail = stopped > 0 || queued > 0
         ? (locale === "ar"
-            ? ` — تم إيقاف ${stopped} حملة و${queued} رسالة معلّقة`
-            : ` — stopped ${stopped} campaign(s) and ${queued} queued message(s)`)
+          ? ` — تم إيقاف ${stopped} حملة و${queued} رسالة معلّقة`
+          : ` — stopped ${stopped} campaign(s) and ${queued} queued message(s)`)
         : "";
 
       toast.success((locale === "ar" ? "تم فك الربط" : "Disconnected") + detail);
@@ -893,7 +893,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       toast.success(api.cards.easyorders.syncSuccess(d.synced, d.hasMore));
       setEoStatus({ connected: true, storeName: d.storeName, totalSynced: d.totalSynced, lastSyncAt: new Date().toISOString() });
     } catch { toast.error(api.cards.easyorders.syncErr); }
-    finally  { setEoSyncing(false); }
+    finally { setEoSyncing(false); }
   };
 
   const handleShConnect = async () => {
@@ -901,11 +901,11 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     setShConnecting(true);
     try {
       const r = await fetch("/api/shopify/install", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          storeName:   shStoreName.trim(),
-          shopDomain:  shShopDomain.trim()  || undefined,
+        body: JSON.stringify({
+          storeName: shStoreName.trim(),
+          shopDomain: shShopDomain.trim() || undefined,
           accessToken: shAccessToken.trim() || undefined,
         }),
       });
@@ -921,7 +921,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       setShStoreName(""); setShShopDomain(""); setShAccessToken("");
       loadShopifyStatus();
     } catch { toast.error("خطأ في الاتصال"); }
-    finally  { setShConnecting(false); }
+    finally { setShConnecting(false); }
   };
 
   const handleShSyncWebhooks = async () => {
@@ -953,14 +953,14 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     const text = type === "key"
       ? `Bearer ${claudeApiKey}`
       : JSON.stringify({
-          mcpServers: {
-            whatspro: {
-              command: "npx",
-              args: ["-y", "@modelcontextprotocol/server-fetch", `https://${host}/api/mcp`],
-              env: { AUTHORIZATION: `Bearer ${claudeApiKey}` },
-            },
+        mcpServers: {
+          whatspro: {
+            command: "npx",
+            args: ["-y", "@modelcontextprotocol/server-fetch", `https://${host}/api/mcp`],
+            env: { AUTHORIZATION: `Bearer ${claudeApiKey}` },
           },
-        }, null, 2);
+        },
+      }, null, 2);
     navigator.clipboard.writeText(text);
     setClaudeCopied(type);
     setTimeout(() => setClaudeCopied(null), 2000);
@@ -970,55 +970,55 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
     id: CardId; title: string; subtitle: string;
     steps: { title: string; desc: string }[];
   }[] = [
-    {
-      id: "whatsapp",
-      title:    api.cards.whatsapp.title,
-      subtitle: api.cards.whatsapp.subtitle,
-      steps:    api.cards.whatsapp.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-    },
-    {
-      id: "shopify",
-      title:    "ربط Shopify",
-      subtitle: "عن طريق Webhook مباشرة",
-      steps: [
-        { title: "احفظ اسم المتجر",  desc: "أدخل اسم متجرك واضغط حفظ عشان تاخد الـ Webhook URL" },
-        { title: "افتح Shopify",      desc: "Settings → Notifications → Webhooks → Create webhook" },
-        { title: "الصق الـ URL",      desc: "اختر الحدث (Order creation) وألصق الـ Webhook URL" },
-      ],
-    },
-    {
-      id: "easyorders",
-      title:    api.cards.easyorders.title,
-      subtitle: api.cards.easyorders.subtitle,
-      steps:    api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-    },
-    {
-      id: "woocommerce",
-      title:    "ربط WooCommerce",
-      subtitle: "عن طريق Webhook تلقائي",
-      steps: [
-        { title: "احفظ اسم المتجر",    desc: "أدخل اسم متجرك واضغط حفظ للحصول على الـ Webhook URL" },
-        { title: "أضف الـ Webhook",    desc: "WooCommerce → Settings → Advanced → Webhooks → Add webhook" },
-        { title: "اختر الحدث",         desc: "اختر 'Order created' + 'Order updated' وألصق الـ URL" },
-      ],
-    },
-    {
-      id: "webhook",
-      title:    api.cards.webhook.title,
-      subtitle: api.cards.webhook.subtitle,
-      steps:    api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-    },
-    {
-      id: "claude",
-      title:    "Claude AI",
-      subtitle: "اربط واتس برو بـ Claude وتحكم بكل حاجة من الشات",
-      steps: [
-        { title: "أنشئ API Key",        desc: "اضغط 'إنشاء مفتاح جديد' للحصول على مفتاحك الخاص" },
-        { title: "افتح Claude Desktop", desc: "حمّل التطبيق من claude.ai/download ثم افتح الإعدادات" },
-        { title: "الصق الـ Config",     desc: "انسخ إعدادات الربط والصقها في Settings → Developer → MCP" },
-      ],
-    },
-  ];
+      {
+        id: "whatsapp",
+        title: api.cards.whatsapp.title,
+        subtitle: api.cards.whatsapp.subtitle,
+        steps: api.cards.whatsapp.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+      },
+      {
+        id: "shopify",
+        title: "ربط Shopify",
+        subtitle: "عن طريق Webhook مباشرة",
+        steps: [
+          { title: "احفظ اسم المتجر", desc: "أدخل اسم متجرك واضغط حفظ عشان تاخد الـ Webhook URL" },
+          { title: "افتح Shopify", desc: "Settings → Notifications → Webhooks → Create webhook" },
+          { title: "الصق الـ URL", desc: "اختر الحدث (Order creation) وألصق الـ Webhook URL" },
+        ],
+      },
+      {
+        id: "easyorders",
+        title: api.cards.easyorders.title,
+        subtitle: api.cards.easyorders.subtitle,
+        steps: api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+      },
+      {
+        id: "woocommerce",
+        title: "ربط WooCommerce",
+        subtitle: "عن طريق Webhook تلقائي",
+        steps: [
+          { title: "احفظ اسم المتجر", desc: "أدخل اسم متجرك واضغط حفظ للحصول على الـ Webhook URL" },
+          { title: "أضف الـ Webhook", desc: "WooCommerce → Settings → Advanced → Webhooks → Add webhook" },
+          { title: "اختر الحدث", desc: "اختر 'Order created' + 'Order updated' وألصق الـ URL" },
+        ],
+      },
+      {
+        id: "webhook",
+        title: api.cards.webhook.title,
+        subtitle: api.cards.webhook.subtitle,
+        steps: api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+      },
+      {
+        id: "claude",
+        title: "Claude AI",
+        subtitle: "اربط واتس برو بـ Claude وتحكم بكل حاجة من الشات",
+        steps: [
+          { title: "أنشئ API Key", desc: "اضغط 'إنشاء مفتاح جديد' للحصول على مفتاحك الخاص" },
+          { title: "افتح Claude Desktop", desc: "حمّل التطبيق من claude.ai/download ثم افتح الإعدادات" },
+          { title: "الصق الـ Config", desc: "انسخ إعدادات الربط والصقها في Settings → Developer → MCP" },
+        ],
+      },
+    ];
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
@@ -1177,7 +1177,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
             {card.id === "shopify" && (
               <ShopifyContent
                 storeName={shStoreName}
-                shopDomain={shShopDomain}   setShopDomain={setShShopDomain}
+                shopDomain={shShopDomain} setShopDomain={setShShopDomain}
                 accessToken={shAccessToken} setAccessToken={setShAccessToken}
                 setStoreName={setShStoreName}
                 webhookUrl={shWebhookUrl}
@@ -1271,7 +1271,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
                     </label>
                     <div className="relative">
                       <pre className="text-xs font-mono bg-gray-950 text-green-400 rounded-xl p-4 overflow-x-auto leading-relaxed" dir="ltr">
-{`{
+                        {`{
   "mcpServers": {
     "whatspro": {
       "command": "npx",
@@ -1314,10 +1314,11 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
                   <p className="text-xs font-semibold text-orange-700 dark:text-orange-400 mb-2">بعد الربط — تقدر تقول لـ Claude:</p>
                   <ul className="space-y-1">
                     {[
-                      "\"اعملي تقرير عن آخر حملة\"",
+                      "\"اختار جمهور عشوائي واعملي حملة\"",
                       "\"فيه كام رسالة واردة؟\"",
                       "\"اعرضلي أفضل الحملات هذا الشهر\"",
                       "\"كام جهة اتصال عندي؟\"",
+                      "\"اعملي قالب تسويقي يشد العميل \"",
                     ].map((ex, i) => (
                       <li key={i} className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
                         <span className="text-orange-400">›</span> {ex}

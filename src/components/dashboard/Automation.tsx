@@ -13,9 +13,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -74,11 +74,11 @@ const DAYS_AR = [
 ];
 
 const subTabs: { id: AutoSubTab; ar: string; en: string; icon: any }[] = [
-  { id: "keywords",  ar: "الكلمات",    en: "Keywords",   icon: Key           },
-  { id: "welcome",   ar: "الترحيب",    en: "Welcome",    icon: Hand          },
-  { id: "noreply",   ar: "المتابعة",   en: "Follow-up",  icon: Clock         },
-  { id: "timebased", ar: "الزمنية",    en: "Scheduled",  icon: CalendarClock },
-  { id: "ab",        ar: "A/B اختبار", en: "A/B Test",   icon: FlaskConical  },
+  { id: "keywords", ar: "الكلمات", en: "Keywords", icon: Key },
+  { id: "welcome", ar: "الترحيب", en: "Welcome", icon: Hand },
+  { id: "noreply", ar: "المتابعة", en: "Follow-up", icon: Clock },
+  { id: "timebased", ar: "الزمنية", en: "Scheduled", icon: CalendarClock },
+  { id: "ab", ar: "A/B اختبار", en: "A/B Test", icon: FlaskConical },
 ];
 
 // ─── Small reusable pieces ────────────────────────────────────────────────────
@@ -199,23 +199,23 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true }: {
 export default function Automation({ planTier = "free" }: { planTier?: string }) {
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
-  const [activeTab,    setActiveTab]    = useState<"automation" | "ai">("automation");
+  const [activeTab, setActiveTab] = useState<"automation" | "ai">("automation");
   const [activeSubTab, setActiveSubTab] = useState<AutoSubTab>("keywords");
 
-  const [rules,     setRules]     = useState<AutomationRule[]>([]);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [audiences, setAudiences] = useState<Audience[]>([]);
-  const [agent,     setAgent]     = useState<AIAgent>({ ...EMPTY_AGENT });
-  const [loading,   setLoading]   = useState(true);
+  const [agent, setAgent] = useState<AIAgent>({ ...EMPTY_AGENT });
+  const [loading, setLoading] = useState(true);
 
   const [savingAgent, setSavingAgent] = useState(false);
-  const [agentDirty,  setAgentDirty]  = useState(false);
-  const [agentSaved,  setAgentSaved]  = useState(false);
+  const [agentDirty, setAgentDirty] = useState(false);
+  const [agentSaved, setAgentSaved] = useState(false);
 
   const [showDialog, setShowDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState<AutoSubTab>("keywords");
   const [editTarget, setEditTarget] = useState<AutomationRule | null>(null);
-  const [saving,     setSaving]     = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [ruleForm, setRuleForm] = useState({
     name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "",
@@ -253,41 +253,41 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     try {
       const [rulesRes, agentRes, templatesRes, audRes] = await Promise.all([
         fetch("/api/automation"), fetch("/api/ai-agent"),
-        fetch("/api/templates"),  fetch("/api/audiences"),
+        fetch("/api/templates"), fetch("/api/audiences"),
       ]);
-      const rulesData     = await rulesRes.json();
-      const agentData     = await agentRes.json();
+      const rulesData = await rulesRes.json();
+      const agentData = await agentRes.json();
       const templatesData = await templatesRes.json();
-      const audData       = await audRes.json();
+      const audData = await audRes.json();
 
       setRules(Array.isArray(rulesData) ? rulesData : []);
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAudiences(Array.isArray(audData.audiences) ? audData.audiences : []);
       setAgent({
-        isEnabled:    agentData.isEnabled    ?? false,
-        provider:     agentData.provider     ?? "gemini",
-        brandName:    agentData.brandName    ?? "",
+        isEnabled: agentData.isEnabled ?? false,
+        provider: agentData.provider ?? "gemini",
+        brandName: agentData.brandName ?? "",
         businessDesc: agentData.businessDesc ?? "",
         productsInfo: agentData.productsInfo ?? "",
-        pricingInfo:  agentData.pricingInfo  ?? "",
+        pricingInfo: agentData.pricingInfo ?? "",
         workingHours: agentData.workingHours ?? "",
-        tone:         agentData.tone         ?? "friendly",
+        tone: agentData.tone ?? "friendly",
         systemPrompt: agentData.systemPrompt ?? "",
         pauseMinutes: agentData.pauseMinutes ?? 10,
         elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
-        elevenLabsApiKey:  agentData.elevenLabsApiKey  ?? "",
+        elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
         elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
       });
     } catch { toast.error(tx(lang, "خطأ في تحميل البيانات", "Failed to load data")); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const kwRules      = rules.filter(r => r.triggerType === "KEYWORD");
+  const kwRules = rules.filter(r => r.triggerType === "KEYWORD");
   const welcomeRules = rules.filter(r => r.triggerType === "FIRST_MESSAGE");
   const noReplyRules = rules.filter(r => r.triggerType === "NO_REPLY");
-  const timeRules    = rules.filter(r => r.triggerType === "TIME_BASED");
+  const timeRules = rules.filter(r => r.triggerType === "TIME_BASED");
 
   // ─── Dialog open ──────────────────────────────────────────────────────────
   const handleMediaUpload = async (file: File) => {
@@ -315,7 +315,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     let days: string[] = []; let hour = "09"; let minute = "00";
     let tbAudienceId = ""; let tbMaxContacts = "500";
     if (rule.triggerType === "TIME_BASED" && rule.triggerValue) {
-      try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch {}
+      try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch { }
     }
     setRuleForm({
       name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "", replyMediaUrl: rule.replyMediaUrl ?? "",
@@ -335,7 +335,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
     if (dialogMode === "keywords") {
       if (!keyword.trim()) { toast.error(tx(lang, "الكلمة المفتاحية مطلوبة", "Keyword is required")); return; }
-      if (!reply.trim())   { toast.error(tx(lang, "نص الرد مطلوب", "Reply text is required")); return; }
+      if (!reply.trim()) { toast.error(tx(lang, "نص الرد مطلوب", "Reply text is required")); return; }
       triggerType = "KEYWORD"; triggerValue = keyword.trim();
       replyType = "TEXT"; replyContent = reply.trim();
     } else if (dialogMode === "welcome") {
@@ -348,8 +348,8 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       triggerType = "NO_REPLY"; triggerValue = String(d); replyType = "TEMPLATE"; tplId = templateId;
     } else if (dialogMode === "timebased") {
       if (days.length === 0) { toast.error(tx(lang, "اختر يوماً واحداً على الأقل", "Choose at least one day")); return; }
-      if (!tbAudienceId)     { toast.error(tx(lang, "اختر الجمهور المستهدف", "Choose target audience")); return; }
-      if (!templateId)       { toast.error(tx(lang, "اختر قالباً معتمداً", "Choose an approved template")); return; }
+      if (!tbAudienceId) { toast.error(tx(lang, "اختر الجمهور المستهدف", "Choose target audience")); return; }
+      if (!templateId) { toast.error(tx(lang, "اختر قالباً معتمداً", "Choose an approved template")); return; }
       const maxN = Number(tbMaxContacts);
       if (!maxN || maxN < 1) { toast.error(tx(lang, "عدد جهات الاتصال يجب أن يكون أكبر من 0", "Contacts count must be greater than 0")); return; }
       triggerType = "TIME_BASED";
@@ -360,13 +360,13 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     setSaving(true);
     try {
       const payload = { name: name.trim(), triggerType, triggerValue, replyType, replyContent, replyMediaUrl: ruleForm.replyMediaUrl?.trim() || null, templateId: tplId, humanKeywords: [], pauseOnReply: dialogMode !== "keywords" };
-      const method  = editTarget ? "PATCH" : "POST";
-      const body    = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
-      const r       = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body });
-      const d       = await r.json();
+      const method = editTarget ? "PATCH" : "POST";
+      const body = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
+      const r = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body });
+      const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       if (editTarget) { toast.success(tx(lang, "تم التعديل", "Updated")); setRules(prev => prev.map(x => x.id === editTarget.id ? d : x)); }
-      else             { toast.success(tx(lang, "تم الإضافة", "Added")); setRules(prev => [...prev, d]); }
+      else { toast.success(tx(lang, "تم الإضافة", "Added")); setRules(prev => [...prev, d]); }
       window.dispatchEvent(new Event("trigger-review-prompt"));
       setShowDialog(false);
     } catch (e: any) { toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed")); }
@@ -391,26 +391,26 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
   // ─── A/B launch ───────────────────────────────────────────────────────────
   const launchABTest = async () => {
     const { name, audienceId, sampleSize, splitRatio, varAName, varATemplate, varBName, varBTemplate } = abForm;
-    if (!name.trim())  { toast.error(tx(lang, "اسم الاختبار مطلوب", "Test name is required")); return; }
-    if (!audienceId)   { toast.error(tx(lang, "اختر جمهوراً", "Choose audience")); return; }
+    if (!name.trim()) { toast.error(tx(lang, "اسم الاختبار مطلوب", "Test name is required")); return; }
+    if (!audienceId) { toast.error(tx(lang, "اختر جمهوراً", "Choose audience")); return; }
     if (!varATemplate) { toast.error(tx(lang, "اختر قالب النسخة أ", "Choose variant A template")); return; }
     if (!varBTemplate) { toast.error(tx(lang, "اختر قالب النسخة ب", "Choose variant B template")); return; }
     if (varATemplate === varBTemplate) { toast.error(tx(lang, "يجب أن يكون لكل نسخة قالب مختلف", "Each variant must use a different template")); return; }
 
     setLaunchingAb(true);
     try {
-      const audRes  = await fetch(`/api/audiences?audienceId=${audienceId}&includeContacts=all`);
+      const audRes = await fetch(`/api/audiences?audienceId=${audienceId}&includeContacts=all`);
       const audData = await audRes.json();
       const contacts: { phone: string }[] = audData.audience?.contacts ?? [];
       if (contacts.length === 0) { toast.error(tx(lang, "الجمهور فارغ", "Audience is empty")); return; }
 
       const shuffled = [...contacts].sort(() => Math.random() - 0.5);
-      const n        = Math.min(Number(sampleSize), shuffled.length);
-      const sample   = shuffled.slice(0, n);
+      const n = Math.min(Number(sampleSize), shuffled.length);
+      const sample = shuffled.slice(0, n);
       const splitPct = Math.max(10, Math.min(90, Number(splitRatio)));
-      const aCount   = Math.round(sample.length * splitPct / 100);
-      const groupA   = sample.slice(0, aCount).map(c => c.phone);
-      const groupB   = sample.slice(aCount).map(c => c.phone);
+      const aCount = Math.round(sample.length * splitPct / 100);
+      const groupA = sample.slice(0, aCount).map(c => c.phone);
+      const groupB = sample.slice(aCount).map(c => c.phone);
 
       if (groupA.length === 0 || groupB.length === 0) { toast.error(tx(lang, "كل مجموعة تحتاج على الأقل جهة اتصال واحدة", "Each group needs at least one contact")); return; }
 
@@ -449,13 +449,13 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
   };
 
   const updateAgent = (patch: Partial<AIAgent>) => { setAgent(a => ({ ...a, ...patch })); setAgentDirty(true); setAgentSaved(false); };
-  const toggleDay   = (day: string) => setRuleForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
+  const toggleDay = (day: string) => setRuleForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
 
   // ─── Badge count ──────────────────────────────────────────────────────────
   const badgeCount: Record<AutoSubTab, number> = {
-    keywords:  kwRules.filter(r => r.isEnabled).length,
-    welcome:   welcomeRules.filter(r => r.isEnabled).length,
-    noreply:   noReplyRules.filter(r => r.isEnabled).length,
+    keywords: kwRules.filter(r => r.isEnabled).length,
+    welcome: welcomeRules.filter(r => r.isEnabled).length,
+    noreply: noReplyRules.filter(r => r.isEnabled).length,
     timebased: timeRules.filter(r => r.isEnabled).length,
     ab: 0,
   };
@@ -585,7 +585,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 if (p.maxContacts) schedLabel += lang === "ar"
                   ? ` (${p.maxContacts.toLocaleString()} كحد أقصى)`
                   : ` (${p.maxContacts.toLocaleString()} max)`;
-              } catch {}
+              } catch { }
               return (
                 <div key={rule.id} className={`bg-white dark:bg-gray-800 border rounded-2xl p-4 shadow-sm ${rule.isEnabled ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-700/50 opacity-60"}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -818,7 +818,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
                 <Key className="w-3.5 h-3.5 flex-shrink-0" />
-                {agent.provider === "gemini" ? "تأكد إن GEMINI_API_KEY موجود في Vercel" : "تأكد إن OPENAI_API_KEY موجود في Vercel"}
+
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
@@ -894,7 +894,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">ElevenLabs Voice Agent</h3>
-                  <p className="text-xs text-gray-400">{tx(lang, "كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا", "Each user can use their own ElevenLabs voice agent")}</p>
+                    <p className="text-xs text-gray-400">{tx(lang, "كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا", "Each user can use their own ElevenLabs voice agent")}</p>
                   </div>
                 </div>
                 <button onClick={() => updateAgent({ elevenLabsEnabled: !agent.elevenLabsEnabled })}
@@ -947,15 +947,15 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              {dialogMode === "keywords"  && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
-              {dialogMode === "welcome"   && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل رسالة الترحيب", "Edit welcome message") : tx(lang, "رسالة ترحيب جديدة", "New welcome message")}</>}
-              {dialogMode === "noreply"   && <><Clock className="w-5 h-5 text-amber-500" /> {editTarget ? tx(lang, "تعديل قاعدة المتابعة", "Edit follow-up rule") : tx(lang, "قاعدة متابعة جديدة", "New follow-up rule")}</>}
+              {dialogMode === "keywords" && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
+              {dialogMode === "welcome" && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل رسالة الترحيب", "Edit welcome message") : tx(lang, "رسالة ترحيب جديدة", "New welcome message")}</>}
+              {dialogMode === "noreply" && <><Clock className="w-5 h-5 text-amber-500" /> {editTarget ? tx(lang, "تعديل قاعدة المتابعة", "Edit follow-up rule") : tx(lang, "قاعدة متابعة جديدة", "New follow-up rule")}</>}
               {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? tx(lang, "تعديل الجدولة", "Edit schedule") : tx(lang, "جدولة زمنية جديدة", "New schedule")}</>}
             </DialogTitle>
             <DialogDescription>
-              {dialogMode === "keywords"  && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When customer sends this keyword, bot replies instantly")}
-              {dialogMode === "welcome"   && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on first customer message")}
-              {dialogMode === "noreply"   && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after no-reply days")}
+              {dialogMode === "keywords" && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When customer sends this keyword, bot replies instantly")}
+              {dialogMode === "welcome" && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on first customer message")}
+              {dialogMode === "noreply" && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after no-reply days")}
               {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends template at selected weekly time slots")}
             </DialogDescription>
           </DialogHeader>
