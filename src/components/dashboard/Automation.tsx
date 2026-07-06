@@ -51,7 +51,7 @@ interface AIAgent {
   isEnabled: boolean; provider: "gemini" | "openai";
   brandName: string; businessDesc: string; productsInfo: string;
   pricingInfo: string; workingHours: string; tone: string;
-  systemPrompt: string; pauseMinutes: number;
+  systemPrompt: string; languageMode: string; websiteUrl: string; websiteButtonText: string; pauseMinutes: number;
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
@@ -61,7 +61,7 @@ const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
 const EMPTY_AGENT: AIAgent = {
   isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
-  systemPrompt: "", pauseMinutes: 10,
+  systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
 };
 type AutoSubTab = "keywords" | "welcome" | "noreply" | "timebased" | "ab";
@@ -273,6 +273,9 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
         workingHours: agentData.workingHours ?? "",
         tone: agentData.tone ?? "friendly",
         systemPrompt: agentData.systemPrompt ?? "",
+        languageMode: agentData.languageMode ?? "auto",
+        websiteUrl: agentData.websiteUrl ?? "",
+        websiteButtonText: agentData.websiteButtonText ?? "",
         pauseMinutes: agentData.pauseMinutes ?? 10,
         elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
         elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
@@ -874,6 +877,27 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                 <div>
                   <Label className="text-sm mb-1.5 block">System Prompt إضافي (اختياري)</Label>
                   <Textarea value={agent.systemPrompt} onChange={e => updateAgent({ systemPrompt: e.target.value })} placeholder="مثال: لا تذكر المنافسين. لو سألوا عن التوصيل الدولي قول مش متاح." className="min-h-[80px] resize-none text-sm" dir="rtl" />
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <Label className="text-sm mb-1.5 block">وضع اللغة</Label>
+                    <Select value={agent.languageMode} onValueChange={v => updateAgent({ languageMode: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">تلقائي (حسب لغة العميل)</SelectItem>
+                        <SelectItem value="ar">دايمًا عربي</SelectItem>
+                        <SelectItem value="en">English always</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">رابط الموقع (اختياري)</Label>
+                    <Input value={agent.websiteUrl} onChange={e => updateAgent({ websiteUrl: e.target.value })} placeholder="https://example.com" dir="ltr" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">نص الزرار (اختياري)</Label>
+                  <Input value={agent.websiteButtonText} onChange={e => updateAgent({ websiteButtonText: e.target.value })} placeholder="تصفح المنتجات" />
                 </div>
               </div>
             </div>

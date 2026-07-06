@@ -70,6 +70,8 @@ const t: Record<Lang, Record<string, string>> = {
     templateLabel: "قالب رسمي",
     today_label: "اليوم", yesterday: "أمس",
     reactions: "ردود الفعل", close: "إغلاق",
+    resumeAi: "استئناف الرد الآلي", resumeAiSuccess: "تم استئناف الرد الآلي",
+    handoffWarning: "المحادثة تنتظر تدخل بشري", handoffActive: "التاجر رد يدويًا — الرد الآلي متوقف مؤقتًا",
   },
   en: {
     search: "Search by name or number",
@@ -115,6 +117,8 @@ const t: Record<Lang, Record<string, string>> = {
     templateLabel: "Official template",
     today_label: "Today", yesterday: "Yesterday",
     reactions: "Reactions", close: "Close",
+    resumeAi: "Resume AI reply", resumeAiSuccess: "AI reply resumed",
+    handoffWarning: "Conversation is waiting for human support", handoffActive: "The merchant replied manually — AI reply is paused",
   },
 };
 
@@ -134,6 +138,9 @@ interface Conversation {
   isArchived: boolean;
   voiceAgentEnabled?: boolean;
   textAiEnabled?: boolean;
+  aiStatus?: string;
+  handoffReason?: string | null;
+  handoffAt?: string | null;
 }
 interface Message {
   id: string; content: string | null; type: string;
@@ -737,6 +744,24 @@ export default function ChatPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const resumeAi = async (contactId: string) => {
+    try {
+      const r = await fetch("/api/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resumeAi", contactId }),
+      });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      setConvs(prev => prev.map(c =>
+        c.contact.id === contactId ? { ...c, aiStatus: "AUTO", handoffReason: null, handoffAt: null } : c
+      ));
+      if (selected?.contact.id === contactId) {
+        setSelected(prev => prev ? { ...prev, aiStatus: "AUTO", handoffReason: null, handoffAt: null } : prev);
+      }
+      toast.success(t[lang].resumeAiSuccess);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   // فلترة فورية محلية باستخدام searchInput (مش search المؤجلة) — بتدي إحساس
   // فوري للمستخدم وهو بيكتب لحد ما نتيجة البحث الفعلية من السيرفر توصل
   // (بعد الـ debounce). البحث الحقيقي ضد كل قاعدة البيانات بيحصل في fetchConvs.
@@ -983,6 +1008,20 @@ export default function ChatPage() {
                 </DropdownMenu>
               </div>
             </header>
+
+            {selected.aiStatus && selected.aiStatus !== "AUTO" && (
+              <div className={`px-3 py-2 border-b ${selected.aiStatus === "NEEDS_HUMAN" ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300" : "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm">
+                    <p className="font-semibold">{selected.aiStatus === "NEEDS_HUMAN" ? t[lang].handoffWarning : t[lang].handoffActive}</p>
+                    {selected.handoffReason && <p className="text-xs opacity-80">{selected.handoffReason}</p>}
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8" onClick={() => resumeAi(selected.contact.id)}>
+                    {t[lang].resumeAi}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Messages area */}
             <div

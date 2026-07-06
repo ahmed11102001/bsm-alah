@@ -257,6 +257,28 @@ export async function notifySubscriptionSuccess(userId: string, planName: string
   });
 }
 
+export async function notifyAiHandoffNeeded(
+  userId: string,
+  contactName: string,
+  contactId: string,
+  reason: string | null,
+  priority: "normal" | "high" = "normal",
+) {
+  const priorityTag = priority === "high" ? "🔴 عاجل — " : "";
+
+  await createNotification({
+    userId,
+    type: NotificationType.AI_HANDOFF_NEEDED,
+    title: bi(`${priorityTag}🤖 AI طلب تحويل المحادثة`, `${priorityTag}🤖 AI requested handoff`),
+    body: bi(
+      `العميل: ${contactName}${reason ? `\nالسبب: ${reason}` : ""}`,
+      `Customer: ${contactName}${reason ? `\nReason: ${reason}` : ""}`,
+    ),
+    link: `/dashboard?section=chat&contactId=${contactId}`,
+    meta: { contactId, reason, priority },
+  });
+}
+
 export async function notifyOrderConfirmed(userId: string, orderNumber: string, customerPhone: string) {
   await createNotification({
     userId,
@@ -281,4 +303,4 @@ export async function notifyOrderCancelled(userId: string, orderNumber: string, 
     ),
     link: "/dashboard?section=store",
   });
-}
+}

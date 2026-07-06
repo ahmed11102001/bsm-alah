@@ -98,8 +98,16 @@ export const NotificationType = {
   SUBSCRIPTION_SUCCESS:    "SUBSCRIPTION_SUCCESS",
   ORDER_CONFIRMED:         "ORDER_CONFIRMED",
   ORDER_CANCELLED:         "ORDER_CANCELLED",
+  AI_HANDOFF_NEEDED:       "AI_HANDOFF_NEEDED",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
+export const ConversationStatus = {
+  AUTO: "AUTO",
+  NEEDS_HUMAN: "NEEDS_HUMAN",
+  HUMAN_ACTIVE: "HUMAN_ACTIVE",
+} as const;
+export type ConversationStatus = (typeof ConversationStatus)[keyof typeof ConversationStatus];
 
 export const StoreType = {
   shopify:     "shopify",

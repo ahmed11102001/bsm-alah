@@ -76,7 +76,8 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       id: true, name: true, phone: true,
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
-      voiceAgentEnabled: true, textAiEnabled: true, lastAiRepliedAt: true,
+      voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true,
+      handoffReason: true, handoffAt: true, lastAiRepliedAt: true,
       // آخر رسالة فعلية (inbound أو outbound) — للـ preview الصح
       messages: {
         take: 1,
@@ -132,6 +133,9 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     isArchived: c.isArchived,
     voiceAgentEnabled: (c as any).voiceAgentEnabled ?? false,
     textAiEnabled: (c as any).textAiEnabled ?? true,
+    aiStatus: (c as any).aiStatus ?? "AUTO",
+    handoffReason: (c as any).handoffReason ?? null,
+    handoffAt: (c as any).handoffAt ?? null,
   }));
 
   return NextResponse.json({ conversations });
@@ -287,6 +291,14 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  if (action === "resumeAi") {
+    await prisma.contact.update({
+      where: { id: contactId, userId },
+      data: { aiStatus: "AUTO", handoffReason: null, handoffAt: null },
+    });
+    return NextResponse.json({ success: true });
+  }
+
   // ── React to message ───────────────────────────────────────────────────────
   if (action === "react") {
     if (!messageId || !emoji)
@@ -406,6 +418,13 @@ async function sendMessage(
       where: { id: contactId },
       data: { lastMessageAt: new Date() },
     });
+
+    if (contact.aiStatus === "NEEDS_HUMAN") {
+      await tx.contact.update({
+        where: { id: contactId },
+        data: { aiStatus: "HUMAN_ACTIVE" },
+      });
+    }
 
     return { msg, queueId: queueItem.id };
   });

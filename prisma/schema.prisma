@@ -212,6 +212,9 @@ model Contact {
   updatedAt         DateTime     @updatedAt
   voiceAgentEnabled Boolean      @default(false)
   textAiEnabled     Boolean      @default(true)
+  aiStatus          ConversationStatus @default(AUTO)
+  handoffReason     String?
+  handoffAt         DateTime?
   lastAiRepliedAt   DateTime?
   audience          Audience?    @relation(fields: [audienceId], references: [id])
   user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -446,6 +449,9 @@ model AIAgent {
   workingHours      String?
   tone              String     @default("friendly")
   systemPrompt      String?
+  languageMode      String     @default("auto")
+  websiteUrl        String?
+  websiteButtonText String?
   pauseMinutes      Int        @default(10)
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
@@ -686,6 +692,13 @@ enum NotificationType {
   SUBSCRIPTION_SUCCESS
   ORDER_CONFIRMED
   ORDER_CANCELLED
+  AI_HANDOFF_NEEDED
+}
+
+enum ConversationStatus {
+  AUTO
+  NEEDS_HUMAN
+  HUMAN_ACTIVE
 }
 
 enum StoreType {

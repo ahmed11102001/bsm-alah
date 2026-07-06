@@ -19,6 +19,9 @@ export interface AgentContext {
   workingHours?: string | null;
   tone?: string | null;
   systemPrompt?: string | null;
+  languageMode?: string | null;
+  websiteUrl?: string | null;
+  websiteButtonText?: string | null;
   userId?: string | null;
 }
 
@@ -33,12 +36,19 @@ export interface AgentResult {
   ok: boolean;
   reply?: string;
   action?: "handoff" | null;
+  reason?: string | null;
+  priority?: "normal" | "high";
   error?: string;
   offTopic?: boolean;
   tokensUsed?: number;   // ← إجمالي التوكن المستهلكة (input + output)
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
+
+function withUtm(url: string): string {
+  const utm = "utm_source=whatsapp_ai&utm_medium=chat&utm_campaign=ai_assistant";
+  return url.includes("?") ? `${url}&${utm}` : `${url}?${utm}`;
+}
 
 function buildSystemPrompt(ctx: AgentContext): string {
   const toneMap: Record<string, string> = {
@@ -71,6 +81,26 @@ function buildSystemPrompt(ctx: AgentContext): string {
   if (ctx.systemPrompt?.trim())
     lines.push(`── تعليمات إضافية ──\n${ctx.systemPrompt.trim()}`, "");
 
+  const languageInstruction =
+    ctx.languageMode === "ar"
+      ? "ردّ دائمًا بالعربية، بغض النظر عن لغة رسالة العميل."
+      : ctx.languageMode === "en"
+      ? "Reply only in English, regardless of the customer's message language."
+      : "ردّ بنفس لغة آخر رسالة من العميل (عربي أو إنجليزي) — حتى لو باقي الإعدادات هنا مكتوبة عربي.";
+
+  lines.push(`── اللغة ──`, languageInstruction, "");
+
+  if (ctx.websiteUrl?.trim()) {
+    const websiteUrl = withUtm(ctx.websiteUrl.trim());
+    lines.push(
+      `── رابط الموقع ──`,
+      `لو العميل عايز يتصفح المنتجات أو يشتري، ابعتله الرابط ده: ${websiteUrl}`,
+      "استخدم الرابط ده بس لما يكون مناسب فعليًا للسياق (العميل قال عايز يشوف/يشتري) — متحطوش في كل رسالة.",
+      ctx.websiteButtonText?.trim() ? `ممكن تقول للعميل يدوس "${ctx.websiteButtonText.trim()}" أو حاجة شبهها.` : "",
+      "",
+    );
+  }
+
   lines.push(
     "── قواعد الرد ──",
     `- تكلم بأسلوب ${toneLabel}.`,
@@ -85,12 +115,18 @@ function buildSystemPrompt(ctx: AgentContext): string {
     "ردّ دايماً بـ JSON صحيح فقط، بدون أي نص خارجه:",
     `{`,
     `  "reply": "نص الرد للعميل",`,
-    `  "action": null`,
+    `  "action": null,`,
+    `  "reason": null,`,
+    `  "priority": null`,
     `}`,
     "",
     `قيم action المتاحة:`,
-    `  null     → رد عادي`,
-    `  "handoff" → حوّل للبشر (استخدمه لو الموضوع تقيل أو العميل محتاج متخصص)`,
+    `  null      → رد عادي`,
+    `  "handoff" → حوّل للبشر (استخدمه لو الموضوع تقيل أو العميل محتاج متخصص أو طلب استرجاع/شكوى)`,
+    "",
+    `لو action = "handoff"، لازم تملى:`,
+    `  "reason": سبب مختصر وواضح بالعربي أو الإنجليزي (مثال: "العميل طلب استرجاع مبلغ")`,
+    `  "priority": "high" لو عاجل (شكوى/غضب واضح)، أو "normal" غير كده`,
   );
 
   return lines.join("\n");
@@ -255,11 +291,20 @@ function parseAgentJSON(raw: string): AgentResult {
     const reply =
       typeof parsed.reply === "string" ? parsed.reply.trim() : null;
     const action = parsed.action === "handoff" ? "handoff" : null;
+    const reason = typeof parsed.reason === "string" ? parsed.reason.trim() : null;
+    const priority = parsed.priority === "high" ? "high" : "normal";
 
     if (!reply && !offTopic)
       return { ok: false, error: "reply field missing in AI response" };
 
-    return { ok: true, reply: reply ?? "", action, offTopic: offTopic || undefined };
+    return {
+      ok: true,
+      reply: reply ?? "",
+      action,
+      reason,
+      priority,
+      offTopic: offTopic || undefined,
+    };
   } catch {
     // لو الـ AI فشل يرجع JSON صح، نعامل الـ raw كـ reply عادي
     const fallback = raw.trim();

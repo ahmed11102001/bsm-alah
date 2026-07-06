@@ -70,6 +70,7 @@ vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 vi.mock("@/lib/notifications", () => ({
   notifyNewMessage:       vi.fn(),
   notifyPlanLimitReached: vi.fn(),
+  notifyAiHandoffNeeded:  vi.fn(),
   createNotification:     vi.fn(),
 }));
 vi.mock("@/lib/cloudinary",   () => ({ downloadFromMetaAndUpload: vi.fn() }));
@@ -194,6 +195,31 @@ describe("POST /webhook — HMAC Signature Verification", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+describe("POST /webhook — AI handoff pause", () => {
+  it("يوقف الرد التلقائي لو كانت المحادثة في حالة NEEDS_HUMAN", async () => {
+    mockPrisma.contact.findFirst.mockResolvedValue({ id: "contact_1", voiceAgentEnabled: false, textAiEnabled: true, aiStatus: "NEEDS_HUMAN" });
+    const { getAIReply } = await import("@/lib/ai-agent");
+
+    const payload = {
+      object: "whatsapp_business_account",
+      entry: [{
+        id: "waba_1",
+        changes: [{ value: { metadata: { phone_number_id: "phone_1" }, messages: [{
+          id: "wamid.1",
+          from: "201012345678",
+          timestamp: "1700000000",
+          type: "text",
+          text: { body: "أريد استرجاع الطلب" },
+        }] } }],
+      }],
+    };
+
+    const res = await POST(makeRequest(payload) as any);
+    expect(res.status).toBe(200);
+    expect(getAIReply).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /webhook — Status Updates (Delivered / Read)", () => {
   function makeStatusPayload(waStatus: string, msgId = "wamid.AAA") {
     return {

@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
-import { notifyNewMessage } from "@/lib/notifications";
+import { notifyNewMessage, notifyAiHandoffNeeded } from "@/lib/notifications";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
@@ -451,7 +451,7 @@ async function handleAutomation(ctx: {
   // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
   const contactRecord = await prisma.contact.findFirst({
     where: { phone: from, userId },
-    select: { id: true, voiceAgentEnabled: true, textAiEnabled: true },
+    select: { id: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
   });
 
   if (contactRecord?.voiceAgentEnabled) {
@@ -469,6 +469,7 @@ async function handleAutomation(ctx: {
         isEnabled: true, provider: true,
         brandName: true, businessDesc: true, productsInfo: true,
         pricingInfo: true, workingHours: true, tone: true, systemPrompt: true,
+        languageMode: true, websiteUrl: true, websiteButtonText: true,
       },
     });
 
@@ -510,6 +511,9 @@ async function handleAutomation(ctx: {
           workingHours: agentSettings.workingHours,
           tone: agentSettings.tone,
           systemPrompt: agentSettings.systemPrompt,
+          languageMode: agentSettings.languageMode,
+          websiteUrl: agentSettings.websiteUrl,
+          websiteButtonText: agentSettings.websiteButtonText,
         },
         agentSettings.provider as "gemini" | "openai",
       );
@@ -517,6 +521,24 @@ async function handleAutomation(ctx: {
       if (!aiResult.ok || !aiResult.reply?.trim()) {
         console.error("[VOICE-AGENT] AI text generation failed:", aiResult.error);
         return;
+      }
+
+      if (aiResult.action === "handoff" && contactRecord) {
+        await prisma.contact.update({
+          where: { id: contactRecord.id },
+          data: {
+            aiStatus: "NEEDS_HUMAN",
+            handoffReason: aiResult.reason ?? "الـ AI طلب تحويل المحادثة لإنسان",
+            handoffAt: new Date(),
+          },
+        });
+        await notifyAiHandoffNeeded(
+          userId,
+          contactRecord.name ?? from,
+          contactRecord.id,
+          aiResult.reason ?? null,
+          aiResult.priority ?? "normal",
+        );
       }
 
       // سجّل استهلاك التوكن
@@ -675,6 +697,7 @@ async function handleAutomation(ctx: {
       brandName: true, businessDesc: true, productsInfo: true,
       pricingInfo: true, workingHours: true, tone: true,
       systemPrompt: true, pauseMinutes: true,
+      languageMode: true, websiteUrl: true, websiteButtonText: true,
     },
   });
 
@@ -683,6 +706,11 @@ async function handleAutomation(ctx: {
   // -- 2a: Check if Text AI is specifically disabled for this contact --
   if (contactRecord?.textAiEnabled === false) {
     console.log(`[AI-AGENT] Paused — text AI is disabled for ${from}`);
+    return;
+  }
+
+  if (contactRecord?.aiStatus && contactRecord.aiStatus !== "AUTO") {
+    console.log(`[AI-AGENT] Paused — conversation needs human (status: ${contactRecord.aiStatus})`);
     return;
   }
 
@@ -744,6 +772,9 @@ async function handleAutomation(ctx: {
       workingHours: agent.workingHours,
       tone: agent.tone,
       systemPrompt: agent.systemPrompt,
+      languageMode: agent.languageMode,
+      websiteUrl: agent.websiteUrl,
+      websiteButtonText: agent.websiteButtonText,
     },
     agent.provider as "gemini" | "openai",
   );
@@ -759,6 +790,24 @@ async function handleAutomation(ctx: {
   }
 
   if (!result.reply?.trim()) return;
+
+  if (result.action === "handoff" && contactRecord) {
+    await prisma.contact.update({
+      where: { id: contactRecord.id },
+      data: {
+        aiStatus: "NEEDS_HUMAN",
+        handoffReason: result.reason ?? "الـ AI طلب تحويل المحادثة لإنسان",
+        handoffAt: new Date(),
+      },
+    });
+    await notifyAiHandoffNeeded(
+      userId,
+      contactRecord.name ?? from,
+      contactRecord.id,
+      result.reason ?? null,
+      result.priority ?? "normal",
+    );
+  }
 
   // ── سجّل استهلاك التوكن ──
   if (result.tokensUsed) {
