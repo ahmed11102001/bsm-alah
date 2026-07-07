@@ -172,12 +172,20 @@ export async function proxy(req: NextRequest) {
   // ═══════════════════════════════════════════════════════════════════════
   const isDashboard  = pathname.startsWith("/dashboard");
   const isOnboarding = pathname.startsWith("/onboarding");
+  const isCheckout   = pathname.startsWith("/checkout");
 
-  if (isDashboard || isOnboarding) {
+  if (isDashboard || isOnboarding || isCheckout) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     if (!token && isDashboard) {
       return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce);
+    }
+
+    if (!token && isCheckout) {
+      const url = new URL("/", req.url);
+      url.searchParams.set("openLogin", "1");
+      url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
+      return applyHeaders(NextResponse.redirect(url), nonce);
     }
 
     if (token) {

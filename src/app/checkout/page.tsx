@@ -35,7 +35,21 @@ function CheckoutContent() {
   const params = useSearchParams();
   const router = useRouter();
   const { track } = usePixel();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  // ── UI state ──
+  const [coupon, setCoupon] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [couponData, setCouponData] = useState<{
+    code: string; discountType: string; discountValue: number;
+  } | null>(null);
+  const [showFeatures, setShowFeatures] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [cardFocused, setCardFocused] = useState(false);
+  const [payError, setPayError] = useState("");
 
   // ── استنتج نوع الـ checkout من الـ URL ──
   const rawPackageId = params.get("packageId");
@@ -69,19 +83,6 @@ function CheckoutContent() {
     ? Math.round(plan.monthly * cycle.discount * cycle.months)
     : 0;
 
-  // ── UI state ──
-  const [coupon, setCoupon] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponError, setCouponError] = useState("");
-  const [validatingCoupon, setValidatingCoupon] = useState(false);
-  const [couponData, setCouponData] = useState<{
-    code: string; discountType: string; discountValue: number;
-  } | null>(null);
-  const [showFeatures, setShowFeatures] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [cardFocused, setCardFocused] = useState(false);
-
   useEffect(() => {
     track("InitiateCheckout", {
       content_name: mcpAddonPkg ? mcpAddonPkg.label : tokenPkg ? tokenPkg.label : plan.name,
@@ -93,6 +94,14 @@ function CheckoutContent() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+      </div>
+    );
+  }
 
   const handleCardFocus = () => {
     if (cardFocused) return;
@@ -138,8 +147,6 @@ function CheckoutContent() {
     : 0;
   const finalTotal = totalDue - couponDiscount;
 
-  const [payError, setPayError] = useState("");
-
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaying(true);
@@ -167,6 +174,12 @@ function CheckoutContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+
+    if (res.status === 401) {
+      const callbackUrl = window.location.pathname + window.location.search;
+      router.replace(`/?openLogin=1&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
 
     const data = await res.json().catch(() => ({}));
 
