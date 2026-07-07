@@ -548,6 +548,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
             )}
 
           </AnimatePresence>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
