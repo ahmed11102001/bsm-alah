@@ -425,7 +425,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                         onChange={e => setTermsAccepted(e.target.checked)}
                         className="mt-1 h-4 w-4 rounded border-gray-400 bg-black text-[#25D366] focus:ring-[#25D366]" />
                       <span className="text-sm leading-relaxed text-gray-200">
-                        أوافق على
+                         أوافق على
                         <a href="/terms" target="_blank" rel="noreferrer"
                           className="ml-1 text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
                           شروط الاستخدام
