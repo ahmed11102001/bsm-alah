@@ -9,31 +9,31 @@ import {
 import { t, tr, type Lang } from "@/lib/translations";
 
 const BASIC_META = [
-  { icon: Upload,    color: "bg-blue-500",   glow: "rgba(59,130,246,0.2)",  ring: "ring-blue-100"   },
-  { icon: FileText,  color: "bg-[#25D366]",  glow: "rgba(37,211,102,0.2)", ring: "ring-green-100"  },
-  { icon: Rocket,    color: "bg-purple-500", glow: "rgba(168,85,247,0.2)", ring: "ring-purple-100" },
+  { icon: Upload, color: "bg-blue-500", glow: "rgba(59,130,246,0.2)", ring: "ring-blue-100" },
+  { icon: FileText, color: "bg-[#25D366]", glow: "rgba(37,211,102,0.2)", ring: "ring-green-100" },
+  { icon: Rocket, color: "bg-purple-500", glow: "rgba(168,85,247,0.2)", ring: "ring-purple-100" },
   { icon: BarChart3, color: "bg-orange-500", glow: "rgba(249,115,22,0.2)", ring: "ring-orange-100" },
 ];
 
 const AI_META = [
-  { icon: Store,      color: "bg-blue-500",   glow: "rgba(59,130,246,0.2)",  ring: "ring-blue-100"   },
-  { icon: Bot,        color: "bg-purple-500", glow: "rgba(168,85,247,0.2)", ring: "ring-purple-100" },
-  { icon: Zap,        color: "bg-[#25D366]",  glow: "rgba(37,211,102,0.2)", ring: "ring-green-100"  },
+  { icon: Store, color: "bg-blue-500", glow: "rgba(59,130,246,0.2)", ring: "ring-blue-100" },
+  { icon: Bot, color: "bg-purple-500", glow: "rgba(168,85,247,0.2)", ring: "ring-purple-100" },
+  { icon: Zap, color: "bg-[#25D366]", glow: "rgba(37,211,102,0.2)", ring: "ring-green-100" },
   { icon: TrendingUp, color: "bg-orange-500", glow: "rgba(249,115,22,0.2)", ring: "ring-orange-100" },
 ];
 
 const AI_STEPS = {
   ar: [
-    { time: "٥ دقائق", title: "اربط متجرك",              what: "Shopify أو EasyOrders",   desc: "اربط متجرك بخطوات بسيطة. كل أوردر جديد هيوصل لواتس برو تلقائياً من اللحظة دي." },
-    { time: "دقيقتين", title: "فعّل الـ AI والأتمتة",   what: "بدون كودينج خالص",       desc: "حدد رسائل التأكيد والشحن والمتابعة. وفعّل الـ AI Sales Assistant على Catalog منتجاتك." },
-    { time: "فوري",    title: "الـ AI يبدأ يبيع",        what: "٢٤/٧ بدون تدخل",         desc: "الـ AI بيرد على العملاء، بيقترح منتجات، ويتابع السلة المتروكة — وأنت شايل بالك." },
-    { time: "مستمر",   title: "تابع Revenue Attribution", what: "كل حملة = كم أوردر؟",   desc: "شوف بالظبط كل حملة واتساب أنتجت كام أوردر وكام إيراد — وحسّن على أساس بيانات حقيقية." },
+    { time: "٥ دقائق", title: "اربط متجرك", what: "Shopify أو EasyOrders", desc: "اربط متجرك بخطوات بسيطة. كل أوردر جديد هيوصل وني تلقائياً من اللحظة دي." },
+    { time: "دقيقتين", title: "فعّل الـ AI والأتمتة", what: "بدون كودينج خالص", desc: "حدد رسائل التأكيد والشحن والمتابعة. وفعّل الـ AI Sales Assistant على Catalog منتجاتك." },
+    { time: "فوري", title: "الـ AI يبدأ يبيع", what: "٢٤/٧ بدون تدخل", desc: "الـ AI بيرد على العملاء، بيقترح منتجات، ويتابع السلة المتروكة — وأنت شايل بالك." },
+    { time: "مستمر", title: "تابع Revenue Attribution", what: "كل حملة = كم أوردر؟", desc: "شوف بالظبط كل حملة واتساب أنتجت كام أوردر وكام إيراد — وحسّن على أساس بيانات حقيقية." },
   ],
   en: [
-    { time: "5 min",     title: "Connect your store",       what: "Shopify or EasyOrders",         desc: "Connect your store in a few steps. Every new order will reach WhatsPro automatically." },
-    { time: "2 min",     title: "Enable AI & Automation",   what: "Zero coding required",          desc: "Set up confirmation, shipping, and follow-up messages. Enable the AI Sales Assistant on your catalog." },
-    { time: "Instant",   title: "AI starts selling",        what: "24/7, hands-free",              desc: "The AI replies to customers, suggests products, and follows up on abandoned carts." },
-    { time: "Ongoing",   title: "Track Revenue Attribution", what: "Campaign → orders → revenue", desc: "See exactly how many orders each WhatsApp campaign generated — optimize based on real data." },
+    { time: "5 min", title: "Connect your store", what: "Shopify or EasyOrders", desc: "Connect your store in a few steps. Every new order will reach WhatsPro automatically." },
+    { time: "2 min", title: "Enable AI & Automation", what: "Zero coding required", desc: "Set up confirmation, shipping, and follow-up messages. Enable the AI Sales Assistant on your catalog." },
+    { time: "Instant", title: "AI starts selling", what: "24/7, hands-free", desc: "The AI replies to customers, suggests products, and follows up on abandoned carts." },
+    { time: "Ongoing", title: "Track Revenue Attribution", what: "Campaign → orders → revenue", desc: "See exactly how many orders each WhatsApp campaign generated — optimize based on real data." },
   ],
 };
 
@@ -42,14 +42,14 @@ const NUMS = ["01", "02", "03", "04"];
 interface HowItWorksProps { lang: Lang; onLoginClick?: () => void; }
 
 export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
-  const isAr      = lang === "ar";
+  const isAr = lang === "ar";
   const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
 
-  const [tab,        setTab]        = useState<"basic" | "ai">("basic");
-  const [animating,  setAnimating]  = useState(false);
-  const [displayed,  setDisplayed]  = useState<"basic" | "ai">("basic");
-  const [visible,    setVisible]    = useState(false);
-  const [stepsIn,    setStepsIn]    = useState(false);
+  const [tab, setTab] = useState<"basic" | "ai">("basic");
+  const [animating, setAnimating] = useState(false);
+  const [displayed, setDisplayed] = useState<"basic" | "ai">("basic");
+  const [visible, setVisible] = useState(false);
+  const [stepsIn, setStepsIn] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   // ── scroll reveal ─────────────────────────────────────────────────────────
@@ -88,13 +88,13 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
   };
 
   const basicSteps = t.how.steps;
-  const aiSteps    = isAr ? AI_STEPS.ar : AI_STEPS.en;
-  const meta       = displayed === "basic" ? BASIC_META : AI_META;
+  const aiSteps = isAr ? AI_STEPS.ar : AI_STEPS.en;
+  const meta = displayed === "basic" ? BASIC_META : AI_META;
 
   // ── line progress (animated when visible) ────────────────────────────────
   const lineStyle: React.CSSProperties = {
-    opacity:    visible ? 1 : 0,
-    transform:  visible ? "scaleX(1)" : "scaleX(0)",
+    opacity: visible ? 1 : 0,
+    transform: visible ? "scaleX(1)" : "scaleX(0)",
     transformOrigin: isAr ? "right" : "left",
     transition: "transform 1s cubic-bezier(0.16,1,0.3,1) 400ms, opacity 0.6s ease 400ms",
   };
@@ -112,8 +112,8 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
         <div
           className="text-center mb-10"
           style={{
-            opacity:    visible ? 1 : 0,
-            transform:  visible ? "translateY(0)" : "translateY(30px)",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(30px)",
             transition: "opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1)",
           }}
         >
@@ -141,13 +141,12 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
               <button
                 key={id}
                 onClick={() => switchTab(id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-250 ${
-                  tab === id
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-250 ${tab === id
                     ? id === "ai"
                       ? "bg-gray-900 text-white shadow-sm"
                       : "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
-                }`}
+                  }`}
               >
                 {id === "basic" ? <Rocket className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
                 {id === "basic"
@@ -178,7 +177,7 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
           >
             {meta.map((m, i) => {
               const Icon = m.icon;
-              const s    = displayed === "basic" ? basicSteps[i] : null;
+              const s = displayed === "basic" ? basicSteps[i] : null;
               const step = displayed === "basic"
                 ? { time: tr(s!.time, lang), title: tr(s!.title, lang), what: tr(s!.what, lang), desc: tr(s!.desc, lang) }
                 : (isAr ? AI_STEPS.ar[i] : AI_STEPS.en[i]);
@@ -188,8 +187,8 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
                   key={`${displayed}-${i}`}
                   className="flex flex-col items-center text-center group"
                   style={{
-                    opacity:    stepsIn ? 1 : 0,
-                    transform:  stepsIn ? "translateY(0)" : "translateY(28px)",
+                    opacity: stepsIn ? 1 : 0,
+                    transform: stepsIn ? "translateY(0)" : "translateY(28px)",
                     transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 100}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 100}ms`,
                   }}
                 >
@@ -238,8 +237,8 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
         <div
           className="mt-14 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-3xl p-7 flex flex-col sm:flex-row items-center justify-between gap-5"
           style={{
-            opacity:    visible ? 1 : 0,
-            transform:  visible ? "translateY(0)" : "translateY(20px)",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.7s cubic-bezier(0.16,1,0.3,1) 500ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) 500ms",
           }}
         >

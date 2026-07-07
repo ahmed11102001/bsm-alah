@@ -1011,7 +1011,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
       {
         id: "claude",
         title: "Claude AI",
-        subtitle: "اربط واتس برو بـ Claude وتحكم بكل حاجة من الشات",
+        subtitle: "اربط وني بـ Claude وتحكم بكل حاجة من الشات",
         steps: [
           { title: "أنشئ API Key", desc: "اضغط 'إنشاء مفتاح جديد' للحصول على مفتاحك الخاص" },
           { title: "افتح Claude Desktop", desc: "حمّل التطبيق من claude.ai/download ثم افتح الإعدادات" },

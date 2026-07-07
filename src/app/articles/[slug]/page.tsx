@@ -30,8 +30,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   const date = article.publishedAt
     ? new Date(article.publishedAt).toLocaleDateString("ar-EG", {
-        year: "numeric", month: "long", day: "numeric",
-      })
+      year: "numeric", month: "long", day: "numeric",
+    })
     : "";
 
   return (
@@ -97,7 +97,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       {/* CTA */}
       <div className="bg-gray-900 text-white py-16 px-4 mt-16">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-3">جاهز تبدأ مع واتس برو؟</h2>
+          <h2 className="text-2xl font-bold mb-3">جاهز تبدأ مع وني ؟ </h2>
           <p className="text-gray-400 mb-6">أتمتة الرسائل وربط متجرك بخطوات بسيطة</p>
           <Link
             href="/#pricing"

@@ -363,8 +363,8 @@ function SettingsModal({ open, onClose, data, onSaved }: {
                 <div className="flex gap-1 mt-1">
                   {[4, 6, 8, 10].map((threshold, i) => (
                     <div key={i} className={`h-1 flex-1 rounded-full ${newPw.length >= threshold
-                        ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
-                        : "bg-gray-200 dark:bg-gray-700"
+                      ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
+                      : "bg-gray-200 dark:bg-gray-700"
                       }`} />
                   ))}
                 </div>
@@ -490,7 +490,7 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
             const on = plan.limits[key as keyof typeof plan.limits] as boolean;
             return (
               <span key={key} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${on ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                  : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
+                : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
                 }`}>{label}</span>
             );
           })}
@@ -922,7 +922,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    {locale === "ar" ? "🤖 تحكّم في واتس برو بالكلام مع Claude" : "🤖 Control WhatsPro by talking to Claude"}
+                    {locale === "ar" ? "🤖 تحكّم في وني بالكلام مع Claude" : "🤖 Control WANI by talking to Claude"}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
                     {locale === "ar" ? "قول لـ Claude: اعمل حملة لعملائي — وهو يتنفذها تلقائياً." : "Tell Claude to create campaigns or reports — it executes automatically."}
@@ -1208,8 +1208,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             <button key={item.id} onClick={() => setActiveSection(item.id)}
               data-sidebar-id={item.id}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${activeSection === item.id
-                  ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 }`}>
               <item.icon className="w-[18px] h-[18px]" />
               <span>{item.label}</span>
@@ -1219,8 +1219,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           {session?.user?.isSuper && (
             <button onClick={() => setActiveSection("admin")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${activeSection === "admin"
-                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
-                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+                ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
+                : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
                 }`}>
               <adminItem.icon className="w-[18px] h-[18px]" />
               <span>{t.sidebar.admin}</span>
@@ -1292,8 +1292,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
                 data-sidebar-id={item.id}
                 onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
-                    ? "bg-[#25D366] text-white shadow-sm"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                  ? "bg-[#25D366] text-white shadow-sm"
+                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
                   }`}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -1305,8 +1305,8 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
               <button
                 onClick={() => { setActiveSection("admin"); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === "admin"
-                    ? "bg-red-500 text-white shadow-sm"
-                    : "bg-white dark:bg-gray-800 text-red-500"
+                  ? "bg-red-500 text-white shadow-sm"
+                  : "bg-white dark:bg-gray-800 text-red-500"
                   }`}
               >
                 <Shield className="w-5 h-5 flex-shrink-0" />

@@ -6,39 +6,39 @@ import { t, tr, type Lang } from "@/lib/translations";
 interface PartnersProps { lang: Lang }
 
 const PARTNERS = [
-  { name: "Meta",        logoSrc: "/partners/meta.svg",        description: { ar: "واتساب API",     en: "WhatsApp API"  }, accent: "#0081FB" },
-  { name: "Shopify",     logoSrc: "/partners/shopify.svg",     description: { ar: "متجر متكامل",    en: "E-commerce"    }, accent: "#96BF48" },
-  { name: "EasyOrder",   logoSrc: "/partners/easyorder.svg",   description: { ar: "إدارة الطلبات",  en: "Order Mgmt"    }, accent: "#F97316" },
-  { name: "WooCommerce", logoSrc: "/partners/woocommerce.svg", description: { ar: "إرسال عروض",     en: "Send Offers"   }, accent: "#7F54B3" },
-  { name: "ChatGPT",     logoSrc: "/partners/chatgpt.svg",     description: { ar: "ذكاء اصطناعي",   en: "AI Assistant"  }, accent: "#10A37F" },
-  { name: "Claude",      logoSrc: "/partners/claude.svg.svg",  description: { ar: "مساعد ذكي",      en: "AI Assistant"  }, accent: "#D97706" },
-  { name: "Elevenlabs",  logoSrc: "/partners/elevenlabs.svg",  description: { ar: "Voice AI",        en: "Voice AI"      }, accent: "#EAB308" },
-  { name: "Gemini",      logoSrc: "/partners/gemini.svg",      description: { ar: "سيلز AI",         en: "AI Sales"      }, accent: "#8B5CF6" },
+  { name: "Meta", logoSrc: "/partners/meta.svg", description: { ar: "واتساب API", en: "WhatsApp API" }, accent: "#0081FB" },
+  { name: "Shopify", logoSrc: "/partners/shopify.svg", description: { ar: "متجر متكامل", en: "E-commerce" }, accent: "#96BF48" },
+  { name: "EasyOrder", logoSrc: "/partners/easyorder.svg", description: { ar: "إدارة الطلبات", en: "Order Mgmt" }, accent: "#F97316" },
+  { name: "WooCommerce", logoSrc: "/partners/woocommerce.svg", description: { ar: "إرسال عروض", en: "Send Offers" }, accent: "#7F54B3" },
+  { name: "ChatGPT", logoSrc: "/partners/chatgpt.svg", description: { ar: "ذكاء اصطناعي", en: "AI Assistant" }, accent: "#10A37F" },
+  { name: "Claude", logoSrc: "/partners/claude.svg.svg", description: { ar: "مساعد ذكي", en: "AI Assistant" }, accent: "#D97706" },
+  { name: "Elevenlabs", logoSrc: "/partners/elevenlabs.svg", description: { ar: "Voice AI", en: "Voice AI" }, accent: "#EAB308" },
+  { name: "Gemini", logoSrc: "/partners/gemini.svg", description: { ar: "سيلز AI", en: "AI Sales" }, accent: "#8B5CF6" },
 ] as const;
 
 const WHO_FOR = [
   {
     icon: "🛍️",
     title: { ar: "أصحاب المتاجر الإلكترونية", en: "E-commerce Owners" },
-    desc:  { ar: "أرسل تأكيدات الطلبات، عروض خاصة، وتذكيرات السلة المهجورة تلقائياً", en: "Send order confirmations, special offers & abandoned cart reminders automatically" },
+    desc: { ar: "أرسل تأكيدات الطلبات، عروض خاصة، وتذكيرات السلة المهجورة تلقائياً", en: "Send order confirmations, special offers & abandoned cart reminders automatically" },
     color: "from-green-50 to-emerald-50", border: "border-green-200", iconBg: "bg-green-100",
   },
   {
     icon: "☕",
     title: { ar: "المطاعم والكافيهات", en: "Restaurants & Cafes" },
-    desc:  { ar: "تواصل مع عملائك بعروض يومية، قوائم جديدة، وحجوزات عبر واتساب مباشرة", en: "Reach customers with daily offers, new menus & WhatsApp reservations" },
+    desc: { ar: "تواصل مع عملائك بعروض يومية، قوائم جديدة، وحجوزات عبر واتساب مباشرة", en: "Reach customers with daily offers, new menus & WhatsApp reservations" },
     color: "from-orange-50 to-amber-50", border: "border-orange-200", iconBg: "bg-orange-100",
   },
   {
     icon: "🏥",
     title: { ar: "العيادات والمراكز الطبية", en: "Clinics & Medical Centers" },
-    desc:  { ar: "ذكّر مرضاك بمواعيدهم وأرسل تعليمات ما بعد الزيارة بشكل احترافي", en: "Remind patients of appointments & send post-visit instructions professionally" },
+    desc: { ar: "ذكّر مرضاك بمواعيدهم وأرسل تعليمات ما بعد الزيارة بشكل احترافي", en: "Remind patients of appointments & send post-visit instructions professionally" },
     color: "from-blue-50 to-sky-50", border: "border-blue-200", iconBg: "bg-blue-100",
   },
   {
     icon: "🏢",
     title: { ar: "الشركات والمؤسسات", en: "Companies & Businesses" },
-    desc:  { ar: "أتمتة تواصلك مع العملاء، فريق المبيعات، والدعم الفني في مكان واحد", en: "Automate customer communication, sales team & support in one place" },
+    desc: { ar: "أتمتة تواصلك مع العملاء، فريق المبيعات، والدعم الفني في مكان واحد", en: "Automate customer communication, sales team & support in one place" },
     color: "from-purple-50 to-violet-50", border: "border-purple-200", iconBg: "bg-purple-100",
   },
 ];
@@ -86,10 +86,10 @@ export default function Partners({ lang }: PartnersProps) {
   const track = [...PARTNERS, ...PARTNERS, ...PARTNERS, ...PARTNERS];
 
   // scroll reveal refs
-  const headerRef  = useRef<HTMLDivElement>(null);
-  const whoRef     = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const whoRef = useRef<HTMLDivElement>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
-  const [whoVisible,    setWhoVisible]    = useState(false);
+  const [whoVisible, setWhoVisible] = useState(false);
 
   useEffect(() => {
     const observe = (el: HTMLElement | null, set: (v: boolean) => void) => {
@@ -102,14 +102,14 @@ export default function Partners({ lang }: PartnersProps) {
       return () => obs.disconnect();
     };
     const c1 = observe(headerRef.current, setHeaderVisible);
-    const c2 = observe(whoRef.current,    setWhoVisible);
+    const c2 = observe(whoRef.current, setWhoVisible);
     return () => { c1?.(); c2?.(); };
   }, []);
 
   // LTR site: row1 = ltr، row2 = ltr-reverse (نفس الـ keyframe بس معكوس — seamless)
   // RTL site: row1 = rtl، row2 = rtl-reverse
-  const row1Class = isAr ? "marquee-track-rtl"         : "marquee-track-ltr";
-  const row2Class = isAr ? "marquee-track-rtl-reverse"  : "marquee-track-ltr-reverse";
+  const row1Class = isAr ? "marquee-track-rtl" : "marquee-track-ltr";
+  const row2Class = isAr ? "marquee-track-rtl-reverse" : "marquee-track-ltr-reverse";
 
   return (
     <section
@@ -124,8 +124,8 @@ export default function Partners({ lang }: PartnersProps) {
           ref={headerRef}
           className="text-center mb-14"
           style={{
-            opacity:    headerVisible ? 1 : 0,
-            transform:  headerVisible ? "translateY(0)" : "translateY(30px)",
+            opacity: headerVisible ? 1 : 0,
+            transform: headerVisible ? "translateY(0)" : "translateY(30px)",
             transition: "opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1)",
           }}
         >
@@ -162,7 +162,7 @@ export default function Partners({ lang }: PartnersProps) {
         className="relative w-full select-none"
         aria-hidden="true"
         style={{
-          maskImage:       "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
+          maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
           WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%)",
         }}
       >
@@ -190,8 +190,8 @@ export default function Partners({ lang }: PartnersProps) {
             ref={whoRef}
             className="text-center mb-10"
             style={{
-              opacity:    whoVisible ? 1 : 0,
-              transform:  whoVisible ? "translateY(0)" : "translateY(24px)",
+              opacity: whoVisible ? 1 : 0,
+              transform: whoVisible ? "translateY(0)" : "translateY(24px)",
               transition: "opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1)",
             }}
           >
@@ -200,7 +200,7 @@ export default function Partners({ lang }: PartnersProps) {
             </h3>
             <p className="text-gray-500 text-sm">
               {lang === "ar"
-                ? "واتس برو مصمم لكل من يريد تسويقاً أذكى عبر واتساب"
+                ? " وني مصمم لكل من يريد تسويقاً أذكى عبر واتساب"
                 : "WhatsPro is built for anyone who wants smarter WhatsApp marketing"}
             </p>
           </div>
@@ -212,8 +212,8 @@ export default function Partners({ lang }: PartnersProps) {
                 key={idx}
                 className={`relative rounded-2xl border ${item.border} bg-gradient-to-br ${item.color} p-6 hover:shadow-md transition-shadow duration-200`}
                 style={{
-                  opacity:    whoVisible ? 1 : 0,
-                  transform:  whoVisible ? "translateY(0)" : "translateY(28px)",
+                  opacity: whoVisible ? 1 : 0,
+                  transform: whoVisible ? "translateY(0)" : "translateY(28px)",
                   transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${idx * 90}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${idx * 90}ms`,
                 }}
               >

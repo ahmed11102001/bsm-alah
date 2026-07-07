@@ -4,32 +4,32 @@ import { useState, useEffect } from "react";
 import { Bot, Sparkles, ShieldCheck, Lightbulb, Zap, Navigation } from "lucide-react";
 
 interface Props {
-  locale:       "ar" | "en";
-  onStartTour:  () => void;
+  locale: "ar" | "en";
+  onStartTour: () => void;
 }
 
 const T = {
   ar: {
-    greeting:   "أهلاً! أنا مساعدك الذكي في واتس برو 👋",
-    subtitle:   "هنا عشان أساعدك تستخدم المنتج صح وتجنب المشاكل قبل ما تحصل.",
+    greeting: "أهلاً! أنا مساعدك الذكي في  وني 👋",
+    subtitle: "هنا عشان أساعدك تستخدم المنتج صح وتجنب المشاكل قبل ما تحصل.",
     features: [
       { icon: ShieldCheck, text: "أحذرك قبل أي خطوة ممكن تسبب حظر الواتساب" },
-      { icon: Lightbulb,   text: "أديك نصايح مخصصة لنشاطك وعلى حسب الصفحة" },
-      { icon: Zap,         text: "أعرفك على أفضل طريقة تستخدم كل feature" },
+      { icon: Lightbulb, text: "أديك نصايح مخصصة لنشاطك وعلى حسب الصفحة" },
+      { icon: Zap, text: "أعرفك على أفضل طريقة تستخدم كل feature" },
     ],
     activate: "ابدأ الجولة",
-    badge:    "مساعد ذكي جديد ✨",
+    badge: "مساعد ذكي جديد ✨",
   },
   en: {
-    greeting:   "Hey! I'm your smart assistant in WhatsPro 👋",
-    subtitle:   "I'm here to help you use the product correctly and avoid problems before they happen.",
+    greeting: "Hey! I'm your smart assistant in WhatsPro 👋",
+    subtitle: "I'm here to help you use the product correctly and avoid problems before they happen.",
     features: [
       { icon: ShieldCheck, text: "Warn you before any step that could get your WhatsApp blocked" },
-      { icon: Lightbulb,   text: "Give you personalized tips based on your activity and current page" },
-      { icon: Zap,         text: "Help you get the most out of every feature" },
+      { icon: Lightbulb, text: "Give you personalized tips based on your activity and current page" },
+      { icon: Zap, text: "Help you get the most out of every feature" },
     ],
     activate: "Start the Tour",
-    badge:    "New Smart Assistant ✨",
+    badge: "New Smart Assistant ✨",
   },
 };
 
