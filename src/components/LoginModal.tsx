@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, cubicBezier } from "framer-motion";
@@ -138,6 +138,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
   const [regPhone,   setRegPhone]   = useState("");
   const [regPass,    setRegPass]    = useState("");
   const [regConfirm, setRegConfirm] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // join team
   const [joinEmail, setJoinEmail] = useState("");
@@ -148,6 +149,15 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
   const [forgotEmail, setForgotEmail] = useState("");
 
   const go = (v: View) => { setView(v); setErr(""); };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   const emailFormatOk = /\S+@\S+\.\S+/.test(regEmail);
   const emailIcon = regEmail
@@ -190,6 +200,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
   // ── Register ──────────────────────────────────────────────────────────────
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
+    if (!termsAccepted) {
+      setErr("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية.");
+      return;
+    }
     const fullName = `${regFirst.trim()} ${regLast.trim()}`.trim();
     if (!regFirst.trim() || !regLast.trim()) { setErr("الاسم الثنائي مطلوب"); return; }
     if (!emailFormatOk)                       { setErr("صيغة البريد غير صحيحة"); return; }
@@ -250,34 +264,35 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-[440px] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
+        className="w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
         dir="rtl"
       >
         {/* Top gradient bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366]" />
 
-        <div className="px-7 pt-5 pb-7">
-          {/* Logo */}
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-2.5 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              واتس <span className="text-[#25D366]">برو</span>
-            </span>
-          </motion.div>
+        <div className="flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-[#090A0B] text-white">
+          <div className="sticky top-0 z-20 border-b border-white/10 bg-[#090A0B]/95 backdrop-blur-sm px-7 pt-5 pb-4">
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-50">
+                WANI
+              </span>
+            </motion.div>
 
-          {/* Tabs */}
-          {(view === "login" || view === "register" || view === "join") && (
-            <div className="flex border-b border-gray-100 mb-5">
-              <Tab active={view === "login"}    onClick={() => go("login")}>دخول</Tab>
-              <Tab active={view === "register"} onClick={() => go("register")}>حساب جديد</Tab>
-              <Tab active={view === "join"}     onClick={() => go("join")}>انضمام لفريق</Tab>
-            </div>
-          )}
+            {(view === "login" || view === "register" || view === "join") && (
+              <div className="flex border-b border-white/10 mb-0">
+                <Tab active={view === "login"}    onClick={() => go("login")}>دخول</Tab>
+                <Tab active={view === "register"} onClick={() => go("register")}>حساب جديد</Tab>
+                <Tab active={view === "join"}     onClick={() => go("join")}>انضمام لفريق</Tab>
+              </div>
+            )}
+          </div>
 
-          <AnimatePresence mode="wait">
+          <div className="flex-1 overflow-y-auto px-7 pb-6 pt-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#25D366]/35 hover:scrollbar-thumb-[#25D366]">
+            <AnimatePresence mode="wait">
 
             {/* ══ LOGIN ══ */}
             {view === "login" && (
@@ -404,12 +419,35 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                     )}
                   </div>
 
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <label htmlFor="terms-checkbox" className="flex items-start gap-3 cursor-pointer">
+                      <input id="terms-checkbox" type="checkbox" checked={termsAccepted}
+                        onChange={e => setTermsAccepted(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-gray-400 bg-black text-[#25D366] focus:ring-[#25D366]" />
+                      <span className="text-sm leading-relaxed text-gray-200">
+                        أوافق على
+                        <a href="/terms" target="_blank" rel="noreferrer"
+                          className="ml-1 text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
+                          شروط الاستخدام
+                        </a>
+                        و
+                        <a href="/privacy" target="_blank" rel="noreferrer"
+                          className="mx-1 text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
+                          سياسة الخصوصية
+                        </a>
+                        .
+                      </span>
+                    </label>
+                  </div>
+
                   {err && <ErrMsg msg={err} />}
 
-                  <Button type="submit" disabled={busy || (!!regEmail && !emailFormatOk)}
-                    className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm mt-1">
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}
-                  </Button>
+                  <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-[#090A0B]/95 border-t border-white/10">
+                    <Button type="submit" disabled={busy || !termsAccepted || (!!regEmail && !emailFormatOk)}
+                      className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}
+                    </Button>
+                  </div>
                 </form>
               </motion.div>
             )}
