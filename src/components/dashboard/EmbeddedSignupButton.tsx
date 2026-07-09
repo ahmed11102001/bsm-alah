@@ -16,8 +16,13 @@ import { toast }                                     from "sonner";
 
 /* ── Props ──────────────────────────────────────────────────────────────────── */
 interface EmbeddedSignupButtonProps {
-  onSuccess: (data: { phone_number_id: string; waba_id: string }) => void;
+  onSuccess: (data: {
+    phone_number_id: string;
+    waba_id: string;
+    display_phone_number?: string;
+  }) => void;
   locale?: string;
+  endpoint?: string; // defaults to the main app's endpoint for backward compatibility
 }
 
 /* ── FB SDK global types ────────────────────────────────────────────────────── */
@@ -32,6 +37,7 @@ declare global {
 export default function EmbeddedSignupButton({
   onSuccess,
   locale = "ar",
+  endpoint = "/api/meta/embedded-signup-complete",
 }: EmbeddedSignupButtonProps) {
   const [sdkReady, setSdkReady] = useState(false);
   const [loading,  setLoading]  = useState(false);
@@ -188,7 +194,7 @@ export default function EmbeddedSignupButton({
           const code: string = response.authResponse.code;
 
           try {
-            const res = await fetch("/api/meta/embedded-signup-complete", {
+            const res = await fetch(endpoint, {
               method:  "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -218,8 +224,9 @@ export default function EmbeddedSignupButton({
             );
 
             onSuccess({
-              phone_number_id: data.phone_number_id,
-              waba_id:         data.waba_id,
+              phone_number_id:      data.phone_number_id,
+              waba_id:              data.waba_id,
+              display_phone_number: data.display_phone_number,
             });
           } catch {
             setError(locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error");

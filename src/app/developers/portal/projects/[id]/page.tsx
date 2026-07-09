@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Key, FileText, Wifi, WifiOff, Share2, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
+import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import { useLanguage } from "../../../_components/LanguageProvider";
 
 interface ProjectData {
@@ -311,6 +312,20 @@ export default function ProjectOverviewPage() {
         }
         .btn-cancel-form:hover { background: rgba(255,255,255,0.08); }
 
+        .btn-connect-meta-manual {
+          display: block;
+          margin-top: 10px;
+          background: none;
+          border: none;
+          color: rgba(255,255,255,0.35);
+          font-size: 12px;
+          font-family: inherit;
+          cursor: pointer;
+          padding: 4px 0;
+          transition: color 0.2s;
+        }
+        .btn-connect-meta-manual:hover { color: rgba(255,255,255,0.6); }
+
         /* Transfer banner */
         .transfer-banner {
           display: flex; align-items: center; justify-content: space-between;
@@ -473,14 +488,23 @@ export default function ProjectOverviewPage() {
               )}
             </>
           ) : !showMetaForm ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(245,158,11,0.8)" }}>
+            <div className="meta-connect-options" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(245,158,11,0.8)", flexDirection: language === 'ar' ? 'row' : 'row-reverse', marginBottom: 14 }}>
                 <AlertTriangle size={14} />
                 {t("This project is not connected to Meta — it won't be able to send OTPs", "المشروع ده مش مربوط بـ Meta — مش هيقدر يرسل OTP")}
               </div>
-              <button className="btn-connect-meta" onClick={() => setShowMetaForm(true)}>
-                <Wifi size={14} />
-                {t("Connect Meta Now", "ربط Meta الآن")}
+
+              <EmbeddedSignupButton
+                locale={language}
+                endpoint={`/api/developers/projects/${projectId}/meta/embedded-signup-complete`}
+                onSuccess={() => fetchAll()}
+              />
+
+              <button
+                className="btn-connect-meta-manual"
+                onClick={() => setShowMetaForm(true)}
+              >
+                {t("Or enter details manually", "أو أدخل البيانات يدويًا")}
               </button>
             </div>
           ) : (
