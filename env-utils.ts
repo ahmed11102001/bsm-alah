@@ -36,13 +36,18 @@ const requiredEnvVars = {
     optional: true,
   },
 
-  // WhatsApp
+  // WhatsApp / Meta
   WHATSAPP_VERIFY_TOKEN: {
     description: "Token للتحقق من الـ Webhook مع Meta",
     optional: false,
   },
-  WHATSAPP_APP_SECRET: {
-    description: "App Secret من Meta لتوقيع الـ Webhook",
+  META_APP_SECRET: {
+    description: "Meta App Secret — used to verify webhook signatures and to exchange Embedded Signup codes",
+    optional: false,
+    aliases: ["WHATSAPP_APP_SECRET"],
+  },
+  NEXT_PUBLIC_META_APP_ID: {
+    description: "Meta App ID for Embedded Signup",
     optional: false,
   },
 
@@ -75,7 +80,10 @@ export function validateEnv() {
   const warnings: string[] = [];
 
   Object.entries(requiredEnvVars).forEach(([key, config]) => {
-    const value = process.env[key];
+    const aliases = (config as { aliases?: string[] }).aliases ?? [];
+    const primaryValue = process.env[key];
+    const aliasHit = aliases.find((a) => process.env[a]);
+    const value = primaryValue ?? (aliasHit ? process.env[aliasHit] : undefined);
 
     if (!value) {
       if (!config.optional) {
@@ -83,6 +91,10 @@ export function validateEnv() {
       } else {
         warnings.push(`${key} is not set (optional)`);
       }
+    } else if (!primaryValue && aliasHit) {
+      warnings.push(
+        `${key} is set via deprecated alias ${aliasHit} — please rename it to ${key} in your environment`
+      );
     }
   });
 
@@ -92,9 +104,19 @@ export function validateEnv() {
     throw new Error("Missing required environment variables");
   }
 
-  if (warnings.length > 0 && process.env.NODE_ENV === "development") {
-    console.warn("⚠️  Optional environment variables not set:");
-    warnings.forEach((w) => console.warn(`   - ${w}`));
+  if (warnings.length > 0) {
+    const deprecated = warnings.filter((w) => w.includes("deprecated alias"));
+    const optional = warnings.filter((w) => !w.includes("deprecated alias"));
+
+    if (deprecated.length > 0) {
+      console.warn("⚠️  Deprecated environment variables:");
+      deprecated.forEach((w) => console.warn(`   - ${w}`));
+    }
+
+    if (optional.length > 0 && process.env.NODE_ENV === "development") {
+      console.warn("⚠️  Optional environment variables not set:");
+      optional.forEach((w) => console.warn(`   - ${w}`));
+    }
   }
 
   console.log("✅ Environment variables validated");

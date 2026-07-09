@@ -28,7 +28,7 @@ function makeRequest(body: object, signature?: string, method = "POST"): Request
 }
 
 // ─── Mock البيئة ─────────────────────────────────────────────────────────────
-vi.stubEnv("WHATSAPP_APP_SECRET", APP_SECRET);
+vi.stubEnv("META_APP_SECRET", APP_SECRET);
 vi.stubEnv("WHATSAPP_VERIFY_TOKEN", "myverifytoken");
 
 // ─── Mock prisma ──────────────────────────────────────────────────────────────
@@ -177,6 +177,28 @@ describe("POST /webhook — HMAC Signature Verification", () => {
     const res = await POST(makeRequest(payload) as any);
     // مش 401 = الـ signature اتقبلت
     expect(res.status).not.toBe(401);
+  });
+
+  it("بيقبل signature صحيحة لما WHATSAPP_APP_SECRET بس متحط (legacy fallback)", async () => {
+    const savedMeta = process.env.META_APP_SECRET;
+    delete process.env.META_APP_SECRET;
+    vi.stubEnv("WHATSAPP_APP_SECRET", APP_SECRET);
+
+    try {
+      const payload = {
+        object: "whatsapp_business_account",
+        entry:  [{ id: "waba_1", changes: [{ value: { metadata: { phone_number_id: "phone_1" } } }] }],
+      };
+      const res = await POST(makeRequest(payload) as any);
+      expect(res.status).not.toBe(401);
+    } finally {
+      if (savedMeta !== undefined) {
+        vi.stubEnv("META_APP_SECRET", savedMeta);
+      } else {
+        delete process.env.META_APP_SECRET;
+      }
+      vi.stubEnv("WHATSAPP_APP_SECRET", "");
+    }
   });
 
   it("بيرفض signature بدون prefix sha256=", async () => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
+import { warnDeprecatedSecretOnce } from "@/lib/env-deprecation";
 
 // ─── GET: Meta Webhook Verification ─────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -26,11 +27,14 @@ export async function GET(req: NextRequest) {
 // ─── POST: Receive Meta Template Status Updates ──────────────────────────────
 export async function POST(req: NextRequest) {
   // 1. Verify HMAC signature
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  const appSecret = process.env.META_APP_SECRET ?? process.env.WHATSAPP_APP_SECRET;
 
-  // في Production، الـ WHATSAPP_APP_SECRET مطلوب — بدونه أي حد يقدر يبعت webhook مزيف
+  if (!process.env.META_APP_SECRET && process.env.WHATSAPP_APP_SECRET) {
+    warnDeprecatedSecretOnce("[DEV-WEBHOOK]");
+  }
+
   if (!appSecret && process.env.NODE_ENV === "production") {
-    console.error("[DEV-WEBHOOK] WHATSAPP_APP_SECRET is required in production");
+    console.error("[DEV-WEBHOOK] META_APP_SECRET is required in production");
     return new NextResponse("Server misconfigured", { status: 500 });
   }
 
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
     await processWebhook(payload);
   } else {
     // No secret configured — dev mode only
-    console.warn("[DEV-WEBHOOK] ⚠️ WHATSAPP_APP_SECRET مش متحط — بيقبل webhooks بدون توقيع (dev mode فقط)");
+    console.warn("[DEV-WEBHOOK] ⚠️ META_APP_SECRET مش متحط — بيقبل webhooks بدون توقيع (dev mode فقط)");
     const payload = await req.json();
     await processWebhook(payload);
   }

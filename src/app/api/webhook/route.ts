@@ -10,6 +10,7 @@ import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import { transcribeAudio, estimateWhisperTokens } from "@/lib/whisper";
 import { decryptToken } from "@/lib/crypto";
+import { warnDeprecatedSecretOnce } from "@/lib/env-deprecation";
 
 // -----------------------------------------------------------------------------
 // HELPER: ?????? ?? ????? Meta (HMAC-SHA256)
@@ -21,6 +22,10 @@ async function verifyMetaSignature(
 ): Promise<{ valid: boolean; rawBody: string }> {
   // META_APP_SECRET is the canonical name — WHATSAPP_APP_SECRET kept as fallback
   const appSecret = process.env.META_APP_SECRET ?? process.env.WHATSAPP_APP_SECRET;
+
+  if (!process.env.META_APP_SECRET && process.env.WHATSAPP_APP_SECRET) {
+    warnDeprecatedSecretOnce("[WEBHOOK]");
+  }
 
   if (!appSecret) {
     console.error("[WEBHOOK] META_APP_SECRET is not set — rejecting all requests");
