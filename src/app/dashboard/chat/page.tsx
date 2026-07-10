@@ -438,6 +438,15 @@ export default function ChatPage() {
   const lastMsgCount = useRef<number>(0);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
 
+  // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
+  const isExpired = useMemo(() => {
+    if (!selected) return false;
+    const lastInbound = messages.slice().reverse().find(m => m.direction === "inbound");
+    if (!lastInbound) return messages.length > 0;
+    return (Date.now() - new Date(lastInbound.createdAt).getTime()) > 24 * 60 * 60 * 1000;
+  }, [selected, messages]);
+
+
   // ── Theme classes ────────────────────────────────────────────────
   const bg = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
   const sidebarBg = dark ? "bg-[#1f2c34]" : "bg-white";
@@ -1019,6 +1028,25 @@ export default function ChatPage() {
                   <Button size="sm" variant="outline" className="h-8" onClick={() => resumeAi(selected.contact.id)}>
                     {t[lang].resumeAi}
                   </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Expired Window Warning */}
+            {isExpired && (
+              <div className={`px-3 py-2 border-b ${dark ? "bg-red-900/20 border-red-900/50 text-red-200" : "bg-red-50 border-red-100 text-red-700"}`}>
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 text-lg leading-none">⚠️</span>
+                  <div className="text-sm">
+                    <p className="font-semibold">
+                      {lang === "ar" ? "محادثة عدا عليها 24 ساعة بدون رد" : "Conversation expired (24h+ with no reply)"}
+                    </p>
+                    <p className="opacity-90 mt-0.5">
+                      {lang === "ar" 
+                        ? "لو بعت رسالة عادية دلوقتي الواتساب هيحظرك. ابعت قالب من علامة الدبوس (📎) ف الشات، اختار قوالب، وابعت القالب المناسب." 
+                        : "Sending a regular message will get you blocked. Tap the attachment icon (📎), choose templates, and send an approved template."}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

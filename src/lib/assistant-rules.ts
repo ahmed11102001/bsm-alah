@@ -70,31 +70,6 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     action:  { label: { ar: "ربط الواتساب الآن", en: "Connect WhatsApp Now" }, target: "api", type: "navigate" },
   },
 
-  // ── 🔴 CRITICAL: محادثات عدت 24 ساعة ────────────────────────────────────
-  {
-    id:            "chat_24h_expired",
-    pages:         ["chat"],
-    severity:      "critical",
-    displayAs:     "banner",
-    cooldownHours: 1,
-    condition:     ctx => ctx.expiredChats > 0,
-    title:   {
-      ar: (ctx: RuleContext) => `🚨 ${ctx.expiredChats} محادثة عدت عليها 24 ساعة`,
-      en: (ctx: RuleContext) => `🚨 ${ctx.expiredChats} conversation${ctx.expiredChats > 1 ? "s" : ""} expired`,
-    },
-    message: {
-      ar: "لو بعتلهم رسالة عادية دلوقتي هتتحظر! الـ WhatsApp بيسمح بس بـ Template messages بعد 24 ساعة من آخر رسالة من العميل.",
-      en: "Sending a regular message now will get you blocked! WhatsApp only allows Template messages after 24 hours of customer inactivity.",
-    },
-    tip: {
-      ar: "دايماً استخدم قالب رسمي معتمد لإعادة فتح المحادثة — ده مش اختياري، ده قانون Meta.",
-      en: "Always use an approved Template to re-open a conversation — this is Meta's policy, not optional.",
-    },
-    action:         { label: { ar: "اختار قالب وابعته", en: "Pick a Template" },             target: "templates",  type: "navigate" },
-    shortTitle:   { ar: "🚨 محادثات منتهية الـ 24 ساعة", en: "🚨 Expired conversations" },
-    shortMessage: { ar: "ابعت template فقط — ممنوع رسائل عادية.", en: "Send template only — regular messages are blocked." },
-    secondaryAction:{ label: { ar: "شوف المحادثات المتأثرة", en: "View Affected Chats" },    target: "chat",       type: "navigate" },
-  },
 
   // ── 🟡 WARNING: مفيش contacts ────────────────────────────────────────────
   {
