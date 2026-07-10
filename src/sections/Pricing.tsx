@@ -26,10 +26,10 @@ const PLAN_STYLES = [
 
 // social proof لكل plan
 const SOCIAL_PROOF = [
-  { ar: "١٢٠+ مستخدم نشط", en: "120+ active users" },
-  { ar: "٢٨٠+ براند مشترك", en: "280+ brand" },
-  { ar: "الأكثر اختياراً ⭐", en: "Most popular ⭐" },
-  { ar: "للشركات الكبيرة 🏢", en: "For large teams 🏢" },
+  { ar: " انطلق بسرعة", en: "Quick Start" },
+  { ar: " بداية ميثالية", en: "Perfect for Growth" },
+  { ar: " افضل قيمة 💎 ", en: "💎 Best Value" },
+  { ar: "حلول مخصصة🏢", en: "Enterprise Solutions 🏢" },
 ];
 
 const PLAN_ICONS = [Sparkles, Bot, Store, Brain];
