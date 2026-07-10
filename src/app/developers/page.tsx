@@ -576,6 +576,18 @@ function PageContent() {
         <span>Wani API — WhatsApp OTP</span>
         <div style={{ display: "flex", gap: "20px" }}>
           <Link
+            href="/developers/privacy"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            {language === 'ar' ? 'الخصوصية' : 'Privacy'}
+          </Link>
+          <Link
+            href="/developers/terms"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            {language === 'ar' ? 'الشروط' : 'Terms'}
+          </Link>
+          <Link
             href="/developers/portal/quick-start"
             style={{ color: "inherit", textDecoration: "none" }}
           >
