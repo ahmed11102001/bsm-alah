@@ -126,6 +126,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
   // TODO(backend): replace with GET /api/automation/smart-followup/shipping
   const [isEnabled, setIsEnabled] = useState(false);
   const [replyDelay, setReplyDelay] = useState(0); // 0–2 minutes, applies to every reply message in this flow
+  const [triggerDelayDays, setTriggerDelayDays] = useState(3); // days after shipping template → send follow-up
   const [saving, setSaving] = useState(false);
 
   // TODO(backend): these come from the dedicated auto-created templates —
@@ -143,7 +144,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
   const handleSave = async () => {
     setSaving(true);
     // TODO(backend): PUT /api/automation/smart-followup/shipping
-    // { isEnabled, replyDelay, texts }
+    // { isEnabled, replyDelay, triggerDelayDays, texts }
     await new Promise(r => setTimeout(r, 500));
     setSaving(false);
   };
@@ -166,11 +167,42 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 
       <div className="flex items-start gap-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-xs text-gray-500 dark:text-gray-400">
         <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-        {tx(lang, "الفلو والأزرار ثابتين، تقدر تعدّل نص الرسائل بس. المتغيرات (زي متوسط أيام التوصيل) محمية ومحسوبة تلقائيًا.",
-          "The flow and buttons are fixed — you can only edit the message wording. Variables (like average delivery days) are protected and calculated automatically.")}
+        {tx(lang, "الفلو والأزرار ثابتين، تقدر تعدّل نص الرسائل بس. المتغيرات محمية ومحسوبة تلقائيًا.",
+          "The flow and buttons are fixed — you can only edit the message wording. Variables are protected and calculated automatically.")}
       </div>
 
-      {/* Shared delay setting */}
+      {/* Template Name */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <Label className="mb-1.5 block text-sm">{tx(lang, "اسم القالب المخصص", "Dedicated Template Name")}</Label>
+        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-500 font-mono flex items-center justify-between">
+          <span>wani_shipping_followup</span>
+          <Lock className="w-4 h-4 text-gray-400" />
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          {tx(lang, "هذا القالب مخصص لمتابعة الشحن، سيتم جلبه من مكتبة القوالب ولا يمكن تغييره.",
+            "This template is dedicated for shipping follow-up, it will be fetched from the template library and cannot be changed.")}
+        </p>
+      </div>
+
+      {/* Trigger delay — when to send the follow-up after shipping template */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <Label className="mb-1.5 block text-sm">{tx(lang, "إرسال المتابعة بعد (أيام من إرسال قالب الشحن)", "Send follow-up after (days from shipping template)")}</Label>
+        <div className="flex items-center gap-3">
+          <input
+            type="range" min={1} max={7} step={1}
+            value={triggerDelayDays}
+            onChange={e => setTriggerDelayDays(Number(e.target.value))}
+            className="flex-1 accent-green-500"
+          />
+          <span className="text-sm font-semibold w-16 text-center text-gray-900 dark:text-gray-100">{triggerDelayDays} {tx(lang, triggerDelayDays === 1 ? "يوم" : "أيام", triggerDelayDays === 1 ? "day" : "days")}</span>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          {tx(lang, "بعد ما أتمتة المتجر تبعت قالب الشحن للعميل، رسالة المتابعة (هل استلمت طلبك؟) هتتبعت بعد العدد ده من الأيام.",
+            "After the store automation sends the shipping template, the follow-up message (Did you receive your order?) will be sent after this many days.")}
+        </p>
+      </div>
+
+      {/* Reply delay — applies to every reply message inside this flow */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
         <Label className="mb-1.5 block text-sm">{tx(lang, "تأخير رسائل الرد (بالدقائق)", "Reply message delay (minutes)")}</Label>
         <div className="flex items-center gap-3">
@@ -183,8 +215,8 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
           <span className="text-sm font-semibold w-10 text-center text-gray-900 dark:text-gray-100">{replyDelay}</span>
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          {tx(lang, "بيتطبق على كل رسايل الرد جوه الفلو ده (مش أول رسالة — أول رسالة بتتحسب من متوسط أيام التوصيل في إعدادات المتجر).",
-            "Applies to every reply message inside this flow (not the first message — that one is timed from the average delivery days in store settings).")}
+          {tx(lang, "بيتطبق على كل رسايل الرد جوه الفلو ده بس (مش أول رسالة). أول رسالة بتتحسب من عدد الأيام اللي حددته فوق.",
+            "Applies only to reply messages inside this flow (not the first message). The first message is timed from the days you set above.")}
         </p>
       </div>
 
@@ -197,7 +229,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 
         <FlowStep icon={<Truck className="w-4 h-4" />} tone="default"
           text={tx(lang, "تم شحن الطلب", "Order shipped")}
-          sub={tx(lang, "بعد متوسط مدة التوصيل من إعدادات المتجر", "After the average delivery time from store settings")} />
+          sub={tx(lang, `بعد ${triggerDelayDays} ${triggerDelayDays === 1 ? 'يوم' : 'أيام'} من إرسال قالب الشحن`, `${triggerDelayDays} ${triggerDelayDays === 1 ? 'day' : 'days'} after shipping template is sent`)} />
 
         <div>
           <Label className="mb-1.5 block text-xs text-gray-400">{tx(lang, "رسالة السؤال (القالب المخصص)", "Question message (dedicated template)")}</Label>
@@ -272,6 +304,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
   // TODO(backend): replace with GET /api/automation/smart-followup/cart
   const [isEnabled, setIsEnabled] = useState(false);
   const [replyDelay, setReplyDelay] = useState(0); // 0–2 minutes, applies to every reply message in this flow — separate from the shipping card's own delay
+  const [triggerDelayDays, setTriggerDelayDays] = useState(1); // days after cart abandonment template → send follow-up
   const [saving, setSaving] = useState(false);
 
   // TODO(backend): dedicated auto-created templates, one per message below.
@@ -287,7 +320,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
   const handleSave = async () => {
     setSaving(true);
     // TODO(backend): PUT /api/automation/smart-followup/cart
-    // { isEnabled, replyDelay, texts }
+    // { isEnabled, replyDelay, triggerDelayDays, texts }
     await new Promise(r => setTimeout(r, 500));
     setSaving(false);
   };
@@ -314,7 +347,38 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
           "The flow and buttons are fixed — you can only edit the message wording. Variables (like the checkout link) are protected and calculated automatically.")}
       </div>
 
-      {/* Shared delay setting */}
+      {/* Template Name */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <Label className="mb-1.5 block text-sm">{tx(lang, "اسم القالب المخصص", "Dedicated Template Name")}</Label>
+        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-500 font-mono flex items-center justify-between">
+          <span>wani_cart_followup</span>
+          <Lock className="w-4 h-4 text-gray-400" />
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          {tx(lang, "هذا القالب مخصص لمتابعة السلة المتروكة، سيتم جلبه من مكتبة القوالب ولا يمكن تغييره.",
+            "This template is dedicated for abandoned cart follow-up, it will be fetched from the template library and cannot be changed.")}
+        </p>
+      </div>
+
+      {/* Trigger delay — when to send the follow-up after cart abandonment template */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <Label className="mb-1.5 block text-sm">{tx(lang, "إرسال المتابعة بعد (أيام من إرسال قالب السلة المتروكة)", "Send follow-up after (days from cart template)")}</Label>
+        <div className="flex items-center gap-3">
+          <input
+            type="range" min={1} max={3} step={1}
+            value={triggerDelayDays}
+            onChange={e => setTriggerDelayDays(Number(e.target.value))}
+            className="flex-1 accent-green-500"
+          />
+          <span className="text-sm font-semibold w-16 text-center text-gray-900 dark:text-gray-100">{triggerDelayDays} {tx(lang, triggerDelayDays === 1 ? "يوم" : "أيام", triggerDelayDays === 1 ? "day" : "days")}</span>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          {tx(lang, "بعد ما أتمتة المتجر تبعت قالب السلة المتروكة للعميل، رسالة المتابعة (هل ما زلت مهتم؟) هتتبعت بعد العدد ده من الأيام.",
+            "After the store automation sends the cart abandonment template, the follow-up message (Still interested?) will be sent after this many days.")}
+        </p>
+      </div>
+
+      {/* Reply delay — applies to every reply message inside this flow */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
         <Label className="mb-1.5 block text-sm">{tx(lang, "تأخير رسائل الرد (بالدقائق)", "Reply message delay (minutes)")}</Label>
         <div className="flex items-center gap-3">
@@ -327,8 +391,8 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
           <span className="text-sm font-semibold w-10 text-center text-gray-900 dark:text-gray-100">{replyDelay}</span>
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          {tx(lang, "بيتطبق على كل رسايل الرد جوه الفلو ده بس (مش أول رسالة)، عشان الرد ميبانش سريع بشكل آلي قوي. أول رسالة بتتحسب من التأخير المحدد في أتمتة السلة المتروكة بتاعة المتجر — المتابعة دي بتكمل شغلها مش بتحدد وقتها بنفسها.",
-            "Applies only to the reply messages inside this flow (not the first message), so replies don't feel instantly automated. The first message is timed from the delay set in the store's cart abandonment automation — this follow-up continues it rather than timing itself.")}
+          {tx(lang, "بيتطبق على كل رسايل الرد جوه الفلو ده بس (مش أول رسالة). أول رسالة بتتحسب من عدد الأيام اللي حددته فوق.",
+            "Applies only to reply messages inside this flow (not the first message). The first message is timed from the days you set above.")}
         </p>
       </div>
 
@@ -341,7 +405,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
 
         <FlowStep icon={<ShoppingCart className="w-4 h-4" />} tone="default"
           text={tx(lang, "سلة متروكة", "Cart abandoned")}
-          sub={tx(lang, "بعد الوقت المحدد في أتمتة السلة المتروكة الموجودة في المتجر", "After the delay set in the store's cart abandonment automation")} />
+          sub={tx(lang, `بعد ${triggerDelayDays} ${triggerDelayDays === 1 ? 'يوم' : 'أيام'} من إرسال قالب السلة المتروكة`, `${triggerDelayDays} ${triggerDelayDays === 1 ? 'day' : 'days'} after cart abandonment template is sent`)} />
 
         <div>
           <Label className="mb-1.5 block text-xs text-gray-400">{tx(lang, "رسالة السؤال (القالب المخصص)", "Question message (dedicated template)")}</Label>
