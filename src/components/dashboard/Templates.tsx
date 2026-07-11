@@ -53,6 +53,7 @@ const T = {
     table: { name: "اسم القالب", category: "الفئة", language: "اللغة", updated: "آخر تعديل", status: "الحالة", actions: "" },
     empty: "لا توجد قوالب بعد", emptyHint: "أنشئ قالبك الأول أو مزامنة من Meta",
     waniReady: "قوالب Wani الجاهزة", waniReadyDesc: "قوالب مبنية مسبقاً للمتجر — خصّصها قبل الإرسال",
+    waniLibraryBtn: "مكتبة قوالب وني",
     myTemplates: "قوالبي", sendReview: "إرسال للمراجعة", submitted: "تم الإرسال ✓",
     waniEdit: {
       title: "تخصيص القالب",
@@ -94,6 +95,7 @@ const T = {
     table: { name: "Template Name", category: "Category", language: "Language", updated: "Last Updated", status: "Status", actions: "" },
     empty: "No templates yet", emptyHint: "Create your first template or sync from Meta",
     waniReady: "Wani Ready Templates", waniReadyDesc: "Pre-built store templates — customize before sending",
+    waniLibraryBtn: "Wani Template Library",
     myTemplates: "My Templates", sendReview: "Send for Review", submitted: "Submitted ✓",
     waniEdit: {
       title: "Customize Template",
@@ -1269,6 +1271,7 @@ export default function TemplatesPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [detailTpl, setDetailTpl] = useState<Template | null>(null);
   const [waniEditTpl, setWaniEditTpl] = useState<Template | null>(null);
+  const [showWaniLibrary, setShowWaniLibrary] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCat, setFilterCat] = useState<string>("ALL");
   const [filterLang, setFilterLang] = useState<string>("ALL");
@@ -1419,6 +1422,11 @@ export default function TemplatesPage() {
             <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? t.syncing : t.syncBtn}
           </button>
+          <button onClick={() => setShowWaniLibrary(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all">
+            <Sparkles className="w-4 h-4" />
+            {t.waniLibraryBtn}
+          </button>
           <Button onClick={() => { setView("create"); setStep(1); setForm(defaultForm); setSubmitSuccess(false); }}
             className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-2 shadow-sm">
             <Plus className="w-4 h-4" /> {t.newTemplate}
@@ -1475,32 +1483,6 @@ export default function TemplatesPage() {
                 ${filterCat === c ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
               {c === "ALL" ? t.filters.all : t.category[c as TemplateCategory]}
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Wani-Ready Section */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
-              <Zap className="w-3 h-3 text-white" />
-            </div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">{t.waniReady}</p>
-          </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500">— {t.waniReadyDesc}</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {WANI_READY.map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
           ))}
         </div>
       </div>
@@ -1575,6 +1557,34 @@ export default function TemplatesPage() {
         onSendCustomized={handleSendWani}
         lang={lang}
       />
+
+      {/* Wani Template Library modal — same section, moved out of the main list */}
+      <Dialog open={showWaniLibrary} onOpenChange={setShowWaniLibrary}>
+        <DialogContent className="max-w-4xl dark:bg-gray-800 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
+                <Zap className="w-3 h-3 text-white" />
+              </div>
+              <DialogTitle className="text-base dark:text-white">{t.waniReady}</DialogTitle>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t.waniReadyDesc}</p>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {WANI_READY.map(tpl => (
+              <WaniReadyCard
+                key={tpl.id}
+                template={tpl}
+                lang={lang}
+                onView={() => setDetailTpl(tpl)}
+                onSend={handleSendWani}
+                onCustomize={tpl => setWaniEditTpl(tpl)}
+                matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
