@@ -33,6 +33,7 @@ import {
   X,
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
 } from "lucide-react";
+import SmartFollowUpTab from "./SmartFollowUpTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationRule {
@@ -64,7 +65,7 @@ const EMPTY_AGENT: AIAgent = {
   systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
 };
-type AutoSubTab = "keywords" | "welcome" | "noreply" | "timebased" | "ab";
+type AutoSubTab = "keywords" | "welcome" | "smart_followup" | "timebased" | "ab";
 
 const DAYS_AR = [
   { key: "sun", ar: "الأحد", en: "Sunday" }, { key: "mon", ar: "الاثنين", en: "Monday" },
@@ -76,7 +77,7 @@ const DAYS_AR = [
 const subTabs: { id: AutoSubTab; ar: string; en: string; icon: any }[] = [
   { id: "keywords", ar: "الكلمات", en: "Keywords", icon: Key },
   { id: "welcome", ar: "الترحيب", en: "Welcome", icon: Hand },
-  { id: "noreply", ar: "المتابعة", en: "Follow-up", icon: Clock },
+  { id: "smart_followup", ar: "المتابعة الذكية", en: "Smart Follow-up", icon: Sparkles },
   { id: "timebased", ar: "الزمنية", en: "Scheduled", icon: CalendarClock },
   { id: "ab", ar: "A/B اختبار", en: "A/B Test", icon: FlaskConical },
 ];
@@ -289,7 +290,6 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
   const kwRules = rules.filter(r => r.triggerType === "KEYWORD");
   const welcomeRules = rules.filter(r => r.triggerType === "FIRST_MESSAGE");
-  const noReplyRules = rules.filter(r => r.triggerType === "NO_REPLY");
   const timeRules = rules.filter(r => r.triggerType === "TIME_BASED");
 
   // ─── Dialog open ──────────────────────────────────────────────────────────
@@ -344,11 +344,6 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     } else if (dialogMode === "welcome") {
       if (!reply.trim()) { toast.error(tx(lang, "نص الرد مطلوب", "Reply text is required")); return; }
       triggerType = "FIRST_MESSAGE"; replyType = "TEXT"; replyContent = reply.trim();
-    } else if (dialogMode === "noreply") {
-      const d = Number(noReplyDays);
-      if (!d || d < 1 || d > 365) { toast.error(tx(lang, "عدد الأيام يجب أن يكون بين 1 و 365", "Days must be between 1 and 365")); return; }
-      if (!templateId) { toast.error(tx(lang, "اختر قالباً معتمداً", "Choose an approved template")); return; }
-      triggerType = "NO_REPLY"; triggerValue = String(d); replyType = "TEMPLATE"; tplId = templateId;
     } else if (dialogMode === "timebased") {
       if (days.length === 0) { toast.error(tx(lang, "اختر يوماً واحداً على الأقل", "Choose at least one day")); return; }
       if (!tbAudienceId) { toast.error(tx(lang, "اختر الجمهور المستهدف", "Choose target audience")); return; }
@@ -458,7 +453,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
   const badgeCount: Record<AutoSubTab, number> = {
     keywords: kwRules.filter(r => r.isEnabled).length,
     welcome: welcomeRules.filter(r => r.isEnabled).length,
-    noreply: noReplyRules.filter(r => r.isEnabled).length,
+    smart_followup: 0,
     timebased: timeRules.filter(r => r.isEnabled).length,
     ab: 0,
   };
@@ -536,31 +531,8 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
       </div>
     );
 
-    if (activeSubTab === "noreply") return (
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "متابعة العملاء الصامتين", "Follow up with silent customers")}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{tx(lang, "ترسل قالباً تلقائياً للعملاء الذين لم يردوا منذ عدد من الأيام", "Sends a template automatically to customers who have been silent for several days")}</p>
-          </div>
-          <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> {tx(lang, "قاعدة جديدة", "New rule")}</Button>
-        </div>
-        <OutboundWarning lang={lang} />
-        <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
-          <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          {tx(lang, "تُفعَّل هذه القواعد بشكل تلقائي يومياً عبر Inngest scheduler — تأكد من إعداد الـ cron function في السيرفر.", "These rules run automatically every day via Inngest scheduler — make sure the cron function is configured on the server.")}
-        </div>
-        {noReplyRules.length === 0 ? (
-          <EmptyState icon={<Clock className="w-10 h-10 text-amber-300" />} title={tx(lang, "لا توجد قواعد متابعة", "No follow-up rules yet")} desc={tx(lang, "أضف قاعدة لمتابعة العملاء الذين لم يردوا", "Add a rule to follow up with customers who have not replied")}
-            action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("noreply")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة قاعدة متابعة", "Add follow-up rule")}</Button>} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            {noReplyRules.map(rule => (
-              <RuleCard key={rule.id} rule={rule} lang={lang} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "noreply")} onDelete={() => deleteRule(rule.id)} />
-            ))}
-          </div>
-        )}
-      </div>
+    if (activeSubTab === "smart_followup") return (
+      <SmartFollowUpTab lang={lang} />
     );
 
     if (activeSubTab === "timebased") return (
@@ -754,8 +726,8 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           {/* Inner sub-tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
             {subTabs.map(st => {
-              // noreply و timebased و ab — pro فأعلى فقط
-              const needsPro = st.id === "noreply" || st.id === "timebased" || st.id === "ab";
+              // smart_followup و timebased و ab — pro فأعلى فقط
+              const needsPro = st.id === "smart_followup" || st.id === "timebased" || st.id === "ab";
               const isLocked = needsPro && !isProOrAbove;
               return (
                 <button key={st.id}
@@ -977,13 +949,11 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               {dialogMode === "keywords" && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
               {dialogMode === "welcome" && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل رسالة الترحيب", "Edit welcome message") : tx(lang, "رسالة ترحيب جديدة", "New welcome message")}</>}
-              {dialogMode === "noreply" && <><Clock className="w-5 h-5 text-amber-500" /> {editTarget ? tx(lang, "تعديل قاعدة المتابعة", "Edit follow-up rule") : tx(lang, "قاعدة متابعة جديدة", "New follow-up rule")}</>}
               {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? tx(lang, "تعديل الجدولة", "Edit schedule") : tx(lang, "جدولة زمنية جديدة", "New schedule")}</>}
             </DialogTitle>
             <DialogDescription>
               {dialogMode === "keywords" && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When the customer sends this keyword, the bot replies instantly")}
               {dialogMode === "welcome" && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on the first message from a new customer")}
-              {dialogMode === "noreply" && tx(lang, "ترسل قالباً للعميل بعد صمت عدد من الأيام", "Sends a template after a number of days of silence")}
               {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends a template at selected weekly time slots")}
             </DialogDescription>
           </DialogHeader>
@@ -1070,23 +1040,6 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
                         : <><ImageIcon className="w-5 h-5 text-gray-400 mb-1" /><span className="text-xs text-gray-400">{tx(lang, "رفع صورة (اختياري)", "Upload image (optional)")}</span></>}
                     </label>
                   )}
-                </div>
-              </>
-            )}
-
-            {dialogMode === "noreply" && (
-              <>
-                <OutboundWarning lang={lang} />
-                <div>
-                  <Label className="text-sm mb-1.5 block">{tx(lang, "عدد أيام الصمت", "Days of silence")} *</Label>
-                  <div className="flex items-center gap-2">
-                    <Input type="number" min={1} max={365} dir="ltr" className="w-24 text-center" value={ruleForm.noReplyDays} onChange={e => setRuleForm(f => ({ ...f, noReplyDays: e.target.value }))} />
-                    <span className="text-sm text-gray-500">{tx(lang, "يوم بدون رد من العميل", "day(s) without a reply from the customer")}</span>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm mb-1.5 block">{tx(lang, "القالب المعتمد", "Approved template")} *</Label>
-                  <TemplatePicker templates={templates} value={ruleForm.templateId} onChange={v => setRuleForm(f => ({ ...f, templateId: v }))} lang={lang} />
                 </div>
               </>
             )}
