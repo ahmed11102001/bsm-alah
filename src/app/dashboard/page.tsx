@@ -1046,6 +1046,51 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   );
 }
 
+// ─── User Menu Badge ──────────────────────────────────────────────────────────
+function UserMenuBadge({ initials, displayName, planName, dir, onOpenSettings, locale }: { initials: string, displayName: string, planName: string, dir: string, onOpenSettings: () => void, locale: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 focus:outline-none rounded-full">
+        <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
+          <p className="text-sm font-semibold leading-tight text-gray-900 dark:text-white">{displayName}</p>
+          <p className="text-[10px] text-gray-400">{planName}</p>
+        </div>
+        <div className="w-9 h-9 rounded-full bg-[#25D366] hover:bg-[#20bb5a] transition-colors flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-transparent hover:ring-[#25D366]/20">
+          {initials}
+        </div>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-56 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden`}>
+             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 sm:hidden">
+               <p className="text-sm font-bold text-gray-900 dark:text-white">{displayName}</p>
+               <p className="text-xs text-gray-500">{planName}</p>
+             </div>
+             
+             <div className="p-2 space-y-0.5">
+               <button onClick={() => { setIsOpen(false); onOpenSettings(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
+                 <Settings className="w-4 h-4" />
+                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+               </button>
+               
+               <div onClick={() => setIsOpen(false)} className="w-full">
+                 <LanguageToggle />
+               </div>
+               <div onClick={() => setIsOpen(false)} className="w-full">
+                 <ThemeToggle />
+               </div>
+             </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const { data: session } = useSession();
@@ -1364,17 +1409,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           {/* Desktop spacer */}
           <div className="flex-1 hidden lg:block" />
 
-          <div className="flex items-center gap-1">
-            <LanguageToggle compact />
-            <ThemeToggle compact />
-
-            <button
-              onClick={openSettings}
-              className="p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-            >
-              <Settings className="w-[18px] h-[18px]" />
-            </button>
-
+          <div className="flex items-center gap-2">
             <NotificationBell
               onNavigate={(section) => setActiveSection(section)}
               isOpen={activeTopPanel === "notifications"}
@@ -1393,15 +1428,14 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             )}
             <div id="assistant-header-slot" className="flex items-center" />
 
-            <div className="flex items-center gap-2">
-              <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
-                <p className="text-sm font-semibold leading-tight">{displayName}</p>
-                <p className="text-[10px] text-gray-400">{planName}</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold">
-                {initials}
-              </div>
-            </div>
+            <UserMenuBadge 
+              initials={initials} 
+              displayName={displayName} 
+              planName={planName} 
+              dir={dir} 
+              onOpenSettings={openSettings} 
+              locale={locale} 
+            />
           </div>
         </header>
 
