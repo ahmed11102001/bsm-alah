@@ -159,6 +159,32 @@ const WANI_READY: Template[] = [
     exampleVars: ["سارة", "قميص قطني أزرق", "٢٤٠ ج.م", "https://store.example.com/cart"],
     footer: "Wani Store",
   },
+  {
+    id: "wani_shipping_followup", name: "wani_shipping_followup",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true,
+    headerType: "none",
+    body: "مرحبًا {{1}} 👋\n\nنتمنى أن يكون طلبك قد وصل إليك.\n\nهل استلمت طلبك؟",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "استلمته", value: "delivered" },
+      { type: "quick_reply", text: "لسه موصلش", value: "not_delivered" },
+      { type: "quick_reply", text: "حصلت مشكلة", value: "problem" },
+    ],
+    exampleVars: ["أحمد"],
+  },
+  {
+    id: "wani_abandoned_cart_followup", name: "wani_abandoned_cart_followup",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true,
+    headerType: "none",
+    body: "مرحبًا {{1}} 👋\n\nلاحظنا أنك لم تُكمل طلبك حتى الآن.\n\nهل ما زلت ترغب في إتمامه؟",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "أريد إكمال الطلب", value: "continue_order" },
+      { type: "quick_reply", text: "لدي استفسار", value: "ask_question" },
+      { type: "quick_reply", text: "غير مهتم", value: "not_interested" },
+    ],
+    exampleVars: ["أحمد"],
+  },
 ];
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -503,25 +529,32 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
           {/* ── Left: Edit panel (3 cols) ─────────────────────────────────── */}
           <div className="sm:col-span-3 space-y-4">
 
-            {/* Locked vars info */}
+            {/* System Template Alert */}
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                <p className="text-xs font-bold text-amber-700 dark:text-amber-300">{tw.lockedVarsTitle}</p>
+                <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-300">تنبيه</p>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {varMeta.map(v => (
-                  <span key={v.num}
-                    className="inline-flex items-center gap-1 bg-white dark:bg-gray-700 border border-amber-300 dark:border-amber-600 rounded-full px-2 py-0.5 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300">
-                    <span className="text-amber-400">🔒</span>
-                    {`{{${v.num}}}`}
-                    <span className="font-normal text-gray-500 dark:text-gray-400">
-                      {lang === "ar" ? v.meaning_ar : v.meaning_en}
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed mb-3">
+                {lang === "ar"
+                  ? "هذا قالب نظام مرتبط بأتمتة Wani. يمكنك تعديل نص الرسالة وعناوين الأزرار فقط. لا يمكن حذف أو إضافة أو تغيير المتغيرات أو عدد الأزرار أو معرفاتها، لأن ذلك سيؤثر على عمل الأتمتة."
+                  : "This is a Wani system template. You can only edit the message text and button labels. You cannot delete, add, or change variables, button count, or IDs, as it will break the automation."}
+              </p>
+              
+              {varMeta.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-amber-200/50 dark:border-amber-700/50">
+                  {varMeta.map(v => (
+                    <span key={v.num}
+                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-700 border border-amber-300 dark:border-amber-600 rounded-full px-2 py-0.5 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300">
+                      <span className="text-amber-400">🔒</span>
+                      {`{{${v.num}}}`}
+                      <span className="font-normal text-gray-500 dark:text-gray-400">
+                        {lang === "ar" ? v.meaning_ar : v.meaning_en}
+                      </span>
                     </span>
-                  </span>
-                ))}
-              </div>
-              <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5">{tw.lockedVarsHint}</p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Body textarea */}
