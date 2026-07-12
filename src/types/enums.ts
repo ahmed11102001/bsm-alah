@@ -150,3 +150,25 @@ export const AIProvider = {
   openai: "openai",
 } as const;
 export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];
+
+// Smart follow-up enums (mirror Prisma schema)
+export const SmartFollowUpType = {
+  shipping: "shipping",
+  cart:     "cart",
+} as const;
+export type SmartFollowUpType = (typeof SmartFollowUpType)[keyof typeof SmartFollowUpType];
+
+export const ShippingFollowUpStage = {
+  SENT:                  "SENT",
+  AWAITING_RATING:       "AWAITING_RATING",
+  AWAITING_PROBLEM_DETAILS: "AWAITING_PROBLEM_DETAILS",
+  DONE:                  "DONE",
+} as const;
+export type ShippingFollowUpStage = (typeof ShippingFollowUpStage)[keyof typeof ShippingFollowUpStage];
+
+export const CartFollowUpStage = {
+  SENT:           "SENT",
+  AWAITING_REASON: "AWAITING_REASON",
+  DONE:           "DONE",
+} as const;
+export type CartFollowUpStage = (typeof CartFollowUpStage)[keyof typeof CartFollowUpStage];
