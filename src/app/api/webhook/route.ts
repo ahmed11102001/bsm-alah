@@ -268,23 +268,83 @@ export async function POST(req: NextRequest) {
 
         if (ctx?.kind === "shipping" && ctx.order) {
           await closeExpiredStageIfNeeded("shipping", ctx.order).catch(() => {});
-          await handleShippingFollowUpReply(ctx.order, {
-            payloadId: payload,
-            payloadTitle: content,
-            messageText: content,
-            accountOwner,
-            userId,
-          });
+
+          const { getSmartFollowUpSetting } = await import("@/lib/smart-followup");
+          const setting = await getSmartFollowUpSetting(ctx.order.userId, "shipping");
+          const replyDelayMinutes = setting?.replyDelayMinutes ?? 0;
+
+          if (replyDelayMinutes > 0) {
+            // schedule delayed action via Inngest
+            try {
+              const { inngest } = await import("@/inngest/client");
+              await inngest.send({
+                name: "followup/action.send",
+                data: {
+                  kind: "shipping",
+                  recordId: ctx.order.id,
+                  action: payload,
+                  replyDelaySeconds: Math.round(replyDelayMinutes * 60),
+                },
+              });
+            } catch (e) {
+              console.error("[SmartFollowUp] Failed to schedule delayed action:", e);
+              // fallback to immediate handling
+              await handleShippingFollowUpReply(ctx.order, {
+                payloadId: payload,
+                payloadTitle: content,
+                messageText: content,
+                accountOwner,
+                userId,
+              });
+            }
+          } else {
+            await handleShippingFollowUpReply(ctx.order, {
+              payloadId: payload,
+              payloadTitle: content,
+              messageText: content,
+              accountOwner,
+              userId,
+            });
+          }
           smartFollowUpHandled = true;
         } else if (ctx?.kind === "cart" && ctx.cart) {
           await closeExpiredStageIfNeeded("cart", ctx.cart).catch(() => {});
-          await handleCartFollowUpReply(ctx.cart, {
-            payloadId: payload,
-            payloadTitle: content,
-            messageText: content,
-            accountOwner,
-            userId,
-          });
+
+          const { getSmartFollowUpSetting } = await import("@/lib/smart-followup");
+          const setting = await getSmartFollowUpSetting(ctx.cart.userId, "cart");
+          const replyDelayMinutes = setting?.replyDelayMinutes ?? 0;
+
+          if (replyDelayMinutes > 0) {
+            try {
+              const { inngest } = await import("@/inngest/client");
+              await inngest.send({
+                name: "followup/action.send",
+                data: {
+                  kind: "cart",
+                  recordId: ctx.cart.id,
+                  action: payload,
+                  replyDelaySeconds: Math.round(replyDelayMinutes * 60),
+                },
+              });
+            } catch (e) {
+              console.error("[SmartFollowUp] Failed to schedule delayed action:", e);
+              await handleCartFollowUpReply(ctx.cart, {
+                payloadId: payload,
+                payloadTitle: content,
+                messageText: content,
+                accountOwner,
+                userId,
+              });
+            }
+          } else {
+            await handleCartFollowUpReply(ctx.cart, {
+              payloadId: payload,
+              payloadTitle: content,
+              messageText: content,
+              accountOwner,
+              userId,
+            });
+          }
           smartFollowUpHandled = true;
         }
       } catch (e) {

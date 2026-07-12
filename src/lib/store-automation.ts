@@ -83,6 +83,21 @@ export async function executeStoreAutomationSend(
 
   const account = automation.user?.whatsappAccount;
   if (!account) return { sent: false, reason: "no_whatsapp_account" };
+  // ── Atomic claim for order_shipped (prerequisite for smart follow-up) ──
+  // Claim before sending to avoid duplicate sends when the webhook/handler
+  // is invoked concurrently for the same order.
+  let claimedShipped = false;
+  if (automationType === "order_shipped" && storeOrderId) {
+    const claim = await prisma.storeOrder.updateMany({
+      where: { id: storeOrderId, shippedMessageId: null },
+      data:  { shippedAt: new Date() },
+    });
+    claimedShipped = claim.count === 1;
+    if (!claimedShipped) {
+      // Already shipped or in progress — don't send again
+      return { sent: false, reason: "already_shipped_or_in_progress" };
+    }
+  }
 
   const result = await sendWhatsAppMessage({
     toPhone:       customerPhone,
@@ -96,19 +111,6 @@ export async function executeStoreAutomationSend(
     content:       null,
   });
 
-  // ── Atomic claim for order_shipped (prerequisite for smart follow-up) ──
-  let claimedShipped = false;
-  if (automationType === "order_shipped" && storeOrderId) {
-    const claim = await prisma.storeOrder.updateMany({
-      where: { id: storeOrderId, shippedMessageId: null },
-      data:  { shippedAt: new Date() },
-    });
-    claimedShipped = claim.count === 1;
-    if (!claimedShipped) {
-      // Already shipped or in progress — don't send again
-      return { sent: false, reason: "already_shipped_or_in_progress" };
-    }
-  }
 
   await prisma.message.create({
     data: {

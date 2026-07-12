@@ -723,7 +723,7 @@ export async function handleShippingFollowUpReply(
 
     await notifySmartFollowUpAlert(
       userId,
-      "shipping_send_failed",
+      "shipping_not_delivered",
       { customerPhone: order.customerPhone, orderNumber: order.orderNumber ?? undefined }
     );
     return;
@@ -941,6 +941,54 @@ export async function executeFollowUpAction(
   action: string
 ) {
   console.log(`[SmartFollowUp] Executing action ${action} for ${kind} ${recordId}`);
-  // placeholder — currently all actions are handled inline in the webhook
-  // this function is called from Inngest for delayed replies if needed
+  // This function is invoked by Inngest when a delayed reply/action should be
+  // executed. It reconstructs the necessary context and forwards to the
+  // existing reply handlers so behavior is identical to immediate replies.
+  if (kind === "shipping") {
+    const order = await prisma.storeOrder.findUnique({
+      where: { id: recordId },
+      select: {
+        id: true, status: true, customerPhone: true, contactId: true,
+        userId: true, followUpSentAt: true, orderNumber: true, customerName: true,
+        followUpStage: true, followUpMessageId: true,
+      },
+    });
+    if (!order) return;
+
+    const account = await getWhatsappAccount(order.userId);
+    if (!account) return;
+
+    await handleShippingFollowUpReply(order as any, {
+      payloadId: action,
+      payloadTitle: undefined,
+      messageText: action,
+      accountOwner: account,
+      userId: order.userId,
+    });
+    return;
+  }
+
+  if (kind === "cart") {
+    const cart = await prisma.abandonedCart.findUnique({
+      where: { id: recordId },
+      select: {
+        id: true, userId: true, customerPhone: true, customerName: true,
+        recoveredAt: true, followUpSentAt: true, recoveryUrl: true, followUpStage: true,
+        followUpMessageId: true,
+      },
+    });
+    if (!cart) return;
+
+    const account = await getWhatsappAccount(cart.userId);
+    if (!account) return;
+
+    await handleCartFollowUpReply(cart as any, {
+      payloadId: action,
+      payloadTitle: undefined,
+      messageText: action,
+      accountOwner: account,
+      userId: cart.userId,
+    });
+    return;
+  }
 }

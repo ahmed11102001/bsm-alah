@@ -297,13 +297,14 @@ export async function notifyOrderConfirmed(userId: string, orderNumber: string, 
 
 export async function notifySmartFollowUpAlert(
   userId: string,
-  kind: "low_rating" | "cart_not_interested" | "shipping_send_failed" | "cart_send_failed",
+  kind: "low_rating" | "cart_not_interested" | "shipping_send_failed" | "shipping_not_delivered" | "cart_send_failed",
   details: { customerPhone: string; orderNumber?: string; rating?: number; reason?: string; error?: string },
 ) {
   const titles: Record<typeof kind, { ar: string; en: string }> = {
     low_rating:             { ar: "🔴 تقييم منخفض من عميل",       en: "🔴 Low customer rating" },
     cart_not_interested:    { ar: "📭 عميل غير مهتم بالسلة",      en: "📭 Customer not interested in cart" },
     shipping_send_failed:   { ar: "❌ فشل إرسال متابعة الشحن",    en: "❌ Shipping follow-up send failed" },
+    shipping_not_delivered: { ar: "⚠️ عميل قال: لم يستلم الشحنة", en: "⚠️ Customer reported not delivered" },
     cart_send_failed:       { ar: "❌ فشل إرسال متابعة السلة",     en: "❌ Cart follow-up send failed" },
   };
 
@@ -319,6 +320,10 @@ export async function notifySmartFollowUpAlert(
     shipping_send_failed: (d) => ({
       ar: `فشل إرسال متابعة الشحن لـ ${d.customerPhone} — ${d.error ?? ""}`,
       en: `Shipping follow-up failed for ${d.customerPhone} — ${d.error ?? ""}`,
+    }),
+    shipping_not_delivered: (d) => ({
+      ar: `العميل ${d.customerPhone} أبلغ أن الشحنة لم تصل — طلب متابعة`,
+      en: `Customer ${d.customerPhone} reported the shipment as not delivered — please follow up`,
     }),
     cart_send_failed: (d) => ({
       ar: `فشل إرسال متابعة السلة لـ ${d.customerPhone} — ${d.error ?? ""}`,
