@@ -304,7 +304,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
   const [saving, setSaving] = useState(false);
 
   // MOCK: This will come from API
-  const templateStatus = "PENDING"; 
+  const templateStatus: string = "PENDING"; 
   const isApproved = templateStatus === "APPROVED";
 
   const [texts, setTexts] = useState({
