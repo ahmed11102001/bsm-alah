@@ -42,24 +42,24 @@ function FlowTree({ templateName, title, icon, children, isApproved }: { templat
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm mt-6">
       {/* Template Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
-         <div>
-            <p className="text-xs text-gray-500 font-medium mb-1">{tx("ar", "اسم القالب المخصص (يُعدل من مكتبة القوالب):", "Dedicated template name (edited from Template Library):")}</p>
-            <div className="flex items-center gap-2 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">
-               <Lock className="w-3.5 h-3.5 text-gray-400" />
-               {templateName}
-            </div>
-         </div>
-         <div>
-            {isApproved ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
-                <CheckCircle2 className="w-3.5 h-3.5" /> {tx("ar", "قالب معتمد", "Approved template")}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
-                <Lock className="w-3.5 h-3.5" /> {tx("ar", "غير معتمد", "Not approved")}
-              </span>
-            )}
-         </div>
+        <div>
+          <p className="text-xs text-gray-500 font-medium mb-1">{tx("ar", "اسم القالب المخصص (يُعدل من مكتبة القوالب):", "Dedicated template name (edited from Template Library):")}</p>
+          <div className="flex items-center gap-2 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <Lock className="w-3.5 h-3.5 text-gray-400" />
+            {templateName}
+          </div>
+        </div>
+        <div>
+          {isApproved ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
+              <CheckCircle2 className="w-3.5 h-3.5" /> {tx("ar", "قالب معتمد", "Approved template")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+              <Lock className="w-3.5 h-3.5" /> {tx("ar", "غير معتمد", "Not approved")}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* The Root of the flow */}
@@ -71,7 +71,7 @@ function FlowTree({ templateName, title, icon, children, isApproved }: { templat
       </div>
 
       <div className="rtl:pr-4 ltr:pl-4 rtl:border-r-2 ltr:border-l-2 border-gray-100 dark:border-gray-700 rtl:mr-4 ltr:ml-4 pb-2">
-         {children}
+        {children}
       </div>
     </div>
   );
@@ -82,21 +82,21 @@ function FlowAction({ title, icon, isLast, children }: { title: string, icon: Re
     <div className="relative mt-5 pt-1">
       {/* Horizontal connector line */}
       <div className="absolute top-4 w-4 border-t-2 border-gray-100 dark:border-gray-700 rtl:-right-4 ltr:-left-4" />
-      
+
       {/* Hide the vertical line overlap if it's the last item */}
       {isLast && (
         <div className="absolute top-[17px] bottom-0 w-1 bg-white dark:bg-gray-800 rtl:-right-[18px] ltr:-left-[18px]" />
       )}
 
       <div className="flex items-center gap-2 mb-3">
-         <div className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 flex items-center justify-center flex-shrink-0">
-            {icon}
-         </div>
-         <span className="font-semibold text-[13px] text-gray-800 dark:text-gray-200">{title}</span>
+        <div className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 flex items-center justify-center flex-shrink-0">
+          {icon}
+        </div>
+        <span className="font-semibold text-[13px] text-gray-800 dark:text-gray-200">{title}</span>
       </div>
 
       <div className="rtl:pr-7 ltr:pl-7 rtl:border-r-2 ltr:border-l-2 border-gray-100 dark:border-gray-700 rtl:mr-3 ltr:ml-3 space-y-4 pb-3">
-         {children}
+        {children}
       </div>
     </div>
   );
@@ -107,7 +107,7 @@ function FlowStep({ text, textareaValue, onTextareaChange, icon, isLast, label }
     <div className="relative mt-3">
       {/* Horizontal connector line */}
       <div className="absolute top-2.5 w-5 border-t-2 border-gray-100 dark:border-gray-700 rtl:-right-5 ltr:-left-5" />
-      
+
       {/* Hide the vertical line overlap if it's the last item */}
       {isLast && (
         <div className="absolute top-[11px] bottom-0 w-1 bg-white dark:bg-gray-800 rtl:-right-[22px] ltr:-left-[22px]" />
@@ -115,21 +115,21 @@ function FlowStep({ text, textareaValue, onTextareaChange, icon, isLast, label }
 
       <div className="flex items-start gap-2">
         <div className="mt-0.5 text-gray-400 dark:text-gray-500">
-           {icon || <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1" />}
+          {icon || <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 mt-1" />}
         </div>
         <div className="flex-1 max-w-md">
-           <p className="text-[13px] text-gray-700 dark:text-gray-300 font-medium mb-1.5">{text}</p>
-           {textareaValue !== undefined && (
-             <div className="mt-2">
-                {label && <p className="text-[11px] text-gray-400 mb-1">{label}</p>}
-                <Textarea 
-                   rows={2} 
-                   value={textareaValue} 
-                   onChange={e => onTextareaChange && onTextareaChange(e.target.value)}
-                   className="text-xs resize-none dark:bg-gray-900 dark:border-gray-700 shadow-sm"
-                />
-             </div>
-           )}
+          <p className="text-[13px] text-gray-700 dark:text-gray-300 font-medium mb-1.5">{text}</p>
+          {textareaValue !== undefined && (
+            <div className="mt-2">
+              {label && <p className="text-[11px] text-gray-400 mb-1">{label}</p>}
+              <Textarea
+                rows={2}
+                value={textareaValue}
+                onChange={e => onTextareaChange && onTextareaChange(e.target.value)}
+                className="text-xs resize-none dark:bg-gray-900 dark:border-gray-700 shadow-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -141,12 +141,12 @@ function SelectDelay({ value, onChange, options, label }: { value: string | numb
   return (
     <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300">
       <span className="font-medium whitespace-nowrap">{label}:</span>
-      <select 
-        value={value} 
+      <select
+        value={value}
         onChange={e => onChange(e.target.value)}
         className="bg-transparent border-none outline-none font-bold text-gray-900 dark:text-gray-100 cursor-pointer min-w-[70px]"
       >
-         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   )
@@ -156,12 +156,12 @@ function SelectDelay({ value, onChange, options, label }: { value: string | numb
 
 function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }) {
   const [isEnabled, setIsEnabled] = useState(false);
-  const [replyDelay, setReplyDelay] = useState(0); 
-  const [triggerDelayDays, setTriggerDelayDays] = useState(3); 
+  const [replyDelay, setReplyDelay] = useState(0);
+  const [triggerDelayDays, setTriggerDelayDays] = useState(3);
   const [saving, setSaving] = useState(false);
 
   // MOCK: This will come from API
-  const templateStatus: string = "PENDING"; 
+  const templateStatus: string = "PENDING";
   const isApproved = templateStatus === "APPROVED";
 
   const [texts, setTexts] = useState({
@@ -202,87 +202,87 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-           <SelectDelay 
-             label={tx(lang, "إرسال المتابعة بعد", "Trigger after")} 
-             value={triggerDelayDays} 
-             onChange={v => setTriggerDelayDays(Number(v))} 
-             options={[
-               { label: tx(lang, "1 يوم", "1 day"), value: 1 },
-               { label: tx(lang, "2 أيام", "2 days"), value: 2 },
-               { label: tx(lang, "3 أيام", "3 days"), value: 3 },
-               { label: tx(lang, "4 أيام", "4 days"), value: 4 },
-               { label: tx(lang, "5 أيام", "5 days"), value: 5 },
-               { label: tx(lang, "7 أيام", "7 days"), value: 7 },
-             ]} 
-           />
-           <SelectDelay 
-             label={tx(lang, "تأخير رسائل الرد", "Reply delay")} 
-             value={replyDelay} 
-             onChange={v => setReplyDelay(Number(v))} 
-             options={[
-               { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
-               { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
-               { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
-               { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
-             ]} 
-           />
-           <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
+          <SelectDelay
+            label={tx(lang, "إرسال المتابعة بعد", "Trigger after")}
+            value={triggerDelayDays}
+            onChange={v => setTriggerDelayDays(Number(v))}
+            options={[
+              { label: tx(lang, "1 يوم", "1 day"), value: 1 },
+              { label: tx(lang, "2 أيام", "2 days"), value: 2 },
+              { label: tx(lang, "3 أيام", "3 days"), value: 3 },
+              { label: tx(lang, "4 أيام", "4 days"), value: 4 },
+              { label: tx(lang, "5 أيام", "5 days"), value: 5 },
+              { label: tx(lang, "7 أيام", "7 days"), value: 7 },
+            ]}
+          />
+          <SelectDelay
+            label={tx(lang, "تأخير رسائل الرد", "Reply delay")}
+            value={replyDelay}
+            onChange={v => setReplyDelay(Number(v))}
+            options={[
+              { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
+              { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
+              { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
+              { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
+            ]}
+          />
+          <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
         </div>
       </div>
 
-      <FlowTree 
-         templateName="wani_shipping_followup"
-         title={tx(lang, "أتمتة متابعة الشحن", "Shipping Follow-up Automation")}
-         icon={<Truck className="w-4 h-4" />}
-         isApproved={isApproved}
+      <FlowTree
+        templateName="wani_shipping_followup"
+        title={tx(lang, "أتمتة متابعة الشحن", "Shipping Follow-up Automation")}
+        icon={<Truck className="w-4 h-4" />}
+        isApproved={isApproved}
       >
-         <FlowAction title={tx(lang, "يستقبل ضغط الزر (استلمته)", "Receives button click (Received)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
-            <FlowStep 
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل رسالة طلب التقييم", "Sends rating request")}
-              label={tx(lang, "نص رسالة طلب التقييم", "Rating request text")}
-              textareaValue={texts.rating}
-              onTextareaChange={v => setTexts({...texts, rating: v})}
-            />
-            <FlowStep icon={<Bell className="w-4 h-4" />} text={tx(lang, "إذا كان التقييم 1-2 نجمة: يرسل إشعار فوري للتاجر", "If rating 1-2 stars: sends instant notification to merchant")} />
-            <FlowStep 
-              isLast 
-              icon={<Star className="w-4 h-4 text-amber-500" />}
-              text={tx(lang, "إذا كان التقييم 3-5 نجوم: يرسل رسالة شكر للعميل", "If rating 3-5 stars: sends thank you message to customer")}
-              label={tx(lang, "نص رسالة الشكر", "Thank you message text")}
-              textareaValue={texts.ratingThanks}
-              onTextareaChange={v => setTexts({...texts, ratingThanks: v})}
-            />
-         </FlowAction>
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (استلمته)", "Receives button click (Received)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة طلب التقييم", "Sends rating request")}
+            label={tx(lang, "نص رسالة طلب التقييم", "Rating request text")}
+            textareaValue={texts.rating}
+            onTextareaChange={v => setTexts({ ...texts, rating: v })}
+          />
+          <FlowStep icon={<Bell className="w-4 h-4" />} text={tx(lang, "إذا كان التقييم 1-2 نجمة: يرسل إشعار فوري للتاجر", "If rating 1-2 stars: sends instant notification to merchant")} />
+          <FlowStep
+            isLast
+            icon={<Star className="w-4 h-4 text-amber-500" />}
+            text={tx(lang, "إذا كان التقييم 3-5 نجوم: يرسل رسالة شكر للعميل", "If rating 3-5 stars: sends thank you message to customer")}
+            label={tx(lang, "نص رسالة الشكر", "Thank you message text")}
+            textareaValue={texts.ratingThanks}
+            onTextareaChange={v => setTexts({ ...texts, ratingThanks: v })}
+          />
+        </FlowAction>
 
-         <FlowAction title={tx(lang, "يستقبل ضغط الزر (لسه موصلش)", "Receives button click (Not yet)")} icon={<Truck className="w-4 h-4 text-blue-500" />}>
-            <FlowStep 
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل رسالة الرد الفوري", "Sends instant reply message")}
-              label={tx(lang, "نص الرسالة", "Message text")}
-              textareaValue={texts.notArrived}
-              onTextareaChange={v => setTexts({...texts, notArrived: v})}
-            />
-            <FlowStep isLast icon={<Bell className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري للتاجر", "Sends instant notification to merchant")} />
-         </FlowAction>
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (لسه موصلش)", "Receives button click (Not yet)")} icon={<Truck className="w-4 h-4 text-blue-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة الرد الفوري", "Sends instant reply message")}
+            label={tx(lang, "نص الرسالة", "Message text")}
+            textareaValue={texts.notArrived}
+            onTextareaChange={v => setTexts({ ...texts, notArrived: v })}
+          />
+          <FlowStep isLast icon={<Bell className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري للتاجر", "Sends instant notification to merchant")} />
+        </FlowAction>
 
-         <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (حصلت مشكلة)", "Receives button click (Problem)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
-            <FlowStep 
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل سؤال نوع المشكلة", "Sends problem type question")}
-              label={tx(lang, "نص رسالة سؤال المشكلة", "Problem question text")}
-              textareaValue={texts.problemType}
-              onTextareaChange={v => setTexts({...texts, problemType: v})}
-            />
-            <FlowStep 
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يستقبل الرد ويرسل رسالة", "Receives answer and sends message")}
-              label={tx(lang, "نص رسالة الفحص", "Checking message text")}
-              textareaValue={texts.problemThanks}
-              onTextareaChange={v => setTexts({...texts, problemThanks: v})}
-            />
-            <FlowStep isLast icon={<Headset className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري ويحول العميل لموظف المحادثة", "Sends instant notification and routes customer to human agent")} />
-         </FlowAction>
+        <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (حصلت مشكلة)", "Receives button click (Problem)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل سؤال نوع المشكلة", "Sends problem type question")}
+            label={tx(lang, "نص رسالة سؤال المشكلة", "Problem question text")}
+            textareaValue={texts.problemType}
+            onTextareaChange={v => setTexts({ ...texts, problemType: v })}
+          />
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يستقبل الرد ويرسل رسالة", "Receives answer and sends message")}
+            label={tx(lang, "نص رسالة الفحص", "Checking message text")}
+            textareaValue={texts.problemThanks}
+            onTextareaChange={v => setTexts({ ...texts, problemThanks: v })}
+          />
+          <FlowStep isLast icon={<Headset className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري ويحول العميل لموظف المحادثة", "Sends instant notification and routes customer to human agent")} />
+        </FlowAction>
       </FlowTree>
 
       <div className="flex justify-end gap-2 pt-4">
@@ -299,18 +299,19 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 
 function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }) {
   const [isEnabled, setIsEnabled] = useState(false);
-  const [replyDelay, setReplyDelay] = useState(0); 
+  const [replyDelay, setReplyDelay] = useState(0);
   const [triggerDelayDays, setTriggerDelayDays] = useState(1);
   const [saving, setSaving] = useState(false);
 
   // MOCK: This will come from API
-  const templateStatus: string = "PENDING"; 
+  const templateStatus: string = "PENDING";
   const isApproved = templateStatus === "APPROVED";
 
   const [texts, setTexts] = useState({
     completeReply: tx(lang, "رائع ❤️\nيمكنك إكمال طلبك من خلال الرابط التالي:\n🔗 [رابط إكمال الطلب]", "Great ❤️\nYou can complete your order through the following link:\n🔗 [checkout link]"),
     inquiryReply: tx(lang, "سيتم تحويلك إلى أحد موظفي المبيعات للتواصل معك في أقرب وقت.", "You'll be connected with one of our sales team who will reach out soon."),
     reasonQuestion: tx(lang, "ما سبب عدم إكمال الطلب؟", "What's the reason you didn't complete the order?"),
+    reasonThanks: tx(lang, "شكرًا لمشاركتنا رأيك ❤️", "Thanks for sharing your feedback with us ❤️"),
   });
 
   const handleToggle = (checked: boolean) => {
@@ -343,69 +344,275 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-           <SelectDelay 
-             label={tx(lang, "إرسال المتابعة بعد", "Trigger after")} 
-             value={triggerDelayDays} 
-             onChange={v => setTriggerDelayDays(Number(v))} 
-             options={[
-               { label: tx(lang, "1 يوم", "1 day"), value: 1 },
-               { label: tx(lang, "2 أيام", "2 days"), value: 2 },
-               { label: tx(lang, "3 أيام", "3 days"), value: 3 },
-             ]} 
-           />
-           <SelectDelay 
-             label={tx(lang, "تأخير رسائل الرد", "Reply delay")} 
-             value={replyDelay} 
-             onChange={v => setReplyDelay(Number(v))} 
-             options={[
-               { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
-               { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
-               { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
-               { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
-             ]} 
-           />
-           <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
+          <SelectDelay
+            label={tx(lang, "إرسال المتابعة بعد", "Trigger after")}
+            value={triggerDelayDays}
+            onChange={v => setTriggerDelayDays(Number(v))}
+            options={[
+              { label: tx(lang, "1 يوم", "1 day"), value: 1 },
+              { label: tx(lang, "2 أيام", "2 days"), value: 2 },
+              { label: tx(lang, "3 أيام", "3 days"), value: 3 },
+            ]}
+          />
+          <SelectDelay
+            label={tx(lang, "تأخير رسائل الرد", "Reply delay")}
+            value={replyDelay}
+            onChange={v => setReplyDelay(Number(v))}
+            options={[
+              { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
+              { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
+              { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
+              { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
+            ]}
+          />
+          <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
         </div>
       </div>
 
-      <FlowTree 
-         templateName="wani_abandoned_cart_followup"
-         title={tx(lang, "أتمتة متابعة السلة المتروكة", "Abandoned Cart Automation")}
-         icon={<ShoppingCart className="w-4 h-4" />}
-         isApproved={isApproved}
+      <FlowTree
+        templateName="wani_abandoned_cart_followup"
+        title={tx(lang, "أتمتة متابعة السلة المتروكة", "Abandoned Cart Automation")}
+        icon={<ShoppingCart className="w-4 h-4" />}
+        isApproved={isApproved}
       >
-         <FlowAction title={tx(lang, "يستقبل ضغط الزر (أريد إكمال الطلب)", "Receives button click (Continue Order)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
-            <FlowStep 
-              isLast
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل رسالة رابط الإكمال (الرابط يُحقن تلقائيًا)", "Sends checkout link message (Link is auto-injected)")}
-              label={tx(lang, "نص رسالة رابط الإكمال", "Checkout link message")}
-              textareaValue={texts.completeReply}
-              onTextareaChange={v => setTexts({...texts, completeReply: v})}
-            />
-         </FlowAction>
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (أريد إكمال الطلب)", "Receives button click (Continue Order)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
+          <FlowStep
+            isLast
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة رابط الإكمال (الرابط يُحقن تلقائيًا)", "Sends checkout link message (Link is auto-injected)")}
+            label={tx(lang, "نص رسالة رابط الإكمال", "Checkout link message")}
+            textareaValue={texts.completeReply}
+            onTextareaChange={v => setTexts({ ...texts, completeReply: v })}
+          />
+        </FlowAction>
 
-         <FlowAction title={tx(lang, "يستقبل ضغط الزر (لدي استفسار)", "Receives button click (Have a question)")} icon={<MessageCircle className="w-4 h-4 text-amber-500" />}>
-            <FlowStep 
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل رسالة الرد الفوري", "Sends instant reply message")}
-              label={tx(lang, "نص الرسالة", "Message text")}
-              textareaValue={texts.inquiryReply}
-              onTextareaChange={v => setTexts({...texts, inquiryReply: v})}
-            />
-            <FlowStep isLast icon={<Headset className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري للتاجر ويحول المحادثة للموظف", "Sends instant notification and routes to agent")} />
-         </FlowAction>
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (لدي استفسار)", "Receives button click (Have a question)")} icon={<MessageCircle className="w-4 h-4 text-amber-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة الرد الفوري", "Sends instant reply message")}
+            label={tx(lang, "نص الرسالة", "Message text")}
+            textareaValue={texts.inquiryReply}
+            onTextareaChange={v => setTexts({ ...texts, inquiryReply: v })}
+          />
+          <FlowStep isLast icon={<Headset className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري للتاجر ويحول المحادثة للموظف", "Sends instant notification and routes to agent")} />
+        </FlowAction>
 
-         <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (غير مهتم)", "Receives button click (Not interested)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
-            <FlowStep 
-              isLast
-              icon={<MessageCircle className="w-4 h-4" />}
-              text={tx(lang, "يرسل رسالة سؤال عن السبب", "Sends reason question message")}
-              label={tx(lang, "نص رسالة سؤال السبب", "Reason question text")}
-              textareaValue={texts.reasonQuestion}
-              onTextareaChange={v => setTexts({...texts, reasonQuestion: v})}
-            />
-         </FlowAction>
+        <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (غير مهتم)", "Receives button click (Not interested)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة سؤال عن السبب مع 3 أزرار (السعر مرتفع / غيرت رأيي / سبب آخر)", "Sends reason question with 3 buttons (Price too high / Changed my mind / Other reason)")}
+            label={tx(lang, "نص رسالة سؤال السبب", "Reason question text")}
+            textareaValue={texts.reasonQuestion}
+            onTextareaChange={v => setTexts({ ...texts, reasonQuestion: v })}
+          />
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "أيًا كان السبب المُختار: يرسل رسالة شكر للعميل", "Whichever reason is picked: sends a thank-you reply to the customer")}
+            label={tx(lang, "نص رسالة الشكر", "Thank-you message text")}
+            textareaValue={texts.reasonThanks}
+            onTextareaChange={v => setTexts({ ...texts, reasonThanks: v })}
+          />
+          <FlowStep isLast icon={<Bell className="w-4 h-4" />} text={tx(lang, "يسجّل سبب عدم الاهتمام ويرسل إشعارًا لصاحب المتجر", "Logs the not-interested reason and notifies the merchant")} />
+        </FlowAction>
+      </FlowTree>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button variant="outline" onClick={onBack}>{tx(lang, "إلغاء", "Cancel")}</Button>
+        <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handleSave} disabled={saving}>
+          {saving ? tx(lang, "جاري الحفظ...", "Saving...") : tx(lang, "حفظ التغييرات", "Save changes")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Campaign follow-up detail view ─────────────────────────────────────────────
+
+// TODO(backend): pull from GET /api/campaigns
+const MOCK_CAMPAIGNS = [
+  { id: "camp_summer_offers", name: "عروض الصيف" },
+  { id: "camp_new_launch", name: "إطلاق المنتج الجديد" },
+  { id: "camp_reviews", name: "جمع التقييمات" },
+];
+
+// TODO(backend): pull real name/status from the "followup"-group templates in Templates.tsx
+const CAMPAIGN_TEMPLATES = [
+  {
+    id: "wani_campaign_followup_generic", name: "wani_campaign_followup_generic", status: "PENDING" as const,
+    body: "مرحبًا {{1}} 👋\n\nهل ما زلت مهتمًا بهذا العرض؟"
+  },
+  {
+    id: "wani_campaign_followup_discount", name: "wani_campaign_followup_discount", status: "PENDING" as const,
+    body: "مرحبًا {{1}} 🎯\n\nالخصم اللي بعتناهولك لسه متاح لوقت محدود.\n\nهل جربت العرض؟"
+  },
+  {
+    id: "wani_campaign_followup_launch", name: "wani_campaign_followup_launch", status: "PENDING" as const,
+    body: "مرحبًا {{1}} 🚀\n\nشفت المنتج الجديد اللي بعتناه؟\n\nهل حابب تعرف تفاصيله؟"
+  },
+];
+
+function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }) {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [replyDelay, setReplyDelay] = useState(0);
+  const [triggerDelayDays, setTriggerDelayDays] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  const [linkMode, setLinkMode] = useState<"specific" | "all">("all");
+  const [campaignId, setCampaignId] = useState(MOCK_CAMPAIGNS[0].id);
+
+  const [templateId, setTemplateId] = useState(CAMPAIGN_TEMPLATES[0].id);
+  const selectedTemplate = CAMPAIGN_TEMPLATES.find(t => t.id === templateId)!;
+  const isApproved = (selectedTemplate.status as string) === "APPROVED";
+
+  const [texts, setTexts] = useState({
+    wantOrder: tx(lang, "ممتاز 🎉\n\nيمكنك إكمال الطلب الآن أو سيقوم أحد ممثلينا بالتواصل معك.", "Great 🎉\n\nYou can complete the order now, or one of our reps will reach out to you."),
+    hasQuestion: tx(lang, "يسعدنا مساعدتك ❤️\n\nاكتب استفسارك وسيتم الرد عليك في أقرب وقت.", "Happy to help ❤️\n\nWrite your question and we'll get back to you soon."),
+    notInterested: tx(lang, "شكرًا لك ❤️\n\nلن نرسل لك متابعة لهذه الحملة.", "Thank you ❤️\n\nWe won't send you further follow-ups for this campaign."),
+  });
+
+  const handleToggle = (checked: boolean) => {
+    if (checked && !isApproved) {
+      toast.error(tx(lang, "يجب اعتماد القالب من ميتا أولاً لتفعيل الأتمتة", "Template must be approved by Meta to enable automation"));
+      return;
+    }
+    setIsEnabled(checked);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 500));
+    setSaving(false);
+    toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Unified Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 flex-shrink-0">
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4" />
+          </div>
+          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "متابعة الحملة التسويقية", "Campaign Follow-up")}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectDelay
+            label={tx(lang, "إرسال المتابعة بعد", "Trigger after")}
+            value={triggerDelayDays}
+            onChange={v => setTriggerDelayDays(Number(v))}
+            options={[
+              { label: tx(lang, "ساعة", "1 hour"), value: 0.04 },
+              { label: tx(lang, "1 يوم", "1 day"), value: 1 },
+              { label: tx(lang, "2 أيام", "2 days"), value: 2 },
+              { label: tx(lang, "3 أيام", "3 days"), value: 3 },
+            ]}
+          />
+          <SelectDelay
+            label={tx(lang, "تأخير رسائل الرد", "Reply delay")}
+            value={replyDelay}
+            onChange={v => setReplyDelay(Number(v))}
+            options={[
+              { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
+              { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
+              { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
+              { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
+            ]}
+          />
+          <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
+        </div>
+      </div>
+
+      {/* Campaign linkage */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{tx(lang, "الحملة المرتبطة", "Linked campaign")}</p>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input type="radio" checked={linkMode === "specific"} onChange={() => setLinkMode("specific")} className="accent-green-500" />
+            {tx(lang, "اختر حملة محددة", "Choose a specific campaign")}
+          </label>
+          {linkMode === "specific" && (
+            <select
+              value={campaignId}
+              onChange={e => setCampaignId(e.target.value)}
+              className="ms-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-64"
+            >
+              {MOCK_CAMPAIGNS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input type="radio" checked={linkMode === "all"} onChange={() => setLinkMode("all")} className="accent-green-500" />
+            {tx(lang, "تطبيق على جميع الحملات الجديدة", "Apply to all new campaigns")}
+          </label>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          {tx(lang, "لو عندك متابعة مخصصة لحملة معينة ومتابعة عامة لكل الحملات، المخصصة بتاخد الأولوية دايمًا.",
+            "If you have both a campaign-specific follow-up and a general one for all campaigns, the specific one always takes priority.")}
+        </p>
+      </div>
+
+      {/* Template picker */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{tx(lang, "قالب المتابعة", "Follow-up template")}</p>
+        <p className="text-xs text-gray-400 mb-3">
+          {tx(lang, "اختر من قوالب المتابعة الجاهزة في مكتبة القوالب (قسم \"قوالب المتابعة\") — كلها متوافقة مع نفس الأزرار.",
+            "Choose from the ready-made follow-up templates in the Template Library (\"Follow-up Templates\" section) — they're all compatible with the same buttons.")}
+        </p>
+        <select
+          value={templateId}
+          onChange={e => setTemplateId(e.target.value)}
+          className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-72 font-mono"
+        >
+          {CAMPAIGN_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        {!isApproved && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+            <Lock className="w-3 h-3" /> {tx(lang, "القالب ده لسه مش معتمد من ميتا", "This template isn't approved by Meta yet")}
+          </p>
+        )}
+      </div>
+
+      <FlowTree
+        templateName={selectedTemplate.name}
+        title={tx(lang, "أتمتة متابعة الحملة", "Campaign Follow-up Automation")}
+        icon={<Megaphone className="w-4 h-4" />}
+        isApproved={isApproved}
+      >
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (اطلب الآن)", "Receives button click (Order now)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
+          <FlowStep
+            isLast
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رد فوري ويحوّل المحادثة لموظف مبيعات (Lead ساخن)", "Sends instant reply and routes to a sales agent (hot lead)")}
+            label={tx(lang, "نص الرد", "Reply text")}
+            textareaValue={texts.wantOrder}
+            onTextareaChange={v => setTexts({ ...texts, wantOrder: v })}
+          />
+        </FlowAction>
+
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (لدي استفسار)", "Receives button click (Has a question)")} icon={<MessageCircle className="w-4 h-4 text-amber-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رد فوري", "Sends instant reply")}
+            label={tx(lang, "نص الرد", "Reply text")}
+            textareaValue={texts.hasQuestion}
+            onTextareaChange={v => setTexts({ ...texts, hasQuestion: v })}
+          />
+          <FlowStep isLast icon={<Headset className="w-4 h-4" />} text={tx(lang, "يرسل إشعار فوري للتاجر ويحوّل المحادثة لموظف (Lead دافئ)", "Sends instant notification and routes to an agent (warm lead)")} />
+        </FlowAction>
+
+        <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (ليس الآن)", "Receives button click (Not now)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
+          <FlowStep
+            isLast
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رد شكر وتنتهي المتابعة — من غير إزعاج العميل تاني", "Sends a thank-you reply and ends — no further nagging")}
+            label={tx(lang, "نص الرد", "Reply text")}
+            textareaValue={texts.notInterested}
+            onTextareaChange={v => setTexts({ ...texts, notInterested: v })}
+          />
+        </FlowAction>
       </FlowTree>
 
       <div className="flex justify-end gap-2 pt-4">
@@ -440,8 +647,8 @@ function CardGrid({ lang, onOpen }: { lang: Lang; onOpen: (id: CardId) => void }
       id: "campaign",
       icon: <Megaphone className="w-5 h-5" />,
       title: tx(lang, "متابعة الحملة التسويقية", "Campaign Follow-up"),
-      desc: tx(lang, "قريبًا", "Coming soon"),
-      ready: false,
+      desc: tx(lang, "يفلتر المهتمين ويحوّلهم لموظف مبيعات حسب ردهم", "Filters interested leads and routes them to a sales agent based on their reply"),
+      ready: true,
     },
   ];
 
@@ -483,6 +690,9 @@ export default function SmartFollowUpTab({ lang }: { lang: Lang }) {
   }
   if (openCard === "cart") {
     return <CartFollowUpDetail lang={lang} onBack={() => setOpenCard(null)} />;
+  }
+  if (openCard === "campaign") {
+    return <CampaignFollowUpDetail lang={lang} onBack={() => setOpenCard(null)} />;
   }
 
   return (

@@ -33,7 +33,7 @@ interface Template {
   status: TemplateStatus; body?: string; headerType?: HeaderType;
   headerText?: string; footer?: string; buttons?: TemplateButton[];
   createdAt?: string; updatedAt?: string; rejectedReason?: string;
-  isWaniReady?: boolean; exampleVars?: string[];
+  isWaniReady?: boolean; exampleVars?: string[]; group?: "store" | "followup";
 }
 interface FormState {
   name: string; category: TemplateCategory | ""; language: string;
@@ -53,6 +53,8 @@ const T = {
     table: { name: "اسم القالب", category: "الفئة", language: "اللغة", updated: "آخر تعديل", status: "الحالة", actions: "" },
     empty: "لا توجد قوالب بعد", emptyHint: "أنشئ قالبك الأول أو مزامنة من Meta",
     waniReady: "قوالب Wani الجاهزة", waniReadyDesc: "قوالب مبنية مسبقاً للمتجر — خصّصها قبل الإرسال",
+    storeGroupTitle: "قوالب المتجر", storeGroupDesc: "قوالب أتمتة المتجر (تأكيد الأوردر، الشحن، السلة المتروكة)",
+    followupGroupTitle: "قوالب المتابعة", followupGroupDesc: "قوالب المتابعة الذكية (شحن، سلة، حملات) — اختر وخصّص النص فقط",
     waniLibraryBtn: "مكتبة قوالب وني",
     myTemplates: "قوالبي", sendReview: "إرسال للمراجعة", submitted: "تم الإرسال ✓",
     waniEdit: {
@@ -95,6 +97,8 @@ const T = {
     table: { name: "Template Name", category: "Category", language: "Language", updated: "Last Updated", status: "Status", actions: "" },
     empty: "No templates yet", emptyHint: "Create your first template or sync from Meta",
     waniReady: "Wani Ready Templates", waniReadyDesc: "Pre-built store templates — customize before sending",
+    storeGroupTitle: "Store Templates", storeGroupDesc: "Store automation templates (order confirm, shipping, abandoned cart)",
+    followupGroupTitle: "Follow-up Templates", followupGroupDesc: "Smart follow-up templates (shipping, cart, campaigns) — pick one and customize the text",
     waniLibraryBtn: "Wani Template Library",
     myTemplates: "My Templates", sendReview: "Send for Review", submitted: "Submitted ✓",
     waniEdit: {
@@ -133,7 +137,7 @@ const T = {
 const WANI_READY: Template[] = [
   {
     id: "wani_order_confirm", name: "wani_order_confirm",
-    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true,
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 👋\n\nاستلمنا طلبك رقم #{{2}} بإجمالي {{3}} جنيه.\n\nتأكيد إنك عايز الأوردر ده يتنفذ فعلاً؟",
     footer: "Wani Store",
@@ -145,7 +149,7 @@ const WANI_READY: Template[] = [
   },
   {
     id: "wani_order_shipped", name: "wani_order_shipped",
-    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true,
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 📦\n\nطلبك رقم *{{2}}* في طريقه إليك! 🚚\nرقم التتبع: *{{3}}*\n\nتوقع وصوله خلال 2-4 أيام.",
     footer: "Wani Store",
@@ -153,7 +157,7 @@ const WANI_READY: Template[] = [
   },
   {
     id: "wani_cart_abandon", name: "wani_cart_abandon",
-    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true,
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 🛒\n\nنسيت *{{2}}* في سلتك!\nالإجمالي: *{{3}}*\n\nأكمل طلبك الآن قبل نفاد المخزون 👇\n{{4}}\n\nبانتظارك! 📦",
     exampleVars: ["سارة", "قميص قطني أزرق", "٢٤٠ ج.م", "https://store.example.com/cart"],
@@ -161,7 +165,7 @@ const WANI_READY: Template[] = [
   },
   {
     id: "wani_shipping_followup", name: "wani_shipping_followup",
-    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true,
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 👋\n\nنتمنى أن يكون طلبك قد وصل إليك.\n\nهل استلمت طلبك؟",
     footer: "Wani Store",
@@ -174,7 +178,7 @@ const WANI_READY: Template[] = [
   },
   {
     id: "wani_abandoned_cart_followup", name: "wani_abandoned_cart_followup",
-    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true,
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 👋\n\nلاحظنا أنك لم تُكمل طلبك حتى الآن.\n\nهل ما زلت ترغب في إتمامه؟",
     footer: "Wani Store",
@@ -184,6 +188,45 @@ const WANI_READY: Template[] = [
       { type: "quick_reply", text: "غير مهتم", value: "not_interested" },
     ],
     exampleVars: ["أحمد"],
+  },
+  {
+    id: "wani_campaign_followup_generic", name: "wani_campaign_followup_generic",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "مرحبًا {{1}} 👋\n\nهل ما زلت مهتمًا بهذا العرض؟",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 اطلب الآن", value: "want_order" },
+      { type: "quick_reply", text: "💬 لدي استفسار", value: "has_question" },
+      { type: "quick_reply", text: "✖️ ليس الآن", value: "not_interested" },
+    ],
+    exampleVars: ["أحمد"],
+  },
+  {
+    id: "wani_campaign_followup_discount", name: "wani_campaign_followup_discount",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🎯\n\nالخصم اللي بعتناهولك لسه متاح لوقت محدود.\n\nهل جربت العرض؟",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 اطلب الآن", value: "want_order" },
+      { type: "quick_reply", text: "💬 لدي استفسار", value: "has_question" },
+      { type: "quick_reply", text: "✖️ ليس الآن", value: "not_interested" },
+    ],
+    exampleVars: ["سارة"],
+  },
+  {
+    id: "wani_campaign_followup_launch", name: "wani_campaign_followup_launch",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🚀\n\nشفت المنتج الجديد اللي بعتناه؟\n\nهل حابب تعرف تفاصيله؟",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 اطلب الآن", value: "want_order" },
+      { type: "quick_reply", text: "💬 لدي استفسار", value: "has_question" },
+      { type: "quick_reply", text: "✖️ ليس الآن", value: "not_interested" },
+    ],
+    exampleVars: ["مريم"],
   },
 ];
 
@@ -540,7 +583,7 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
                   ? "هذا قالب نظام مرتبط بأتمتة Wani. يمكنك تعديل نص الرسالة وعناوين الأزرار فقط. لا يمكن حذف أو إضافة أو تغيير المتغيرات أو عدد الأزرار أو معرفاتها، لأن ذلك سيؤثر على عمل الأتمتة."
                   : "This is a Wani system template. You can only edit the message text and button labels. You cannot delete, add, or change variables, button count, or IDs, as it will break the automation."}
               </p>
-              
+
               {varMeta.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-2 border-t border-amber-200/50 dark:border-amber-700/50">
                   {varMeta.map(v => (
@@ -1019,8 +1062,8 @@ function Step1({ form, setForm, lang, onNext, onCancel }: {
                     }`}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${cat.key === "MARKETING" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" :
-                      cat.key === "UTILITY" ? "bg-blue-100   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400" :
-                        "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
+                    cat.key === "UTILITY" ? "bg-blue-100   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400" :
+                      "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
                     {cat.icon}
                   </div>
                   <p className="font-bold text-sm text-gray-800 dark:text-white mb-2">
@@ -1615,19 +1658,56 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {/* Grid — wraps across rows as more templates get added */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {WANI_READY.map(tpl => (
-          <WaniReadyCard
-            key={tpl.id}
-            template={tpl}
-            lang={lang}
-            onView={() => setDetailTpl(tpl)}
-            onSend={handleSendWani}
-            onCustomize={tpl => setWaniEditTpl(tpl)}
-            matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-          />
-        ))}
+      {/* Store templates */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
+            <Package className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.storeGroupTitle}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t.storeGroupDesc}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {WANI_READY.filter(tpl => tpl.group === "store").map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Follow-up templates */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.followupGroupTitle}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t.followupGroupDesc}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {WANI_READY.filter(tpl => tpl.group === "followup").map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
       </div>
 
       <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />
