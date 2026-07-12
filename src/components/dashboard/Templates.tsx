@@ -826,6 +826,10 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
   lang: Lang;
 }) {
   const tw = T[lang].waniEdit as any;
+  const t = T[lang] as any;
+
+  const [tplLang, setTplLang] = useState<Lang>("ar");
+  const [activeTemplate, setActiveTemplate] = useState<Template | null>(null);
 
   // state يبدأ من القالب الأصلي
   const [body, setBody] = useState("");
@@ -837,15 +841,17 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
   // كلما فتح الـ modal على قالب جديد نعيد التهيئة
   useEffect(() => {
     if (!template) return;
-    setBody(template.body ?? "");
-    setFooter(template.footer ?? "");
-    setButtons(template.buttons ? [...template.buttons] : []);
+    const variant = WANI_READY.find(t => t.name === template.name && t.language === tplLang) || template;
+    setActiveTemplate(variant);
+    setBody(variant.body ?? "");
+    setFooter(variant.footer ?? "");
+    setButtons(variant.buttons ? [...variant.buttons] : []);
     setVarError(false);
-  }, [template]);
+  }, [template, tplLang]);
 
   if (!template) return null;
 
-  const originalBody = template.body ?? "";
+  const originalBody = activeTemplate?.body ?? "";
   const varMeta = extractVarMeta(originalBody);
   const originalVars = [...originalBody.matchAll(/\{\{(\d+)\}\}/g)].map(m => m[1]);
 
@@ -857,8 +863,8 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
 
   const handleReset = () => {
     setBody(originalBody);
-    setFooter(template.footer ?? "");
-    setButtons(template.buttons ? [...template.buttons] : []);
+    setFooter(activeTemplate?.footer ?? "");
+    setButtons(activeTemplate?.buttons ? [...activeTemplate.buttons] : []);
     setVarError(false);
   };
 
@@ -866,7 +872,7 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
     if (varError) return;
     if (!validateVarsPreserved(originalBody, body)) { setVarError(true); return; }
     setSending(true);
-    const customized: Template = { ...template, body, footer, buttons };
+    const customized: Template = { ...activeTemplate!, body, footer, buttons };
     const ok = await onSendCustomized(customized);
     setSending(false);
     if (ok) onClose();
@@ -882,13 +888,23 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="max-w-2xl dark:bg-gray-800 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 dark:bg-[#25D366]/20 flex items-center justify-center flex-shrink-0">
-              <Pencil className="w-5 h-5 text-[#25D366]" />
+          <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 dark:bg-[#25D366]/20 flex items-center justify-center flex-shrink-0">
+                <Pencil className="w-5 h-5 text-[#25D366]" />
+              </div>
+              <div>
+                <DialogTitle className="font-mono text-base dark:text-white">{tw.title}</DialogTitle>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-normal">{tw.subtitle}</p>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="font-mono text-base dark:text-white">{tw.title}</DialogTitle>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-normal">{tw.subtitle}</p>
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
+              <button onClick={() => setTplLang("ar")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${tplLang === "ar" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {t.langToggleAR}
+              </button>
+              <button onClick={() => setTplLang("en")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${tplLang === "en" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {t.langToggleEN}
+              </button>
             </div>
           </div>
         </DialogHeader>
@@ -1025,7 +1041,7 @@ function WaniEditModal({ template, open, onClose, onSendCustomized, lang }: {
               body={body}
               footer={footer}
               buttons={buttons}
-              exampleVars={template.exampleVars ?? []}
+              exampleVars={activeTemplate?.exampleVars ?? []}
             />
           </div>
         </div>
@@ -1676,7 +1692,6 @@ export default function TemplatesPage() {
   const [filterCat, setFilterCat] = useState<string>("ALL");
   const [filterLang, setFilterLang] = useState<string>("ALL");
   const [search, setSearch] = useState("");
-  const [libLang, setLibLang] = useState<Lang>(lang);
 
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
   const [form, setForm] = useState<FormState>(defaultForm);
@@ -1965,7 +1980,7 @@ export default function TemplatesPage() {
         
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === libLang).map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
@@ -1980,7 +1995,7 @@ export default function TemplatesPage() {
         
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === libLang).map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
@@ -2017,16 +2032,7 @@ export default function TemplatesPage() {
           <span className="text-gray-900 dark:text-white font-medium">{t.waniLibraryBtn}</span>
         </div>
         
-        {/* Language Toggle */}
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
-          <button onClick={() => setLibLang("ar")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${libLang === "ar" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-            {t.langToggleAR}
-          </button>
-          <button onClick={() => setLibLang("en")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${libLang === "en" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-            {t.langToggleEN}
-          </button>
         </div>
-      </div>
 
       {/* Store templates */}
       <div>
@@ -2040,7 +2046,7 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "store" && tpl.language === libLang).map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "store" && tpl.language === "ar").map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
@@ -2066,7 +2072,7 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "followup" && tpl.language === libLang).map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "followup" && tpl.language === "ar").map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
