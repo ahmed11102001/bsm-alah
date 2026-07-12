@@ -99,6 +99,7 @@ export const NotificationType = {
   ORDER_CONFIRMED:         "ORDER_CONFIRMED",
   ORDER_CANCELLED:         "ORDER_CANCELLED",
   AI_HANDOFF_NEEDED:       "AI_HANDOFF_NEEDED",
+  SMART_FOLLOWUP_ALERT:    "SMART_FOLLOWUP_ALERT",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

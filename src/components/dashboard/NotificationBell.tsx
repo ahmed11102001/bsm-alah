@@ -30,6 +30,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   ORDER_CONFIRMED: <CheckCircle2 className="w-4 h-4 text-green-500" />,
   ORDER_CANCELLED: <XCircle className="w-4 h-4 text-red-500" />,
   AI_HANDOFF_NEEDED: <Bot className="w-4 h-4 text-purple-500" />,
+  SMART_FOLLOWUP_ALERT: <AlertTriangle className="w-4 h-4 text-orange-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -48,6 +49,7 @@ const TYPE_BG: Record<NotificationType, string> = {
   ORDER_CONFIRMED: "bg-green-50",
   ORDER_CANCELLED: "bg-red-50",
   AI_HANDOFF_NEEDED: "bg-purple-50",
+  SMART_FOLLOWUP_ALERT: "bg-orange-50",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {
