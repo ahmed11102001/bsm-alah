@@ -1294,20 +1294,29 @@ function TemplateDetailModal({ template, open, onClose, onDelete, lang }: {
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDeleteClick}
-              disabled={deleting}
-              className="gap-1.5 border-red-200 dark:border-red-900/50 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+            {!(template.isWaniReady || WANI_READY.some(w => w.name === template.name)) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDeleteClick}
+                disabled={deleting}
+                className="gap-1.5 border-red-200 dark:border-red-900/50 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+              >
+                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {t.detail.delete}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="gap-1.5 dark:border-gray-600 dark:text-gray-300"
+              onClick={async () => {
+                if (template.body) {
+                  await navigator.clipboard.writeText(template.body);
+                  toast.success(lang === "ar" ? "تم نسخ نص القالب" : "Template text copied");
+                }
+              }}
             >
-              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-              {t.detail.delete}
-            </Button>
-            <Button size="sm" variant="outline" className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
               <Copy className="w-3.5 h-3.5" /> {t.detail.duplicate}
             </Button>
-            {template.status !== "APPROVED" && (
+            {!(template.isWaniReady || WANI_READY.some(w => w.name === template.name)) && template.status !== "APPROVED" && (
               <Button size="sm" variant="outline" className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
                 <Pencil className="w-3.5 h-3.5" /> {t.detail.edit}
               </Button>
