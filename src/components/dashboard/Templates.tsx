@@ -33,7 +33,7 @@ interface Template {
   status: TemplateStatus; body?: string; headerType?: HeaderType;
   headerText?: string; footer?: string; buttons?: TemplateButton[];
   createdAt?: string; updatedAt?: string; rejectedReason?: string;
-  isWaniReady?: boolean; exampleVars?: string[]; group?: "store" | "followup";
+  isWaniReady?: boolean; exampleVars?: string[]; group?: "store" | "followup" | "campaign";
 }
 interface FormState {
   name: string; category: TemplateCategory | ""; language: string;
@@ -55,6 +55,12 @@ const T = {
     waniReady: "قوالب Wani الجاهزة", waniReadyDesc: "قوالب مبنية مسبقاً للمتجر — خصّصها قبل الإرسال",
     storeGroupTitle: "قوالب المتجر", storeGroupDesc: "قوالب أتمتة المتجر (تأكيد الأوردر، الشحن، السلة المتروكة)",
     followupGroupTitle: "قوالب المتابعة", followupGroupDesc: "قوالب المتابعة الذكية (شحن، سلة، حملات) — اختر وخصّص النص فقط",
+        campaignGroupTitle: "قوالب الحملات",
+    campaignGroupDesc: "قوالب الحملات التسويقية والخدمية",
+    marketingTitle: "قوالب تسويقية",
+    utilityTitle: "قوالب خدمية",
+    langToggleAR: "🇸🇦 عربي",
+    langToggleEN: "🇬🇧 English",
     waniLibraryBtn: "مكتبة قوالب وني",
     myTemplates: "قوالبي", sendReview: "إرسال للمراجعة", submitted: "تم الإرسال ✓",
     waniEdit: {
@@ -99,6 +105,12 @@ const T = {
     waniReady: "Wani Ready Templates", waniReadyDesc: "Pre-built store templates — customize before sending",
     storeGroupTitle: "Store Templates", storeGroupDesc: "Store automation templates (order confirm, shipping, abandoned cart)",
     followupGroupTitle: "Follow-up Templates", followupGroupDesc: "Smart follow-up templates (shipping, cart, campaigns) — pick one and customize the text",
+        campaignGroupTitle: "Campaign Templates",
+    campaignGroupDesc: "Marketing and utility campaign templates",
+    marketingTitle: "Marketing Templates",
+    utilityTitle: "Utility Templates",
+    langToggleAR: "🇸🇦 عربي",
+    langToggleEN: "🇬🇧 English",
     waniLibraryBtn: "Wani Template Library",
     myTemplates: "My Templates", sendReview: "Send for Review", submitted: "Submitted ✓",
     waniEdit: {
@@ -135,8 +147,9 @@ const T = {
 
 // ─── Wani-Ready pre-built templates ──────────────────────────────────────────
 const WANI_READY: Template[] = [
+  // ── Store Templates (Utility & Marketing) ──
   {
-    id: "wani_order_confirm", name: "wani_order_confirm",
+    id: "wani_order_confirm_ar", name: "wani_order_confirm",
     category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 👋\n\nاستلمنا طلبك رقم #{{2}} بإجمالي {{3}} جنيه.\n\nتأكيد إنك عايز الأوردر ده يتنفذ فعلاً؟",
@@ -148,7 +161,19 @@ const WANI_READY: Template[] = [
     exampleVars: ["أحمد", "ORD-12345", "١٢٥ ج.م"],
   },
   {
-    id: "wani_order_shipped", name: "wani_order_shipped",
+    id: "wani_order_confirm_en", name: "wani_order_confirm",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "store",
+    headerType: "none",
+    body: "Hello {{1}} 👋\n\nWe received your order #{{2}} for {{3}}.\n\nPlease confirm you want to proceed.",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "Yes, Confirm ✅", value: "CONFIRM_ORDER" },
+      { type: "quick_reply", text: "No, Cancel ❌", value: "CANCEL_ORDER" },
+    ],
+    exampleVars: ["Ahmed", "ORD-12345", "$50"],
+  },
+  {
+    id: "wani_order_shipped_ar", name: "wani_order_shipped",
     category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 📦\n\nطلبك رقم *{{2}}* في طريقه إليك! 🚚\nرقم التتبع: *{{3}}*\n\nتوقع وصوله خلال 2-4 أيام.",
@@ -156,7 +181,15 @@ const WANI_READY: Template[] = [
     exampleVars: ["مريم", "ORD-12345", "TRK-789"],
   },
   {
-    id: "wani_cart_abandon", name: "wani_cart_abandon",
+    id: "wani_order_shipped_en", name: "wani_order_shipped",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "store",
+    headerType: "none",
+    body: "Hi {{1}} 📦\n\nYour order *{{2}}* is on its way! 🚚\nTracking: *{{3}}*\n\nExpect it in 2-4 days.",
+    footer: "Wani Store",
+    exampleVars: ["Maryam", "ORD-12345", "TRK-789"],
+  },
+  {
+    id: "wani_cart_abandon_ar", name: "wani_cart_abandon",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
     headerType: "none",
     body: "مرحباً {{1}} 🛒\n\nنسيت *{{2}}* في سلتك!\nالإجمالي: *{{3}}*\n\nأكمل طلبك الآن قبل نفاد المخزون 👇\n{{4}}\n\nبانتظارك! 📦",
@@ -164,7 +197,17 @@ const WANI_READY: Template[] = [
     footer: "Wani Store",
   },
   {
-    id: "wani_shipping_followup", name: "wani_shipping_followup",
+    id: "wani_cart_abandon_en", name: "wani_cart_abandon",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "store",
+    headerType: "none",
+    body: "Hello {{1}} 🛒\n\nYou left *{{2}}* in your cart!\nTotal: *{{3}}*\n\nComplete your order before stock runs out 👇\n{{4}}\n\nWaiting for you! 📦",
+    exampleVars: ["Sarah", "Blue Cotton Shirt", "$24", "https://store.example.com/cart"],
+    footer: "Wani Store",
+  },
+  
+  // ── Follow-up Templates ──
+  {
+    id: "wani_shipping_followup_ar", name: "wani_shipping_followup",
     category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 👋\n\nنتمنى أن يكون طلبك قد وصل إليك.\n\nهل استلمت طلبك؟",
@@ -177,7 +220,20 @@ const WANI_READY: Template[] = [
     exampleVars: ["أحمد"],
   },
   {
-    id: "wani_abandoned_cart_followup", name: "wani_abandoned_cart_followup",
+    id: "wani_shipping_followup_en", name: "wani_shipping_followup",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "Hello {{1}} 👋\n\nWe hope your order has arrived.\n\nDid you receive it?",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "Received", value: "delivered" },
+      { type: "quick_reply", text: "Not yet", value: "not_delivered" },
+      { type: "quick_reply", text: "Got a problem", value: "problem" },
+    ],
+    exampleVars: ["Ahmed"],
+  },
+  {
+    id: "wani_abandoned_cart_followup_ar", name: "wani_abandoned_cart_followup",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 👋\n\nلاحظنا أنك لم تُكمل طلبك حتى الآن.\n\nهل ما زلت ترغب في إتمامه؟",
@@ -190,7 +246,20 @@ const WANI_READY: Template[] = [
     exampleVars: ["أحمد"],
   },
   {
-    id: "wani_campaign_followup_generic", name: "wani_campaign_followup_generic",
+    id: "wani_abandoned_cart_followup_en", name: "wani_abandoned_cart_followup",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "Hi {{1}} 👋\n\nWe noticed you haven't completed your order yet.\n\nWould you like to finish it?",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "Continue Order", value: "continue_order" },
+      { type: "quick_reply", text: "I have a question", value: "ask_question" },
+      { type: "quick_reply", text: "Not interested", value: "not_interested" },
+    ],
+    exampleVars: ["Ahmed"],
+  },
+  {
+    id: "wani_campaign_followup_generic_ar", name: "wani_campaign_followup_generic",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 👋\n\nهل ما زلت مهتمًا بهذا العرض؟",
@@ -203,7 +272,20 @@ const WANI_READY: Template[] = [
     exampleVars: ["أحمد"],
   },
   {
-    id: "wani_campaign_followup_discount", name: "wani_campaign_followup_discount",
+    id: "wani_campaign_followup_generic_en", name: "wani_campaign_followup_generic",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "Hello {{1}} 👋\n\nAre you still interested in this offer?",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 Order Now", value: "want_order" },
+      { type: "quick_reply", text: "💬 I have a question", value: "has_question" },
+      { type: "quick_reply", text: "✖️ Not now", value: "not_interested" },
+    ],
+    exampleVars: ["Ahmed"],
+  },
+  {
+    id: "wani_campaign_followup_discount_ar", name: "wani_campaign_followup_discount",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 🎯\n\nالخصم اللي بعتناهولك لسه متاح لوقت محدود.\n\nهل جربت العرض؟",
@@ -216,7 +298,20 @@ const WANI_READY: Template[] = [
     exampleVars: ["سارة"],
   },
   {
-    id: "wani_campaign_followup_launch", name: "wani_campaign_followup_launch",
+    id: "wani_campaign_followup_discount_en", name: "wani_campaign_followup_discount",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "Hi {{1}} 🎯\n\nThe discount we sent is still available for a limited time.\n\nDid you try the offer?",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 Order Now", value: "want_order" },
+      { type: "quick_reply", text: "💬 I have a question", value: "has_question" },
+      { type: "quick_reply", text: "✖️ Not now", value: "not_interested" },
+    ],
+    exampleVars: ["Sarah"],
+  },
+  {
+    id: "wani_campaign_followup_launch_ar", name: "wani_campaign_followup_launch",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "followup",
     headerType: "none",
     body: "مرحبًا {{1}} 🚀\n\nشفت المنتج الجديد اللي بعتناه؟\n\nهل حابب تعرف تفاصيله؟",
@@ -227,6 +322,236 @@ const WANI_READY: Template[] = [
       { type: "quick_reply", text: "✖️ ليس الآن", value: "not_interested" },
     ],
     exampleVars: ["مريم"],
+  },
+  {
+    id: "wani_campaign_followup_launch_en", name: "wani_campaign_followup_launch",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "followup",
+    headerType: "none",
+    body: "Hello {{1}} 🚀\n\nDid you see the new product we sent?\n\nWould you like to know more details?",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "🛒 Order Now", value: "want_order" },
+      { type: "quick_reply", text: "💬 I have a question", value: "has_question" },
+      { type: "quick_reply", text: "✖️ Not now", value: "not_interested" },
+    ],
+    exampleVars: ["Maryam"],
+  },
+
+  // ── Campaign Templates (12 templates: 6 Marketing, 6 Utility) ──
+  // Marketing Campaigns
+  {
+    id: "wani_campaign_eid_sale_ar", name: "wani_campaign_eid_sale",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🎉\n\nبمناسبة العيد، بنقدملك خصم {{2}} على كل منتجاتنا!\n\nاستخدم الكود: *{{3}}*\n\nالعرض ساري حتى {{4}}.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تسوق الآن", value: "https://store.com/sale" }],
+    exampleVars: ["أحمد", "20%", "EID20", "نهاية الأسبوع"],
+  },
+  {
+    id: "wani_campaign_eid_sale_en", name: "wani_campaign_eid_sale",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} 🎉\n\nCelebrate Eid with a {{2}} discount on all our products!\n\nUse code: *{{3}}*\n\nOffer valid until {{4}}.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Shop Now", value: "https://store.com/sale" }],
+    exampleVars: ["Ahmed", "20%", "EID20", "the weekend"],
+  },
+  {
+    id: "wani_campaign_black_friday_ar", name: "wani_campaign_black_friday",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🖤\n\nعروض البلاك فرايداي بدأت!\nخصومات تصل إلى {{2}} على أفضل المبيعات.\n\nتسوق الآن قبل نفاذ الكمية 👇",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تسوق الآن", value: "https://store.com/bf" }],
+    exampleVars: ["سارة", "50%"],
+  },
+  {
+    id: "wani_campaign_black_friday_en", name: "wani_campaign_black_friday",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} 🖤\n\nBlack Friday deals are here!\nUp to {{2}} off best-sellers.\n\nShop now before stock runs out 👇",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Shop Now", value: "https://store.com/bf" }],
+    exampleVars: ["Sarah", "50%"],
+  },
+  {
+    id: "wani_campaign_new_collection_ar", name: "wani_campaign_new_collection",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} ✨\n\nتشكيلتنا الجديدة وصلت!\nاكتشف أحدث التصميمات اللي ضفناها في المتجر اليوم.\n\nتصفح التشكيلة الآن:",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تصفح الجديد", value: "https://store.com/new" }],
+    exampleVars: ["مريم"],
+  },
+  {
+    id: "wani_campaign_new_collection_en", name: "wani_campaign_new_collection",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} ✨\n\nOur new collection has arrived!\nDiscover the latest designs added to our store today.\n\nBrowse now:",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Browse New", value: "https://store.com/new" }],
+    exampleVars: ["Maryam"],
+  },
+  {
+    id: "wani_campaign_flash_sale_ar", name: "wani_campaign_flash_sale",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} ⚡\n\nعرض حصري لمدة 24 ساعة فقط!\nاحصل على {{2}} عند تسوقك الآن.\n\nلا تفوت الفرصة!",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "اغتنم الفرصة", value: "https://store.com/flash" }],
+    exampleVars: ["أحمد", "شحن مجاني"],
+  },
+  {
+    id: "wani_campaign_flash_sale_en", name: "wani_campaign_flash_sale",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} ⚡\n\nExclusive 24-hour flash sale!\nGet {{2}} when you shop now.\n\nDon't miss out!",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Grab Offer", value: "https://store.com/flash" }],
+    exampleVars: ["Ahmed", "free shipping"],
+  },
+  {
+    id: "wani_campaign_loyalty_reward_ar", name: "wani_campaign_loyalty_reward",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🎁\n\nلأنك عميل مميز، ضفنا {{2}} نقطة لمحفظتك!\nتقدر تستخدمهم في طلبك القادم.\n\nشكراً لثقتك فينا.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "استخدم النقاط", value: "https://store.com/loyalty" }],
+    exampleVars: ["أحمد", "500"],
+  },
+  {
+    id: "wani_campaign_loyalty_reward_en", name: "wani_campaign_loyalty_reward",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} 🎁\n\nAs a loyal customer, we've added {{2}} points to your wallet!\nYou can use them on your next order.\n\nThank you for choosing us.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Use Points", value: "https://store.com/loyalty" }],
+    exampleVars: ["Ahmed", "500"],
+  },
+  {
+    id: "wani_campaign_win_back_ar", name: "wani_campaign_win_back",
+    category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 👋\n\nاشتقنالك! بقالنا فترة مشفناكش في المتجر.\n\nعشان كده، حضرنالك خصم خاص {{2}} على طلبك الجاي.\nكود الخصم: *{{3}}*",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تسوق الآن", value: "https://store.com/winback" }],
+    exampleVars: ["محمد", "15%", "MISSYOU15"],
+  },
+  {
+    id: "wani_campaign_win_back_en", name: "wani_campaign_win_back",
+    category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} 👋\n\nWe miss you! It's been a while since your last visit.\n\nHere's a special {{2}} discount for your next order.\nCode: *{{3}}*",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Shop Now", value: "https://store.com/winback" }],
+    exampleVars: ["Mohammed", "15%", "MISSYOU15"],
+  },
+  
+  // Utility Campaigns
+  {
+    id: "wani_campaign_store_maintenance_ar", name: "wani_campaign_store_maintenance",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 🛠️\n\nنود إعلامك بوجود صيانة مجدولة للمتجر يوم {{2}} من الساعة {{3}}.\nقد تتأثر بعض الخدمات مؤقتًا.\n\nشكراً لتفهمك.",
+    footer: "Wani Store",
+    exampleVars: ["أحمد", "الأحد القادم", "10 صباحاً"],
+  },
+  {
+    id: "wani_campaign_store_maintenance_en", name: "wani_campaign_store_maintenance",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} 🛠️\n\nWe want to inform you of scheduled maintenance on {{2}} starting at {{3}}.\nSome services may be temporarily affected.\n\nThank you for understanding.",
+    footer: "Wani Store",
+    exampleVars: ["Ahmed", "Next Sunday", "10 AM"],
+  },
+  {
+    id: "wani_campaign_policy_update_ar", name: "wani_campaign_policy_update",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 📢\n\nقمنا بتحديث سياسة الاسترجاع الخاصة بنا.\nيرجى مراجعة السياسة الجديدة من خلال الرابط أدناه لمعرفة المزيد من التفاصيل.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "قراءة السياسة", value: "https://store.com/policy" }],
+    exampleVars: ["أحمد"],
+  },
+  {
+    id: "wani_campaign_policy_update_en", name: "wani_campaign_policy_update",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} 📢\n\nWe have updated our return policy.\nPlease review the new policy via the link below for more details.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Read Policy", value: "https://store.com/policy" }],
+    exampleVars: ["Ahmed"],
+  },
+  {
+    id: "wani_campaign_shipping_delay_ar", name: "wani_campaign_shipping_delay",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} ⚠️\n\nنعتذر لإبلاغك بوجود تأخير عام في الشحن بسبب {{2}}.\nنعمل جاهدين لتوصيل طلباتكم في أقرب وقت.\n\nشكراً لصبركم.",
+    footer: "Wani Store",
+    exampleVars: ["مريم", "سوء الأحوال الجوية"],
+  },
+  {
+    id: "wani_campaign_shipping_delay_en", name: "wani_campaign_shipping_delay",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} ⚠️\n\nWe apologize for a general shipping delay due to {{2}}.\nWe are working hard to deliver your orders as soon as possible.\n\nThank you for your patience.",
+    footer: "Wani Store",
+    exampleVars: ["Maryam", "bad weather conditions"],
+  },
+  {
+    id: "wani_campaign_address_update_ar", name: "wani_campaign_address_update",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 📍\n\nلاحظنا عدم اكتمال عنوان الشحن في حسابك.\nلضمان وصول طلباتك المستقبلية بسلاسة، يرجى تحديث بيانات العنوان.\n\nشكراً لتعاونك.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تحديث العنوان", value: "https://store.com/profile" }],
+    exampleVars: ["أحمد"],
+  },
+  {
+    id: "wani_campaign_address_update_en", name: "wani_campaign_address_update",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} 📍\n\nWe noticed your shipping address is incomplete.\nTo ensure smooth delivery of future orders, please update your address details.\n\nThank you.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Update Address", value: "https://store.com/profile" }],
+    exampleVars: ["Ahmed"],
+  },
+  {
+    id: "wani_campaign_stock_replenished_ar", name: "wani_campaign_stock_replenished",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 📦\n\nالمنتج الذي كنت تنتظره \"{{2}}\" متوفر الآن في المخزون!\n\nيمكنك طلبه الآن قبل نفاذ الكمية مجدداً.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "اطلب الآن", value: "https://store.com/product" }],
+    exampleVars: ["سارة", "ساعة ذكية الإصدار الأخير"],
+  },
+  {
+    id: "wani_campaign_stock_replenished_en", name: "wani_campaign_stock_replenished",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hello {{1}} 📦\n\nThe item you've been waiting for \"{{2}}\" is back in stock!\n\nYou can order it now before it sells out again.",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Order Now", value: "https://store.com/product" }],
+    exampleVars: ["Sarah", "Latest Smart Watch"],
+  },
+  {
+    id: "wani_campaign_event_reminder_ar", name: "wani_campaign_event_reminder",
+    category: "UTILITY", language: "ar", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "مرحبًا {{1}} 📅\n\nنذكرك بالحدث الخاص بنا \"{{2}}\" الذي سيبدأ غداً الساعة {{3}}.\n\nنتطلع لرؤيتك!",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "تفاصيل الحدث", value: "https://store.com/event" }],
+    exampleVars: ["أحمد", "إطلاق المنتج الجديد", "8 مساءً"],
+  },
+  {
+    id: "wani_campaign_event_reminder_en", name: "wani_campaign_event_reminder",
+    category: "UTILITY", language: "en", status: "PENDING", isWaniReady: true, group: "campaign",
+    headerType: "none",
+    body: "Hi {{1}} 📅\n\nThis is a reminder for our event \"{{2}}\" starting tomorrow at {{3}}.\n\nWe look forward to seeing you!",
+    footer: "Wani Store",
+    buttons: [{ type: "url", text: "Event Details", value: "https://store.com/event" }],
+    exampleVars: ["Ahmed", "New Product Launch", "8 PM"],
   },
 ];
 
@@ -1351,6 +1676,7 @@ export default function TemplatesPage() {
   const [filterCat, setFilterCat] = useState<string>("ALL");
   const [filterLang, setFilterLang] = useState<string>("ALL");
   const [search, setSearch] = useState("");
+  const [libLang, setLibLang] = useState<Lang>(lang);
 
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
   const [form, setForm] = useState<FormState>(defaultForm);
@@ -1624,6 +1950,49 @@ export default function TemplatesPage() {
         </div>
       </div>
 
+
+      {/* Campaign Templates */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 mt-8">
+          <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.campaignGroupTitle}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t.campaignGroupDesc}</p>
+          </div>
+        </div>
+        
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === libLang).map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
+        
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === libLang).map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
+      </div>
       <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />
       <WaniEditModal
         template={waniEditTpl}
@@ -1638,23 +2007,24 @@ export default function TemplatesPage() {
   // ── Wani Template Library view (full page — room to grow) ────────────────────
   if (view === "library") return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6" dir={dir}>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <button onClick={() => setView("list")} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-          {t.title}
-        </button>
-        <ChevronLeft className="w-3.5 h-3.5" />
-        <span className="text-gray-900 dark:text-white font-medium">{t.waniLibraryBtn}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center">
-          <Zap className="w-4 h-4 text-white" />
+      {/* Breadcrumb & Language Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <button onClick={() => setView("list")} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+            {t.title}
+          </button>
+          <ChevronLeft className="w-3.5 h-3.5" />
+          <span className="text-gray-900 dark:text-white font-medium">{t.waniLibraryBtn}</span>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{t.waniReady}</h1>
-          <p className="text-xs text-gray-400 dark:text-gray-500">{t.waniReadyDesc}</p>
+        
+        {/* Language Toggle */}
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
+          <button onClick={() => setLibLang("ar")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${libLang === "ar" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+            {t.langToggleAR}
+          </button>
+          <button onClick={() => setLibLang("en")} className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${libLang === "en" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+            {t.langToggleEN}
+          </button>
         </div>
       </div>
 
@@ -1670,7 +2040,7 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "store").map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "store" && tpl.language === libLang).map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
@@ -1696,7 +2066,7 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "followup").map(tpl => (
+          {WANI_READY.filter(tpl => tpl.group === "followup" && tpl.language === libLang).map(tpl => (
             <WaniReadyCard
               key={tpl.id}
               template={tpl}
