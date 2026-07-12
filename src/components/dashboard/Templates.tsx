@@ -1966,48 +1966,6 @@ export default function TemplatesPage() {
       </div>
 
 
-      {/* Campaign Templates */}
-      <div>
-        <div className="flex items-center gap-2 mb-3 mt-8">
-          <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-            <Megaphone className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.campaignGroupTitle}</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{t.campaignGroupDesc}</p>
-          </div>
-        </div>
-        
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
-        </div>
-        
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
-        </div>
-      </div>
       <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />
       <WaniEditModal
         template={waniEditTpl}
@@ -2086,6 +2044,48 @@ export default function TemplatesPage() {
         </div>
       </div>
 
+      {/* Campaign Templates */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 mt-8">
+          <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.campaignGroupTitle}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t.campaignGroupDesc}</p>
+          </div>
+        </div>
+        
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
+        
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => (
+            <WaniReadyCard
+              key={tpl.id}
+              template={tpl}
+              lang={lang}
+              onView={() => setDetailTpl(tpl)}
+              onSend={handleSendWani}
+              onCustomize={tpl => setWaniEditTpl(tpl)}
+              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
+            />
+          ))}
+        </div>
+      </div>
       <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />
       <WaniEditModal
         template={waniEditTpl}
