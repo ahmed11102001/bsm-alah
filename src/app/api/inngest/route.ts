@@ -27,6 +27,11 @@ import {
   whatsappTokenExpiryCheck,
   aiTokensLowCheck,
 } from "@/inngest/automation-cron-functions";
+import {
+  scheduleShippingFollowUpFn,
+  scheduleCartFollowUpFn,
+  sendFollowUpActionFn,
+} from "@/inngest/smart-followup-functions";
 
 const inngestHandler = serve({
   client:    inngest,
@@ -52,6 +57,10 @@ const inngestHandler = serve({
     aiTokensLowCheck,
     // ── Plan Reset ──
     monthlyPlanReset,
+    // ── Smart Follow-Up ──
+    scheduleShippingFollowUpFn,
+    scheduleCartFollowUpFn,
+    sendFollowUpActionFn,
   ],
 });
 

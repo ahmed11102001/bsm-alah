@@ -1,6 +1,22 @@
 // src/lib/whatsapp-api.ts
 // ─── كود إرسال الرسائل — مكان واحد بيتاستخدم من Inngest والـ queue ────────────
 
+export interface InteractiveButton {
+  id: string;
+  title: string;
+}
+
+export interface InteractiveListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface InteractiveList {
+  buttonText: string;
+  rows: InteractiveListRow[];
+}
+
 export interface SendMessageParams {
   toPhone: string;
   phoneNumberId: string;
@@ -10,6 +26,12 @@ export interface SendMessageParams {
   templateLang: string;
   templateVars: any;
   content: string | null;
+  interactive?: {
+    body: string;
+    footer?: string;
+    buttons?: InteractiveButton[];
+    list?: InteractiveList;
+  };
 }
 
 export interface SendResult {
@@ -117,6 +139,47 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
       to: item.toPhone,
       type: mediaType,
       [mediaType]: { id: mediaId },
+    };
+
+  } else if (item.messageType === "interactive_buttons" && item.interactive) {
+    if (!item.interactive.buttons || item.interactive.buttons.length === 0 || item.interactive.buttons.length > 3) {
+      return { ok: false, error: "interactive_buttons يحتاج بين 1 و 3 أزرار" };
+    }
+    payload = {
+      messaging_product: "whatsapp",
+      to: item.toPhone,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body:   { text: item.interactive.body },
+        footer: item.interactive.footer ? { text: item.interactive.footer } : undefined,
+        action: {
+          buttons: item.interactive.buttons.map(b => ({
+            type: "reply",
+            reply: { id: b.id, title: b.title.slice(0, 20) },
+          })),
+        },
+      },
+    };
+
+  } else if (item.messageType === "interactive_list" && item.interactive?.list) {
+    payload = {
+      messaging_product: "whatsapp",
+      to: item.toPhone,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body:   { text: item.interactive.body },
+        footer: item.interactive.footer ? { text: item.interactive.footer } : undefined,
+        action: {
+          button:   item.interactive.list.buttonText.slice(0, 20),
+          sections: [{ rows: item.interactive.list.rows.slice(0, 10).map(r => ({
+            id: r.id,
+            title: r.title.slice(0, 24),
+            description: r.description?.slice(0, 72),
+          })) }],
+        },
+      },
     };
 
   } else {

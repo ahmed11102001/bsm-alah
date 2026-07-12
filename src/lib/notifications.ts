@@ -16,6 +16,7 @@ const PUSH_ENABLED_TYPES = new Set<NotificationType>([
   "PLAN_LIMIT_REACHED",
   "STORE_AUTO_FAILED",
   "SUBSCRIPTION_SUCCESS",
+  "SMART_FOLLOWUP_ALERT",
 ]);
 
 // ─── Bilingual text helper ────────────────────────────────────────────────────
@@ -289,6 +290,52 @@ export async function notifyOrderConfirmed(userId: string, orderNumber: string, 
       `Customer (${customerPhone}) successfully confirmed order #${orderNumber}.`
     ),
     link: "/dashboard?section=store",
+  });
+}
+
+// ─── Smart Follow-Up Alert ────────────────────────────────────────────────────
+
+export async function notifySmartFollowUpAlert(
+  userId: string,
+  kind: "low_rating" | "cart_not_interested" | "shipping_send_failed" | "cart_send_failed",
+  details: { customerPhone: string; orderNumber?: string; rating?: number; reason?: string; error?: string },
+) {
+  const titles: Record<typeof kind, { ar: string; en: string }> = {
+    low_rating:             { ar: "🔴 تقييم منخفض من عميل",       en: "🔴 Low customer rating" },
+    cart_not_interested:    { ar: "📭 عميل غير مهتم بالسلة",      en: "📭 Customer not interested in cart" },
+    shipping_send_failed:   { ar: "❌ فشل إرسال متابعة الشحن",    en: "❌ Shipping follow-up send failed" },
+    cart_send_failed:       { ar: "❌ فشل إرسال متابعة السلة",     en: "❌ Cart follow-up send failed" },
+  };
+
+  const bodies: Record<typeof kind, (d: typeof details) => { ar: string; en: string }> = {
+    low_rating: (d) => ({
+      ar: `العميل ${d.customerPhone} قيّم الطلب ${d.orderNumber ?? ""} بـ ${d.rating} نجوم`,
+      en: `Customer ${d.customerPhone} rated order ${d.orderNumber ?? ""} ${d.rating} stars`,
+    }),
+    cart_not_interested: (d) => ({
+      ar: `العميل ${d.customerPhone} غير مهتم — السبب: ${d.reason ?? "غير معروف"}`,
+      en: `Customer ${d.customerPhone} not interested — reason: ${d.reason ?? "unknown"}`,
+    }),
+    shipping_send_failed: (d) => ({
+      ar: `فشل إرسال متابعة الشحن لـ ${d.customerPhone} — ${d.error ?? ""}`,
+      en: `Shipping follow-up failed for ${d.customerPhone} — ${d.error ?? ""}`,
+    }),
+    cart_send_failed: (d) => ({
+      ar: `فشل إرسال متابعة السلة لـ ${d.customerPhone} — ${d.error ?? ""}`,
+      en: `Cart follow-up failed for ${d.customerPhone} — ${d.error ?? ""}`,
+    }),
+  };
+
+  const t = titles[kind];
+  const b = bodies[kind](details);
+
+  await createNotification({
+    userId,
+    type:  NotificationType.SMART_FOLLOWUP_ALERT,
+    title: bi(t.ar, t.en),
+    body:  bi(b.ar, b.en),
+    link:  "/dashboard?section=store",
+    meta:  { kind, ...details },
   });
 }
 

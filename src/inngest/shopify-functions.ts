@@ -225,12 +225,19 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
       });
     });
 
-    // سجّل sentAt في السلة
+    // سجّل sentAt في السلة + جدولة المتابعة الذكية
     if (result.sent && cart?.id) {
       await prisma.abandonedCart.update({
         where: { id: cart.id },
         data:  { sentAt: new Date() },
       }).catch(() => {});
+
+      try {
+        const { scheduleCartFollowUp } = await import("@/lib/smart-followup");
+        await scheduleCartFollowUp(cart.id, userId);
+      } catch (e) {
+        console.error("[CartFollowUp] schedule failed:", e);
+      }
     }
 
     console.log(

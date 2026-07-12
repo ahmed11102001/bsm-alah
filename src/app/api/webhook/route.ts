@@ -217,7 +217,11 @@ export async function POST(req: NextRequest) {
 
       // ─── Order Confirmation Flow ───
       const contextId = msg.context?.id as string | undefined;
-      const payload = msg.type === "button" ? msg.button?.payload : (msg.type === "interactive" ? msg.interactive?.button_reply?.id : undefined);
+      const payload = msg.type === "button"
+        ? msg.button?.payload
+        : msg.type === "interactive"
+          ? (msg.interactive?.button_reply?.id ?? msg.interactive?.list_reply?.id)
+          : undefined;
 
       if (payload === "CONFIRM_ORDER" || payload === "CANCEL_ORDER") {
         const newStatus = payload === "CONFIRM_ORDER" ? "confirmed" : "cancelled";
@@ -246,6 +250,45 @@ export async function POST(req: NextRequest) {
           }
           // TODO (مرحلة تانية): استدعاء API المتجر للإلغاء الفعلي عند CANCEL_ORDER
         }
+      }
+      // ────────────────────────────────
+
+      // ─── Smart Follow-Up Flow ───
+      let smartFollowUpHandled = false;
+
+      try {
+        const {
+          resolveActiveFollowUpContext,
+          handleShippingFollowUpReply,
+          handleCartFollowUpReply,
+          closeExpiredStageIfNeeded,
+        } = await import("@/lib/smart-followup");
+
+        const ctx = await resolveActiveFollowUpContext({ userId, phone: from, contextId });
+
+        if (ctx?.kind === "shipping" && ctx.order) {
+          await closeExpiredStageIfNeeded("shipping", ctx.order).catch(() => {});
+          await handleShippingFollowUpReply(ctx.order, {
+            payloadId: payload,
+            payloadTitle: content,
+            messageText: content,
+            accountOwner,
+            userId,
+          });
+          smartFollowUpHandled = true;
+        } else if (ctx?.kind === "cart" && ctx.cart) {
+          await closeExpiredStageIfNeeded("cart", ctx.cart).catch(() => {});
+          await handleCartFollowUpReply(ctx.cart, {
+            payloadId: payload,
+            payloadTitle: content,
+            messageText: content,
+            accountOwner,
+            userId,
+          });
+          smartFollowUpHandled = true;
+        }
+      } catch (e) {
+        console.error("[SmartFollowUp] Webhook handling error:", e);
       }
       // ────────────────────────────────
 
@@ -351,9 +394,11 @@ export async function POST(req: NextRequest) {
 
       // Step 4: ????? ??????? ??? ????? ???? ?? Meta — ????? ??? Vercel
       const triggersAutomation =
-        (type === MessageType.text && content.trim()) ||
-        type === MessageType.image ||
-        type === MessageType.audio;
+        !smartFollowUpHandled && (
+          (type === MessageType.text && content.trim()) ||
+          type === MessageType.image ||
+          type === MessageType.audio
+        );
 
       if (triggersAutomation) {
         after(async () => {

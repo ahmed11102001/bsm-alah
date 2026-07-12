@@ -44,6 +44,7 @@ model User {
   messageQueues    MessageQueue[]
   notifications    Notification[]
   shopifyStore     ShopifyStore?
+  smartFollowUpSettings SmartFollowUpSetting[]
   storeAutomations StoreAutomation[]
   storeOrders      StoreOrder[]
   subscription     Subscription?
@@ -480,6 +481,18 @@ model StoreOrder {
   wooCommerceStoreId String?
   source             OrderSource
   total              Float             @default(0)
+
+  // ── idempotency لإرسال "تم الشحن" ─────────────────────────────────────────
+  shippedMessageId          String?
+  shippedAt                 DateTime?
+
+  // ── حالة أتمتة المتابعة الذكية للشحن ─────────────────────────────────────
+  followUpMessageId         String?
+  followUpSentAt            DateTime?
+  followUpStage             ShippingFollowUpStage?
+  followUpStageExpiresAt    DateTime?
+  followUpRating            Int?
+
   campaignOrder      CampaignOrder?
   contact            Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
   easyOrdersStore    EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
@@ -495,6 +508,8 @@ model StoreOrder {
   @@index([orderedAt])
   @@index([wooCommerceStoreId])
   @@index([userId, confirmationMessageId])
+  @@index([followUpStage])
+  @@index([userId, followUpMessageId])
 }
 
 model TrackedClick {
@@ -577,10 +592,19 @@ model AbandonedCart {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  // ── حالة أتمتة المتابعة الذكية للسلة ─────────────────────────────────────
+  followUpMessageId         String?
+  followUpSentAt            DateTime?
+  followUpStage             CartFollowUpStage?
+  followUpStageExpiresAt    DateTime?
+  followUpReason            String?   // "cart_reason_price_high" | "cart_reason_changed_mind" | "cart_reason_other"
+
   @@unique([source, externalId, userId])
   @@index([userId])
   @@index([customerPhone, userId])
   @@index([shopifyStoreId])
+  @@index([followUpStage])
+  @@index([userId, followUpMessageId])
 }
 
 model Article {
@@ -607,6 +631,45 @@ model PushSubscription {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+// ─── Smart Follow-Up ──────────────────────────────────────────────────────────
+
+enum SmartFollowUpType {
+  shipping
+  cart
+}
+
+enum ShippingFollowUpStage {
+  SENT
+  AWAITING_RATING
+  AWAITING_PROBLEM_DETAILS
+  DONE
+}
+
+enum CartFollowUpStage {
+  SENT
+  AWAITING_REASON
+  DONE
+}
+
+model SmartFollowUpSetting {
+  id                String            @id @default(cuid())
+  userId            String
+  type              SmartFollowUpType
+  isEnabled         Boolean           @default(false)
+  triggerDelayDays  Int               @default(3)
+  replyDelayMinutes Float             @default(0)
+  texts             Json              // shape حسب النوع
+  sentCount         Int               @default(0)
+  failedCount       Int               @default(0)
+  lastSentAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
   @@index([userId])
 }
 
@@ -685,6 +748,7 @@ enum NotificationType {
   NEW_MESSAGE
   STORE_AUTO_SENT
   STORE_AUTO_FAILED
+  SMART_FOLLOWUP_ALERT
   SUBSCRIPTION_EXPIRING
   PAYMENT_FAILED
   WHATSAPP_TOKEN_EXPIRING

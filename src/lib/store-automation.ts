@@ -96,6 +96,20 @@ export async function executeStoreAutomationSend(
     content:       null,
   });
 
+  // ── Atomic claim for order_shipped (prerequisite for smart follow-up) ──
+  let claimedShipped = false;
+  if (automationType === "order_shipped" && storeOrderId) {
+    const claim = await prisma.storeOrder.updateMany({
+      where: { id: storeOrderId, shippedMessageId: null },
+      data:  { shippedAt: new Date() },
+    });
+    claimedShipped = claim.count === 1;
+    if (!claimedShipped) {
+      // Already shipped or in progress — don't send again
+      return { sent: false, reason: "already_shipped_or_in_progress" };
+    }
+  }
+
   await prisma.message.create({
     data: {
       userId,
@@ -125,11 +139,34 @@ export async function executeStoreAutomationSend(
         },
       }).catch((e) => console.error("[StoreAuto] Failed to update StoreOrder with confirmationMessageId", e));
     }
+
+    if (automationType === "order_shipped" && storeOrderId && result.whatsappMsgId) {
+      await prisma.storeOrder.update({
+        where: { id: storeOrderId },
+        data: { shippedMessageId: result.whatsappMsgId },
+      }).catch((e) => console.error("[StoreAuto] Failed to update StoreOrder with shippedMessageId", e));
+
+      // Schedule smart follow-up (fire and forget)
+      try {
+        const { scheduleShippingFollowUp } = await import("@/lib/smart-followup");
+        await scheduleShippingFollowUp(storeOrderId, userId);
+      } catch (e) {
+        console.error("[SmartFollowUp] Failed to schedule shipping follow-up:", e);
+      }
+    }
   } else {
     await prisma.storeAutomation.update({
       where: { id: automation.id },
       data:  { failedCount: { increment: 1 } },
     }).catch(() => {});
+
+    // Rollback shipped claim on failure (but NOT shippedMessageId)
+    if (claimedShipped && storeOrderId) {
+      await prisma.storeOrder.updateMany({
+        where: { id: storeOrderId },
+        data:  { shippedAt: null },
+      }).catch(() => {});
+    }
   }
 
   console.log(result.ok
