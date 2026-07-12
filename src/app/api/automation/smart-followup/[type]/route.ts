@@ -51,7 +51,7 @@ async function resolveSmartFollowUpTemplate(userId: string, type: typeof VALID_T
 // ─── GET ───────────────────────────────────────────────────────────────────────
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> | { type: string } }
 ): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -59,7 +59,7 @@ export async function GET(
   }
 
   const ownerId = resolveOwnerId(session);
-  const { type } = params;
+  const { type } = await params;
 
   if (!isValidType(type)) {
     return NextResponse.json(
@@ -96,7 +96,7 @@ export async function GET(
 // ─── PUT ───────────────────────────────────────────────────────────────────────
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> | { type: string } }
 ): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -104,7 +104,7 @@ export async function PUT(
   }
 
   const ownerId = resolveOwnerId(session);
-  const { type } = params;
+  const { type } = await params;
 
   if (!isValidType(type)) {
     return NextResponse.json(
