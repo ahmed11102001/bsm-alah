@@ -27,7 +27,7 @@ const t: Record<Lang, Record<string, string>> = {
   ar: {
     search: "بحث بالاسم أو الرقم",
     all: "الكل", replied: "تم الرد", today: "اليوم",
-    unread: "غير مقروءة", archived: "الأرشيف", ai_replied: "رد AI 🤖",
+    unread: "غير مقروءة", archived: "الأرشيف", ai_replied: "رد AI 🤖", automation: "الأتمتة",
     noConvs: "لا توجد محادثات حتى الآن",
     noConvsHint: "ستظهر المحادثات هنا بعد رد العملاء",
     startCampaign: "ابدأ حملة الآن",
@@ -76,7 +76,7 @@ const t: Record<Lang, Record<string, string>> = {
   en: {
     search: "Search by name or number",
     all: "All", replied: "Replied", today: "Today",
-    unread: "Unread", archived: "Archived", ai_replied: "AI Replied 🤖",
+    unread: "Unread", archived: "Archived", ai_replied: "AI Replied 🤖", automation: "Automation",
     noConvs: "No conversations yet",
     noConvsHint: "Conversations will appear here after customers reply",
     startCampaign: "Start a Campaign",
@@ -147,7 +147,7 @@ interface Message {
   direction: string; status: string; mediaUrl: string | null; createdAt: string;
   reactions?: { emoji: string; senderId: string }[];
 }
-type FilterType = "all" | "replied" | "today" | "unread" | "archived" | "ai_replied";
+type FilterType = "all" | "replied" | "today" | "unread" | "archived" | "ai_replied" | "automation";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const initials = (c: Contact) => (c.name ?? c.phone).slice(0, 2).toUpperCase();
@@ -396,6 +396,116 @@ function Bubble({
       </div>
     </div>
   );
+function TimelineView({ messages, lang, dark }: { messages: Message[], lang: Lang, dark: boolean }) {
+  if (messages.length === 0) {
+    return (
+      <div className="flex justify-center py-12">
+        <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
+          لا توجد بيانات للأتمتة
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto w-full font-sans" dir={lang === "ar" ? "rtl" : "ltr"}>
+      <div className="relative border-l-2 border-amber-500/30 rtl:border-l-0 rtl:border-r-2 ml-4 rtl:mr-4 rtl:ml-0 pl-6 rtl:pr-6 space-y-8">
+        
+        {/* Workflow Started */}
+        <div className="relative">
+          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-[#0b141a]">
+            <Clock className="w-3 h-3" />
+          </div>
+          <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-[#1f2c34] border-[#2a3942]" : "bg-white border-gray-100"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🚀</span>
+              <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>
+                {lang === "ar" ? "بداية الأتمتة" : "Automation Started"}
+              </h4>
+            </div>
+            <p className={`text-xs ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
+              {timeStr(messages[0]?.createdAt ?? new Date().toISOString())}
+            </p>
+          </div>
+        </div>
+
+        {messages.map((msg, i) => {
+          const isMe = msg.direction === "outbound";
+          // We consider it bot if it has [متابعة ذكية] or if it is an outbound message and the filter is automation (which implies bot messages). Actually msg doesn't have senderType here.
+          // But we can check content for keywords or just assume if it's from bot in an automated workflow.
+          const isBot = isMe && (msg.content?.includes("[متابعة ذكية]") || msg.content?.includes("[قالب]"));
+          const isCustomer = msg.direction === "inbound";
+          
+          let icon = "💬";
+          let title = isMe ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer");
+          let dotColor = isMe ? "bg-[#25d366]" : "bg-gray-400";
+          let dotIcon = isMe ? <CheckCheck className="w-3 h-3" /> : <Users className="w-3 h-3" />;
+
+          if (isBot) {
+            icon = "🤖";
+            title = lang === "ar" ? "الأتمتة (رد آلي)" : "Automation (Bot)";
+            dotColor = "bg-amber-500";
+            dotIcon = <Bot className="w-3 h-3" />;
+          } else if (isCustomer) {
+            icon = "👤";
+            title = lang === "ar" ? "العميل" : "Customer";
+            dotColor = "bg-gray-400";
+            dotIcon = <Users className="w-3 h-3" />;
+          } else if (isMe) {
+            icon = "👨‍💻";
+            title = lang === "ar" ? "تدخل بشري" : "Human Agent";
+            dotColor = "bg-[#25d366]";
+            dotIcon = <CheckCheck className="w-3 h-3" />;
+          }
+
+          return (
+            <div key={msg.id} className="relative">
+              <div className={`absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full ${dotColor} text-white flex items-center justify-center shadow-md ring-4 ring-white dark:ring-[#0b141a]`}>
+                {dotIcon}
+              </div>
+              <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-[#1f2c34] border-[#2a3942]" : "bg-white border-gray-100"}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">{icon}</span>
+                  <div>
+                    <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>{title}</h4>
+                    <p className={`text-[10px] ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
+                      {dateStr(msg.createdAt, lang)} • {timeStr(msg.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {msg.content && (
+                  <div className={`text-sm p-3 rounded-lg ${dark ? "bg-[#2a3942] text-[#d1d7db]" : "bg-gray-50 text-gray-700"} whitespace-pre-wrap`}>
+                    {msg.content.replace("[متابعة ذكية] ", "").replace("[قالب] ", "")}
+                  </div>
+                )}
+                {msg.mediaUrl && (
+                  <div className="mt-2 text-xs text-blue-500 flex items-center gap-1">
+                    <Paperclip className="w-3 h-3" /> {lang === "ar" ? "مرفق" : "Attachment"} ({msg.type})
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* End of Workflow marker */}
+        <div className="relative">
+          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-md ring-4 ring-white dark:ring-[#0b141a]">
+            <CheckCheck className="w-3 h-3" />
+          </div>
+          <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-indigo-900/20 border-indigo-500/30" : "bg-indigo-50 border-indigo-100"}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">✅</span>
+              <h4 className={`font-semibold text-sm ${dark ? "text-indigo-300" : "text-indigo-700"}`}>
+                {lang === "ar" ? "نهاية المسار المتاح" : "End of available workflow"}
+              </h4>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -414,6 +524,7 @@ export default function ChatPage() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [chatViewMode, setChatViewMode] = useState<"chat" | "timeline">("chat");
 
   // mobile: show chat panel over sidebar
   const [mobileShowChat, setMobileShowChat] = useState(false);
@@ -506,8 +617,9 @@ export default function ChatPage() {
     } finally { setLoadingMsgs(false); }
   }, []);
 
-  const selectConv = useCallback((conv: Conversation) => {
+  const selectConv = useCallback((conv: Conversation, mode: "chat" | "timeline" = "chat") => {
     setSelected(conv);
+    setChatViewMode(mode);
     isInitialLoad.current = true;   // ← أول فتح للمحادثة → scroll للأسفل
     isAtBottom.current = true;
     lastMsgCount.current = 0;
@@ -859,6 +971,18 @@ export default function ChatPage() {
             <Bot className="w-3 h-3" />
             {t[lang].ai_replied}
           </button>
+          {/* Automation — فلتر جديد للأتمتة */}
+          <button
+            onClick={() => setFilter("automation")}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "automation"
+              ? "bg-amber-500 border-amber-500 text-white"
+              : dark
+                ? "bg-[#2a3942] border-amber-500/30 text-amber-400 hover:border-amber-400 hover:text-amber-300"
+                : "bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
+              }`}>
+            <Clock className="w-3 h-3" />
+            {t[lang].automation}
+          </button>
         </div>
 
         {/* List */}
@@ -915,11 +1039,25 @@ export default function ChatPage() {
                           {t[lang].noMsgs}
                         </span>}
                     </p>
-                    {isUnread ? (
-                      <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold ${dir === "rtl" ? "mr-2" : "ml-2"}`}>
-                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                      </span>
-                    ) : <span className={`w-2 ${dir === "rtl" ? "mr-2" : "ml-2"}`} />}
+                    <div className="flex items-center gap-1">
+                      {isUnread ? (
+                        <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold`}>
+                          {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                        </span>
+                      ) : <span className="w-2" />}
+                      {filter === "automation" && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectConv(conv, "timeline");
+                          }}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border ${dark ? "bg-[#233138] border-amber-500/30 text-amber-400 hover:bg-[#2a3942]" : "bg-white border-amber-200 text-amber-600 hover:bg-amber-50"}`}
+                        >
+                          <Clock className="w-3 h-3" />
+                          مسار الأتمتة
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1079,6 +1217,8 @@ export default function ChatPage() {
                     {t[lang].noMsgs}
                   </p>
                 </div>
+              ) : chatViewMode === "timeline" ? (
+                <TimelineView messages={messages} lang={lang} dark={dark} />
               ) : (
                 <>
                   {messages.map((msg, i) => {

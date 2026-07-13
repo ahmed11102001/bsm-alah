@@ -35,7 +35,8 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       rawFilter === "replied" ||
       rawFilter === "today" ||
       rawFilter === "archived" ||
-      rawFilter === "ai_replied"
+      rawFilter === "ai_replied" ||
+      rawFilter === "automation"
       ? rawFilter
       : "all";
   const search = sp.get("search") ?? "";
@@ -122,6 +123,20 @@ async function getConversations(userId: string, sp: URLSearchParams) {
       distinct: ["contactId"],
     });
     const s = new Set(aiContactIds.map((m: { contactId: string }) => m.contactId));
+    result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
+  }
+  if (filter === "automation") {
+    // المحادثات التي ردت عليها الأتمتة
+    const autoContactIds = await prisma.message.findMany({
+      where: {
+        userId,
+        direction: MessageDirection.outbound,
+        senderType: MessageSenderType.bot,
+      },
+      select: { contactId: true },
+      distinct: ["contactId"],
+    });
+    const s = new Set(autoContactIds.map((m: { contactId: string }) => m.contactId));
     result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
   }
 
