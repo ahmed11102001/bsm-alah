@@ -54,6 +54,7 @@ model User {
   members          User[]            @relation("TeamHierarchy")
   whatsappAccount   WhatsAppAccount?
   pushSubscriptions PushSubscription[]
+  automationAnalytics AutomationAnalytics[]
 
   @@index([email])
   @@index([workspaceId])
@@ -428,6 +429,7 @@ model AutomationRule {
   extraInstructions String?
   humanKeywords     String[]
   pauseOnReply      Boolean     @default(true)
+  analytics         AutomationAnalytics[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   template          Template?   @relation(fields: [templateId], references: [id])
@@ -460,6 +462,38 @@ model AIAgent {
   elevenLabsApiKey  String?
   elevenLabsAgentId String?
   user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics         AutomationAnalytics[]
+}
+
+model AutomationAnalytics {
+  id                 String      @id @default(cuid())
+  userId             String
+  automationRuleId   String?
+  aiAgentId          String?
+  source             AnalyticsSource
+  eventType          AnalyticsEventType
+  status             AnalyticsStatus  @default(success)
+  step               AnalyticsFunnelStep?
+  runAt              DateTime        @default(now())
+  durationMs         Int?
+  success            Boolean         @default(true)
+  errorCode          String?
+  errorMessage       String?
+  metadata           Json?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  automationRule     AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
+  aiAgent            AIAgent?        @relation(fields: [aiAgentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, runAt])
+  @@index([userId, source])
+  @@index([automationRuleId, runAt])
+  @@index([aiAgentId, runAt])
+  @@index([status])
+  @@index([eventType])
+  @@index([step])
 }
 
 model StoreOrder {
@@ -800,6 +834,36 @@ enum ReplyType {
 enum AIProvider {
   gemini
   openai
+}
+
+enum AnalyticsSource {
+  automation_rule
+  ai_agent
+  store_automation
+  smart_followup
+  webhook
+  unknown
+}
+
+enum AnalyticsEventType {
+  trigger
+  executed
+  failed
+  completed
+  error
+}
+
+enum AnalyticsStatus {
+  success
+  failure
+  pending
+}
+
+enum AnalyticsFunnelStep {
+  started
+  processing
+  completed
+  failed
 }
 
 enum LeadStatus {
