@@ -1110,6 +1110,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const handleTriggerReview = () => {
@@ -1406,8 +1407,18 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
             </div>
           </button>
 
-          {/* Desktop spacer */}
+          {/* Desktop spacer / Center Button */}
           <div className="flex-1 hidden lg:block" />
+          
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+            <button
+               onClick={() => router.push('/strategies')}
+               className="pointer-events-auto px-5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-600 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-900/50 dark:hover:to-purple-900/50 dark:text-indigo-400 rounded-full text-sm font-bold transition-all shadow-sm border border-indigo-100 dark:border-indigo-800 flex items-center gap-2 transform hover:scale-105"
+            >
+               <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+               <span>{locale === 'ar' ? 'استراتيجيات' : 'Strategies'}</span>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             <NotificationBell
