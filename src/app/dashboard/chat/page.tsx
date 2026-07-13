@@ -396,6 +396,8 @@ function Bubble({
       </div>
     </div>
   );
+}
+
 function TimelineView({ messages, lang, dark }: { messages: Message[], lang: Lang, dark: boolean }) {
   if (messages.length === 0) {
     return (
