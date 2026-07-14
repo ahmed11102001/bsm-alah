@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import { CampaignFollowUpStage } from "@/types/enums";
-import { getWhatsappAccount } from "./whatsapp";
 import { sendSessionText, type ReplyParams } from "./smart-followup";
 import { notifyAiHandoffNeeded } from "./notifications";
 

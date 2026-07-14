@@ -203,7 +203,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
       const res = await fetch("/api/automation/smart-followup/shipping", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes: replyDelay, texts }),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -380,7 +380,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
       const res = await fetch("/api/automation/smart-followup/cart", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes: replyDelay, texts }),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -543,7 +543,7 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
       const res = await fetch("/api/automation/smart-followup/order_confirm", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes: replyDelay, texts }),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -756,7 +756,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           campaignId: linkMode === "all" ? "all" : campaignId,
-          isEnabled, triggerDelayDays, replyDelayMinutes, texts, templateId
+          isEnabled, triggerDelayDays, replyDelayMinutes: replyDelay, texts, templateId
         }),
       });
       if (!res.ok) {
