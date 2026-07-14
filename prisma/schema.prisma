@@ -55,6 +55,8 @@ model User {
   whatsappAccount   WhatsAppAccount?
   pushSubscriptions PushSubscription[]
   automationAnalytics AutomationAnalytics[]
+  campaignFollowUpSettings CampaignFollowUpSetting[]
+  campaignFollowUpRecords  CampaignFollowUpRecord[]
 
   @@index([email])
   @@index([workspaceId])
@@ -249,6 +251,7 @@ model Template {
   automationRules  AutomationRule[]
   campaigns        Campaign[]
   storeAutomations StoreAutomation[]
+  campaignFollowUpSettings CampaignFollowUpSetting[]
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([metaId, userId])
@@ -527,6 +530,12 @@ model StoreOrder {
   followUpStageExpiresAt    DateTime?
   followUpRating            Int?
 
+  // ── حالة أتمتة متابعة تأكيد الأوردر ─────────────────────────────────────
+  cancelReasonStage         OrderCancelReasonStage?
+  cancelReasonExpiresAt     DateTime?
+  cancelReason              String?
+  cancelReasonMessageId     String?
+
   campaignOrder      CampaignOrder?
   contact            Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
   easyOrdersStore    EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
@@ -544,6 +553,7 @@ model StoreOrder {
   @@index([userId, confirmationMessageId])
   @@index([followUpStage])
   @@index([userId, followUpMessageId])
+  @@index([cancelReasonStage])
 }
 
 model TrackedClick {
@@ -673,6 +683,12 @@ model PushSubscription {
 enum SmartFollowUpType {
   shipping
   cart
+  order_confirm
+}
+
+enum OrderCancelReasonStage {
+  AWAITING_REASON
+  DONE
 }
 
 enum ShippingFollowUpStage {
@@ -705,6 +721,54 @@ model SmartFollowUpSetting {
 
   @@unique([userId, type])
   @@index([userId])
+}
+
+// ── Campaign Follow-Up ────────────────────────────────────────────────────────
+
+model CampaignFollowUpSetting {
+  id                String   @id @default(cuid())
+  userId            String
+  campaignId        String
+  templateId        String?
+  isEnabled         Boolean  @default(false)
+  triggerDelayDays  Float    @default(1)
+  replyDelayMinutes Float    @default(0)
+  texts             Json
+  sentCount         Int      @default(0)
+  failedCount       Int      @default(0)
+  lastSentAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template          Template? @relation(fields: [templateId], references: [id])
+
+  @@unique([userId, campaignId])
+  @@index([userId])
+}
+
+model CampaignFollowUpRecord {
+  id                      String    @id @default(cuid())
+  userId                  String
+  campaignId              String
+  contactId               String
+  messageId               String    @unique
+  customerPhone           String
+  followUpSentAt          DateTime?
+  followUpMessageId       String?
+  followUpStage           CampaignFollowUpStage?
+  followUpStageExpiresAt  DateTime?
+  createdAt               DateTime  @default(now())
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([customerPhone, userId])
+  @@index([followUpStage])
+  @@index([userId, followUpMessageId])
+}
+
+enum CampaignFollowUpStage {
+  SENT
+  DONE
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────

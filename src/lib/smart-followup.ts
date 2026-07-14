@@ -11,6 +11,7 @@ import {
   MessageType,
   ShippingFollowUpStage,
   CartFollowUpStage,
+  ORDER_CANCEL_REASON_IDS,
   type SmartFollowUpType,
 } from "@/types/enums";
 
@@ -41,7 +42,7 @@ export const CART_REASON_IDS = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FollowUpKind = "shipping" | "cart";
+export type FollowUpKind = "shipping" | "cart" | "order_confirm";
 
 export type FollowUpContext = {
   kind: "shipping";
@@ -49,6 +50,9 @@ export type FollowUpContext = {
 } | {
   kind: "cart";
   cart: Awaited<ReturnType<typeof findAbandonedCartByContext>>;
+} | {
+  kind: "order_confirm";
+  order: Awaited<ReturnType<typeof findStoreOrderByCancelContext>>;
 };
 
 // ─── Template Resolution ──────────────────────────────────────────────────────
@@ -158,7 +162,7 @@ export async function checkCartRescheduleNeeded(
 
 // ─── Send Helpers (session messages inside 24h window) ────────────────────────
 
-async function sendSessionText(
+export async function sendSessionText(
   toPhone: string,
   phoneNumberId: string,
   accessToken: string,
@@ -194,7 +198,7 @@ async function sendSessionText(
   return result;
 }
 
-async function sendSessionButtons(
+export async function sendSessionButtons(
   toPhone: string,
   phoneNumberId: string,
   accessToken: string,
@@ -569,6 +573,36 @@ async function findAbandonedCartByContext(ctx: { id?: string | null; userId: str
   return null;
 }
 
+// ─── Order Confirm Cancel Reason Context ──────────────────────────────────────
+
+async function findStoreOrderByCancelContext(ctx: { id?: string | null; userId: string; phone?: string }) {
+  const now = new Date();
+  if (ctx.id) {
+    const order = await prisma.storeOrder.findFirst({
+      where: {
+        userId: ctx.userId,
+        cancelReasonMessageId: ctx.id,
+        cancelReasonStage: "AWAITING_REASON",
+        cancelReasonExpiresAt: { gt: now },
+      },
+    });
+    if (order) return order;
+  }
+  if (ctx.phone) {
+    const order = await prisma.storeOrder.findFirst({
+      where: {
+        userId: ctx.userId,
+        customerPhone: ctx.phone,
+        cancelReasonStage: "AWAITING_REASON",
+        cancelReasonExpiresAt: { gt: now },
+      },
+      orderBy: { orderedAt: "desc" },
+    });
+    if (order) return order;
+  }
+  return null;
+}
+
 export async function resolveActiveFollowUpContext({
   userId,
   phone,
@@ -578,7 +612,7 @@ export async function resolveActiveFollowUpContext({
   phone: string;
   contextId?: string | null;
 }): Promise<FollowUpContext | null> {
-  // 1. Try StoreOrder by contextId
+  // 1. Try StoreOrder by contextId (shipping follow-up)
   if (contextId) {
     const order = await findStoreOrderByContext({ id: contextId, userId });
     if (order) return { kind: "shipping", order };
@@ -588,13 +622,21 @@ export async function resolveActiveFollowUpContext({
     const cart = await findAbandonedCartByContext({ id: contextId, userId });
     if (cart) return { kind: "cart", cart };
   }
-  // 3. Fallback: StoreOrder by phone
+  // 3. Try StoreOrder cancel reason by contextId
+  if (contextId) {
+    const order = await findStoreOrderByCancelContext({ id: contextId, userId });
+    if (order) return { kind: "order_confirm", order };
+  }
+  // 4. Fallback: StoreOrder by phone (shipping)
   const order = await findStoreOrderByContext({ userId, phone });
   if (order) return { kind: "shipping", order };
-  // 4. Fallback: AbandonedCart by phone
+  // 5. Fallback: AbandonedCart by phone
   const cart = await findAbandonedCartByContext({ userId, phone });
   if (cart) return { kind: "cart", cart };
-  // 5. Nothing
+  // 6. Fallback: StoreOrder cancel reason by phone
+  const cancelOrder = await findStoreOrderByCancelContext({ userId, phone });
+  if (cancelOrder) return { kind: "order_confirm", order: cancelOrder };
+  // 7. Nothing
   return null;
 }
 
@@ -936,7 +978,7 @@ export async function handleCartFollowUpReply(
 // ─── Execute Follow-Up Action (for replyDelay) ────────────────────────────────
 
 export async function executeFollowUpAction(
-  kind: "shipping" | "cart",
+  kind: "shipping" | "cart" | "order_confirm",
   recordId: string,
   action: string
 ) {
@@ -989,6 +1031,118 @@ export async function executeFollowUpAction(
       accountOwner: account,
       userId: cart.userId,
     });
+    return;
+  }
+
+  if (kind === "order_confirm") {
+    const order = await prisma.storeOrder.findUnique({
+      where: { id: recordId },
+      select: {
+        id: true, status: true, customerPhone: true, contactId: true,
+        userId: true, orderNumber: true, cancelReasonStage: true,
+        cancelReasonMessageId: true,
+      },
+    });
+    if (!order) return;
+
+    const account = await getWhatsappAccount(order.userId);
+    if (!account) return;
+
+    await handleOrderConfirmReply(order as any, {
+      payloadId: action,
+      messageText: action,
+      accountOwner: account,
+      userId: order.userId,
+    });
+    return;
+  }
+}
+
+// ─── Order Confirm Follow-Up ───────────────────────────────────────────────────
+
+export async function handleOrderConfirmReply(
+  order: { id: string; userId: string; customerPhone: string; contactId: string | null;
+           status: string; cancelReasonStage: string | null; orderNumber: string | null },
+  { payloadId, messageText, accountOwner, userId }: ReplyParams
+) {
+  const setting = await getSmartFollowUpSetting(userId, "order_confirm");
+  const texts = (setting?.texts ?? {}) as Record<string, string>;
+  if (!setting || !setting.isEnabled) return;
+
+  const contact = order.contactId
+    ? await prisma.contact.findUnique({ where: { id: order.contactId }, select: { id: true, phone: true, name: true } })
+    : null;
+
+  // ── فرع: تأكيد الأوردر → رد شكر واحد وخلاص ──
+  if (payloadId === "CONFIRM_ORDER") {
+    await sendSessionText(
+      order.customerPhone,
+      accountOwner.phoneNumberId,
+      accountOwner.accessToken,
+      texts.confirmThanks || "شكرًا لتأكيد طلبك ❤️ جاري تجهيزه الآن.",
+      { userId, contactId: contact?.id, label: "شكر تأكيد الأوردر" }
+    );
+    return;
+  }
+
+  // ── فرع: إلغاء الأوردر → اسأل السبب ──
+  if (payloadId === "CANCEL_ORDER") {
+    const claim = await prisma.storeOrder.updateMany({
+      where: { id: order.id, cancelReasonStage: null },
+      data: {
+        cancelReasonStage: "AWAITING_REASON",
+        cancelReasonExpiresAt: expiryDate(48),
+      },
+    });
+    if (claim.count === 0) return; // اتسأل قبل كده
+
+    const result = await sendSessionButtons(
+      order.customerPhone,
+      accountOwner.phoneNumberId,
+      accountOwner.accessToken,
+      texts.cancelReasonQuestion || "ممكن نعرف سبب الإلغاء؟",
+      [
+        { id: ORDER_CANCEL_REASON_IDS.price,       title: "السعر مرتفع" },
+        { id: ORDER_CANCEL_REASON_IDS.changedMind, title: "غيرت رأيي" },
+        { id: ORDER_CANCEL_REASON_IDS.other,       title: "سبب تاني" },
+      ],
+      { userId, contactId: contact?.id, label: "سؤال سبب الإلغاء" }
+    );
+    if (result.ok && result.whatsappMsgId) {
+      await prisma.storeOrder.update({
+        where: { id: order.id },
+        data: { cancelReasonMessageId: result.whatsappMsgId },
+      });
+    }
+    return;
+  }
+
+  // ── فرع: اختيار سبب الإلغاء → رسالة شكر ──
+  if (
+    order.cancelReasonStage === "AWAITING_REASON" &&
+    (payloadId === ORDER_CANCEL_REASON_IDS.price ||
+     payloadId === ORDER_CANCEL_REASON_IDS.changedMind ||
+     payloadId === ORDER_CANCEL_REASON_IDS.other)
+  ) {
+    const claim = await prisma.storeOrder.updateMany({
+      where: { id: order.id, cancelReasonStage: "AWAITING_REASON" },
+      data: { cancelReasonStage: "DONE", cancelReason: payloadId },
+    });
+    if (claim.count === 0) return;
+
+    await sendSessionText(
+      order.customerPhone,
+      accountOwner.phoneNumberId,
+      accountOwner.accessToken,
+      texts.cancelThanks || "شكرًا لمشاركتنا رأيك ❤️",
+      { userId, contactId: contact?.id, label: "شكر بعد سبب الإلغاء" }
+    );
+
+    await notifySmartFollowUpAlert(
+      userId,
+      "order_cancelled_with_reason",
+      { customerPhone: order.customerPhone, orderNumber: order.orderNumber ?? undefined, reason: payloadId }
+    ).catch(() => {});
     return;
   }
 }

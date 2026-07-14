@@ -80,3 +80,143 @@ export const sendFollowUpActionFn = inngest.createFunction(
     });
   }
 );
+
+// ─── Campaign Follow-Up Schedule ──────────────────────────────────────────────
+
+export const scheduleCampaignFollowUpFn = inngest.createFunction(
+  {
+    id: "followup-campaign-schedule",
+    retries: 3,
+    triggers: [{ event: "campaign_followup/schedule" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { campaignId, userId, delayDays, templateId } = event.data;
+    const delayInSeconds = Math.round(delayDays * 24 * 60 * 60);
+
+    if (delayInSeconds > 0) {
+      await step.sleep("wait-trigger-delay", `${delayInSeconds}s`);
+    }
+
+    return step.run("send-campaign-followup", async () => {
+      const prisma = (await import("@/lib/prisma")).default;
+      
+      // Get all recipients who received the campaign
+      const messages = await prisma.message.findMany({
+        where: { campaignId, status: "sent" },
+        select: { id: true, contactId: true, contact: { select: { phone: true } } }
+      });
+
+      if (!messages.length) return { sent: 0 };
+
+      let count = 0;
+      for (const msg of messages) {
+        if (!msg.contact) continue;
+
+        const record = await prisma.campaignFollowUpRecord.create({
+          data: {
+            userId,
+            campaignId,
+            contactId: msg.contactId!,
+            messageId: msg.id,
+            customerPhone: msg.contact.phone,
+            followUpStage: "SENT",
+            followUpStageExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours to reply
+          }
+        });
+
+        // Queue message sending for this recipient
+        await inngest.send({
+          name: "campaign_followup/send_msg",
+          data: { recordId: record.id, templateId, userId }
+        });
+
+        count++;
+      }
+      return { scheduledCount: count };
+    });
+  }
+);
+
+// ─── Campaign Follow-Up Send Msg ──────────────────────────────────────────────
+
+export const sendCampaignFollowUpMsgFn = inngest.createFunction(
+  {
+    id: "followup-campaign-send-msg",
+    retries: 3,
+    triggers: [{ event: "campaign_followup/send_msg" }],
+    concurrency: { limit: 10, key: "event.data.userId" }, // protect limits
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { recordId, templateId, userId } = event.data;
+
+    const record = await step.run("get-record", async () => {
+      const prisma = (await import("@/lib/prisma")).default;
+      return prisma.campaignFollowUpRecord.findUnique({
+        where: { id: recordId },
+        include: { user: { include: { whatsappAccount: true } } }
+      });
+    });
+
+    if (!record || !record.user.whatsappAccount) return { error: "no_record_or_account" };
+
+    const template = await step.run("get-template", async () => {
+      const prisma = (await import("@/lib/prisma")).default;
+      return templateId ? prisma.template.findUnique({ where: { id: templateId } }) : null;
+    });
+
+    if (!template) return { error: "no_template" };
+
+    const result = await step.run("send-msg", async () => {
+      const { sendWhatsAppMessage } = await import("@/lib/whatsapp-api");
+      const { decryptToken } = await import("@/lib/crypto");
+      
+      return sendWhatsAppMessage({
+        toPhone: record.customerPhone,
+        phoneNumberId: record.user.whatsappAccount!.phoneNumberId,
+        accessToken: decryptToken(record.user.whatsappAccount!.accessToken),
+        messageType: "template",
+        templateName: template.name,
+        templateLang: template.language || "ar",
+        templateVars: {},
+        content: `[Campaign Follow-Up] ${template.name}`,
+      });
+    });
+
+    await step.run("update-record", async () => {
+      const prisma = (await import("@/lib/prisma")).default;
+      if (result.ok) {
+        await prisma.campaignFollowUpRecord.update({
+          where: { id: recordId },
+          data: {
+            followUpSentAt: new Date(),
+            followUpMessageId: result.whatsappMsgId,
+          }
+        });
+      } else {
+        // failed
+        await prisma.campaignFollowUpRecord.delete({ where: { id: recordId } });
+      }
+    });
+
+    return { ok: result.ok };
+  }
+);
+
+// ─── Campaign Follow-Up Action ────────────────────────────────────────────────
+
+export const campaignFollowUpActionFn = inngest.createFunction(
+  {
+    id: "followup-campaign-action",
+    retries: 2,
+    triggers: [{ event: "campaign_followup/action.send" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { recordId, action, replyDelaySeconds } = event.data;
+    if (replyDelaySeconds > 0) await step.sleep("wait-reply-delay", `${replyDelaySeconds}s`);
+    
+    return step.run("execute-action", async () => {
+      const { executeCampaignFollowUpAction } = await import("@/lib/campaign-followup");
+      return executeCampaignFollowUpAction(recordId, action);
+    });
+  }
+);

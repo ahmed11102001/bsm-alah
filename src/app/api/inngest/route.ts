@@ -31,6 +31,9 @@ import {
   scheduleShippingFollowUpFn,
   scheduleCartFollowUpFn,
   sendFollowUpActionFn,
+  scheduleCampaignFollowUpFn,
+  sendCampaignFollowUpMsgFn,
+  campaignFollowUpActionFn,
 } from "@/inngest/smart-followup-functions";
 
 const inngestHandler = serve({
@@ -61,6 +64,9 @@ const inngestHandler = serve({
     scheduleShippingFollowUpFn,
     scheduleCartFollowUpFn,
     sendFollowUpActionFn,
+    scheduleCampaignFollowUpFn,
+    sendCampaignFollowUpMsgFn,
+    campaignFollowUpActionFn,
   ],
 });
 

@@ -21,7 +21,7 @@ import { toast } from "sonner";
 type Lang = "ar" | "en";
 const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
 
-type CardId = "shipping" | "cart" | "campaign";
+type CardId = "shipping" | "cart" | "campaign" | "order_confirm";
 
 function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
@@ -159,10 +159,10 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
   const [replyDelay, setReplyDelay] = useState(0);
   const [triggerDelayDays, setTriggerDelayDays] = useState(3);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // MOCK: This will come from API
-  const templateStatus: string = "PENDING";
-  const isApproved = templateStatus === "APPROVED";
+  const [templateStatus, setTemplateStatus] = useState("MISSING");
+  const isApproved = templateStatus === "APPROVED" || templateStatus === "approved";
 
   const [texts, setTexts] = useState({
     rating: tx(lang, "يسعدنا معرفة رأيك في المنتج ⭐", "We'd love to know what you think of the product ⭐"),
@@ -171,6 +171,23 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
     problemType: tx(lang, "ما نوع المشكلة؟", "What kind of problem?"),
     problemThanks: tx(lang, "شكرًا لإبلاغنا. سيتم تحويل طلبك إلى أحد موظفي خدمة العملاء للتواصل معك في أقرب وقت.", "Thanks for letting us know. Your request will be forwarded to a support agent who'll reach out soon."),
   });
+
+  useEffect(() => {
+    fetch("/api/automation/smart-followup/shipping")
+      .then(r => r.json())
+      .then(data => {
+        if (data.setting) {
+          setIsEnabled(data.setting.isEnabled);
+          setTriggerDelayDays(data.setting.triggerDelayDays);
+          setReplyDelay(data.setting.replyDelayMinutes);
+          if (Object.keys(data.setting.texts || {}).length > 0) {
+            setTexts(prev => ({ ...prev, ...data.setting.texts }));
+          }
+        }
+        if (data.template) setTemplateStatus(data.template.status);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleToggle = (checked: boolean) => {
     if (checked && !isApproved) {
@@ -182,10 +199,28 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    setSaving(false);
-    toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+    try {
+      const res = await fetch("/api/automation/smart-followup/shipping", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+      } else {
+        toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+      }
+    } catch {
+      toast.error(tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+
+
 
   return (
     <div className="space-y-4">
@@ -302,10 +337,10 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
   const [replyDelay, setReplyDelay] = useState(0);
   const [triggerDelayDays, setTriggerDelayDays] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // MOCK: This will come from API
-  const templateStatus: string = "PENDING";
-  const isApproved = templateStatus === "APPROVED";
+  const [templateStatus, setTemplateStatus] = useState("MISSING");
+  const isApproved = templateStatus === "APPROVED" || templateStatus === "approved";
 
   const [texts, setTexts] = useState({
     completeReply: tx(lang, "رائع ❤️\nيمكنك إكمال طلبك من خلال الرابط التالي:\n🔗 [رابط إكمال الطلب]", "Great ❤️\nYou can complete your order through the following link:\n🔗 [checkout link]"),
@@ -313,6 +348,23 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
     reasonQuestion: tx(lang, "ما سبب عدم إكمال الطلب؟", "What's the reason you didn't complete the order?"),
     reasonThanks: tx(lang, "شكرًا لمشاركتنا رأيك ❤️", "Thanks for sharing your feedback with us ❤️"),
   });
+
+  useEffect(() => {
+    fetch("/api/automation/smart-followup/cart")
+      .then(r => r.json())
+      .then(data => {
+        if (data.setting) {
+          setIsEnabled(data.setting.isEnabled);
+          setTriggerDelayDays(data.setting.triggerDelayDays);
+          setReplyDelay(data.setting.replyDelayMinutes);
+          if (Object.keys(data.setting.texts || {}).length > 0) {
+            setTexts(prev => ({ ...prev, ...data.setting.texts }));
+          }
+        }
+        if (data.template) setTemplateStatus(data.template.status);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleToggle = (checked: boolean) => {
     if (checked && !isApproved) {
@@ -324,10 +376,26 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    setSaving(false);
-    toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+    try {
+      const res = await fetch("/api/automation/smart-followup/cart", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+      } else {
+        toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+      }
+    } catch {
+      toast.error(tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
 
   return (
     <div className="space-y-4">
@@ -426,6 +494,158 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
   );
 }
 
+// ─── Order Confirmation follow-up detail view ──────────────────────────────────────────
+
+function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }) {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [replyDelay, setReplyDelay] = useState(0);
+  const [triggerDelayDays, setTriggerDelayDays] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [templateStatus, setTemplateStatus] = useState("MISSING");
+  const isApproved = templateStatus === "APPROVED" || templateStatus === "approved";
+
+  const [texts, setTexts] = useState({
+    confirmThanks: tx(lang, "شكرًا لتأكيد طلبك ❤️ جاري تجهيزه الآن.", "Thanks for confirming your order ❤️ We are preparing it now."),
+    cancelReasonQuestion: tx(lang, "ممكن نعرف سبب الإلغاء؟", "May we know the reason for cancellation?"),
+    cancelThanks: tx(lang, "شكرًا لمشاركتنا رأيك ❤️", "Thanks for sharing your feedback with us ❤️"),
+  });
+
+  useEffect(() => {
+    fetch("/api/automation/smart-followup/order_confirm")
+      .then(r => r.json())
+      .then(data => {
+        if (data.setting) {
+          setIsEnabled(data.setting.isEnabled);
+          setTriggerDelayDays(data.setting.triggerDelayDays);
+          setReplyDelay(data.setting.replyDelayMinutes);
+          if (Object.keys(data.setting.texts || {}).length > 0) {
+            setTexts(prev => ({ ...prev, ...data.setting.texts }));
+          }
+        }
+        if (data.template) setTemplateStatus(data.template.status);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleToggle = (checked: boolean) => {
+    if (checked && !isApproved) {
+      toast.error(tx(lang, "يجب اعتماد القالب من ميتا أولاً لتفعيل الأتمتة", "Template must be approved by Meta to enable automation"));
+      return;
+    }
+    setIsEnabled(checked);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/automation/smart-followup/order_confirm", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isEnabled, triggerDelayDays, replyDelayMinutes, texts }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+      } else {
+        toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+      }
+    } catch {
+      toast.error(tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Unified Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:bg-gray-800 text-gray-400 flex-shrink-0">
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "تأكيد الطلب", "Order Confirmation")}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectDelay
+            label={tx(lang, "تأخير إرسال الرسالة", "Delay sending message")}
+            value={triggerDelayDays}
+            onChange={v => setTriggerDelayDays(Number(v))}
+            options={[
+              { label: tx(lang, "فوري", "Instant"), value: 0 },
+              { label: tx(lang, "1 يوم", "1 day"), value: 1 },
+              { label: tx(lang, "2 أيام", "2 days"), value: 2 },
+            ]}
+          />
+          <SelectDelay
+            label={tx(lang, "تأخير رسائل الرد", "Reply delay")}
+            value={replyDelay}
+            onChange={v => setReplyDelay(Number(v))}
+            options={[
+              { label: tx(lang, "0 دقيقة (فوري)", "0 min (Instant)"), value: 0 },
+              { label: tx(lang, "30 ثانية", "30 secs"), value: 0.5 },
+              { label: tx(lang, "1 دقيقة", "1 min"), value: 1 },
+              { label: tx(lang, "2 دقيقة", "2 mins"), value: 2 },
+            ]}
+          />
+          <ToggleSwitch checked={isEnabled} onChange={handleToggle} />
+        </div>
+      </div>
+
+      <FlowTree
+        templateName="wani_order_confirm_followup"
+        title={tx(lang, "أتمتة تأكيد الطلب", "Order Confirmation Automation")}
+        icon={<CheckCircle2 className="w-4 h-4" />}
+        isApproved={isApproved}
+      >
+        <FlowAction title={tx(lang, "يستقبل ضغط الزر (تأكيد الطلب)", "Receives button click (Confirm Order)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
+          <FlowStep
+            isLast
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل رسالة شكر وتأكيد", "Sends confirmation thank you message")}
+            label={tx(lang, "نص رسالة الشكر", "Thank you message text")}
+            textareaValue={texts.confirmThanks}
+            onTextareaChange={v => setTexts({ ...texts, confirmThanks: v })}
+          />
+        </FlowAction>
+
+        <FlowAction isLast title={tx(lang, "يستقبل ضغط الزر (إلغاء الطلب)", "Receives button click (Cancel Order)")} icon={<XCircle className="w-4 h-4 text-red-500" />}>
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "يرسل سؤال عن السبب مع 3 أزرار (السعر / غيرت رأيي / سبب آخر)", "Sends reason question with 3 buttons")}
+            label={tx(lang, "نص رسالة سؤال السبب", "Reason question text")}
+            textareaValue={texts.cancelReasonQuestion}
+            onTextareaChange={v => setTexts({ ...texts, cancelReasonQuestion: v })}
+          />
+          <FlowStep
+            icon={<MessageCircle className="w-4 h-4" />}
+            text={tx(lang, "أيًا كان السبب المُختار: يرسل رسالة شكر للعميل", "Whichever reason is picked: sends a thank-you reply")}
+            label={tx(lang, "نص رسالة الشكر", "Thank-you message text")}
+            textareaValue={texts.cancelThanks}
+            onTextareaChange={v => setTexts({ ...texts, cancelThanks: v })}
+          />
+          <FlowStep isLast icon={<Bell className="w-4 h-4" />} text={tx(lang, "يسجّل سبب الإلغاء ويرسل إشعارًا للتاجر", "Logs cancellation reason and notifies the merchant")} />
+        </FlowAction>
+      </FlowTree>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button variant="outline" onClick={onBack}>{tx(lang, "إلغاء", "Cancel")}</Button>
+        <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handleSave} disabled={saving}>
+          {saving ? tx(lang, "جاري الحفظ...", "Saving...") : tx(lang, "حفظ التغييرات", "Save changes")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Campaign follow-up detail view ─────────────────────────────────────────────
 
 // TODO(backend): pull from GET /api/campaigns
@@ -456,19 +676,69 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
   const [replyDelay, setReplyDelay] = useState(0);
   const [triggerDelayDays, setTriggerDelayDays] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [linkMode, setLinkMode] = useState<"specific" | "all">("all");
-  const [campaignId, setCampaignId] = useState(MOCK_CAMPAIGNS[0].id);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaignId, setCampaignId] = useState("all");
 
-  const [templateId, setTemplateId] = useState(CAMPAIGN_TEMPLATES[0].id);
-  const selectedTemplate = CAMPAIGN_TEMPLATES.find(t => t.id === templateId)!;
-  const isApproved = (selectedTemplate.status as string) === "APPROVED";
+  const [templates, setTemplates] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [templateId, setTemplateId] = useState<string>("");
 
   const [texts, setTexts] = useState({
     wantOrder: tx(lang, "ممتاز 🎉\n\nيمكنك إكمال الطلب الآن أو سيقوم أحد ممثلينا بالتواصل معك.", "Great 🎉\n\nYou can complete the order now, or one of our reps will reach out to you."),
     hasQuestion: tx(lang, "يسعدنا مساعدتك ❤️\n\nاكتب استفسارك وسيتم الرد عليك في أقرب وقت.", "Happy to help ❤️\n\nWrite your question and we'll get back to you soon."),
     notInterested: tx(lang, "شكرًا لك ❤️\n\nلن نرسل لك متابعة لهذه الحملة.", "Thank you ❤️\n\nWe won't send you further follow-ups for this campaign."),
   });
+
+  const loadData = async (selectedCampId: string = "all") => {
+    setLoading(true);
+    try {
+      // Load setting for this campaign (or all)
+      const res = await fetch(`/api/automation/campaign-followup?campaignId=${selectedCampId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.setting) {
+          setIsEnabled(data.setting.isEnabled);
+          setTriggerDelayDays(data.setting.triggerDelayDays);
+          setReplyDelay(data.setting.replyDelayMinutes);
+          if (data.setting.templateId) setTemplateId(data.setting.templateId);
+          if (Object.keys(data.setting.texts || {}).length > 0) {
+            setTexts(prev => ({ ...prev, ...data.setting.texts }));
+          }
+        }
+      }
+      // Load templates and campaigns if not loaded yet
+      if (templates.length === 0) {
+        const tplRes = await fetch("/api/templates?category=followup");
+        if (tplRes.ok) {
+          const tpls = await tplRes.json();
+          // Filter to just those with interactive buttons (a simplification)
+          const validTpls = tpls.filter((t: any) => t.category === "marketing" || t.name.includes("campaign"));
+          setTemplates(validTpls);
+          if (validTpls.length > 0 && !templateId) {
+            setTemplateId(validTpls[0].id);
+          }
+        }
+        const campRes = await fetch("/api/campaigns?status=completed");
+        if (campRes.ok) {
+          const data = await campRes.json();
+          setCampaigns(data.campaigns || []);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData(campaignId);
+  }, [campaignId]);
+
+  const selectedTemplate = templates.find(t => t.id === templateId);
+  const isApproved = selectedTemplate ? (selectedTemplate.status === "APPROVED" || selectedTemplate.status === "approved") : false;
 
   const handleToggle = (checked: boolean) => {
     if (checked && !isApproved) {
@@ -480,10 +750,29 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    setSaving(false);
-    toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+    try {
+      const res = await fetch("/api/automation/campaign-followup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaignId: linkMode === "all" ? "all" : campaignId,
+          isEnabled, triggerDelayDays, replyDelayMinutes, texts, templateId
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+      } else {
+        toast.success(tx(lang, "تم الحفظ بنجاح", "Saved successfully"));
+      }
+    } catch {
+      toast.error(tx(lang, "حدث خطأ أثناء الحفظ", "Error saving"));
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
 
   return (
     <div className="space-y-4">
@@ -540,12 +829,12 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
               onChange={e => setCampaignId(e.target.value)}
               className="ms-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-64"
             >
-              {MOCK_CAMPAIGNS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-            <input type="radio" checked={linkMode === "all"} onChange={() => setLinkMode("all")} className="accent-green-500" />
-            {tx(lang, "تطبيق على جميع الحملات الجديدة", "Apply to all new campaigns")}
+            <input type="radio" checked={linkMode === "all"} onChange={() => { setLinkMode("all"); setCampaignId("all"); }} className="accent-green-500" />
+            {tx(lang, "تطبيق على جميع الحملات المكتملة", "Apply to all completed campaigns")}
           </label>
         </div>
         <p className="text-xs text-gray-400 mt-3">
@@ -566,7 +855,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
           onChange={e => setTemplateId(e.target.value)}
           className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-72 font-mono"
         >
-          {CAMPAIGN_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         {!isApproved && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
@@ -576,7 +865,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
       </div>
 
       <FlowTree
-        templateName={selectedTemplate.name}
+        templateName={selectedTemplate ? selectedTemplate.name : "..."}
         title={tx(lang, "أتمتة متابعة الحملة", "Campaign Follow-up Automation")}
         icon={<Megaphone className="w-4 h-4" />}
         isApproved={isApproved}
@@ -650,6 +939,13 @@ function CardGrid({ lang, onOpen }: { lang: Lang; onOpen: (id: CardId) => void }
       desc: tx(lang, "يفلتر المهتمين ويحوّلهم لموظف مبيعات حسب ردهم", "Filters interested leads and routes them to a sales agent based on their reply"),
       ready: true,
     },
+    {
+      id: "order_confirm",
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      title: tx(lang, "تأكيد الطلب", "Order Confirmation"),
+      desc: tx(lang, "يرسل رسالة لتأكيد الطلب ويسأل عن سبب الإلغاء إذا تم رفضه", "Sends order confirmation and asks for cancellation reason if rejected"),
+      ready: true,
+    },
   ];
 
   return (
@@ -693,6 +989,9 @@ export default function SmartFollowUpTab({ lang }: { lang: Lang }) {
   }
   if (openCard === "campaign") {
     return <CampaignFollowUpDetail lang={lang} onBack={() => setOpenCard(null)} />;
+  }
+  if (openCard === "order_confirm") {
+    return <OrderConfirmFollowUpDetail lang={lang} onBack={() => setOpenCard(null)} />;
   }
 
   return (

@@ -6,16 +6,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-const VALID_TYPES = ["shipping", "cart"] as const;
+const VALID_TYPES = ["shipping", "cart", "order_confirm"] as const;
 
 const TEXT_SCHEMAS: Record<typeof VALID_TYPES[number], string[]> = {
-  shipping: ["rating", "ratingThanks", "notArrived", "problemType", "problemThanks"],
-  cart:     ["completeReply", "inquiryReply", "reasonQuestion", "reasonThanks"],
+  shipping:      ["rating", "ratingThanks", "notArrived", "problemType", "problemThanks"],
+  cart:          ["completeReply", "inquiryReply", "reasonQuestion", "reasonThanks"],
+  order_confirm: ["confirmThanks", "cancelReasonQuestion", "cancelThanks"],
 };
 
 const DELAY_DAY_OPTIONS: Record<typeof VALID_TYPES[number], number[]> = {
-  shipping: [1, 2, 3, 4, 5, 7],
-  cart:     [1, 2, 3],
+  shipping:      [1, 2, 3, 4, 5, 7],
+  cart:          [1, 2, 3],
+  order_confirm: [0, 1, 2], // allow immediate or 1,2 days? Maybe 0 is instant.
 };
 
 const REPLY_DELAY_OPTIONS = [0, 0.5, 1, 2];
@@ -32,8 +34,9 @@ function isValidType(type: string): type is typeof VALID_TYPES[number] {
 // ─── Template resolution (same logic as store/automation) ────────────────────
 async function resolveSmartFollowUpTemplate(userId: string, type: typeof VALID_TYPES[number]) {
   const templateNames: Record<string, string> = {
-    shipping: "wani_shipping_followup",
-    cart:     "wani_abandoned_cart_followup",
+    shipping:      "wani_shipping_followup",
+    cart:          "wani_abandoned_cart_followup",
+    order_confirm: "wani_order_confirm_followup",
   };
   const templateName = templateNames[type];
   const template = await prisma.template.findFirst({
@@ -173,8 +176,9 @@ export async function PUT(
     const template = await resolveSmartFollowUpTemplate(ownerId, type);
     if (!template) {
       const templateNames: Record<string, string> = {
-        shipping: "wani_shipping_followup",
-        cart:     "wani_abandoned_cart_followup",
+        shipping:      "wani_shipping_followup",
+        cart:          "wani_abandoned_cart_followup",
+        order_confirm: "wani_order_confirm_followup",
       };
       const tpl = await prisma.template.findFirst({
         where: {

@@ -261,8 +261,14 @@ export async function POST(req: NextRequest) {
           resolveActiveFollowUpContext,
           handleShippingFollowUpReply,
           handleCartFollowUpReply,
+          handleOrderConfirmReply,
           closeExpiredStageIfNeeded,
         } = await import("@/lib/smart-followup");
+
+        const {
+          resolveActiveCampaignFollowUpContext,
+          handleCampaignFollowUpReply,
+        } = await import("@/lib/campaign-followup");
 
         const ctx = await resolveActiveFollowUpContext({ userId, phone: from, contextId });
 
@@ -346,6 +352,80 @@ export async function POST(req: NextRequest) {
             });
           }
           smartFollowUpHandled = true;
+        } else if (ctx?.kind === "order_confirm" && ctx.order) {
+          const { getSmartFollowUpSetting } = await import("@/lib/smart-followup");
+          const setting = await getSmartFollowUpSetting(ctx.order.userId, "order_confirm");
+          const replyDelayMinutes = setting?.replyDelayMinutes ?? 0;
+
+          if (replyDelayMinutes > 0) {
+            try {
+              const { inngest } = await import("@/inngest/client");
+              await inngest.send({
+                name: "followup/action.send",
+                data: {
+                  kind: "order_confirm",
+                  recordId: ctx.order.id,
+                  action: payload,
+                  replyDelaySeconds: Math.round(replyDelayMinutes * 60),
+                },
+              });
+            } catch (e) {
+              await handleOrderConfirmReply(ctx.order as any, {
+                payloadId: payload,
+                messageText: content,
+                accountOwner,
+                userId,
+              });
+            }
+          } else {
+            await handleOrderConfirmReply(ctx.order as any, {
+              payloadId: payload,
+              messageText: content,
+              accountOwner,
+              userId,
+            });
+          }
+          smartFollowUpHandled = true;
+        }
+
+        if (!smartFollowUpHandled) {
+          const campRecord = await resolveActiveCampaignFollowUpContext({ userId, phone: from, contextId });
+          if (campRecord) {
+            const setting = await prisma.campaignFollowUpSetting.findFirst({
+              where: { userId: campRecord.userId, isEnabled: true },
+              orderBy: { createdAt: "desc" }
+            });
+            const replyDelayMinutes = setting?.replyDelayMinutes ?? 0;
+
+            if (replyDelayMinutes > 0) {
+              try {
+                const { inngest } = await import("@/inngest/client");
+                await inngest.send({
+                  name: "campaign_followup/action.send" as any,
+                  data: {
+                    recordId: campRecord.id,
+                    action: payload,
+                    replyDelaySeconds: Math.round(replyDelayMinutes * 60),
+                  },
+                });
+              } catch (e) {
+                await handleCampaignFollowUpReply(campRecord, {
+                  payloadId: payload,
+                  messageText: content,
+                  accountOwner,
+                  userId,
+                });
+              }
+            } else {
+              await handleCampaignFollowUpReply(campRecord, {
+                payloadId: payload,
+                messageText: content,
+                accountOwner,
+                userId,
+              });
+            }
+            smartFollowUpHandled = true;
+          }
         }
       } catch (e) {
         console.error("[SmartFollowUp] Webhook handling error:", e);

@@ -353,6 +353,30 @@ export const processCampaign = inngest.createFunction(
         console.error("[INNGEST] Notification error:", error);
         throw error; // مهم عشان Inngest يعتبر الـ job فشل
       }
+
+      // Schedule follow-up if applicable
+      if (sent > 0) {
+        const setting = await prisma.campaignFollowUpSetting.findFirst({
+          where: { userId: campaign.userId, campaignId, isEnabled: true },
+        });
+        
+        if (setting) {
+          try {
+            await inngest.send({
+              name: "campaign_followup/schedule",
+              data: {
+                campaignId,
+                userId: campaign.userId,
+                delayDays: setting.triggerDelayDays,
+                templateId: setting.templateId,
+              },
+            });
+            console.log(`[INNGEST] Scheduled campaign follow-up for ${campaignId}`);
+          } catch (e) {
+            console.error("[INNGEST] Failed to schedule campaign follow-up:", e);
+          }
+        }
+      }
     });
 
     return { sent, failed, total: sent + failed };

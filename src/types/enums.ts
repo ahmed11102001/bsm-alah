@@ -154,8 +154,9 @@ export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];
 
 // Smart follow-up enums (mirror Prisma schema)
 export const SmartFollowUpType = {
-  shipping: "shipping",
-  cart:     "cart",
+  shipping:      "shipping",
+  cart:          "cart",
+  order_confirm: "order_confirm",
 } as const;
 export type SmartFollowUpType = (typeof SmartFollowUpType)[keyof typeof SmartFollowUpType];
 
@@ -173,3 +174,21 @@ export const CartFollowUpStage = {
   DONE:           "DONE",
 } as const;
 export type CartFollowUpStage = (typeof CartFollowUpStage)[keyof typeof CartFollowUpStage];
+
+export const OrderCancelReasonStage = {
+  AWAITING_REASON: "AWAITING_REASON",
+  DONE:            "DONE",
+} as const;
+export type OrderCancelReasonStage = (typeof OrderCancelReasonStage)[keyof typeof OrderCancelReasonStage];
+
+export const CampaignFollowUpStage = {
+  SENT: "SENT",
+  DONE: "DONE",
+} as const;
+export type CampaignFollowUpStage = (typeof CampaignFollowUpStage)[keyof typeof CampaignFollowUpStage];
+
+export const ORDER_CANCEL_REASON_IDS = {
+  price:       "order_cancel_reason_price",
+  changedMind: "order_cancel_reason_changed_mind",
+  other:       "order_cancel_reason_other",
+} as const;
