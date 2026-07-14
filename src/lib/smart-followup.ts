@@ -17,9 +17,10 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const SMART_FOLLOWUP_TEMPLATE_NAMES: Record<"shipping" | "cart", string> = {
+export const SMART_FOLLOWUP_TEMPLATE_NAMES: Record<"shipping" | "cart" | "order_confirm", string> = {
   shipping: "wani_shipping_followup",
   cart:     "wani_abandoned_cart_followup",
+  order_confirm: "wani_order_confirm_followup",
 };
 
 export const SHIPPING_STAGE_EXPIRY_HOURS = 48;

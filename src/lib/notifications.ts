@@ -297,7 +297,7 @@ export async function notifyOrderConfirmed(userId: string, orderNumber: string, 
 
 export async function notifySmartFollowUpAlert(
   userId: string,
-  kind: "low_rating" | "cart_not_interested" | "shipping_send_failed" | "shipping_not_delivered" | "cart_send_failed",
+  kind: "low_rating" | "cart_not_interested" | "shipping_send_failed" | "shipping_not_delivered" | "cart_send_failed" | "order_cancelled_with_reason",
   details: { customerPhone: string; orderNumber?: string; rating?: number; reason?: string; error?: string },
 ) {
   const titles: Record<typeof kind, { ar: string; en: string }> = {
@@ -306,6 +306,7 @@ export async function notifySmartFollowUpAlert(
     shipping_send_failed:   { ar: "❌ فشل إرسال متابعة الشحن",    en: "❌ Shipping follow-up send failed" },
     shipping_not_delivered: { ar: "⚠️ عميل قال: لم يستلم الشحنة", en: "⚠️ Customer reported not delivered" },
     cart_send_failed:       { ar: "❌ فشل إرسال متابعة السلة",     en: "❌ Cart follow-up send failed" },
+    order_cancelled_with_reason: { ar: "❌ إلغاء طلب مع سبب",      en: "❌ Order cancelled with reason" },
   };
 
   const bodies: Record<typeof kind, (d: typeof details) => { ar: string; en: string }> = {
@@ -328,6 +329,10 @@ export async function notifySmartFollowUpAlert(
     cart_send_failed: (d) => ({
       ar: `فشل إرسال متابعة السلة لـ ${d.customerPhone} — ${d.error ?? ""}`,
       en: `Cart follow-up failed for ${d.customerPhone} — ${d.error ?? ""}`,
+    }),
+    order_cancelled_with_reason: (d) => ({
+      ar: `العميل ${d.customerPhone} ألغى الطلب ${d.orderNumber ?? ""} — السبب: ${d.reason ?? "غير معروف"}`,
+      en: `Customer ${d.customerPhone} cancelled order ${d.orderNumber ?? ""} — reason: ${d.reason ?? "unknown"}`,
     }),
   };
 
