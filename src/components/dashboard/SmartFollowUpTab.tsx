@@ -146,7 +146,7 @@ function SelectDelay({ value, onChange, options, label }: { value: string | numb
         onChange={e => onChange(e.target.value)}
         className="bg-transparent border-none outline-none font-bold text-gray-900 dark:text-gray-100 cursor-pointer min-w-[70px]"
       >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map(o => <option key={o.value} value={o.value} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{o.label}</option>)}
       </select>
     </div>
   )
@@ -829,7 +829,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
               onChange={e => setCampaignId(e.target.value)}
               className="ms-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-64"
             >
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {campaigns.map(c => <option key={c.id} value={c.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{c.name}</option>)}
             </select>
           )}
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
@@ -855,7 +855,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
           onChange={e => setTemplateId(e.target.value)}
           className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 w-full sm:w-72 font-mono"
         >
-          {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          {templates.map(t => <option key={t.id} value={t.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">{t.name}</option>)}
         </select>
         {!isApproved && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
