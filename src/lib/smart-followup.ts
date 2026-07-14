@@ -666,7 +666,7 @@ export async function closeExpiredStageIfNeeded(
 
 // ─── Handle Shipping Reply ────────────────────────────────────────────────────
 
-interface ReplyParams {
+export interface ReplyParams {
   payloadId?: string | null;
   payloadTitle?: string;
   messageText: string;
