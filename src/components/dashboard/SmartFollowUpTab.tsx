@@ -9,7 +9,7 @@
 // STATUS: front-end only for now. Shipping card and Cart card are fully built.
 // Campaign card is a placeholder.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
