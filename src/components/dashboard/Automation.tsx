@@ -545,10 +545,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
           <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5 h-9 text-sm" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> {tx(lang, "جدولة جديدة", "New schedule")}</Button>
         </div>
         <OutboundWarning lang={lang} />
-        <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
-          <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          {tx(lang, "الأتمتة الزمنية تحتاج Inngest cron function تشتغل كل ساعة لفحص القواعد المجدولة.", "Scheduled automation needs an Inngest cron function running every hour to scan the scheduled rules.")}
-        </div>
+
         {timeRules.length === 0 ? (
           <EmptyState icon={<CalendarClock className="w-10 h-10 text-purple-300" />} title={tx(lang, "لا توجد جدولة بعد", "No schedules yet")} desc={tx(lang, "أضف قاعدة لإرسال رسائل في وقت وأيام محددة", "Add a rule to send messages at a specific time and days")}
             action={<Button className="bg-green-500 hover:bg-green-600 text-white gap-2" onClick={() => openCreate("timebased")}><Plus className="w-4 h-4" /> {tx(lang, "إضافة جدولة", "Add schedule")}</Button>} />
