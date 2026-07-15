@@ -2,9 +2,9 @@
 // ─── تقارير الأتمتة — بيانات حقيقية ──────────────────────────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession }          from "next-auth";
-import { authOptions }               from "@/lib/auth";
-import prisma                        from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -14,7 +14,7 @@ function resolveUserId(session: any): string {
 
 function dateRange(from?: string | null, to?: string | null) {
   const gte = from ? new Date(from) : new Date(Date.now() - 30 * 86400_000);
-  const lte = to   ? new Date(to)   : new Date();
+  const lte = to ? new Date(to) : new Date();
   lte.setHours(23, 59, 59, 999);
   return { gte, lte };
 }
@@ -23,11 +23,10 @@ function dateRange(from?: string | null, to?: string | null) {
 function triggerTypeLabel(triggerType: string, replyType: string): string {
   if (replyType === "AI") return "AI Agent";
   switch (triggerType) {
-    case "KEYWORD":       return "Keyword Replies";
+    case "KEYWORD": return "Keyword Replies";
     case "FIRST_MESSAGE": return "Welcome Messages";
-    case "NO_REPLY":      return "Scheduled Automations";
-    case "TIME_BASED":    return "Time-based Automations";
-    default:              return triggerType;
+    case "TIME_BASED": return "Time-based Automations";
+    default: return triggerType;
   }
 }
 
@@ -53,8 +52,8 @@ export async function GET(req: NextRequest) {
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);
-    const from  = searchParams.get("from");
-    const to    = searchParams.get("to");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const range = dateRange(from, to);
 
     // ── 1. Fetch all automation sources in parallel ──────────────────────────
@@ -313,10 +312,10 @@ export async function GET(req: NextRequest) {
     const aiMsgStats = botMessagesByType.find(r => r.sender_type === "ai");
     const botMsgStats = botMessagesByType.find(r => r.sender_type === "bot");
 
-    const totalAiRuns     = Number(aiMsgStats?.total ?? 0);
-    const totalAiFailed   = Number(aiMsgStats?.failed ?? 0);
-    const totalBotRuns    = Number(botMsgStats?.total ?? 0);
-    const totalBotFailed  = Number(botMsgStats?.failed ?? 0);
+    const totalAiRuns = Number(aiMsgStats?.total ?? 0);
+    const totalAiFailed = Number(aiMsgStats?.failed ?? 0);
+    const totalBotRuns = Number(botMsgStats?.total ?? 0);
+    const totalBotFailed = Number(botMsgStats?.failed ?? 0);
 
     // Distribute bot runs proportionally among automation rules
     const enabledBotRules = automationRules.filter(r => r.replyType !== "AI");
@@ -343,15 +342,15 @@ export async function GET(req: NextRequest) {
       }
 
       rulesResult.push({
-        id:           rule.id,
-        name:         rule.name,
+        id: rule.id,
+        name: rule.name,
         type,
-        isEnabled:    rule.isEnabled,
-        hasError:     failureCount > 0,
+        isEnabled: rule.isEnabled,
+        hasError: failureCount > 0,
         runCount,
         successCount: runCount - failureCount,
         failureCount,
-        lastRun:      timeAgo(lastRunDate),
+        lastRun: timeAgo(lastRunDate),
       });
     }
 
@@ -359,15 +358,15 @@ export async function GET(req: NextRequest) {
     const hasAiRule = automationRules.some(r => r.replyType === "AI");
     if (aiAgent && !hasAiRule) {
       rulesResult.push({
-        id:           aiAgent.id,
-        name:         "AI Agent",
-        type:         "AI Agent",
-        isEnabled:    aiAgent.isEnabled,
-        hasError:     totalAiFailed > 0,
-        runCount:     totalAiRuns,
+        id: aiAgent.id,
+        name: "AI Agent",
+        type: "AI Agent",
+        isEnabled: aiAgent.isEnabled,
+        hasError: totalAiFailed > 0,
+        runCount: totalAiRuns,
         successCount: totalAiRuns - totalAiFailed,
         failureCount: totalAiFailed,
-        lastRun:      timeAgo(aiMsgStats?.last_at ?? null),
+        lastRun: timeAgo(aiMsgStats?.last_at ?? null),
       });
     }
 
@@ -375,55 +374,55 @@ export async function GET(req: NextRequest) {
     const storeTypeLabels: Record<string, string> = {
       order_confirm: "تأكيد الطلب",
       order_shipped: "تم الشحن",
-      promo:         "عروض ترويجية",
-      cart_abandon:  "السلة المهجورة",
+      promo: "عروض ترويجية",
+      cart_abandon: "السلة المهجورة",
     };
     for (const sa of storeAutomations) {
       rulesResult.push({
-        id:           sa.id,
-        name:         storeTypeLabels[sa.type] ?? sa.type,
-        type:         "Store Automation",
-        isEnabled:    sa.isEnabled,
-        hasError:     sa.failedCount > 0,
-        runCount:     sa.sentCount + sa.failedCount,
+        id: sa.id,
+        name: storeTypeLabels[sa.type] ?? sa.type,
+        type: "Store Automation",
+        isEnabled: sa.isEnabled,
+        hasError: sa.failedCount > 0,
+        runCount: sa.sentCount + sa.failedCount,
         successCount: sa.sentCount,
         failureCount: sa.failedCount,
-        lastRun:      timeAgo(sa.lastSentAt),
+        lastRun: timeAgo(sa.lastSentAt),
       });
     }
 
     // Add smart follow-up settings
     const followUpTypeLabels: Record<string, string> = {
       shipping: "متابعة الشحن",
-      cart:     "متابعة السلة",
+      cart: "متابعة السلة",
     };
     for (const sf of smartFollowUpSettings) {
       rulesResult.push({
-        id:           sf.id,
-        name:         followUpTypeLabels[sf.type] ?? sf.type,
-        type:         "Smart Follow-up",
-        isEnabled:    sf.isEnabled,
-        hasError:     sf.failedCount > 0,
-        runCount:     sf.sentCount + sf.failedCount,
+        id: sf.id,
+        name: followUpTypeLabels[sf.type] ?? sf.type,
+        type: "Smart Follow-up",
+        isEnabled: sf.isEnabled,
+        hasError: sf.failedCount > 0,
+        runCount: sf.sentCount + sf.failedCount,
         successCount: sf.sentCount,
         failureCount: sf.failedCount,
-        lastRun:      timeAgo(sf.lastSentAt),
+        lastRun: timeAgo(sf.lastSentAt),
       });
     }
 
     // ── 3. KPIs ──────────────────────────────────────────────────────────────
-    const totalRuns    = rulesResult.reduce((s, r) => s + r.runCount, 0);
+    const totalRuns = rulesResult.reduce((s, r) => s + r.runCount, 0);
     const totalSuccess = rulesResult.reduce((s, r) => s + r.successCount, 0);
     const totalFailures = rulesResult.reduce((s, r) => s + r.failureCount, 0);
-    const activeCount  = rulesResult.filter(r => r.isEnabled).length;
+    const activeCount = rulesResult.filter(r => r.isEnabled).length;
     const stoppedCount = rulesResult.filter(r => !r.isEnabled).length;
-    const errorCount   = rulesResult.filter(r => r.hasError).length;
+    const errorCount = rulesResult.filter(r => r.hasError).length;
 
     const kpis = {
-      totalAutomations:       rulesResult.length,
-      activeAutomations:      activeCount,
-      stoppedAutomations:     stoppedCount,
-      automationsWithErrors:  errorCount,
+      totalAutomations: rulesResult.length,
+      activeAutomations: activeCount,
+      stoppedAutomations: stoppedCount,
+      automationsWithErrors: errorCount,
       totalRuns,
       totalSuccess,
       totalFailures,
@@ -446,10 +445,10 @@ export async function GET(req: NextRequest) {
       else title = "Automation Send Failed";
 
       return {
-        id:      err.id,
+        id: err.id,
         title,
         details: `${errorMsg} — ${contactName}`,
-        time:    err.createdAt.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false }),
+        time: err.createdAt.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false }),
       };
     });
 
@@ -471,12 +470,12 @@ export async function GET(req: NextRequest) {
       : 0;
 
     const aiMetrics = {
-      avgResponseTime:  formatMs(avgMs),
-      fastestResponse:  formatMs(minMs),
-      slowestResponse:  formatMs(maxMs),
-      aiRepliesCount:   totalAiRuns,
+      avgResponseTime: formatMs(avgMs),
+      fastestResponse: formatMs(minMs),
+      slowestResponse: formatMs(maxMs),
+      aiRepliesCount: totalAiRuns,
       aiSuccessRate,
-      humanHandoffs:    handoffCount,
+      humanHandoffs: handoffCount,
     };
 
     // ── 7. Time saved estimation ─────────────────────────────────────────────
@@ -525,7 +524,7 @@ export async function GET(req: NextRequest) {
     // Calculate funnel as percentages based on sent
     const funnelBase = funnelSent || 1;
     const funnel = {
-      steps:  ["تم تفعيل الأتمتة", "تم إرسال الرسالة", "تم فتح الرسالة", "رد العميل"],
+      steps: ["تم تفعيل الأتمتة", "تم إرسال الرسالة", "تم فتح الرسالة", "رد العميل"],
       values: [
         100,
         Math.round((funnelDelivered / funnelBase) * 100),

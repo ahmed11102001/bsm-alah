@@ -5,7 +5,6 @@
 //   1. "الأتمتة"  → inner sub-tabs:
 //        - الكلمات  : keyword bot (KEYWORD + TEXT)           — free text ✅
 //        - الترحيب  : first-message (FIRST_MESSAGE + TEXT)   — free text ✅ (reply to incoming)
-//        - المتابعة : no-reply (NO_REPLY + TEMPLATE)         — template only ⚠️ (outbound)
 //        - الزمنية  : time-based (TIME_BASED + TEMPLATE)     — template ⚠️ (outbound)
 //        - A/B      : splits random contacts → two campaigns
 //   2. "الذكاء الاصطناعي" → unchanged AI agent
@@ -220,7 +219,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
   const [ruleForm, setRuleForm] = useState({
     name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "",
-    noReplyDays: "3", days: [] as string[], hour: "09", minute: "00",
+    days: [] as string[], hour: "09", minute: "00",
     tbAudienceId: "", tbMaxContacts: "500",
   });
   const [mediaUploading, setMediaUploading] = useState(false);
@@ -309,7 +308,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
   const openCreate = (mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(null);
-    setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", noReplyDays: "3", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
+    setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
     setShowDialog(true);
   };
 
@@ -322,7 +321,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
     }
     setRuleForm({
       name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "", replyMediaUrl: rule.replyMediaUrl ?? "",
-      templateId: rule.templateId ?? "", noReplyDays: rule.triggerType === "NO_REPLY" ? (rule.triggerValue ?? "3") : "3",
+      templateId: rule.templateId ?? "",
       days, hour, minute, tbAudienceId, tbMaxContacts,
     });
     setShowDialog(true);
@@ -330,7 +329,7 @@ export default function Automation({ planTier = "free" }: { planTier?: string })
 
   // ─── Save rule ────────────────────────────────────────────────────────────
   const saveRule = async () => {
-    const { name, keyword, reply, templateId, noReplyDays, days, hour, minute, tbAudienceId, tbMaxContacts } = ruleForm;
+    const { name, keyword, reply, templateId, days, hour, minute, tbAudienceId, tbMaxContacts } = ruleForm;
     if (!name.trim()) { toast.error(tx(lang, "اسم القاعدة مطلوب", "Rule name is required")); return; }
 
     let triggerType = "KEYWORD"; let triggerValue: string | null = null;

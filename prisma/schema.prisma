@@ -885,7 +885,6 @@ enum OrderSource {
 enum TriggerType {
   KEYWORD
   FIRST_MESSAGE
-  NO_REPLY
   TIME_BASED
 }
 

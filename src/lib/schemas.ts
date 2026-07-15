@@ -27,8 +27,8 @@ export function parseInput<T>(
 
   // نجمّع أول خطأ بشكل مقروء — Zod v4 يستخدم .issues
   const issues = (result.error as any).issues ?? [];
-  const first  = issues[0] ?? { path: [], message: result.error.message };
-  const field  = first.path?.length ? first.path.join(".") : null;
+  const first = issues[0] ?? { path: [], message: result.error.message };
+  const field = first.path?.length ? first.path.join(".") : null;
   const message = field ? `${field}: ${first.message}` : first.message;
   return { ok: false, error: message };
 }
@@ -52,10 +52,10 @@ const phoneField = z
 
 /** POST /api/register */
 export const RegisterSchema = z.object({
-  email:    emailField,
+  email: emailField,
   password: passwordField,
-  name:     nonEmptyStr.max(100, "الاسم طويل جداً"),
-  phone:    phoneField,
+  name: nonEmptyStr.max(100, "الاسم طويل جداً"),
+  phone: phoneField,
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 
@@ -67,7 +67,7 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 
 /** POST /api/auth/reset-password */
 export const ResetPasswordSchema = z.object({
-  token:    nonEmptyStr,
+  token: nonEmptyStr,
   password: passwordField,
 });
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
@@ -75,8 +75,8 @@ export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 /** POST /api/auth/join-team */
 export const JoinTeamSchema = z.object({
   inviteCode: nonEmptyStr,
-  password:   passwordField,
-  name:       nonEmptyStr.max(100).optional(),
+  password: passwordField,
+  name: nonEmptyStr.max(100).optional(),
 });
 export type JoinTeamInput = z.infer<typeof JoinTeamSchema>;
 
@@ -97,45 +97,45 @@ const VALID_TONES = ["friendly", "formal", "egyptian"] as const;
 
 /** PATCH /api/me/settings — type: "profile" */
 export const SettingsProfileSchema = z.object({
-  type:  z.literal("profile"),
-  name:  nonEmptyStr.max(100, "الاسم طويل جداً"),
+  type: z.literal("profile"),
+  name: nonEmptyStr.max(100, "الاسم طويل جداً"),
   phone: z.string().trim().optional(),
 });
 export type SettingsProfileInput = z.infer<typeof SettingsProfileSchema>;
 
 /** PATCH /api/me/settings — type: "password" */
 export const SettingsPasswordSchema = z.object({
-  type:            z.literal("password"),
+  type: z.literal("password"),
   currentPassword: nonEmptyStr,
-  newPassword:     passwordField,
+  newPassword: passwordField,
 });
 export type SettingsPasswordInput = z.infer<typeof SettingsPasswordSchema>;
 
 /** PATCH /api/me/settings — type: "create_password" */
 export const SettingsCreatePasswordSchema = z.object({
-  type:        z.literal("create_password"),
+  type: z.literal("create_password"),
   newPassword: passwordField,
 });
 export type SettingsCreatePasswordInput = z.infer<typeof SettingsCreatePasswordSchema>;
 
 /** PATCH /api/me/settings — type: "whatsapp" */
 export const SettingsWhatsAppSchema = z.object({
-  type:          z.literal("whatsapp"),
-  accessToken:   nonEmptyStr,
+  type: z.literal("whatsapp"),
+  accessToken: nonEmptyStr,
   phoneNumberId: nonEmptyStr,
-  wabaId:        nonEmptyStr,
+  wabaId: nonEmptyStr,
 });
 export type SettingsWhatsAppInput = z.infer<typeof SettingsWhatsAppSchema>;
 
 /** PATCH /api/me/settings — type: "brand" */
 export const SettingsBrandSchema = z.object({
-  type:         z.literal("brand"),
-  brandName:    z.string().trim().max(100).optional(),
+  type: z.literal("brand"),
+  brandName: z.string().trim().max(100).optional(),
   businessDesc: nonEmptyStr.max(2000, "الوصف طويل جداً"),
   productsInfo: z.string().trim().max(3000).optional(),
-  pricingInfo:  z.string().trim().max(2000).optional(),
+  pricingInfo: z.string().trim().max(2000).optional(),
   workingHours: z.string().trim().max(500).optional(),
-  aiTone:       z.enum(VALID_TONES).optional().default("friendly"),
+  aiTone: z.enum(VALID_TONES).optional().default("friendly"),
 });
 export type SettingsBrandInput = z.infer<typeof SettingsBrandSchema>;
 
@@ -154,29 +154,29 @@ export type SettingsPatchInput = z.infer<typeof SettingsPatchSchema>;
 /** POST /api/team */
 export const TeamInviteSchema = z.object({
   email: emailField,
-  name:  z.string().trim().max(100).optional(),
-  role:  z.enum([UserRole.FULL_ACCESS, UserRole.CHAT_ONLY]),
+  name: z.string().trim().max(100).optional(),
+  role: z.enum([UserRole.FULL_ACCESS, UserRole.CHAT_ONLY]),
 });
 export type TeamInviteInput = z.infer<typeof TeamInviteSchema>;
 
 // ─── Automation ──────────────────────────────────────────────────────────────
 
 const triggerValues = Object.values(TriggerType) as [string, ...string[]];
-const replyValues   = Object.values(ReplyType)   as [string, ...string[]];
+const replyValues = Object.values(ReplyType) as [string, ...string[]];
 
 /** POST /api/automation */
 export const AutomationCreateSchema = z
   .object({
-    name:              nonEmptyStr.max(200),
-    triggerType:       z.enum(triggerValues as [TriggerType, ...TriggerType[]]),
-    triggerValue:      z.string().trim().optional(),
-    replyType:         z.enum(replyValues as [ReplyType, ...ReplyType[]]),
-    replyContent:      z.string().trim().optional(),
-    templateId:        z.string().optional(),
+    name: nonEmptyStr.max(200),
+    triggerType: z.enum(triggerValues as [TriggerType, ...TriggerType[]]),
+    triggerValue: z.string().trim().optional(),
+    replyType: z.enum(replyValues as [ReplyType, ...ReplyType[]]),
+    replyContent: z.string().trim().optional(),
+    templateId: z.string().optional(),
     extraInstructions: z.string().trim().max(1000).optional(),
-    humanKeywords:     z.array(z.string().trim()).optional().default([]),
-    pauseOnReply:      z.boolean().optional().default(true),
-    replyMediaUrl:     z.string().url().optional().or(z.literal("")),
+    humanKeywords: z.array(z.string().trim()).optional().default([]),
+    pauseOnReply: z.boolean().optional().default(true),
+    replyMediaUrl: z.string().url().optional().or(z.literal("")),
   })
   .superRefine((data, ctx) => {
     if (data.triggerType === TriggerType.KEYWORD && !data.triggerValue) {
@@ -185,16 +185,6 @@ export const AutomationCreateSchema = z
         path: ["triggerValue"],
         message: "الكلمة المفتاحية مطلوبة",
       });
-    }
-    if (data.triggerType === TriggerType.NO_REPLY) {
-      const days = Number(data.triggerValue);
-      if (!days || days < 1 || days > 365) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["triggerValue"],
-          message: "عدد الأيام يجب أن يكون بين 1 و 365",
-        });
-      }
     }
     if (data.replyType === ReplyType.TEXT && !data.replyContent) {
       ctx.addIssue({
@@ -225,10 +215,10 @@ export const AutomationDeleteSchema = z.object({ id: nonEmptyStr });
 
 /** POST /api/admin/users */
 export const AdminCreateUserSchema = z.object({
-  name:     z.string().trim().max(100).optional(),
-  email:    emailField,
+  name: z.string().trim().max(100).optional(),
+  email: emailField,
   password: passwordField,
-  plan:     z.enum(Object.values(PlanTier) as [string, ...string[]]),
+  plan: z.enum(Object.values(PlanTier) as [string, ...string[]]),
 });
 export type AdminCreateUserInput = z.infer<typeof AdminCreateUserSchema>;
 
@@ -237,12 +227,12 @@ export type AdminCreateUserInput = z.infer<typeof AdminCreateUserSchema>;
 /** POST /api/admin/coupons */
 export const AdminCreateCouponSchema = z
   .object({
-    prefix:        z.string().trim().toUpperCase().max(8).optional().default("SAVE"),
-    discountType:  z.enum(["percent", "fixed"]).optional().default("percent"),
+    prefix: z.string().trim().toUpperCase().max(8).optional().default("SAVE"),
+    discountType: z.enum(["percent", "fixed"]).optional().default("percent"),
     discountValue: z.number().positive("قيمة الخصم مطلوبة"),
-    maxUses:       z.number().int().min(1).optional().default(1),
-    expiresAt:     z.string().datetime({ offset: true }).nullable().optional().transform(v => v ?? undefined),
-    forPlan:       z.enum(["starter", "pro", "enterprise"]).nullable().optional().default(null),
+    maxUses: z.number().int().min(1).optional().default(1),
+    expiresAt: z.string().datetime({ offset: true }).nullable().optional().transform(v => v ?? undefined),
+    forPlan: z.enum(["starter", "pro", "enterprise"]).nullable().optional().default(null),
   })
   .refine(
     (d) => !(d.discountType === "percent" && d.discountValue > 100),
@@ -254,12 +244,12 @@ export type AdminCreateCouponInput = z.infer<typeof AdminCreateCouponSchema>;
 
 /** POST /api/admin/articles */
 export const AdminCreateArticleSchema = z.object({
-  title:       nonEmptyStr.max(300),
-  content:     nonEmptyStr,
-  excerpt:     z.string().trim().max(500).optional(),
-  coverImage:  z.string().url("رابط الصورة غير صالح").optional().or(z.literal("")),
-  published:   z.boolean().optional().default(false),
-  slug:        z.string().trim().max(80).optional(),
+  title: nonEmptyStr.max(300),
+  content: nonEmptyStr,
+  excerpt: z.string().trim().max(500).optional(),
+  coverImage: z.string().url("رابط الصورة غير صالح").optional().or(z.literal("")),
+  published: z.boolean().optional().default(false),
+  slug: z.string().trim().max(80).optional(),
 });
 export type AdminCreateArticleInput = z.infer<typeof AdminCreateArticleSchema>;
 
@@ -267,7 +257,7 @@ export type AdminCreateArticleInput = z.infer<typeof AdminCreateArticleSchema>;
 
 /** PATCH /api/admin/testimonials */
 export const AdminTestimonialPatchSchema = z.object({
-  id:     nonEmptyStr,
+  id: nonEmptyStr,
   action: z.enum(["approve", "reject"]),
 });
 export type AdminTestimonialPatchInput = z.infer<typeof AdminTestimonialPatchSchema>;

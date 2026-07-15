@@ -10,96 +10,96 @@
  */
 
 export const MessageType = {
-  text:     "text",
-  image:    "image",
+  text: "text",
+  image: "image",
   document: "document",
-  audio:    "audio",
+  audio: "audio",
   template: "template",
-  video:    "video",
-  sticker:  "sticker",
+  video: "video",
+  sticker: "sticker",
 } as const;
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 export const MessageStatus = {
-  pending:   "pending",
-  sent:      "sent",
+  pending: "pending",
+  sent: "sent",
   delivered: "delivered",
-  read:      "read",
-  failed:    "failed",
+  read: "read",
+  failed: "failed",
 } as const;
 export type MessageStatus = (typeof MessageStatus)[keyof typeof MessageStatus];
 
 export const MessageDirection = {
-  inbound:  "inbound",
+  inbound: "inbound",
   outbound: "outbound",
 } as const;
 export type MessageDirection = (typeof MessageDirection)[keyof typeof MessageDirection];
 
 export const MessageSenderType = {
-  human:  "human",
-  ai:     "ai",
-  bot:    "bot",
+  human: "human",
+  ai: "ai",
+  bot: "bot",
   system: "system",
 } as const;
 export type MessageSenderType = (typeof MessageSenderType)[keyof typeof MessageSenderType];
 
 export const CampaignStatus = {
-  draft:     "draft",
+  draft: "draft",
   scheduled: "scheduled",
-  running:   "running",
+  running: "running",
   completed: "completed",
-  failed:    "failed",
+  failed: "failed",
 } as const;
 export type CampaignStatus = (typeof CampaignStatus)[keyof typeof CampaignStatus];
 
 export const QueueStatus = {
-  pending:    "pending",
+  pending: "pending",
   processing: "processing",
-  sent:       "sent",
-  failed:     "failed",
-  cancelled:  "cancelled",
+  sent: "sent",
+  failed: "failed",
+  cancelled: "cancelled",
 } as const;
 export type QueueStatus = (typeof QueueStatus)[keyof typeof QueueStatus];
 
 export const UserRole = {
-  OWNER:       "OWNER",
+  OWNER: "OWNER",
   FULL_ACCESS: "FULL_ACCESS",
-  CHAT_ONLY:   "CHAT_ONLY",
+  CHAT_ONLY: "CHAT_ONLY",
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const PlanTier = {
-  free:       "free",
-  starter:    "starter",
-  pro:        "pro",
+  free: "free",
+  starter: "starter",
+  pro: "pro",
   enterprise: "enterprise",
 } as const;
 export type PlanTier = (typeof PlanTier)[keyof typeof PlanTier];
 
 export const SubscriptionStatus = {
-  active:    "active",
-  expired:   "expired",
+  active: "active",
+  expired: "expired",
   cancelled: "cancelled",
 } as const;
 export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
 
 export const NotificationType = {
-  CAMPAIGN_SUCCESS:        "CAMPAIGN_SUCCESS",
-  CAMPAIGN_FAILED:         "CAMPAIGN_FAILED",
-  CAMPAIGN_PARTIAL:        "CAMPAIGN_PARTIAL",
-  PLAN_LIMIT_REACHED:      "PLAN_LIMIT_REACHED",
-  NEW_MESSAGE:             "NEW_MESSAGE",
-  STORE_AUTO_SENT:         "STORE_AUTO_SENT",
-  STORE_AUTO_FAILED:       "STORE_AUTO_FAILED",
-  SUBSCRIPTION_EXPIRING:   "SUBSCRIPTION_EXPIRING",
-  PAYMENT_FAILED:          "PAYMENT_FAILED",
+  CAMPAIGN_SUCCESS: "CAMPAIGN_SUCCESS",
+  CAMPAIGN_FAILED: "CAMPAIGN_FAILED",
+  CAMPAIGN_PARTIAL: "CAMPAIGN_PARTIAL",
+  PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED",
+  NEW_MESSAGE: "NEW_MESSAGE",
+  STORE_AUTO_SENT: "STORE_AUTO_SENT",
+  STORE_AUTO_FAILED: "STORE_AUTO_FAILED",
+  SUBSCRIPTION_EXPIRING: "SUBSCRIPTION_EXPIRING",
+  PAYMENT_FAILED: "PAYMENT_FAILED",
   WHATSAPP_TOKEN_EXPIRING: "WHATSAPP_TOKEN_EXPIRING",
-  AI_TOKENS_LOW:           "AI_TOKENS_LOW",
-  SUBSCRIPTION_SUCCESS:    "SUBSCRIPTION_SUCCESS",
-  ORDER_CONFIRMED:         "ORDER_CONFIRMED",
-  ORDER_CANCELLED:         "ORDER_CANCELLED",
-  AI_HANDOFF_NEEDED:       "AI_HANDOFF_NEEDED",
-  SMART_FOLLOWUP_ALERT:    "SMART_FOLLOWUP_ALERT",
+  AI_TOKENS_LOW: "AI_TOKENS_LOW",
+  SUBSCRIPTION_SUCCESS: "SUBSCRIPTION_SUCCESS",
+  ORDER_CONFIRMED: "ORDER_CONFIRMED",
+  ORDER_CANCELLED: "ORDER_CANCELLED",
+  AI_HANDOFF_NEEDED: "AI_HANDOFF_NEEDED",
+  SMART_FOLLOWUP_ALERT: "SMART_FOLLOWUP_ALERT",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
@@ -111,8 +111,8 @@ export const ConversationStatus = {
 export type ConversationStatus = (typeof ConversationStatus)[keyof typeof ConversationStatus];
 
 export const StoreType = {
-  shopify:     "shopify",
-  easyorders:  "easyorders",
+  shopify: "shopify",
+  easyorders: "easyorders",
   woocommerce: "woocommerce",
 } as const;
 export type StoreType = (typeof StoreType)[keyof typeof StoreType];
@@ -120,29 +120,28 @@ export type StoreType = (typeof StoreType)[keyof typeof StoreType];
 export const StoreAutomationType = {
   order_confirm: "order_confirm",
   order_shipped: "order_shipped",
-  promo:         "promo",
+  promo: "promo",
 } as const;
 export type StoreAutomationType = (typeof StoreAutomationType)[keyof typeof StoreAutomationType];
 
 export const OrderSource = {
-  shopify:     "shopify",
-  easyorders:  "easyorders",
+  shopify: "shopify",
+  easyorders: "easyorders",
   woocommerce: "woocommerce",
 } as const;
 export type OrderSource = (typeof OrderSource)[keyof typeof OrderSource];
 
 export const TriggerType = {
-  KEYWORD:       "KEYWORD",
+  KEYWORD: "KEYWORD",
   FIRST_MESSAGE: "FIRST_MESSAGE",
-  NO_REPLY:      "NO_REPLY",
-  TIME_BASED:    "TIME_BASED",
+  TIME_BASED: "TIME_BASED",
 } as const;
 export type TriggerType = (typeof TriggerType)[keyof typeof TriggerType];
 
 export const ReplyType = {
-  TEXT:     "TEXT",
+  TEXT: "TEXT",
   TEMPLATE: "TEMPLATE",
-  AI:       "AI",
+  AI: "AI",
 } as const;
 export type ReplyType = (typeof ReplyType)[keyof typeof ReplyType];
 
@@ -154,30 +153,30 @@ export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];
 
 // Smart follow-up enums (mirror Prisma schema)
 export const SmartFollowUpType = {
-  shipping:      "shipping",
-  cart:          "cart",
+  shipping: "shipping",
+  cart: "cart",
   order_confirm: "order_confirm",
 } as const;
 export type SmartFollowUpType = (typeof SmartFollowUpType)[keyof typeof SmartFollowUpType];
 
 export const ShippingFollowUpStage = {
-  SENT:                  "SENT",
-  AWAITING_RATING:       "AWAITING_RATING",
+  SENT: "SENT",
+  AWAITING_RATING: "AWAITING_RATING",
   AWAITING_PROBLEM_DETAILS: "AWAITING_PROBLEM_DETAILS",
-  DONE:                  "DONE",
+  DONE: "DONE",
 } as const;
 export type ShippingFollowUpStage = (typeof ShippingFollowUpStage)[keyof typeof ShippingFollowUpStage];
 
 export const CartFollowUpStage = {
-  SENT:           "SENT",
+  SENT: "SENT",
   AWAITING_REASON: "AWAITING_REASON",
-  DONE:           "DONE",
+  DONE: "DONE",
 } as const;
 export type CartFollowUpStage = (typeof CartFollowUpStage)[keyof typeof CartFollowUpStage];
 
 export const OrderCancelReasonStage = {
   AWAITING_REASON: "AWAITING_REASON",
-  DONE:            "DONE",
+  DONE: "DONE",
 } as const;
 export type OrderCancelReasonStage = (typeof OrderCancelReasonStage)[keyof typeof OrderCancelReasonStage];
 
@@ -188,7 +187,7 @@ export const CampaignFollowUpStage = {
 export type CampaignFollowUpStage = (typeof CampaignFollowUpStage)[keyof typeof CampaignFollowUpStage];
 
 export const ORDER_CANCEL_REASON_IDS = {
-  price:       "order_cancel_reason_price",
+  price: "order_cancel_reason_price",
   changedMind: "order_cancel_reason_changed_mind",
-  other:       "order_cancel_reason_other",
+  other: "order_cancel_reason_other",
 } as const;

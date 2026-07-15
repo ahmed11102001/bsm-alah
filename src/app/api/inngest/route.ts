@@ -3,8 +3,8 @@
 // ده الباب اللي Inngest بيكلم مشروعك من خلاله
 // لازم يكون accessible (مش محمي بـ auth)
 
-import { serve }            from "inngest/next";
-import { inngest }          from "@/inngest/client";
+import { serve } from "inngest/next";
+import { inngest } from "@/inngest/client";
 import { processCampaign, sendDirectMessage, processQueueItem, handleNewLeadBot, processDelayedStoreAutomation } from "@/inngest/functions";
 import {
   handleShopifyOrderCreated,
@@ -19,7 +19,6 @@ import {
   handleWooOrderUpdated,
 } from "@/inngest/woocommerce-functions";
 import {
-  noReplyCron,
   timeBasedCron,
   monthlyPlanReset,
   subscriptionExpiryWarning,
@@ -37,7 +36,7 @@ import {
 } from "@/inngest/smart-followup-functions";
 
 const inngestHandler = serve({
-  client:    inngest,
+  client: inngest,
   functions: [
     processCampaign,
     sendDirectMessage,
@@ -53,7 +52,6 @@ const inngestHandler = serve({
     handleWooOrderFulfilled,
     handleWooOrderUpdated,
     // ── Automation Crons ──
-    noReplyCron,
     timeBasedCron,
     subscriptionExpiryWarning,
     whatsappTokenExpiryCheck,
@@ -70,6 +68,6 @@ const inngestHandler = serve({
   ],
 });
 
-export const GET  = inngestHandler.GET  as any;
+export const GET = inngestHandler.GET as any;
 export const POST = inngestHandler.POST as any;
-export const PUT  = inngestHandler.PUT  as any;
+export const PUT = inngestHandler.PUT as any;

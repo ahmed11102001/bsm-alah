@@ -1,11 +1,10 @@
 // src/inngest/automation-cron-functions.ts
 // ─── Cron Functions for Automation Rules ─────────────────────────────────────
 //
-//  1. noReplyCron   — يومياً الساعة 9 ص: يبعت قالب للعملاء الصامتين X يوم
-//  2. timeBasedCron — كل ساعة: يبعت قالب لو الساعة واليوم بيطابقوا القاعدة
+//  1. timeBasedCron — كل ساعة: يبعت قالب لو الساعة واليوم بيطابقوا القاعدة
 //
-// كلاهما يستخدم sendWhatsAppMessage مباشرة (مش عبر campaign queue)
-// لأنهما أتمتة فردية وليست حملة جماعية.
+// بيستخدم sendWhatsAppMessage مباشرة (مش عبر campaign queue)
+// لأنه أتمتة فردية وليست حملة جماعية.
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
@@ -59,123 +58,6 @@ async function sendTemplateToContact({
 
   return result;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Cron 1: noReplyCron
-// يشتغل كل يوم الساعة 9 صباحاً (UTC)
-// يجيب كل قواعد NO_REPLY المفعّلة ويبعت قالب للعملاء الصامتين
-// ═══════════════════════════════════════════════════════════════════════════════
-export const noReplyCron = inngest.createFunction(
-  {
-    id: "automation-no-reply-cron",
-    retries: 1,
-    triggers: [{ cron: "0 7 * * *" }], // 7 UTC = 9 Cairo (UTC+2)
-  },
-  async ({ step }: { step: any }) => {
-
-    // ── Step 1: جيب كل قواعد NO_REPLY المفعّلة ───────────────────────────────
-    const rules = await step.run("get-no-reply-rules", async () => {
-      return await prisma.automationRule.findMany({
-        where: { triggerType: "NO_REPLY", isEnabled: true },
-        select: {
-          id: true, userId: true, triggerValue: true, templateId: true,
-          user: {
-            select: {
-              whatsappAccount: {
-                select: { accessToken: true, phoneNumberId: true },
-              },
-            },
-          },
-        },
-      });
-    });
-
-    if (rules.length === 0) return { processed: 0 };
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    // ── Step 2: لكل قاعدة، جيب العملاء الصامتين وابعتلهم ────────────────────
-    for (const rule of rules) {
-      const account = rule.user?.whatsappAccount;
-      if (!account || !rule.templateId) continue;
-
-      const silentDays = parseInt(rule.triggerValue ?? "3", 10);
-      if (!silentDays || silentDays < 1) continue;
-
-      const cutoffDate = new Date(Date.now() - silentDays * 24 * 60 * 60 * 1000);
-
-      // جيب القالب
-      const template = await step.run(`get-template-${rule.id}`, async () => {
-        return await prisma.template.findFirst({
-          where: { id: rule.templateId!, userId: rule.userId },
-          select: { id: true, name: true, language: true, status: true },
-        });
-      });
-
-      if (!template || template.status?.toLowerCase() !== "approved") continue;
-
-      // جيب جهات الاتصال الصامتة:
-      // - آخر رسالة كانت قبل cutoffDate
-      // - ما اتبعتلهاش أتمتة متابعة من نفس القاعدة اليوم
-      const contacts = await step.run(`get-silent-contacts-${rule.id}`, async () => {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-
-        // جيب ids اللي اتبعتلهم من نفس القاعدة النهارده
-        const alreadySentToday = await prisma.message.findMany({
-          where: {
-            userId: rule.userId,
-            direction: "outbound",
-            content: { contains: `[أتمتة] ${template.name}` },
-            sentAt: { gte: todayStart },
-          },
-          select: { contactId: true },
-        });
-        const excludeIds = alreadySentToday.map(m => m.contactId).filter(Boolean) as string[];
-
-        return await prisma.contact.findMany({
-          where: {
-            userId: rule.userId,
-            deletedAt: null,
-            lastMessageAt: { lte: cutoffDate, not: null },
-            id: excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
-          },
-          select: { id: true, phone: true },
-          take: 500, // حماية من الكميات الكبيرة
-        });
-      });
-
-      if (contacts.length === 0) continue;
-
-      // ابعت لكل جهة اتصال
-      const { sent, failed } = await step.run(`send-no-reply-${rule.id}`, async () => {
-        let sent = 0; let failed = 0;
-        for (const contact of contacts) {
-          const result = await sendTemplateToContact({
-            userId: rule.userId,
-            contactId: contact.id,
-            phone: contact.phone,
-            template: { id: template.id, name: template.name, language: template.language ?? "ar" },
-            account,
-            ruleId: rule.id,
-          });
-          if (result.ok) sent++;
-          else failed++;
-
-          // delay بسيط بين الرسائل لتجنب rate limit
-          await new Promise(r => setTimeout(r, 300));
-        }
-        return { sent, failed };
-      });
-
-      totalSent += sent;
-      totalFailed += failed;
-    }
-
-    return { totalSent, totalFailed, rulesProcessed: rules.length };
-  }
-);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Cron 2: timeBasedCron
@@ -591,23 +473,23 @@ export const aiTokensLowCheck = inngest.createFunction(
         if (aiTokensLimit > 0) {
           const usedPct = (sub.aiTokensUsedThisMonth / aiTokensLimit) * 100;
           if (usedPct >= 85) {
-             // To prevent sending multiple times a month, we check if we already sent it
-             // Here we just send it if it's over 85%. Ideally we'd have a flag like aiTokensLowWarningSentAt.
-             // For now we'll just send the notification.
-             // In a real app we'd add `aiTokensLowWarningSentAt` to the Subscription model.
-             // Since we didn't add it, we will just rely on the user seeing it. Let's send only once by looking at Notification history.
-             const recentWarning = await prisma.notification.findFirst({
-                where: {
-                  userId: sub.userId,
-                  type: "AI_TOKENS_LOW",
-                  createdAt: { gte: new Date(new Date().setDate(1)) } // beginning of month
-                }
-             });
-             
-             if (!recentWarning) {
-               await notifyAiTokensLow(sub.userId, Math.round(usedPct));
-               processed++;
-             }
+            // To prevent sending multiple times a month, we check if we already sent it
+            // Here we just send it if it's over 85%. Ideally we'd have a flag like aiTokensLowWarningSentAt.
+            // For now we'll just send the notification.
+            // In a real app we'd add `aiTokensLowWarningSentAt` to the Subscription model.
+            // Since we didn't add it, we will just rely on the user seeing it. Let's send only once by looking at Notification history.
+            const recentWarning = await prisma.notification.findFirst({
+              where: {
+                userId: sub.userId,
+                type: "AI_TOKENS_LOW",
+                createdAt: { gte: new Date(new Date().setDate(1)) } // beginning of month
+              }
+            });
+
+            if (!recentWarning) {
+              await notifyAiTokensLow(sub.userId, Math.round(usedPct));
+              processed++;
+            }
           }
         }
       }
