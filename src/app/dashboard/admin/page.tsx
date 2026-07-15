@@ -7,7 +7,7 @@ import {
   Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
-  Target, Download, Phone, Bot, Send, Power, PowerOff,
+  Target, Download, Phone, Bot, Send, Power, PowerOff, Sparkles,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -451,10 +451,19 @@ export default function AdminPage() {
               <p className="text-xs text-gray-400 dark:text-gray-500">{adm.subtitle}</p>
             </div>
           </div>
-          {activeTab === "users"    && <button onClick={() => setShowForm(true)}    className={btn}><Plus className="w-4 h-4" /> {adm.users.newBtn}</button>}
-          {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
-          {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
-          {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
+          <div className="flex items-center gap-3">
+            <button
+               onClick={() => router.push('/strategies')}
+               className="px-5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-600 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-900/50 dark:hover:to-purple-900/50 dark:text-indigo-400 rounded-full text-sm font-bold transition-all shadow-sm border border-indigo-100 dark:border-indigo-800 flex items-center gap-2 transform hover:scale-105"
+            >
+               <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+               <span>{locale === 'ar' ? 'استراتيجيات' : 'Strategies'}</span>
+            </button>
+            {activeTab === "users"    && <button onClick={() => setShowForm(true)}    className={btn}><Plus className="w-4 h-4" /> {adm.users.newBtn}</button>}
+            {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
+            {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
+            {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
+          </div>
         </div>
 
         {/* Tabs */}
