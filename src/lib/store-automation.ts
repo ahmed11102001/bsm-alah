@@ -1,9 +1,9 @@
 // src/lib/store-automation.ts
 // ─── Helper مشترك: تشغيل أتمتة المتجر (order_confirm / order_shipped / promo) ──
 
-import prisma                  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
-import { decryptToken }        from "@/lib/crypto";
+import { decryptToken } from "@/lib/crypto";
 import { notifyStoreAutoSent, notifyStoreAutoFailed } from "@/lib/notifications";
 import {
   MessageDirection,
@@ -12,38 +12,40 @@ import {
 } from "@/types/enums";
 
 export type StoreAutomationType = "order_confirm" | "order_shipped" | "promo" | "cart_abandon";
-export type StoreSource         = "shopify" | "easyorders" | "woocommerce";
+export type StoreSource = "shopify" | "easyorders" | "woocommerce";
 
 // المتغيرات اللي بتتحقن في القالب
 // body: ["قيمة {{1}}", "قيمة {{2}}", ...]
 // لو null → القالب بدون متغيرات (ميتا بتقبله لو القالب مش فيه vars)
 export interface TemplateVars {
-  body:    string[];           // متغيرات الـ body {{1}} {{2}} ...
-  header?: string;             // لو فيه header image/document (اختياري)
-  buttons?: string[];          // لو فيه أزرار dynamic (اختياري)
+  body: string[];                              // متغيرات الـ body {{1}} {{2}} ...
+  header?: string;                                 // (قديم) نص هيدر — غير مستخدم حالياً
+  headerMediaUrl?: string;                                 // رابط صورة/فيديو/PDF لو الـ Header من نوع media
+  headerMediaType?: "image" | "video" | "document";          // نوع الميديا — افتراضي "image"
+  buttons?: string[];                                // لو فيه أزرار dynamic (اختياري)
 }
 
 export interface TriggerStoreAutomationParams {
-  userId:         string;
+  userId: string;
   automationType: StoreAutomationType;
-  storeSource:    StoreSource;
-  storeId:        string;
-  customerPhone:  string;
-  contactId:      string;
-  templateVars?:  TemplateVars | null;
-  storeOrderId?:  string;
+  storeSource: StoreSource;
+  storeId: string;
+  customerPhone: string;
+  contactId: string;
+  templateVars?: TemplateVars | null;
+  storeOrderId?: string;
 }
 
 function buildAutomationWhere(
-  source:  StoreSource,
+  source: StoreSource,
   storeId: string,
-  type:    StoreAutomationType
+  type: StoreAutomationType
 ) {
   if (source === "shopify")
-    return { shopifyStoreId_type:     { shopifyStoreId:     storeId, type } };
+    return { shopifyStoreId_type: { shopifyStoreId: storeId, type } };
   if (source === "easyorders")
-    return { easyOrdersStoreId_type:  { easyOrdersStoreId:  storeId, type } };
-  return   { wooCommerceStoreId_type: { wooCommerceStoreId: storeId, type } };
+    return { easyOrdersStoreId_type: { easyOrdersStoreId: storeId, type } };
+  return { wooCommerceStoreId_type: { wooCommerceStoreId: storeId, type } };
 }
 
 export async function executeStoreAutomationSend(
@@ -61,7 +63,7 @@ export async function executeStoreAutomationSend(
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
-    where:   buildAutomationWhere(storeSource, storeId, automationType),
+    where: buildAutomationWhere(storeSource, storeId, automationType),
     include: {
       template: {
         select: { id: true, name: true, language: true, status: true },
@@ -90,7 +92,7 @@ export async function executeStoreAutomationSend(
   if (automationType === "order_shipped" && storeOrderId) {
     const claim = await prisma.storeOrder.updateMany({
       where: { id: storeOrderId, shippedMessageId: null },
-      data:  { shippedAt: new Date() },
+      data: { shippedAt: new Date() },
     });
     claimedShipped = claim.count === 1;
     if (!claimedShipped) {
@@ -100,15 +102,15 @@ export async function executeStoreAutomationSend(
   }
 
   const result = await sendWhatsAppMessage({
-    toPhone:       customerPhone,
+    toPhone: customerPhone,
     phoneNumberId: account.phoneNumberId,
-    accessToken:   decryptToken(account.accessToken),
-    messageType:   "template",
-    templateName:  automation.template.name,
-    templateLang:  automation.template.language ?? "ar",
+    accessToken: decryptToken(account.accessToken),
+    messageType: "template",
+    templateName: automation.template.name,
+    templateLang: automation.template.language ?? "ar",
     // لو templateVars موجودة بتحقنها، لو null القالب بيتبعت بدون vars
     templateVars,
-    content:       null,
+    content: null,
   });
 
 
@@ -116,21 +118,21 @@ export async function executeStoreAutomationSend(
     data: {
       userId,
       contactId,
-      content:    `[أتمتة متجر] ${automation.template.name}`,
-      type:       MessageType.template,
-      direction:  MessageDirection.outbound,
-      status:     result.ok ? MessageStatus.sent : MessageStatus.failed,
+      content: `[أتمتة متجر] ${automation.template.name}`,
+      type: MessageType.template,
+      direction: MessageDirection.outbound,
+      status: result.ok ? MessageStatus.sent : MessageStatus.failed,
       whatsappId: result.ok ? result.whatsappMsgId : null,
-      error:      result.ok ? null : (result.error ?? "فشل الإرسال"),
-      sentAt:     result.ok ? new Date() : null,
+      error: result.ok ? null : (result.error ?? "فشل الإرسال"),
+      sentAt: result.ok ? new Date() : null,
     },
   }).catch((e) => console.error("[StoreAuto] DB message save failed:", e));
 
   if (result.ok) {
     await prisma.storeAutomation.update({
       where: { id: automation.id },
-      data:  { sentCount: { increment: 1 }, lastSentAt: new Date() },
-    }).catch(() => {});
+      data: { sentCount: { increment: 1 }, lastSentAt: new Date() },
+    }).catch(() => { });
 
     if (automationType === "order_confirm" && storeOrderId && result.whatsappMsgId) {
       await prisma.storeOrder.update({
@@ -159,15 +161,15 @@ export async function executeStoreAutomationSend(
   } else {
     await prisma.storeAutomation.update({
       where: { id: automation.id },
-      data:  { failedCount: { increment: 1 } },
-    }).catch(() => {});
+      data: { failedCount: { increment: 1 } },
+    }).catch(() => { });
 
     // Rollback shipped claim on failure (but NOT shippedMessageId)
     if (claimedShipped && storeOrderId) {
       await prisma.storeOrder.updateMany({
         where: { id: storeOrderId },
-        data:  { shippedAt: null },
-      }).catch(() => {});
+        data: { shippedAt: null },
+      }).catch(() => { });
     }
   }
 
@@ -180,12 +182,12 @@ export async function executeStoreAutomationSend(
   if (result.ok) {
     await notifyStoreAutoSent(
       userId, automationType, storeSource, customerPhone, automation.template.name,
-    ).catch(() => {});
+    ).catch(() => { });
   } else {
     await notifyStoreAutoFailed(
       userId, automationType, storeSource, customerPhone,
       automation.template.name, result.error ?? "فشل غير معروف",
-    ).catch(() => {});
+    ).catch(() => { });
   }
 
   return { sent: result.ok, reason: result.ok ? undefined : result.error };
@@ -206,10 +208,10 @@ export async function triggerStoreAutomation(
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
-    where:   buildAutomationWhere(storeSource, storeId, automationType),
+    where: buildAutomationWhere(storeSource, storeId, automationType),
     select: {
-      id:           true,
-      isEnabled:    true,
+      id: true,
+      isEnabled: true,
       delayMinutes: true,
     },
   });

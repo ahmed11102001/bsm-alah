@@ -407,7 +407,7 @@ function ShopifyContent({
               <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-4">
                 📋 <strong>Shopify Admin → Settings → Apps → Develop apps → Create app</strong>
                 <br />
-                فعّل: <strong>read_orders, write_orders, read_checkouts, read_customers</strong>
+                فعّل: <strong>read_orders, write_orders, read_checkouts, read_customers, read_products</strong>
                 <br />
                 ثم <strong>Install app</strong> وانسخ الـ Admin API access token
               </p>

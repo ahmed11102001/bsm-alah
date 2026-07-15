@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type TemplateStatus = "APPROVED" | "PENDING" | "REJECTED" | "PAUSED";
+type TemplateStatus = "APPROVED" | "PENDING" | "REJECTED" | "PAUSED" | "NOT_SENT";
 type TemplateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION";
 type HeaderType = "none" | "text" | "image" | "video" | "document";
 type ButtonType = "url" | "phone" | "quick_reply";
@@ -48,14 +48,14 @@ const T = {
     newTemplate: "إنشاء قالب", syncBtn: "مزامنة من Meta", syncing: "جاري المزامنة...",
     stats: { total: "إجمالي القوالب", approved: "معتمدة", pending: "قيد المراجعة", rejected: "مرفوضة", paused: "متوقفة" },
     filters: { all: "الكل", search: "ابحث بالاسم...", status: "الحالة", category: "التصنيف", language: "اللغة" },
-    status: { APPROVED: "معتمد", PENDING: "قيد المراجعة", REJECTED: "مرفوض", PAUSED: "متوقف" },
+    status: { APPROVED: "معتمد", PENDING: "قيد المراجعة", REJECTED: "مرفوض", PAUSED: "متوقف", NOT_SENT: "لم يُرسل بعد" },
     category: { MARKETING: "تسويقي", UTILITY: "خدمي", AUTHENTICATION: "مصادقة" },
     table: { name: "اسم القالب", category: "الفئة", language: "اللغة", updated: "آخر تعديل", status: "الحالة", actions: "" },
     empty: "لا توجد قوالب بعد", emptyHint: "أنشئ قالبك الأول أو مزامنة من Meta",
     waniReady: "قوالب Wani الجاهزة", waniReadyDesc: "قوالب مبنية مسبقاً للمتجر — خصّصها قبل الإرسال",
     storeGroupTitle: "قوالب المتجر", storeGroupDesc: "قوالب أتمتة المتجر (تأكيد الأوردر، الشحن، السلة المتروكة)",
     followupGroupTitle: "قوالب المتابعة", followupGroupDesc: "قوالب المتابعة الذكية (شحن، سلة، حملات) — اختر وخصّص النص فقط",
-        campaignGroupTitle: "قوالب الحملات",
+    campaignGroupTitle: "قوالب الحملات",
     campaignGroupDesc: "قوالب الحملات التسويقية والخدمية",
     marketingTitle: "قوالب تسويقية",
     utilityTitle: "قوالب خدمية",
@@ -98,14 +98,14 @@ const T = {
     newTemplate: "New Template", syncBtn: "Sync from Meta", syncing: "Syncing...",
     stats: { total: "Total Templates", approved: "Approved", pending: "Pending", rejected: "Rejected", paused: "Paused" },
     filters: { all: "All", search: "Search by name...", status: "Status", category: "Category", language: "Language" },
-    status: { APPROVED: "Approved", PENDING: "Pending", REJECTED: "Rejected", PAUSED: "Paused" },
+    status: { APPROVED: "Approved", PENDING: "Pending", REJECTED: "Rejected", PAUSED: "Paused", NOT_SENT: "Not Sent" },
     category: { MARKETING: "Marketing", UTILITY: "Utility", AUTHENTICATION: "Authentication" },
     table: { name: "Template Name", category: "Category", language: "Language", updated: "Last Updated", status: "Status", actions: "" },
     empty: "No templates yet", emptyHint: "Create your first template or sync from Meta",
     waniReady: "Wani Ready Templates", waniReadyDesc: "Pre-built store templates — customize before sending",
     storeGroupTitle: "Store Templates", storeGroupDesc: "Store automation templates (order confirm, shipping, abandoned cart)",
     followupGroupTitle: "Follow-up Templates", followupGroupDesc: "Smart follow-up templates (shipping, cart, campaigns) — pick one and customize the text",
-        campaignGroupTitle: "Campaign Templates",
+    campaignGroupTitle: "Campaign Templates",
     campaignGroupDesc: "Marketing and utility campaign templates",
     marketingTitle: "Marketing Templates",
     utilityTitle: "Utility Templates",
@@ -191,7 +191,7 @@ const WANI_READY: Template[] = [
   {
     id: "wani_cart_abandon_ar", name: "wani_cart_abandon",
     category: "MARKETING", language: "ar", status: "PENDING", isWaniReady: true, group: "store",
-    headerType: "none",
+    headerType: "image",
     body: "مرحباً {{1}} 🛒\n\nنسيت *{{2}}* في سلتك!\nالإجمالي: *{{3}}*\n\nأكمل طلبك الآن قبل نفاد المخزون 👇\n{{4}}\n\nبانتظارك! 📦",
     exampleVars: ["سارة", "قميص قطني أزرق", "٢٤٠ ج.م", "https://store.example.com/cart"],
     footer: "Wani Store",
@@ -199,12 +199,12 @@ const WANI_READY: Template[] = [
   {
     id: "wani_cart_abandon_en", name: "wani_cart_abandon",
     category: "MARKETING", language: "en", status: "PENDING", isWaniReady: true, group: "store",
-    headerType: "none",
+    headerType: "image",
     body: "Hello {{1}} 🛒\n\nYou left *{{2}}* in your cart!\nTotal: *{{3}}*\n\nComplete your order before stock runs out 👇\n{{4}}\n\nWaiting for you! 📦",
     exampleVars: ["Sarah", "Blue Cotton Shirt", "$24", "https://store.example.com/cart"],
     footer: "Wani Store",
   },
-  
+
   // ── Follow-up Templates ──
   {
     id: "wani_shipping_followup_ar", name: "wani_shipping_followup",
@@ -447,7 +447,7 @@ const WANI_READY: Template[] = [
     buttons: [{ type: "url", text: "Shop Now", value: "https://store.com/winback" }],
     exampleVars: ["Mohammed", "15%", "MISSYOU15"],
   },
-  
+
   // Utility Campaigns
   {
     id: "wani_campaign_store_maintenance_ar", name: "wani_campaign_store_maintenance",
@@ -561,6 +561,7 @@ const STATUS_CONFIG: Record<TemplateStatus, { icon: React.ReactNode; cls: string
   PENDING: { icon: <Clock className="w-3 h-3" />, cls: "bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-700", dot: "bg-amber-400" },
   REJECTED: { icon: <XCircle className="w-3 h-3" />, cls: "bg-red-50    text-red-700    border-red-200    dark:bg-red-900/30    dark:text-red-300    dark:border-red-700", dot: "bg-red-500" },
   PAUSED: { icon: <Ban className="w-3 h-3" />, cls: "bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-700      dark:text-gray-400   dark:border-gray-600", dot: "bg-gray-400" },
+  NOT_SENT: { icon: <FileText className="w-3 h-3" />, cls: "bg-gray-50   text-gray-500   border-gray-200   dark:bg-gray-700/50    dark:text-gray-400   dark:border-gray-600", dot: "bg-gray-300" },
 };
 
 const CATEGORY_CONFIG: Record<TemplateCategory, { icon: React.ReactNode; cls: string; label_ar: string }> = {
@@ -1998,8 +1999,8 @@ export default function TemplatesPage() {
           <ChevronLeft className="w-3.5 h-3.5" />
           <span className="text-gray-900 dark:text-white font-medium">{t.waniLibraryBtn}</span>
         </div>
-        
-        </div>
+
+      </div>
 
       {/* Store templates */}
       <div>
@@ -2013,17 +2014,20 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "store" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
+          {WANI_READY.filter(tpl => tpl.group === "store" && tpl.language === "ar").map(tpl => {
+            const matched = templates.find(t => t.name === tpl.name) ?? null;
+            return (
+              <WaniReadyCard
+                key={tpl.id}
+                template={tpl}
+                lang={lang}
+                onView={() => setDetailTpl(matched ?? { ...tpl, status: "NOT_SENT", createdAt: undefined, updatedAt: undefined })}
+                onSend={handleSendWani}
+                onCustomize={tpl2 => setWaniEditTpl(tpl2)}
+                matchedTemplate={matched}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -2039,17 +2043,20 @@ export default function TemplatesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {WANI_READY.filter(tpl => tpl.group === "followup" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
+          {WANI_READY.filter(tpl => tpl.group === "followup" && tpl.language === "ar").map(tpl => {
+            const matched = templates.find(t => t.name === tpl.name) ?? null;
+            return (
+              <WaniReadyCard
+                key={tpl.id}
+                template={tpl}
+                lang={lang}
+                onView={() => setDetailTpl(matched ?? { ...tpl, status: "NOT_SENT", createdAt: undefined, updatedAt: undefined })}
+                onSend={handleSendWani}
+                onCustomize={tpl2 => setWaniEditTpl(tpl2)}
+                matchedTemplate={matched}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -2064,35 +2071,41 @@ export default function TemplatesPage() {
             <p className="text-xs text-gray-400 dark:text-gray-500">{t.campaignGroupDesc}</p>
           </div>
         </div>
-        
+
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => {
+            const matched = templates.find(t => t.name === tpl.name) ?? null;
+            return (
+              <WaniReadyCard
+                key={tpl.id}
+                template={tpl}
+                lang={lang}
+                onView={() => setDetailTpl(matched ?? { ...tpl, status: "NOT_SENT", createdAt: undefined, updatedAt: undefined })}
+                onSend={handleSendWani}
+                onCustomize={tpl2 => setWaniEditTpl(tpl2)}
+                matchedTemplate={matched}
+              />
+            );
+          })}
         </div>
-        
+
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => (
-            <WaniReadyCard
-              key={tpl.id}
-              template={tpl}
-              lang={lang}
-              onView={() => setDetailTpl(tpl)}
-              onSend={handleSendWani}
-              onCustomize={tpl => setWaniEditTpl(tpl)}
-              matchedTemplate={templates.find(t => t.name === tpl.name) ?? null}
-            />
-          ))}
+          {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => {
+            const matched = templates.find(t => t.name === tpl.name) ?? null;
+            return (
+              <WaniReadyCard
+                key={tpl.id}
+                template={tpl}
+                lang={lang}
+                onView={() => setDetailTpl(matched ?? { ...tpl, status: "NOT_SENT", createdAt: undefined, updatedAt: undefined })}
+                onSend={handleSendWani}
+                onCustomize={tpl2 => setWaniEditTpl(tpl2)}
+                matchedTemplate={matched}
+              />
+            );
+          })}
         </div>
       </div>
       <TemplateDetailModal template={detailTpl} open={!!detailTpl} onClose={() => setDetailTpl(null)} onDelete={handleDelete} lang={lang} />

@@ -15,7 +15,7 @@ function cleanPhone(phone: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleShopifyOrderCreated = inngest.createFunction(
   {
-    id:      "shopify-order-created",
+    id: "shopify-order-created",
     retries: 2,
     triggers: [{ event: "shopify/order.created" }],
   },
@@ -41,7 +41,7 @@ export const handleShopifyOrderCreated = inngest.createFunction(
     // ── Step 1: Upsert Contact ─────────────────────────────────────────────
     const contact = await step.run("upsert-contact", async () => {
       return prisma.contact.upsert({
-        where:  { phone_userId: { phone, userId } },
+        where: { phone_userId: { phone, userId } },
         update: { name: customerName || undefined },
         create: { phone, userId, name: customerName || "عميل شوبيفاي" },
       });
@@ -53,23 +53,23 @@ export const handleShopifyOrderCreated = inngest.createFunction(
         where: {
           source_externalId_userId: {
             userId,
-            source:     "shopify",
+            source: "shopify",
             externalId: String(orderId),
           },
         },
         update: { status: "pending" },
         create: {
           userId,
-          source:        "shopify",
-          externalId:    String(orderId),
-          orderNumber:   orderNumber ? String(orderNumber) : undefined,
-          customerName:  customerName,
+          source: "shopify",
+          externalId: String(orderId),
+          orderNumber: orderNumber ? String(orderNumber) : undefined,
+          customerName: customerName,
           customerPhone: phone,
-          total:         totalPrice != null ? Number(totalPrice) : undefined,
-          currency:      currency || "USD",
-          status:        "pending",
-          rawData:       rawData ?? undefined,
-          contactId:     contact.id,
+          total: totalPrice != null ? Number(totalPrice) : undefined,
+          currency: currency || "USD",
+          status: "pending",
+          rawData: rawData ?? undefined,
+          contactId: contact.id,
         },
       });
     });
@@ -84,7 +84,7 @@ export const handleShopifyOrderCreated = inngest.createFunction(
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleShopifyOrderFulfilled = inngest.createFunction(
   {
-    id:      "shopify-order-fulfilled",
+    id: "shopify-order-fulfilled",
     retries: 2,
     triggers: [{ event: "shopify/order.fulfilled" }],
   },
@@ -95,11 +95,11 @@ export const handleShopifyOrderFulfilled = inngest.createFunction(
       await prisma.storeOrder.updateMany({
         where: {
           userId,
-          source:     "shopify",
+          source: "shopify",
           externalId: String(orderId),
         },
         data: {
-          status:  "fulfilled",
+          status: "fulfilled",
           rawData: trackingUrl || trackingNumber
             ? { trackingUrl, trackingNumber }
             : undefined,
@@ -117,7 +117,7 @@ export const handleShopifyOrderFulfilled = inngest.createFunction(
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleShopifyCartAbandoned = inngest.createFunction(
   {
-    id:      "shopify-cart-abandoned",
+    id: "shopify-cart-abandoned",
     retries: 2,
     triggers: [{ event: "shopify/cart.abandoned" }],
   },
@@ -143,7 +143,7 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
     // ── تحقق: هل السلة اتحولت لأوردر؟ ──────────────────────────────────────
     const cart = await step.run("check-if-recovered", async () => {
       return prisma.abandonedCart.findFirst({
-        where:  { externalId: checkoutToken, userId },
+        where: { externalId: checkoutToken, userId },
         select: { id: true, recoveredAt: true, sentAt: true },
       });
     });
@@ -179,8 +179,8 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
       if (cart?.id) {
         await prisma.abandonedCart.update({
           where: { id: cart.id },
-          data:  { recoveredAt: new Date() },
-        }).catch(() => {});
+          data: { recoveredAt: new Date() },
+        }).catch(() => { });
       }
       console.log(`[CartAbandon] Recent order found — skipping ${customerPhone}`);
       return { skipped: true, reason: "recent_order_found" };
@@ -189,7 +189,7 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
     // ── ابعت رسالة السلة ─────────────────────────────────────────────────────
     const contact = await step.run("get-contact", async () => {
       return prisma.contact.findFirst({
-        where:  { phone: customerPhone, userId },
+        where: { phone: customerPhone, userId },
         select: { id: true },
       });
     });
@@ -203,18 +203,42 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
     const firstItem = Array.isArray(cartItems) && cartItems.length > 0
       ? (cartItems[0] as any)?.title ?? ""
       : "";
+    const firstItemProductId = Array.isArray(cartItems) && cartItems.length > 0
+      ? (cartItems[0] as any)?.product_id ?? null
+      : null;
+    const firstItemVariantId = Array.isArray(cartItems) && cartItems.length > 0
+      ? (cartItems[0] as any)?.variant_id ?? null
+      : null;
+
+    // ── صورة المنتج — تُسحب من Shopify Admin API (اختياري، لو فشل بيتبعت من غيرها) ──
+    const productImageUrl = await step.run("fetch-product-image", async () => {
+      if (!firstItemProductId && !firstItemVariantId) return null;
+      const store = await prisma.shopifyStore.findUnique({
+        where: { id: shopifyStoreId },
+        select: { shop: true, accessToken: true },
+      });
+      if (!store?.accessToken) return null;
+
+      const { getShopifyProductImageUrl } = await import("@/lib/shopify-api");
+      return getShopifyProductImageUrl(store.shop, store.accessToken, {
+        productId: firstItemProductId,
+        variantId: firstItemVariantId,
+      });
+    });
 
     const result = await step.run("send-cart-message", async () => {
       const { triggerStoreAutomation } = await import("@/lib/store-automation");
       return triggerStoreAutomation({
         userId,
         automationType: "cart_abandon",
-        storeSource:    "shopify",
-        storeId:        shopifyStoreId,
+        storeSource: "shopify",
+        storeId: shopifyStoreId,
         customerPhone,
-        contactId:      contact.id,
+        contactId: contact.id,
         // {{1}} اسم العميل  {{2}} المنتج  {{3}} الإجمالي  {{4}} رابط الاسترداد
+        // Header: صورة المنتج (لو اتسحبت بنجاح)
         templateVars: {
+          ...(productImageUrl ? { headerMediaUrl: productImageUrl, headerMediaType: "image" as const } : {}),
           body: [
             customerName || "عزيزي العميل",
             firstItem,
@@ -229,8 +253,8 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
     if (result.sent && cart?.id) {
       await prisma.abandonedCart.update({
         where: { id: cart.id },
-        data:  { sentAt: new Date() },
-      }).catch(() => {});
+        data: { sentAt: new Date() },
+      }).catch(() => { });
 
       try {
         const { scheduleCartFollowUp } = await import("@/lib/smart-followup");
@@ -251,7 +275,7 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
 );
 export const handleShopifyOrderUpdated = inngest.createFunction(
   {
-    id:      "shopify-order-updated",
+    id: "shopify-order-updated",
     retries: 2,
     triggers: [{ event: "shopify/order.updated" }],
   },
@@ -262,7 +286,7 @@ export const handleShopifyOrderUpdated = inngest.createFunction(
       await prisma.storeOrder.updateMany({
         where: {
           userId,
-          source:     "shopify",
+          source: "shopify",
           externalId: String(orderId),
         },
         data: { status: fulfillmentStatus || status || "updated" },

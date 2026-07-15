@@ -9,27 +9,27 @@
 // ─── Shared ────────────────────────────────────────────────────────────────────
 
 export interface ShopifyAddress {
-  phone?:        string | null;
-  first_name?:   string | null;
-  last_name?:    string | null;
-  address1?:     string | null;
-  city?:         string | null;
-  country?:      string | null;
+  phone?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  address1?: string | null;
+  city?: string | null;
+  country?: string | null;
 }
 
 export interface ShopifyCustomerBasic {
-  id?:               number | null;
-  email?:            string | null;
-  phone?:            string | null;
-  first_name?:       string | null;
-  last_name?:        string | null;
-  default_address?:  ShopifyAddress | null;
+  id?: number | null;
+  email?: string | null;
+  phone?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  default_address?: ShopifyAddress | null;
 }
 
 export interface ShopifyFulfillment {
-  id?:            number;
-  status?:        string | null;
-  tracking_url?:  string | null;
+  id?: number;
+  status?: string | null;
+  tracking_url?: string | null;
   tracking_urls?: string[];
   tracking_number?: string | null;
 }
@@ -37,72 +37,74 @@ export interface ShopifyFulfillment {
 // ─── Order ─────────────────────────────────────────────────────────────────────
 
 export interface ShopifyOrder {
-  id:                  number;
-  order_number?:       number | null;
-  financial_status?:   string | null;
+  id: number;
+  order_number?: number | null;
+  financial_status?: string | null;
   fulfillment_status?: string | null;
-  total_price?:        string | null;
-  currency?:           string | null;
-  phone?:              string | null;
-  created_at?:         string | null;
-  customer?:           ShopifyCustomerBasic | null;
-  billing_address?:    ShopifyAddress | null;
-  shipping_address?:   ShopifyAddress | null;
-  fulfillments?:       ShopifyFulfillment[];
-  line_items?:         ShopifyLineItem[];
+  total_price?: string | null;
+  currency?: string | null;
+  phone?: string | null;
+  created_at?: string | null;
+  customer?: ShopifyCustomerBasic | null;
+  billing_address?: ShopifyAddress | null;
+  shipping_address?: ShopifyAddress | null;
+  fulfillments?: ShopifyFulfillment[];
+  line_items?: ShopifyLineItem[];
 }
 
 export interface ShopifyLineItem {
-  id?:         number;
-  title?:      string | null;
-  quantity?:   number;
-  price?:      string | null;
-  sku?:        string | null;
+  id?: number;
+  title?: string | null;
+  quantity?: number;
+  price?: string | null;
+  sku?: string | null;
   variant_id?: number | null;
 }
 
 // ─── Customer (full webhook payload) ──────────────────────────────────────────
 
 export interface ShopifyCustomer {
-  id:              number;
-  email?:          string | null;
-  phone?:          string | null;
-  first_name?:     string | null;
-  last_name?:      string | null;
+  id: number;
+  email?: string | null;
+  phone?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   default_address?: ShopifyAddress | null;
-  addresses?:      ShopifyAddress[];
-  created_at?:     string | null;
-  updated_at?:     string | null;
+  addresses?: ShopifyAddress[];
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // ─── Checkout (abandoned cart webhook payload) ─────────────────────────────────
 
 export interface ShopifyCheckoutLineItem {
-  title?:    string | null;
+  title?: string | null;
   quantity?: number;
-  price?:    string | null;
-  sku?:      string | null;
+  price?: string | null;
+  sku?: string | null;
+  product_id?: number | null;
+  variant_id?: number | null;
 }
 
 export interface ShopifyCheckout {
-  id:              number;
-  token:           string;           // ← الـ unique identifier
-  email?:          string | null;
-  phone?:          string | null;
-  total_price?:    string | null;
+  id: number;
+  token: string;           // ← الـ unique identifier
+  email?: string | null;
+  phone?: string | null;
+  total_price?: string | null;
   subtotal_price?: string | null;
-  currency?:       string | null;
+  currency?: string | null;
   abandoned_checkout_url?: string | null;  // رابط استكمال الشراء
-  created_at?:     string | null;
-  updated_at?:     string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   customer?: {
-    id?:         number;
-    email?:      string | null;
-    phone?:      string | null;
+    id?: number;
+    email?: string | null;
+    phone?: string | null;
     first_name?: string | null;
-    last_name?:  string | null;
+    last_name?: string | null;
   } | null;
-  billing_address?:  ShopifyAddress | null;
+  billing_address?: ShopifyAddress | null;
   shipping_address?: ShopifyAddress | null;
   line_items?: ShopifyCheckoutLineItem[];
 }
