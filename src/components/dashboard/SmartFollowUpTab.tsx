@@ -37,30 +37,32 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
 
 // ─── Tree UI Components ───────────────────────────────────────────────────────
 
-function FlowTree({ templateName, title, icon, children, isApproved }: { templateName: string, title: string, icon: React.ReactNode, children: React.ReactNode, isApproved: boolean }) {
+function FlowTree({ templateName, title, icon, children, isApproved, hideTemplateInfo }: { templateName: string, title: string, icon: React.ReactNode, children: React.ReactNode, isApproved: boolean, hideTemplateInfo?: boolean }) {
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm mt-6">
       {/* Template Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
-        <div>
-          <p className="text-xs text-gray-500 font-medium mb-1">{tx("ar", "اسم القالب المخصص (يُعدل من مكتبة القوالب):", "Dedicated template name (edited from Template Library):")}</p>
-          <div className="flex items-center gap-2 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">
-            <Lock className="w-3.5 h-3.5 text-gray-400" />
-            {templateName}
+      {!hideTemplateInfo && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-1">{tx("ar", "اسم القالب المخصص (يُعدل من مكتبة القوالب):", "Dedicated template name (edited from Template Library):")}</p>
+            <div className="flex items-center gap-2 font-mono text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <Lock className="w-3.5 h-3.5 text-gray-400" />
+              {templateName}
+            </div>
+          </div>
+          <div>
+            {isApproved ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {tx("ar", "قالب معتمد", "Approved template")}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+                <Lock className="w-3.5 h-3.5" /> {tx("ar", "غير معتمد", "Not approved")}
+              </span>
+            )}
           </div>
         </div>
-        <div>
-          {isApproved ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
-              <CheckCircle2 className="w-3.5 h-3.5" /> {tx("ar", "قالب معتمد", "Approved template")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
-              <Lock className="w-3.5 h-3.5" /> {tx("ar", "غير معتمد", "Not approved")}
-            </span>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* The Root of the flow */}
       <div className="flex items-center gap-2.5 mb-4">
@@ -571,7 +573,7 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
           <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "تأكيد الطلب", "Order Confirmation")}</p>
+          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "متابعة تاكيد الاوردر", "Order Confirmation Follow-up")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -602,9 +604,10 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
 
       <FlowTree
         templateName={tx(lang, "أتمتة المتجر الأساسية", "Base Store Automation")}
-        title={tx(lang, "أتمتة تأكيد الطلب", "Order Confirmation Automation")}
+        title={tx(lang, "متابعة تاكيد الاوردر", "Order Confirmation Follow-up")}
         icon={<CheckCircle2 className="w-4 h-4" />}
         isApproved={isApproved}
+        hideTemplateInfo
       >
         <FlowAction title={tx(lang, "يستقبل ضغط الزر (تأكيد الطلب)", "Receives button click (Confirm Order)")} icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}>
           <FlowStep
@@ -919,8 +922,8 @@ function CardGrid({ lang, onOpen }: { lang: Lang; onOpen: (id: CardId) => void }
     {
       id: "order_confirm",
       icon: <CheckCircle2 className="w-5 h-5" />,
-      title: tx(lang, "تأكيد الطلب", "Order Confirmation"),
-      desc: tx(lang, "يرسل رسالة لتأكيد الطلب ويسأل عن سبب الإلغاء إذا تم رفضه", "Sends order confirmation and asks for cancellation reason if rejected"),
+      title: tx(lang, "متابعة تاكيد الاوردر", "Order Confirmation Follow-up"),
+      desc: tx(lang, "لو الاوردر اتلغي يعرف السبب", "Know the reason if order is canceled"),
       ready: true,
     },
   ];
