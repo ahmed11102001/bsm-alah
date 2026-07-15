@@ -164,7 +164,17 @@ export const sendCampaignFollowUpMsgFn = inngest.createFunction(
       return templateId ? prisma.template.findUnique({ where: { id: templateId } }) : null;
     });
 
-    if (!template) return { error: "no_template" };
+    if (!template || template.status?.toLowerCase() !== "approved") {
+      return { error: "template_not_approved" };
+    }
+
+    const contact = await step.run("get-contact", async () => {
+      const prisma = (await import("@/lib/prisma")).default;
+      return prisma.contact.findUnique({
+        where: { id: record.contactId },
+        select: { name: true }
+      });
+    });
 
     const result = await step.run("send-msg", async () => {
       const { sendWhatsAppMessage } = await import("@/lib/whatsapp-api");
@@ -177,7 +187,7 @@ export const sendCampaignFollowUpMsgFn = inngest.createFunction(
         messageType: "template",
         templateName: template.name,
         templateLang: template.language || "ar",
-        templateVars: {},
+        templateVars: { body: [contact?.name || "عميلنا العزيز"] },
         content: `[Campaign Follow-Up] ${template.name}`,
       });
     });
@@ -192,9 +202,17 @@ export const sendCampaignFollowUpMsgFn = inngest.createFunction(
             followUpMessageId: result.whatsappMsgId,
           }
         });
+      } else if (result.isRateLimit) {
+        throw new Error(`Rate limit sending campaign follow-up: ${result.error}`);
       } else {
-        // failed
-        await prisma.campaignFollowUpRecord.delete({ where: { id: recordId } });
+        await prisma.campaignFollowUpRecord.delete({ where: { id: recordId } }).catch(() => {});
+        await prisma.campaignFollowUpSetting.updateMany({
+          where: { userId, campaignId: record.campaignId },
+          data: { failedCount: { increment: 1 } },
+        }).catch(() => {});
+        const { notifySmartFollowUpAlert } = await import("@/lib/notifications");
+        await notifySmartFollowUpAlert(userId, "campaign_send_failed",
+          { customerPhone: record.customerPhone, error: result.error }).catch(() => {});
       }
     });
 

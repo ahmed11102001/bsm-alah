@@ -531,7 +531,7 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
 
   const handleToggle = (checked: boolean) => {
     if (checked && !isApproved) {
-      toast.error(tx(lang, "يجب اعتماد القالب من ميتا أولاً لتفعيل الأتمتة", "Template must be approved by Meta to enable automation"));
+      toast.error(tx(lang, "يجب تفعيل أتمتة تأكيد الطلب الأساسية من صفحة أتمتة المتجر أولاً لتفعيل هذه الأتمتة", "You must enable the base order confirmation automation from the Store Automation tab first"));
       return;
     }
     setIsEnabled(checked);
@@ -601,7 +601,7 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
       </div>
 
       <FlowTree
-        templateName="wani_order_confirm_followup"
+        templateName={tx(lang, "أتمتة المتجر الأساسية", "Base Store Automation")}
         title={tx(lang, "أتمتة تأكيد الطلب", "Order Confirmation Automation")}
         icon={<CheckCircle2 className="w-4 h-4" />}
         isApproved={isApproved}
@@ -647,29 +647,6 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
 }
 
 // ─── Campaign follow-up detail view ─────────────────────────────────────────────
-
-// TODO(backend): pull from GET /api/campaigns
-const MOCK_CAMPAIGNS = [
-  { id: "camp_summer_offers", name: "عروض الصيف" },
-  { id: "camp_new_launch", name: "إطلاق المنتج الجديد" },
-  { id: "camp_reviews", name: "جمع التقييمات" },
-];
-
-// TODO(backend): pull real name/status from the "followup"-group templates in Templates.tsx
-const CAMPAIGN_TEMPLATES = [
-  {
-    id: "wani_campaign_followup_generic", name: "wani_campaign_followup_generic", status: "PENDING" as const,
-    body: "مرحبًا {{1}} 👋\n\nهل ما زلت مهتمًا بهذا العرض؟"
-  },
-  {
-    id: "wani_campaign_followup_discount", name: "wani_campaign_followup_discount", status: "PENDING" as const,
-    body: "مرحبًا {{1}} 🎯\n\nالخصم اللي بعتناهولك لسه متاح لوقت محدود.\n\nهل جربت العرض؟"
-  },
-  {
-    id: "wani_campaign_followup_launch", name: "wani_campaign_followup_launch", status: "PENDING" as const,
-    body: "مرحبًا {{1}} 🚀\n\nشفت المنتج الجديد اللي بعتناه؟\n\nهل حابب تعرف تفاصيله؟"
-  },
-];
 
 function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }) {
   const [isEnabled, setIsEnabled] = useState(false);

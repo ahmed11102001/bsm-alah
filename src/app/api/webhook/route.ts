@@ -249,6 +249,36 @@ export async function POST(req: NextRequest) {
             await notifyOrderCancelled(userId, order.orderNumber || order.externalId, order.customerPhone);
           }
           // TODO (مرحلة تانية): استدعاء API المتجر للإلغاء الفعلي عند CANCEL_ORDER
+
+          // ── متابعة تأكيد الأوردر — أول رد فوري (يحترم replyDelayMinutes) ──
+          try {
+            const { getSmartFollowUpSetting, handleOrderConfirmReply } = await import("@/lib/smart-followup");
+            const settingOC = await getSmartFollowUpSetting(userId, "order_confirm");
+            if (settingOC?.isEnabled) {
+              const replyDelayMinutes = settingOC.replyDelayMinutes ?? 0;
+              if (replyDelayMinutes > 0) {
+                const { inngest } = await import("@/inngest/client");
+                await inngest.send({
+                  name: "followup/action.send",
+                  data: {
+                    kind: "order_confirm",
+                    recordId: order.id,
+                    action: payload,
+                    replyDelaySeconds: Math.round(replyDelayMinutes * 60),
+                  },
+                });
+              } else {
+                await handleOrderConfirmReply(order as any, {
+                  payloadId: payload,
+                  messageText: content,
+                  accountOwner,
+                  userId,
+                });
+              }
+            }
+          } catch (e) {
+            console.error("[SmartFollowUp] order_confirm initial reply failed:", e);
+          }
         }
       }
       // ────────────────────────────────

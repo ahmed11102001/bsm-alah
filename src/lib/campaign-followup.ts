@@ -46,7 +46,7 @@ export async function executeCampaignFollowUpAction(recordId: string, action: st
     where: { id: recordId },
     select: {
       id: true, userId: true, customerPhone: true, contactId: true,
-      followUpStage: true, followUpMessageId: true,
+      followUpStage: true, followUpMessageId: true, campaignId: true,
       user: {
         select: {
           whatsappAccount: {
@@ -70,14 +70,21 @@ export async function executeCampaignFollowUpAction(recordId: string, action: st
 }
 
 export async function handleCampaignFollowUpReply(
-  record: { id: string; userId: string; customerPhone: string; contactId: string; followUpStage: string | null },
+  record: { id: string; userId: string; customerPhone: string; contactId: string; followUpStage: string | null; campaignId: string },
   { payloadId, messageText, accountOwner, userId }: ReplyParams
 ) {
+  async function resolveCampaignFollowUpSetting(userId: string, campaignId: string) {
+    const specific = await prisma.campaignFollowUpSetting.findFirst({
+      where: { userId, campaignId, isEnabled: true },
+    });
+    if (specific) return specific;
+    return prisma.campaignFollowUpSetting.findFirst({
+      where: { userId, campaignId: "all", isEnabled: true },
+    });
+  }
+
   // Get settings
-  const setting = await prisma.campaignFollowUpSetting.findFirst({
-    where: { userId, isEnabled: true },
-    orderBy: { createdAt: "desc" } // Simplified resolution for this implementation
-  });
+  const setting = await resolveCampaignFollowUpSetting(userId, record.campaignId);
   
   if (!setting || !setting.isEnabled) return;
   const texts = (setting.texts ?? {}) as Record<string, string>;
@@ -91,7 +98,7 @@ export async function handleCampaignFollowUpReply(
   const contact = await prisma.contact.findUnique({ where: { id: record.contactId }, select: { id: true, name: true, phone: true }});
 
   // Branch 1: Want Order (Lead ساخن)
-  if (payloadId === "WANT_ORDER") {
+  if (payloadId === "want_order") {
     await sendSessionText(
       record.customerPhone,
       accountOwner.phoneNumberId,
@@ -106,7 +113,7 @@ export async function handleCampaignFollowUpReply(
   }
 
   // Branch 2: Have Question (Lead دافئ)
-  if (payloadId === "HAVE_QUESTION") {
+  if (payloadId === "has_question") {
     await sendSessionText(
       record.customerPhone,
       accountOwner.phoneNumberId,
@@ -121,7 +128,7 @@ export async function handleCampaignFollowUpReply(
   }
 
   // Branch 3: Not Interested (لا شكرا)
-  if (payloadId === "NOT_INTERESTED") {
+  if (payloadId === "not_interested") {
     await sendSessionText(
       record.customerPhone,
       accountOwner.phoneNumberId,

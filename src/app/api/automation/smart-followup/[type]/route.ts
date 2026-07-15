@@ -33,10 +33,18 @@ function isValidType(type: string): type is typeof VALID_TYPES[number] {
 
 // ─── Template resolution (same logic as store/automation) ────────────────────
 async function resolveSmartFollowUpTemplate(userId: string, type: typeof VALID_TYPES[number]) {
+  if (type === "order_confirm") {
+    const baseAutomation = await prisma.storeAutomation.findFirst({
+      where: { userId, type: "order_confirm", isEnabled: true },
+    });
+    return baseAutomation
+      ? { id: "base-order-confirm", name: "order_confirm (base automation)", status: "APPROVED", language: "ar" }
+      : null;
+  }
+
   const templateNames: Record<string, string> = {
     shipping:      "wani_shipping_followup",
     cart:          "wani_abandoned_cart_followup",
-    order_confirm: "wani_order_confirm_followup",
   };
   const templateName = templateNames[type];
   const template = await prisma.template.findFirst({
@@ -175,10 +183,19 @@ export async function PUT(
   if (isEnabled === true) {
     const template = await resolveSmartFollowUpTemplate(ownerId, type);
     if (!template) {
+      if (type === "order_confirm") {
+        return NextResponse.json(
+          {
+            error: `لازم تفعّل أتمتة تأكيد الأوردر الأساسية الأول من تاب المتجر`,
+            templateStatus: "MISSING",
+          },
+          { status: 422 }
+        );
+      }
+
       const templateNames: Record<string, string> = {
         shipping:      "wani_shipping_followup",
         cart:          "wani_abandoned_cart_followup",
-        order_confirm: "wani_order_confirm_followup",
       };
       const tpl = await prisma.template.findFirst({
         where: {

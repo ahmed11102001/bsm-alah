@@ -356,9 +356,17 @@ export const processCampaign = inngest.createFunction(
 
       // Schedule follow-up if applicable
       if (sent > 0) {
-        const setting = await prisma.campaignFollowUpSetting.findFirst({
-          where: { userId: campaign.userId, campaignId, isEnabled: true },
-        });
+        async function resolveCampaignFollowUpSetting(userId: string, campaignId: string) {
+          const specific = await prisma.campaignFollowUpSetting.findFirst({
+            where: { userId, campaignId, isEnabled: true },
+          });
+          if (specific) return specific;
+          return prisma.campaignFollowUpSetting.findFirst({
+            where: { userId, campaignId: "all", isEnabled: true },
+          });
+        }
+
+        const setting = await resolveCampaignFollowUpSetting(campaign.userId, campaignId);
         
         if (setting) {
           try {
@@ -486,6 +494,7 @@ export const processQueueItem = inngest.createFunction(
   },
   async ({ event, step }: { event: any; step: any }) => {
     const { queueId } = event.data as { queueId: string };
+    // TODO: support scheduleCampaignFollowUp / processQueueItem for single messages if they are part of a campaign
 
     // ── Step 1: جيب الـ item وتحقق إنه لسه pending ────────────────────────────
     const item = await step.run("get-item", async () => {
