@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استرجاع السلة المتروكة — واني</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --bg-deep:#14110F; --line:#3A3128;
+    --amber:#F2A93B; --amber-dim:#8A6A2E;
+    --text:#F5EFE6; --text-muted:#A79C8E;
+    --font-display:'Bebas Neue', sans-serif;
+    --font-body:'Manrope', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg-deep);color:var(--text);font-family:var(--font-body);overflow:hidden;direction:rtl;}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.55) 100%);}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:51;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* parallax background — moves slower than the stage to fake depth */
+  #bgLayer{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(242,169,59,.14) 1.4px, transparent 1.4px);
+    background-size:44px 44px; background-position:0 0;}
+
+  #viewport{position:fixed;inset:0;overflow:hidden;z-index:1;}
+  #stage{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;}
+  svg.layer{position:absolute;top:0;left:0;overflow:visible;}
+  .anno-circle{fill:none;stroke:var(--amber);stroke-width:2.4;}
+  .anno-arrow{fill:none;stroke:var(--amber);stroke-width:2.2;}
+  .arrowhead{fill:var(--amber);}
+  .travel-dot{fill:var(--amber);filter:drop-shadow(0 0 6px rgba(242,169,59,.9));}
+  .thread-path{fill:none;stroke:var(--amber);stroke-width:1.6;opacity:.55;}
+
+  /* free-floating text elements — no boxes, no borders */
+  .eyebrow{position:absolute;font-family:var(--font-mono);font-size:13px;color:var(--amber);letter-spacing:2px;white-space:nowrap;}
+  .title-text{position:absolute;font-family:var(--font-display);font-size:88px;line-height:.95;color:var(--text);letter-spacing:1px;white-space:nowrap;}
+  .heading{position:absolute;font-family:var(--font-display);font-size:46px;color:var(--text);letter-spacing:1px;overflow:visible;white-space:nowrap;}
+  .char{display:inline-block;opacity:0;transform:translateY(24px);}
+  .ptext{position:absolute;font-size:19.5px;line-height:1.75;color:var(--text-muted);opacity:0;}
+  .ptext.small{font-size:16.5px;line-height:1.65;}
+  .hl{color:var(--amber);font-weight:700;background:linear-gradient(to right, rgba(242,169,59,.2) 50%, transparent 50%);background-size:200% 100%;background-position:right;border-radius:3px;padding:0 2px;}
+  .label-line{position:absolute;font-family:var(--font-mono);font-size:12px;color:var(--amber-dim);letter-spacing:1px;opacity:0;}
+  .value-line{position:absolute;font-size:20px;font-weight:700;color:var(--text);opacity:0;transform:translateY(10px);}
+
+  .node-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 5px rgba(242,169,59,.15);opacity:0;transform:scale(0);}
+  .node-title{position:absolute;font-weight:700;font-size:19px;color:var(--text);text-align:center;opacity:0;}
+  .chev-mark{position:absolute;font-size:13px;color:var(--amber);opacity:0;}
+
+  .branch-item{position:absolute;display:flex;align-items:center;gap:10px;font-size:16px;color:var(--text-muted);opacity:0;transform:translateX(14px);white-space:nowrap;}
+  .branch-item .stub{width:22px;height:2px;background:var(--amber-dim);flex:none;}
+  .branch-item.warn{color:#c97a63;}
+  .branch-item .stub.warn{background:#7a3220;}
+
+  /* عناصر قصيرة: أيقونة + جملة واحدة قصيرة، بدل الفقرات الطويلة */
+  .icon-item{position:absolute;display:flex;align-items:center;gap:12px;font-size:17px;font-weight:500;color:var(--text-muted);opacity:0;transform:translateX(14px);white-space:nowrap;}
+  .icon-item svg{flex:none;}
+  .icon-item .tag{font-family:var(--font-mono);font-size:11.5px;color:var(--amber-dim);border:1px solid var(--line);border-radius:5px;padding:2px 8px;margin-right:2px;}
+  .goal-chip{position:absolute;display:flex;align-items:center;gap:16px;font-size:24px;font-weight:600;color:var(--text);opacity:0;transform:translateY(14px);white-space:nowrap;}
+  .goal-chip svg{flex:none;}
+
+  .kpi-name{position:absolute;display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;color:var(--amber);opacity:0;}
+  .kpi-name svg{flex:none;}
+  .kpi-underline{position:absolute;height:2px;background:var(--amber);transform:scaleX(0);transform-origin:right;}
+  .kpi-desc{position:absolute;font-size:15px;color:var(--text-muted);line-height:1.6;opacity:0;}
+
+  .tip-num{position:absolute;width:26px;height:26px;}
+  .tip-num circle{fill:none;stroke:var(--amber);stroke-width:2;stroke-dasharray:75;stroke-dashoffset:75;}
+  .tip-num text{fill:var(--amber);font-family:var(--font-mono);font-size:12px;text-anchor:middle;}
+  .tip-text{position:absolute;font-size:16px;color:var(--text-muted);line-height:1.65;opacity:0;}
+
+  .term{transition:color .3s;}
+  .ribbon-note{position:absolute;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);opacity:0;text-align:center;}
+
+  #ctaOverlay{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:46;opacity:0;pointer-events:none;}
+  #ctaOverlay button{background:var(--amber);color:#1A1206;font-family:var(--font-mono);font-weight:600;border:none;border-radius:8px;padding:15px 32px;font-size:14px;letter-spacing:1px;cursor:pointer;pointer-events:auto;}
+
+  #controls{position:fixed;bottom:0;left:0;right:0;z-index:45;display:flex;align-items:center;justify-content:center;gap:18px;padding:18px 24px 22px 24px;background:linear-gradient(to top, rgba(20,17,15,.95), transparent);}
+  .ctrl-btn{background:#1C1712;border:1px solid var(--line);color:var(--text);width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:border-color .2s;}
+  .ctrl-btn:hover{border-color:var(--amber);color:var(--amber);}
+  #reel{display:flex;gap:5px;align-items:center;}
+  .perf{width:8px;height:8px;border-radius:2px;background:var(--line);cursor:pointer;transition:background .2s,transform .2s;}
+  .perf.active{background:var(--amber);transform:scale(1.3);}
+  #sceneName{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);min-width:170px;text-align:center;}
+</style>
+</head>
+<body>
+
+<div id="bgLayer"></div>
+
+<div id="viewport"><div id="stage"></div></div>
+
+<div id="ctaOverlay"><button id="ctaBtn">إعادة تشغيل الاستراتيجية ›</button></div>
+
+<div id="controls">
+  <button class="ctrl-btn" id="prevBtn">›</button>
+  <button class="ctrl-btn" id="playBtn">▶</button>
+  <div id="reel"></div>
+  <div id="sceneName"></div>
+  <button class="ctrl-btn" id="nextBtn">‹</button>
+</div>
+
+<script>
+/* =========================================================================
+   PRESENTATION ENGINE v5 — لوحة واحدة حرة، كاميرا تتحرك على أشياء مش أقسام
+   ========================================================================= */
+
+const CANVAS = { w: 2900, h: 2650 };
+const stage = document.getElementById('stage');
+stage.style.width = CANVAS.w+'px';
+stage.style.height = CANVAS.h+'px';
+const bgLayer = document.getElementById('bgLayer');
+
+const svgNS = "http://www.w3.org/2000/svg";
+function makeSvgLayer(id){
+  const s = document.createElementNS(svgNS,"svg");
+  s.setAttribute("id", id); s.classList.add("layer");
+  s.setAttribute("width", CANVAS.w); s.setAttribute("height", CANVAS.h);
+  stage.appendChild(s); return s;
+}
+const structLayer = makeSvgLayer('structLayer'); // خطوط دائمة (تايم لاين، الخيط الأخير)
+const annoLayer   = makeSvgLayer('annoLayer');   // شروحات مؤقتة تتمسح كل Beat
+
+function el(tag, attrs, parent){
+  const n = document.createElement(tag);
+  Object.entries(attrs||{}).forEach(([k,v])=>{
+    if(k==='html') n.innerHTML = v;
+    else if(k==='text') n.textContent = v;
+    else if(k==='style') Object.assign(n.style, v);
+    else n.setAttribute(k,v);
+  });
+  (parent||stage).appendChild(n);
+  return n;
+}
+function pos(node, x,y,extra){ Object.assign(node.style, {left:x+'px', top:y+'px'}, extra||{}); return node; }
+
+/* مكتبة أيقونات صغيرة (خطية) — بدل ما نشرح بالكلام، نوريها بشكل */
+function icon(name, size=20){
+  const P = {
+    target:  `<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".6" fill="var(--amber)" stroke="none"/>`,
+    cart:    `<path d="M3 4h2.2l2.3 12a2 2 0 0 0 2 1.6h7a2 2 0 0 0 2-1.6L21 8H6.4"/><circle cx="9.5" cy="20" r="1.3" fill="var(--amber)" stroke="none"/><circle cx="17" cy="20" r="1.3" fill="var(--amber)" stroke="none"/>`,
+    check:   `<path d="M4.5 12.5l4.5 4.5L19.5 6.5"/>`,
+    clock:   `<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.2 2.8"/>`,
+    chat:    `<path d="M4 5.5h16v10.5H8.5L4 20.5V5.5z"/>`,
+    help:    `<circle cx="12" cy="12" r="8.5"/><path d="M9.3 9.6a2.8 2.8 0 0 1 5.3 1.2c0 2-2.6 2-2.6 4"/><circle cx="12" cy="17.2" r=".6" fill="var(--amber)" stroke="none"/>`,
+    bell:    `<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5 1.5 5h-14s1.5-1 1.5-5z"/><path d="M10 18a2 2 0 0 0 4 0"/>`,
+    handoff: `<path d="M4 12h13"/><path d="M12.5 6.5l6 5.5-6 5.5"/>`,
+    hourglass:`<path d="M6.5 3.5h11"/><path d="M6.5 20.5h11"/><path d="M7.5 3.5c0 4.5 4 5.5 4.5 8-.5 2.5-4.5 3.5-4.5 8"/><path d="M16.5 3.5c0 4.5-4 5.5-4.5 8 .5 2.5 4.5 3.5 4.5 8"/>`,
+    bulb:    `<path d="M9 18.5h6"/><path d="M10 21h4"/><path d="M12 3a6.2 6.2 0 0 0-3.4 11.4c.6.5 1 1.2 1 2.1h4.8c0-.9.4-1.6 1-2.1A6.2 6.2 0 0 0 12 3z"/>`,
+    chart:   `<path d="M4.5 20V11"/><path d="M11.5 20V4"/><path d="M18.5 20v-8"/>`
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name]||''}</svg>`;
+}
+
+/* ================= CONTENT ================= */
+
+/* --- العنوان --- */
+pos(el('div',{class:'eyebrow', text:'استراتيجية واني  •  Abandoned Cart Recovery'}), 980, 90);
+pos(el('div',{class:'title-text', id:'mainTitle'}), 950, 118);
+
+/* --- الهدف --- */
+pos(el('div',{class:'label-line', id:'goal-label', text:'01 / الهدف'}), 330, 470);
+pos(el('div',{class:'heading', id:'goal-heading', text:'الهدف'}), 330, 494);
+pos(el('div',{class:'goal-chip', id:'goal-chip1',
+  html: icon('cart',26)+'<span>من سلة متروكة… لعميل فعلي</span>'}), 330, 578);
+pos(el('div',{class:'goal-chip', id:'goal-chip2',
+  html: icon('check',26)+'<span class="hl" id="w-noeffort">من غير أي تدخل يدوي</span>'}), 330, 634);
+
+/* --- المتطلبات (يمين، فوق شوية) --- */
+pos(el('div',{class:'label-line', id:'req-label1', text:'الباقة المطلوبة'}), 1980, 480);
+pos(el('div',{class:'value-line', id:'req-val1', text:'Professional فأعلى'}), 1980, 502);
+pos(el('div',{class:'label-line', id:'req-label2', text:'التكامل المطلوب'}), 1980, 570);
+pos(el('div',{class:'value-line', id:'req-val2', text:'ربط المتجر (storeIntegration)'}), 1980, 592);
+
+/* --- آلية العمل: Timeline رأسي --- */
+const NODE_X = 1350;
+const NODE_Y = [980, 1200, 1420, 1640, 1860];
+const NODE_TITLES = ["الاكتشاف","الجدولة","الرسالة الأولى (SENT)","مش مهتم (AWAITING_REASON)","الإغلاق (DONE)"];
+
+pos(el('div',{class:'label-line', id:'mech-label', text:'03 / آلية العمل'}), NODE_X-90, NODE_Y[0]-90);
+pos(el('div',{class:'heading', id:'mech-heading', text:'آلية العمل'}), NODE_X-140, NODE_Y[0]-64);
+
+NODE_Y.forEach((y,i)=>{
+  pos(el('div',{class:'node-dot', id:'node'+i+'-dot'}), NODE_X-7, y-7);
+  pos(el('div',{class:'node-title', id:'node'+i+'-title', text:NODE_TITLES[i]}), NODE_X-140, y+16, {width:'280px'});
+});
+
+/* node1: أيقونة + جملة قصيرة، والتفاصيل التقنية بقت Tag صغير مش جزء من الجملة —
+   على نفس محاذاة باقي الأوصاف الجانبية عشان الخط الواصل يفضل واضح */
+pos(el('div',{class:'icon-item', id:'node0-desc',
+  html: icon('cart',20)+'<span>السلة بتتسجل تلقائيًا</span><span class="tag">AbandonedCart</span>'}),
+  1620, NODE_Y[0]+58);
+
+/* node2: الجدولة — 3 شروط قصيرة بدل فقرة واحدة طويلة، كل شرط بأيقونته
+   عشان الـ Micro Annotations تشتغل على كل واحد لوحده */
+pos(el('div',{class:'icon-item', id:'w-isenabled-row',
+  html: icon('check',20)+'<span class="term" id="w-isenabled">الميزة الذكية مفعّلة</span><span class="tag">isEnabled</span>'}),
+  1620, NODE_Y[1]-40);
+pos(el('div',{class:'icon-item', id:'w-meta-row',
+  html: icon('check',20)+'<span class="term" id="w-meta">القالب معتمد من واتساب</span><span class="tag">Meta Approved</span>'}),
+  1620, NODE_Y[1]-40+42);
+pos(el('div',{class:'icon-item', id:'w-hours-row',
+  html: icon('clock',20)+'<span class="hl" id="w-hours">الإرسال بعد 2-4 ساعات</span>'}),
+  1620, NODE_Y[1]-40+84);
+
+/* node3: الرسالة الأولى + 3 أزرار */
+pos(el('div',{class:'icon-item', id:'node2-desc', html: icon('chat',20)+'<span>رسالة تذكير + 3 خيارات</span>'}), 1620, NODE_Y[2]-46);
+const chips3 = ['أكمل الطلب → رابط استكمال الشراء مباشرة','عندي سؤال → تحويل لموظف مبيعات','مش مهتم → فتح مرحلة معرفة السبب'];
+chips3.forEach((c,i)=> pos(el('div',{class:'branch-item', id:'n3chip'+i, html:'<span class="stub"></span>'+c}), 1620, NODE_Y[2]+2+i*36));
+
+/* node4: مش مهتم + أسباب */
+pos(el('div',{class:'icon-item', id:'node3-desc', html: icon('help',20)+'<span>ليه؟ 3 أسباب محتملة</span>'}), 1620, NODE_Y[3]-46);
+const chips4 = ['السعر مرتفع','غيرت رأيي','سبب تاني'];
+chips4.forEach((c,i)=> pos(el('div',{class:'branch-item', id:'n4chip'+i, html:'<span class="stub"></span>'+c}), 1620, NODE_Y[3]+2+i*36));
+
+/* node5: DONE + مسارين — كل مسار أيقونة + جملة قصيرة، واسم الحدث التقني بقى Tag */
+const outcomes = [
+  {ic:'bell', t:'تنبيه لصاحب الحساب', tag:'notifySmartFollowUpAlert'},
+  {ic:'handoff', t:'تحويل فوري للمبيعات', tag:'handoffReason'}
+];
+outcomes.forEach((o,i)=> pos(el('div',{class:'icon-item', id:'n5out'+i,
+  html: icon(o.ic,20)+'<span>'+o.t+'</span><span class="tag">'+o.tag+'</span>'}), 1620, NODE_Y[4]-10+i*40));
+pos(el('div',{class:'icon-item', id:'ribbon',
+  html: icon('hourglass',18)+'<span>48 ساعة صلاحية لكل مرحلة</span>'}), NODE_X-150, NODE_Y[4]+92);
+
+/* --- KPIs --- */
+const KPI_X = 330, KPI_Y = 2140;
+pos(el('div',{class:'label-line', id:'kpi-label', text:'04 / مؤشرات النجاح'}), KPI_X, KPI_Y-40);
+pos(el('div',{class:'heading', id:'kpi-heading', text:'مؤشرات النجاح'}), KPI_X, KPI_Y-16);
+const kpis = [
+  {ic:'chart', n:'معدل استرجاع السلة', d:'ضغطات «أكمل الطلب» ÷ الرسائل المرسلة'},
+  {ic:'help', n:'أهم سبب ترك السلة', d:'الأسباب المجمّعة: سعر / تردد / سبب تاني'},
+  {ic:'clock', n:'زمن الاستجابة', d:'الفرق بين وقت الإرسال والرد'}
+];
+kpis.forEach((k,i)=>{
+  const y = KPI_Y+60+i*100;
+  pos(el('div',{class:'kpi-name', id:'kpiName'+i, html: icon(k.ic,19)+'<span>'+k.n+'</span>'}), KPI_X, y);
+  pos(el('div',{class:'kpi-underline', id:'kpiLine'+i}), KPI_X, y+30, {width:'420px'});
+  pos(el('div',{class:'kpi-desc', id:'kpiDesc'+i, text:k.d}), KPI_X, y+42, {width:'480px'});
+});
+
+/* --- أفضل الممارسات --- */
+const PR_X = 1620, PR_Y = 2140;
+pos(el('div',{class:'label-line', id:'pr-label', text:'05 / أفضل الممارسات'}), PR_X, PR_Y-40);
+pos(el('div',{class:'heading', id:'pr-heading', text:'أفضل الممارسات'}), PR_X, PR_Y-16);
+const tips = [
+  'جرّب تأخير 2-3 ساعات الأول، وعدّل حسب النتائج',
+  'اربط «السعر مرتفع» بخصم تلقائي بسيط',
+  'راقب حالة القالب في واتساب أول بأول',
+  'ارفع أولوية التحويل البشري لعملاء VIP'
+];
+tips.forEach((t,i)=>{
+  const y = PR_Y+60+i*58;
+  const wrap = pos(el('svg',{class:'tip-num', id:'tipnum'+i}, stage), PR_X, y);
+  wrap.setAttributeNS(null,'viewBox','0 0 26 26');
+  wrap.innerHTML = `<circle cx="13" cy="13" r="11"/><text x="13" y="17">${i+1}</text>`;
+  pos(el('div',{class:'tip-text', id:'tiptext'+i, text:t}), PR_X+38, y+2, {width:'760px'});
+});
+
+/* --- خاتمة: نفس المنطقة، إطار واحد ثابت — من غير أي تكبير/تصغير درامي للّوحة كلها --- */
+pos(el('div',{class:'goal-chip', id:'closingLine',
+  html: icon('target',26)+'<span>جاهز نفعّل الاستراتيجية؟</span>'}), PR_X, PR_Y+330);
+
+/* ================= measurement + camera ================= */
+function elCanvasRect(node){
+  const r = node.getBoundingClientRect();
+  const stageR = stage.getBoundingClientRect();
+  const scale = stageR.width / CANVAS.w;
+  return { x:(r.left-stageR.left)/scale, y:(r.top-stageR.top)/scale, w:r.width/scale, h:r.height/scale };
+}
+function unionRect(ids){
+  const rects = ids.map(id=>elCanvasRect(document.getElementById(id)));
+  const x1=Math.min(...rects.map(r=>r.x)), y1=Math.min(...rects.map(r=>r.y));
+  const x2=Math.max(...rects.map(r=>r.x+r.w)), y2=Math.max(...rects.map(r=>r.y+r.h));
+  return {x:x1,y:y1,w:x2-x1,h:y2-y1};
+}
+function focusRect(ids, pad=80){
+  const r = unionRect(ids);
+  return {x:r.x-pad, y:r.y-pad, w:r.w+pad*2, h:r.h+pad*2};
+}
+function centerOf(idOrRect){
+  if(typeof idOrRect==='string'){ const r=elCanvasRect(document.getElementById(idOrRect)); return {x:r.x+r.w/2, y:r.y+r.h/2}; }
+  return {x:idOrRect.x+idOrRect.w/2, y:idOrRect.y+idOrRect.h/2};
+}
+
+/* single continuous camera move: one tween, one ease, driving a real
+   quadratic-bezier motion path — no mid-flight stop, no momentum reset.
+   `onSettle` fires while the camera is still gliding (~68% through),
+   so the reveal overlaps the motion instead of waiting for it. */
+function cameraTo(rect, duration=1.25, onSettle){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let scale = Math.min((vw*0.86)/rect.w, (vh*0.78)/rect.h);
+  scale = Math.max(0.32, Math.min(scale, 2.6));
+  const cx = rect.x+rect.w/2, cy = rect.y+rect.h/2;
+  const targetX = vw/2-cx*scale, targetY = vh/2-cy*scale;
+
+  const startX = gsap.getProperty(stage,'x') || 0;
+  const startY = gsap.getProperty(stage,'y') || 0;
+  const startScale = gsap.getProperty(stage,'scale') || 1;
+
+  const dist = Math.hypot(targetX-startX, targetY-startY);
+  const bow = Math.min(70, dist*0.1); // gentle bend, scales with travel distance
+  const nx = dist ? -(targetY-startY)/dist : 0, ny = dist ? (targetX-startX)/dist : 0;
+  const p0 = {x:startX, y:startY};
+  const p1 = {x:(startX+targetX)/2 + nx*bow, y:(startY+targetY)/2 + ny*bow};
+  const p2 = {x:targetX, y:targetY};
+
+  const state = {t:0};
+  const tl = gsap.timeline();
+  tl.to(state, {
+    t:1, duration, ease:"power2.inOut",
+    onUpdate: ()=>{
+      const t = state.t, mt = 1-t;
+      const x = mt*mt*p0.x + 2*mt*t*p1.x + t*t*p2.x;
+      const y = mt*mt*p0.y + 2*mt*t*p1.y + t*t*p2.y;
+      const s = startScale + (scale-startScale)*t;
+      gsap.set(stage, {x, y, scale:s});
+      gsap.set(bgLayer, {backgroundPosition: `${x*0.16}px ${y*0.16}px`});
+    }
+  }, 0);
+  if(onSettle) tl.call(onSettle, null, duration*0.68);
+  return tl;
+}
+
+/* ================= micro annotation primitives ================= */
+function clearAnno(){ annoLayer.innerHTML = ''; }
+
+function annoCircle(targetId, tl, t){
+  const r = elCanvasRect(document.getElementById(targetId));
+  const cx = r.x+r.w/2, cy = r.y+r.h/2;
+  const rx = r.w/2+14, ry = r.h/2+11;
+  const c = document.createElementNS(svgNS,'ellipse');
+  c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('rx',rx); c.setAttribute('ry',ry);
+  c.classList.add('anno-circle');
+  const circumference = Math.PI*(3*(rx+ry)-Math.sqrt((3*rx+ry)*(rx+3*ry)));
+  c.style.strokeDasharray = circumference; c.style.strokeDashoffset = circumference;
+  annoLayer.appendChild(c);
+  tl.to(c, {strokeDashoffset:0, duration:.7, ease:"power2.inOut"}, t);
+  tl.to(document.getElementById(targetId), {color:'var(--amber)', fontWeight:700, duration:.3}, t+.2);
+  return t+.7;
+}
+
+function annoArrow(fromId, toId, tl, t){
+  const a = elCanvasRect(document.getElementById(fromId));
+  const b = elCanvasRect(document.getElementById(toId));
+  const p1 = {x:a.x+a.w/2, y:a.y+a.h+6};
+  const p2 = {x:b.x+b.w/2, y:b.y-6};
+  // slight zigzag control point so the arrow doesn't read as a straight vertical
+  const dir = (p2.x-p1.x) >= 0 ? 1 : -1;
+  const mx = (p1.x+p2.x)/2 + dir*24;
+  const my = (p1.y+p2.y)/2 - 30;
+  const path = document.createElementNS(svgNS,'path');
+  const d = `M ${p1.x} ${p1.y} Q ${mx} ${my} ${p2.x} ${p2.y}`;
+  path.setAttribute('d', d); path.classList.add('anno-arrow');
+  path.setAttribute('marker-end','url(#arrowhead)');
+  annoLayer.appendChild(path);
+  const len = path.getTotalLength ? path.getTotalLength() : 400;
+  path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
+  tl.to(path, {strokeDashoffset:0, duration:.8, ease:"power2.inOut"}, t);
+  return t+.8;
+}
+
+function annoHighlight(targetId, tl, t){
+  tl.to(document.getElementById(targetId), {backgroundPosition:'left', duration:.6}, t);
+  return t+.6;
+}
+
+/* a glowing dot that physically travels along a drawn SVG path */
+function travelDot(path, tl, t, duration=1.8){
+  const dot = document.createElementNS(svgNS,'circle');
+  dot.setAttribute('r', 6); dot.classList.add('travel-dot');
+  structLayer.appendChild(dot);
+  const len = path.getTotalLength();
+  const start = path.getPointAtLength(0);
+  dot.setAttribute('cx', start.x); dot.setAttribute('cy', start.y);
+  const obj = {p:0};
+  tl.to(obj, {p:1, duration, ease:"power1.inOut", onUpdate:()=>{
+    const pt = path.getPointAtLength(obj.p*len);
+    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+  }}, t);
+  return t+duration;
+}
+
+/* arrowhead marker def */
+const defs = document.createElementNS(svgNS,'defs');
+defs.innerHTML = `<marker id="arrowhead" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" class="arrowhead"/></marker>`;
+annoLayer.appendChild(defs);
+
+/* ================= helpers for reveal ================= */
+function splitHeading(headEl){
+  const text = headEl.textContent; headEl.innerHTML='';
+  [...text].forEach(ch=>{
+    const s=document.createElement('span'); s.className='char';
+    s.textContent = ch===' '?'\u00A0':ch; headEl.appendChild(s);
+  });
+  return headEl.querySelectorAll('.char');
+}
+
+/* ================= BEATS =================
+   كل Beat هدفه عنصر أو زوج عناصر صغير، مش قسم كامل — الكاميرا بتتحرك أقل
+   والعين بتتنقل بمنطق: دايرة → سهم → دايرة → Highlight، قبل ما تقطع المشهد. */
+const BEATS = [
+  { id:'title', label:'العنوان', ids:['mainTitle'],
+    focus:()=>focusRect(['mainTitle'], 260),
+    reveal:(tl)=>{
+      const t = document.getElementById('mainTitle');
+      gsap.set(t, {opacity:1});
+      t.textContent = 'استرجاع السلة المتروكة';
+      tl.to(splitHeading(t), {opacity:1,y:0,duration:.5,stagger:.03,ease:"back.out(2)"}, 0);
+    }
+  },
+  { id:'goal-label', label:'الهدف', ids:['goal-label','goal-heading'],
+    focus:()=>focusRect(['goal-label','goal-heading'], 70),
+    reveal:(tl)=>{
+      tl.to('#goal-label', {opacity:1, duration:.3}, 0);
+      gsap.set('#goal-heading', {opacity:1});
+      tl.to(splitHeading(document.getElementById('goal-heading')), {opacity:1,y:0,duration:.4,stagger:.02,ease:"back.out(2)"}, .1);
+    }
+  },
+  { id:'goal-body', label:'الهدف — التفاصيل', ids:['goal-chip1','goal-chip2'],
+    focus:()=>focusRect(['goal-chip1','goal-chip2'], 55),
+    reveal:(tl)=>{
+      tl.to('#goal-chip1', {opacity:1, y:0, duration:.45}, 0);
+      tl.to('#goal-chip2', {opacity:1, y:0, duration:.45}, .35);
+      let t = annoCircle('w-noeffort', tl, 1);
+    }
+  },
+  { id:'req1', label:'المتطلبات — الباقة', ids:['req-label1','req-val1'],
+    focus:()=>focusRect(['req-label1','req-val1'], 80),
+    reveal:(tl)=>{
+      tl.to(['#req-label1'], {opacity:1, duration:.35}, 0);
+      tl.to(['#req-val1'], {opacity:1,y:0, duration:.45}, .2);
+    }
+  },
+  { id:'req2', label:'المتطلبات — التكامل', ids:['req-label2','req-val2'],
+    focus:()=>focusRect(['req-label2','req-val2'], 80),
+    reveal:(tl)=>{
+      tl.to(['#req-label2'], {opacity:1, duration:.35}, 0);
+      tl.to(['#req-val2'], {opacity:1,y:0, duration:.45}, .2);
+      annoArrow('req-val1', 'req-label2', tl, .75);
+    }
+  },
+  { id:'mech-intro', label:'آلية العمل', ids:['mech-label','mech-heading'],
+    focus:()=>focusRect(['mech-label','mech-heading'], 60),
+    reveal:(tl)=>{
+      tl.to('#mech-label', {opacity:1, duration:.3}, 0);
+      gsap.set('#mech-heading', {opacity:1});
+      tl.to(splitHeading(document.getElementById('mech-heading')), {opacity:1,y:0,duration:.4,stagger:.02,ease:"back.out(2)"}, .1);
+    }
+  },
+  { id:'node0', label:'١ / الاكتشاف', ids:['node0-dot','node0-title','node0-desc'],
+    focus:()=>focusRect(['node0-dot','node0-title','node0-desc'], 70),
+    reveal:(tl)=>{
+      tl.to('#node0-dot', {opacity:1, scale:1, duration:.35, ease:"back.out(3)"}, 0);
+      tl.to('#node0-title', {opacity:1, duration:.35}, .1);
+      tl.to('#node0-desc', {opacity:1, x:0, duration:.5}, .3);
+    }
+  },
+  { id:'node1', label:'٢ / الجدولة', ids:['node1-dot','node1-title','w-isenabled-row','w-meta-row','w-hours-row'],
+    focus:()=>focusRect(['node1-dot','node1-title','w-isenabled-row','w-meta-row','w-hours-row'], 70),
+    reveal:(tl)=>{
+      tl.to('#node1-dot', {opacity:1, scale:1, duration:.35, ease:"back.out(3)"}, 0);
+      tl.to('#node1-title', {opacity:1, duration:.35}, .1);
+      tl.to('#w-isenabled-row', {opacity:1, x:0, duration:.4}, .3);
+      tl.to('#w-meta-row', {opacity:1, x:0, duration:.4}, .62);
+      tl.to('#w-hours-row', {opacity:1, x:0, duration:.4}, .94);
+      let t = 1.45;
+      t = annoCircle('w-isenabled', tl, t);
+      t = annoArrow('w-isenabled', 'w-meta', tl, t) - .3;
+      t = annoCircle('w-meta', tl, t+.2);
+      t = annoArrow('w-meta', 'w-hours', tl, t) - .3;
+      annoHighlight('w-hours', tl, t+.2);
+    }
+  },
+  { id:'node2', label:'٣ / الرسالة الأولى', ids:['node2-dot','node2-title','node2-desc','n3chip0','n3chip1','n3chip2'],
+    focus:()=>focusRect(['node2-dot','node2-title','node2-desc','n3chip0','n3chip1','n3chip2'], 65),
+    reveal:(tl)=>{
+      tl.to('#node2-dot', {opacity:1, scale:1, duration:.35, ease:"back.out(3)"}, 0);
+      tl.to('#node2-title', {opacity:1, duration:.35}, .1);
+      tl.to('#node2-desc', {opacity:1, x:0, duration:.45}, .3);
+      [0,1,2].forEach(i=> tl.to('#n3chip'+i, {opacity:1, x:0, duration:.4}, .75+i*.28));
+    }
+  },
+  { id:'node3', label:'٤ / مش مهتم', ids:['node3-dot','node3-title','node3-desc','n4chip0','n4chip1','n4chip2'],
+    focus:()=>focusRect(['node3-dot','node3-title','node3-desc','n4chip0','n4chip1','n4chip2'], 65),
+    reveal:(tl)=>{
+      tl.to('#node3-dot', {opacity:1, scale:1, duration:.35, ease:"back.out(3)"}, 0);
+      tl.to('#node3-title', {opacity:1, duration:.35}, .1);
+      tl.to('#node3-desc', {opacity:1, x:0, duration:.45}, .3);
+      [0,1,2].forEach(i=> tl.to('#n4chip'+i, {opacity:1, x:0, duration:.4}, .75+i*.28));
+    }
+  },
+  { id:'node4', label:'٥ / الإغلاق', ids:['node4-dot','node4-title','n5out0','n5out1','ribbon'],
+    focus:()=>focusRect(['node4-dot','node4-title','n5out0','n5out1','ribbon'], 65),
+    reveal:(tl)=>{
+      tl.to('#node4-dot', {opacity:1, scale:1, duration:.35, ease:"back.out(3)"}, 0);
+      tl.to('#node4-title', {opacity:1, duration:.35}, .1);
+      tl.to('#n5out0', {opacity:1, x:0, duration:.4}, .3);
+      tl.to('#n5out1', {opacity:1, x:0, duration:.4}, .6);
+      tl.to('#ribbon', {opacity:1, x:0, duration:.4}, 1.0);
+    }
+  },
+  { id:'kpis', label:'مؤشرات النجاح', ids:['kpi-label','kpi-heading','kpiName0','kpiName1','kpiName2','kpiLine0','kpiLine1','kpiLine2','kpiDesc0','kpiDesc1','kpiDesc2'],
+    focus:()=>focusRect(['kpi-label','kpiDesc2'], 60),
+    reveal:(tl)=>{
+      tl.to('#kpi-label', {opacity:1, duration:.3}, 0);
+      gsap.set('#kpi-heading', {opacity:1});
+      tl.to(splitHeading(document.getElementById('kpi-heading')), {opacity:1,y:0,duration:.4,stagger:.02,ease:"back.out(2)"}, .1);
+      [0,1,2].forEach(i=>{
+        const t0 = .6+i*.5;
+        tl.to('#kpiName'+i, {opacity:1, duration:.35}, t0);
+        tl.to('#kpiLine'+i, {opacity:1, scaleX:1, duration:.4}, t0+.15);
+        tl.to('#kpiDesc'+i, {opacity:1, duration:.4}, t0+.3);
+      });
+    }
+  },
+  { id:'practices', label:'أفضل الممارسات', ids:['pr-label','pr-heading','tipnum0','tipnum1','tipnum2','tipnum3','tiptext0','tiptext1','tiptext2','tiptext3'],
+    focus:()=>focusRect(['pr-label','tiptext3'], 60),
+    reveal:(tl)=>{
+      tl.to('#pr-label', {opacity:1, duration:.3}, 0);
+      gsap.set('#pr-heading', {opacity:1});
+      tl.to(splitHeading(document.getElementById('pr-heading')), {opacity:1,y:0,duration:.4,stagger:.02,ease:"back.out(2)"}, .1);
+      [0,1,2,3].forEach(i=>{
+        const t0 = .6+i*.4;
+        tl.to('#tipnum'+i, {opacity:1, duration:.3}, t0);
+        tl.to('#tipnum'+i+' circle', {strokeDashoffset:0, duration:.5}, t0);
+        tl.to('#tiptext'+i, {opacity:1, duration:.4}, t0+.15);
+      });
+    }
+  },
+  { id:'closing', label:'الختام', ids:['closingLine'],
+    /* نفس فلسفة كل Beat قبلها: كادر واحد ثابت، من غير أي تكبير/تصغير
+       يورّي اللوحة كلها — الكاميرا بترسو على جملة ختامية واحدة بس. */
+    focus:()=>focusRect(['closingLine'], 90),
+    reveal:(tl)=>{
+      tl.to('#closingLine', {opacity:1, y:0, duration:.5}, 0);
+      tl.call(()=>{ gsap.to('#ctaOverlay', {opacity:1, duration:.5}); }, null, .55);
+    }
+  }
+];
+
+/* ================= playback engine ================= */
+const N = BEATS.length;
+const reel = document.getElementById('reel');
+BEATS.forEach((b,i)=>{
+  const p = document.createElement('div'); p.className='perf'; p.dataset.idx=i;
+  p.addEventListener('click', ()=>goTo(i));
+  reel.appendChild(p);
+});
+
+let current = -1, autoplay=false, autoTimer=null;
+
+function updateHUD(i){
+  document.getElementById('sceneName').textContent = BEATS[i].label;
+  reel.querySelectorAll('.perf').forEach((p,idx)=>p.classList.toggle('active', idx===i));
+}
+
+/* بيت واحد بس ظاهر في اللحظة الواحدة — أي حاجة اتشرحت قبل كدا لازم تختفي
+   قبل ما نكمل، عشان يفضل حاسس إنه كادر واحد بيتغيّر مش لوحة بتتكوّم */
+function hideOtherBeats(currentIdx){
+  BEATS.forEach((b,idx)=>{
+    if(idx===currentIdx || !b.ids) return;
+    b.ids.forEach(id=>{
+      const node = document.getElementById(id);
+      if(node) gsap.to(node, {opacity:0, duration:.35, overwrite:'auto'});
+    });
+  });
+}
+
+function goTo(i){
+  if(i<0||i>=N||i===current) return;
+  current = i;
+  const beat = BEATS[i];
+  updateHUD(i);
+  hideOtherBeats(i);
+  if(beat.id !== 'closing') gsap.set('#ctaOverlay', {opacity:0});
+
+  gsap.to(annoLayer, {opacity:0, duration:.2, onComplete:()=>{
+    clearAnno();
+    annoLayer.appendChild(defs);
+    annoLayer.style.opacity = 1;
+
+    if(beat.custom){
+      beat.run(()=>{ if(autoplay) queueNext(); });
+      return;
+    }
+
+    const rect = beat.focus();
+    let revealStarted = false;
+    const startReveal = ()=>{
+      if(revealStarted) return;
+      revealStarted = true;
+      const tl = gsap.timeline();
+      beat.reveal(tl);
+      if(autoplay) queueNext();
+    };
+    cameraTo(rect, 1.25, startReveal);
+  }});
+}
+
+function queueNext(){
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(()=>{ if(autoplay) goTo(Math.min(current+1,N-1)); }, 2600);
+}
+
+document.getElementById('nextBtn').addEventListener('click', ()=>goTo(current+1));
+document.getElementById('prevBtn').addEventListener('click', ()=>goTo(current-1));
+document.getElementById('playBtn').addEventListener('click', (e)=>{
+  autoplay = !autoplay;
+  e.target.textContent = autoplay ? '❚❚' : '▶';
+  if(autoplay) queueNext(); else clearTimeout(autoTimer);
+});
+document.getElementById('ctaBtn').addEventListener('click', ()=>goTo(0));
+
+window.addEventListener('resize', ()=>{ if(current>=0) cameraTo(BEATS[current].focus(), 0); });
+
+goTo(0);
+</script>
+</body>
+</html>
