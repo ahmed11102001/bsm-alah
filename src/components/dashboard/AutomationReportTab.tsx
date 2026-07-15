@@ -242,7 +242,6 @@ export default function AutomationReportTab() {
   const [data, setData] = useState<AutomationReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [selectedError, setSelectedError] = useState<ErrorLogItem | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -266,14 +265,8 @@ export default function AutomationReportTab() {
   const rules = data?.rules ?? [];
 
   const filteredRules = useMemo(() => {
-    let result = [...rules];
-    if (selectedFilter === "active") result = result.filter((r) => r.isEnabled);
-    if (selectedFilter === "stopped") result = result.filter((r) => !r.isEnabled);
-    if (selectedFilter === "error") result = result.filter((r) => r.hasError);
-    if (selectedFilter !== "all" && !["active", "stopped", "error"].includes(selectedFilter))
-      result = result.filter((r) => r.type === selectedFilter);
-    return result;
-  }, [selectedFilter, rules]);
+    return [...rules];
+  }, [rules]);
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -307,31 +300,8 @@ export default function AutomationReportTab() {
   return (
     <div className="space-y-6">
       {/* ── Filters + Refresh ───────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
-        {[
-          { key: "all", label: t.filterAll },
-          { key: "AI Agent", label: t.filterAi },
-          { key: "Smart Follow-up", label: t.filterSmart },
-          { key: "Keyword Replies", label: t.filterKeyword },
-          { key: "Welcome Messages", label: t.filterWelcome },
-          { key: "Scheduled Automations", label: t.filterScheduled },
-          { key: "Time-based Automations", label: t.filterTime },
-          { key: "Store Automation", label: t.filterStore },
-          { key: "active", label: t.filterActive },
-          { key: "stopped", label: t.filterStopped },
-          { key: "error", label: t.filterError },
-        ].map((item) => (
-          <Button
-            key={item.key}
-            variant={selectedFilter === item.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedFilter(item.key)}
-            className="rounded-full"
-          >
-            {item.label}
-          </Button>
-        ))}
-        <Button variant="ghost" size="sm" onClick={fetchData} className="ml-auto">
+      <div className="flex items-center justify-end">
+        <Button variant="ghost" size="sm" onClick={fetchData}>
           <RefreshCw className="w-4 h-4" />
         </Button>
       </div>
