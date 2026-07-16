@@ -32,7 +32,7 @@ import {
   X,
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
 } from "lucide-react";
-import SmartFollowUpTab from "./SmartFollowUpTab";
+import SmartFollowUpTab from "@/components/dashboard/SmartFollowUpTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AutomationRule {

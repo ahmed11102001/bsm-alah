@@ -32,13 +32,13 @@ import {
   Lock, Wifi, RefreshCw, Star, Sun, Moon, Monitor, ShoppingBag,
   Languages, Bot, Sparkles, UserCheck,
 } from "lucide-react";
-import Contacts from "@/components/dashboard/Contacts";
-import Templates from "@/components/dashboard/Templates";
-import Campaigns from "@/components/dashboard/Campaigns";
-import Reports from "@/components/dashboard/Reports";
-import Automation from "@/components/dashboard/Automation";
-import API from "@/components/dashboard/API";
-import Store from "@/components/dashboard/store";
+import ContactsPage from "@/app/dashboard/contacts/page";
+import TemplatesPage from "@/app/dashboard/templates/page";
+import CampaignsPage from "@/app/dashboard/campaigns/page";
+import Reports from "@/app/dashboard/Reports/page";
+import Automation from "@/app/dashboard/Automation/page";
+import API from "@/app/dashboard/API/page";
+import Store from "@/app/dashboard/store/page";
 import AdminPage from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanGate from "@/components/dashboard/PlanGate";
@@ -1214,11 +1214,11 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
         ? <HomeDashboard data={dashData} onCreateCampaign={() => setActiveSection("campaigns")} onOpenSettings={openSettings} campaignAtLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />
         : <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>;
       case "chat": return <ChatPage />;
-      case "contacts": return <Contacts />;
+      case "contacts": return <ContactsPage />;
       case "team":
         return <TeamPage canAddMembers={canTeam} atLimit={teamAtMax} />;
-      case "templates": return <Templates />;
-      case "campaigns": return <Campaigns atLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />;
+      case "templates": return <TemplatesPage />;
+      case "campaigns": return <CampaignsPage atLimit={campaignAtMax} whatsappConnected={hasMetaConnection} />;
       case "reports":
         return (
           <PlanGate allowed={true} featureName="التقارير المتقدمة" requiredPlan="Professional">
@@ -1411,6 +1411,7 @@ function DashboardInner({ onLogout }: { onLogout: () => void }) {
           <div className="flex-1 hidden lg:block" />
           
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+          
           </div>
 
           <div className="flex items-center gap-2">
