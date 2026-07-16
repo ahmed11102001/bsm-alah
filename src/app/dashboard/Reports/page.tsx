@@ -29,8 +29,8 @@ import {
   Bot,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-import AutomationReportTab from "@/components/dashboard/AutomationReportTab";
-import CostReportTab       from "@/components/dashboard/CostReportTab";
+import AutomationReportTab from "@/app/dashboard/Reports/AutomationReport/page";
+import CostReportTab       from "@/app/dashboard/Reports/CostReport/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Overview {
