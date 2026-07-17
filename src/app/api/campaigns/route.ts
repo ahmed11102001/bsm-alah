@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "مستخدم غير موجود" }, { status: 401 });
       // نظّف الـ internal fields قبل ما نمرر الـ body
       const { _mcpInternal: _, _mcpOwnerId: __, ...cleanBody } = body;
-      return handleCreate(mcpUserId, cleanBody);
+      return await handleCreate(mcpUserId, cleanBody);
     }
 
     const session = await getServerSession(authOptions);
@@ -154,9 +154,9 @@ export async function POST(req: NextRequest) {
     const userId = resolveUserId(session);
 
     if (body._action === "repeat" && body.campaignId)
-      return handleRepeat(userId, body.campaignId);
+      return await handleRepeat(userId, body.campaignId);
 
-    return handleCreate(userId, body);
+    return await handleCreate(userId, body);
   } catch (err: any) {
     console.error("POST /api/campaigns:", err);
     return NextResponse.json({ error: err.message ?? "خطأ في السيرفر" }, { status: 500 });
