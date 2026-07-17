@@ -36,7 +36,7 @@ describe("Integration: Store Automation Idempotency (Real DB)", () => {
       data: {
         userId: testUserId,
         phoneNumberId: "12345",
-        wabaId: "67890",
+        wabaId: `waba-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         accessToken: "encrypted_token", // In reality this would be encrypted, but executeStoreAutomationSend decrypts it... wait, crypto decrypt will fail if not real!
       },
     });

@@ -91,7 +91,7 @@ export async function executeStoreAutomationSend(
   let claimedShipped = false;
   if (automationType === "order_shipped" && storeOrderId) {
     const claim = await prisma.storeOrder.updateMany({
-      where: { id: storeOrderId, shippedMessageId: null },
+      where: { id: storeOrderId, shippedAt: null, shippedMessageId: null },
       data: { shippedAt: new Date() },
     });
     claimedShipped = claim.count === 1;
