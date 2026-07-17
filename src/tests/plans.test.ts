@@ -68,8 +68,8 @@ describe("PLANS — consistency checks", () => {
     expect(PLANS.free.scheduledCampaigns).toBe(false);
   });
 
-  it("pro مش عندها apiAccess", () => {
-    expect(PLANS.pro.apiAccess).toBe(false);
+  it("pro عندها apiAccess (وصول Claude MCP)", () => {
+    expect(PLANS.pro.apiAccess).toBe(true);
   });
 });
 
@@ -97,7 +97,7 @@ describe("FEATURE_REQUIRED_PLAN", () => {
     expect(FEATURE_REQUIRED_PLAN.storeIntegration).toBe("pro");
   });
 
-  it("apiAccess بيحتاج enterprise", () => {
-    expect(FEATURE_REQUIRED_PLAN.apiAccess).toBe("enterprise");
+  it("apiAccess بيحتاج pro كحد أدنى", () => {
+    expect(FEATURE_REQUIRED_PLAN.apiAccess).toBe("pro");
   });
 });

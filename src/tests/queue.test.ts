@@ -23,7 +23,7 @@ const mockPrisma = {
   whatsAppAccount: { findMany: vi.fn(), update: vi.fn() },
   messageQueue:    { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), update: vi.fn(), count: vi.fn(), createMany: vi.fn(), create: vi.fn() },
   campaign:        { update: vi.fn(), findMany: vi.fn() },
-  message:         { create: vi.fn(), update: vi.fn() },
+  message:         { create: vi.fn(), update: vi.fn(), upsert: vi.fn() },
   contact:         { findFirst: vi.fn(), upsert: vi.fn(), update: vi.fn() },
   subscription:    { findUnique: vi.fn(), update: vi.fn() },
   $transaction:    vi.fn(),
@@ -94,6 +94,7 @@ beforeEach(() => {
   mockPrisma.campaign.update.mockResolvedValue({ queuedCount: 0, status: "running" });
   mockPrisma.message.create.mockResolvedValue({ id: "msg_1" });
   mockPrisma.message.update.mockResolvedValue({});
+  mockPrisma.message.upsert.mockResolvedValue({ id: "msg_1" });
   mockPrisma.contact.findFirst.mockResolvedValue({ id: "contact_1" });
   mockPrisma.contact.upsert.mockResolvedValue({ id: "contact_1" });
   mockPrisma.contact.update.mockResolvedValue({});

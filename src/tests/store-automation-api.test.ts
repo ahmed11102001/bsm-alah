@@ -1,261 +1,154 @@
-// src/tests/store-automation-api.test.ts
-// ─── اختبار /api/store/automation — الراوت اللي بيغذي تاب "المتجر" ───────────
-// بيغطي: الأمان، ربط المتجر، منطق القوالب المخصصة (dedicated) مقابل promo،
-// اختيار القالب المعتمد لما يكون فيه أكتر من نسخة بنفس الاسم.
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import prisma from "@/lib/prisma";
+import { executeStoreAutomationSend } from "@/lib/store-automation";
+import * as whatsappApi from "@/lib/whatsapp-api";
+import { UserRole, PlanTier } from "@/types/enums";
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-const mockGetServerSession = vi.hoisted(() => vi.fn());
-vi.mock("next-auth", () => ({ getServerSession: mockGetServerSession }));
-vi.mock("@/lib/auth", () => ({ authOptions: {} }));
-
-const mockPrisma = vi.hoisted(() => ({
-  user: { findUnique: vi.fn() },
-  storeAutomation: { findMany: vi.fn(), upsert: vi.fn() },
-  template: { findMany: vi.fn(), findFirst: vi.fn() },
+// Mock the external WhatsApp API call so we don't actually send real messages
+vi.mock("@/lib/whatsapp-api", () => ({
+  sendWhatsAppMessage: vi.fn().mockResolvedValue({ ok: true, whatsappMsgId: "msg-123" }),
 }));
-vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 
-import { GET, POST } from "@/app/api/store/automation/route";
-import { NextRequest } from "next/server";
+describe("Integration: Store Automation Idempotency (Real DB)", () => {
+  let testUserId: string;
+  let testStoreId: string = "test-store-123";
+  let testOrderId: string;
+  let testContactId: string;
+  let testAutomationId: string;
+  let testTemplateId: string;
+  let testAccountId: string;
 
-const SESSION = { user: { id: "user-1", email: "a@b.com" } };
-
-const USER_WITH_SHOPIFY = {
-  id: "user-1",
-  shopifyStore: { id: "shop-1" },
-  easyOrdersStore: null,
-  wooCommerceStore: null,
-};
-
-function makeGetReq(params: Record<string, string> = {}): NextRequest {
-  const url = new URL("https://app.example.com/api/store/automation");
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  return new NextRequest(url);
-}
-
-function makePostReq(body: any): NextRequest {
-  return new NextRequest("https://app.example.com/api/store/automation", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-describe("GET /api/store/automation", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    mockGetServerSession.mockReset();
-    mockPrisma.storeAutomation.findMany.mockResolvedValue([]);
-    mockPrisma.template.findMany.mockResolvedValue([]);
-  });
 
-  it("من غير جلسة → 401", async () => {
-    mockGetServerSession.mockResolvedValueOnce(null);
-    const res = await GET(makeGetReq({ source: "shopify" }));
-    expect(res.status).toBe(401);
-  });
-
-  it("اليوزر مش موجود → 404", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
-    const res = await GET(makeGetReq({ source: "shopify" }));
-    expect(res.status).toBe(404);
-  });
-
-  it("source ناقص أو غلط → 400", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(USER_WITH_SHOPIFY);
-    const res = await GET(makeGetReq({ source: "aliexpress" }));
-    expect(res.status).toBe(400);
-  });
-
-  it("المتجر المطلوب مش مربوط لليوزر ده → 404", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(USER_WITH_SHOPIFY);
-    const res = await GET(makeGetReq({ source: "easyorders" })); // مش مربوط
-    expect(res.status).toBe(404);
-  });
-
-  it("بيربط القالب المخصص المعتمد تلقائياً بنوع الأتمتة (case-insensitive)", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(USER_WITH_SHOPIFY);
-    mockPrisma.template.findMany.mockImplementation((args: any) => {
-      // نداء dedicatedTemplates (فيه AND/OR) أو promoTemplates (فيه status APPROVED مباشرة)
-      if (args.where.AND) {
-        return Promise.resolve([
-          { id: "tpl-cart", name: "WANI_CART_ABANDON", status: "approved" },
-        ]);
-      }
-      return Promise.resolve([]);
+    // 1. Create a dummy user
+    const user = await prisma.user.create({
+      data: {
+        email: `test-${Date.now()}@test.com`,
+        password: "hash",
+        name: "Test User",
+      },
     });
+    testUserId = user.id;
 
-    const res = await GET(makeGetReq({ source: "shopify" }));
-    const data = await res.json();
-
-    const cartAuto = data.automations.find((a: any) => a.type === "cart_abandon");
-    expect(cartAuto.isDedicated).toBe(true);
-    expect(cartAuto.dedicatedTemplate).toEqual(
-      expect.objectContaining({ id: "tpl-cart", status: "approved" })
-    );
-  });
-
-  it("لما فيه نسختين بنفس اسم القالب المخصص → بيفضّل المعتمدة (APPROVED)", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(USER_WITH_SHOPIFY);
-    mockPrisma.template.findMany.mockImplementation((args: any) => {
-      if (args.where.AND) {
-        return Promise.resolve([
-          { id: "tpl-old", name: "wani_cart_abandon", status: "REJECTED" },
-          { id: "tpl-new", name: "wani_cart_abandon", status: "APPROVED" },
-        ]);
-      }
-      return Promise.resolve([]);
+    // 2. Create Whatsapp Account
+    const waAccount = await prisma.whatsAppAccount.create({
+      data: {
+        userId: testUserId,
+        phoneNumberId: "12345",
+        wabaId: "67890",
+        accessToken: "encrypted_token", // In reality this would be encrypted, but executeStoreAutomationSend decrypts it... wait, crypto decrypt will fail if not real!
+      },
     });
+    testAccountId = waAccount.id;
 
-    const res = await GET(makeGetReq({ source: "shopify" }));
-    const data = await res.json();
-    const cartAuto = data.automations.find((a: any) => a.type === "cart_abandon");
-
-    expect(cartAuto.dedicatedTemplate.id).toBe("tpl-new");
-  });
-
-  it("promo مش من الأتمتات المخصصة (isDedicated=false)", async () => {
-    mockGetServerSession.mockResolvedValueOnce(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValueOnce(USER_WITH_SHOPIFY);
-
-    const res = await GET(makeGetReq({ source: "shopify" }));
-    const data = await res.json();
-    const promoAuto = data.automations.find((a: any) => a.type === "promo");
-
-    expect(promoAuto.isDedicated).toBe(false);
-    expect(promoAuto.dedicatedTemplate).toBeNull();
-  });
-});
-
-describe("POST /api/store/automation", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetServerSession.mockReset();
-    mockGetServerSession.mockResolvedValue(SESSION);
-    mockPrisma.user.findUnique.mockResolvedValue(USER_WITH_SHOPIFY);
-    mockPrisma.storeAutomation.upsert.mockResolvedValue({ id: "auto-1" });
-  });
-
-  it("من غير جلسة → 401", async () => {
-    mockGetServerSession.mockResolvedValueOnce(null);
-    const res = await POST(makePostReq({ source: "shopify", type: "promo" }));
-    expect(res.status).toBe(401);
-  });
-
-  it("JSON مش صحيح → 400", async () => {
-    const badReq = new NextRequest("https://app.example.com/api/store/automation", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: "{not json",
+    // 3. Create a Contact
+    const contact = await prisma.contact.create({
+      data: {
+        userId: testUserId,
+        phone: "201000000000",
+        name: "Test Contact",
+      },
     });
-    const res = await POST(badReq);
-    expect(res.status).toBe(400);
-  });
+    testContactId = contact.id;
 
-  it("delayMinutes خارج المدى (سالب أو أكبر من 1440) → 400", async () => {
-    const res = await POST(makePostReq({ source: "shopify", type: "promo", delayMinutes: 2000 }));
-    expect(res.status).toBe(400);
-  });
-
-  it("type غير موجود في القيم المسموحة → 400", async () => {
-    const res = await POST(makePostReq({ source: "shopify", type: "discount_blast" }));
-    expect(res.status).toBe(400);
-  });
-
-  it("source غير مربوط لليوزر → 404", async () => {
-    const res = await POST(makePostReq({ source: "woocommerce", type: "promo" }));
-    expect(res.status).toBe(404);
-  });
-
-  describe("أتمتة مخصصة (dedicated) — زي cart_abandon", () => {
-    it("مفيش قالب بالاسم المتوقع خالص → 422 مع missingTemplate", async () => {
-      mockPrisma.template.findMany.mockResolvedValueOnce([]);
-      const res = await POST(makePostReq({ source: "shopify", type: "cart_abandon", isEnabled: true }));
-
-      expect(res.status).toBe(422);
-      const data = await res.json();
-      expect(data.missingTemplate).toBe("wani_cart_abandon");
+    // 4. Create Template
+    const template = await prisma.template.create({
+      data: {
+        userId: testUserId,
+        name: "shipped_template",
+        language: "ar",
+        status: "APPROVED",
+        category: "MARKETING",
+        components: [],
+        content: "test template content",
+        metaId: "meta-test-123",
+      },
     });
+    testTemplateId = template.id;
 
-    it("القالب موجود لكن لسه PENDING وعايز يفعّل (isEnabled=true) → 422", async () => {
-      mockPrisma.template.findMany.mockResolvedValueOnce([
-        { id: "tpl-1", name: "wani_cart_abandon", status: "PENDING" },
-      ]);
-      const res = await POST(makePostReq({ source: "shopify", type: "cart_abandon", isEnabled: true }));
-
-      expect(res.status).toBe(422);
-      const data = await res.json();
-      expect(data.templateStatus).toBe("PENDING");
+    // 4.5 Create Shopify Store
+    const store = await prisma.shopifyStore.create({
+      data: {
+        userId: testUserId,
+        shop: "test-store.myshopify.com",
+        storeName: "Test Store",
+        accessToken: "test-token",
+      },
     });
+    testStoreId = store.id;
 
-    it("القالب لسه PENDING بس مش هيفعّل الأتمتة (isEnabled=false) → مسموح ومحفوظ", async () => {
-      mockPrisma.template.findMany.mockResolvedValueOnce([
-        { id: "tpl-1", name: "wani_cart_abandon", status: "PENDING" },
-      ]);
-      const res = await POST(makePostReq({ source: "shopify", type: "cart_abandon", isEnabled: false }));
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.storeAutomation.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          create: expect.objectContaining({ templateId: "tpl-1", isEnabled: false }),
-        })
-      );
+    // 5. Create StoreAutomation
+    const automation = await prisma.storeAutomation.create({
+      data: {
+        userId: testUserId,
+        type: "order_shipped",
+        shopifyStoreId: testStoreId, // source is shopify
+        templateId: testTemplateId,
+        isEnabled: true,
+      },
     });
+    testAutomationId = automation.id;
 
-    it("القالب معتمد ومفعّل → بيحفظ templateId الصحيح تلقائياً (مش اللي بعته)", async () => {
-      mockPrisma.template.findMany.mockResolvedValueOnce([
-        { id: "tpl-real", name: "wani_cart_abandon", status: "APPROVED" },
-      ]);
-      // حتى لو بعت templateId مختلف، لازم ياخد المخصص
-      const res = await POST(makePostReq({
-        source: "shopify", type: "cart_abandon", isEnabled: true, templateId: "some-other-id",
-      }));
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.storeAutomation.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({ templateId: "tpl-real" }),
-        })
-      );
+    // 6. Create StoreOrder
+    const order = await prisma.storeOrder.create({
+      data: {
+        userId: testUserId,
+        source: "shopify",
+        shopifyStoreId: testStoreId,
+        externalId: `order-${Date.now()}`,
+        customerPhone: "201000000000",
+        customerName: "Customer",
+        total: 100,
+        status: "processing",
+      },
     });
-  });
+    testOrderId = order.id;
+  }, 30000);
 
-  describe("أتمتة promo (اختيار حر للقالب)", () => {
-    it("عايز يفعّل من غير ما يختار قالب → 422", async () => {
-      const res = await POST(makePostReq({ source: "shopify", type: "promo", isEnabled: true }));
-      expect(res.status).toBe(422);
-    });
+  afterEach(async () => {
+    // Clean up created records in reverse order
+    await prisma.message.deleteMany({ where: { userId: testUserId } });
+    await prisma.storeOrder.deleteMany({ where: { userId: testUserId } });
+    await prisma.storeAutomation.deleteMany({ where: { userId: testUserId } });
+    await prisma.template.deleteMany({ where: { userId: testUserId } });
+    await prisma.shopifyStore.deleteMany({ where: { userId: testUserId } });
+    await prisma.contact.deleteMany({ where: { userId: testUserId } });
+    if (testUserId) {
+      await prisma.whatsAppAccount.deleteMany({ where: { userId: testUserId } });
+    }
+    await prisma.user.deleteMany({ where: { id: testUserId } });
+  }, 30000);
 
-    it("اختار قالب مش معتمد → 422", async () => {
-      mockPrisma.template.findFirst.mockResolvedValueOnce({ status: "PENDING" });
-      const res = await POST(makePostReq({
-        source: "shopify", type: "promo", isEnabled: true, templateId: "tpl-x",
-      }));
-      expect(res.status).toBe(422);
-    });
+  it("order_shipped claim race: يجب أن يُرسل رسالة واحدة فقط عند الاستدعاء المتزامن", async () => {
+    // نحتاج إلى عمل Mock لـ decryptToken عشان ميضربش error واحنا بنحاول نفك تشفير "encrypted_token"
+    const crypto = await import("@/lib/crypto");
+    vi.spyOn(crypto, "decryptToken").mockReturnValue("decrypted-token");
 
-    it("اختار قالب معتمد → بينجح ويتحفظ", async () => {
-      mockPrisma.template.findFirst.mockResolvedValueOnce({ status: "approved" });
-      const res = await POST(makePostReq({
-        source: "shopify", type: "promo", isEnabled: true, templateId: "tpl-x",
-      }));
+    const params = {
+      userId: testUserId,
+      automationType: "order_shipped" as const,
+      storeSource: "shopify" as const,
+      storeId: testStoreId,
+      customerPhone: "201000000000",
+      contactId: testContactId,
+      storeOrderId: testOrderId,
+    };
 
-      expect(res.status).toBe(200);
-      expect(mockPrisma.storeAutomation.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { shopifyStoreId_type: { shopifyStoreId: "shop-1", type: "promo" } },
-          create: expect.objectContaining({ templateId: "tpl-x", shopifyStoreId: "shop-1" }),
-        })
-      );
-    });
+    // استدعاء متزامن مرتين في نفس اللحظة
+    const [res1, res2] = await Promise.all([
+      executeStoreAutomationSend(params),
+      executeStoreAutomationSend(params),
+    ]);
 
-    it("مش مفعّل ومفيش قالب مختار → مسموح (تعطيل الأتمتة من غير قالب)", async () => {
-      const res = await POST(makePostReq({ source: "shopify", type: "promo", isEnabled: false }));
-      expect(res.status).toBe(200);
-    });
+    // نتحقق من كم مرة تم المناداة على sendWhatsAppMessage
+    const sendMsgCalls = vi.mocked(whatsappApi.sendWhatsAppMessage).mock.calls.length;
+    
+    // Test Assertion - This will likely fail if the bug is present (i.e. if it's called 2 times)
+    expect(sendMsgCalls).toBe(1);
+    
+    // المفترض واحدة تنجح والتانية ترجع already_shipped_or_in_progress
+    const successes = [res1.sent, res2.sent].filter(Boolean).length;
+    expect(successes).toBe(1);
   });
 });

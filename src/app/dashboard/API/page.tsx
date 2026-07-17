@@ -368,8 +368,8 @@ function ShopifyContent({
           </div>
           <div>
             <Label className="text-xs dark:text-gray-400">
-              دومين Shopify
-              <span className="text-gray-400 font-normal mr-1">(اختياري — للتحقق)</span>
+              دومين Shopify *
+              <span className="text-gray-400 font-normal mr-1">(بصيغة متجر.myshopify.com)</span>
             </Label>
             <Input
               placeholder="mystore.myshopify.com"
@@ -898,6 +898,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
 
   const handleShConnect = async () => {
     if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
+    if (!shShopDomain.trim()) { toast.error("أدخل دومين Shopify — مطلوب للتحقق من المتجر"); return; }
     setShConnecting(true);
     try {
       const r = await fetch("/api/shopify/install", {
@@ -905,7 +906,7 @@ export default function API({ initialData, canUseStoreIntegrations = true, canUs
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeName: shStoreName.trim(),
-          shopDomain: shShopDomain.trim() || undefined,
+          shopDomain: shShopDomain.trim(),
           accessToken: shAccessToken.trim() || undefined,
         }),
       });

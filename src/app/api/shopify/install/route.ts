@@ -140,28 +140,28 @@ export async function POST(req: NextRequest) {
     if (!storeName?.trim())
       return NextResponse.json({ error: "اسم المتجر مطلوب" }, { status: 400 });
 
-    // ── Normalize الدومين ────────────────────────────────────────────────────
-    let verifiedDomain: string;
+    if (!shopDomain?.trim())
+      return NextResponse.json(
+        { error: "دومين Shopify مطلوب — بصيغة متجر.myshopify.com" },
+        { status: 400 }
+      );
 
-    if (shopDomain?.trim()) {
-      const normalized = normalizeShopDomain(shopDomain);
-      if (!normalized)
-        return NextResponse.json(
-          { error: "الدومين غير صالح — يجب أن يكون بصيغة متجر.myshopify.com" },
-          { status: 400 }
-        );
+    // ── Normalize ويتحقق من الدومين دايماً (مفيش تخمين من اسم المتجر) ────────
+    const normalized = normalizeShopDomain(shopDomain);
+    if (!normalized)
+      return NextResponse.json(
+        { error: "الدومين غير صالح — يجب أن يكون بصيغة متجر.myshopify.com" },
+        { status: 400 }
+      );
 
-      const exists = await verifyShopifyDomain(normalized);
-      if (!exists)
-        return NextResponse.json(
-          { error: `المتجر "${normalized}" غير موجود على Shopify — تحقق من الاسم` },
-          { status: 422 }
-        );
+    const exists = await verifyShopifyDomain(normalized);
+    if (!exists)
+      return NextResponse.json(
+        { error: `المتجر "${normalized}" غير موجود على Shopify — تحقق من الاسم` },
+        { status: 422 }
+      );
 
-      verifiedDomain = normalized;
-    } else {
-      verifiedDomain = `${storeName.trim().toLowerCase().replace(/\s+/g, "-")}.myshopify.com`;
-    }
+    const verifiedDomain: string = normalized;
 
     const dbUser = await prisma.user.findUnique({
       where:  { email: session.user.email },

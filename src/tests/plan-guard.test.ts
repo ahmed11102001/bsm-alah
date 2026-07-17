@@ -298,15 +298,17 @@ describe("checkFeature", () => {
     if (!result.allowed) expect(result.requiredPlan).toBe("enterprise");
   });
 
-  it("apiAccess — enterprise فقط", async () => {
-    for (const plan of ["free", "starter", "pro"] as const) {
+  it("apiAccess — pro وما فوق (starter/free مرفوضين)", async () => {
+    for (const plan of ["free", "starter"] as const) {
       mockPrisma.subscription.findUnique.mockResolvedValue(makeSub(plan));
       const result = await checkFeature("user_1", "apiAccess");
       expect(result.allowed).toBe(false);
     }
-    mockPrisma.subscription.findUnique.mockResolvedValue(makeSub("enterprise"));
-    const result = await checkFeature("user_1", "apiAccess");
-    expect(result.allowed).toBe(true);
+    for (const plan of ["pro", "enterprise"] as const) {
+      mockPrisma.subscription.findUnique.mockResolvedValue(makeSub(plan));
+      const result = await checkFeature("user_1", "apiAccess");
+      expect(result.allowed).toBe(true);
+    }
   });
 
   it("super admin بيعدي الـ feature lock", async () => {
