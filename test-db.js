@@ -1,6 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config({ path: '.env.test' });
 
+// لو DATABASE_URL_TEST مش موجودة، Prisma بيرجع صامت لـ DATABASE_URL العادي
+// (اللي في schema.prisma) بدل ما يفشل — فلازم نوقف إحنا يدويًا هنا.
+if (!process.env.DATABASE_URL_TEST || process.env.DATABASE_URL_TEST.trim() === '') {
+  throw new Error(
+    '[test-db.js] DATABASE_URL_TEST مش موجودة. تأكد إن .env.test موجود وفيه القيمة دي قبل ما تشغل السكريبت ده.'
+  );
+}
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
