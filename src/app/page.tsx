@@ -48,7 +48,7 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, router]);
 
-  if (status === "loading") return <LandingPageSkeleton />;
+  if (status === "loading") return <LandingPageSkeleton lang={lang} />;
   if (session) return null;
 
   return (

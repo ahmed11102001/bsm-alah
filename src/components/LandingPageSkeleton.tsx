@@ -1,10 +1,11 @@
 // ── LandingPageSkeleton ───────────────────────────────────────────────────────
-// بيظهر بدل "جاري التحميل..." — يشبه الـ Hero الحقيقي تماماً
-// بحيث الزائر مش حاسس بفرق بين الـ loading وبداية الصفحة
+// Loading shell for the current Hero layout. Keep this visually aligned with
+// Hero.tsx so the old phone mock never flashes before the page is ready.
+export default function LandingPageSkeleton({ lang = "ar" }: { lang?: "ar" | "en" }) {
+  const isAr = lang === "ar";
 
-export default function LandingPageSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#064e45] via-[#075E54] to-[#0a7a6a] overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#053b32] to-[#0b5c4e] overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
 
       {/* ── Navbar skeleton ── */}
       <div className="fixed top-0 left-0 right-0 z-50 h-16">
@@ -30,18 +31,6 @@ export default function LandingPageSkeleton() {
 
       {/* ── Hero skeleton ── */}
       <div className="relative min-h-screen flex items-center pt-16">
-        {/* grid bg */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: "linear-gradient(white 1px,transparent 1px),linear-gradient(90deg,white 1px,transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
-        {/* glows */}
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#25D366]/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-300/10 rounded-full blur-[80px]" />
-
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-28">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
@@ -66,13 +55,6 @@ export default function LandingPageSkeleton() {
                 <div className="h-4 rounded-full bg-white/8 animate-pulse w-3/4 mx-auto lg:mx-0" style={{ animationDelay: "280ms" }} />
               </div>
 
-              {/* Pills */}
-              <div className="flex flex-wrap gap-2.5 justify-center lg:justify-start pt-1">
-                {[120, 96, 108].map((w, i) => (
-                  <div key={i} className="h-7 rounded-full bg-white/10 animate-pulse" style={{ width: w, animationDelay: `${320 + i * 50}ms` }} />
-                ))}
-              </div>
-
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                 <div className="h-12 rounded-xl bg-[#25D366]/50 animate-pulse w-44" style={{ animationDelay: "440ms" }} />
@@ -87,54 +69,32 @@ export default function LandingPageSkeleton() {
               </div>
             </div>
 
-            {/* Phone skeleton */}
+            {/* Automation Log skeleton — matches the new Hero mock */}
             <div className="flex justify-center lg:block mt-8 lg:mt-0">
-              <div className="relative w-[250px] sm:w-[290px] lg:w-[340px] mx-auto">
-                {/* Glow */}
-                <div className="absolute inset-0 scale-110 bg-[#25D366]/15 rounded-[3rem] blur-2xl" />
-                {/* Frame */}
-                <div className="relative bg-gray-900/80 rounded-[2.5rem] p-2.5 ring-1 ring-white/10 animate-pulse">
-                  <div className="bg-[#ECE5DD]/20 rounded-[2rem] overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-[#075E54]/80 px-4 py-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-white/20" />
-                      <div className="flex-1 space-y-1.5">
-                        <div className="h-3 rounded-full bg-white/20 w-16" />
-                        <div className="h-2.5 rounded-full bg-white/15 w-12" />
-                      </div>
+              <div className="relative w-[320px] sm:w-[420px] lg:w-[500px] mx-auto">
+                <div className="absolute inset-0 scale-105 bg-black/20 rounded-[1.75rem] blur-2xl" />
+                <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden rotate-[-2deg]">
+                  <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-6 w-36 rounded-lg bg-gray-200 animate-pulse" />
+                      <div className="h-5 w-28 rounded-md bg-[#25D366]/20 animate-pulse" />
                     </div>
-                    {/* Chat area */}
-                    <div className="h-[260px] sm:h-[320px] lg:h-[370px] p-4 space-y-4 flex flex-col justify-end">
-                      {/* messages */}
-                      <div className="flex justify-start">
-                        <div className="h-10 rounded-2xl rounded-tl-none bg-white/15 w-3/4 animate-pulse" style={{ animationDelay: "200ms" }} />
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="h-14 rounded-2xl rounded-tr-none bg-[#25D366]/20 w-5/6 animate-pulse" style={{ animationDelay: "350ms" }} />
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="h-10 rounded-2xl rounded-tr-none bg-[#25D366]/20 w-2/3 animate-pulse" style={{ animationDelay: "450ms" }} />
-                      </div>
-                      {/* stats mini card */}
-                      <div className="bg-white/10 rounded-xl p-3 animate-pulse" style={{ animationDelay: "550ms" }}>
-                        <div className="flex gap-3">
-                          <div className="flex-1 h-8 rounded-lg bg-white/10" />
-                          <div className="flex-1 h-8 rounded-lg bg-white/10" />
+                    <div className="h-3 w-40 rounded-full bg-gray-100 animate-pulse" />
+                  </div>
+                  <div className="h-[2px] bg-gray-900 mx-5 sm:mx-6" />
+                  <div className="h-[500px] sm:h-[560px] lg:h-[600px] overflow-hidden px-5 sm:px-6">
+                    {[0, 1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="py-4 border-b border-dashed border-gray-100" style={{ height: 92, animationDelay: `${i * 80}ms` }}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="h-3 w-12 rounded-full bg-gray-100 animate-pulse" />
+                          <div className="h-4 w-16 rounded bg-gray-100 animate-pulse" />
                         </div>
+                        <div className="h-4 w-4/5 rounded-full bg-gray-200 animate-pulse mb-3" />
+                        <div className="h-3 w-3/5 rounded-full bg-gray-100 animate-pulse" />
                       </div>
-                    </div>
-                    {/* Input */}
-                    <div className="bg-white/10 px-3 py-2.5 flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-white/20" />
-                      <div className="flex-1 h-7 rounded-full bg-white/15 animate-pulse" />
-                      <div className="w-8 h-8 rounded-full bg-[#25D366]/40 animate-pulse" />
-                    </div>
+                    ))}
                   </div>
                 </div>
-
-                {/* Floating cards */}
-                <div className="hidden sm:block absolute -top-4 -right-10 lg:-right-14 bg-white/10 rounded-2xl p-3 w-36 h-14 animate-pulse" />
-                <div className="hidden sm:block absolute -bottom-4 -left-10 lg:-left-14 bg-white/10 rounded-2xl p-3 w-36 h-14 animate-pulse" />
               </div>
             </div>
 

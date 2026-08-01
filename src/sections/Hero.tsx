@@ -12,6 +12,17 @@ interface HeroProps { onLoginClick: () => void; lang: Lang; }
 type LogStatus = "ok" | "pending";
 interface LogEvent { time: string; type: string; main: string; action: string; status: LogStatus; }
 
+const ENGLISH_LOG_COPY: Record<string, { main: string; action: string }> = {
+  "10:30": { main: "Customer asked about pricing", action: "AI replied automatically" },
+  "10:31": { main: "Customer confirmed the order", action: "Order #1024 created" },
+  "10:33": { main: "Payment link sent", action: "Waiting for payment" },
+  "10:34": { main: "Payment received", action: "Order confirmed" },
+  "10:42": { main: "Customer did not finish checkout", action: "Follow-up started" },
+  "10:55": { main: "Cart abandoned for one hour", action: "Product reminder sent" },
+  "11:02": { main: "Order confirmed after follow-up", action: "Order #1031 created" },
+  "11:10": { main: "Order ready to ship", action: "Shipping update sent" },
+};
+
 const AUTOMATION_EVENTS: LogEvent[] = [
   { time: "10:30", type: "MESSAGE",   main: "عميل سأل عن السعر",       action: "وني رد تلقائيًا",              status: "ok" },
   { time: "10:31", type: "ORDER",     main: "العميل أكّد الطلب",        action: "تم إنشاء الطلب #1024",         status: "ok" },
@@ -221,12 +232,16 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                             {e.type}
                           </span>
                         </div>
-                        <p className="text-[15px] font-bold text-gray-900 mb-2 leading-snug">{e.main}</p>
+                        <p className="text-[15px] font-bold text-gray-900 mb-2 leading-snug">
+                          {isAr ? e.main : ENGLISH_LOG_COPY[e.time]?.main ?? e.main}
+                        </p>
                         <div className="flex items-center gap-2">
                           <span className={`text-[14px] font-black flex-shrink-0 ${e.status === "ok" ? "text-[#0c6b34]" : "text-gray-300"}`}>
                             {e.status === "ok" ? "✓" : "→"}
                           </span>
-                          <span className="text-[13.5px] text-gray-600 font-semibold">{e.action}</span>
+                          <span className="text-[13.5px] text-gray-600 font-semibold">
+                            {isAr ? e.action : ENGLISH_LOG_COPY[e.time]?.action ?? e.action}
+                          </span>
                         </div>
                       </div>
                     ))}
