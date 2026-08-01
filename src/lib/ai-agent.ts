@@ -373,11 +373,11 @@ function parseAgentJSON(raw: string): AgentResult {
     // ── NEW: extract product_ids (validated, max 3) ──
     let productIds: string[] | undefined;
     if (Array.isArray(parsed.product_ids)) {
-      productIds = parsed.product_ids
+      const ids = parsed.product_ids
         .filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
         .map((id: string) => id.trim())
         .slice(0, 3);
-      if (!productIds.length) productIds = undefined;
+      productIds = ids.length ? ids : undefined;
     }
 
     if (!reply && !offTopic)
