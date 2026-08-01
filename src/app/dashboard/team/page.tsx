@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 
 interface TeamMember {
   id: string;
@@ -19,9 +20,9 @@ interface TeamMember {
 }
 
 const ROLE_CFG = {
-  OWNER:       { icon: ShieldAlert,   pill: "bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-300",  avatar: "from-amber-500  to-amber-600"  },
-  FULL_ACCESS: { icon: ShieldCheck,   pill: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300", avatar: "from-[#075E54] to-[#064944]" },
-  CHAT_ONLY:   { icon: MessageSquare, pill: "bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-300",   avatar: "from-[#075E54] to-[#064944]" },
+  OWNER: { icon: ShieldAlert, pill: "bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-300", avatar: "from-amber-500  to-amber-600" },
+  FULL_ACCESS: { icon: ShieldCheck, pill: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300", avatar: "from-[#075E54] to-[#064944]" },
+  CHAT_ONLY: { icon: MessageSquare, pill: "bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-300", avatar: "from-[#075E54] to-[#064944]" },
 } as const;
 
 function getInitials(name: string | null, email: string) {
@@ -38,7 +39,7 @@ function MemberCard({ member, isSelf, canDelete, copiedId, onDelete, onCopy }: {
 }) {
   const { t } = useLanguage();
   const tm = t.team;
-  const cfg  = ROLE_CFG[member.role] ?? ROLE_CFG.CHAT_ONLY;
+  const cfg = ROLE_CFG[member.role] ?? ROLE_CFG.CHAT_ONLY;
   const Icon = cfg.icon;
   const roleLabel = tm.roles[member.role] ?? member.role;
 
@@ -93,22 +94,17 @@ function MemberCard({ member, isSelf, canDelete, copiedId, onDelete, onCopy }: {
   );
 }
 
-export default function TeamPage({
-  canAddMembers = true,
-  atLimit = false,
-}: {
-  canAddMembers?: boolean;
-  atLimit?: boolean;
-}) {
+export default function TeamPage() {
+  const { canTeam: canAddMembers, teamAtMax: atLimit } = useSubscription();
   const { data: session } = useSession();
   const { t, dir, locale } = useLanguage();
   const router = useRouter();
   const tm = t.team;
 
-  const [members,    setMembers]    = useState<TeamMember[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [copiedId,   setCopiedId]   = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const isOwner = session?.user?.role !== "CHAT_ONLY";
 
@@ -137,7 +133,7 @@ export default function TeamPage({
       const data = await res.json();
       if (res.ok) setMembers(data);
     } catch { toast.error(tm.fetchError); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchTeam(); }, []);
@@ -159,8 +155,8 @@ export default function TeamPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: String(fd.get("email") || ""),
-          name:  String(fd.get("name")  || ""),
-          role:  String(fd.get("role")),
+          name: String(fd.get("name") || ""),
+          role: String(fd.get("role")),
         }),
       });
       const data = await res.json();
@@ -169,7 +165,7 @@ export default function TeamPage({
       setMembers(prev => [data, ...prev]);
       (e.target as HTMLFormElement).reset();
     } catch { toast.error(tm.addForm.connError); }
-    finally  { setSubmitting(false); }
+    finally { setSubmitting(false); }
   };
 
   const deleteMember = async (id: string) => {
@@ -278,7 +274,7 @@ export default function TeamPage({
         >
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
             <UserPlus className="w-3.5 h-3.5" />
-            {tm.addForm.title} 
+            {tm.addForm.title}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {locale === "ar" ? "متاحة من باقة Starter فما فوق" : "Available on Starter plan and above"}
@@ -318,4 +314,3 @@ export default function TeamPage({
     </div>
   );
 }
-

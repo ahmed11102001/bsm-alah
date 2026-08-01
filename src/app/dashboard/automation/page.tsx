@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -196,7 +197,8 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, lang }
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function Automation({ planTier = "free" }: { planTier?: string }) {
+export default function Automation() {
+  const { planTier } = useSubscription();
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
   const [activeTab, setActiveTab] = useState<"automation" | "ai">("automation");

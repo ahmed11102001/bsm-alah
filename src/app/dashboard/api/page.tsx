@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 
 type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude";
@@ -672,7 +673,9 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function API({ initialData, canUseStoreIntegrations = true, canUseClaude = true }: { initialData?: any; canUseStoreIntegrations?: boolean; canUseClaude?: boolean }) {
+export default function API() {
+  const { dashData, canStore: canUseStoreIntegrations, canUseClaude } = useSubscription();
+  const initialData = dashData?.whatsapp;
   const { t, dir, locale } = useLanguage();
   const api = t.api;
 

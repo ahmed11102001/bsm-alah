@@ -29,8 +29,9 @@ import {
   Bot,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 import AutomationReportTab from "@/app/dashboard/reports/AutomationReport/page";
-import CostReportTab       from "@/app/dashboard/reports/CostReport/page";
+import CostReportTab from "@/app/dashboard/reports/CostReport/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Overview {
@@ -78,8 +79,8 @@ interface TopCustomerRow {
   phone: string; name: string | null; ordersCount: number; totalSpent: number; currency: string;
 }
 interface OrderStatusRow { status: string; count: number; revenue: number; }
-interface DailyTrendRow  { day: string; orders: number; revenue: number; }
-interface StoreInfoRow   { source: string; name: string; connectedAt: string | null; isActive: boolean; }
+interface DailyTrendRow { day: string; orders: number; revenue: number; }
+interface StoreInfoRow { source: string; name: string; connectedAt: string | null; isActive: boolean; }
 interface ConfirmedOrderRow {
   id: string; orderNumber: string | null; externalId: string;
   customerName: string | null; customerPhone: string;
@@ -98,11 +99,11 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const MONTH_AGO = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
 
 const statusColor: Record<string, string> = {
-  sent:      "bg-blue-100 text-blue-700",
+  sent: "bg-blue-100 text-blue-700",
   delivered: "bg-green-100 text-green-700",
-  read:      "bg-purple-100 text-purple-700",
-  failed:    "bg-red-100 text-red-700",
-  pending:   "bg-gray-100 text-gray-600",
+  read: "bg-purple-100 text-purple-700",
+  failed: "bg-red-100 text-red-700",
+  pending: "bg-gray-100 text-gray-600",
 };
 
 const statusLabels: Record<"ar" | "en", Record<string, string>> = {
@@ -502,41 +503,42 @@ function printPage() {
   window.print();
 }
 // ─── Main Component ────────────────────────────────────────────────────────────
-export default function Reports({ planTier = "free" }: { planTier?: string }) {
+export default function Reports() {
+  const { planTier } = useSubscription();
   const { locale } = useLanguage();
   const numberLocale = locale === "ar" ? "ar-EG" : "en-US";
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
 
   // ── Filters ─────────────────────────────────────────────────────
-  const [from, setFrom]   = useState(MONTH_AGO);
-  const [to,   setTo]     = useState(TODAY);
-  const [tab,  setTab]    = useState("overview");
+  const [from, setFrom] = useState(MONTH_AGO);
+  const [to, setTo] = useState(TODAY);
+  const [tab, setTab] = useState("overview");
 
   // ── Overview ─────────────────────────────────────────────────────
-  const [overview, setOverview]       = useState<Overview | null>(null);
-  const [loadingOverview, setLO]       = useState(false);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [loadingOverview, setLO] = useState(false);
 
   // ── Customers ────────────────────────────────────────────────────
   const [custSegment, setCustSegment] = useState("engaged");
-  const [customers, setCustomers]     = useState<CustomerRow[]>([]);
-  const [loadingCust, setLC]          = useState(false);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [loadingCust, setLC] = useState(false);
 
   // ── Team ─────────────────────────────────────────────────────────
-  const [team, setTeam]               = useState<TeamRow[]>([]);
-  const [loadingTeam, setLT]          = useState(false);
+  const [team, setTeam] = useState<TeamRow[]>([]);
+  const [loadingTeam, setLT] = useState(false);
 
   // ── Logs ─────────────────────────────────────────────────────────
-  const [logs, setLogs]               = useState<LogsData | null>(null);
-  const [loadingLogs, setLL]          = useState(false);
-  const [logPage, setLogPage]         = useState(1);
-  const [logStatus, setLogStatus]     = useState("all");
-  const [logSearch, setLogSearch]     = useState("");
-  const [logType,   setLogType]       = useState("all");
+  const [logs, setLogs] = useState<LogsData | null>(null);
+  const [loadingLogs, setLL] = useState(false);
+  const [logPage, setLogPage] = useState(1);
+  const [logStatus, setLogStatus] = useState("all");
+  const [logSearch, setLogSearch] = useState("");
+  const [logType, setLogType] = useState("all");
 
   // ── Store Report ──────────────────────────────────────────────────
   const [storeReport, setStoreReport] = useState<StoreReportData | null>(null);
-  const [loadingStore, setLS]         = useState(false);
-  const [ordersPage, setOrdersPage]   = useState(1);
+  const [loadingStore, setLS] = useState(false);
+  const [ordersPage, setOrdersPage] = useState(1);
   const [orderFilter, setOrderFilter] = useState("all");
 
   // ── Fetchers ─────────────────────────────────────────────────────
@@ -570,8 +572,8 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
       const params = new URLSearchParams({
         type: "logs", from, to, page: String(page), limit: "50",
         ...(logStatus !== "all" && { status: logStatus }),
-        ...(logType   !== "all" && { msgType: logType }),
-        ...(logSearch             && { search: logSearch }),
+        ...(logType !== "all" && { msgType: logType }),
+        ...(logSearch && { search: logSearch }),
       });
       const r = await fetch(`/api/reports?${params}`);
       setLogs(await r.json());
@@ -593,12 +595,12 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
 
   // Initial load per tab
   useEffect(() => {
-    if (tab === "overview")  fetchOverview();
+    if (tab === "overview") fetchOverview();
     if (tab === "customers") fetchCustomers();
-    if (tab === "team")      fetchTeam();
-    if (tab === "logs")      fetchLogs(1);
-    if (tab === "store")     fetchStoreReport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (tab === "team") fetchTeam();
+    if (tab === "logs") fetchLogs(1);
+    if (tab === "store") fetchStoreReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, ordersPage, orderFilter]);
 
   // ── Chart colors ─────────────────────────────────────────────────
@@ -607,13 +609,13 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
     const map = new Map(overview.hourly.map((h) => [h.hour, h.cnt]));
     return Array.from({ length: 24 }, (_, i) => ({
       hour: HOURS[i],
-      cnt:  map.get(i) ?? 0,
+      cnt: map.get(i) ?? 0,
     }));
   }, [overview]);
 
   const maxHour = useMemo(() =>
     hourlyData.reduce((a, b) => (b.cnt > a.cnt ? b : a), { hour: "—", cnt: 0 }),
-  [hourlyData]);
+    [hourlyData]);
 
   // ─────────────────────────────────────────────────────────────────
   return (
@@ -642,14 +644,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                 exportExcel(team, locale === "ar" ? "تقرير-الفريق" : "team-report");
               else if (tab === "logs" && logs)
                 exportExcel(logs.messages.map((m) => ({
-                  الهاتف:    m.contact?.phone,
-                  العميل:    m.contact?.name ?? "—",
-                  الحالة:    getStatusLabel(locale, m.status),
-                  النوع:     getTypeLabel(locale, m.type),
-                  الاتجاه:   getDirLabel(locale, m.direction),
-                  الحملة:    m.campaign?.name ?? "—",
-                  المستخدم:  m.user?.name ?? m.user?.email ?? "—",
-                  التاريخ:   formatDate(m.createdAt, dateLocale),
+                  الهاتف: m.contact?.phone,
+                  العميل: m.contact?.name ?? "—",
+                  الحالة: getStatusLabel(locale, m.status),
+                  النوع: getTypeLabel(locale, m.type),
+                  الاتجاه: getDirLabel(locale, m.direction),
+                  الحملة: m.campaign?.name ?? "—",
+                  المستخدم: m.user?.name ?? m.user?.email ?? "—",
+                  التاريخ: formatDate(m.createdAt, dateLocale),
                 })), locale === "ar" ? "سجل-النشاط" : "activity-log");
             }}
           >
@@ -682,15 +684,15 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             size="sm"
             className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
             onClick={() => {
-              if (tab === "overview")  fetchOverview();
+              if (tab === "overview") fetchOverview();
               if (tab === "customers") fetchCustomers();
-              if (tab === "logs")      fetchLogs(1);
+              if (tab === "logs") fetchLogs(1);
             }}
           >
             <RefreshCw className="w-3.5 h-3.5" /> {pageText[locale].refresh}
           </Button>
           {/* Quick ranges */}
-          {pageText[locale].quickRanges.map((r: {label: string; days: number}) => (
+          {pageText[locale].quickRanges.map((r: { label: string; days: number }) => (
             <button
               key={r.days}
               className="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 hover:underline"
@@ -710,17 +712,17 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
         <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl h-auto flex-wrap gap-1">
           {[
             // free+
-            { value: "overview",   label: pageText[locale].tabs.overview,    icon: <BarChart3 className="w-4 h-4" />,    minPlan: "free"       },
+            { value: "overview", label: pageText[locale].tabs.overview, icon: <BarChart3 className="w-4 h-4" />, minPlan: "free" },
             // starter+
-            { value: "customers",  label: pageText[locale].tabs.customers,       icon: <Users className="w-4 h-4" />,        minPlan: "starter"    },
-            { value: "team",       label: pageText[locale].tabs.team,        icon: <Shield className="w-4 h-4" />,       minPlan: "starter"    },
+            { value: "customers", label: pageText[locale].tabs.customers, icon: <Users className="w-4 h-4" />, minPlan: "starter" },
+            { value: "team", label: pageText[locale].tabs.team, icon: <Shield className="w-4 h-4" />, minPlan: "starter" },
             // pro+
-            { value: "logs",       label: pageText[locale].tabs.logs,   icon: <Activity className="w-4 h-4" />,     minPlan: "pro"        },
-            { value: "store",      label: pageText[locale].tabs.store,  icon: <ShoppingBag className="w-4 h-4" />,  minPlan: "pro"        },
-            { value: "automation", label: pageText[locale].tabs.automation, icon: <Bot className="w-4 h-4" />,          minPlan: "pro"        },
-            { value: "cost",       label: pageText[locale].tabs.cost, icon: <DollarSign className="w-4 h-4" />, minPlan: "starter"    },
+            { value: "logs", label: pageText[locale].tabs.logs, icon: <Activity className="w-4 h-4" />, minPlan: "pro" },
+            { value: "store", label: pageText[locale].tabs.store, icon: <ShoppingBag className="w-4 h-4" />, minPlan: "pro" },
+            { value: "automation", label: pageText[locale].tabs.automation, icon: <Bot className="w-4 h-4" />, minPlan: "pro" },
+            { value: "cost", label: pageText[locale].tabs.cost, icon: <DollarSign className="w-4 h-4" />, minPlan: "starter" },
           ].map((t) => {
-            const order = ["free","starter","pro","enterprise"];
+            const order = ["free", "starter", "pro", "enterprise"];
             const allowed = order.indexOf(planTier) >= order.indexOf(t.minPlan);
             return (
               <TabsTrigger
@@ -747,14 +749,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             <div className="space-y-6">
               {/* KPI cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label={locale === "ar" ? "إجمالي المرسل" : "Total Sent"}   value={overview.totals.sent}         sub={locale === "ar" ? `نسبة وصول ${overview.totals.deliveryRate}%` : `Delivery rate ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />}   color="bg-blue-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "تم التوصيل" : "Delivered"}       value={overview.totals.delivered}    sub={locale === "ar" ? `${overview.totals.deliveryRate}% من المرسل` : `${overview.totals.deliveryRate}% of sent`}   icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "تم القراءة" : "Read"}       value={overview.totals.read}         sub={locale === "ar" ? `${overview.totals.readRate}% قرأوا` : `${overview.totals.readRate}% read`}            icon={<Eye className="w-5 h-5 text-purple-600" />}  color="bg-purple-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "فشل الإرسال" : "Failed"}      value={overview.totals.failed}       icon={<XCircle className="w-5 h-5 text-red-500" />}   color="bg-red-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "رسائل واردة" : "Inbound Messages"}      value={overview.totals.inbound}      sub={locale === "ar" ? `معدل رد ${overview.totals.replyRate}%` : `Reply rate ${overview.totals.replyRate}%`}          icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "عملاء جدد" : "New Contacts"}        value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "أفضل وقت للإرسال" : "Best Send Time"} value={maxHour.hour}                sub={locale === "ar" ? `${maxHour.cnt} رسالة` : `${maxHour.cnt} messages`}                          icon={<Clock className="w-5 h-5 text-indigo-600" />}  color="bg-indigo-50" locale={locale} />
-                <StatCard label={locale === "ar" ? "معدل الردود" : "Reply Rate"}      value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "إجمالي المرسل" : "Total Sent"} value={overview.totals.sent} sub={locale === "ar" ? `نسبة وصول ${overview.totals.deliveryRate}%` : `Delivery rate ${overview.totals.deliveryRate}%`} icon={<Send className="w-5 h-5 text-blue-600" />} color="bg-blue-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "تم التوصيل" : "Delivered"} value={overview.totals.delivered} sub={locale === "ar" ? `${overview.totals.deliveryRate}% من المرسل` : `${overview.totals.deliveryRate}% of sent`} icon={<CheckCircle className="w-5 h-5 text-green-600" />} color="bg-green-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "تم القراءة" : "Read"} value={overview.totals.read} sub={locale === "ar" ? `${overview.totals.readRate}% قرأوا` : `${overview.totals.readRate}% read`} icon={<Eye className="w-5 h-5 text-purple-600" />} color="bg-purple-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "فشل الإرسال" : "Failed"} value={overview.totals.failed} icon={<XCircle className="w-5 h-5 text-red-500" />} color="bg-red-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "رسائل واردة" : "Inbound Messages"} value={overview.totals.inbound} sub={locale === "ar" ? `معدل رد ${overview.totals.replyRate}%` : `Reply rate ${overview.totals.replyRate}%`} icon={<MessageSquare className="w-5 h-5 text-teal-600" />} color="bg-teal-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "عملاء جدد" : "New Contacts"} value={overview.totals.uniqueContacts} icon={<Users className="w-5 h-5 text-orange-500" />} color="bg-orange-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "أفضل وقت للإرسال" : "Best Send Time"} value={maxHour.hour} sub={locale === "ar" ? `${maxHour.cnt} رسالة` : `${maxHour.cnt} messages`} icon={<Clock className="w-5 h-5 text-indigo-600" />} color="bg-indigo-50" locale={locale} />
+                <StatCard label={locale === "ar" ? "معدل الردود" : "Reply Rate"} value={`${overview.totals.replyRate}%`} icon={<TrendingUp className="w-5 h-5 text-cyan-600" />} color="bg-cyan-50" locale={locale} />
               </div>
 
               {/* Daily chart */}
@@ -776,7 +778,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                         ]}
                         labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
                       />
-                      <Line type="monotone" dataKey="sent"     stroke="#22c55e" strokeWidth={2} dot={false} name="sent" />
+                      <Line type="monotone" dataKey="sent" stroke="#22c55e" strokeWidth={2} dot={false} name="sent" />
                       <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" />
                     </LineChart>
                   </ResponsiveContainer>
@@ -800,13 +802,13 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                         <XAxis dataKey="hour" tick={{ fontSize: 10 }}
                           interval={3}
                           tickFormatter={(v) => v.slice(0, 2)} />
-                         <YAxis tick={{ fontSize: 10 }} />
-                         <Tooltip
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip
                           formatter={(value: any, name: any) => [
-                         value != null ? formatNumber(Number(value), numberLocale) : "0",
-                         name === "sent" ? pageText[locale].charts.sent : pageText[locale].charts.received
-                         ]}
-/>
+                            value != null ? formatNumber(Number(value), numberLocale) : "0",
+                            name === "sent" ? pageText[locale].charts.sent : pageText[locale].charts.received
+                          ]}
+                        />
                         <Bar dataKey="cnt" radius={[3, 3, 0, 0]}>
                           {hourlyData.map((entry, i) => (
                             <Cell
@@ -859,11 +861,11 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
             {/* Segment selector */}
             <div className="flex flex-wrap gap-2">
               {[
-                { value: "engaged",    label: pageText[locale].customers.segments.engaged,     icon: <TrendingUp className="w-4 h-4" /> },
-                { value: "no-response",label: pageText[locale].customers.segments.noResponse,            icon: <AlertCircle className="w-4 h-4" /> },
-                { value: "new",        label: pageText[locale].customers.segments.new,       icon: <UserCheck className="w-4 h-4" /> },
-                { value: "archived",   label: pageText[locale].customers.segments.archived, icon: <Archive className="w-4 h-4" /> },
-                { value: "followup",   label: pageText[locale].customers.segments.followup,      icon: <RefreshCw className="w-4 h-4" /> },
+                { value: "engaged", label: pageText[locale].customers.segments.engaged, icon: <TrendingUp className="w-4 h-4" /> },
+                { value: "no-response", label: pageText[locale].customers.segments.noResponse, icon: <AlertCircle className="w-4 h-4" /> },
+                { value: "new", label: pageText[locale].customers.segments.new, icon: <UserCheck className="w-4 h-4" /> },
+                { value: "archived", label: pageText[locale].customers.segments.archived, icon: <Archive className="w-4 h-4" /> },
+                { value: "followup", label: pageText[locale].customers.segments.followup, icon: <RefreshCw className="w-4 h-4" /> },
               ].map((s) => (
                 <button
                   key={s.value}
@@ -871,11 +873,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                     setCustSegment(s.value);
                     fetchCustomers(s.value);
                   }}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
-                    custSegment === s.value
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${custSegment === s.value
                       ? "border-green-500 bg-green-50 text-green-700"
                       : "border-gray-200 text-gray-600 hover:border-gray-300 bg-white"
-                  }`}
+                    }`}
                 >
                   {s.icon} {s.label}
                 </button>
@@ -955,13 +956,13 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                       <XAxis type="number" tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={100} />
-                       <Tooltip
-                       formatter={(value: any, name: any) => [
-                       value != null ? Number(value).toLocaleString(numberLocale) : "0",
-                       name === "sent" ? pageText[locale].charts.teamSent : pageText[locale].charts.teamReplied
-                       ]}
-/>
-                      <Bar dataKey="sent"    fill="#22c55e" radius={[0, 3, 3, 0]} name="sent"    />
+                      <Tooltip
+                        formatter={(value: any, name: any) => [
+                          value != null ? Number(value).toLocaleString(numberLocale) : "0",
+                          name === "sent" ? pageText[locale].charts.teamSent : pageText[locale].charts.teamReplied
+                        ]}
+                      />
+                      <Bar dataKey="sent" fill="#22c55e" radius={[0, 3, 3, 0]} name="sent" />
                       <Bar dataKey="replied" fill="#3b82f6" radius={[0, 3, 3, 0]} name="replied" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -992,11 +993,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                           <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                             <td className="py-3 px-4 font-medium text-gray-800">{m.name}</td>
                             <td className="py-3 px-4">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                m.role === "OWNER"       ? "bg-purple-100 text-purple-700" :
-                                m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700"    :
-                                                           "bg-gray-100 text-gray-600"
-                              }`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.role === "OWNER" ? "bg-purple-100 text-purple-700" :
+                                  m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700" :
+                                    "bg-gray-100 text-gray-600"
+                                }`}>
                                 {m.role === "OWNER" ? (locale === "ar" ? "مالك" : "Owner") : m.role === "FULL_ACCESS" ? (locale === "ar" ? "وصول كامل" : "Full Access") : (locale === "ar" ? "دردشة فقط" : "Chat Only")}
                               </span>
                             </td>
@@ -1180,16 +1180,14 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                       className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm text-sm">
                       <Store className="w-4 h-4 text-green-500" />
                       <span className="font-medium text-gray-700">{s.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                        s.source === "shopify"
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.source === "shopify"
                           ? "bg-green-50 text-green-600"
                           : "bg-blue-50 text-blue-600"
-                      }`}>
+                        }`}>
                         {s.source === "shopify" ? "Shopify" : "EasyOrders"}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        s.isActive ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${s.isActive ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400"
+                        }`}>
                         {s.isActive ? pageText[locale].store.active : pageText[locale].store.inactive}
                       </span>
                     </div>
@@ -1320,9 +1318,9 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                           const total = storeReport.summary.totalOrders || 1;
                           const pct = Math.round((s.count / total) * 100);
                           const colors: Record<string, string> = {
-                            pending:   "bg-yellow-400",
+                            pending: "bg-yellow-400",
                             fulfilled: "bg-green-400",
-                            shipped:   "bg-blue-400",
+                            shipped: "bg-blue-400",
                             cancelled: "bg-red-400",
                           };
                           const labels: Record<string, string> = {
@@ -1378,7 +1376,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                             }}
                             labelFormatter={(l) => `${pageText[locale].charts.dayLabel}: ${l}`}
                           />
-                          <Line type="monotone" dataKey="orders"  stroke="#3b82f6" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={2} dot={false} />
                           <Line type="monotone" dataKey="revenue" stroke="#25D366" strokeWidth={2} dot={false} />
                         </LineChart>
                       </ResponsiveContainer>
@@ -1439,11 +1437,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                               <td className="py-3 text-center text-gray-600">{formatNumber(c.sentCount, numberLocale)}</td>
                               <td className="py-3 text-center text-gray-600">{formatNumber(c.readCount, numberLocale)}</td>
                               <td className="py-3 text-center">
-                                <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${
-                                  parseFloat(convRate) >= 5 ? "bg-green-50 text-green-600"
-                                  : parseFloat(convRate) >= 2 ? "bg-yellow-50 text-yellow-600"
-                                  : "bg-gray-100 text-gray-500 dark:text-gray-400"
-                                }`}>
+                                <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${parseFloat(convRate) >= 5 ? "bg-green-50 text-green-600"
+                                    : parseFloat(convRate) >= 2 ? "bg-yellow-50 text-yellow-600"
+                                      : "bg-gray-100 text-gray-500 dark:text-gray-400"
+                                  }`}>
                                   {convRate}%
                                 </span>
                               </td>
@@ -1581,11 +1578,10 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                                 <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{o.customerName || "—"}</td>
                                 <td className="py-3 px-4 text-center text-gray-500 dark:text-gray-400 text-xs font-mono" dir="ltr">{o.customerPhone}</td>
                                 <td className="py-3 px-4 text-center">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    o.status === "confirmed" ? "bg-green-100 text-green-700" :
-                                    o.status === "cancelled" ? "bg-red-100 text-red-700" :
-                                    "bg-gray-100 text-gray-600"
-                                  }`}>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${o.status === "confirmed" ? "bg-green-100 text-green-700" :
+                                      o.status === "cancelled" ? "bg-red-100 text-red-700" :
+                                        "bg-gray-100 text-gray-600"
+                                    }`}>
                                     {o.status === "confirmed" ? (locale === "ar" ? "مؤكد" : "Confirmed") : o.status === "cancelled" ? (locale === "ar" ? "ملغى" : "Cancelled") : o.status}
                                   </span>
                                 </td>
@@ -1599,7 +1595,7 @@ export default function Reports({ planTier = "free" }: { planTier?: string }) {
                             ))}
                           </tbody>
                         </table>
-                        
+
                         {/* Pagination */}
                         <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
                           <div>

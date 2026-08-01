@@ -23,6 +23,7 @@ import {
   XCircle, Loader2, BarChart3, Hourglass,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 import { useTemplateParser } from "@/hooks/useTemplateParser";
 import { DynamicTemplateForm } from "@/components/dashboard/DynamicTemplateForm";
 
@@ -432,7 +433,8 @@ function DetailsModal({ campaign, open, onClose, lang }: {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
-export default function Campaigns({ atLimit = false, whatsappConnected = false }: { atLimit?: boolean; whatsappConnected?: boolean }) {
+export default function Campaigns() {
+  const { campaignAtMax: atLimit, hasMetaConnection: whatsappConnected } = useSubscription();
   const router = useRouter();
   const { locale } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
