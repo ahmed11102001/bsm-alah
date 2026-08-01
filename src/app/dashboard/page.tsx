@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "@/lib/dashboard-context";
+import { toast } from "sonner";
 import { PLAN_COLORS, STATUS_BADGE, limitLabel, usagePct } from "@/app/dashboard/_shared";
 import { TOKEN_PACKAGES, SUBSCRIPTION_PLANS } from "@/lib/pricing";
 import { Button } from "@/components/ui/button";
