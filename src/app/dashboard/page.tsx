@@ -35,9 +35,9 @@ import {
 import ContactsPage from "@/app/dashboard/contacts/page";
 import TemplatesPage from "@/app/dashboard/templates/page";
 import CampaignsPage from "@/app/dashboard/campaigns/page";
-import Reports from "@/app/dashboard/Reports/page";
-import Automation from "@/app/dashboard/Automation/page";
-import API from "@/app/dashboard/API/page";
+import Reports from "@/app/dashboard/reports/page";
+import Automation from "@/app/dashboard/automation/page";
+import API from "@/app/dashboard/api/page";
 import Store from "@/app/dashboard/store/page";
 import AdminPage from "@/app/dashboard/admin/page";
 import NotificationBell from "@/components/dashboard/NotificationBell";
