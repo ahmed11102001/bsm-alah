@@ -35,6 +35,11 @@ import {
   campaignFollowUpActionFn,
 } from "@/inngest/smart-followup-functions";
 
+import {
+  productSyncCron,
+  productSyncOnDemand,
+} from "@/inngest/product-sync-functions";
+
 const inngestHandler = serve({
   client: inngest,
   functions: [
@@ -56,6 +61,8 @@ const inngestHandler = serve({
     subscriptionExpiryWarning,
     whatsappTokenExpiryCheck,
     aiTokensLowCheck,
+    productSyncCron,
+    productSyncOnDemand,
     // ── Plan Reset ──
     monthlyPlanReset,
     // ── Smart Follow-Up ──

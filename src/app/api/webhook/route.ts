@@ -909,7 +909,7 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  // -- 2: AI Agent — ?? ???? keyword match ---------------------------------
+  // -- 2: AI Agent — لو مفيش keyword match ---------------------------------
   const agent = await prisma.aIAgent.findUnique({
     where: { userId },
     select: {
@@ -942,7 +942,7 @@ async function handleAutomation(ctx: {
   }
 
 
-  // Pause check — ?? ???????? ??? ?????? ??????? ??? AI ????
+  // Pause check — لو الإنسان رد مؤخراً، أوقف AI مؤقت
   const lastManualOutbound = await prisma.messageQueue.findFirst({
     where: { userId, toPhone: from, campaignId: null, status: { in: ["sent", "failed"] } },
     orderBy: { sentAt: "desc" },
@@ -982,6 +982,33 @@ async function handleAutomation(ctx: {
     }
   }
 
+  // ── NEW: Retrieve structured knowledge sources ──────────────────────────
+  const { getRelevantProducts } = await import("@/lib/product-search");
+
+  const relevantProducts = await getRelevantProducts(userId, messageText, 5);
+
+  // FAQ + Policies + Guardrails — fetch all (small data, no retrieval needed)
+  const [faqs, policies, guardrails] = await Promise.all([
+    prisma.brandFAQ.findMany({
+      where: { userId },
+      orderBy: { sortOrder: "asc" },
+      select: { question: true, answer: true },
+    }),
+    prisma.brandPolicy.findMany({
+      where: { userId },
+      select: { type: true, title: true, content: true },
+    }),
+    prisma.aIGuardrail.findUnique({
+      where: { userId },
+      select: {
+        noInventPrices: true, noInventProducts: true,
+        noMentionCompetitors: true, noSharePersonal: true,
+        alwaysHandoffComplaints: true, maxReplyLines: true,
+        customRules: true,
+      },
+    }),
+  ]);
+
   const result = await getAIReply(
     aiMessages,
     {
@@ -995,6 +1022,11 @@ async function handleAutomation(ctx: {
       languageMode: agent.languageMode,
       websiteUrl: agent.websiteUrl,
       websiteButtonText: agent.websiteButtonText,
+      // ── NEW structured knowledge ──
+      relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
+      faqs: faqs.length > 0 ? faqs : undefined,
+      policies: policies.length > 0 ? policies : undefined,
+      guardrails: guardrails ?? undefined,
     },
     agent.provider as "gemini" | "openai",
   );
@@ -1034,7 +1066,33 @@ async function handleAutomation(ctx: {
     void incrementAITokens(userId, result.tokensUsed);
   }
 
-  await sendReply({ userId, from, replyText: result.reply, accountOwner, ruleName: `AI/${agent.provider}`, isAI: true });
+  // ── NEW: Resolve product image for first valid product_id ──────────────
+  let productImageUrl: string | undefined;
+  if (result.productIds?.length && relevantProducts.length > 0) {
+    // Validate: only accept IDs from the retrieved context (security)
+    const retrievedIdSet = new Set(relevantProducts.map(p => p.id));
+    const validIds = result.productIds.filter(id => retrievedIdSet.has(id));
+
+    if (validIds.length > 0) {
+      // Fetch first product's image from DB (MVP: single image only)
+      const productWithImage = await prisma.product.findFirst({
+        where: { id: validIds[0], userId, isActive: true },
+        select: { images: true },
+      });
+      if (productWithImage?.images?.length) {
+        productImageUrl = productWithImage.images[0];
+      }
+    }
+  }
+
+  await sendReply({
+    userId, from,
+    replyText: result.reply,
+    replyMediaUrl: productImageUrl,
+    accountOwner,
+    ruleName: `AI/${agent.provider}`,
+    isAI: true,
+  });
 }
 
 // -----------------------------------------------------------------------------

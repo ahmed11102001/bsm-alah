@@ -58,6 +58,11 @@ model User {
   automationAnalytics AutomationAnalytics[]
   campaignFollowUpSettings CampaignFollowUpSetting[]
   campaignFollowUpRecords  CampaignFollowUpRecord[]
+  products                 Product[]
+  brandFAQs                BrandFAQ[]
+  brandPolicies            BrandPolicy[]
+  aiGuardrail              AIGuardrail?
+  productSyncLogs          ProductSyncLog[]
 
   @@index([email])
   @@index([workspaceId])
@@ -467,6 +472,101 @@ model AIAgent {
   elevenLabsAgentId String?
   user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   analytics         AutomationAnalytics[]
+}
+
+// ── Product Catalog ───────────────────────────────────────────────────────────
+model Product {
+  id             String        @id @default(cuid())
+  userId         String
+  source         ProductSource
+  externalId     String
+  name           String
+  description    String?       @db.Text
+  price          Float?
+  compareAtPrice Float?
+  currency       String        @default("EGP")
+  images         String[]      @default([])
+  variants       Json?
+  stock          Int?
+  url            String?
+  category       String?
+  tags           String[]      @default([])
+  isActive       Boolean       @default(true)
+  searchText     String        @db.Text
+  lastSyncedAt   DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([source, externalId, userId])
+  @@index([userId, isActive])
+  @@index([userId, source])
+}
+
+// ── FAQ (الأسئلة الشائعة) ─────────────────────────────────────────────────────
+model BrandFAQ {
+  id        String   @id @default(cuid())
+  userId    String
+  question  String
+  answer    String   @db.Text
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ── سياسات البراند ────────────────────────────────────────────────────────────
+model BrandPolicy {
+  id        String     @id @default(cuid())
+  userId    String
+  type      PolicyType
+  title     String
+  content   String     @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ── Guardrails (قواعد وحدود المساعد) ──────────────────────────────────────────
+model AIGuardrail {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  noInventPrices          Boolean  @default(true)
+  noInventProducts        Boolean  @default(true)
+  noMentionCompetitors    Boolean  @default(false)
+  noSharePersonal         Boolean  @default(true)
+  alwaysHandoffComplaints Boolean  @default(true)
+  maxReplyLines           Int      @default(3)
+  customRules             String?  @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Product Sync Status & Log ────────────────────────────────────────────────
+model ProductSyncLog {
+  id             String        @id @default(cuid())
+  userId         String
+  source         ProductSource
+  status         String        @default("success")
+  productsSynced Int           @default(0)
+  errorsCount    Int           @default(0)
+  errorMessage   String?
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, source])
+  @@index([userId, startedAt])
 }
 
 model AutomationAnalytics {
@@ -881,6 +981,22 @@ enum OrderSource {
   shopify
   easyorders
   woocommerce
+}
+
+enum ProductSource {
+  shopify
+  easyorders
+  woocommerce
+  manual
+}
+
+enum PolicyType {
+  return_policy
+  shipping_policy
+  payment_policy
+  warranty_policy
+  privacy_policy
+  custom
 }
 
 enum TriggerType {

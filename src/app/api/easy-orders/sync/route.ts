@@ -146,6 +146,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     },
   });
 
+  // ── مزامنة المنتجات في الخلفية ──────────────────────────────────────────
+  try {
+    const { inngest } = await import("@/inngest/client");
+    void inngest.send({
+      name: "product/sync.requested",
+      data: { userId: user.id, source: "easyorders" },
+    }).catch(err => console.error("[EasyOrders Connect] Failed to trigger product sync", err));
+  } catch (e) {
+    // non-blocking
+  }
+
   // ── جلب الطلبات من EasyOrders API ───────────────────────────────────────
   let orders: EasyOrderItem[] = [];
 

@@ -81,3 +81,28 @@ export async function getShopifyProductImageUrl(
         return null; // فشل السحب لا يوقف إرسال رسالة المتابعة — بيتبعت من غير صورة
     }
 }
+
+// ─── التحقق من وجود صلاحية read_products في Shopify ──────────────────────────
+export async function verifyShopifyProductScope(
+    shop: string,
+    accessToken: string,
+): Promise<{ hasProductScope: boolean; currentScopes: string[]; error?: string }> {
+    try {
+        const res = await fetch(
+            `https://${shop}/admin/oauth/access_scopes.json`,
+            {
+                headers: { "X-Shopify-Access-Token": accessToken },
+                signal: AbortSignal.timeout(8_000),
+            },
+        );
+        if (!res.ok) {
+            return { hasProductScope: false, currentScopes: [], error: `HTTP ${res.status}` };
+        }
+        const data = await res.json();
+        const scopes: string[] = (data.access_scopes ?? []).map((s: { handle: string }) => s.handle);
+        const hasProductScope = scopes.includes("read_products") || scopes.includes("write_products");
+        return { hasProductScope, currentScopes: scopes };
+    } catch (err: any) {
+        return { hasProductScope: false, currentScopes: [], error: err.message };
+    }
+}

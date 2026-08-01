@@ -214,10 +214,24 @@ export async function POST(req: NextRequest) {
 
     const webhookUrl = generateShopifyWebhookUrl(userId);
 
-    // ── تسجيل الـ webhooks تلقائياً لو في token ─────────────────────────────
+    // ── تسجيل الـ webhooks ومزامنة المنتجات تلقائياً لو في token ───────────────
     let webhooksResult: { registered: string[]; failed: string[] } | null = null;
+    let hasProductScope = false;
     if (cleanToken) {
       webhooksResult = await registerAllWebhooks(verifiedDomain, cleanToken, webhookUrl);
+
+      // Check for read_products scope & trigger sync
+      const { verifyShopifyProductScope } = await import("@/lib/shopify-api");
+      const scopeCheck = await verifyShopifyProductScope(verifiedDomain, cleanToken);
+      hasProductScope = scopeCheck.hasProductScope;
+
+      if (hasProductScope) {
+        const { inngest } = await import("@/inngest/client");
+        void inngest.send({
+          name: "product/sync.requested",
+          data: { userId, source: "shopify" },
+        }).catch(err => console.error("[Shopify Connect] Failed to trigger product sync", err));
+      }
     }
 
     return NextResponse.json({
@@ -225,6 +239,7 @@ export async function POST(req: NextRequest) {
       storeName:   storeName.trim(),
       domain:      verifiedDomain,
       webhookUrl,
+      hasProductScope,
       webhooks:    webhooksResult
         ? {
             registered: webhooksResult.registered.length,

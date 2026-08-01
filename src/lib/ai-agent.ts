@@ -10,6 +10,7 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 import * as Sentry from "@sentry/nextjs";
+import type { RelevantProduct } from "@/lib/product-search";
 
 export interface AgentContext {
   brandName?: string | null;
@@ -23,6 +24,20 @@ export interface AgentContext {
   websiteUrl?: string | null;
   websiteButtonText?: string | null;
   userId?: string | null;
+
+  // ── NEW: Structured Knowledge Sources ──
+  relevantProducts?: RelevantProduct[];
+  faqs?: { question: string; answer: string }[];
+  policies?: { type: string; title: string; content: string }[];
+  guardrails?: {
+    noInventPrices?: boolean;
+    noInventProducts?: boolean;
+    noMentionCompetitors?: boolean;
+    noSharePersonal?: boolean;
+    alwaysHandoffComplaints?: boolean;
+    maxReplyLines?: number;
+    customRules?: string | null;
+  };
 }
 
 // رسالة واحدة في تاريخ المحادثة
@@ -41,6 +56,7 @@ export interface AgentResult {
   error?: string;
   offTopic?: boolean;
   tokensUsed?: number;   // ← إجمالي التوكن المستهلكة (input + output)
+  productIds?: string[]; // ← المنتجات المقترحة/المذكورة من الـ context (أقصى 3)
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -69,11 +85,41 @@ function buildSystemPrompt(ctx: AgentContext): string {
   if (ctx.businessDesc?.trim())
     lines.push(`── عن البيزنس ──\n${ctx.businessDesc.trim()}`, "");
 
-  if (ctx.productsInfo?.trim())
-    lines.push(`── المنتجات والخدمات ──\n${ctx.productsInfo.trim()}`, "");
+  // ── 1) Product Knowledge (Structured products first, fallback to free-text) ──
+  if (ctx.relevantProducts && ctx.relevantProducts.length > 0) {
+    lines.push("── المنتجات المتاحة حاليًا (الكتالوج المتصل) ──");
+    ctx.relevantProducts.forEach((p, idx) => {
+      const priceStr = p.price != null ? `${p.price} ${p.currency || "EGP"}` : "غير محدد";
+      const stockStr = p.stock != null ? `(المخزون: ${p.stock})` : "";
+      const descStr = p.description ? ` - ${p.description.substring(0, 150)}` : "";
+      const urlStr = p.url ? ` [رابط: ${p.url}]` : "";
+      lines.push(`${idx + 1}. [ID: ${p.id}] ${p.name} - السعر: ${priceStr} ${stockStr}${descStr}${urlStr}`);
+    });
+    lines.push("");
+  } else {
+    if (ctx.productsInfo?.trim())
+      lines.push(`── المنتجات والخدمات ──\n${ctx.productsInfo.trim()}`, "");
+    if (ctx.pricingInfo?.trim())
+      lines.push(`── الأسعار ──\n${ctx.pricingInfo.trim()}`, "");
+  }
 
-  if (ctx.pricingInfo?.trim())
-    lines.push(`── الأسعار ──\n${ctx.pricingInfo.trim()}`, "");
+  // ── 2) FAQs ──
+  if (ctx.faqs && ctx.faqs.length > 0) {
+    lines.push("── الأسئلة الشائعة والإجابات ──");
+    ctx.faqs.forEach((faq) => {
+      lines.push(`س: ${faq.question}\nج: ${faq.answer}`);
+    });
+    lines.push("");
+  }
+
+  // ── 3) Brand Policies ──
+  if (ctx.policies && ctx.policies.length > 0) {
+    lines.push("── سياسات البراند ──");
+    ctx.policies.forEach((policy) => {
+      lines.push(`- ${policy.title}: ${policy.content}`);
+    });
+    lines.push("");
+  }
 
   if (ctx.workingHours?.trim())
     lines.push(`── ساعات العمل ──\n${ctx.workingHours.trim()}`, "");
@@ -101,15 +147,42 @@ function buildSystemPrompt(ctx: AgentContext): string {
     );
   }
 
+  // ── 4) Guardrails & Rules ──
+  const g = ctx.guardrails;
+  const maxLines = g?.maxReplyLines ?? 3;
+
   lines.push(
     "── قواعد الرد ──",
     `- تكلم بأسلوب ${toneLabel}.`,
-    "- ردودك قصيرة ومباشرة (3 سطور بحد أقصى).",
-    "- لا تخترع أسعاراً أو معلومات مش موجودة في السياق أعلاه.",
-    "- لا تذكر إنك AI أو مساعد آلي.",
-    "- لو العميل سأل عن منتج مش موجود في قائمتك، قوله بأدب إنه مش متاح.",
-    "- لو العميل بعت صورة، حللها واربطها باحتياجه (مثلاً منتج، فاتورة، مشكلة) ورد عليه بناءً عليها.",
-    "- لو الموضوع خرج تماماً عن نطاق البيزنس أو العميل محتاج دعم بشري متخصص، حدد action: handoff.",
+    `- ردودك قصيرة ومباشرة (${maxLines} سطور بحد أقصى).`,
+  );
+
+  if (g?.noInventPrices ?? true) {
+    lines.push("- لا تخترع أسعاراً أو معلومات غير موجودة في السياق أعلاه.");
+  }
+  if (g?.noInventProducts ?? true) {
+    lines.push("- لو العميل سأل عن منتج مش موجود في قائمتك، قوله بأدب إنه مش متاح ولا تخترع منتجات.");
+  }
+  if (g?.noMentionCompetitors) {
+    lines.push("- لا تذكر أو تقارن نفسك بأي منافسين.");
+  }
+  if (g?.noSharePersonal ?? true) {
+    lines.push("- لا تلمس أو تطلب أو تطلع العميل على أي بيانات شخصية أو حساسة.");
+  }
+  lines.push("- لا تذكر إنك AI أو مساعد آلي.");
+  lines.push("- لو العميل بعت صورة، حللها واربطها باحتياجه (مثلاً منتج، فاتورة، مشكلة) ورد عليه بناءً عليها.");
+
+  if (g?.alwaysHandoffComplaints ?? true) {
+    lines.push("- لو العميل قدم شكوى صريحة، طلب استرجاع مبلغ، أو كان غاضباً جداً، حدد action: handoff.");
+  } else {
+    lines.push("- لو الموضوع خرج تماماً عن نطاق البيزنس أو العميل محتاج دعم بشري متخصص، حدد action: handoff.");
+  }
+
+  if (g?.customRules?.trim()) {
+    lines.push(`- قواعد مخصصة: ${g.customRules.trim()}`);
+  }
+
+  lines.push(
     "",
     "── صيغة الرد المطلوبة ──",
     "ردّ دايماً بـ JSON صحيح فقط، بدون أي نص خارجه:",
@@ -117,7 +190,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `  "reply": "نص الرد للعميل",`,
     `  "action": null,`,
     `  "reason": null,`,
-    `  "priority": null`,
+    `  "priority": null,`,
+    `  "product_ids": []`,
     `}`,
     "",
     `قيم action المتاحة:`,
@@ -127,6 +201,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `لو action = "handoff"، لازم تملى:`,
     `  "reason": سبب مختصر وواضح بالعربي أو الإنجليزي (مثال: "العميل طلب استرجاع مبلغ")`,
     `  "priority": "high" لو عاجل (شكوى/غضب واضح)، أو "normal" غير كده`,
+    "",
+    `لو ردك بيتكلم عن منتج معين أو أكتر من قائمة "المنتجات المتاحة حالياً" أعلاه، حط الـ IDs بتاعتها في قائمة "product_ids" (بحد أقصى 3 منتجات). استخدم الـ ID الحقيقي المكتوب في القائمة فقط!`
   );
 
   return lines.join("\n");
@@ -294,6 +370,16 @@ function parseAgentJSON(raw: string): AgentResult {
     const reason = typeof parsed.reason === "string" ? parsed.reason.trim() : null;
     const priority = parsed.priority === "high" ? "high" : "normal";
 
+    // ── NEW: extract product_ids (validated, max 3) ──
+    let productIds: string[] | undefined;
+    if (Array.isArray(parsed.product_ids)) {
+      productIds = parsed.product_ids
+        .filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
+        .map((id: string) => id.trim())
+        .slice(0, 3);
+      if (!productIds.length) productIds = undefined;
+    }
+
     if (!reply && !offTopic)
       return { ok: false, error: "reply field missing in AI response" };
 
@@ -304,6 +390,7 @@ function parseAgentJSON(raw: string): AgentResult {
       reason,
       priority,
       offTopic: offTopic || undefined,
+      productIds,
     };
   } catch {
     // لو الـ AI فشل يرجع JSON صح، نعامل الـ raw كـ reply عادي

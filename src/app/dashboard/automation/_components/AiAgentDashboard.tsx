@@ -1,0 +1,1094 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Bot, Sparkles, Store, Shield, HelpCircle, FileText, Send, RefreshCw,
+  Plus, Trash2, Edit3, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
+  Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
+  ExternalLink, Layers, Check
+} from "lucide-react";
+
+interface AiAgentSettings {
+  isEnabled: boolean;
+  provider: "gemini" | "openai";
+  brandName: string;
+  businessDesc: string;
+  productsInfo: string;
+  pricingInfo: string;
+  workingHours: string;
+  tone: string;
+  systemPrompt: string;
+  languageMode: string;
+  websiteUrl: string;
+  websiteButtonText: string;
+  pauseMinutes: number;
+  elevenLabsEnabled: boolean;
+  elevenLabsApiKey: string;
+  elevenLabsAgentId: string;
+}
+
+interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  sortOrder: number;
+}
+
+interface PolicyItem {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+}
+
+interface GuardrailsData {
+  noInventPrices: boolean;
+  noInventProducts: boolean;
+  noMentionCompetitors: boolean;
+  noSharePersonal: boolean;
+  alwaysHandoffComplaints: boolean;
+  maxReplyLines: number;
+  customRules: string | null;
+}
+
+interface ProductStats {
+  total: number;
+  lastSync?: {
+    source: string;
+    status: string;
+    productsSynced: number;
+    completedAt: string;
+  };
+}
+
+interface ChatMessage {
+  id: string;
+  sender: "user" | "ai";
+  text: string;
+  time: string;
+  matchedProducts?: Array<{
+    id: string;
+    name: string;
+    price: number | null;
+    currency: string;
+    images: string[];
+    url: string | null;
+  }>;
+  action?: string | null;
+  reason?: string | null;
+}
+
+export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
+  const isAr = lang === "ar";
+
+  // ── States ──
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [agent, setAgent] = useState<AiAgentSettings>({
+    isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
+    productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
+    systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
+    elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
+  });
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [policies, setPolicies] = useState<PolicyItem[]>([]);
+  const [guardrails, setGuardrails] = useState<GuardrailsData>({
+    noInventPrices: true,
+    noInventProducts: true,
+    noMentionCompetitors: false,
+    noSharePersonal: true,
+    alwaysHandoffComplaints: true,
+    maxReplyLines: 3,
+    customRules: null,
+  });
+  const [productStats, setProductStats] = useState<ProductStats>({ total: 0 });
+  const [syncingProducts, setSyncingProducts] = useState(false);
+
+  // Modals
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [showFaqModal, setShowFaqModal] = useState(false);
+  const [faqForm, setFaqForm] = useState({ id: "", question: "", answer: "" });
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [policyForm, setPolicyForm] = useState({ id: "", type: "return_policy", title: "", content: "" });
+  const [showGuardrailsModal, setShowGuardrailsModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+
+  // Test Chat
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      sender: "ai",
+      text: isAr ? "مرحباً! أنا مساعدك الذكي التجريبي. جرب تسألني عن أي منتج أو سياسة لتجربة ردودي live ✨" : "Hello! I am your test AI assistant. Try asking me about products or policies live ✨",
+      time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+    },
+  ]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
+
+  // ── Load All Data ──
+  const loadAllData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts] = await Promise.all([
+        fetch("/api/ai-agent"),
+        fetch("/api/ai-agent/faq"),
+        fetch("/api/ai-agent/policies"),
+        fetch("/api/ai-agent/guardrails"),
+        fetch("/api/ai-agent/products?pageSize=1"),
+      ]);
+
+      if (resAgent.ok) {
+        const data = await resAgent.json();
+        setAgent(prev => ({ ...prev, ...data }));
+        // If brandName and businessDesc are missing, open onboarding
+        if (!data.brandName && !data.businessDesc) {
+          setShowOnboarding(true);
+        }
+      }
+      if (resFaqs.ok) setFaqs(await resFaqs.json());
+      if (resPolicies.ok) setPolicies(await resPolicies.json());
+      if (resGuardrails.ok) setGuardrails(await resGuardrails.json());
+      if (resProducts.ok) {
+        const pData = await resProducts.json();
+        setProductStats({ total: pData.total || 0, lastSync: pData.lastSync });
+      }
+    } catch (e) {
+      console.error("[AiAgentDashboard] Load error:", e);
+      toast.error(isAr ? "حدث خطأ أثناء تحميل البيانات" : "Failed to load AI agent data");
+    } finally {
+      setLoading(false);
+    }
+  }, [isAr]);
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  // ── Calculate Readiness Score ──
+  const calculateReadiness = () => {
+    let score = 0;
+    if (agent.brandName?.trim()) score += 10;
+    if (agent.businessDesc?.trim()) score += 15;
+    if (agent.tone) score += 10;
+    if (agent.languageMode) score += 5;
+    if (productStats.total > 0 || agent.productsInfo?.trim()) score += 25;
+    if (faqs.length > 0) score += 15;
+    if (policies.length > 0) score += 10;
+    if (guardrails.customRules?.trim() || guardrails.noInventPrices) score += 10;
+    return Math.min(100, score);
+  };
+
+  const readiness = calculateReadiness();
+
+  // ── Actions ──
+  const saveAgentSettings = async (updates?: Partial<AiAgentSettings>) => {
+    setSaving(true);
+    const payload = { ...agent, ...updates };
+    try {
+      const res = await fetch("/api/ai-agent", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setAgent(prev => ({ ...prev, ...saved }));
+        toast.success(isAr ? "تم حفظ إعدادات المساعد بنجاح" : "AI Agent settings saved successfully");
+      } else {
+        toast.error(isAr ? "فشل حفظ الإعدادات" : "Failed to save settings");
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveFaq = async () => {
+    if (!faqForm.question.trim() || !faqForm.answer.trim()) return;
+    try {
+      const res = await fetch("/api/ai-agent/faq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(faqForm),
+      });
+      if (res.ok) {
+        toast.success(isAr ? "تم إضافة السؤال بنجاح" : "FAQ added");
+        setShowFaqModal(false);
+        setFaqForm({ id: "", question: "", answer: "" });
+        loadAllData();
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ" : "Error saving FAQ");
+    }
+  };
+
+  const deleteFaq = async (id: string) => {
+    try {
+      const res = await fetch(`/api/ai-agent/faq?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(isAr ? "تم المحذف" : "Deleted");
+        setFaqs(prev => prev.filter(f => f.id !== id));
+      }
+    } catch (e) {
+      toast.error(isAr ? "خطأ في الحذف" : "Delete error");
+    }
+  };
+
+  const savePolicy = async () => {
+    if (!policyForm.title.trim() || !policyForm.content.trim()) return;
+    try {
+      const method = policyForm.id ? "PUT" : "POST";
+      const res = await fetch("/api/ai-agent/policies", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(policyForm),
+      });
+      if (res.ok) {
+        toast.success(isAr ? "تم حفظ السياسة" : "Policy saved");
+        setShowPolicyModal(false);
+        setPolicyForm({ id: "", type: "return_policy", title: "", content: "" });
+        loadAllData();
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ" : "Error saving policy");
+    }
+  };
+
+  const deletePolicy = async (id: string) => {
+    try {
+      const res = await fetch(`/api/ai-agent/policies?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(isAr ? "تم المحذف" : "Deleted");
+        setPolicies(prev => prev.filter(p => p.id !== id));
+      }
+    } catch (e) {
+      toast.error(isAr ? "خطأ في الحذف" : "Delete error");
+    }
+  };
+
+  const saveGuardrails = async () => {
+    try {
+      const res = await fetch("/api/ai-agent/guardrails", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(guardrails),
+      });
+      if (res.ok) {
+        toast.success(isAr ? "تم حفظ القواعد والحدود" : "Guardrails saved");
+        setShowGuardrailsModal(false);
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ" : "Error saving guardrails");
+    }
+  };
+
+  const triggerProductSync = async () => {
+    setSyncingProducts(true);
+    try {
+      const res = await fetch("/api/ai-agent/products/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "all" }),
+      });
+      if (res.ok) {
+        toast.success(isAr ? "تم بدء مزامنة المنتجات في الخلفية" : "Product sync started in background");
+      } else {
+        toast.error(isAr ? "فشل بدء المزامنة" : "Failed to start sync");
+      }
+    } catch (e) {
+      toast.error(isAr ? "خطأ أثناء المزامنة" : "Sync error");
+    } finally {
+      setSyncingProducts(false);
+    }
+  };
+
+  // ── Send Test Chat Message ──
+  const sendTestMessage = async () => {
+    if (!inputMessage.trim() || sendingTest) return;
+
+    const userText = inputMessage.trim();
+    setInputMessage("");
+
+    const newMsg: ChatMessage = {
+      id: String(Date.now()),
+      sender: "user",
+      text: userText,
+      time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setChatMessages(prev => [...prev, newMsg]);
+    setSendingTest(true);
+
+    try {
+      const history = [...chatMessages, newMsg].map(m => ({
+        role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.text,
+      }));
+
+      const res = await fetch("/api/ai-agent/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const aiMsg: ChatMessage = {
+          id: String(Date.now() + 1),
+          sender: "ai",
+          text: data.reply || (isAr ? "لم يتم إرجاع رد" : "No reply generated"),
+          time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+          matchedProducts: data.matchedProducts,
+          action: data.action,
+          reason: data.reason,
+        };
+        setChatMessages(prev => [...prev, aiMsg]);
+      } else {
+        const err = await res.json();
+        toast.error(err.error || (isAr ? "فشل تجربة المساعد" : "Test failed"));
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ أثناء إرسال الرسالة" : "Error sending message");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">{isAr ? "جاري تحميل مركز تدريب المساعد..." : "Loading AI Agent Hub..."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 pb-12" dir={isAr ? "rtl" : "ltr"}>
+      {/* ── Header & Enable Toggle ── */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-900/10 via-emerald-800/5 to-teal-900/10 dark:from-emerald-950/40 dark:to-teal-950/30 p-6 rounded-3xl border border-emerald-500/20 shadow-sm">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Bot className="w-6 h-6" />
+            </span>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {isAr ? "درّب مساعدك الذكي" : "Train Your AI Agent"}
+            </h2>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {isAr ? "كلما زادت معرفة المساعد بالبراند والمنتجات والسياسات، أصبحت ردوده أكثر دقة واحترافية" : "The more your AI knows about your brand, products, and policies, the more accurate its replies will be"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowOnboarding(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-emerald-400 text-sm font-semibold text-gray-700 dark:text-gray-200 shadow-sm transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-500" />
+            {isAr ? "معالج التدريب (Onboarding)" : "Training Wizard"}
+          </button>
+
+          <button
+            onClick={() => saveAgentSettings({ isEnabled: !agent.isEnabled })}
+            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all shadow-sm ${
+              agent.isEnabled
+                ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+            }`}
+          >
+            {agent.isEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+            {agent.isEnabled ? (isAr ? "المساعد مفعّل" : "Agent Active") : (isAr ? "المساعد معطّل" : "Agent Inactive")}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Readiness % Meter ── */}
+      <div className="bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-900 dark:text-gray-100 text-base">
+              {isAr ? "نسبة جاهزية المساعد" : "Agent Readiness Score"}
+            </span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              {readiness}%
+            </span>
+          </div>
+          <span className="text-xs text-gray-400">
+            {readiness >= 80 ? (isAr ? "جاهز للاستخدام والتفعيل 🚀" : "Ready for deployment 🚀") : (isAr ? "أضف المزيد من المعلومات لتحسين الردود" : "Add more info to improve replies")}
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-100 dark:bg-gray-700/60 rounded-full h-3.5 overflow-hidden p-0.5 border border-gray-200/40 dark:border-gray-600/40">
+          <div
+            className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-700 ease-out shadow-sm"
+            style={{ width: `${readiness}%` }}
+          />
+        </div>
+      </div>
+
+      {/* ── Knowledge Sources Cards Grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        {/* 1. Brand Info */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between group">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center font-bold">
+                  <Store className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "بيانات البراند" : "Brand Info"}</h3>
+                  <span className="text-xs text-gray-400">{agent.brandName || (isAr ? "لم يحدد الاسم" : "No name set")}</span>
+                </div>
+              </div>
+              {agent.brandName && agent.businessDesc ? (
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isAr ? "مكتمل" : "Complete"}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-500/20">
+                  <AlertCircle className="w-3.5 h-3.5" /> {isAr ? "ناقص" : "Incomplete"}
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 min-h-[3rem]">
+              {agent.businessDesc || (isAr ? "أضف وصفاً شاملاً للنشاط وساعات العمل ليعرف المساعد كيف يمثل البراند." : "Add a business description so your AI represents your brand accurately.")}
+            </p>
+          </div>
+
+          <Button
+            onClick={() => setShowBrandModal(true)}
+            variant="outline"
+            className="w-full rounded-2xl text-xs font-semibold gap-2 border-gray-200 dark:border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20"
+          >
+            <Edit3 className="w-3.5 h-3.5 text-emerald-500" />
+            {isAr ? "تعديل بيانات البراند" : "Edit Brand Info"}
+          </Button>
+        </div>
+
+        {/* 2. AI Personality */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center font-bold">
+                  <Sparkles className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "شخصية المساعد" : "AI Personality"}</h3>
+                  <span className="text-xs text-gray-400">
+                    {agent.tone === "friendly" ? (isAr ? "ودود ومساعد" : "Friendly") : agent.tone === "formal" ? (isAr ? "رسمي واحترافي" : "Formal") : (isAr ? "عامية مصرية" : "Colloquial")}
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {isAr ? "مكتمل" : "Complete"}
+              </span>
+            </div>
+
+            <div className="space-y-2 mb-4 text-xs text-gray-600 dark:text-gray-300">
+              <div className="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-700/50">
+                <span className="text-gray-400">{isAr ? "المزوّد" : "Provider"}</span>
+                <span className="font-bold">{agent.provider === "gemini" ? "Google Gemini" : "ChatGPT GPT-4o mini"}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-700/50">
+                <span className="text-gray-400">{isAr ? "اللغة" : "Language"}</span>
+                <span className="font-bold">{agent.languageMode === "auto" ? (isAr ? "تلقائي" : "Auto") : agent.languageMode === "ar" ? "عربي" : "English"}</span>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowOnboarding(true)}
+            variant="outline"
+            className="w-full rounded-2xl text-xs font-semibold gap-2 border-gray-200 dark:border-gray-700 hover:border-purple-500/50 hover:bg-purple-50/30 dark:hover:bg-purple-950/20"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+            {isAr ? "ضبط الشخصية والنموذج" : "Tune Personality"}
+          </Button>
+        </div>
+
+        {/* 3. Guardrails & Limits */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center font-bold">
+                  <Shield className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "القواعد والحدود" : "Guardrails & Limits"}</h3>
+                  <span className="text-xs text-gray-400">{isAr ? "حماية وتوجيه الردود" : "Controls & Rules"}</span>
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {isAr ? "مكتمل" : "Complete"}
+              </span>
+            </div>
+
+            <div className="space-y-1.5 mb-4 text-xs text-gray-600 dark:text-gray-300">
+              <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3.5 h-3.5" /> {isAr ? "عدم اختراع أسعار أو منتجات" : "No hallucinated prices"}
+              </p>
+              <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3.5 h-3.5" /> {isAr ? "تحويل الشكاوى للبشر تلقائياً" : "Auto handoff for complaints"}
+              </p>
+              {guardrails.customRules && (
+                <p className="text-xs text-gray-400 line-clamp-1 italic">"{guardrails.customRules}"</p>
+              )}
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowGuardrailsModal(true)}
+            variant="outline"
+            className="w-full rounded-2xl text-xs font-semibold gap-2 border-gray-200 dark:border-gray-700 hover:border-rose-500/50 hover:bg-rose-50/30 dark:hover:bg-rose-950/20"
+          >
+            <Shield className="w-3.5 h-3.5 text-rose-500" />
+            {isAr ? "إدارة القواعد والحدود" : "Manage Guardrails"}
+          </Button>
+        </div>
+
+        {/* 4. Product Catalog Knowledge (Featured Card) */}
+        <div className="md:col-span-2 lg:col-span-3 bg-gradient-to-br from-emerald-950/90 via-emerald-900/90 to-teal-950/90 text-white rounded-3xl p-6 border border-emerald-500/30 shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <span className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center justify-center font-bold">
+                <ShoppingBag className="w-6 h-6" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg">{isAr ? "معرفة المنتجات (Smart Catalog Search)" : "Product Catalog Knowledge"}</h3>
+                  <span className="text-xs bg-emerald-400/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/30 font-semibold">
+                    {productStats.total} {isAr ? "منتج متصل" : "Connected products"}
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-200/80 mt-1">
+                  {isAr
+                    ? "البحث الذكي يجيب أقرب 3-5 منتجات فقط لكل رسالة — الكتالوج كامل لا يُرسل للذكاء الاصطناعي لتوفير السرعة والتكلفة."
+                    : "Smart search retrieves top 3-5 relevant products per message — the entire catalog is never dumped into the prompt."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                onClick={triggerProductSync}
+                disabled={syncingProducts}
+                className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-2xl text-xs gap-2 px-4 shadow-sm"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} />
+                {syncingProducts ? (isAr ? "جاري المزامنة..." : "Syncing...") : (isAr ? "مزامنة الآن" : "Sync Now")}
+              </Button>
+            </div>
+          </div>
+
+          {productStats.lastSync && (
+            <div className="text-[11px] text-emerald-300/70 border-t border-emerald-500/20 pt-3 flex items-center justify-between">
+              <span>
+                {isAr ? "آخر مزامنة:" : "Last sync:"} {new Date(productStats.lastSync.completedAt || Date.now()).toLocaleString(isAr ? "ar-EG" : "en-US")} ({productStats.lastSync.source})
+              </span>
+              <span className="text-emerald-400 font-semibold">
+                {productStats.lastSync.productsSynced} {isAr ? "منتج مُزامن" : "products synced"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 5. FAQs Knowledge */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center font-bold">
+                  <HelpCircle className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "الأسئلة الشائعة" : "FAQs"}</h3>
+                  <span className="text-xs text-gray-400">{faqs.length} {isAr ? "سؤال مضاف" : "questions added"}</span>
+                </div>
+              </div>
+              {faqs.length > 0 ? (
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isAr ? "مكتمل" : "Complete"}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-500/20">
+                  <AlertCircle className="w-3.5 h-3.5" /> {isAr ? "إضفي أسئلة" : "Add FAQs"}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-2 mb-4 max-h-28 overflow-y-auto">
+              {faqs.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">{isAr ? "أضف أسئلة تتدفق من العملاء كثرةً ليجيبها المساعد بدقة." : "Add common questions so your AI replies accurately."}</p>
+              ) : (
+                faqs.slice(0, 3).map(f => (
+                  <div key={f.id} className="text-xs bg-gray-50 dark:bg-gray-700/50 p-2 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <span className="truncate max-w-[180px] font-semibold text-gray-800 dark:text-gray-200">س: {f.question}</span>
+                    <button onClick={() => deleteFaq(f.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowFaqModal(true)}
+            variant="outline"
+            className="w-full rounded-2xl text-xs font-semibold gap-2 border-gray-200 dark:border-gray-700 hover:border-blue-500/50 hover:bg-blue-50/30 dark:hover:bg-blue-950/20"
+          >
+            <Plus className="w-3.5 h-3.5 text-blue-500" />
+            {isAr ? "إضافة / إدارة الأسئلة" : "Manage FAQs"}
+          </Button>
+        </div>
+
+        {/* 6. Brand Policies */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-teal-500 flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "سياسات البراند" : "Brand Policies"}</h3>
+                  <span className="text-xs text-gray-400">{policies.length} {isAr ? "سياسة مضافة" : "policies added"}</span>
+                </div>
+              </div>
+              {policies.length > 0 ? (
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isAr ? "مكتمل" : "Complete"}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-500/20">
+                  <AlertCircle className="w-3.5 h-3.5" /> {isAr ? "إضفي سياسة" : "Add policy"}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-2 mb-4 max-h-28 overflow-y-auto">
+              {policies.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">{isAr ? "أضف سياسة الاستبدال والاسترجاع والشحن لتجنب سوء الفهم." : "Add return and shipping policies for clear AI answers."}</p>
+              ) : (
+                policies.slice(0, 3).map(p => (
+                  <div key={p.id} className="text-xs bg-gray-50 dark:bg-gray-700/50 p-2 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <span className="truncate max-w-[180px] font-semibold text-gray-800 dark:text-gray-200">📋 {p.title}</span>
+                    <button onClick={() => deletePolicy(p.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowPolicyModal(true)}
+            variant="outline"
+            className="w-full rounded-2xl text-xs font-semibold gap-2 border-gray-200 dark:border-gray-700 hover:border-teal-500/50 hover:bg-teal-50/30 dark:hover:bg-teal-950/20"
+          >
+            <Plus className="w-3.5 h-3.5 text-teal-500" />
+            {isAr ? "إضافة / إدارة السياسات" : "Manage Policies"}
+          </Button>
+        </div>
+
+      </div>
+
+      {/* ── Test Chat / AI Preview Playground (🧪 جرّب مساعدك) ── */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              🧪
+            </span>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">{isAr ? "جرّب مساعدك (Test Chat Live)" : "Test Your Agent Live"}</h3>
+              <p className="text-xs text-gray-400">{isAr ? "ختبر ردود المساعد وبحث المنتجات مباشرة قبل تفعيله مع العملاء" : "Test how your AI agent replies to messages live before engaging actual customers"}</p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setChatMessages([
+              {
+                id: "welcome",
+                sender: "ai",
+                text: isAr ? "مرحباً! أنا مساعدك الذكي التجريبي. جرب تسألني عن أي منتج أو سياسة لتجربة ردودي live ✨" : "Hello! I am your test AI assistant. Try asking me about products or policies live ✨",
+                time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+              }
+            ])}
+            variant="ghost"
+            className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {isAr ? "مسح المحادثة" : "Clear Chat"}
+          </Button>
+        </div>
+
+        {/* Chat Messages Screen */}
+        <div className="bg-gray-50 dark:bg-gray-900/60 rounded-2xl p-4 min-h-[260px] max-h-[360px] overflow-y-auto space-y-3 border border-gray-200/50 dark:border-gray-700/50">
+          {chatMessages.map(msg => (
+            <div
+              key={msg.id}
+              className={`flex flex-col max-w-[80%] ${msg.sender === "user" ? "mr-auto items-end" : "ml-auto items-start"}`}
+            >
+              <div
+                className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                  msg.sender === "user"
+                    ? "bg-emerald-600 text-white rounded-tl-none"
+                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tr-none"
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                {/* Show Matched Product Card if any */}
+                {msg.matchedProducts && msg.matchedProducts.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2">
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">🛍️ {isAr ? "المنتج المقترح من الكتالوج:" : "Suggested Product:"}</p>
+                    {msg.matchedProducts.map(prod => (
+                      <div key={prod.id} className="flex items-center gap-2 bg-emerald-50/50 dark:bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/20">
+                        {prod.images?.[0] && (
+                          <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
+                        )}
+                        <div className="truncate text-[11px]">
+                          <p className="font-bold text-gray-900 dark:text-gray-100 truncate">{prod.name}</p>
+                          <p className="text-emerald-700 dark:text-emerald-300 font-semibold">{prod.price} {prod.currency || "EGP"}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {msg.action === "handoff" && (
+                  <div className="mt-2 p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/20 flex items-center gap-1">
+                    ⚠️ {isAr ? "تم تحويل المحادثة لبشر" : "Handoff to human triggered"}: {msg.reason}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Input Bar */}
+        <div className="flex items-center gap-2 mt-4">
+          <Input
+            value={inputMessage}
+            onChange={e => setInputMessage(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") sendTestMessage(); }}
+            placeholder={isAr ? "اكتب رسالة تجريبية... (مثال: عندكم فستان أسود؟)" : "Type a test message... (e.g. Do you have black dresses?)"}
+            className="rounded-2xl text-xs py-5 bg-gray-50 dark:bg-gray-900/50"
+          />
+          <Button
+            onClick={sendTestMessage}
+            disabled={sendingTest || !inputMessage.trim()}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl px-5 py-5 gap-1.5 flex-shrink-0 font-bold"
+          >
+            {sendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isAr ? "إرسال" : "Send"}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Dialog: Onboarding Wizard (Modal 3 Steps) ── */}
+      <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
+        <DialogContent className="max-w-xl rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-500" />
+                {isAr ? "تدريب مساعد الذكاء الاصطناعي" : "AI Agent Onboarding"}
+              </DialogTitle>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-500/20">
+                {isAr ? `الخطوة ${onboardingStep} من 3` : `Step ${onboardingStep} of 3`}
+              </span>
+            </div>
+            <DialogDescription className="text-xs">
+              {onboardingStep === 1 && (isAr ? "الخطوة 1: معلومات البراند وطبيعة النشاط" : "Step 1: Brand Info & Business Description")}
+              {onboardingStep === 2 && (isAr ? "الخطوة 2: شخصية المساعد ولهجة الرد" : "Step 2: Personality & Reply Tone")}
+              {onboardingStep === 3 && (isAr ? "الخطوة 3: ربط المنتجات والإنهاء" : "Step 3: Connect Products & Finish")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            {onboardingStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "اسم البراند" : "Brand Name"} *</Label>
+                  <Input
+                    value={agent.brandName}
+                    onChange={e => setAgent(f => ({ ...f, brandName: e.target.value }))}
+                    placeholder={isAr ? "مثال: متجر الأناقة" : "E.g. Elegance Store"}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "ساعات العمل" : "Working Hours"}</Label>
+                  <Input
+                    value={agent.workingHours}
+                    onChange={e => setAgent(f => ({ ...f, workingHours: e.target.value }))}
+                    placeholder={isAr ? "مثال: 9 ص – 10 م يومياً" : "E.g. 9 AM – 10 PM daily"}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "وصف نشاط البيزنس والخدمات" : "Business Description"} *</Label>
+                  <Textarea
+                    value={agent.businessDesc}
+                    onChange={e => setAgent(f => ({ ...f, businessDesc: e.target.value }))}
+                    placeholder={isAr ? "اكتب تفاصيل عن بيزنسك وما يميز منتجاتك..." : "Describe your business, products, and what makes you unique..."}
+                    className="min-h-[100px] resize-none text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            {onboardingStep === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "مزوّد الذكاء الاصطناعي" : "AI Provider"}</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["gemini", "openai"] as const).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setAgent(f => ({ ...f, provider: p }))}
+                        className={`p-3 rounded-2xl border text-xs font-semibold flex items-center justify-between transition-all ${
+                          agent.provider === p ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300" : "border-gray-200 dark:border-gray-700"
+                        }`}
+                      >
+                        <span>{p === "gemini" ? "Google Gemini" : "ChatGPT GPT-4o mini"}</span>
+                        {agent.provider === p && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "لهجة الرد" : "Reply Tone"}</Label>
+                  <Select value={agent.tone} onValueChange={v => setAgent(f => ({ ...f, tone: v }))}>
+                    <SelectTrigger className="rounded-xl text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="friendly">{isAr ? "ودود ومساعد" : "Friendly & Helpful"}</SelectItem>
+                      <SelectItem value="formal">{isAr ? "رسمي واحترافي" : "Formal & Professional"}</SelectItem>
+                      <SelectItem value="egyptian">{isAr ? "عامية مصرية خفيفة" : "Egyptian Colloquial"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs mb-1.5 block">{isAr ? "وضع اللغة" : "Language Mode"}</Label>
+                  <Select value={agent.languageMode} onValueChange={v => setAgent(f => ({ ...f, languageMode: v }))}>
+                    <SelectTrigger className="rounded-xl text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">{isAr ? "تلقائي (حسب لغة العميل)" : "Auto (Customer language)"}</SelectItem>
+                      <SelectItem value="ar">{isAr ? "عربي دائماً" : "Always Arabic"}</SelectItem>
+                      <SelectItem value="en">{isAr ? "English always" : "Always English"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {onboardingStep === 3 && (
+              <div className="space-y-4 text-center py-2">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto text-2xl font-bold">
+                  🛍️
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 text-base">
+                  {productStats.total > 0
+                    ? (isAr ? `تم العثور على ${productStats.total} منتج متصل من متجرك!` : `Found ${productStats.total} connected products!`)
+                    : (isAr ? "لم يتم ربط متجر بعد — يمكنك المزامنة لاحقاً أو إدخال منتجات يدويًا" : "No store connected yet — sync anytime or add products manually")}
+                </h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  {isAr ? "البحث الذكي سيتكفل بجلب أحدث المنتجات والأسعار تلقائياً أثناء محادثة العملاء." : "Smart Search automatically brings relevant items and prices into context."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+            {onboardingStep > 1 ? (
+              <Button variant="outline" onClick={() => setOnboardingStep(s => s - 1)} className="rounded-xl text-xs gap-1">
+                {isAr ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+                {isAr ? "رجوع" : "Back"}
+              </Button>
+            ) : <div />}
+
+            {onboardingStep < 3 ? (
+              <Button onClick={() => setOnboardingStep(s => s + 1)} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1 px-5 font-bold">
+                {isAr ? "التالي" : "Next"}
+                {isAr ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+              </Button>
+            ) : (
+              <Button
+                onClick={async () => {
+                  await saveAgentSettings({ isEnabled: true });
+                  setShowOnboarding(false);
+                  setOnboardingStep(1);
+                }}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1 px-6 font-bold"
+              >
+                <Check className="w-4 h-4" />
+                {isAr ? "إنهاء الإعداد وتفعيل المساعد" : "Finish & Activate Agent"}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Edit Brand Info ── */}
+      <Dialog open={showBrandModal} onOpenChange={setShowBrandModal}>
+        <DialogContent className="max-w-md rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg">{isAr ? "بيانات البراند" : "Brand Info"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "اسم البراند" : "Brand Name"}</Label>
+              <Input value={agent.brandName} onChange={e => setAgent(f => ({ ...f, brandName: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "ساعات العمل" : "Working Hours"}</Label>
+              <Input value={agent.workingHours} onChange={e => setAgent(f => ({ ...f, workingHours: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "وصف النشاط والمنتجات" : "Business Description"}</Label>
+              <Textarea value={agent.businessDesc} onChange={e => setAgent(f => ({ ...f, businessDesc: e.target.value }))} className="min-h-[100px] text-xs" />
+            </div>
+          </div>
+          <Button onClick={async () => { await saveAgentSettings(); setShowBrandModal(false); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
+            {isAr ? "حفظ البيانات" : "Save Brand Info"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: FAQ Modal ── */}
+      <Dialog open={showFaqModal} onOpenChange={setShowFaqModal}>
+        <DialogContent className="max-w-md rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg">{isAr ? "إضافة سؤال شائع" : "Add FAQ"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "السؤال" : "Question"} *</Label>
+              <Input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder={isAr ? "مثال: فين مكانكم؟" : "E.g. Where are you located?"} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "الإجابة" : "Answer"} *</Label>
+              <Textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder={isAr ? "اكتب الإجابة النموذجية التي سيرد بها المساعد..." : "Write the answer..."} className="min-h-[90px] text-xs" />
+            </div>
+          </div>
+          <Button onClick={saveFaq} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
+            {isAr ? "إضافة السؤال" : "Save FAQ"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Policy Modal ── */}
+      <Dialog open={showPolicyModal} onOpenChange={setShowPolicyModal}>
+        <DialogContent className="max-w-md rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg">{isAr ? "إضافة سياسة" : "Add Policy"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "نوع السياسة" : "Policy Type"}</Label>
+              <Select value={policyForm.type} onValueChange={v => setPolicyForm(f => ({ ...f, type: v }))}>
+                <SelectTrigger className="rounded-xl text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="return_policy">{isAr ? "سياسة الاستبدال والاسترجاع" : "Return Policy"}</SelectItem>
+                  <SelectItem value="shipping_policy">{isAr ? "سياسة الشحن والتوصيل" : "Shipping Policy"}</SelectItem>
+                  <SelectItem value="payment_policy">{isAr ? "سياسة الدفع" : "Payment Policy"}</SelectItem>
+                  <SelectItem value="warranty_policy">{isAr ? "سياسة الضمان" : "Warranty Policy"}</SelectItem>
+                  <SelectItem value="custom">{isAr ? "سياسة مخصصة" : "Custom Policy"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "عنوان السياسة" : "Policy Title"} *</Label>
+              <Input value={policyForm.title} onChange={e => setPolicyForm(f => ({ ...f, title: e.target.value }))} placeholder={isAr ? "مثال: الاسترجاع خلال 14 يوماً" : "E.g. Returns within 14 days"} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "تفاصيل السياسة" : "Policy Content"} *</Label>
+              <Textarea value={policyForm.content} onChange={e => setPolicyForm(f => ({ ...f, content: e.target.value }))} placeholder={isAr ? "اكتب بنود السياسة بالتفصيل..." : "Write policy text..."} className="min-h-[100px] text-xs" />
+            </div>
+          </div>
+          <Button onClick={savePolicy} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
+            {isAr ? "حفظ السياسة" : "Save Policy"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Guardrails Modal ── */}
+      <Dialog open={showGuardrailsModal} onOpenChange={setShowGuardrailsModal}>
+        <DialogContent className="max-w-md rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg flex items-center gap-2">
+              <Shield className="w-5 h-5 text-rose-500" />
+              {isAr ? "القواعد والحدود (Guardrails)" : "AI Guardrails"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">{isAr ? "عدم اختراع أسعار غير متوفرة" : "Do not hallucinate prices"}</Label>
+              <Switch checked={guardrails.noInventPrices} onCheckedChange={v => setGuardrails(g => ({ ...g, noInventPrices: v }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">{isAr ? "عدم اختراع منتجات غير متوفرة" : "Do not invent non-existent products"}</Label>
+              <Switch checked={guardrails.noInventProducts} onCheckedChange={v => setGuardrails(g => ({ ...g, noInventProducts: v }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">{isAr ? "عدم ذكر أو مقارنة المنافسين" : "Never mention competitors"}</Label>
+              <Switch checked={guardrails.noMentionCompetitors} onCheckedChange={v => setGuardrails(g => ({ ...g, noMentionCompetitors: v }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">{isAr ? "تحويل الشكاوى والغضب للبشر فوراً" : "Auto handoff for complaints"}</Label>
+              <Switch checked={guardrails.alwaysHandoffComplaints} onCheckedChange={v => setGuardrails(g => ({ ...g, alwaysHandoffComplaints: v }))} />
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "أقصى عدد سطور للرد" : "Max lines per reply"}</Label>
+              <Input
+                type="number" min={1} max={10}
+                value={guardrails.maxReplyLines}
+                onChange={e => setGuardrails(g => ({ ...g, maxReplyLines: Number(e.target.value) || 3 }))}
+                className="rounded-xl text-xs"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "قواعد مخصصة (Custom Rules)" : "Custom Rules"}</Label>
+              <Textarea
+                value={guardrails.customRules || ""}
+                onChange={e => setGuardrails(g => ({ ...g, customRules: e.target.value }))}
+                placeholder={isAr ? "مثال: لو سألوا عن الشحن الدولي قول مش متاح حالياً." : "E.g. If asked about international shipping, reply not available."}
+                className="min-h-[80px] text-xs resize-none"
+              />
+            </div>
+          </div>
+
+          <Button onClick={saveGuardrails} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
+            {isAr ? "حفظ القواعد والحدود" : "Save Guardrails"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+}
