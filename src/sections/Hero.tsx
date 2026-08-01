@@ -13,18 +13,18 @@ type LogStatus = "ok" | "pending";
 interface LogEvent { time: string; type: string; main: string; action: string; status: LogStatus; }
 
 const AUTOMATION_EVENTS: LogEvent[] = [
-  { time: "10:30", type: "MESSAGE",   main: "عميل سأل عن السعر",         action: "وني رد تلقائيًا",        status: "ok" },
-  { time: "10:31", type: "ORDER",     main: "العميل أكّد الطلب",          action: "طلب #1024 اتسجّل",       status: "ok" },
-  { time: "10:33", type: "PAYMENT",   main: "اتبعت رابط الدفع",          action: "في انتظار الدفع",         status: "pending" },
-  { time: "10:34", type: "PAYMENT",   main: "الفلوس اتحصّلت",            action: "الطلب مؤكَّد",            status: "ok" },
-  { time: "10:42", type: "ORDER",     main: "اتأكد ميعاد التوصيل",       action: "طلب #1025 اتسجّل",       status: "ok" },
-  { time: "10:55", type: "FOLLOW-UP", main: "متابعة عميل ساكت",          action: "رسالة تذكير اتبعتت",       status: "ok" },
-  { time: "11:02", type: "ORDER",     main: "أكّد الطلب بعد المتابعة",   action: "طلب #1031 اتسجّل",       status: "ok" },
-  { time: "11:15", type: "CART",      main: "سلة متروكة من ساعة",        action: "تذكير بالمنتج اتبعت",      status: "ok" },
+  { time: "10:30", type: "MESSAGE",   main: "عميل سأل عن السعر",       action: "وني رد تلقائيًا",              status: "ok" },
+  { time: "10:31", type: "ORDER",     main: "العميل أكّد الطلب",        action: "تم إنشاء الطلب #1024",         status: "ok" },
+  { time: "10:33", type: "PAYMENT",   main: "اتبعث رابط الدفع",         action: "في انتظار الدفع",              status: "pending" },
+  { time: "10:34", type: "PAYMENT",   main: "الفلوس اتحصّلت",           action: "الطلب مؤكَّد",                 status: "ok" },
+  { time: "10:42", type: "FOLLOW-UP", main: "عميل ما كملش الطلب",       action: "وني بدأ المتابعة",             status: "ok" },
+  { time: "10:55", type: "CART",      main: "سلة متروكة من ساعة",       action: "وني بعت تذكير بالمنتج",        status: "ok" },
+  { time: "11:02", type: "ORDER",     main: "أكّد الطلب بعد المتابعة",  action: "تم إنشاء الطلب #1031",         status: "ok" },
+  { time: "11:10", type: "SHIPPING",  main: "الطلب جاهز للشحن",         action: "وني بعت تحديث الشحن للعميل",   status: "ok" },
 ];
 
 const LOG_WINDOW = 6;
-const ENTRY_HEIGHT = 78;
+const ENTRY_HEIGHT = 92;
 
 function useAutomationLog() {
   const [startIndex, setStartIndex] = useState(0);
@@ -76,11 +76,8 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
       className="relative min-h-screen flex items-center overflow-hidden"
       dir={isAr ? "rtl" : "ltr"}
     >
-      {/* ── Background ── */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#064e45] via-[#075E54] to-[#0a7a6a]">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#25D366]/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-300/10 rounded-full blur-[80px]" />
-      </div>
+      {/* ── Background — أعمق ومتجانس، من غير glow كبير ── */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#053b32] to-[#0b5c4e]" />
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-28">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
@@ -167,31 +164,24 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
               transition: "opacity 0.9s cubic-bezier(0.16,1,0.3,1) 300ms, transform 0.9s cubic-bezier(0.16,1,0.3,1) 300ms",
             }}
           >
-            <div className="relative w-[300px] sm:w-[370px] lg:w-[420px] mx-auto">
+            <div className="relative w-[320px] sm:w-[420px] lg:w-[500px] mx-auto">
 
-              {/* ختم وني — بديل الكروت الزجاجية العايمة القديمة */}
+              {/* Glow خفيف ومحصور تحت الكارد بس — مش ambient blob كبير */}
+              <div className="absolute inset-0 scale-105 bg-black/20 rounded-[1.75rem] blur-2xl" />
+
+              {/* Automation Log — البطل البصري للـ Hero */}
               <div
-                className="hidden sm:flex absolute -top-6 -right-6 lg:-right-9 z-20 w-[92px] h-[92px] rounded-full items-center justify-center text-center bg-white/90"
-                style={{ border: "2px solid #0c6b34", transform: "rotate(-10deg)", mixBlendMode: "multiply" }}
+                className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden"
+                style={{ transform: "rotate(-2deg)" }}
               >
-                <div className="absolute inset-[6px] rounded-full border border-dashed border-[#0c6b34]/60" />
-                <div className="relative leading-tight">
-                  <p className="font-black text-[15px] text-[#0c6b34]">وني</p>
-                  <p className="font-mono text-[8.5px] tracking-widest text-[#0c6b34] font-bold">AI · 24/7</p>
-                </div>
-              </div>
 
-              {/* Glow خفيف بس يفصل الكارد عن الخلفية الغامقة */}
-              <div className="absolute inset-0 scale-105 bg-black/25 rounded-[1.75rem] blur-2xl" />
-
-              {/* Automation Log — سجل حي بيوضح شغل وني الفعلي، بديل الفون موك والداشبورد القديم */}
-              <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
-
-                {/* Header */}
-                <div className="px-5 pt-5 pb-4">
+                {/* Header — "24/7" بقى جزء من هوية الكارد، مش ختم عايم */}
+                <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-black text-[17px] text-gray-900">{isAr ? "وني AI" : "WANI AI"}</span>
-                    <span className="text-[10px] font-bold tracking-wider text-[#0c6b34] bg-[#25D366]/15 px-2.5 py-1 rounded-md">
+                    <span className="font-black text-[18px] sm:text-[20px] text-gray-900">
+                      {isAr ? "وني AI · 24/7" : "WANI AI · 24/7"}
+                    </span>
+                    <span className="text-[10px] font-bold tracking-wider text-[#0c6b34] bg-[#25D366]/15 px-2.5 py-1 rounded-md flex-shrink-0">
                       AUTOMATION LOG
                     </span>
                   </div>
@@ -202,14 +192,14 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                     </span>
                   </div>
                 </div>
-                <div className="h-[2px] bg-gray-900 mx-5" />
+                <div className="h-[2px] bg-gray-900 mx-5 sm:mx-6" />
 
                 {/* Log entries — الشريط بيتحرك لوحده كل شوية */}
                 <div
-                  className="relative h-[430px] overflow-hidden px-5"
+                  className="relative h-[500px] sm:h-[560px] lg:h-[600px] overflow-hidden px-5 sm:px-6"
                   style={{
-                    maskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
-                    WebkitMaskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
+                    maskImage: "linear-gradient(to bottom, black 84%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, black 84%, transparent 100%)",
                   }}
                 >
                   <div
@@ -222,21 +212,21 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
                     {logItems.map((e, i) => (
                       <div
                         key={`${e.time}-${e.main}-${i}`}
-                        className="py-3.5 border-b border-dashed border-gray-100"
+                        className="py-4 border-b border-dashed border-gray-100"
                         style={{ height: ENTRY_HEIGHT }}
                       >
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[10px] font-mono text-gray-400">{e.time}</span>
-                          <span className="text-[9px] font-mono font-bold tracking-wider text-gray-400 border border-gray-200 rounded px-1.5 py-[1px]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[11px] font-mono text-gray-400">{e.time}</span>
+                          <span className="text-[9.5px] font-mono font-bold tracking-wider text-gray-400 border border-gray-200 rounded px-1.5 py-[1px]">
                             {e.type}
                           </span>
                         </div>
-                        <p className="text-[13.5px] font-bold text-gray-900 mb-1">{e.main}</p>
-                        <div className="flex items-center justify-between pr-3.5">
-                          <span className="text-[12px] text-gray-500 font-semibold">↳ {e.action}</span>
-                          <span className={`text-[13px] font-black ${e.status === "ok" ? "text-[#0c6b34]" : "text-gray-300"}`}>
+                        <p className="text-[15px] font-bold text-gray-900 mb-2 leading-snug">{e.main}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[14px] font-black flex-shrink-0 ${e.status === "ok" ? "text-[#0c6b34]" : "text-gray-300"}`}>
                             {e.status === "ok" ? "✓" : "→"}
                           </span>
+                          <span className="text-[13.5px] text-gray-600 font-semibold">{e.action}</span>
                         </div>
                       </div>
                     ))}
