@@ -892,7 +892,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             <DialogDescription className="text-xs">
               {onboardingStep === 1 && (isAr ? "الخطوة 1: معلومات البراند وطبيعة النشاط" : "Step 1: Brand Info & Business Description")}
               {onboardingStep === 2 && (isAr ? "الخطوة 2: شخصية المساعد ولهجة الرد" : "Step 2: Personality & Reply Tone")}
-              {onboardingStep === 3 && (isAr ? "الخطوة 3: ربط المنتجات والإنهاء" : "Step 3: Connect Products & Finish")}
+              {onboardingStep === 3 && (isAr ? "الخطوة 3: بيانات المنتجات والخدمات" : "Step 3: Products & Services Info")}
             </DialogDescription>
           </DialogHeader>
 
@@ -974,17 +974,49 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             )}
 
             {onboardingStep === 3 && (
-              <div className="space-y-4 text-center py-2">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto text-2xl font-bold">
-                  🛍️
+              <div className="space-y-6 text-center py-2">
+                <div>
+                  <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center mx-auto mb-4">
+                    <ShoppingBag className="w-8 h-8" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-2">
+                    {isAr ? "أضف منتجاتك أو خدماتك" : "Add your products or services"}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    {isAr ? "اختر الطريقة المناسبة لك: اجلبها تلقائيًا من متجرك أو أضفها يدويًا." : "Choose the best method: sync automatically from your store or add manually."}
+                  </p>
                 </div>
-                <h4 className="font-bold text-gray-900 dark:text-gray-100 text-base">
-                  {productStats.total > 0
-                    ? (isAr ? `تم العثور على ${productStats.total} منتج متصل من متجرك!` : `Found ${productStats.total} connected products!`)
-                    : (isAr ? "لم يتم ربط متجر بعد — يمكنك المزامنة لاحقاً أو إدخال منتجات يدويًا" : "No store connected yet — sync anytime or add products manually")}
-                </h4>
-                <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                  {isAr ? "البحث الذكي سيتكفل بجلب أحدث المنتجات والأسعار تلقائياً أثناء محادثة العملاء." : "Smart Search automatically brings relevant items and prices into context."}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                       toast(isAr ? "يمكنك ربط متجرك من تبويب المتجر" : "You can connect your store from the Store tab");
+                    }}
+                    className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-all text-center"
+                  >
+                    <span className="text-2xl">🛍️</span>
+                    <div>
+                      <span className="block font-bold text-sm text-gray-900 dark:text-gray-100">{isAr ? "جلب من المتجر" : "Sync from Store"}</span>
+                      <span className="text-[10px] text-gray-400 mt-1">{isAr ? "Shopify, EasyOrders, الخ" : "Shopify, EasyOrders, etc."}</span>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                       toast(isAr ? "يمكنك إضافة المنتجات يدوياً لاحقاً" : "You can add products manually later");
+                    }}
+                    className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-all text-center"
+                  >
+                    <span className="text-2xl">✏️</span>
+                    <div>
+                      <span className="block font-bold text-sm text-gray-900 dark:text-gray-100">{isAr ? "إدخال يدوي" : "Manual Entry"}</span>
+                      <span className="text-[10px] text-gray-400 mt-1">{isAr ? "أضف منتجات وخدمات بدون متجر" : "Add products & services without a store"}</span>
+                    </div>
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-400 italic mt-4">
+                  {isAr ? "لا تحتاج إلى متجر لإكمال إعداد المساعد." : "You don't need a store to finish setting up the AI agent."}
                 </p>
               </div>
             )}
