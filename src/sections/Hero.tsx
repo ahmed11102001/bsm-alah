@@ -2,23 +2,48 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft, ArrowRight, Play, CheckCheck, TrendingUp,
-  Package, Users, ToggleRight, ShoppingCart, MessageSquareText,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, CheckCheck } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 interface HeroProps { onLoginClick: () => void; lang: Lang; }
 
-// ── Live-updating mock numbers for the dashboard preview ────────────────────
-// أرقام توضيحية بس — مش claims حقيقية، الهدف تبيّن شكل الداشبورد مش تثبت أرقام
-function useMockTicker() {
-  const [tick, setTick] = useState(0);
+// ── Automation Log — الأحداث المعروضة في محاكاة السجل ────────────────────────
+// نصوص توضيحية بس (illustrative)، مش أرقام/ادعاءات حقيقية عن عملاء فعليين
+type LogStatus = "ok" | "pending";
+interface LogEvent { time: string; type: string; main: string; action: string; status: LogStatus; }
+
+const AUTOMATION_EVENTS: LogEvent[] = [
+  { time: "10:30", type: "MESSAGE",   main: "عميل سأل عن السعر",         action: "وني رد تلقائيًا",        status: "ok" },
+  { time: "10:31", type: "ORDER",     main: "العميل أكّد الطلب",          action: "طلب #1024 اتسجّل",       status: "ok" },
+  { time: "10:33", type: "PAYMENT",   main: "اتبعت رابط الدفع",          action: "في انتظار الدفع",         status: "pending" },
+  { time: "10:34", type: "PAYMENT",   main: "الفلوس اتحصّلت",            action: "الطلب مؤكَّد",            status: "ok" },
+  { time: "10:42", type: "ORDER",     main: "اتأكد ميعاد التوصيل",       action: "طلب #1025 اتسجّل",       status: "ok" },
+  { time: "10:55", type: "FOLLOW-UP", main: "متابعة عميل ساكت",          action: "رسالة تذكير اتبعتت",       status: "ok" },
+  { time: "11:02", type: "ORDER",     main: "أكّد الطلب بعد المتابعة",   action: "طلب #1031 اتسجّل",       status: "ok" },
+  { time: "11:15", type: "CART",      main: "سلة متروكة من ساعة",        action: "تذكير بالمنتج اتبعت",      status: "ok" },
+];
+
+const LOG_WINDOW = 6;
+const ENTRY_HEIGHT = 78;
+
+function useAutomationLog() {
+  const [startIndex, setStartIndex] = useState(0);
+  const [shifted, setShifted] = useState(false);
+
   useEffect(() => {
-    const i = setInterval(() => setTick((p) => p + 1), 3000);
-    return () => clearInterval(i);
+    const loop = setInterval(() => {
+      setShifted(true);
+      const settle = setTimeout(() => {
+        setStartIndex((p) => (p + 1) % AUTOMATION_EVENTS.length);
+        setShifted(false);
+      }, 550);
+      return () => clearTimeout(settle);
+    }, 2800);
+    return () => clearInterval(loop);
   }, []);
-  return tick;
+
+  const items = Array.from({ length: LOG_WINDOW + 1 }, (_, i) => AUTOMATION_EVENTS[(startIndex + i) % AUTOMATION_EVENTS.length]);
+  return { items, shifted };
 }
 
 // ── Entrance animation hook ───────────────────────────────────────────────────
@@ -41,7 +66,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
   const isAr      = lang === "ar";
   const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
   const ready     = useEntrance();
-  const tick      = useMockTicker();
+  const { items: logItems, shifted } = useAutomationLog();
 
   const scrollTo = (href: string) =>
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
@@ -53,13 +78,6 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
     >
       {/* ── Background ── */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#064e45] via-[#075E54] to-[#0a7a6a]">
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: "linear-gradient(white 1px,transparent 1px),linear-gradient(90deg,white 1px,transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#25D366]/10 rounded-full blur-[100px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-300/10 rounded-full blur-[80px]" />
       </div>
@@ -138,7 +156,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
             </div>
           </div>
 
-          {/* ══ SaaS Dashboard Mockup — بديل الفون موك ══ */}
+          {/* ══ Automation Log Mockup — بديل الفون موك ══ */}
           <div
             className="relative flex justify-center lg:block mt-10 lg:mt-0"
             style={{
@@ -166,79 +184,63 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
               {/* Glow خفيف بس يفصل الكارد عن الخلفية الغامقة */}
               <div className="absolute inset-0 scale-105 bg-black/25 rounded-[1.75rem] blur-2xl" />
 
-              {/* Dashboard window */}
+              {/* Automation Log — سجل حي بيوضح شغل وني الفعلي، بديل الفون موك والداشبورد القديم */}
               <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
 
-                {/* Window bar */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-                  <span className="text-[11px] text-gray-400 mr-auto font-medium">
-                    {isAr ? "لوحة تحكم وني" : "WANI Dashboard"}
-                  </span>
+                {/* Header */}
+                <div className="px-5 pt-5 pb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-black text-[17px] text-gray-900">{isAr ? "وني AI" : "WANI AI"}</span>
+                    <span className="text-[10px] font-bold tracking-wider text-[#0c6b34] bg-[#25D366]/15 px-2.5 py-1 rounded-md">
+                      AUTOMATION LOG
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                    <span className="text-[11px] text-gray-400 font-mono">
+                      {isAr ? "سجل الأتمتة — مباشر" : "Automation log — live"}
+                    </span>
+                  </div>
                 </div>
+                <div className="h-[2px] bg-gray-900 mx-5" />
 
-                <div className="p-4 sm:p-5 space-y-4">
-
-                  {/* KPI row */}
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="bg-blue-50 rounded-xl p-2.5">
-                      <Package className="w-4 h-4 text-blue-600 mb-1.5" />
-                      <p className="text-sm font-black text-gray-800">{(1180 + tick * 4).toLocaleString(isAr ? "ar-EG" : "en-US")}</p>
-                      <p className="text-[9.5px] text-gray-500">{isAr ? "طلب" : "orders"}</p>
-                    </div>
-                    <div className="bg-purple-50 rounded-xl p-2.5">
-                      <Users className="w-4 h-4 text-purple-600 mb-1.5" />
-                      <p className="text-sm font-black text-gray-800">{(312).toLocaleString(isAr ? "ar-EG" : "en-US")}</p>
-                      <p className="text-[9.5px] text-gray-500">{isAr ? "عميل" : "customers"}</p>
-                    </div>
-                    <div className="bg-[#25D366]/10 rounded-xl p-2.5">
-                      <TrendingUp className="w-4 h-4 text-[#0c6b34] mb-1.5" />
-                      <p className="text-sm font-black text-gray-800">45.6{isAr ? "ك" : "K"}</p>
-                      <p className="text-[9.5px] text-gray-500">{isAr ? "جنيه" : "EGP"}</p>
-                    </div>
-                  </div>
-
-                  {/* Active automations */}
-                  <div className="space-y-2">
-                    <p className="text-[10.5px] font-bold text-gray-400 tracking-wide">
-                      {isAr ? "الأتمتات الفعّالة" : "ACTIVE AUTOMATIONS"}
-                    </p>
-
-                    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <MessageSquareText className="w-4 h-4 text-[#0c6b34]" />
-                        <span className="text-xs font-semibold text-gray-700">{isAr ? "تأكيد الأوردر" : "Order Confirm"}</span>
+                {/* Log entries — الشريط بيتحرك لوحده كل شوية */}
+                <div
+                  className="relative h-[430px] overflow-hidden px-5"
+                  style={{
+                    maskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
+                  }}
+                >
+                  <div
+                    className="transition-transform ease-out"
+                    style={{
+                      transform: shifted ? `translateY(-${ENTRY_HEIGHT}px)` : "translateY(0)",
+                      transitionDuration: "550ms",
+                    }}
+                  >
+                    {logItems.map((e, i) => (
+                      <div
+                        key={`${e.time}-${e.main}-${i}`}
+                        className="py-3.5 border-b border-dashed border-gray-100"
+                        style={{ height: ENTRY_HEIGHT }}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] font-mono text-gray-400">{e.time}</span>
+                          <span className="text-[9px] font-mono font-bold tracking-wider text-gray-400 border border-gray-200 rounded px-1.5 py-[1px]">
+                            {e.type}
+                          </span>
+                        </div>
+                        <p className="text-[13.5px] font-bold text-gray-900 mb-1">{e.main}</p>
+                        <div className="flex items-center justify-between pr-3.5">
+                          <span className="text-[12px] text-gray-500 font-semibold">↳ {e.action}</span>
+                          <span className={`text-[13px] font-black ${e.status === "ok" ? "text-[#0c6b34]" : "text-gray-300"}`}>
+                            {e.status === "ok" ? "✓" : "→"}
+                          </span>
+                        </div>
                       </div>
-                      <ToggleRight className="w-6 h-6 text-[#25D366]" />
-                    </div>
-
-                    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <ShoppingCart className="w-4 h-4 text-[#0c6b34]" />
-                        <span className="text-xs font-semibold text-gray-700">{isAr ? "استرداد السلة" : "Cart Recovery"}</span>
-                      </div>
-                      <ToggleRight className="w-6 h-6 text-[#25D366]" />
-                    </div>
+                    ))}
                   </div>
-
-                  {/* Mini chart */}
-                  <div>
-                    <p className="text-[10.5px] font-bold text-gray-400 tracking-wide mb-2">
-                      {isAr ? "رسائل هذا الأسبوع" : "MESSAGES THIS WEEK"}
-                    </p>
-                    <div className="flex items-end gap-1.5 h-16">
-                      {[38, 52, 46, 64, 58, 74, 68].map((h, i) => (
-                        <div
-                          key={i}
-                          className="flex-1 rounded-t-sm bg-[#25D366]"
-                          style={{ height: `${h}%`, opacity: 0.35 + i / 10 }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
                 </div>
               </div>
             </div>
