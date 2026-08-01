@@ -807,6 +807,75 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         </div>
       </div>
 
+      {/* ── ElevenLabs Voice Agent ── */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center font-bold">
+              <Sparkles className="w-5 h-5" />
+            </span>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">ElevenLabs Voice Agent</h3>
+              <p className="text-xs text-gray-400">{isAr ? "كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا" : "Each user can use their own ElevenLabs voice agent"}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => saveAgentSettings({ elevenLabsEnabled: !agent.elevenLabsEnabled })}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-xs font-bold transition-all ${
+              agent.elevenLabsEnabled
+                ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
+                : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+            }`}
+          >
+            {agent.elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+            {agent.elevenLabsEnabled ? (isAr ? "مفعّل" : "Enabled") : (isAr ? "معطّل" : "Disabled")}
+          </button>
+        </div>
+
+        {agent.elevenLabsEnabled && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-3.5 text-xs text-purple-700 dark:text-purple-300">
+              <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              {isAr
+                ? "اعمل Agent على ElevenLabs وحط الـ API Key والـ Agent ID هنا. لما تفعّل Voice Agent في محادثة معينة، هيرد بصوت الـ Agent على كل الرسائل."
+                : "Create an Agent in ElevenLabs and place the API Key and Agent ID here. When you enable Voice Agent in a specific conversation, it will reply with the Agent's voice to all messages."}
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">ElevenLabs API Key *</Label>
+              <Input
+                type="password"
+                value={agent.elevenLabsApiKey}
+                onChange={e => setAgent(f => ({ ...f, elevenLabsApiKey: e.target.value }))}
+                placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                dir="ltr"
+                className="rounded-xl"
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Agent ID *</Label>
+              <Input
+                value={agent.elevenLabsAgentId}
+                onChange={e => setAgent(f => ({ ...f, elevenLabsAgentId: e.target.value }))}
+                placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                dir="ltr"
+                className="rounded-xl"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {isAr ? "من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID" : "From ElevenLabs Dashboard → Conversational AI → Agent → Copy ID"}
+              </p>
+            </div>
+            <Button
+              onClick={() => saveAgentSettings()}
+              disabled={saving}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5 gap-2"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isAr ? "حفظ إعدادات Voice Agent" : "Save Voice Agent Settings"}
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* ── Dialog: Onboarding Wizard (Modal 3 Steps) ── */}
       <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
         <DialogContent className="max-w-xl rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
