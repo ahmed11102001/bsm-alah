@@ -17,7 +17,7 @@ import {
   Bot, Sparkles, Store, Shield, HelpCircle, FileText, Send, RefreshCw,
   Plus, Trash2, Edit3, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
-  ExternalLink, Layers, Check
+  ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload
 } from "lucide-react";
 
 interface AiAgentSettings {
@@ -73,6 +73,25 @@ interface ProductStats {
   };
 }
 
+interface CatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice: string;
+  currency: string;
+  imageUrl: string;
+  url: string;
+  category: string;
+  tags: string;
+  stock: string; // "available" | "unavailable" | number-string | ""
+}
+
+const emptyCatalogItem: CatalogItem = {
+  id: "", name: "", description: "", price: "", compareAtPrice: "",
+  currency: "EGP", imageUrl: "", url: "", category: "", tags: "", stock: "",
+};
+
 interface ChatMessage {
   id: string;
   sender: "user" | "ai";
@@ -126,12 +145,15 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [showGuardrailsModal, setShowGuardrailsModal] = useState(false);
   const [showBrandModal, setShowBrandModal] = useState(false);
 
-  // Onboarding Step 3 Submode & Manual Entry Form
+  // Onboarding Step 3 Submode & Manual Catalog Manager
   const [onboardingSubMode, setOnboardingSubMode] = useState<"select" | "store" | "manual" | "services_only">("select");
-  const [manualProductForm, setManualProductForm] = useState({
-    name: "", description: "", price: "", currency: "EGP", imageUrl: "", url: "", stock: ""
-  });
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [manualProductForm, setManualProductForm] = useState<CatalogItem>({ ...emptyCatalogItem });
   const [addingManualProduct, setAddingManualProduct] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(true);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Test Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -323,7 +345,32 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     }
   };
 
-  // ── Add Manual Product inside Onboarding ──
+  // ── Upload product image to Cloudinary ──
+  const handleProductImageUpload = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(isAr ? "الحجم الأقصى للصورة 5MB" : "Max image size is 5MB");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/automation/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        setManualProductForm(f => ({ ...f, imageUrl: data.url }));
+        toast.success(isAr ? "تم رفع الصورة" : "Image uploaded");
+      } else {
+        toast.error(isAr ? "فشل رفع الصورة" : "Image upload failed");
+      }
+    } catch {
+      toast.error(isAr ? "خطأ أثناء رفع الصورة" : "Error uploading image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // ── Add or Update Manual Product inside Onboarding ──
   const handleAddManualProduct = async () => {
     if (!manualProductForm.name.trim()) {
       toast.error(isAr ? "اسم المنتج أو الخدمة مطلوب" : "Product/service name is required");
@@ -338,25 +385,59 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           name: manualProductForm.name.trim(),
           description: manualProductForm.description.trim() || null,
           price: manualProductForm.price ? parseFloat(manualProductForm.price) : null,
+          compareAtPrice: manualProductForm.compareAtPrice ? parseFloat(manualProductForm.compareAtPrice) : null,
           currency: manualProductForm.currency || "EGP",
           images: manualProductForm.imageUrl.trim() ? [manualProductForm.imageUrl.trim()] : [],
           url: manualProductForm.url.trim() || null,
-          stock: manualProductForm.stock ? parseInt(manualProductForm.stock, 10) : null,
+          stock: manualProductForm.stock ? (manualProductForm.stock === "available" ? 999 : manualProductForm.stock === "unavailable" ? 0 : parseInt(manualProductForm.stock, 10)) : null,
+          category: manualProductForm.category.trim() || null,
+          tags: manualProductForm.tags.trim() ? manualProductForm.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
         }),
       });
       if (res.ok) {
-        toast.success(isAr ? "تم إضافة المنتج / الخدمة بنجاح!" : "Product / Service added successfully!");
-        setManualProductForm({ name: "", description: "", price: "", currency: "EGP", imageUrl: "", url: "", stock: "" });
-        setProductStats(prev => ({ ...prev, total: prev.total + 1 }));
+        const saved = await res.json();
+        toast.success(isAr ? "تم حفظ المنتج / الخدمة بنجاح!" : "Product / Service saved!");
+        // Update local catalog list
+        const newItem: CatalogItem = { ...manualProductForm, id: saved.id || String(Date.now()) };
+        if (editingProductId) {
+          setCatalogItems(prev => prev.map(p => p.id === editingProductId ? newItem : p));
+        } else {
+          setCatalogItems(prev => [...prev, newItem]);
+          setProductStats(prev => ({ ...prev, total: prev.total + 1 }));
+        }
+        // Reset form
+        setManualProductForm({ ...emptyCatalogItem });
+        setShowAddForm(false);
+        setEditingProductId(null);
+        setShowAdvancedFields(false);
       } else {
         const errData = await res.json();
-        toast.error(errData.error || (isAr ? "فشل إضافة المنتج" : "Failed to add product"));
+        toast.error(errData.error || (isAr ? "فشل حفظ المنتج" : "Failed to save product"));
       }
     } catch (err: any) {
-      toast.error(isAr ? "حدث خطأ أثناء الإضافة" : "Error adding product");
+      toast.error(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving product");
     } finally {
       setAddingManualProduct(false);
     }
+  };
+
+  // ── Delete catalog item ──
+  const handleDeleteCatalogItem = async (item: CatalogItem) => {
+    try {
+      await fetch(`/api/ai-agent/products?id=${item.id}`, { method: "DELETE" });
+      setCatalogItems(prev => prev.filter(p => p.id !== item.id));
+      setProductStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      toast.success(isAr ? "تم حذف المنتج" : "Product deleted");
+    } catch {
+      toast.error(isAr ? "فشل حذف المنتج" : "Failed to delete product");
+    }
+  };
+
+  // ── Start editing catalog item ──
+  const handleEditCatalogItem = (item: CatalogItem) => {
+    setManualProductForm({ ...item });
+    setEditingProductId(item.id);
+    setShowAddForm(true);
   };
 
   // ── Send Test Chat Message ──
@@ -1124,73 +1205,227 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   </div>
                 )}
 
-                {/* Submode 3: MANUAL ENTRY MODE */}
+                {/* Submode 3: MANUAL ENTRY MODE — Mini Catalog Manager */}
                 {onboardingSubMode === "manual" && (
-                  <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/50 dark:bg-gray-900/30 text-right" dir={isAr ? "rtl" : "ltr"}>
-                    <div className="flex items-center justify-between mb-1">
+                  <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/50 dark:bg-gray-900/30" dir={isAr ? "rtl" : "ltr"}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
                       <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                        ✏️ {isAr ? "إضافة منتج أو خدمة يدويًا" : "Add Product or Service Manually"}
+                        ✏️ {catalogItems.length > 0
+                          ? (isAr ? `كتالوجك — ${catalogItems.length}` : `Your Catalog — ${catalogItems.length}`)
+                          : (isAr ? "إضافة منتج أو خدمة يدويًا" : "Add Product or Service Manually")}
                       </h5>
                       <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline">
                         {isAr ? "← تغيير الخيار" : "← Change option"}
                       </button>
                     </div>
 
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-[11px] mb-1 block">{isAr ? "اسم المنتج / الخدمة *" : "Product / Service Name *"}</Label>
-                        <Input
-                          value={manualProductForm.name}
-                          onChange={e => setManualProductForm(f => ({ ...f, name: e.target.value }))}
-                          placeholder={isAr ? "مثال: فستان سهرة أحمر / باقة استشارات" : "E.g. Red Evening Dress / Consultation Package"}
-                          className="text-xs rounded-xl"
-                        />
+                    {/* ── Product List ── */}
+                    {catalogItems.length > 0 && (
+                      <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                        {catalogItems.map(item => (
+                          <div key={item.id} className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-2 hover:border-emerald-500/40 transition-all">
+                            {/* Thumbnail */}
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                <ShoppingBag className="w-4 h-4 text-gray-400" />
+                              </div>
+                            )}
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
+                              <p className="text-[10px] text-gray-500">
+                                {item.price ? `${item.price} ${item.currency}` : (isAr ? "بدون سعر" : "No price")}
+                                {item.category ? ` · ${item.category}` : ""}
+                              </p>
+                            </div>
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button onClick={() => handleEditCatalogItem(item)} className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleDeleteCatalogItem(item)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    )}
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="col-span-2">
-                          <Label className="text-[11px] mb-1 block">{isAr ? "السعر" : "Price"}</Label>
+                    {/* ── Add/Edit Form ── */}
+                    {showAddForm ? (
+                      <div className="space-y-2.5 border-t border-gray-200 dark:border-gray-700 pt-3">
+                        {/* Level 1: Essential Fields */}
+                        <div>
+                          <Label className="text-[11px] mb-1 block">{isAr ? "اسم المنتج / الخدمة *" : "Product / Service Name *"}</Label>
                           <Input
-                            type="number"
-                            value={manualProductForm.price}
-                            onChange={e => setManualProductForm(f => ({ ...f, price: e.target.value }))}
-                            placeholder="350"
+                            value={manualProductForm.name}
+                            onChange={e => setManualProductForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder={isAr ? "مثال: فستان سهرة أحمر / باقة استشارات" : "E.g. Red Evening Dress / Consultation Package"}
                             className="text-xs rounded-xl"
                           />
                         </div>
+
                         <div>
-                          <Label className="text-[11px] mb-1 block">{isAr ? "العملة" : "Currency"}</Label>
-                          <Select value={manualProductForm.currency} onValueChange={v => setManualProductForm(f => ({ ...f, currency: v }))}>
-                            <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="EGP">EGP</SelectItem>
-                              <SelectItem value="SAR">SAR</SelectItem>
-                              <SelectItem value="AED">AED</SelectItem>
-                              <SelectItem value="USD">USD</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-[11px] mb-1 block">{isAr ? "الوصف" : "Description"}</Label>
+                          <Textarea
+                            value={manualProductForm.description}
+                            onChange={e => setManualProductForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder={isAr ? "تفاصيل المقاسات، الخامات، المميزات..." : "Details, materials, features, sizing..."}
+                            className="text-xs rounded-xl min-h-[50px] resize-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="col-span-2">
+                            <Label className="text-[11px] mb-1 block">{isAr ? "السعر" : "Price"}</Label>
+                            <Input type="number" value={manualProductForm.price} onChange={e => setManualProductForm(f => ({ ...f, price: e.target.value }))} placeholder="350" className="text-xs rounded-xl" />
+                          </div>
+                          <div>
+                            <Label className="text-[11px] mb-1 block">{isAr ? "العملة" : "Currency"}</Label>
+                            <Select value={manualProductForm.currency} onValueChange={v => setManualProductForm(f => ({ ...f, currency: v }))}>
+                              <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="EGP">EGP</SelectItem>
+                                <SelectItem value="SAR">SAR</SelectItem>
+                                <SelectItem value="AED">AED</SelectItem>
+                                <SelectItem value="USD">USD</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Image Upload */}
+                        <div>
+                          <Label className="text-[11px] mb-1 block">{isAr ? "صورة المنتج (اختياري)" : "Product Image (optional)"}</Label>
+                          {manualProductForm.imageUrl ? (
+                            <div className="relative w-full h-24 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden group">
+                              <img src={manualProductForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => setManualProductForm(f => ({ ...f, imageUrl: "" }))}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <label className="flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 hover:border-emerald-500 cursor-pointer transition-colors text-xs text-gray-500">
+                                {uploadingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                                {uploadingImage ? (isAr ? "جاري الرفع..." : "Uploading...") : (isAr ? "رفع صورة" : "Upload Image")}
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp,image/gif"
+                                  className="hidden"
+                                  onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleProductImageUpload(file);
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </label>
+                              <Input
+                                value={manualProductForm.imageUrl}
+                                onChange={e => setManualProductForm(f => ({ ...f, imageUrl: e.target.value }))}
+                                placeholder={isAr ? "أو ألصق رابط صورة" : "Or paste image URL"}
+                                className="text-xs rounded-xl flex-1"
+                                dir="ltr"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Advanced Fields Toggle */}
+                        <button
+                          onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                          className="w-full flex items-center justify-center gap-1.5 text-[11px] text-gray-500 hover:text-emerald-600 transition-colors py-1"
+                        >
+                          {showAdvancedFields ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {showAdvancedFields
+                            ? (isAr ? "إخفاء التفاصيل الإضافية" : "Hide advanced details")
+                            : (isAr ? "+ إضافة تفاصيل إضافية (رابط، تصنيف، مخزون...)" : "+ Add more details (URL, category, stock...)")}
+                        </button>
+
+                        {showAdvancedFields && (
+                          <div className="space-y-2 p-2.5 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px] mb-0.5 block">{isAr ? "السعر قبل الخصم" : "Compare at Price"}</Label>
+                                <Input type="number" value={manualProductForm.compareAtPrice} onChange={e => setManualProductForm(f => ({ ...f, compareAtPrice: e.target.value }))} placeholder="500" className="text-xs rounded-xl" />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] mb-0.5 block">{isAr ? "المخزون" : "Stock"}</Label>
+                                <Select value={manualProductForm.stock || "available"} onValueChange={v => setManualProductForm(f => ({ ...f, stock: v }))}>
+                                  <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="available">{isAr ? "متوفر" : "In Stock"}</SelectItem>
+                                    <SelectItem value="unavailable">{isAr ? "غير متوفر" : "Out of Stock"}</SelectItem>
+                                    <SelectItem value="">{isAr ? "غير متابع" : "Not Tracked"}</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-[10px] mb-0.5 block">{isAr ? "رابط المنتج / صفحة الموقع" : "Product URL / Website Link"}</Label>
+                              <Input value={manualProductForm.url} onChange={e => setManualProductForm(f => ({ ...f, url: e.target.value }))} placeholder="https://example.com/product/..." dir="ltr" className="text-xs rounded-xl" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px] mb-0.5 block">{isAr ? "التصنيف" : "Category"}</Label>
+                                <Input value={manualProductForm.category} onChange={e => setManualProductForm(f => ({ ...f, category: e.target.value }))} placeholder={isAr ? "ملابس، إلكترونيات..." : "Clothing, Electronics..."} className="text-xs rounded-xl" />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] mb-0.5 block">{isAr ? "كلمات مفتاحية" : "Tags"}</Label>
+                                <Input value={manualProductForm.tags} onChange={e => setManualProductForm(f => ({ ...f, tags: e.target.value }))} placeholder={isAr ? "سهرة, أحمر, نسائي" : "evening, red, women"} className="text-xs rounded-xl" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Save & Cancel Buttons */}
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleAddManualProduct}
+                            disabled={addingManualProduct || !manualProductForm.name.trim()}
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-4 gap-1.5"
+                          >
+                            {addingManualProduct ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            {editingProductId ? (isAr ? "حفظ التعديلات" : "Save Changes") : (isAr ? "حفظ المنتج" : "Save Product")}
+                          </Button>
+                          {(catalogItems.length > 0 || editingProductId) && (
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setShowAddForm(false);
+                                setEditingProductId(null);
+                                setManualProductForm({ ...emptyCatalogItem });
+                                setShowAdvancedFields(false);
+                              }}
+                              className="rounded-xl text-xs px-4"
+                            >
+                              {isAr ? "إلغاء" : "Cancel"}
+                            </Button>
+                          )}
                         </div>
                       </div>
-
-                      <div>
-                        <Label className="text-[11px] mb-1 block">{isAr ? "الوصف" : "Description"}</Label>
-                        <Input
-                          value={manualProductForm.description}
-                          onChange={e => setManualProductForm(f => ({ ...f, description: e.target.value }))}
-                          placeholder={isAr ? "تفاصيل المقاسات، الخامات، السعة..." : "Details, materials, sizing, etc."}
-                          className="text-xs rounded-xl"
-                        />
-                      </div>
-
+                    ) : (
+                      /* Show "Add" button when form is hidden */
                       <Button
-                        onClick={handleAddManualProduct}
-                        disabled={addingManualProduct || !manualProductForm.name.trim()}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-4 gap-1.5 mt-2"
+                        onClick={() => {
+                          setManualProductForm({ ...emptyCatalogItem });
+                          setShowAddForm(true);
+                          setEditingProductId(null);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-xl text-xs font-semibold gap-1.5 border-dashed border-gray-300 dark:border-gray-600 hover:border-emerald-500"
                       >
-                        {addingManualProduct ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                        {isAr ? "+ حفظ وإضافة منتج آخر" : "+ Save & Add Another"}
+                        <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                        {isAr ? "+ إضافة منتج أو خدمة" : "+ Add Product or Service"}
                       </Button>
-                    </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-400 italic text-center pt-1">
+                      {isAr ? "يمكنك تعديل وإضافة المنتجات لاحقًا من الكتالوج." : "You can edit and add more products later from the catalog."}
+                    </p>
                   </div>
                 )}
 
