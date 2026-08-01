@@ -268,9 +268,9 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
       {/* Dropdown */}
       {open && (
-        <div className={`fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-[24rem] md:max-w-[calc(100vw-2rem)] md:max-h-96 md:overflow-hidden ${lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"}`}>
+        <div className={`fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-[min(24rem,calc(100vw-1rem))] md:max-w-[calc(100vw-1rem)] md:max-h-96 md:overflow-hidden ${lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"}`}>
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-gray-600" />
               <span className="text-sm font-semibold text-gray-900">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
@@ -280,11 +280,11 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-shrink-0 items-center gap-1">
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-xs text-[#25D366] hover:underline flex items-center gap-1"
+                  className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1"
                   title={lang === "ar" ? "تحديد الكل كمقروء" : "Mark all as read"}
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
@@ -324,10 +324,10 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-snug ${!notif.isRead ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}>
+                    <p className={`break-words text-sm leading-snug ${!notif.isRead ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}>
                       {t(notif.title, lang)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-snug">{t(notif.body, lang)}</p>
+                    <p className="break-words text-xs text-gray-500 mt-0.5 leading-snug">{t(notif.body, lang)}</p>
                     <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt, lang)}</p>
                   </div>
 

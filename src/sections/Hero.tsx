@@ -3,62 +3,22 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, ArrowRight, Play, Sparkles, Zap, Brain,
-  Send, Paperclip, Smile, MoreVertical, Phone, Video,
-  CheckCheck, Store, TrendingUp,
+  ArrowLeft, ArrowRight, Play, CheckCheck, TrendingUp,
+  Package, Users, ToggleRight, ShoppingCart, MessageSquareText,
 } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 interface HeroProps { onLoginClick: () => void; lang: Lang; }
 
-// ── Typing simulation hook ────────────────────────────────────────────────────
-type ChatStep =
-  | { type: "msg";    side: "customer" | "ai"; text: string; time: string }
-  | { type: "typing"; side: "ai" }
-  | { type: "stats" };
-
-function useChatSimulation(lang: Lang) {
-  const steps: ChatStep[] = [
-    { type: "msg",    side: "customer", text: tr(t.hero.msg1, lang), time: "10:30" },
-    { type: "typing", side: "ai" },
-    { type: "msg",    side: "ai",       text: tr(t.hero.msg2, lang), time: "10:30" },
-    { type: "msg",    side: "ai",       text: tr(t.hero.msg3, lang), time: "10:31" },
-    { type: "stats" },
-  ];
-
-  const DELAYS = [700, 1200, 1100, 900, 800];
-  // بعد آخر step نستنى 3 ثواني وبعدين نلف
-  const RESET_DELAY = 3500;
-
-  const [visible, setVisible] = useState<number[]>([]);
-
+// ── Live-updating mock numbers for the dashboard preview ────────────────────
+// أرقام توضيحية بس — مش claims حقيقية، الهدف تبيّن شكل الداشبورد مش تثبت أرقام
+function useMockTicker() {
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    let timeouts: ReturnType<typeof setTimeout>[] = [];
-
-    const run = () => {
-      setVisible([]);
-      let acc = 400;
-      steps.forEach((_, i) => {
-        acc += DELAYS[i] ?? 900;
-        const t = setTimeout(() => setVisible(prev => [...prev, i]), acc);
-        timeouts.push(t);
-      });
-      // loop
-      const total = acc + RESET_DELAY;
-      const loop = setTimeout(() => {
-        timeouts.forEach(clearTimeout);
-        timeouts = [];
-        run();
-      }, total);
-      timeouts.push(loop);
-    };
-
-    run();
-    return () => timeouts.forEach(clearTimeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang]);
-
-  return { steps, visible };
+    const i = setInterval(() => setTick((p) => p + 1), 3000);
+    return () => clearInterval(i);
+  }, []);
+  return tick;
 }
 
 // ── Entrance animation hook ───────────────────────────────────────────────────
@@ -81,7 +41,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
   const isAr      = lang === "ar";
   const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
   const ready     = useEntrance();
-  const { steps, visible } = useChatSimulation(lang);
+  const tick      = useMockTicker();
 
   const scrollTo = (href: string) =>
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
@@ -142,35 +102,25 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
               </p>
             </div>
 
-            {/* Feature pills */}
-            <div style={entranceStyle(ready, 340)} className={`flex flex-wrap gap-2.5 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} mb-8`}>
-              {[
-                { icon: Brain, label: tr(t.hero.stat2, lang) },
-                { icon: Store, label: tr(t.hero.stat3, lang) },
-                { icon: Zap,   label: tr(t.hero.stat1, lang) },
-              ].map(({ icon: Icon, label }) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full px-3.5 py-1.5 transition-colors"
-                >
-                  <Icon className="w-3.5 h-3.5 text-[#25D366]" />
-                  <span className="text-white/90 text-sm font-medium">{label}</span>
-                </div>
-              ))}
-            </div>
-
             {/* CTAs */}
-            <div style={entranceStyle(ready, 440)} className={`flex flex-col sm:flex-row gap-3 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} mb-8`}>
+            <div style={entranceStyle(ready, 340)} className={`flex flex-col sm:flex-row gap-3 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"} mb-8`}>
               <Button
                 onClick={onLoginClick} size="lg"
-                className="bg-[#25D366] hover:bg-[#20bb5a] text-white px-8 font-bold shadow-lg shadow-green-900/40 hover:shadow-green-800/50 hover:scale-[1.02] transition-all duration-200 text-base h-12"
+                className="bg-[#25D366] hover:bg-[#25D366] text-[#06371f] px-8 font-extrabold text-base h-12 rounded-md border-2 border-[#0c6b34]
+                           shadow-[3px_3px_0_rgba(0,0,0,0.55)] hover:shadow-[4px_4px_0_rgba(0,0,0,0.55)]
+                           hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_rgba(0,0,0,0.55)]
+                           transition-all duration-150"
               >
                 {tr(t.hero.cta, lang)}
                 <ArrowIcon className="w-5 h-5 mr-2" />
               </Button>
               <Button
                 onClick={() => scrollTo("#how-it-works")} size="lg" variant="outline"
-                className="border-white/25 text-white hover:bg-white/10 hover:border-white/40 px-8 h-12 group text-base"
+                className="bg-transparent text-white px-8 h-12 group text-base font-bold rounded-md border-2 border-white/80
+                           shadow-[3px_3px_0_rgba(0,0,0,0.35)] hover:bg-white hover:text-[#06371f]
+                           hover:shadow-[4px_4px_0_rgba(0,0,0,0.35)] hover:-translate-x-[1px] hover:-translate-y-[1px]
+                           active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0_rgba(0,0,0,0.35)]
+                           transition-all duration-150"
               >
                 <Play className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform" />
                 {tr(t.hero.ctaWatch, lang)}
@@ -178,7 +128,7 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
             </div>
 
             {/* Trust strip */}
-            <div style={entranceStyle(ready, 540)} className={`flex flex-wrap items-center gap-x-5 gap-y-2 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"}`}>
+            <div style={entranceStyle(ready, 440)} className={`flex flex-wrap items-center gap-x-5 gap-y-2 justify-center ${isAr ? "lg:justify-start" : "lg:justify-start"}`}>
               {[tr(t.hero.trust1, lang), tr(t.hero.trust2, lang), tr(t.hero.trust3, lang)].map((item, i) => (
                 <span key={i} className="flex items-center gap-1.5 text-xs text-white/50">
                   <CheckCheck className="w-3.5 h-3.5 text-[#25D366]/70" />
@@ -188,9 +138,9 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
             </div>
           </div>
 
-          {/* ══ Phone Mockup ══ */}
+          {/* ══ SaaS Dashboard Mockup — بديل الفون موك ══ */}
           <div
-            className="relative flex justify-center lg:block mt-8 lg:mt-0"
+            className="relative flex justify-center lg:block mt-10 lg:mt-0"
             style={{
               opacity:   ready ? 1 : 0,
               transform: ready
@@ -199,159 +149,97 @@ export default function Hero({ onLoginClick, lang }: HeroProps) {
               transition: "opacity 0.9s cubic-bezier(0.16,1,0.3,1) 300ms, transform 0.9s cubic-bezier(0.16,1,0.3,1) 300ms",
             }}
           >
-            <div className="relative w-[250px] sm:w-[290px] lg:w-[340px] mx-auto">
+            <div className="relative w-[300px] sm:w-[370px] lg:w-[420px] mx-auto">
 
-              {/* Glow */}
-              <div className="absolute inset-0 scale-110 bg-[#25D366]/20 rounded-[3rem] blur-2xl" />
+              {/* ختم وني — بديل الكروت الزجاجية العايمة القديمة */}
+              <div
+                className="hidden sm:flex absolute -top-6 -right-6 lg:-right-9 z-20 w-[92px] h-[92px] rounded-full items-center justify-center text-center bg-white/90"
+                style={{ border: "2px solid #0c6b34", transform: "rotate(-10deg)", mixBlendMode: "multiply" }}
+              >
+                <div className="absolute inset-[6px] rounded-full border border-dashed border-[#0c6b34]/60" />
+                <div className="relative leading-tight">
+                  <p className="font-black text-[15px] text-[#0c6b34]">وني</p>
+                  <p className="font-mono text-[8.5px] tracking-widest text-[#0c6b34] font-bold">AI · 24/7</p>
+                </div>
+              </div>
 
-              {/* Phone frame */}
-              <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl ring-1 ring-white/10">
-                <div className="bg-[#ECE5DD] rounded-[2rem] overflow-hidden">
+              {/* Glow خفيف بس يفصل الكارد عن الخلفية الغامقة */}
+              <div className="absolute inset-0 scale-105 bg-black/25 rounded-[1.75rem] blur-2xl" />
 
-                  {/* Chat header */}
-                  <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shadow-md overflow-hidden">
-                        <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+              {/* Dashboard window */}
+              <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
+
+                {/* Window bar */}
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                  <span className="text-[11px] text-gray-400 mr-auto font-medium">
+                    {isAr ? "لوحة تحكم وني" : "WANI Dashboard"}
+                  </span>
+                </div>
+
+                <div className="p-4 sm:p-5 space-y-4">
+
+                  {/* KPI row */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="bg-blue-50 rounded-xl p-2.5">
+                      <Package className="w-4 h-4 text-blue-600 mb-1.5" />
+                      <p className="text-sm font-black text-gray-800">{(1180 + tick * 4).toLocaleString(isAr ? "ar-EG" : "en-US")}</p>
+                      <p className="text-[9.5px] text-gray-500">{isAr ? "طلب" : "orders"}</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-xl p-2.5">
+                      <Users className="w-4 h-4 text-purple-600 mb-1.5" />
+                      <p className="text-sm font-black text-gray-800">{(312).toLocaleString(isAr ? "ar-EG" : "en-US")}</p>
+                      <p className="text-[9.5px] text-gray-500">{isAr ? "عميل" : "customers"}</p>
+                    </div>
+                    <div className="bg-[#25D366]/10 rounded-xl p-2.5">
+                      <TrendingUp className="w-4 h-4 text-[#0c6b34] mb-1.5" />
+                      <p className="text-sm font-black text-gray-800">45.6{isAr ? "ك" : "K"}</p>
+                      <p className="text-[9.5px] text-gray-500">{isAr ? "جنيه" : "EGP"}</p>
+                    </div>
+                  </div>
+
+                  {/* Active automations */}
+                  <div className="space-y-2">
+                    <p className="text-[10.5px] font-bold text-gray-400 tracking-wide">
+                      {isAr ? "الأتمتات الفعّالة" : "ACTIVE AUTOMATIONS"}
+                    </p>
+
+                    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <MessageSquareText className="w-4 h-4 text-[#0c6b34]" />
+                        <span className="text-xs font-semibold text-gray-700">{isAr ? "تأكيد الأوردر" : "Order Confirm"}</span>
                       </div>
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-[#075E54] rounded-full" />
+                      <ToggleRight className="w-6 h-6 text-[#25D366]" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white text-sm leading-tight">{isAr ? "وني AI" : "WANI AI"}</p>
-                      <p className="text-[11px] text-green-300 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                        {tr(t.hero.chatOnline, lang)}
-                      </p>
-                    </div>
-                    <div className="flex gap-3 text-white/70">
-                      <Phone className="w-4 h-4" />
-                      <Video className="w-4 h-4" />
-                      <MoreVertical className="w-4 h-4" />
+
+                    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <ShoppingCart className="w-4 h-4 text-[#0c6b34]" />
+                        <span className="text-xs font-semibold text-gray-700">{isAr ? "استرداد السلة" : "Cart Recovery"}</span>
+                      </div>
+                      <ToggleRight className="w-6 h-6 text-[#25D366]" />
                     </div>
                   </div>
 
-                  {/* ── Chat area — typing simulation ── */}
-                  <div className="h-[260px] sm:h-[320px] lg:h-[370px] p-3 space-y-2.5 bg-[#ECE5DD] overflow-hidden flex flex-col justify-end">
-                    {steps.map((step, i) => {
-                      const show = visible.includes(i);
-                      if (!show) return null;
-
-                      if (step.type === "typing") {
-                        return (
-                          <div key={i} className="flex justify-end items-end gap-1.5" style={{ animation: "fade-in-up 0.3s ease both" }}>
-                            <div className="flex items-center gap-1 bg-white/70 rounded-full px-2.5 py-1.5">
-                              <Brain className="w-3 h-3 text-[#25D366]" />
-                              <span className="text-[10px] text-gray-500">{tr(t.hero.typing, lang)}</span>
-                              <span className="flex gap-[3px] mr-1">
-                                {[0,1,2].map(d => (
-                                  <span
-                                    key={d}
-                                    className="w-1 h-1 bg-gray-400 rounded-full"
-                                    style={{ animation: `typing-dot 1.2s ease-in-out ${d * 200}ms infinite` }}
-                                  />
-                                ))}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      if (step.type === "msg") {
-                        const isCustomer = step.side === "customer";
-                        return (
-                          <div
-                            key={i}
-                            className={`flex ${isCustomer ? "justify-start" : "justify-end"}`}
-                            style={{ animation: `${isCustomer ? "message-received" : "message-sent"} 0.35s cubic-bezier(0.34,1.56,0.64,1) both` }}
-                          >
-                            <div className={`${isCustomer ? "bg-white rounded-2xl rounded-tl-none" : "bg-[#DCF8C6] rounded-2xl rounded-tr-none"} px-3.5 py-2 max-w-[88%] shadow-sm`}>
-                              <p className="text-gray-800 text-xs leading-relaxed">{step.text}</p>
-                              <div className={`flex items-center ${isCustomer ? "justify-start" : "justify-end"} gap-1 mt-1`}>
-                                <span className="text-[9px] text-gray-400">{step.time}</span>
-                                {!isCustomer && <CheckCheck className="w-3 h-3 text-[#25D366]" />}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      if (step.type === "stats") {
-                        return (
-                          <div
-                            key={i}
-                            className="bg-white/95 rounded-xl p-2.5 border border-green-100 shadow-sm mx-1"
-                            style={{ animation: "fade-in-scale 0.4s cubic-bezier(0.34,1.56,0.64,1) both" }}
-                          >
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <TrendingUp className="w-3 h-3 text-[#25D366]" />
-                              <span className="text-[10px] font-bold text-gray-700">AI Performance</span>
-                              <span className="mr-auto text-[9px] text-green-600 font-semibold bg-green-50 px-1.5 rounded-full">LIVE</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <div className="bg-gray-50 rounded-lg p-1.5 text-center">
-                                <p className="text-sm font-black text-[#25D366]">98%</p>
-                                <p className="text-[9px] text-gray-500">{tr(t.hero.statMsg, lang)}</p>
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-1.5 text-center">
-                                <p className="text-sm font-black text-[#25D366]">+247</p>
-                                <p className="text-[9px] text-gray-500">{tr(t.hero.statCont, lang)}</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return null;
-                    })}
-                  </div>
-
-                  {/* Input bar */}
-                  <div className="bg-[#F0F2F5] px-3 py-2.5 flex items-center gap-2">
-                    <Smile className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 bg-white rounded-full px-3 py-1.5 text-xs text-gray-400">
-                      {tr(t.hero.chatInput, lang)}
-                    </div>
-                    <div className="bg-[#25D366] rounded-full p-1.5 flex-shrink-0">
-                      <Send className="w-4 h-4 text-white" />
+                  {/* Mini chart */}
+                  <div>
+                    <p className="text-[10.5px] font-bold text-gray-400 tracking-wide mb-2">
+                      {isAr ? "رسائل هذا الأسبوع" : "MESSAGES THIS WEEK"}
+                    </p>
+                    <div className="flex items-end gap-1.5 h-16">
+                      {[38, 52, 46, 64, 58, 74, 68].map((h, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t-sm bg-[#25D366]"
+                          style={{ height: `${h}%`, opacity: 0.35 + i / 10 }}
+                        />
+                      ))}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* ── Floating cards — float ناعم بدل bounce ── */}
-              <div
-                className="hidden sm:flex absolute -top-4 -right-10 lg:-right-14 bg-white rounded-2xl p-3 shadow-xl items-center gap-2.5"
-                style={{ animation: "float 4s ease-in-out infinite" }}
-              >
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-[#25D366]" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-900 leading-tight">{tr(t.hero.floatSent, lang)}</p>
-                  <p className="text-[10px] text-gray-400">{tr(t.hero.floatSentSub, lang)}</p>
-                </div>
-              </div>
-
-              <div
-                className="hidden sm:flex absolute -bottom-4 -left-10 lg:-left-14 bg-white rounded-2xl p-3 shadow-xl items-center gap-2.5"
-                style={{ animation: "float-reverse 4.5s ease-in-out 0.8s infinite" }}
-              >
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Brain className="w-4 h-4 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-900 leading-tight">{tr(t.hero.floatConts, lang)}</p>
-                  <p className="text-[10px] text-gray-400">{tr(t.hero.floatContsSub, lang)}</p>
-                </div>
-              </div>
-
-              <div
-                className="hidden sm:block absolute top-1/2 -left-8 lg:-left-12 -translate-y-1/2 bg-white rounded-xl p-2.5 shadow-xl text-center"
-                style={{ animation: "float 5s ease-in-out 1.5s infinite" }}
-              >
-                <p className="text-base font-black text-[#25D366]">98%</p>
-                <p className="text-[9px] text-gray-400 leading-tight">{tr(t.hero.floatRate, lang)}</p>
               </div>
             </div>
           </div>

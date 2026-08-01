@@ -726,6 +726,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <NotificationBell
               onNavigate={navigateTo}
+              lang={locale === "en" ? "en" : "ar"}
               isOpen={activeTopPanel === "notifications"}
               onOpenChange={openNotifications}
             />
