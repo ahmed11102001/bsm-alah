@@ -64,9 +64,9 @@ export default function ReportsLogsPage() {
       "التاريخ": formatDate(m.createdAt, dateLocale),
       "العميل": m.contact?.name || m.contact?.phone || "—",
       "الهاتف": m.contact?.phone || "—",
-      "النوع": getTypeLabel(m.type, locale),
-      "الاتجاه": getDirLabel(m.direction, locale),
-      "الحالة": getStatusLabel(m.status, locale),
+      "النوع": getTypeLabel(locale, m.type),
+      "الاتجاه": getDirLabel(locale, m.direction),
+      "الحالة": getStatusLabel(locale, m.status),
       "الحملة": m.campaign?.name || "—",
       "المحتوى": m.content || "—",
     }));
@@ -207,17 +207,17 @@ export default function ReportsLogsPage() {
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">
-                          {getTypeLabel(m.type, locale)}
+                          {getTypeLabel(locale, m.type)}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">
-                          {getDirLabel(m.direction, locale)}
+                          {getDirLabel(locale, m.direction)}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor[m.status] || "bg-gray-100 text-gray-600"}`}>
-                          {getStatusLabel(m.status, locale)}
+                          {getStatusLabel(locale, m.status)}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-gray-500 max-w-[150px] truncate">
