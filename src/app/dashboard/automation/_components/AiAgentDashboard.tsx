@@ -156,6 +156,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [wooForm, setWooForm] = useState({ storeUrl: "", consumerKey: "", consumerSecret: "" });
+  const [connectingWoo, setConnectingWoo] = useState(false);
 
   // Test Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -345,6 +347,20 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     } finally {
       setSyncingProducts(false);
     }
+  };
+
+  const connectWooCommerce = async () => {
+    setConnectingWoo(true);
+    try {
+      const res = await fetch("/api/woocommerce/connect-rest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(wooForm) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Connection failed");
+      toast.success(isAr ? "تم الاتصال بـ WooCommerce وبدأت المزامنة" : "WooCommerce connected; sync started");
+      setWooForm({ storeUrl: "", consumerKey: "", consumerSecret: "" });
+      setOnboardingSubMode("store");
+      await loadAllData();
+    } catch (error: any) { toast.error(error.message || (isAr ? "فشل الاتصال" : "Connection failed")); }
+    finally { setConnectingWoo(false); }
   };
 
   // ── Upload product image to Cloudinary ──
@@ -1204,6 +1220,15 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         </div>
                       </div>
                     )}
+                    <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">WooCommerce REST API</div>
+                      <Input value={wooForm.storeUrl} onChange={e => setWooForm(f => ({ ...f, storeUrl: e.target.value }))} placeholder="https://store.example.com" dir="ltr" className="text-xs rounded-xl" />
+                      <Input value={wooForm.consumerKey} onChange={e => setWooForm(f => ({ ...f, consumerKey: e.target.value }))} placeholder="ck_..." dir="ltr" className="text-xs rounded-xl" />
+                      <Input type="password" value={wooForm.consumerSecret} onChange={e => setWooForm(f => ({ ...f, consumerSecret: e.target.value }))} placeholder="cs_..." dir="ltr" className="text-xs rounded-xl" />
+                      <Button onClick={connectWooCommerce} disabled={connectingWoo || !wooForm.storeUrl || !wooForm.consumerKey || !wooForm.consumerSecret} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold">
+                        {connectingWoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{isAr ? "اختبار اتصال WooCommerce" : "Test WooCommerce Connection"}
+                      </Button>
+                    </div>
                   </div>
                 )}
 

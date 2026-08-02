@@ -4,6 +4,7 @@ import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
+import { encryptToken }              from "@/lib/crypto";
 
 // الـ topics اللي محتاجينها — بالترتيب الصح
 const REQUIRED_TOPICS = [
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
         shop:        verifiedDomain,
         storeName:   storeName.trim(),
         isActive:    true,
-        accessToken: cleanToken,
+        accessToken: cleanToken ? encryptToken(cleanToken) : null,
         updatedAt:   new Date(),
       },
       create: {
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest) {
         shop:        verifiedDomain,
         storeName:   storeName.trim(),
         isActive:    true,
-        accessToken: cleanToken,
+        accessToken: cleanToken ? encryptToken(cleanToken) : null,
       },
     });
 

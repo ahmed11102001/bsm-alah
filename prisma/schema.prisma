@@ -412,6 +412,9 @@ model WooCommerceStore {
   userId      String            @unique
   storeName   String
   storeUrl    String?
+  consumerKey String?
+  consumerSecret String?
+  isConnected Boolean           @default(false)
   isActive    Boolean           @default(true)
   totalSynced Int               @default(0)
   lastSyncAt  DateTime?

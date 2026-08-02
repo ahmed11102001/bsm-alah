@@ -1,6 +1,6 @@
 // src/lib/product-sync.ts
 import prisma from "@/lib/prisma";
-import { ProductSource } from "@prisma/client";
+import { Prisma, ProductSource } from "@prisma/client";
 import { verifyShopifyProductScope } from "@/lib/shopify-api";
 
 export const MAX_PRODUCTS_PER_SYNC = 5000;
@@ -346,6 +346,93 @@ export async function syncEasyOrdersProducts(
       deactivated: 0,
       errorMessage: err.message,
     };
+  }
+}
+
+// ─── WooCommerce Product Sync ───────────────────────────────────────────────
+export async function syncWooCommerceProducts(
+  userId: string,
+  storeUrl: string,
+  consumerKey: string,
+  consumerSecret: string
+): Promise<SyncResult> {
+  const log = await prisma.productSyncLog.create({
+    data: { userId, source: ProductSource.woocommerce, status: "in_progress" },
+  });
+
+  try {
+    const normalizedUrl = storeUrl.replace(/\/+$/, "");
+    if (!/^https:\/\//i.test(normalizedUrl)) {
+      throw new Error("WooCommerce REST API requires HTTPS");
+    }
+    const authHeader = `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64")}`;
+    const fetchedIds = new Set<string>();
+    let totalSynced = 0;
+    let errorsCount = 0;
+    let page = 1;
+    const syncTime = new Date();
+
+    while (fetchedIds.size < MAX_PRODUCTS_PER_SYNC) {
+      const res = await fetch(`${normalizedUrl}/wp-json/wc/v3/products?per_page=100&page=${page}`, {
+        headers: { Authorization: authHeader, Accept: "application/json" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("WooCommerce Consumer Key/Secret are invalid or missing permissions");
+      }
+      if (!res.ok) throw new Error(`WooCommerce API responded with status ${res.status}`);
+
+      const products: any[] = await res.json();
+      if (!Array.isArray(products) || products.length === 0) break;
+
+      for (const p of products) {
+        if (fetchedIds.size >= MAX_PRODUCTS_PER_SYNC) break;
+        const externalId = String(p.id);
+        fetchedIds.add(externalId);
+        const description = p.description ? p.description.replace(/<[^>]*>?/gm, "").trim() : null;
+        const salePrice = typeof p.sale_price === "string" ? p.sale_price.trim() : p.sale_price;
+        const regularPrice = typeof p.regular_price === "string" ? p.regular_price.trim() : p.regular_price;
+        const rawPrice = salePrice || regularPrice || p.price;
+        const price = rawPrice ? parseFloat(rawPrice) : null;
+        const regular = regularPrice ? parseFloat(regularPrice) : null;
+        const compareAtPrice = regular != null && regular !== price ? regular : null;
+        const images: string[] = (p.images || []).map((img: any) => img?.src).filter(Boolean);
+        const tags: string[] = (p.tags || []).map((tag: any) => tag?.name).filter(Boolean);
+        const category = p.categories?.[0]?.name || null;
+        const stock = p.stock_quantity == null ? null : parseInt(String(p.stock_quantity), 10);
+        const name = p.name || "";
+        const isActive = p.status === "publish";
+        const searchText = buildSearchText({ name, description, tags, category });
+        try {
+          await prisma.product.upsert({
+            where: { source_externalId_userId: { source: ProductSource.woocommerce, externalId, userId } },
+            update: { name, description, price, compareAtPrice, currency: "EGP", images, variants: Prisma.JsonNull, stock, url: p.permalink || null, category, tags, isActive, searchText, lastSyncedAt: syncTime },
+            create: { userId, source: ProductSource.woocommerce, externalId, name, description, price, compareAtPrice, currency: "EGP", images, variants: Prisma.JsonNull, stock, url: p.permalink || null, category, tags, isActive, searchText, lastSyncedAt: syncTime },
+          });
+          totalSynced++;
+        } catch (error) {
+          console.error(`[ProductSync/WooCommerce] Failed to upsert product ${externalId}`, error);
+          errorsCount++;
+        }
+      }
+      const totalPages = Number(res.headers.get("X-WP-TotalPages") || 0);
+      if (products.length < 100 || (totalPages > 0 && page >= totalPages)) break;
+      page++;
+    }
+
+    const deactivatedResult = await prisma.product.updateMany({
+      where: { userId, source: ProductSource.woocommerce, isActive: true, externalId: { notIn: Array.from(fetchedIds) } },
+      data: { isActive: false },
+    });
+    await prisma.productSyncLog.update({
+      where: { id: log.id },
+      data: { status: errorsCount > 0 ? "partial" : "success", productsSynced: totalSynced, errorsCount, completedAt: new Date() },
+    });
+    return { source: ProductSource.woocommerce, synced: totalSynced, errors: errorsCount, deactivated: deactivatedResult.count };
+  } catch (err: any) {
+    console.error("[ProductSync/WooCommerce] Sync error:", err);
+    await prisma.productSyncLog.update({ where: { id: log.id }, data: { status: "failed", errorMessage: err.message || "Unknown sync error", completedAt: new Date() } });
+    return { source: ProductSource.woocommerce, synced: 0, errors: 1, deactivated: 0, errorMessage: err.message };
   }
 }
 

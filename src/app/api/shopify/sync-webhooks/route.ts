@@ -6,6 +6,7 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { registerAllWebhooks }       from "@/app/api/shopify/install/route";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
 
 export async function POST() {
   try {
@@ -37,7 +38,8 @@ export async function POST() {
       );
 
     const webhookUrl = generateShopifyWebhookUrl(userId);
-    const result     = await registerAllWebhooks(store.shop, store.accessToken, webhookUrl);
+    const token = isEncrypted(store.accessToken) ? decryptToken(store.accessToken) : store.accessToken;
+    const result     = await registerAllWebhooks(store.shop, token, webhookUrl);
 
     return NextResponse.json({
       success:    result.failed.length === 0,

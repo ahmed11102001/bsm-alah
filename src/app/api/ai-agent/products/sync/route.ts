@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const source = body?.source || "all";
+    if (!["shopify", "easyorders", "woocommerce", "all"].includes(source)) return NextResponse.json({ error: "Invalid source" }, { status: 400 });
 
     await inngest.send({
       name: "product/sync.requested",

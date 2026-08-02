@@ -4,6 +4,7 @@
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
 
 // ─── Helper: تنظيف رقم الهاتف ───────────────────────────────────────────────
 function cleanPhone(phone: string): string {
@@ -220,7 +221,8 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
       if (!store?.accessToken) return null;
 
       const { getShopifyProductImageUrl } = await import("@/lib/shopify-api");
-      return getShopifyProductImageUrl(store.shop, store.accessToken, {
+      const token = isEncrypted(store.accessToken) ? decryptToken(store.accessToken) : store.accessToken;
+      return getShopifyProductImageUrl(store.shop, token, {
         productId: firstItemProductId,
         variantId: firstItemVariantId,
       });

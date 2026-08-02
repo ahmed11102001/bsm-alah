@@ -1,7 +1,10 @@
 // src/inngest/product-sync-functions.ts
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
-import { syncShopifyProducts, syncEasyOrdersProducts } from "@/lib/product-sync";
+import { syncShopifyProducts, syncEasyOrdersProducts, syncWooCommerceProducts } from "@/lib/product-sync";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
+
+const plainCredential = (value: string) => isEncrypted(value) ? decryptToken(value) : value;
 
 // ── 1. Cron Job: Product Sync كل 6 ساعات ────────────────────────────────────
 export const productSyncCron = inngest.createFunction(
@@ -22,7 +25,7 @@ export const productSyncCron = inngest.createFunction(
       for (const store of stores) {
         if (!store.accessToken) continue;
         try {
-          const res = await syncShopifyProducts(store.userId, store.shop, store.accessToken);
+          const res = await syncShopifyProducts(store.userId, store.shop, plainCredential(store.accessToken));
           results.push({ userId: store.userId, shop: store.shop, ...res });
         } catch (err: any) {
           console.error(`[Inngest/Cron] Shopify sync failed for ${store.shop}:`, err);
@@ -41,7 +44,7 @@ export const productSyncCron = inngest.createFunction(
       const results = [];
       for (const store of stores) {
         try {
-          const res = await syncEasyOrdersProducts(store.userId, store.apiKey);
+          const res = await syncEasyOrdersProducts(store.userId, plainCredential(store.apiKey));
           results.push({ userId: store.userId, storeName: store.storeName, ...res });
         } catch (err: any) {
           console.error(`[Inngest/Cron] EasyOrders sync failed for ${store.storeName}:`, err);
@@ -50,7 +53,17 @@ export const productSyncCron = inngest.createFunction(
       return results;
     });
 
-    return { success: true, shopifyResults, easyOrdersResults };
+    const woocommerceResults = await step.run("sync-all-woocommerce-stores", async () => {
+      const stores = await prisma.wooCommerceStore.findMany({ where: { isActive: true, isConnected: true, consumerKey: { not: null }, consumerSecret: { not: null } }, select: { userId: true, storeUrl: true, consumerKey: true, consumerSecret: true, storeName: true } });
+      const results = [];
+      for (const store of stores) {
+        if (!store.storeUrl || !store.consumerKey || !store.consumerSecret) continue;
+        try { results.push({ userId: store.userId, storeName: store.storeName, ...await syncWooCommerceProducts(store.userId, store.storeUrl, plainCredential(store.consumerKey), plainCredential(store.consumerSecret)) }); }
+        catch (err) { console.error(`[Inngest/Cron] WooCommerce sync failed for ${store.storeName}:`, err); }
+      }
+      return results;
+    });
+    return { success: true, shopifyResults, easyOrdersResults, woocommerceResults };
   }
 );
 
@@ -62,7 +75,7 @@ export const productSyncOnDemand = inngest.createFunction(
     triggers: [{ event: "product/sync.requested" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { userId, source = "all" } = event.data as { userId: string; source?: "shopify" | "easyorders" | "all" };
+    const { userId, source = "all" } = event.data as { userId: string; source?: "shopify" | "easyorders" | "woocommerce" | "all" };
 
     if (!userId) return { success: false, error: "userId is required" };
 
@@ -79,7 +92,7 @@ export const productSyncOnDemand = inngest.createFunction(
           return { skipped: true, reason: "No active Shopify store connected" };
         }
 
-        return syncShopifyProducts(userId, store.shop, store.accessToken);
+        return syncShopifyProducts(userId, store.shop, plainCredential(store.accessToken));
       });
     }
 
@@ -94,7 +107,15 @@ export const productSyncOnDemand = inngest.createFunction(
           return { skipped: true, reason: "No active EasyOrders store connected" };
         }
 
-        return syncEasyOrdersProducts(userId, store.apiKey);
+        return syncEasyOrdersProducts(userId, plainCredential(store.apiKey));
+      });
+    }
+
+    if (source === "woocommerce" || source === "all") {
+      results.woocommerce = await step.run("sync-user-woocommerce", async () => {
+        const store = await prisma.wooCommerceStore.findUnique({ where: { userId }, select: { storeUrl: true, consumerKey: true, consumerSecret: true, isActive: true, isConnected: true } });
+        if (!store || !store.isActive || !store.isConnected || !store.storeUrl || !store.consumerKey || !store.consumerSecret) return { skipped: true, reason: "No active WooCommerce store connected" };
+        return syncWooCommerceProducts(userId, store.storeUrl, plainCredential(store.consumerKey), plainCredential(store.consumerSecret));
       });
     }
 

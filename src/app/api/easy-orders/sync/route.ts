@@ -9,6 +9,7 @@ import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { OrderSource }               from "@/types/enums";
+import { decryptToken, encryptToken, isEncrypted } from "@/lib/crypto";
 
 const PAGE_SIZE = 100;
 
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 422 }
       );
     }
-    apiKey = user.easyOrdersStore.apiKey;
+    apiKey = isEncrypted(user.easyOrdersStore.apiKey) ? decryptToken(user.easyOrdersStore.apiKey) : user.easyOrdersStore.apiKey;
   } else {
     // تمرير مباشر من صفحة API (أول ربط)
     if (!body.apiKey?.trim()) {
@@ -135,12 +136,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const store = await prisma.easyOrdersStore.upsert({
     where:  { userId: user.id },
     update: {
-      apiKey,
+      apiKey: encryptToken(apiKey),
       ...(storeName?.trim() ? { storeName: storeName.trim() } : {}),
     },
     create: {
       userId:        user.id,
-      apiKey,
+      apiKey: encryptToken(apiKey),
       storeName:     storeName?.trim() || "متجري",
       webhookSecret: apiKey, // نفس المفتاح كـ secret مبدئياً
     },
