@@ -778,8 +778,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         {chatMessages.map(msg => (
           <div key={msg.id} className={`flex flex-col max-w-[92%] ${msg.sender === "user" ? "mr-auto items-end" : "ml-auto items-start"}`}>
             <div className={`p-2.5 rounded-2xl text-[11px] leading-relaxed shadow-sm ${msg.sender === "user"
-                ? "bg-emerald-600 text-white rounded-tl-none"
-                : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tr-none"
+              ? "bg-emerald-600 text-white rounded-tl-none"
+              : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tr-none"
               }`}>
               <p className="whitespace-pre-wrap">{msg.text}</p>
               {msg.matchedProducts && msg.matchedProducts.length > 0 && (
@@ -853,8 +853,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           <button
             onClick={() => saveAgentSettings({ isEnabled: !agent.isEnabled })}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all shadow-sm ${agent.isEnabled
-                ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+              ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+              : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
               }`}
           >
             {agent.isEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
@@ -1318,8 +1318,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   <button
                     onClick={() => saveAgentSettings({ elevenLabsEnabled: !agent.elevenLabsEnabled })}
                     className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-xs font-bold transition-all ${agent.elevenLabsEnabled
-                        ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
-                        : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+                      ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
+                      : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
                       }`}
                   >
                     {agent.elevenLabsEnabled ? <ToggleRight className="w-4 h-4 text-purple-500" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
