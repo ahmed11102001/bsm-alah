@@ -412,7 +412,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   };
 
   const syncWebsiteKnowledge = async () => {
-    const rootUrl = websiteKnowledge.rootUrl.trim() || agent.websiteUrl.trim();
+    const rootUrl = websiteKnowledge.rootUrl.trim() || (agent.websiteUrl || "").trim();
     if (!rootUrl) { toast.error(isAr ? "أدخل رابط الموقع أولًا" : "Enter your website URL first"); return; }
     setSyncingWebsite(true);
     try {
@@ -810,7 +810,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input value={websiteKnowledge.rootUrl} onChange={event => setWebsiteKnowledge(s => ({ ...s, rootUrl: event.target.value }))} placeholder={agent.websiteUrl || "https://example.com"} dir="ltr" className="text-xs rounded-xl" />
-            <Button onClick={syncWebsiteKnowledge} disabled={syncingWebsite || (!websiteKnowledge.rootUrl.trim() && !agent.websiteUrl.trim())} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">
+            <Button onClick={syncWebsiteKnowledge} disabled={syncingWebsite || (!websiteKnowledge.rootUrl.trim() && !(agent.websiteUrl || "").trim())} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">
               {syncingWebsite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{syncingWebsite ? (isAr ? "بنقرأ موقعك..." : "Reading your site...") : (isAr ? "استخراج المعرفة الآن" : "Extract Knowledge Now")}
             </Button>
           </div>
