@@ -1,6 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
 import { notifyNewMessage, notifyAiHandoffNeeded } from "@/lib/notifications";
@@ -9,7 +10,6 @@ import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import { transcribeAudio, estimateWhisperTokens } from "@/lib/whisper";
-import { decryptToken } from "@/lib/crypto";
 import { warnDeprecatedSecretOnce } from "@/lib/env-deprecation";
 
 // -----------------------------------------------------------------------------
@@ -693,10 +693,14 @@ async function handleAutomation(ctx: {
       },
     });
 
+    const voiceApiKey = agentSettings?.elevenLabsApiKey
+      ? (isEncrypted(agentSettings.elevenLabsApiKey) ? decryptToken(agentSettings.elevenLabsApiKey) : agentSettings.elevenLabsApiKey)
+      : null;
+
     if (
       agentSettings?.elevenLabsEnabled &&
       agentSettings?.isEnabled &&
-      agentSettings.elevenLabsApiKey?.trim() &&
+      voiceApiKey?.trim() &&
       agentSettings.elevenLabsAgentId?.trim()
     ) {
       // ── Step 1: ولّد الرد النصي عبر Gemini/OpenAI (بيتحسب في التوكن) ──
@@ -769,7 +773,7 @@ async function handleAutomation(ctx: {
       // ── Step 2: حوّل النص لصوت عبر ElevenLabs TTS فقط ───────────────────
       const voiceResult = await callVoiceAgent({
         agentId: agentSettings.elevenLabsAgentId,
-        apiKey: agentSettings.elevenLabsApiKey,
+        apiKey: voiceApiKey,
         textReply: aiResult.reply,
       });
 

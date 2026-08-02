@@ -758,7 +758,27 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </Button>
         </div>
 
-        {/* 3. Guardrails & Limits */}
+        {/* 3. Agent Links, Knowledge & Pause */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-500 flex items-center justify-center font-bold"><Info className="w-5 h-5" /></span>
+                <div><h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{isAr ? "إعدادات الرد والمعرفة" : "Reply & Knowledge Settings"}</h3><span className="text-xs text-gray-400">{isAr ? "روابط ومعلومات إضافية" : "Links and fallback knowledge"}</span></div>
+              </div>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div><Label className="mb-1 block">{isAr ? "رابط الموقع الذي يرسله المساعد" : "Website URL shared with customers"}</Label><Input value={agent.websiteUrl || ""} onChange={e => setAgent(f => ({ ...f, websiteUrl: e.target.value }))} placeholder="https://example.com" dir="ltr" className="rounded-xl text-xs" /></div>
+              <div><Label className="mb-1 block">{isAr ? "نص زر الموقع المقترح" : "Website button text"}</Label><Input value={agent.websiteButtonText || ""} onChange={e => setAgent(f => ({ ...f, websiteButtonText: e.target.value }))} placeholder={isAr ? "تصفح المنتجات" : "Browse products"} className="rounded-xl text-xs" /></div>
+              <div><Label className="mb-1 block">{isAr ? "مدة إيقاف المساعد بعد رد موظف (بالدقائق)" : "Pause AI after a human reply (minutes)"}</Label><div className="flex items-center gap-3"><input type="range" min={1} max={120} value={agent.pauseMinutes} onChange={e => setAgent(f => ({ ...f, pauseMinutes: Number(e.target.value) }))} className="flex-1 accent-emerald-500" /><span className="w-12 text-center font-bold">{agent.pauseMinutes}</span></div></div>
+              <div><Label className="mb-1 block">{isAr ? "معلومات المنتجات والخدمات (بديل نصي للكتالوج)" : "Products & services fallback text"}</Label><Textarea value={agent.productsInfo || ""} onChange={e => setAgent(f => ({ ...f, productsInfo: e.target.value }))} placeholder={isAr ? "اكتب وصفًا مختصرًا للمنتجات أو الخدمات..." : "Describe your products or services..."} className="rounded-xl text-xs min-h-[70px]" /></div>
+              <div><Label className="mb-1 block">{isAr ? "معلومات الأسعار (بديل نصي للكتالوج)" : "Pricing fallback text"}</Label><Textarea value={agent.pricingInfo || ""} onChange={e => setAgent(f => ({ ...f, pricingInfo: e.target.value }))} placeholder={isAr ? "اكتب الأسعار أو قواعد التسعير..." : "Add prices or pricing rules..."} className="rounded-xl text-xs min-h-[60px]" /></div>
+            </div>
+          </div>
+          <Button onClick={() => saveAgentSettings()} className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-semibold"><Save className="w-3.5 h-3.5" />{isAr ? "حفظ الإعدادات" : "Save settings"}</Button>
+        </div>
+
+        {/* 4. Guardrails & Limits */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -777,11 +797,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             </div>
 
             <div className="space-y-1.5 mb-4 text-xs text-gray-600 dark:text-gray-300">
-              <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <Check className="w-3.5 h-3.5" /> {isAr ? "عدم اختراع أسعار أو منتجات" : "No hallucinated prices"}
+              <p className={`flex items-center gap-1.5 ${guardrails.noInventPrices ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`}>
+                {guardrails.noInventPrices ? <Check className="w-3.5 h-3.5" /> : <span className="w-3.5 text-center">—</span>} {isAr ? "عدم اختراع أسعار أو منتجات" : "No hallucinated prices"}
               </p>
-              <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <Check className="w-3.5 h-3.5" /> {isAr ? "تحويل الشكاوى للبشر تلقائياً" : "Auto handoff for complaints"}
+              <p className={`flex items-center gap-1.5 ${guardrails.alwaysHandoffComplaints ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`}>
+                {guardrails.alwaysHandoffComplaints ? <Check className="w-3.5 h-3.5" /> : <span className="w-3.5 text-center">—</span>} {isAr ? "تحويل الشكاوى للبشر تلقائياً" : "Auto handoff for complaints"}
               </p>
               {guardrails.customRules && (
                 <p className="text-xs text-gray-400 line-clamp-1 italic">"{guardrails.customRules}"</p>
@@ -851,7 +871,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 <span>{label}</span><Switch checked={salesBehavior[key]} onCheckedChange={value => {
                   if (key === "suggestCrossSell" && value && !relationProducts.some(product => product.relatedProductIds.length > 0)) {
                     setShowRelationManager(true);
-                    toast.error(isAr ? "Ø§Ø±Ø¨Ø· Ù…Ù†ØªØ¬Ø§Øª Ù…ÙƒÙ…Ù„Ø© Ù…Ù† Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø£ÙˆÙ„Ø§Ù‹ Ø­ØªÙ‰ ÙŠØªÙ…ÙƒÙ† Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯ Ù…Ù† Ø§Ù‚ØªØ±Ø§Ø­Ù‡Ø§ Ø¨Ø¯Ù‚Ø©." : "Link complementary products in the catalog first so the assistant can suggest them accurately.");
+                    toast.error(isAr ? "اربط منتجات مكملة من الكتالوج أولًا حتى يتمكن المساعد من اقتراحها بدقة." : "Link complementary products in the catalog first so the assistant can suggest them accurately.");
                     return;
                   }
                   setSalesBehavior(s => ({ ...s, [key]: value }));
@@ -861,7 +881,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </div>
           {salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2">{isAr ? "الاقتراحات المكملة تحتاج ربط المنتجات يدويًا من الكتالوج أولًا." : "Complementary suggestions require manual product relationships in the catalog."}</p>}
           {salesBehavior.suggestCrossSell && <button type="button" onClick={() => setShowRelationManager(true)} className="text-[11px] text-emerald-600 hover:underline font-bold">{isAr ? "إدارة المنتجات المرتبطة →" : "Manage related products →"}</button>}
-          {showRelationManager && !salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2 flex items-center justify-between gap-2"><span>{isAr ? "Ø§Ø±Ø¨Ø· Ù…Ù†ØªØ¬Ø§Øª Ù…ÙƒÙ…Ù„Ø© Ù…Ù† Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø£ÙˆÙ„Ø§Ù‹ Ø­ØªÙ‰ ÙŠØªÙ…ÙƒÙ† Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯ Ù…Ù† Ø§Ù‚ØªØ±Ø§Ø­Ù‡Ø§ Ø¨Ø¯Ù‚Ø©." : "Link complementary products in the catalog first so the assistant can suggest them accurately."}</span><button type="button" onClick={() => setShowRelationManager(true)} className="shrink-0 underline font-bold">{isAr ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© →" : "Manage related products →"}</button></p>}
+          {showRelationManager && !salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2 flex items-center justify-between gap-2"><span>{isAr ? "اربط منتجات مكملة من الكتالوج أولًا حتى يتمكن المساعد من اقتراحها بدقة." : "Link complementary products in the catalog first so the assistant can suggest them accurately."}</span><button type="button" onClick={() => setShowRelationManager(true)} className="shrink-0 underline font-bold">{isAr ? "إدارة المنتجات المرتبطة →" : "Manage related products →"}</button></p>}
           {(salesBehavior.suggestCrossSell || showRelationManager) && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
             <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط المنتجات المكملة" : "Link complementary products"}</div>
             {relationProducts.slice(0, 20).map(product => (

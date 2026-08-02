@@ -5,6 +5,7 @@ import { AIProvider } from "@/types/enums";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { encryptToken } from "@/lib/crypto";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -31,7 +32,8 @@ export async function GET(req: NextRequest) {
   const agent = await prisma.aIAgent.findUnique({ where: { userId } });
 
   // لو مفيش record → رجّع defaults
-  return NextResponse.json(agent ?? {
+  if (agent) return NextResponse.json({ ...agent, elevenLabsApiKey: agent.elevenLabsApiKey ? "••••••••" : null });
+  return NextResponse.json({
     isEnabled:    false,
     provider:     "gemini",
     brandName:    "",
@@ -92,6 +94,12 @@ export async function PUT(req: NextRequest) {
     const providerEnum: AIProvider =
       provider === "openai" ? AIProvider.openai : AIProvider.gemini;
 
+    const existing = await prisma.aIAgent.findUnique({ where: { userId }, select: { elevenLabsApiKey: true } });
+    const isMaskedApiKey = /^•+$/.test(apiKeyTrim);
+    const encryptedApiKey = isMaskedApiKey
+      ? existing?.elevenLabsApiKey ?? null
+      : apiKeyTrim ? encryptToken(apiKeyTrim) : null;
+
     const payload = {
       isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
       provider:  providerEnum,
@@ -109,7 +117,7 @@ export async function PUT(req: NextRequest) {
         typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
       elevenLabsEnabled:
         typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : false,
-      elevenLabsApiKey:  apiKeyTrim || null,
+      elevenLabsApiKey:  encryptedApiKey,
       elevenLabsAgentId: agentIdTrim || null,
     };
 
