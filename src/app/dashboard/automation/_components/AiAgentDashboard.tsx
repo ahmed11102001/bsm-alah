@@ -134,6 +134,7 @@ interface ChatMessage {
     images: string[];
     url: string | null;
   }>;
+  knowledgeSources?: string[];
   action?: string | null;
   reason?: string | null;
 }
@@ -324,8 +325,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     if (agent.tone) score += 10;
     if (agent.languageMode) score += 5;
     if (productStats.total > 0 || agent.productsInfo?.trim()) score += 25;
-    if (faqs.length > 0) score += 15;
-    if (policies.length > 0) score += 10;
+    if (policies.length > 0) score += 15;
     if (guardrails.customRules?.trim() || guardrails.noInventPrices) score += 10;
     return Math.min(100, score);
   };
@@ -335,7 +335,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const readinessChecklist = [
     { done: Boolean(agent.brandName?.trim() && agent.businessDesc?.trim()), label: isAr ? "بيانات البراند والشخصية مكتملة" : "Brand & personality complete", jump: "identity" as const },
     { done: productStats.total > 0 || Boolean(agent.productsInfo?.trim()), label: isAr ? "لسه معندكش أي مصدر منتجات" : "No product source added yet", jump: "knowledge" as const, sub: "catalog" as const },
-    { done: faqs.length > 0, label: isAr ? "لسه معندكش أسئلة شائعة مضافة" : "No FAQs added yet", jump: "knowledge" as const, sub: "faq" as const },
     { done: policies.length > 0, label: isAr ? "أضف سياسة استرجاع أو شحن واحدة على الأقل" : "Add at least one return/shipping policy", jump: "knowledge" as const, sub: "policies" as const },
   ];
 
@@ -377,13 +376,13 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         body: JSON.stringify(faqForm),
       });
       if (res.ok) {
-        toast.success(isAr ? "تم إضافة السؤال بنجاح" : "FAQ added");
+        toast.success(isAr ? "تمت إضافة المعلومة المخصصة" : "Custom fact added");
         setShowFaqSheet(false);
         setFaqForm({ id: "", question: "", answer: "" });
         loadAllData();
       }
     } catch (e) {
-      toast.error(isAr ? "حدث خطأ" : "Error saving FAQ");
+      toast.error(isAr ? "حدث خطأ أثناء حفظ المعلومة" : "Error saving custom fact");
     }
   };
 
@@ -449,7 +448,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     setSaving(true);
     try {
       await Promise.all([saveSalesBehaviorSilent(), saveGuardrails(), saveAgentSettingsSilent({ pauseMinutes: agent.pauseMinutes })]);
-      toast.success(isAr ? "تم حفظ إعدادات السلوك والحدود" : "Behavior & guardrails saved");
+      toast.success(isAr ? "تم حفظ سلوك Wani وحدوده" : "Wani behavior and boundaries saved");
     } catch {
       toast.error(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving");
     } finally {
@@ -722,6 +721,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           text: data.reply || (isAr ? "لم يتم إرجاع رد" : "No reply generated"),
           time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
           matchedProducts: data.matchedProducts,
+          knowledgeSources: data.knowledgeSources,
           action: data.action,
           reason: data.reason,
         };
@@ -758,7 +758,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </span>
           <div>
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">{isAr ? "اختبار Wani" : "Test Wani"}</h3>
-            <p className="text-[10px] text-gray-400">{isAr ? "ثابتة جنب أي قسم بتعدّل فيه" : "Stays put while you edit any section"}</p>
+            <p className="text-[10px] text-gray-400">{isAr ? "اختبر كيف يفهم Wani السياق ويرد داخل حدود براندك" : "Test how Wani understands context and stays within your brand rules"}</p>
           </div>
         </div>
         <button
@@ -798,6 +798,18 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               {msg.action === "handoff" && (
                 <div className="mt-1.5 p-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[9px] font-bold border border-amber-500/20">
                   ⚠️ {isAr ? "تحويل لبشر" : "Handoff triggered"}: {msg.reason}
+                </div>
+              )}
+              {msg.knowledgeSources && msg.knowledgeSources.length > 0 && (
+                <div className="mt-2 pt-1.5 border-t border-gray-200/60 dark:border-gray-700/60">
+                  <p className="mb-1 text-[9px] font-semibold text-gray-400">{isAr ? "المعرفة المتاحة لهذا الرد" : "Knowledge available for this reply"}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {msg.knowledgeSources.map(source => (
+                      <span key={source} className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 text-[9px] text-emerald-700 dark:text-emerald-300">
+                        ✓ {source === "brand" ? (isAr ? "هوية البراند" : "Brand identity") : source === "catalog" ? (isAr ? "الكتالوج" : "Catalog") : source === "policies" ? (isAr ? "السياسات" : "Policies") : source === "custom_answers" ? (isAr ? "معلومات مخصصة" : "Custom facts") : (isAr ? "قواعد السلوك" : "Behavior rules")}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -867,12 +879,12 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         <div className="flex-1 min-w-0 w-full">
           <Tabs value={activeSection} onValueChange={v => setActiveSection(v as typeof activeSection)}>
-            <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsList className="mb-4 flex-wrap h-auto">
               <TabsTrigger value="overview" className="gap-1.5"><LayoutDashboard className="w-3.5 h-3.5" />{isAr ? "نظرة عامة" : "Overview"}</TabsTrigger>
-              <TabsTrigger value="identity" className="gap-1.5"><UserCog className="w-3.5 h-3.5" />{isAr ? "الهوية والشخصية" : "Identity"}</TabsTrigger>
-              <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="w-3.5 h-3.5" />{isAr ? "مصادر المعرفة" : "Knowledge"}</TabsTrigger>
-              <TabsTrigger value="behavior" className="gap-1.5"><Shield className="w-3.5 h-3.5" />{isAr ? "السلوك والحدود" : "Behavior"}</TabsTrigger>
-              <TabsTrigger value="channels" className="gap-1.5"><Plug className="w-3.5 h-3.5" />{isAr ? "قنوات إضافية" : "Channels"}</TabsTrigger>
+              <TabsTrigger value="identity" className="gap-1.5"><UserCog className="w-3.5 h-3.5" />{isAr ? "هوية البراند" : "Brand identity"}</TabsTrigger>
+              <TabsTrigger value="knowledge" className="gap-1.5"><BookOpen className="w-3.5 h-3.5" />{isAr ? "معرفة Wani" : "Wani's knowledge"}</TabsTrigger>
+              <TabsTrigger value="behavior" className="gap-1.5"><Shield className="w-3.5 h-3.5" />{isAr ? "سلوك Wani" : "Wani's behavior"}</TabsTrigger>
+              <TabsTrigger value="channels" className="gap-1.5"><Plug className="w-3.5 h-3.5" />{isAr ? "القنوات" : "Channels"}</TabsTrigger>
             </TabsList>
 
             {/* ═══════════════ OVERVIEW ═══════════════ */}
@@ -908,7 +920,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{productStats.total}</div>
                 </button>
                 <button onClick={() => jumpTo("knowledge", "faq")} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-right hover:border-emerald-400 transition-colors">
-                  <div className="text-xs text-gray-400 mb-1">{isAr ? "أسئلة شائعة" : "FAQs"}</div>
+                  <div className="text-xs text-gray-400 mb-1">{isAr ? "أجوبة مخصصة (اختياري)" : "Custom answers (optional)"}</div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{faqs.length}</div>
                 </button>
                 <button onClick={() => jumpTo("knowledge", "policies")} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-right hover:border-emerald-400 transition-colors">
@@ -986,10 +998,19 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             {/* ═══════════════ KNOWLEDGE (Catalog Section+actions / FAQ+Policies List+Drawer / Website Inline) ═══════════════ */}
             <TabsContent value="knowledge">
+              <div className="mb-4 rounded-3xl border border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-950/20 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><Sparkles className="w-4 h-4" /></span>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{isAr ? "علّم Wani عن البراند، مش سؤال بسؤال" : "Teach Wani your brand, not one question at a time"}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-300">{isAr ? "Wani يفهم سؤال العميل باستخدام الكتالوج والموقع والسياسات وهوية البراند، ثم يكوّن الرد المناسب داخل القواعد التي تحددها." : "Wani uses your catalog, website, policies, and brand identity to understand each customer message and compose a suitable reply within your rules."}</p>
+                  </div>
+                </div>
+              </div>
               <Tabs value={activeKnowledgeTab} onValueChange={v => setActiveKnowledgeTab(v as typeof activeKnowledgeTab)}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="catalog" className="gap-1.5"><ShoppingBag className="w-3.5 h-3.5" />{isAr ? "الكتالوج" : "Catalog"}</TabsTrigger>
-                  <TabsTrigger value="faq" className="gap-1.5"><HelpCircle className="w-3.5 h-3.5" />{isAr ? "الأسئلة الشائعة" : "FAQs"}</TabsTrigger>
+                  <TabsTrigger value="faq" className="gap-1.5"><HelpCircle className="w-3.5 h-3.5" />{isAr ? "أجوبة مخصصة" : "Custom answers"}</TabsTrigger>
                   <TabsTrigger value="policies" className="gap-1.5"><FileText className="w-3.5 h-3.5" />{isAr ? "السياسات" : "Policies"}</TabsTrigger>
                   <TabsTrigger value="website" className="gap-1.5">🌐{isAr ? "الموقع" : "Website"}</TabsTrigger>
                 </TabsList>
@@ -1105,17 +1126,20 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   )}
                 </TabsContent>
 
-                {/* ── FAQ: List + Drawer ── */}
+                {/* ── Custom answers: optional supplementary knowledge ── */}
                 <TabsContent value="faq">
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5">
+                    <div className="mb-4 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 p-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      {isAr ? "أضف معلومة محددة لا توجد في الكتالوج أو الموقع أو السياسات. سيستخدمها Wani كمرجع إضافي عند الحاجة، وليست قائمة ردود محفوظة." : "Add a specific fact that is not covered by your catalog, website, or policies. Wani uses it as an extra reference when relevant—not as a list of scripted replies."}
+                    </div>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">{faqs.length} {isAr ? "سؤال مضاف" : "questions added"}</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">{faqs.length} {isAr ? "معلومة إضافية" : "custom facts"}</h3>
                       <Button size="sm" onClick={() => { setFaqForm({ id: "", question: "", answer: "" }); setShowFaqSheet(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold gap-1.5">
-                        <Plus className="w-3.5 h-3.5" />{isAr ? "إضافة سؤال" : "Add FAQ"}
+                        <Plus className="w-3.5 h-3.5" />{isAr ? "إضافة معلومة" : "Add custom fact"}
                       </Button>
                     </div>
                     {faqs.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic py-4 text-center">{isAr ? "أضف أسئلة تتكرر من العملاء ليجيبها Wani بدقة." : "Add common customer questions so Wani replies accurately."}</p>
+                      <p className="text-xs text-gray-400 italic py-4 text-center">{isAr ? "اختياري — استخدمه للمعلومات الخاصة التي لا توجد في مصادر المعرفة الأخرى." : "Optional — use this for brand facts not covered by your other knowledge sources."}</p>
                     ) : (
                       <div className="space-y-2">
                         {faqs.map(f => (
@@ -1201,9 +1225,19 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             {/* ═══════════════ BEHAVIOR & GUARDRAILS (Section, merged) ═══════════════ */}
             <TabsContent value="behavior" className="space-y-4">
+              <div className="rounded-3xl border border-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-950/20 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"><Shield className="w-4 h-4" /></span>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{isAr ? "هنا تحدد كيف يفكر Wani في الرد" : "Define how Wani decides what to say"}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-300">{isAr ? "لا تحفظ إجابات جاهزة؛ حدّد الأولويات والحدود، وسيستخدم Wani المعرفة المتاحة والسياق ليكوّن ردًا مناسبًا." : "You are not scripting replies. Set priorities and boundaries, and Wani will use the available knowledge and conversation context to compose the right response."}</p>
+                  </div>
+                </div>
+              </div>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 space-y-4">
                 <div>
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">{isAr ? "هدف Wani واقتراح المنتجات" : "Wani's goal & product suggestions"}</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">{isAr ? "أولوية Wani وطريقة التصرف" : "Wani's priorities and decision style"}</h3>
+                  <p className="text-xs text-gray-400">{isAr ? "يختلف سلوك المساعد فعليًا حسب الهدف الذي تختاره، وليس مجرد إعداد شكلي." : "Wani's behavior changes based on this goal—it is not just a cosmetic setting."}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {(["customer_service", "balanced", "sales_focused"] as const).map(goal => (
@@ -1295,7 +1329,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
               <Button onClick={saveBehaviorSection} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold gap-2">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {isAr ? "حفظ إعدادات السلوك والحدود" : "Save behavior & guardrails"}
+                {isAr ? "حفظ سلوك Wani وحدوده" : "Save Wani behavior & boundaries"}
               </Button>
             </TabsContent>
 
@@ -1361,26 +1395,26 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         </div>
       </div>
 
-      {/* ── Sheet: Add/Edit FAQ (List + Drawer) ── */}
+      {/* ── Sheet: Add/Edit custom fact ── */}
       <Sheet open={showFaqSheet} onOpenChange={setShowFaqSheet}>
         <SheetContent side="left" className="rounded-l-none" dir={isAr ? "rtl" : "ltr"}>
           <SheetHeader>
-            <SheetTitle>{isAr ? "إضافة سؤال شائع" : "Add FAQ"}</SheetTitle>
-            <SheetDescription className="sr-only">{isAr ? "نموذج إضافة سؤال وإجابة" : "Form to add a question and answer"}</SheetDescription>
+          <SheetTitle>{isAr ? "إضافة معلومة مخصصة" : "Add custom fact"}</SheetTitle>
+          <SheetDescription className="sr-only">{isAr ? "معلومة إضافية يستخدمها Wani كمرجع عند الحاجة" : "An extra fact Wani can use as a reference when relevant"}</SheetDescription>
           </SheetHeader>
           <div className="space-y-4 px-4">
             <div>
-              <Label className="text-xs mb-1 block">{isAr ? "السؤال" : "Question"} *</Label>
-              <Input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder={isAr ? "مثال: فين مكانكم؟" : "E.g. Where are you located?"} />
+              <Label className="text-xs mb-1 block">{isAr ? "المعلومة أو السياق" : "Fact or context"} *</Label>
+              <Input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder={isAr ? "مثال: لدينا فرع في مدينة نصر" : "E.g. We have a branch in Nasr City"} />
             </div>
             <div>
-              <Label className="text-xs mb-1 block">{isAr ? "الإجابة" : "Answer"} *</Label>
-              <Textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder={isAr ? "اكتب الإجابة النموذجية..." : "Write the answer..."} className="min-h-[110px] text-xs" />
+              <Label className="text-xs mb-1 block">{isAr ? "التفاصيل" : "Details"} *</Label>
+              <Textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder={isAr ? "اكتب التفاصيل التي يجب أن يعرفها Wani..." : "Add the details Wani should know..."} className="min-h-[110px] text-xs" />
             </div>
           </div>
           <SheetFooter>
             <Button onClick={saveFaq} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
-              {isAr ? "حفظ السؤال" : "Save FAQ"}
+              {isAr ? "حفظ المعلومة" : "Save fact"}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -1648,7 +1682,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       <button onClick={() => setOnboardingSubMode("services_only")} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group">
                         <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">💼</span>
                         <span className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "أقدم خدمات فقط" : "Services Only"}</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "بدون كتالوج — يعتمد على وصف البراند والأسئلة" : "No catalog — relies on Brand & FAQs"}</span>
+                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "بدون كتالوج — يعتمد على معرفة البراند والسياسات" : "No catalog — relies on brand knowledge and policies"}</span>
                       </button>
                     </div>
                     <p className="text-[11px] text-gray-400 italic text-center pt-2">{isAr ? "المتجر مجرد مصدر اختياري لمعرفة Wani — لا يلزمك وجود متجر لإكمال الإعداد." : "A store is optional — you don't need one to complete training."}</p>
@@ -1842,7 +1876,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   <div className="space-y-3 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 bg-emerald-50/40 dark:bg-emerald-950/20 text-center">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-lg font-bold">💼</div>
                     <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "تم ضبط الحساب كـ «نشاط خدمي / بدون منتجات»" : "Configured as 'Services / Non-catalog Business'"}</h5>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">{isAr ? "سيعتمد Wani تمامًا على «وصف النشاط» في الخطوة 1 والأسئلة الشائعة وسياساتك للإجابة على جميع العملاء." : "Wani will rely fully on your Business Description and FAQs/Policies to answer clients."}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">{isAr ? "سيعتمد Wani على هوية البراند وسياساتك ومصادر المعرفة المتاحة لفهم العملاء والرد داخل حدود نشاطك." : "Wani will use your brand identity, policies, and available knowledge sources to understand customers and reply within your business boundaries."}</p>
                     <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline pt-1 block mx-auto font-semibold">{isAr ? "← تغيير هذا الخيار" : "← Change this choice"}</button>
                   </div>
                 )}

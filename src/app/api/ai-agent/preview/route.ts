@@ -117,6 +117,13 @@ export async function POST(req: NextRequest) {
       productIds: result.productIds,
       matchedProducts,
       retrievedProductsCount: relevantProducts.length,
+      knowledgeSources: [
+        ...(agent.brandName || agent.businessDesc ? ["brand"] : []),
+        ...(relevantProducts.length > 0 ? ["catalog"] : []),
+        ...(policies.length > 0 ? ["policies"] : []),
+        ...(faqs.length > 0 ? ["custom_answers"] : []),
+        ...(guardrails ? ["behavior_rules"] : []),
+      ],
       tokensUsed: result.tokensUsed,
     });
   } catch (error: any) {
