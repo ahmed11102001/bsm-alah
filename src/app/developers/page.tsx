@@ -27,8 +27,6 @@ function PageContent() {
         fontFamily:
           "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         direction: language === "ar" ? "rtl" : "ltr",
-        display: "flex",
-        flexDirection: "column",
       }}
     >
       <HeroAnimation />
@@ -163,14 +161,11 @@ function PageContent() {
         </div>
       </nav>
 
-      {/* ── HERO / CINEMATIC FEED — الفيديو التفاعلي والتركيز الكامل ── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <HeroCinematic />
-      </main>
+      {/* ── HERO / CINEMATIC FEED — الفيديو التفاعلي ── */}
+      <HeroCinematic />
 
       {/* ── GLOBAL STYLES ───────────────────────────────────────────────── */}
       <style>{`
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         @media (max-width: 600px) {
           nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 12px; }
         }
