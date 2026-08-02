@@ -988,7 +988,7 @@ async function handleAutomation(ctx: {
   const relevantProducts = await getRelevantProducts(userId, messageText, 5);
 
   // FAQ + Policies + Guardrails — fetch all (small data, no retrieval needed)
-  const [faqs, policies, guardrails, salesSettings] = await Promise.all([
+  const [faqs, policies, guardrails, salesSettings, websiteSettings] = await Promise.all([
     prisma.brandFAQ.findMany({
       where: { userId },
       orderBy: { sortOrder: "asc" },
@@ -1008,6 +1008,7 @@ async function handleAutomation(ctx: {
       },
     }),
     prisma.salesBehaviorSettings.findUnique({ where: { userId } }),
+    prisma.websiteCrawlSettings.findUnique({ where: { userId }, select: { isEnabled: true } }),
   ]);
 
   let suggestedProducts: import("@/lib/product-search").SuggestedProduct[] = [];
@@ -1021,6 +1022,9 @@ async function handleAutomation(ctx: {
       suggestedProducts = await getSuggestedProducts(userId, fullPrimary, salesSettings, Math.min(salesSettings.maxSuggestedProducts, 3));
     }
   }
+  const websiteKnowledge = websiteSettings?.isEnabled
+    ? await (await import("@/lib/website-search")).getRelevantWebsiteKnowledge(userId, messageText, 3)
+    : [];
 
   const result = await getAIReply(
     aiMessages,
@@ -1039,6 +1043,7 @@ async function handleAutomation(ctx: {
       relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
       suggestedProducts: suggestedProducts.length > 0 ? suggestedProducts : undefined,
       salesBehavior: salesSettings ? { goal: salesSettings.goal, suggestDiscounts: salesSettings.suggestDiscounts } : undefined,
+      websiteKnowledge: websiteKnowledge.length > 0 ? websiteKnowledge : undefined,
       faqs: faqs.length > 0 ? faqs : undefined,
       policies: policies.length > 0 ? policies : undefined,
       guardrails: guardrails ?? undefined,

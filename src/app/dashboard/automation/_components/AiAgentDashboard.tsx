@@ -150,6 +150,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   });
   const [productStats, setProductStats] = useState<ProductStats>({ total: 0 });
   const [relationProducts, setRelationProducts] = useState<RelationProduct[]>([]);
+  const [showRelationManager, setShowRelationManager] = useState(false);
+  const [websiteKnowledge, setWebsiteKnowledge] = useState({ isEnabled: false, rootUrl: "" });
+  const [websitePages, setWebsitePages] = useState<Array<{ id: string; url: string; title: string | null; lastCrawledAt: string; _count: { chunks: number } }>>([]);
+  const [syncingWebsite, setSyncingWebsite] = useState(false);
   const [syncingProducts, setSyncingProducts] = useState(false);
 
   // Modals
@@ -192,13 +196,14 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts, resSales] = await Promise.all([
+      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts, resSales, resWebsite] = await Promise.all([
         fetch("/api/ai-agent"),
         fetch("/api/ai-agent/faq"),
         fetch("/api/ai-agent/policies"),
         fetch("/api/ai-agent/guardrails"),
         fetch("/api/ai-agent/products?pageSize=100"),
         fetch("/api/ai-agent/sales-behavior"),
+        fetch("/api/ai-agent/website-knowledge"),
       ]);
 
       if (resAgent.ok) {
@@ -220,6 +225,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       if (resSales.ok) {
         const data = await resSales.json();
         setSalesBehavior(prev => ({ ...prev, ...data }));
+      }
+      if (resWebsite.ok) {
+        const data = await resWebsite.json();
+        setWebsiteKnowledge({ isEnabled: Boolean(data.settings?.isEnabled), rootUrl: data.settings?.rootUrl || "" });
+        setWebsitePages(data.pages || []);
       }
     } catch (e) {
       console.error("[AiAgentDashboard] Load error:", e);
@@ -392,6 +402,32 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     if (!res.ok) { toast.error(isAr ? "تعذر حفظ روابط المنتجات" : "Failed to save product relationships"); return; }
     setRelationProducts(products => products.map(product => product.id === productId ? { ...product, relatedProductIds } : product));
     toast.success(isAr ? "تم حفظ المنتجات المكملة" : "Related products saved");
+  };
+
+  const updateWebsiteKnowledge = async (updates: Partial<typeof websiteKnowledge>) => {
+    const next = { ...websiteKnowledge, ...updates };
+    setWebsiteKnowledge(next);
+    const res = await fetch("/api/ai-agent/website-knowledge", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
+    if (!res.ok) toast.error(isAr ? "تعذر حفظ إعدادات الموقع" : "Failed to save website settings");
+  };
+
+  const syncWebsiteKnowledge = async () => {
+    const rootUrl = websiteKnowledge.rootUrl.trim() || agent.websiteUrl.trim();
+    if (!rootUrl) { toast.error(isAr ? "أدخل رابط الموقع أولًا" : "Enter your website URL first"); return; }
+    setSyncingWebsite(true);
+    try {
+      const res = await fetch("/api/ai-agent/website-knowledge/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rootUrl }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      toast.success(isAr ? "بدأ استخراج معرفة الموقع في الخلفية" : "Website knowledge extraction started");
+      setWebsiteKnowledge(s => ({ ...s, isEnabled: true }));
+    } catch (error: any) { toast.error(error.message || (isAr ? "فشل استخراج الموقع" : "Website extraction failed")); }
+    finally { setSyncingWebsite(false); }
+  };
+
+  const deleteWebsitePage = async (pageId: string) => {
+    await fetch(`/api/ai-agent/website-knowledge?pageId=${pageId}`, { method: "DELETE" });
+    setWebsitePages(pages => pages.filter(page => page.id !== pageId));
   };
 
   const connectWooCommerce = async () => {
@@ -763,7 +799,31 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </Button>
         </div>
 
-        {/* 4. Sales Behavior */}
+        {/* 4. Website Knowledge */}
+        <div className="md:col-span-2 lg:col-span-3 bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">🌐 {isAr ? "معرفة الموقع" : "Website Knowledge"}</h3>
+              <p className="text-xs text-gray-500 mt-1">{isAr ? "استخرج معلومات مفيدة من صفحات محدودة لاستخدامها كمصدر معرفة للمساعد." : "Extract useful content from selected website pages as an additional AI knowledge source."}</p>
+            </div>
+            <Switch checked={websiteKnowledge.isEnabled} onCheckedChange={value => updateWebsiteKnowledge({ isEnabled: value })} />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input value={websiteKnowledge.rootUrl} onChange={event => setWebsiteKnowledge(s => ({ ...s, rootUrl: event.target.value }))} placeholder={agent.websiteUrl || "https://example.com"} dir="ltr" className="text-xs rounded-xl" />
+            <Button onClick={syncWebsiteKnowledge} disabled={syncingWebsite || (!websiteKnowledge.rootUrl.trim() && !agent.websiteUrl.trim())} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">
+              {syncingWebsite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{syncingWebsite ? (isAr ? "بنقرأ موقعك..." : "Reading your site...") : (isAr ? "استخراج المعرفة الآن" : "Extract Knowledge Now")}
+            </Button>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">{isAr ? "العملية تعمل في الخلفية وقد تستغرق دقيقة. المواقع التي تعتمد على JavaScript بالكامل قد لا يظهر محتواها." : "Runs in the background and may take a minute. Fully JavaScript-rendered sites may not expose readable content."}</p>
+          {websitePages.length > 0 && <div className="mt-3 space-y-1.5 border-t border-gray-200 dark:border-gray-700 pt-3">
+            {websitePages.map(page => <div key={page.id} className="flex items-center gap-2 text-[11px]">
+              <div className="flex-1 min-w-0"><div className="font-semibold truncate text-gray-700 dark:text-gray-300">{page.title || page.url}</div><div className="text-gray-400 truncate">{page.url} · {page._count.chunks} chunks · {new Date(page.lastCrawledAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</div></div>
+              <button type="button" onClick={() => deleteWebsitePage(page.id)} className="text-red-500 hover:underline">{isAr ? "حذف" : "Delete"}</button>
+            </div>)}
+          </div>}
+        </div>
+
+        {/* 5. Sales Behavior */}
         <div className="md:col-span-2 lg:col-span-3 bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -788,12 +848,21 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               ["suggestDiscounts", isAr ? "ذكر العروض والخصومات الموجودة فقط" : "Mention existing discounts only"],
             ] as const).map(([key, label]) => (
               <div key={key} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300">
-                <span>{label}</span><Switch checked={salesBehavior[key]} onCheckedChange={value => setSalesBehavior(s => ({ ...s, [key]: value }))} />
+                <span>{label}</span><Switch checked={salesBehavior[key]} onCheckedChange={value => {
+                  if (key === "suggestCrossSell" && value && !relationProducts.some(product => product.relatedProductIds.length > 0)) {
+                    setShowRelationManager(true);
+                    toast.error(isAr ? "Ø§Ø±Ø¨Ø· Ù…Ù†ØªØ¬Ø§Øª Ù…ÙƒÙ…Ù„Ø© Ù…Ù† Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø£ÙˆÙ„Ø§Ù‹ Ø­ØªÙ‰ ÙŠØªÙ…ÙƒÙ† Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯ Ù…Ù† Ø§Ù‚ØªØ±Ø§Ø­Ù‡Ø§ Ø¨Ø¯Ù‚Ø©." : "Link complementary products in the catalog first so the assistant can suggest them accurately.");
+                    return;
+                  }
+                  setSalesBehavior(s => ({ ...s, [key]: value }));
+                }} />
               </div>
             ))}
           </div>
           {salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2">{isAr ? "الاقتراحات المكملة تحتاج ربط المنتجات يدويًا من الكتالوج أولًا." : "Complementary suggestions require manual product relationships in the catalog."}</p>}
-          {salesBehavior.suggestCrossSell && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+          {salesBehavior.suggestCrossSell && <button type="button" onClick={() => setShowRelationManager(true)} className="text-[11px] text-emerald-600 hover:underline font-bold">{isAr ? "إدارة المنتجات المرتبطة →" : "Manage related products →"}</button>}
+          {showRelationManager && !salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2 flex items-center justify-between gap-2"><span>{isAr ? "Ø§Ø±Ø¨Ø· Ù…Ù†ØªØ¬Ø§Øª Ù…ÙƒÙ…Ù„Ø© Ù…Ù† Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø£ÙˆÙ„Ø§Ù‹ Ø­ØªÙ‰ ÙŠØªÙ…ÙƒÙ† Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯ Ù…Ù† Ø§Ù‚ØªØ±Ø§Ø­Ù‡Ø§ Ø¨Ø¯Ù‚Ø©." : "Link complementary products in the catalog first so the assistant can suggest them accurately."}</span><button type="button" onClick={() => setShowRelationManager(true)} className="shrink-0 underline font-bold">{isAr ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© →" : "Manage related products →"}</button></p>}
+          {(salesBehavior.suggestCrossSell || showRelationManager) && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
             <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط المنتجات المكملة" : "Link complementary products"}</div>
             {relationProducts.slice(0, 20).map(product => (
               <div key={product.id} className="flex items-center gap-2">

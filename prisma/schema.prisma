@@ -63,6 +63,8 @@ model User {
   brandPolicies            BrandPolicy[]
   aiGuardrail              AIGuardrail?
   salesBehaviorSettings    SalesBehaviorSettings?
+  websitePages             WebsitePage[]
+  websiteCrawlSettings     WebsiteCrawlSettings?
   productSyncLogs          ProductSyncLog[]
 
   @@index([email])
@@ -1379,4 +1381,43 @@ model SalesBehaviorSettings {
   updatedAt            DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WebsitePage {
+  id            String   @id @default(cuid())
+  userId        String
+  url           String
+  title         String?
+  contentHash   String
+  isActive      Boolean  @default(true)
+  lastCrawledAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks        WebsiteKnowledgeChunk[]
+
+  @@unique([userId, url])
+  @@index([userId])
+}
+
+model WebsiteKnowledgeChunk {
+  id         String   @id @default(cuid())
+  pageId     String
+  userId     String
+  content    String   @db.Text
+  searchText String   @db.Text
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  page       WebsitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model WebsiteCrawlSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  isEnabled Boolean  @default(false)
+  rootUrl   String?
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

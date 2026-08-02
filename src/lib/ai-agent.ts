@@ -11,6 +11,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import type { RelevantProduct, SuggestedProduct } from "@/lib/product-search";
+import type { RelevantKnowledgeChunk } from "@/lib/website-search";
 import { AIAgentResponseSchema } from "@/lib/schemas";
 
 export interface AgentContext {
@@ -29,6 +30,7 @@ export interface AgentContext {
   // ── NEW: Structured Knowledge Sources ──
   relevantProducts?: RelevantProduct[];
   suggestedProducts?: SuggestedProduct[];
+  websiteKnowledge?: RelevantKnowledgeChunk[];
   salesBehavior?: {
     goal: "customer_service" | "balanced" | "sales_focused";
     suggestDiscounts?: boolean;
@@ -118,6 +120,12 @@ function buildSystemPrompt(ctx: AgentContext): string {
       lines.push(`[ID: ${p.id}] (${typeLabel}) ${p.name} - ${priceStr}`);
     });
     lines.push("Suggest these only when natural and useful; never force or repeat offers in every message. If suggested, include its exact ID in product_ids.", "");
+  }
+
+  if (ctx.websiteKnowledge && ctx.websiteKnowledge.length > 0) {
+    lines.push("-- Brand website knowledge --");
+    ctx.websiteKnowledge.forEach((chunk) => lines.push(`(from: ${chunk.pageTitle || chunk.pageUrl}) ${chunk.content}`));
+    lines.push("Use website knowledge only when directly relevant. If the answer is not present in the available sources, do not invent it.", "");
   }
 
   // ── 2) FAQs ──

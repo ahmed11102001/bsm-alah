@@ -39,6 +39,7 @@ import {
   productSyncCron,
   productSyncOnDemand,
 } from "@/inngest/product-sync-functions";
+import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 
 const inngestHandler = serve({
   client: inngest,
@@ -63,6 +64,7 @@ const inngestHandler = serve({
     aiTokensLowCheck,
     productSyncCron,
     productSyncOnDemand,
+    websiteCrawlOnDemand,
     // ── Plan Reset ──
     monthlyPlanReset,
     // ── Smart Follow-Up ──
