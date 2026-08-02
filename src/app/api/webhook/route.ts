@@ -991,13 +991,8 @@ async function handleAutomation(ctx: {
 
   const relevantProducts = await getRelevantProducts(userId, messageText, 5);
 
-  // FAQ + Policies + Guardrails — fetch all (small data, no retrieval needed)
-  const [faqs, policies, guardrails, salesSettings, websiteSettings] = await Promise.all([
-    prisma.brandFAQ.findMany({
-      where: { userId },
-      orderBy: { sortOrder: "asc" },
-      select: { question: true, answer: true },
-    }),
+  // Policies + Guardrails — fetch all (small data, no retrieval needed)
+  const [policies, guardrails, salesSettings, websiteSettings] = await Promise.all([
     prisma.brandPolicy.findMany({
       where: { userId },
       select: { type: true, title: true, content: true },
@@ -1048,7 +1043,6 @@ async function handleAutomation(ctx: {
       suggestedProducts: suggestedProducts.length > 0 ? suggestedProducts : undefined,
       salesBehavior: salesSettings ? { goal: salesSettings.goal, suggestDiscounts: salesSettings.suggestDiscounts } : undefined,
       websiteKnowledge: websiteKnowledge.length > 0 ? websiteKnowledge : undefined,
-      faqs: faqs.length > 0 ? faqs : undefined,
       policies: policies.length > 0 ? policies : undefined,
       guardrails: guardrails ?? undefined,
     },

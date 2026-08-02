@@ -53,12 +53,7 @@ export async function POST(req: NextRequest) {
     // Retrieve Knowledge Sources
     const relevantProducts = await getRelevantProducts(userId, userMessage, 5);
 
-    const [faqs, policies, guardrails] = await Promise.all([
-      prisma.brandFAQ.findMany({
-        where: { userId },
-        orderBy: { sortOrder: "asc" },
-        select: { question: true, answer: true },
-      }),
+    const [policies, guardrails] = await Promise.all([
       prisma.brandPolicy.findMany({
         where: { userId },
         select: { type: true, title: true, content: true },
@@ -88,7 +83,6 @@ export async function POST(req: NextRequest) {
         websiteUrl: agent.websiteUrl,
         websiteButtonText: agent.websiteButtonText,
         relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
-        faqs: faqs.length > 0 ? faqs : undefined,
         policies: policies.length > 0 ? policies : undefined,
         guardrails: guardrails ?? undefined,
       },
@@ -121,7 +115,6 @@ export async function POST(req: NextRequest) {
         ...(agent.brandName || agent.businessDesc ? ["brand"] : []),
         ...(relevantProducts.length > 0 ? ["catalog"] : []),
         ...(policies.length > 0 ? ["policies"] : []),
-        ...(faqs.length > 0 ? ["custom_answers"] : []),
         ...(guardrails ? ["behavior_rules"] : []),
       ],
       tokensUsed: result.tokensUsed,

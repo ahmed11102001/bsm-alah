@@ -7,9 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import {
@@ -17,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Bot, Sparkles, Store, Shield, HelpCircle, FileText, Send, RefreshCw,
+  Bot, Sparkles, Store, Shield, FileText, Send, RefreshCw,
   Plus, Trash2, Edit3, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
   ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload,
@@ -41,13 +38,6 @@ interface AiAgentSettings {
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
-}
-
-interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-  sortOrder: number;
 }
 
 interface PolicyItem {
@@ -134,6 +124,7 @@ interface ChatMessage {
     images: string[];
     url: string | null;
   }>;
+  knowledgeSources?: string[];
   action?: string | null;
   reason?: string | null;
 }
@@ -141,7 +132,7 @@ interface ChatMessage {
 // تابات الصفحة الرئيسية (نفس منطق تبويبات dashboard/reports — قسم دائم لكل موضوع)
 type MainTab = "overview" | "identity" | "knowledge" | "behavior" | "channels";
 // تابات فرعية جوه "مصادر المعرفة"
-type KnowledgeTab = "catalog" | "faq" | "policies" | "website";
+type KnowledgeTab = "catalog" | "policies" | "website";
 
 export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const isAr = lang === "ar";
@@ -158,7 +149,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
     elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
   });
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
   const [guardrails, setGuardrails] = useState<GuardrailsData>({
     noInventPrices: true,
@@ -190,9 +180,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [syncingWebsite, setSyncingWebsite] = useState(false);
   const [syncingProducts, setSyncingProducts] = useState(false);
 
-  // Drawers/Modals (زي القاعدة: List+Drawer للأسئلة والسياسات، Modal بس للـ ElevenLabs لأنه إعداد معقد لمرة واحدة)
-  const [showFaqDrawer, setShowFaqDrawer] = useState(false);
-  const [faqForm, setFaqForm] = useState({ id: "", question: "", answer: "" });
+  // Drawers/Modals (السياسات فقط؛ مصادر المعرفة الأخرى لها واجهاتها المباشرة)
   const [showPolicyDrawer, setShowPolicyDrawer] = useState(false);
   const [policyForm, setPolicyForm] = useState({ id: "", type: "return_policy", title: "", content: "" });
   const [showElevenLabsModal, setShowElevenLabsModal] = useState(false);
@@ -204,10 +192,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [wooForm, setWooForm] = useState({ storeUrl: "", consumerKey: "", consumerSecret: "" });
-  const [connectingWoo, setConnectingWoo] = useState(false);
-  const [wooConnected, setWooConnected] = useState<{ storeName: string; productsAvailable: number } | null>(null);
-  const [selectedStoreSource, setSelectedStoreSource] = useState<"shopify" | "easyorders" | "woocommerce" | null>(null);
 
   // Test Chat (Side panel ثابت — بيتفتح من أي تاب)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -252,9 +236,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts, resSales, resWebsite] = await Promise.all([
+      const [resAgent, resPolicies, resGuardrails, resProducts, resSales, resWebsite] = await Promise.all([
         fetch("/api/ai-agent"),
-        fetch("/api/ai-agent/faq"),
         fetch("/api/ai-agent/policies"),
         fetch("/api/ai-agent/guardrails"),
         fetch("/api/ai-agent/products?pageSize=100"),
@@ -266,7 +249,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         const data = await resAgent.json();
         setAgent(prev => ({ ...prev, ...data }));
       }
-      if (resFaqs.ok) setFaqs(await resFaqs.json());
       if (resPolicies.ok) setPolicies(await resPolicies.json());
       if (resGuardrails.ok) setGuardrails(await resGuardrails.json());
       if (resProducts.ok) {
@@ -300,8 +282,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const checklist: Array<{ id: string; label: string; done: boolean; weight: number; goto: MainTab; gotoSub?: KnowledgeTab }> = [
     { id: "brand", label: isAr ? "بيانات البراند" : "Brand info", done: !!agent.brandName?.trim() && !!agent.businessDesc?.trim(), weight: 20, goto: "identity" },
     { id: "personality", label: isAr ? "شخصية المساعد" : "AI personality", done: !!agent.tone && !!agent.languageMode, weight: 10, goto: "identity" },
-    { id: "knowledge", label: isAr ? "مصدر معرفة واحد على الأقل (كتالوج/أسئلة/سياسات)" : "At least one knowledge source", done: productStats.total > 0 || !!agent.productsInfo?.trim() || faqs.length > 0 || policies.length > 0, weight: 30, goto: "knowledge", gotoSub: "catalog" },
-    { id: "faq", label: isAr ? "الأسئلة الشائعة" : "FAQs", done: faqs.length > 0, weight: 15, goto: "knowledge", gotoSub: "faq" },
+    { id: "knowledge", label: isAr ? "مصدر معرفة واحد على الأقل (كتالوج/موقع/سياسات)" : "At least one knowledge source", done: productStats.total > 0 || !!agent.productsInfo?.trim() || websitePages.length > 0 || policies.length > 0, weight: 30, goto: "knowledge", gotoSub: "catalog" },
     { id: "policies", label: isAr ? "سياسات البراند" : "Brand policies", done: policies.length > 0, weight: 10, goto: "knowledge", gotoSub: "policies" },
     { id: "guardrails", label: isAr ? "القواعد والحدود" : "Guardrails", done: !!guardrails.customRules?.trim() || guardrails.noInventPrices, weight: 15, goto: "behavior" },
   ];
@@ -329,37 +310,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       toast.error(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving settings");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const saveFaq = async () => {
-    if (!faqForm.question.trim() || !faqForm.answer.trim()) return;
-    try {
-      const res = await fetch("/api/ai-agent/faq", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(faqForm),
-      });
-      if (res.ok) {
-        toast.success(isAr ? "تم إضافة السؤال بنجاح" : "FAQ added");
-        setShowFaqDrawer(false);
-        setFaqForm({ id: "", question: "", answer: "" });
-        loadAllData();
-      }
-    } catch (e) {
-      toast.error(isAr ? "حدث خطأ" : "Error saving FAQ");
-    }
-  };
-
-  const deleteFaq = async (id: string) => {
-    try {
-      const res = await fetch(`/api/ai-agent/faq?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success(isAr ? "تم المحذف" : "Deleted");
-        setFaqs(prev => prev.filter(f => f.id !== id));
-      }
-    } catch (e) {
-      toast.error(isAr ? "خطأ في الحذف" : "Delete error");
     }
   };
 
@@ -478,27 +428,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     setWebsitePages(pages => pages.filter(page => page.id !== pageId));
   };
 
-  const connectWooCommerce = async () => {
-    setConnectingWoo(true);
-    try {
-      const res = await fetch("/api/woocommerce/connect-rest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(wooForm) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Connection failed");
-      setWooConnected({ storeName: data.storeName || new URL(wooForm.storeUrl).hostname, productsAvailable: data.productsAvailable || 0 });
-      setWooForm(f => ({ ...f, consumerKey: "••••••••••••", consumerSecret: "••••••••••••" }));
-      toast.success(isAr ? "تم الاتصال بنجاح" : "Connected successfully");
-    } catch (error: any) { toast.error(error.message || (isAr ? "تعذر الاتصال بمتجر WooCommerce. تأكد من الرابط وبيانات API والصلاحيات." : "Could not connect to WooCommerce. Check the store URL, API credentials, and permissions.")); }
-    finally { setConnectingWoo(false); }
-  };
-
-  const syncSelectedStore = async () => {
-    if (selectedStoreSource === "woocommerce" && wooConnected) {
-      await triggerProductSync("woocommerce");
-    } else {
-      window.open("/dashboard/store", "_blank");
-    }
-  };
-
   // ── Upload product image to Cloudinary ──
   const handleProductImageUpload = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -524,7 +453,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     }
   };
 
-  // ── Add or Update Manual Product inside Onboarding ──
+  // ── Add or Update Manual Product in the catalog ──
   const handleAddManualProduct = async () => {
     if (!manualProductForm.name.trim()) {
       toast.error(isAr ? "اسم المنتج أو الخدمة مطلوب" : "Product/service name is required");
@@ -629,6 +558,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           text: data.reply || (isAr ? "لم يتم إرجاع رد" : "No reply generated"),
           time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
           matchedProducts: data.matchedProducts,
+          knowledgeSources: data.knowledgeSources,
           action: data.action,
           reason: data.reason,
         };
@@ -851,7 +781,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
             {([
               ["catalog", isAr ? "الكتالوج" : "Catalog", ShoppingBag, productStats.total],
-              ["faq", isAr ? "الأسئلة الشائعة" : "FAQs", HelpCircle, faqs.length],
               ["policies", isAr ? "السياسات" : "Policies", FileText, policies.length],
               ["website", isAr ? "الموقع" : "Website", Globe, websitePages.length],
             ] as const).map(([id, label, Icon, count]) => (
@@ -892,7 +821,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "الكتالوج" : "Catalog"}</h3>
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isAr ? `إجمالي المنتجات: ${totalKnown}` : `Total products: ${totalKnown}`}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mb-4">{isAr ? "منتجات يعرفها وني ويقدر يبيعها" : "Products Wani knows and can sell"}</p>
+                  <p className="text-xs text-gray-500 mb-4">{isAr ? "كل المنتجات في قائمة واحدة — منتجات المتجر مميزة باسم المنصة، والمنتجات اليدوية مميزة بوسم «يدوي»." : "One catalog for everything — store products show their platform, while manual products are marked Manual."}</p>
 
                   {/* مصادر المنتجات */}
                   <div className="border border-gray-100 dark:border-gray-700 rounded-2xl divide-y divide-gray-100 dark:divide-gray-700 mb-4">
@@ -1000,33 +929,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               </div>
             );
           })()}
-
-          {/* ── الأسئلة الشائعة (List + Drawer) ── */}
-          {knowledgeTab === "faq" && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{faqs.length} {isAr ? "سؤال مضاف" : "questions added"}</h3>
-                <Button onClick={() => { setFaqForm({ id: "", question: "", answer: "" }); setShowFaqDrawer(true); }} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
-                  <Plus className="w-3.5 h-3.5" /> {isAr ? "سؤال جديد" : "New FAQ"}
-                </Button>
-              </div>
-              {faqs.length === 0 ? (
-                <p className="text-sm text-gray-400 italic text-center py-8">{isAr ? "أضف أسئلة تتكرر من العملاء ليجيب عليها وني بدقة." : "Add common customer questions so Wani replies accurately."}</p>
-              ) : (
-                <div className="space-y-2">
-                  {faqs.map(f => (
-                    <div key={f.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">س: {f.question}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">ج: {f.answer}</p>
-                      </div>
-                      <button onClick={() => deleteFaq(f.id)} className="text-gray-400 hover:text-red-500 p-1 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* ── السياسات (List + Drawer) ── */}
           {knowledgeTab === "policies" && (
@@ -1289,6 +1191,18 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       ⚠️ {isAr ? "تم تحويل المحادثة لبشر" : "Handoff to human triggered"}: {msg.reason}
                     </div>
                   )}
+                  {msg.knowledgeSources && msg.knowledgeSources.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                      <p className="mb-1 text-[9px] font-semibold text-gray-400">{isAr ? "مصادر المعرفة المتاحة للرد" : "Knowledge sources available for this reply"}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {msg.knowledgeSources.map(source => (
+                          <span key={source} className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 text-[9px] text-emerald-700 dark:text-emerald-300">
+                            ✓ {source === "brand" ? (isAr ? "هوية البراند" : "Brand identity") : source === "catalog" ? (isAr ? "الكتالوج" : "Catalog") : source === "policies" ? (isAr ? "السياسات" : "Policies") : (isAr ? "قواعد السلوك" : "Behavior rules")}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
               </div>
@@ -1305,28 +1219,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             />
             <Button onClick={sendTestMessage} disabled={sendingTest || !inputMessage.trim()} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl px-4 py-5 flex-shrink-0 font-bold">
               {sendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* ── Drawer: إضافة/تعديل سؤال شائع ── */}
-      <Sheet open={showFaqDrawer} onOpenChange={setShowFaqDrawer}>
-        <SheetContent side={isAr ? "left" : "right"} className="w-full sm:max-w-md" dir={isAr ? "rtl" : "ltr"}>
-          <SheetHeader>
-            <SheetTitle>{isAr ? "إضافة سؤال شائع" : "Add FAQ"}</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label className="text-xs mb-1 block">{isAr ? "السؤال" : "Question"} *</Label>
-              <Input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder={isAr ? "مثال: فين مكانكم؟" : "E.g. Where are you located?"} />
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">{isAr ? "الإجابة" : "Answer"} *</Label>
-              <Textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder={isAr ? "اكتب الإجابة النموذجية التي سيرد بها وني..." : "Write the answer Wani will use..."} className="min-h-[110px] text-xs" />
-            </div>
-            <Button onClick={() => { saveFaq(); setShowFaqDrawer(false); }} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
-              {isAr ? "حفظ السؤال" : "Save FAQ"}
             </Button>
           </div>
         </SheetContent>
