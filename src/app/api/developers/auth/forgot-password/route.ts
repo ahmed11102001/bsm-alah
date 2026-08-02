@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (process.env.RESEND_API_KEY) {
       try {
         await resend.emails.send({
-          from: "WhatsPro Developer Portal <noreply@yourdomain.com>", // Update with verified sender
+          from: "WANI Developer Portal <noreply@yourdomain.com>", // Update with verified sender
           to: developer.email,
           subject: "استعادة كلمة المرور - بوابة المطورين",
           html: `

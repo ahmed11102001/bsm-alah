@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;direction:rtl;background:#0f0f0f;color:#fff">
        <h2 style="color:#ef4444">❌ مفتاح API غير صالح</h2>
        <p>الـ API Key المدخل غير صحيح أو منتهي الصلاحية.</p>
-       <p style="color:#9ca3af;font-size:0.85rem">تأكد من نسخ الـ API Key من صفحة API في واتس برو.</p>
+       <p style="color:#9ca3af;font-size:0.85rem">تأكد من نسخ الـ API Key من صفحة API في وني.</p>
       </body></html>`,
       { status: 401, headers: { "Content-Type": "text/html" } }
     );

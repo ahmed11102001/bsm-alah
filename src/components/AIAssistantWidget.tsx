@@ -612,7 +612,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
           <div className="px-4 py-2 border-t border-gray-800 flex-shrink-0 flex items-center justify-center gap-1">
             <span className="text-[10px] text-gray-600">{f.powered}</span>
             <span className="w-1 h-1 rounded-full bg-gray-700" />
-            <span className="text-[10px] text-gray-600">WhatsPro</span>
+            <span className="text-[10px] text-gray-600">WANI</span>
           </div>
         </div>
       )}

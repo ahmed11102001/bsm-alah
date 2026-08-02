@@ -62,7 +62,7 @@ function OnboardingInner() {
 
       // حدّث الـ session عشان needsOnboarding يبقى false
       await update({ needsOnboarding: false });
-      toast.success("مرحباً بك في WhatsPro 🎉");
+      toast.success("مرحباً بك في وني 🎉");
       router.replace(next || "/dashboard");
     } catch {
       setErr("حدث خطأ، حاول مرة أخرى");

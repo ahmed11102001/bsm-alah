@@ -21,7 +21,7 @@ const T = {
     badge: "مساعد ذكي جديد ✨",
   },
   en: {
-    greeting: "Hey! I'm your smart assistant in WhatsPro 👋",
+    greeting: "Hey! I'm your smart assistant in WANI 👋",
     subtitle: "I'm here to help you use the product correctly and avoid problems before they happen.",
     features: [
       { icon: ShieldCheck, text: "Warn you before any step that could get your WhatsApp blocked" },

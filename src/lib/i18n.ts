@@ -3,7 +3,7 @@ export type Locale = "ar" | "en";
 export const translations = {
   ar: {
     // ── Layout / Sidebar ──────────────────────────────────────────────────────
-    appName: "واتس برو",
+    appName: "وني",
     sidebar: {
       home:       "الرئيسية",
       team:       "الفريق",

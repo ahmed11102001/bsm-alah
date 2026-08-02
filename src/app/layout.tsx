@@ -23,8 +23,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "WhatsPro - واتس برو",
-    template: "%s | WhatsPro",
+    default: "WANI - وني",
+    template: "%s | WANI",
   },
   description: "المنصة الرائدة لإرسال رسائل واتساب جماعية وحملات تسويقية ذكية وموثوقة.",
   icons: {
@@ -33,10 +33,10 @@ export const metadata: Metadata = {
     apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
   },
   openGraph: {
-    title: "WhatsPro - واتس برو",
+    title: "WANI - وني",
     description: "أرسل آلاف الرسائل لعملائك بنقرة واحدة مع تقارير مفصلة وأتمتة كاملة.",
     url: "https://whatsprosystem.vercel.app",
-    siteName: "WhatsPro",
+    siteName: "WANI",
     locale: "ar_EG",
     type: "website",
     images: [
@@ -44,13 +44,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "WhatsPro Dashboard Preview",
+        alt: "WANI Dashboard Preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WhatsPro - واتس برو",
+    title: "WANI - وني",
     description: "نظام إرسال رسائل واتساب جماعية احترافي",
     images: ["/og-image.png"],
   },

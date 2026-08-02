@@ -30,7 +30,7 @@ const AI_STEPS = {
     { time: "مستمر", title: "تابع Revenue Attribution", what: "كل حملة = كم أوردر؟", desc: "شوف بالظبط كل حملة واتساب أنتجت كام أوردر وكام إيراد — وحسّن على أساس بيانات حقيقية." },
   ],
   en: [
-    { time: "5 min", title: "Connect your store", what: "Shopify or EasyOrders", desc: "Connect your store in a few steps. Every new order will reach WhatsPro automatically." },
+    { time: "5 min", title: "Connect your store", what: "Shopify or EasyOrders", desc: "Connect your store in a few steps. Every new order will reach WANI automatically." },
     { time: "2 min", title: "Enable AI & Automation", what: "Zero coding required", desc: "Set up confirmation, shipping, and follow-up messages. Enable the AI Sales Assistant on your catalog." },
     { time: "Instant", title: "AI starts selling", what: "24/7, hands-free", desc: "The AI replies to customers, suggests products, and follows up on abandoned carts." },
     { time: "Ongoing", title: "Track Revenue Attribution", what: "Campaign → orders → revenue", desc: "See exactly how many orders each WhatsApp campaign generated — optimize based on real data." },

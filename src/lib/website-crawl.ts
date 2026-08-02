@@ -9,7 +9,7 @@ export const MAX_PAGES_PER_CRAWL = 15;
 export const MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024;
 export const CHUNK_SIZE_CHARS = 700;
 export const FETCH_TIMEOUT_MS = 10_000;
-export const WEBSITE_BOT_USER_AGENT = "WhatsPro-KnowledgeBot/1.0 (+https://whatspro.app/bot)";
+export const WEBSITE_BOT_USER_AGENT = "WANI-KnowledgeBot/1.0 (+https://wani.app/bot)";
 
 function isPrivateIp(ip: string): boolean {
   const normalized = ip.toLowerCase();

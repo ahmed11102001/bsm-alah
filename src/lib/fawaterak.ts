@@ -181,10 +181,10 @@ export function buildFawaterakCustomer(user: {
     email?: string | null;
     phone?: string | null;
 }): FawaterakCustomer {
-    const nameParts = (user.name ?? "عميل واتس برو").trim().split(/\s+/);
+    const nameParts = (user.name ?? "عميل وني").trim().split(/\s+/);
     return {
         first_name: nameParts[0] ?? "عميل",
-        last_name: nameParts.slice(1).join(" ") || "واتس برو",
+        last_name: nameParts.slice(1).join(" ") || "وني",
         email: user.email ?? undefined,
         phone: user.phone ?? undefined,
         address: "Egypt",

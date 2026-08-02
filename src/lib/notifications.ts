@@ -251,8 +251,8 @@ export async function notifySubscriptionSuccess(userId: string, planName: string
     type: NotificationType.SUBSCRIPTION_SUCCESS,
     title: bi("🎉 تم تفعيل الباقة بنجاح", "🎉 Subscription activated successfully"),
     body: bi(
-      `تم تفعيل باقة (${planName}) الخاصة بك بنجاح. استمتع بميزات واتس برو!`,
-      `Your (${planName}) plan has been activated successfully. Enjoy WhatsPro features!`
+      `تم تفعيل باقة (${planName}) الخاصة بك بنجاح. استمتع بميزات وني!`,
+      `Your (${planName}) plan has been activated successfully. Enjoy WANI features!`
     ),
     link: "/dashboard?section=api",
   });

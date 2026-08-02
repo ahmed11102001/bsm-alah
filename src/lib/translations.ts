@@ -6,8 +6,8 @@ export type Lang = "ar" | "en";
 export const t = {
   // ── Navbar ──────────────────────────────────────────────────────────────────
   nav: {
-    logo: { ar: "واتس برو", en: "WhatsPro" },
-    logoHighlight: { ar: "برو", en: "Pro" },
+    logo: { ar: "وني", en: "WANI" },
+    logoHighlight: { ar: "وني", en: "WANI" },
     features: { ar: "المميزات", en: "Features" },
     partners: { ar: "شركاؤنا", en: "Partners" },
     howItWorks: { ar: "كيف يعمل", en: "How It Works" },
@@ -34,7 +34,7 @@ export const t = {
     cta: { ar: "جرّب مجاناً — بدون بطاقة", en: "Try Free — No Card Needed" },
     ctaWatch: { ar: "شاهد كيف يعمل", en: "See How It Works" },
     // chat mockup
-    chatHeader: { ar: "واتس برو AI", en: "WhatsPro AI" },
+    chatHeader: { ar: "وني AI", en: "WANI AI" },
     chatOnline: { ar: "يعمل الآن", en: "Active now" },
     msg1: { ar: "عاوز اعرف سعر المنتج ده؟", en: "What's the price of this product?" },
     msg2: { ar: "⚡ أهلاً! سعره ٢٩٩ج — ومتاح للشحن فوراً. هبعتلك رابط الطلب؟", en: "⚡ Hi! It's 299 EGP — available for immediate shipping. Want me to send the order link?" },
@@ -73,7 +73,7 @@ export const t = {
         tag: { ar: "الأساس", en: "Core" },
         hook: { ar: "مش رسالة رسالة", en: "Not one by one" },
         title: { ar: "آلاف الرسائل — بضغطة واحدة", en: "Thousands of messages — one click" },
-        desc: { ar: "أنشئ حملة، ارفع جهات الاتصال، واضغط إرسال. واتس برو بيبعت لكل عميل بشكل فردي — مش كإعلان جماعي.", en: "Create a campaign, upload contacts, hit send. WhatsPro sends to each client individually — not as a group broadcast." },
+        desc: { ar: "أنشئ حملة، ارفع جهات الاتصال، واضغط إرسال. وني بيبعت لكل عميل بشكل فردي — مش كإعلان جماعي.", en: "Create a campaign, upload contacts, hit send. WANI sends to each client individually — not as a group broadcast." },
       },
       {
         tag: { ar: "AI ذكاء اصطناعي", en: "AI" },
@@ -159,7 +159,7 @@ export const t = {
       {
         title: { ar: "أرسل أو جدوّل الحملة", en: "Send or schedule the campaign" },
         what: { ar: "فوري أو في الوقت اللي تختاره", en: "Instantly or at your chosen time" },
-        desc: { ar: "اختار الجمهور المستهدف، راجع الملخص، واضغط إرسال. واتس برو بيكمل الشغل حتى لو قفلت الجهاز.", en: "Choose your target audience, review the summary, and hit send. WhatsPro keeps going even if you close your device." },
+        desc: { ar: "اختار الجمهور المستهدف، راجع الملخص، واضغط إرسال. وني بيكمل الشغل حتى لو قفلت الجهاز.", en: "Choose your target audience, review the summary, and hit send. WANI keeps going even if you close your device." },
         time: { ar: "دقيقتين", en: "2 minutes" },
       },
       {
@@ -262,7 +262,7 @@ export const t = {
     badge: { ar: "العملاء يتكلموا", en: "What clients say" },
     h2a: { ar: "مش كلامنا،", en: "Not our words," },
     h2b: { ar: "كلامهم", en: "theirs" },
-    subtitle: { ar: "تجارب حقيقية من أصحاب مشاريع بيستخدموا واتس برو يومياً", en: "Real experiences from business owners who use WhatsPro daily." },
+    subtitle: { ar: "تجارب حقيقية من أصحاب مشاريع بيستخدموا وني يومياً", en: "Real experiences from business owners who use WANI daily." },
     addBtn: { ar: "أضف رأيك", en: "Add Your Review" },
     empty: { ar: "لا توجد آراء حتى الآن", en: "No reviews yet" },
     stats: [
@@ -298,10 +298,10 @@ export const t = {
     items: [
       {
         category: { ar: "النظام والإمكانيات", en: "System & Capabilities" },
-        q: { ar: "واتس برو مجرد أداة إرسال ولا في أكثر من كده؟", en: "Is WhatsPro just a messaging tool or more?" },
+        q: { ar: "وني مجرد أداة إرسال ولا في أكثر من كده؟", en: "Is WANI just a messaging tool or more?" },
         a: {
-          ar: `واتس برو CRM متكامل يدير دورة حياة العميل بالكامل — من أول رسالة لحد ما يصبح عميل دائم.\n\nبتبدأ بـ إدارة جهات الاتصال المتقدمة: استيراد وتصنيف وتقسيم الجمهور بدقة.\n\nثم الحملات التسويقية بالجملة: بترسل لآلاف العملاء في دقائق بقوالب معتمدة من واتساب.\n\nوكمان صندوق الوارد الذكي: ترد على كل عميل بشكل شخصي مع تاريخ المحادثة الكامل.\n\nالفرق بيننا وبين أدوات الإرسال العادية؟ إنت شايف العميل مش بس رقم.`,
-          en: `WhatsPro is a full CRM that manages the entire customer lifecycle — from the first message to becoming a loyal client.\n\nIt starts with advanced contact management: import, tag, and segment your audience precisely.\n\nThen bulk marketing campaigns: send to thousands of customers in minutes using Meta-approved templates.\n\nPlus a smart inbox: reply personally to each client with full conversation history.\n\nThe difference from regular tools? You see the customer, not just a number.`
+          ar: `وني CRM متكامل يدير دورة حياة العميل بالكامل — من أول رسالة لحد ما يصبح عميل دائم.\n\nبتبدأ بـ إدارة جهات الاتصال المتقدمة: استيراد وتصنيف وتقسيم الجمهور بدقة.\n\nثم الحملات التسويقية بالجملة: بترسل لآلاف العملاء في دقائق بقوالب معتمدة من واتساب.\n\nوكمان صندوق الوارد الذكي: ترد على كل عميل بشكل شخصي مع تاريخ المحادثة الكامل.\n\nالفرق بيننا وبين أدوات الإرسال العادية؟ إنت شايف العميل مش بس رقم.`,
+          en: `WANI is a full CRM that manages the entire customer lifecycle — from the first message to becoming a loyal client.\n\nIt starts with advanced contact management: import, tag, and segment your audience precisely.\n\nThen bulk marketing campaigns: send to thousands of customers in minutes using Meta-approved templates.\n\nPlus a smart inbox: reply personally to each client with full conversation history.\n\nThe difference from regular tools? You see the customer, not just a number.`
         },
       },
       {
@@ -314,10 +314,10 @@ export const t = {
       },
       {
         category: { ar: "الأمان والموثوقية", en: "Safety & Reliability" },
-        q: { ar: "هل الإرسال ده هيضر حساب واتساب بتاعي؟", en: "Will sending through WhatsPro harm my WhatsApp account?" },
+        q: { ar: "هل الإرسال ده هيضر حساب واتساب بتاعي؟", en: "Will sending through WANI harm my WhatsApp account?" },
         a: {
-          ar: `السؤال ده مهم جداً — والإجابة الصريحة: بيعتمد على الطريقة.\n\nإزاي واتس برو بيحميك:\n✓ بنشتغل من خلال واتساب بيزنس API الرسمي.\n✓ كل رسالة بتتبع قواعد Meta.\n✓ القوالب بتتراجعها Meta قبل الإرسال.\n✓ نسبة التسليم عندنا 98.5% بدون إيقاف حسابات.`,
-          en: `Great question — the honest answer: it depends on the method.\n\nHow WhatsPro protects you:\n✓ We use the official WhatsApp Business API.\n✓ Every message follows Meta's guidelines.\n✓ Templates are reviewed by Meta before sending.\n✓ 98.5% delivery rate with zero account bans.`
+          ar: `السؤال ده مهم جداً — والإجابة الصريحة: بيعتمد على الطريقة.\n\nإزاي وني بيحميك:\n✓ بنشتغل من خلال واتساب بيزنس API الرسمي.\n✓ كل رسالة بتتبع قواعد Meta.\n✓ القوالب بتتراجعها Meta قبل الإرسال.\n✓ نسبة التسليم عندنا 98.5% بدون إيقاف حسابات.`,
+          en: `Great question — the honest answer: it depends on the method.\n\nHow WANI protects you:\n✓ We use the official WhatsApp Business API.\n✓ Every message follows Meta's guidelines.\n✓ Templates are reviewed by Meta before sending.\n✓ 98.5% delivery rate with zero account bans.`
         },
       },
       {
@@ -468,7 +468,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
   // ── Footer ───────────────────────────────────────────────────────────────────
   footer: {
     desc: { ar: "منصتك المتكاملة لإدارة وإرسال رسائل الواتساب. نساعدك على التواصل مع عملائك بكفاءة واحترافية.", en: "Your all-in-one platform to manage and send WhatsApp messages. We help you reach customers efficiently and professionally." },
-    copyright: { ar: "© 2025 واتس برو. جميع الحقوق محفوظة.", en: "© 2025 WhatsPro. All rights reserved." },
+    copyright: { ar: "© 2025 وني. جميع الحقوق محفوظة.", en: "© 2025 WANI. All rights reserved." },
     col1: { ar: "المنتج", en: "Product" },
     col2: { ar: "الشركة", en: "Company" },
     col3: { ar: "الموارد", en: "Resources" },

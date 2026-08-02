@@ -15,7 +15,7 @@ async function verifyStoreDomain(url: string): Promise<boolean> {
       method:  "HEAD",
       redirect: "follow",
       signal:  AbortSignal.timeout(8_000),
-      headers: { "User-Agent": "WhatsPro-Verify/1.0" },
+      headers: { "User-Agent": "WANI-Verify/1.0" },
     });
     // WooCommerce REST API endpoint — لو رد حتى بـ 401 = موجود
     return res.status < 500;

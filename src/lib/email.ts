@@ -9,7 +9,7 @@ function getResend(): Resend {
 }
 
 function getFrom(): string {
-  return process.env.EMAIL_FROM ?? "واتس برو <no-reply@whatspro.app>";
+  return process.env.EMAIL_FROM ?? "وني <no-reply@wani.app>";
 }
 
 function getBase(): string {
@@ -23,7 +23,7 @@ export async function sendResetEmail(to: string, token: string) {
   const { error } = await getResend().emails.send({
     from:    getFrom(),
     to,
-    subject: "إعادة تعيين كلمة المرور — واتس برو",
+    subject: "إعادة تعيين كلمة المرور — وني",
     html: `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -31,7 +31,7 @@ export async function sendResetEmail(to: string, token: string) {
         <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;border:1px solid #e4e4e7">
           <div style="text-align:center;margin-bottom:24px">
             <div style="display:inline-block;background:#25D366;border-radius:12px;padding:12px 20px">
-              <span style="color:#fff;font-size:18px;font-weight:bold">واتس برو</span>
+              <span style="color:#fff;font-size:18px;font-weight:bold">وني</span>
             </div>
           </div>
           <h2 style="color:#111;margin:0 0 12px;font-size:20px">إعادة تعيين كلمة المرور</h2>
@@ -53,7 +53,7 @@ export async function sendResetEmail(to: string, token: string) {
           </p>
           <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0">
           <p style="color:#bbb;font-size:12px;text-align:center;margin:0">
-            واتس برو · الإسكندرية، مصر
+            وني · الإسكندرية، مصر
           </p>
         </div>
       </body>

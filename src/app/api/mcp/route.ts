@@ -1,6 +1,6 @@
 /**
- * WhatsPro — MCP Server (Model Context Protocol)
- * يسمح لـ Claude بالتحكم في واتس برو مباشرة من الشات
+ * WANI — MCP Server (Model Context Protocol)
+ * يسمح لـ Claude بالتحكم في وني مباشرة من الشات
  *
  * Docs: https://modelcontextprotocol.io
  */
@@ -663,7 +663,7 @@ export async function GET(req: NextRequest) {
           jsonrpc: "2.0",
           method: "notifications/initialized",
           params: {
-            serverInfo: { name: "WhatsPro", version: "1.0.0" },
+            serverInfo: { name: "WANI", version: "1.0.0" },
             protocolVersion: "2024-11-05",
             capabilities: { tools: {} },
           },
@@ -687,7 +687,7 @@ export async function GET(req: NextRequest) {
 
   // Discovery mode
   return NextResponse.json(
-    { name: "WhatsPro", version: "1.0.0", description: "WhatsApp Marketing Platform" },
+    { name: "WANI", version: "1.0.0", description: "WhatsApp Marketing Platform" },
     { headers: CORS }
   );
 }
@@ -713,7 +713,7 @@ export async function POST(req: NextRequest) {
         jsonrpc: "2.0", id,
         result: {
           protocolVersion: "2024-11-05",
-          serverInfo: { name: "WhatsPro", version: "1.0.0" },
+          serverInfo: { name: "WANI", version: "1.0.0" },
           capabilities: { tools: {} },
         },
       });

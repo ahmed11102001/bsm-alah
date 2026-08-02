@@ -201,7 +201,7 @@ export default function Partners({ lang }: PartnersProps) {
             <p className="text-gray-500 text-sm">
               {lang === "ar"
                 ? " وني مصمم لكل من يريد تسويقاً أذكى عبر واتساب"
-                : "WhatsPro is built for anyone who wants smarter WhatsApp marketing"}
+                : "WANI is built for anyone who wants smarter WhatsApp marketing"}
             </p>
           </div>
 
