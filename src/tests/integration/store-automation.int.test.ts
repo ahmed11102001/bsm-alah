@@ -71,7 +71,6 @@ describe("Integration: Store Automation Idempotency (Real DB)", () => {
     const store = await prisma.shopifyStore.create({
       data: {
         userId: testUserId,
-        storeDomain: "test-store.myshopify.com",
         shop: "test-store.myshopify.com",
         storeName: "Test Store",
         accessToken: "test-token",

@@ -16,10 +16,10 @@ const REPORT_TABS = [
   { value: "overview", icon: BarChart3, minPlan: "free", href: "/dashboard/reports" },
   { value: "customers", icon: Users, minPlan: "starter", href: "/dashboard/reports?tab=customers" },
   { value: "team", icon: Shield, minPlan: "starter", href: "/dashboard/reports?tab=team" },
-  { value: "logs", icon: Activity, minPlan: "pro", href: "/dashboard/reports/logs" },
+  { value: "logs", icon: Activity, minPlan: "starter", href: "/dashboard/reports/logs" },
   { value: "store", icon: ShoppingBag, minPlan: "pro", href: "/dashboard/reports/store" },
   { value: "automation", icon: Bot, minPlan: "pro", href: "/dashboard/reports/automation" },
-  { value: "cost", icon: DollarSign, minPlan: "starter", href: "/dashboard/reports/cost" },
+  { value: "cost", icon: DollarSign, minPlan: "pro", href: "/dashboard/reports/cost" },
 ] as const;
 
 const ORDER = ["free", "starter", "pro", "enterprise"];
