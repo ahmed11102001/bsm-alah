@@ -11,6 +11,9 @@ export interface RelevantProduct {
   variants: any;
   url: string | null;
   category?: string | null;
+  aiNotes: string | null;
+  aiKeywords: string[];
+  aiSalesInstructions: string | null;
 }
 
 export interface SuggestedProduct extends RelevantProduct {
@@ -148,6 +151,9 @@ export async function getRelevantProducts(
       variants: true,
       url: true,
       category: true,
+      aiNotes: true,
+      aiKeywords: true,
+      aiSalesInstructions: true,
       searchText: true,
     },
     take: 150, // Expanded candidate pool before scoring
@@ -201,6 +207,9 @@ export async function getRelevantProducts(
       variants: product.variants,
       url: product.url,
       category: product.category,
+      aiNotes: product.aiNotes,
+      aiKeywords: product.aiKeywords,
+      aiSalesInstructions: product.aiSalesInstructions,
     }));
 }
 
@@ -217,6 +226,7 @@ export async function getSuggestedProducts(
   const select = {
     id: true, name: true, price: true, currency: true, description: true,
     stock: true, variants: true, url: true, category: true,
+    aiNotes: true, aiKeywords: true, aiSalesInstructions: true,
   } as const;
 
   if (settings.suggestUpsell && primaryProduct.category && primaryProduct.price != null) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Zap, Shield, BarChart2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import HeroAnimation from "./_components/HeroAnimation";
 import HeroCinematic from "./_components/HeroCinematic";
 import { LanguageProvider, useLanguage } from "./_components/LanguageProvider";
@@ -18,26 +18,6 @@ export default function DevelopersLandingPage() {
 function PageContent() {
   const { language, toggleLanguage, t } = useLanguage();
 
-
-  // ─── 3 focused features — not 6 scattered ones ──────────────────────────────
-  const FEATURES = [
-    {
-      icon: Zap,
-      title: t("Two Lines, Done", "سطرين وخلاص"),
-      body: t("One POST sends the code. One POST verifies it. No SDK or complex configuration required.", "POST واحد يرسل الكود. POST واحد يتحقق منه. مفيش SDK أو config معقد.")
-    },
-    {
-      icon: Shield,
-      title: t("Built-in Protection", "حماية مدمجة"),
-      body: t("Automatic rate limiting: 5 messages/number/hour. Without writing an extra line of code.", "Rate limiting تلقائي: 5 رسائل/رقم/ساعة. بدون ما تكتب سطر كود إضافي."),
-    },
-    {
-      icon: BarChart2,
-      title: t("Live Dashboard", "داشبورد حي"),
-      body: t("Monitor delivery, verification, failure, and average response times in real time.", "تتابع الإرسال والتحقق والفشل ومتوسط الاستجابة في الوقت الفعلي."),
-    },
-  ];
-
   return (
     <div
       style={{
@@ -46,7 +26,9 @@ function PageContent() {
         color: "#f0f0f0",
         fontFamily:
           "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        direction: language === 'ar' ? "rtl" : "ltr",
+        direction: language === "ar" ? "rtl" : "ltr",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <HeroAnimation />
@@ -57,7 +39,7 @@ function PageContent() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "20px 40px",
+          padding: "16px 32px",
           borderBottom: "1px solid rgba(255,255,255,0.05)",
           position: "sticky",
           top: 0,
@@ -66,39 +48,84 @@ function PageContent() {
           zIndex: 50,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
-          >
-            <img src="/favicon.svg" alt="Wani API" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        {/* Brand + Nav Links */}
+        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src="/favicon.svg"
+                alt="Wani API"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            </div>
+            <span style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.3px" }}>
+              Wani <span style={{ color: "#25D366" }}>API</span>
+            </span>
           </div>
-          <span style={{ fontWeight: 700, fontSize: "15px", letterSpacing: "-0.3px" }}>
-            Wani <span style={{ color: "#25D366" }}>API</span>
-          </span>
+
+          {/* Links moved from Bottom Bar to Top Bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <Link
+              href="/developers/docs"
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                textDecoration: "none",
+                transition: "color 0.15s",
+              }}
+            >
+              {t("Docs", "Docs")}
+            </Link>
+            <Link
+              href="/developers/privacy"
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                textDecoration: "none",
+                transition: "color 0.15s",
+              }}
+            >
+              {t("Privacy", "الخصوصية")}
+            </Link>
+            <Link
+              href="/developers/terms"
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                textDecoration: "none",
+                transition: "color 0.15s",
+              }}
+            >
+              {t("Terms", "الشروط")}
+            </Link>
+          </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {/* Action Buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Link
             href="/developers/signin"
             className="nav-link-secondary"
             style={{
               padding: "8px 16px",
               fontSize: "13px",
-              color: "rgba(255,255,255,0.5)",
+              color: "rgba(255,255,255,0.7)",
               textDecoration: "none",
               borderRadius: "8px",
               transition: "color 0.15s",
             }}
           >
-            {t('Sign In', 'تسجيل دخول')}
+            {t("Sign In", "تسجيل دخول")}
           </Link>
           <Link
             href="/developers/signup"
@@ -116,277 +143,36 @@ function PageContent() {
               gap: "6px",
             }}
           >
-            {t('Start for Free', 'ابدأ مجاناً')}
+            {t("Start for Free", "ابدأ مجاناً")}
             <ArrowRight size={13} />
           </Link>
-          <button onClick={toggleLanguage} style={{ padding: "6px 10px", fontSize: "12px", background: "#333", color: "#fff", borderRadius: "6px", border: "none", cursor: "pointer" }}>
-            {language === 'ar' ? 'EN' : 'AR'}
+          <button
+            onClick={toggleLanguage}
+            style={{
+              padding: "6px 10px",
+              fontSize: "12px",
+              background: "#333",
+              color: "#fff",
+              borderRadius: "6px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            {language === "ar" ? "EN" : "AR"}
           </button>
         </div>
       </nav>
 
-      {/* ── HERO — كاميرا سينمائية بتتنقل في نفس الإطار ── */}
-      <HeroCinematic />
-
-      {/* ── FEATURES ────────────────────────────────────────────────────── */}
-      <section style={{ maxWidth: "680px", margin: "0 auto", padding: "0 24px 80px" }}>
-        {/* Section label */}
-        <p
-          style={{
-            fontSize: "11px",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.2)",
-            fontFamily: "'JetBrains Mono', monospace",
-            marginBottom: "24px",
-            textAlign: "center",
-          }}
-        >
-          {language === 'ar' ? 'ليه Wani OTP؟' : 'Why Wani OTP?'}
-        </p>
-
-        <div className="features-grid">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div
-              key={title}
-              style={{
-                padding: "20px",
-                borderRadius: "12px",
-                border: "1px solid rgba(255,255,255,0.07)",
-                background: "rgba(255,255,255,0.02)",
-                transition: "border-color 0.2s",
-              }}
-              onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(37,211,102,0.2)")
-              }
-              onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(255,255,255,0.07)")
-              }
-            >
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(37,211,102,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                }}
-              >
-                <Icon size={15} color="#25D366" />
-              </div>
-              <h3
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  marginBottom: "6px",
-                  color: "#f0f0f0",
-                  letterSpacing: "-0.2px",
-                }}
-              >
-                {title}
-              </h3>
-              <p
-                style={{
-                  fontSize: "12px",
-                  lineHeight: 1.65,
-                  color: "rgba(255,255,255,0.35)",
-                }}
-              >
-                {body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── DEVELOPER BENEFITS ─────────────────────────────────────────────────────── */}
-      <section style={{ maxWidth: "820px", margin: "0 auto", padding: "0 24px 96px" }}>
-        {/* label */}
-        <div style={{ textAlign: "center", marginBottom: "48px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "rgba(37,211,102,0.07)", border: "1px solid rgba(37,211,102,0.15)", marginBottom: "16px" }}>
-            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#25D366", display: "inline-block" }} />
-            <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono',monospace", color: "#25D366", letterSpacing: "0.08em" }}>for developers</span>
-          </div>
-          <h2 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.8px", marginBottom: "10px" }}>{language === 'ar' ? 'مجاني بالكامل للمطورين' : '100% Free for Developers'}</h2>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.35)", maxWidth: "440px", margin: "0 auto", lineHeight: 1.7 }}>{language === 'ar' ? 'ابني مشاريع بلا حدود، جرّب الواجهة البرمجية براحتك، وسلّم المشروع للعميل. العميل هو اللي بيتولى دفع الاشتراك من حسابه الخاص بعد الاستلام.' : 'Build unlimited projects, test the API freely, and hand them off to clients. The client manages the subscription from their own account after handover.'}</p>
-        </div>
-
-        <div style={{ borderRadius: "20px", border: "1.5px solid rgba(37,211,102,0.3)", background: "linear-gradient(145deg, rgba(37,211,102,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "40px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "500px" }}>
-            {[
-              { t: language === 'ar' ? "مشاريع غير محدودة" : "Unlimited projects", s: language === 'ar' ? "كل مشروع معزول ببياناته وإحصائياته" : "fully isolated projects" },
-              { t: language === 'ar' ? "رصيد تجريبي لكل مشروع" : "Trial balance per project", s: language === 'ar' ? "عشان تبني براحتك بدون تكلفة" : "build without upfront costs" },
-              { t: language === 'ar' ? "ربط Meta مخصص" : "Custom Meta connection", s: language === 'ar' ? "رقم WhatsApp Business خاص بكل مشروع" : "custom WhatsApp Business number per project" },
-              { t: language === 'ar' ? "تسليم المشروع بضغطة زر" : "One-click project handover", s: language === 'ar' ? "انقل الملكية للعميل في ثواني" : "transfer ownership to clients instantly" },
-              { t: language === 'ar' ? "إدارة كاملة من Dashboard وحدة" : "Manage from a single dashboard", s: language === 'ar' ? "تابع كل مشاريعك من مكان واحد" : "monitor all your projects centrally" },
-            ].map(({ t, s }) => (
-              <div key={t} style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.02)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#25D366", fontSize: "14px", fontWeight: "bold" }}>✓</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "14px", color: "rgba(255,255,255,0.9)", fontWeight: 600, marginBottom: "2px" }}>{t}</div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>{s}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <a href="/developers/signup" style={{ marginTop: "40px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "14px 32px", borderRadius: "12px", background: "#25D366", color: "#000", fontSize: "15px", fontWeight: 700, textDecoration: "none" }}>
-            {language === 'ar' ? 'سجّل حساب مطور مجاناً' : 'Create a free developer account'}
-            <ArrowRight size={16} />
-          </a>
-        </div>
-      </section>
-
-      {/* ── CTA STRIP ───────────────────────────────────────────────────── */}
-      <section style={{ padding: "0 24px 80px" }}>
-        <div
-          style={{
-            maxWidth: "600px",
-            margin: "0 auto",
-            padding: "40px 40px",
-            borderRadius: "16px",
-            border: "1px solid rgba(37,211,102,0.15)",
-            background:
-              "linear-gradient(135deg, rgba(37,211,102,0.06) 0%, rgba(8,8,8,0) 100%)",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "11px",
-              fontFamily: "'JetBrains Mono', monospace",
-              color: "#25D366",
-              letterSpacing: "0.08em",
-              marginBottom: "12px",
-              opacity: 0.7,
-            }}
-          >
-            {">"} ready to ship?
-          </div>
-          <h2
-            style={{
-              fontSize: "24px",
-              fontWeight: 800,
-              letterSpacing: "-0.6px",
-              marginBottom: "8px",
-            }}
-          >
-            {language === 'ar' ? 'جاهز تبدأ؟' : 'Ready to start?'}
-          </h2>
-          <p
-            style={{
-              fontSize: "13px",
-              color: "rgba(255,255,255,0.35)",
-              marginBottom: "24px",
-            }}
-          >
-            {language === 'ar' ? '14 يوم مجاناً أو 50 رسالة — اللي ينتهي الأول' : '14 days free or 50 messages — whichever ends first'}
-          </p>
-          <Link
-            href="/developers/signup"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "12px 28px",
-              background: "#25D366",
-              color: "#000",
-              fontWeight: 700,
-              fontSize: "14px",
-              borderRadius: "10px",
-              textDecoration: "none",
-              letterSpacing: "-0.2px",
-            }}
-          >
-            {language === 'ar' ? 'سجّل حساب مجاناً' : 'Create a free account'}
-            <ArrowRight size={15} />
-          </Link>
-        </div>
-      </section>
-
-      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer
-        style={{
-          borderTop: "1px solid rgba(255,255,255,0.05)",
-          padding: "20px 40px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: "12px",
-          color: "rgba(255,255,255,0.2)",
-        }}
-      >
-        <span>Wani API — WhatsApp OTP</span>
-        <div style={{ display: "flex", gap: "20px" }}>
-          <Link
-            href="/developers/privacy"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            {language === 'ar' ? 'الخصوصية' : 'Privacy'}
-          </Link>
-          <Link
-            href="/developers/terms"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            {language === 'ar' ? 'الشروط' : 'Terms'}
-          </Link>
-          <Link
-            href="/developers/docs"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            {language === 'ar' ? 'Docs' : 'Docs'}
-          </Link>
-          <Link
-            href="/developers/signin"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            {language === 'ar' ? 'تسجيل دخول' : 'Sign In'}
-          </Link>
-        </div>
-      </footer>
+      {/* ── HERO / CINEMATIC FEED — الفيديو التفاعلي والتركيز الكامل ── */}
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <HeroCinematic />
+      </main>
 
       {/* ── GLOBAL STYLES ───────────────────────────────────────────────── */}
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        .pricing-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        .features-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 12px;
-        }
-        .pricing-card {
-          padding: 32px;
-        }
-        @media (max-width: 768px) {
-          .pricing-grid {
-            grid-template-columns: 1fr;
-          }
-          .features-grid {
-            grid-template-columns: 1fr;
-          }
-        }
         @media (max-width: 600px) {
-          nav { padding: 16px 20px !important; }
-          section { padding-left: 16px !important; padding-right: 16px !important; }
-          .pricing-card {
-            padding: 20px !important;
-          }
-          footer { flex-direction: column; gap: 12px; text-align: center; }
+          nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 12px; }
         }
         @media (max-width: 480px) {
           .nav-link-secondary {
@@ -396,12 +182,6 @@ function PageContent() {
           .nav-link-primary {
             padding: 6px 12px !important;
             font-size: 12px !important;
-          }
-          .hero-stats {
-            gap: 16px !important;
-          }
-          .terminal-body {
-            padding: 12px 12px 16px !important;
           }
         }
       `}</style>

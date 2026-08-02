@@ -18,12 +18,16 @@ export function buildSearchText(product: {
   description?: string | null;
   tags?: string[] | null;
   category?: string | null;
+  aiNotes?: string | null;
+  aiKeywords?: string[] | null;
 }): string {
   const parts = [
     product.name || "",
     product.description || "",
     (product.tags || []).join(" "),
     product.category || "",
+    product.aiNotes || "",
+    (product.aiKeywords || []).join(" "),
   ];
   return parts.join(" ").replace(/\s+/g, " ").trim().toLowerCase();
 }
@@ -63,6 +67,11 @@ export async function syncShopifyProducts(
     let totalSynced = 0;
     let errorsCount = 0;
     const syncTime = new Date();
+    const existingOverlays = await prisma.product.findMany({
+      where: { userId, source: ProductSource.shopify },
+      select: { externalId: true, aiNotes: true, aiKeywords: true },
+    });
+    const overlayByExternalId = new Map(existingOverlays.map((product) => [product.externalId, product]));
 
     while (pageUrl && fetchedIds.size < MAX_PRODUCTS_PER_SYNC) {
       const res: Response = await fetch(pageUrl, {
@@ -93,7 +102,8 @@ export async function syncShopifyProducts(
         const handleUrl = p.handle ? `https://${shop}/products/${p.handle}` : null;
         const isActive = p.status ? p.status === "active" : true;
 
-        const searchText = buildSearchText({ name: p.title, description, tags, category });
+        const overlay = overlayByExternalId.get(externalId);
+        const searchText = buildSearchText({ name: p.title, description, tags, category, aiNotes: overlay?.aiNotes, aiKeywords: overlay?.aiKeywords });
 
         try {
           await prisma.product.upsert({
@@ -238,6 +248,11 @@ export async function syncEasyOrdersProducts(
     let totalSynced = 0;
     let errorsCount = 0;
     const syncTime = new Date();
+    const existingOverlays = await prisma.product.findMany({
+      where: { userId, source: ProductSource.easyorders },
+      select: { externalId: true, aiNotes: true, aiKeywords: true },
+    });
+    const overlayByExternalId = new Map(existingOverlays.map((product) => [product.externalId, product]));
 
     for (const p of rawProducts) {
       if (fetchedIds.size >= MAX_PRODUCTS_PER_SYNC) break;
@@ -254,7 +269,8 @@ export async function syncEasyOrdersProducts(
       const stock = p.quantity != null ? parseInt(p.quantity, 10) : (p.stock != null ? parseInt(p.stock, 10) : null);
       const category = p.category?.name || p.category || null;
       const isActive = p.status ? (p.status === "active" || p.status === 1 || p.status === true) : true;
-      const searchText = buildSearchText({ name, description, category });
+      const overlay = overlayByExternalId.get(externalId);
+      const searchText = buildSearchText({ name, description, category, aiNotes: overlay?.aiNotes, aiKeywords: overlay?.aiKeywords });
 
       try {
         await prisma.product.upsert({
@@ -371,6 +387,11 @@ export async function syncWooCommerceProducts(
     let errorsCount = 0;
     let page = 1;
     const syncTime = new Date();
+    const existingOverlays = await prisma.product.findMany({
+      where: { userId, source: ProductSource.woocommerce },
+      select: { externalId: true, aiNotes: true, aiKeywords: true },
+    });
+    const overlayByExternalId = new Map(existingOverlays.map((product) => [product.externalId, product]));
 
     while (fetchedIds.size < MAX_PRODUCTS_PER_SYNC) {
       const res = await fetch(`${normalizedUrl}/wp-json/wc/v3/products?per_page=100&page=${page}`, {
@@ -402,7 +423,8 @@ export async function syncWooCommerceProducts(
         const stock = p.stock_quantity == null ? null : parseInt(String(p.stock_quantity), 10);
         const name = p.name || "";
         const isActive = p.status === "publish";
-        const searchText = buildSearchText({ name, description, tags, category });
+        const overlay = overlayByExternalId.get(externalId);
+        const searchText = buildSearchText({ name, description, tags, category, aiNotes: overlay?.aiNotes, aiKeywords: overlay?.aiKeywords });
         try {
           await prisma.product.upsert({
             where: { source_externalId_userId: { source: ProductSource.woocommerce, externalId, userId } },
@@ -449,6 +471,9 @@ export interface ManualProductInput {
   category?: string | null;
   tags?: string[];
   url?: string | null;
+  aiNotes?: string | null;
+  aiKeywords?: string[];
+  aiSalesInstructions?: string | null;
 }
 
 export async function upsertManualProduct(
@@ -461,6 +486,8 @@ export async function upsertManualProduct(
     description: input.description,
     category: input.category,
     tags: input.tags,
+    aiNotes: input.aiNotes,
+    aiKeywords: input.aiKeywords,
   });
 
   return prisma.product.upsert({
@@ -482,6 +509,9 @@ export async function upsertManualProduct(
       category: input.category,
       tags: input.tags || [],
       url: input.url,
+      aiNotes: input.aiNotes,
+      aiKeywords: input.aiKeywords || [],
+      aiSalesInstructions: input.aiSalesInstructions,
       isActive: true,
       searchText,
       lastSyncedAt: new Date(),
@@ -500,6 +530,9 @@ export async function upsertManualProduct(
       category: input.category,
       tags: input.tags || [],
       url: input.url,
+      aiNotes: input.aiNotes,
+      aiKeywords: input.aiKeywords || [],
+      aiSalesInstructions: input.aiSalesInstructions,
       isActive: true,
       searchText,
       lastSyncedAt: new Date(),

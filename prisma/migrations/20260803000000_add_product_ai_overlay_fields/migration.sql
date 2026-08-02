@@ -1,0 +1,4 @@
+ALTER TABLE "Product"
+ADD COLUMN "aiNotes" TEXT,
+ADD COLUMN "aiKeywords" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "aiSalesInstructions" TEXT;

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
-import { upsertManualProduct, type ManualProductInput } from "@/lib/product-sync";
+import { buildSearchText, upsertManualProduct, type ManualProductInput } from "@/lib/product-sync";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
         images: true, stock: true, category: true, tags: true,
         url: true, isActive: true,
         relatedProductIds: true,
+        aiNotes: true, aiKeywords: true, aiSalesInstructions: true,
         lastSyncedAt: true, updatedAt: true,
       },
     }),
@@ -96,10 +97,69 @@ export async function POST(req: NextRequest) {
     category: body.category || null,
     tags: Array.isArray(body.tags) ? body.tags : [],
     url: body.url || null,
+    aiNotes: body.aiNotes ?? null,
+    aiKeywords: Array.isArray(body.aiKeywords) ? body.aiKeywords : [],
+    aiSalesInstructions: body.aiSalesInstructions ?? null,
   };
 
   const product = await upsertManualProduct(userId, input);
   return NextResponse.json(product, { status: 201 });
+}
+
+// ── PATCH — عدّل AI Overlay لمنتج (المتجر المتصل أو اليدوي) ──
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await resolveUserId(session);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const guard = await checkFeature(userId, "aiAgent");
+  const blocked = guardResponse(guard);
+  if (blocked) return blocked;
+
+  const body = await req.json().catch(() => ({}));
+  const id = typeof body.id === "string" ? body.id.trim() : "";
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  const product = await prisma.product.findFirst({
+    where: { id, userId },
+    select: { id: true, name: true, description: true, tags: true, category: true, aiNotes: true, aiKeywords: true },
+  });
+  if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+  const data: {
+    aiNotes?: string | null;
+    aiKeywords?: string[];
+    aiSalesInstructions?: string | null;
+    searchText?: string;
+  } = {};
+  if (Object.prototype.hasOwnProperty.call(body, "aiNotes")) {
+    if (body.aiNotes !== null && typeof body.aiNotes !== "string") return NextResponse.json({ error: "aiNotes must be a string or null" }, { status: 400 });
+    data.aiNotes = body.aiNotes;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "aiKeywords")) {
+    if (!Array.isArray(body.aiKeywords) || body.aiKeywords.some((keyword: unknown) => typeof keyword !== "string")) {
+      return NextResponse.json({ error: "aiKeywords must be an array of strings" }, { status: 400 });
+    }
+    data.aiKeywords = body.aiKeywords;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "aiSalesInstructions")) {
+    if (body.aiSalesInstructions !== null && typeof body.aiSalesInstructions !== "string") return NextResponse.json({ error: "aiSalesInstructions must be a string or null" }, { status: 400 });
+    data.aiSalesInstructions = body.aiSalesInstructions;
+  }
+  if (!Object.keys(data).length) return NextResponse.json({ error: "At least one AI overlay field is required" }, { status: 400 });
+
+  data.searchText = buildSearchText({
+    name: product.name,
+    description: product.description,
+    tags: product.tags,
+    category: product.category,
+    aiNotes: data.aiNotes ?? product.aiNotes,
+    aiKeywords: data.aiKeywords ?? product.aiKeywords,
+  });
+
+  const updated = await prisma.product.update({ where: { id }, data });
+  return NextResponse.json(updated);
 }
 
 // ── DELETE — احذف منتج (soft delete: isActive=false) ──

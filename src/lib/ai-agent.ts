@@ -103,6 +103,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
       const descStr = p.description ? ` - ${p.description.substring(0, 150)}` : "";
       const urlStr = p.url ? ` [رابط: ${p.url}]` : "";
       lines.push(`${idx + 1}. [ID: ${p.id}] ${p.name} - السعر: ${priceStr} ${stockStr}${descStr}${urlStr}`);
+      if (p.aiNotes?.trim()) lines.push(`   ملاحظات إضافية: ${p.aiNotes.trim()}`);
+      if (p.aiSalesInstructions?.trim()) lines.push(`   تعليمات بيع خاصة: ${p.aiSalesInstructions.trim()}`);
     });
     lines.push("");
   } else {

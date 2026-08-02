@@ -240,7 +240,7 @@ export default function HeroCinematic() {
               {isAr ? "مجاني بالكامل للمطورين" : "100% Free for Developers"}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {BENEFITS.slice(0, 3).map(({ t: title, s }) => (
+              {BENEFITS.map(({ t: title, s }) => (
                 <div key={title} style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.02)", padding: "10px 12px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.05)" }}>
                   <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ color: "#25D366", fontSize: "10px", fontWeight: 700 }}>✓</span>
