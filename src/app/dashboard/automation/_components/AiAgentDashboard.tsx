@@ -7,9 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
 import {
@@ -199,26 +196,17 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [showManualProductSheet, setShowManualProductSheet] = useState(false);
 
   // Modals / Sheets
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(1);
   const [showFaqSheet, setShowFaqSheet] = useState(false);
   const [faqForm, setFaqForm] = useState({ id: "", question: "", answer: "" });
   const [showPolicySheet, setShowPolicySheet] = useState(false);
   const [policyForm, setPolicyForm] = useState({ id: "", type: "return_policy", title: "", content: "" });
 
-  // Onboarding Step 3 Submode & Manual Catalog Manager
-  const [onboardingSubMode, setOnboardingSubMode] = useState<"select" | "store" | "manual" | "services_only">("select");
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [manualProductForm, setManualProductForm] = useState<CatalogItem>({ ...emptyCatalogItem });
   const [addingManualProduct, setAddingManualProduct] = useState(false);
   const [showAddForm, setShowAddForm] = useState(true);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [wooForm, setWooForm] = useState({ storeUrl: "", consumerKey: "", consumerSecret: "" });
-  const [connectingWoo, setConnectingWoo] = useState(false);
-  const [wooConnected, setWooConnected] = useState<{ storeName: string; productsAvailable: number } | null>(null);
-  const [selectedStoreSource, setSelectedStoreSource] = useState<"shopify" | "easyorders" | "woocommerce" | null>(null);
 
   // Test Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -249,10 +237,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       if (resAgent.ok) {
         const data = await resAgent.json();
         setAgent(prev => ({ ...prev, ...data }));
-        // If brandName and businessDesc are missing, open onboarding
-        if (!data.brandName && !data.businessDesc) {
-          setShowOnboarding(true);
-        }
       }
       if (resFaqs.ok) setFaqs(await resFaqs.json());
       if (resPolicies.ok) setPolicies(await resPolicies.json());
@@ -536,28 +520,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     setWebsitePages(pages => pages.filter(page => page.id !== pageId));
   };
 
-  const connectWooCommerce = async () => {
-    setConnectingWoo(true);
-    try {
-      const res = await fetch("/api/woocommerce/connect-rest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(wooForm) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Connection failed");
-      setWooConnected({ storeName: data.storeName || new URL(wooForm.storeUrl).hostname, productsAvailable: data.productsAvailable || 0 });
-      setWooForm(f => ({ ...f, consumerKey: "••••••••••••", consumerSecret: "••••••••••••" }));
-      toast.success(isAr ? "تم الاتصال بنجاح" : "Connected successfully");
-      setOnboardingSubMode("store");
-    } catch (error: any) { toast.error(error.message || (isAr ? "تعذر الاتصال بمتجر WooCommerce. تأكد من الرابط وبيانات API والصلاحيات." : "Could not connect to WooCommerce. Check the store URL, API credentials, and permissions.")); }
-    finally { setConnectingWoo(false); }
-  };
-
-  const syncSelectedStore = async () => {
-    if (selectedStoreSource === "woocommerce" && wooConnected) {
-      await triggerProductSync("woocommerce");
-    } else {
-      window.open("/dashboard/store", "_blank");
-    }
-  };
-
   // ── Upload product image to Cloudinary ──
   const handleProductImageUpload = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -583,7 +545,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     }
   };
 
-  // ── Add or Update Manual Product (used by both onboarding & the Catalog tab sheet) ──
+  // ── Add or Update Manual Product (Catalog tab sheet) ──
   const handleAddManualProduct = async () => {
     if (!manualProductForm.name.trim()) {
       toast.error(isAr ? "اسم المنتج أو الخدمة مطلوب" : "Product/service name is required");
@@ -608,16 +570,9 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         }),
       });
       if (res.ok) {
-        const saved = await res.json();
+        await res.json();
         toast.success(isAr ? "تم حفظ المنتج / الخدمة بنجاح!" : "Product / Service saved!");
-        // Update local onboarding catalog list (mini-manager inside the wizard)
-        const newItem: CatalogItem = { ...manualProductForm, id: saved.id || String(Date.now()) };
-        if (editingProductId) {
-          setCatalogItems(prev => prev.map(p => p.id === editingProductId ? newItem : p));
-        } else {
-          setCatalogItems(prev => [...prev, newItem]);
-          setProductStats(prev => ({ ...prev, total: prev.total + 1 }));
-        }
+        if (!editingProductId) setProductStats(prev => ({ ...prev, total: prev.total + 1 }));
         // Reset form + close whichever surface was open
         setManualProductForm({ ...emptyCatalogItem });
         setShowAddForm(false);
@@ -637,19 +592,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     }
   };
 
-  // ── Delete catalog item ──
-  const handleDeleteCatalogItem = async (item: CatalogItem) => {
-    try {
-      await fetch(`/api/ai-agent/products?id=${item.id}`, { method: "DELETE" });
-      setCatalogItems(prev => prev.filter(p => p.id !== item.id));
-      setProductStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
-      toast.success(isAr ? "تم حذف المنتج" : "Product deleted");
-      loadCatalogRows(catalogSourceFilter, catalogSearch);
-    } catch {
-      toast.error(isAr ? "فشل حذف المنتج" : "Failed to delete product");
-    }
-  };
-
   const handleDeleteCatalogRow = async (row: CatalogRow) => {
     try {
       await fetch(`/api/ai-agent/products?id=${row.id}`, { method: "DELETE" });
@@ -659,13 +601,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     } catch {
       toast.error(isAr ? "فشل حذف المنتج" : "Failed to delete product");
     }
-  };
-
-  // ── Start editing catalog item ──
-  const handleEditCatalogItem = (item: CatalogItem) => {
-    setManualProductForm({ ...item });
-    setEditingProductId(item.id);
-    setShowAddForm(true);
   };
 
   // Opens the Catalog-tab sheet pre-filled for a manual row (name/price only available from the light table row —
@@ -854,14 +789,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          <button
-            onClick={() => setShowOnboarding(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-emerald-400 text-sm font-semibold text-gray-700 dark:text-gray-200 shadow-sm transition-all"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-500" />
-            {isAr ? "معالج الإعداد السريع" : "Quick setup wizard"}
-          </button>
-
           <button
             onClick={() => saveAgentSettings({ isEnabled: !agent.isEnabled })}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all shadow-sm ${agent.isEnabled
@@ -1562,342 +1489,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         </SheetContent>
       </Sheet>
 
-      {/* ── Dialog: Onboarding Wizard (unchanged — optional first-run / re-run guided setup) ── */}
-      <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
-        <DialogContent className="max-w-xl rounded-3xl" dir={isAr ? "rtl" : "ltr"}>
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-500" />
-                {isAr ? "إعداد Wani السريع" : "Wani Quick Setup"}
-              </DialogTitle>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-500/20">
-                {isAr ? `الخطوة ${onboardingStep} من 3` : `Step ${onboardingStep} of 3`}
-              </span>
-            </div>
-            <DialogDescription className="text-xs">
-              {onboardingStep === 1 && (isAr ? "الخطوة 1: معلومات البراند وطبيعة النشاط" : "Step 1: Brand Info & Business Description")}
-              {onboardingStep === 2 && (isAr ? "الخطوة 2: شخصية المساعد ولهجة الرد" : "Step 2: Personality & Reply Tone")}
-              {onboardingStep === 3 && (isAr ? "الخطوة 3: بيانات المنتجات والخدمات" : "Step 3: Products & Services Info")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-4">
-            {onboardingStep === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "اسم البراند" : "Brand Name"} *</Label>
-                  <Input value={agent.brandName} onChange={e => setAgent(f => ({ ...f, brandName: e.target.value }))} placeholder={isAr ? "مثال: متجر الأناقة" : "E.g. Elegance Store"} />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "ساعات العمل" : "Working Hours"}</Label>
-                  <Input value={agent.workingHours} onChange={e => setAgent(f => ({ ...f, workingHours: e.target.value }))} placeholder={isAr ? "مثال: 9 ص – 10 م يومياً" : "E.g. 9 AM – 10 PM daily"} />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "وصف نشاط البيزنس والخدمات" : "Business Description"} *</Label>
-                  <Textarea value={agent.businessDesc} onChange={e => setAgent(f => ({ ...f, businessDesc: e.target.value }))} placeholder={isAr ? "اكتب تفاصيل عن بيزنسك وما يميز منتجاتك..." : "Describe your business, products, and what makes you unique..."} className="min-h-[100px] resize-none text-xs" />
-                </div>
-              </div>
-            )}
-
-            {onboardingStep === 2 && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "مزوّد الذكاء الاصطناعي" : "AI Provider"}</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["gemini", "openai"] as const).map(p => (
-                      <button
-                        key={p}
-                        onClick={() => setAgent(f => ({ ...f, provider: p }))}
-                        className={`p-3 rounded-2xl border text-xs font-semibold flex items-center justify-between transition-all ${agent.provider === p ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300" : "border-gray-200 dark:border-gray-700"
-                          }`}
-                      >
-                        <span>{p === "gemini" ? "Google Gemini" : "ChatGPT GPT-4o mini"}</span>
-                        {agent.provider === p && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "لهجة الرد" : "Reply Tone"}</Label>
-                  <Select value={agent.tone} onValueChange={v => setAgent(f => ({ ...f, tone: v }))}>
-                    <SelectTrigger className="rounded-xl text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="friendly">{isAr ? "ودود ومساعد" : "Friendly & Helpful"}</SelectItem>
-                      <SelectItem value="formal">{isAr ? "رسمي واحترافي" : "Formal & Professional"}</SelectItem>
-                      <SelectItem value="egyptian">{isAr ? "عامية مصرية خفيفة" : "Egyptian Colloquial"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1.5 block">{isAr ? "وضع اللغة" : "Language Mode"}</Label>
-                  <Select value={agent.languageMode} onValueChange={v => setAgent(f => ({ ...f, languageMode: v }))}>
-                    <SelectTrigger className="rounded-xl text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">{isAr ? "تلقائي (حسب لغة العميل)" : "Auto (Customer language)"}</SelectItem>
-                      <SelectItem value="ar">{isAr ? "عربي دائماً" : "Always Arabic"}</SelectItem>
-                      <SelectItem value="en">{isAr ? "English always" : "Always English"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {onboardingStep === 3 && (
-              <div className="space-y-4 py-1">
-                <div className="text-center">
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 text-base mb-1">{isAr ? "منتجاتك وخدماتك" : "Products & Services"}</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{isAr ? "ساعد Wani على معرفة ما تقدمه لعملائك وأسعاره وتفاصيل كل خيار." : "Help Wani learn about what you offer, pricing, and details."}</p>
-                </div>
-
-                {onboardingSubMode === "select" && (
-                  <div className="space-y-3 pt-2">
-                    {productStats.total > 0 && (
-                      <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2.5 rounded-2xl text-xs flex items-center justify-between font-medium">
-                        <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-500" />{isAr ? `تم تسجيل ${productStats.total} منتج / خدمة في الكتالوج` : `${productStats.total} products/services in catalog`}</span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline cursor-pointer font-bold" onClick={() => setOnboardingSubMode("manual")}>{isAr ? "إضافة المزيد" : "Add more"}</span>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <button onClick={() => { setSelectedStoreSource("shopify"); setOnboardingSubMode("store"); }} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group">
-                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🛍️</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">Shopify</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "استورد منتجاتك تلقائيًا" : "Import products automatically"}</span>
-                      </button>
-                      <button onClick={() => { setSelectedStoreSource("easyorders"); setOnboardingSubMode("store"); }} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group">
-                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">📦</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">EasyOrders</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "مصدر المنتجات" : "Product source"}</span>
-                      </button>
-                      <button onClick={() => { setSelectedStoreSource("woocommerce"); setOnboardingSubMode("store"); }} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-violet-500 hover:bg-violet-50/40 dark:hover:bg-violet-950/20 transition-all group">
-                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🟣</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">WooCommerce</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "مصدر المنتجات" : "Product source"}</span>
-                      </button>
-                      <button onClick={() => setOnboardingSubMode("manual")} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group">
-                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">✏️</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "إدخال يدوي" : "Manual Entry"}</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "أضف منتجاتك أو خدماتك وأسعارها بنفسك" : "Add items & pricing yourself"}</span>
-                      </button>
-                      <button onClick={() => setOnboardingSubMode("services_only")} className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group">
-                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">💼</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "أقدم خدمات فقط" : "Services Only"}</span>
-                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "بدون كتالوج — يعتمد على معرفة البراند والسياسات" : "No catalog — relies on brand knowledge and policies"}</span>
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-gray-400 italic text-center pt-2">{isAr ? "المتجر مجرد مصدر اختياري لمعرفة Wani — لا يلزمك وجود متجر لإكمال الإعداد." : "A store is optional — you don't need one to complete training."}</p>
-                  </div>
-                )}
-
-                {onboardingSubMode === "store" && (
-                  <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/50 dark:bg-gray-900/30 text-right" dir={isAr ? "rtl" : "ltr"}>
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100 flex items-center gap-1.5">🛍️ {isAr ? "مصادر المنتجات" : "Product Sources"}</h5>
-                      <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline">{isAr ? "← تغيير الخيار" : "← Change option"}</button>
-                    </div>
-                    {productStats.total > 0 ? (
-                      <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/20 text-xs">
-                        <div className="font-bold text-emerald-700 dark:text-emerald-300">{isAr ? `✓ تم العثور على ${productStats.total} منتج متصل` : `✓ Found ${productStats.total} connected products`}</div>
-                        <p className="text-[11px] text-emerald-600/80 mt-0.5">{isAr ? "سيتم تحديث المنتجات والأسعار تلقائيًا من منصتك المربوطة." : "Products & prices update automatically from connected store."}</p>
-                      </div>
-                    ) : (
-                      <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-500/20 text-xs space-y-2">
-                        <div className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{isAr ? "لا يوجد مصدر منتجات متصل حالياً" : "No product source connected yet"}</div>
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400">{isAr ? "اربط Shopify أو EasyOrders لاستيراد منتجاتك تلقائياً، أو اختر الإدخال اليدوي." : "Connect Shopify or EasyOrders to import products automatically, or select manual entry."}</p>
-                        <div className="flex items-center gap-2 pt-1">
-                          <Button size="sm" onClick={() => window.open("/dashboard/store", "_blank")} className="bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] rounded-xl font-bold gap-1"><ExternalLink className="w-3 h-3" /> {isAr ? "ربط متجر الآن" : "Connect Store"}</Button>
-                          <Button size="sm" variant="outline" onClick={() => setOnboardingSubMode("manual")} className="text-[11px] rounded-xl font-semibold">✏️ {isAr ? "التوجه للإدخال اليدوي" : "Switch to Manual Entry"}</Button>
-                        </div>
-                      </div>
-                    )}
-                    {selectedStoreSource && selectedStoreSource !== "woocommerce" && <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{selectedStoreSource === "shopify" ? "Shopify" : "EasyOrders"}</div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{isAr ? "اربط المتجر من صفحة التكاملات، ثم استخدم المزامنة لجلب المنتجات." : "Connect this store from Integrations, then sync its products."}</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => window.open("/dashboard/store", "_blank")} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] rounded-xl">{isAr ? "ربط المتجر" : "Connect Store"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => triggerProductSync(selectedStoreSource)} disabled={syncingProducts} className="flex-1 text-[11px] rounded-xl"><RefreshCw className={`w-3 h-3 ${syncingProducts ? "animate-spin" : ""}`} />{isAr ? "مزامنة" : "Sync"}</Button>
-                      </div>
-                    </div>}
-                    {selectedStoreSource === "woocommerce" && <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط متجر WooCommerce" : "Connect WooCommerce Store"}</div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{isAr ? "أدخل بيانات API الخاصة بمتجرك لجلب المنتجات والأسعار والمخزون تلقائيًا." : "Enter your store API details to import products, prices, and stock automatically."}</p>
-                      {wooConnected ? (
-                        <div className="space-y-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20 p-3 text-xs">
-                          <div className="font-bold text-emerald-700 dark:text-emerald-300">✓ {isAr ? "تم الاتصال بنجاح" : "Connected successfully"}</div>
-                          <div className="text-emerald-700/80 dark:text-emerald-300/80">{isAr ? "المتجر" : "Store"}: {wooConnected.storeName}</div>
-                          <div className="text-emerald-700/80 dark:text-emerald-300/80">{isAr ? "المنتجات المتاحة" : "Available products"}: {wooConnected.productsAvailable}</div>
-                          <Button onClick={syncSelectedStore} disabled={syncingProducts} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold"><RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} />{isAr ? "مزامنة المنتجات الآن" : "Sync Products Now"}</Button>
-                          <Button variant="outline" onClick={() => { setWooConnected(null); setWooForm({ storeUrl: "", consumerKey: "", consumerSecret: "" }); }} className="w-full rounded-xl text-xs">{isAr ? "تغيير بيانات الاتصال" : "Change connection details"}</Button>
-                        </div>
-                      ) : <>
-                        <Input value={wooForm.storeUrl} onChange={e => setWooForm(f => ({ ...f, storeUrl: e.target.value }))} placeholder="https://store.example.com" dir="ltr" className="text-xs rounded-xl" />
-                        <Input value={wooForm.consumerKey} onChange={e => setWooForm(f => ({ ...f, consumerKey: e.target.value }))} placeholder="ck_..." dir="ltr" className="text-xs rounded-xl" />
-                        <Input type="password" value={wooForm.consumerSecret} onChange={e => setWooForm(f => ({ ...f, consumerSecret: e.target.value }))} placeholder="cs_..." dir="ltr" className="text-xs rounded-xl" />
-                        <Button onClick={connectWooCommerce} disabled={connectingWoo || !wooForm.storeUrl || !wooForm.consumerKey || !wooForm.consumerSecret} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold">
-                          {connectingWoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{isAr ? "اختبار اتصال WooCommerce" : "Test WooCommerce Connection"}
-                        </Button>
-                      </>}
-                    </div>}
-                  </div>
-                )}
-
-                {onboardingSubMode === "manual" && (
-                  <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/50 dark:bg-gray-900/30" dir={isAr ? "rtl" : "ltr"}>
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100 flex items-center gap-1.5">✏️ {catalogItems.length > 0 ? (isAr ? `كتالوجك — ${catalogItems.length}` : `Your Catalog — ${catalogItems.length}`) : (isAr ? "إضافة منتج أو خدمة يدويًا" : "Add Product or Service Manually")}</h5>
-                      <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline">{isAr ? "← تغيير الخيار" : "← Change option"}</button>
-                    </div>
-                    {catalogItems.length > 0 && (
-                      <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
-                        {catalogItems.map(item => (
-                          <div key={item.id} className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-2 hover:border-emerald-500/40 transition-all">
-                            {item.imageUrl ? (
-                              <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0"><ShoppingBag className="w-4 h-4 text-gray-400" /></div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
-                              <p className="text-[10px] text-gray-500">{item.price ? `${item.price} ${item.currency}` : (isAr ? "بدون سعر" : "No price")}{item.category ? ` · ${item.category}` : ""}</p>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button onClick={() => handleEditCatalogItem(item)} className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => handleDeleteCatalogItem(item)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {showAddForm ? (
-                      <div className="space-y-2.5 border-t border-gray-200 dark:border-gray-700 pt-3">
-                        <div>
-                          <Label className="text-[11px] mb-1 block">{isAr ? "اسم المنتج / الخدمة *" : "Product / Service Name *"}</Label>
-                          <Input value={manualProductForm.name} onChange={e => setManualProductForm(f => ({ ...f, name: e.target.value }))} placeholder={isAr ? "مثال: فستان سهرة أحمر / باقة استشارات" : "E.g. Red Evening Dress / Consultation Package"} className="text-xs rounded-xl" />
-                        </div>
-                        <div>
-                          <Label className="text-[11px] mb-1 block">{isAr ? "الوصف" : "Description"}</Label>
-                          <Textarea value={manualProductForm.description} onChange={e => setManualProductForm(f => ({ ...f, description: e.target.value }))} placeholder={isAr ? "تفاصيل المقاسات، الخامات، المميزات..." : "Details, materials, features, sizing..."} className="text-xs rounded-xl min-h-[50px] resize-none" />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">
-                            <Label className="text-[11px] mb-1 block">{isAr ? "السعر" : "Price"}</Label>
-                            <Input type="number" value={manualProductForm.price} onChange={e => setManualProductForm(f => ({ ...f, price: e.target.value }))} placeholder="350" className="text-xs rounded-xl" />
-                          </div>
-                          <div>
-                            <Label className="text-[11px] mb-1 block">{isAr ? "العملة" : "Currency"}</Label>
-                            <Select value={manualProductForm.currency} onValueChange={v => setManualProductForm(f => ({ ...f, currency: v }))}>
-                              <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="EGP">EGP</SelectItem>
-                                <SelectItem value="SAR">SAR</SelectItem>
-                                <SelectItem value="AED">AED</SelectItem>
-                                <SelectItem value="USD">USD</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-[11px] mb-1 block">{isAr ? "صورة المنتج (اختياري)" : "Product Image (optional)"}</Label>
-                          {manualProductForm.imageUrl ? (
-                            <div className="relative w-full h-24 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden group">
-                              <img src={manualProductForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                              <button onClick={() => setManualProductForm(f => ({ ...f, imageUrl: "" }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <label className="flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 hover:border-emerald-500 cursor-pointer transition-colors text-xs text-gray-500">
-                                {uploadingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                                {uploadingImage ? (isAr ? "جاري الرفع..." : "Uploading...") : (isAr ? "رفع صورة" : "Upload Image")}
-                                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) handleProductImageUpload(file); e.target.value = ""; }} />
-                              </label>
-                              <Input value={manualProductForm.imageUrl} onChange={e => setManualProductForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder={isAr ? "أو ألصق رابط صورة" : "Or paste image URL"} className="text-xs rounded-xl flex-1" dir="ltr" />
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={() => setShowAdvancedFields(!showAdvancedFields)} className="w-full flex items-center justify-center gap-1.5 text-[11px] text-gray-500 hover:text-emerald-600 transition-colors py-1">
-                          {showAdvancedFields ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                          {showAdvancedFields ? (isAr ? "إخفاء التفاصيل الإضافية" : "Hide advanced details") : (isAr ? "+ إضافة تفاصيل إضافية (رابط، تصنيف، مخزون...)" : "+ Add more details (URL, category, stock...)")}
-                        </button>
-                        {showAdvancedFields && (
-                          <div className="space-y-2 p-2.5 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-[10px] mb-0.5 block">{isAr ? "السعر قبل الخصم" : "Compare at Price"}</Label>
-                                <Input type="number" value={manualProductForm.compareAtPrice} onChange={e => setManualProductForm(f => ({ ...f, compareAtPrice: e.target.value }))} placeholder="500" className="text-xs rounded-xl" />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] mb-0.5 block">{isAr ? "المخزون" : "Stock"}</Label>
-                                <Select value={manualProductForm.stock === "" ? "not-tracked" : manualProductForm.stock || "available"} onValueChange={v => setManualProductForm(f => ({ ...f, stock: v === "not-tracked" ? "" : v }))}>
-                                  <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="available">{isAr ? "متوفر" : "In Stock"}</SelectItem>
-                                    <SelectItem value="unavailable">{isAr ? "غير متوفر" : "Out of Stock"}</SelectItem>
-                                    <SelectItem value="not-tracked">{isAr ? "غير متابع" : "Not Tracked"}</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <div>
-                              <Label className="text-[10px] mb-0.5 block">{isAr ? "رابط المنتج / صفحة الموقع" : "Product URL / Website Link"}</Label>
-                              <Input value={manualProductForm.url} onChange={e => setManualProductForm(f => ({ ...f, url: e.target.value }))} placeholder="https://example.com/product/..." dir="ltr" className="text-xs rounded-xl" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-[10px] mb-0.5 block">{isAr ? "التصنيف" : "Category"}</Label>
-                                <Input value={manualProductForm.category} onChange={e => setManualProductForm(f => ({ ...f, category: e.target.value }))} placeholder={isAr ? "ملابس، إلكترونيات..." : "Clothing, Electronics..."} className="text-xs rounded-xl" />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] mb-0.5 block">{isAr ? "كلمات مفتاحية" : "Tags"}</Label>
-                                <Input value={manualProductForm.tags} onChange={e => setManualProductForm(f => ({ ...f, tags: e.target.value }))} placeholder={isAr ? "سهرة, أحمر, نسائي" : "evening, red, women"} className="text-xs rounded-xl" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <Button onClick={handleAddManualProduct} disabled={addingManualProduct || !manualProductForm.name.trim()} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-4 gap-1.5">
-                            {addingManualProduct ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            {editingProductId ? (isAr ? "حفظ التعديلات" : "Save Changes") : (isAr ? "حفظ المنتج" : "Save Product")}
-                          </Button>
-                          {(catalogItems.length > 0 || editingProductId) && (
-                            <Button variant="outline" onClick={() => { setShowAddForm(false); setEditingProductId(null); setManualProductForm({ ...emptyCatalogItem }); setShowAdvancedFields(false); }} className="rounded-xl text-xs px-4">{isAr ? "إلغاء" : "Cancel"}</Button>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <Button onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setShowAddForm(true); setEditingProductId(null); }} variant="outline" className="w-full rounded-xl text-xs font-semibold gap-1.5 border-dashed border-gray-300 dark:border-gray-600 hover:border-emerald-500">
-                        <Plus className="w-3.5 h-3.5 text-emerald-500" />{isAr ? "+ إضافة منتج أو خدمة" : "+ Add Product or Service"}
-                      </Button>
-                    )}
-                    <p className="text-[10px] text-gray-400 italic text-center pt-1">{isAr ? "يمكنك تعديل وإضافة المنتجات لاحقًا من الكتالوج." : "You can edit and add more products later from the catalog."}</p>
-                  </div>
-                )}
-
-                {onboardingSubMode === "services_only" && (
-                  <div className="space-y-3 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 bg-emerald-50/40 dark:bg-emerald-950/20 text-center">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-lg font-bold">💼</div>
-                    <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "تم ضبط الحساب كـ «نشاط خدمي / بدون منتجات»" : "Configured as 'Services / Non-catalog Business'"}</h5>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">{isAr ? "سيعتمد Wani على هوية البراند وسياساتك ومصادر المعرفة المتاحة لفهم العملاء والرد داخل حدود نشاطك." : "Wani will use your brand identity, policies, and available knowledge sources to understand customers and reply within your business boundaries."}</p>
-                    <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline pt-1 block mx-auto font-semibold">{isAr ? "← تغيير هذا الخيار" : "← Change this choice"}</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-            {onboardingStep > 1 ? (
-              <Button variant="outline" onClick={() => setOnboardingStep(s => s - 1)} className="rounded-xl text-xs gap-1">{isAr ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}{isAr ? "رجوع" : "Back"}</Button>
-            ) : <div />}
-            {onboardingStep < 3 ? (
-              <Button onClick={() => setOnboardingStep(s => s + 1)} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1 px-5 font-bold">{isAr ? "التالي" : "Next"}{isAr ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}</Button>
-            ) : (
-              <Button onClick={async () => { await saveAgentSettings({ isEnabled: true }); setShowOnboarding(false); setOnboardingStep(1); loadCatalogRows(catalogSourceFilter, catalogSearch); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1 px-6 font-bold">
-                <Check className="w-4 h-4" />{isAr ? "إنهاء الإعداد وتفعيل Wani" : "Finish & Activate Wani"}
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
