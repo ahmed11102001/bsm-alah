@@ -18,7 +18,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 
-type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude";
+type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude" | "elevenlabs";
 
 // ─── CopyInput ────────────────────────────────────────────────────────────────
 function CopyInput({ value, placeholder }: { value: string; placeholder?: string }) {
@@ -56,6 +56,7 @@ const CARD_VISUALS: CardVisual[] = [
   { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-6 h-6 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
   { id: "webhook", icon: <Webhook className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400", bgLight: "bg-gray-50", bgDark: "dark:bg-gray-900/20", borderLight: "border-gray-200", borderDark: "dark:border-gray-800" },
   { id: "claude", icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
+  { id: "elevenlabs", icon: <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-7 h-7 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
 ];
 
 function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
@@ -674,7 +675,7 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function API() {
-  const { dashData, canStore: canUseStoreIntegrations, canUseClaude } = useSubscription();
+  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier } = useSubscription();
   const initialData = dashData?.whatsapp;
   const { t, dir, locale } = useLanguage();
   const api = t.api;
@@ -715,6 +716,12 @@ export default function API() {
   const [showStoreUpgrade, setShowStoreUpgrade] = useState(false);
   const [storeUpgradeTitle, setStoreUpgradeTitle] = useState("");
   const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
+  const [showElevenLabsUpgrade, setShowElevenLabsUpgrade] = useState(false);
+  const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
+  const [elevenLabsAgentId, setElevenLabsAgentId] = useState("");
+  const [elevenLabsSaving, setElevenLabsSaving] = useState(false);
+  const [elevenLabsAgentData, setElevenLabsAgentData] = useState<Record<string, unknown> | null>(null);
 
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
@@ -770,6 +777,13 @@ export default function API() {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => { });
     fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => { });
     fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => { });
+    fetch("/api/ai-agent").then(r => r.ok ? r.json() : null).then(d => {
+      if (!d) return;
+      setElevenLabsAgentData(d);
+      setElevenLabsEnabled(Boolean(d.elevenLabsEnabled));
+      setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
+      setElevenLabsAgentId(d.elevenLabsAgentId ?? "");
+    }).catch(() => { });
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
     return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
@@ -790,12 +804,17 @@ export default function API() {
   const claudeLockMessage = locale === "ar"
     ? "Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه."
     : "Claude AI is available on Pro plan and above. Please upgrade.";
+  const canUseElevenLabs = planTier === "pro" || planTier === "enterprise";
+  const elevenLabsLockMessage = locale === "ar"
+    ? "ربط ElevenLabs متاح من باقة Pro فما فوق. قم بترقية الباقة."
+    : "ElevenLabs integration is available on Pro and above. Please upgrade.";
   const isStoreCardLocked = (id: CardId) =>
     !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
   const isClaudeCardLocked = (id: CardId) => !canUseClaude && id === "claude";
-  const isCardLocked = (id: CardId) => isStoreCardLocked(id) || isClaudeCardLocked(id);
+  const isElevenLabsCardLocked = (id: CardId) => !canUseElevenLabs && id === "elevenlabs";
+  const isCardLocked = (id: CardId) => isStoreCardLocked(id) || isClaudeCardLocked(id) || isElevenLabsCardLocked(id);
   const getCardLockMessage = (id: CardId) =>
-    isClaudeCardLocked(id) ? claudeLockMessage : lockMessage;
+    isClaudeCardLocked(id) ? claudeLockMessage : isElevenLabsCardLocked(id) ? elevenLabsLockMessage : lockMessage;
 
   const openStoreUpgradeModal = (id: CardId) => {
     const titles: Record<"shopify" | "easyorders" | "woocommerce", string> = {
@@ -810,11 +829,37 @@ export default function API() {
   const handleCardClick = (id: CardId) => {
     if (isCardLocked(id)) {
       if (id === "claude") { setShowClaudeUpgrade(true); return; }
+      if (id === "elevenlabs") { setShowElevenLabsUpgrade(true); return; }
       openStoreUpgradeModal(id);
       return;
     }
     setOpenCard(prev => prev === id ? null : id);
     if (id === "easyorders") loadEoWebhookUrl();
+  };
+
+  const handleSaveElevenLabs = async () => {
+    if (!elevenLabsAgentId.trim()) { toast.error(locale === "ar" ? "أدخل Agent ID أولاً" : "Enter the Agent ID first"); return; }
+    if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) { toast.error(locale === "ar" ? "أدخل ElevenLabs API Key أولاً" : "Enter the ElevenLabs API key first"); return; }
+    setElevenLabsSaving(true);
+    try {
+      const r = await fetch("/api/ai-agent", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(elevenLabsAgentData ?? {}),
+          elevenLabsEnabled,
+          elevenLabsApiKey: elevenLabsApiKey.trim(),
+          elevenLabsAgentId: elevenLabsAgentId.trim(),
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Save failed");
+      setElevenLabsAgentData(d);
+      setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
+      toast.success(locale === "ar" ? "تم حفظ إعدادات ElevenLabs بنجاح" : "ElevenLabs settings saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? (locale === "ar" ? "تعذر حفظ الإعدادات" : "Could not save settings"));
+    } finally { setElevenLabsSaving(false); }
   };
 
   const handleSyncTemplates = async () => {
@@ -1022,6 +1067,16 @@ export default function API() {
           { title: "الصق الـ Config", desc: "انسخ إعدادات الربط والصقها في Settings → Developer → MCP" },
         ],
       },
+      {
+        id: "elevenlabs",
+        title: "ElevenLabs",
+        subtitle: "ربط وكيل الصوت الخاص بك",
+        steps: [
+          { title: "أنشئ Agent", desc: "أنشئ وكيلًا صوتيًا من ElevenLabs Conversational AI" },
+          { title: "أدخل البيانات", desc: "الصق API Key وAgent ID الخاصين بك" },
+          { title: "فعّل الصوت", desc: "احفظ الإعدادات لاستخدام وكيل الصوت مع Wani" },
+        ],
+      },
     ];
 
   return (
@@ -1102,6 +1157,21 @@ export default function API() {
               >
                 لاحقاً
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showElevenLabsUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowElevenLabsUpgrade(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-purple-200 dark:border-purple-900/50" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center"><Lock className="w-5 h-5 text-purple-500" /></div>
+              <div><p className="font-bold text-gray-900 dark:text-white text-sm">ElevenLabs — باقة Pro+</p><p className="text-xs text-gray-500 dark:text-gray-400">غير متاح للباقة المجانية وباقة Starter</p></div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">اربط وكيل الصوت الخاص بك من ElevenLabs بعد الترقية إلى Pro أو Enterprise.</p>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowElevenLabsUpgrade(false); window.location.href = "/checkout?plan=pro"; }} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition"><Zap className="w-4 h-4 inline-block ml-1" /> ترقية الآن</button>
+              <button onClick={() => setShowElevenLabsUpgrade(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">لاحقًا</button>
             </div>
           </div>
         </div>
@@ -1330,6 +1400,32 @@ export default function API() {
                     ))}
                   </ul>
                 </div>
+              </div>
+            )}
+            {card.id === "elevenlabs" && (
+              <div className="space-y-4">
+                <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
+                  <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <span>اربط Agent الصوت من ElevenLabs. يتم حفظ مفتاح API بشكل مشفر ولا يتم عرضه بعد الحفظ.</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
+                  <div><p className="text-sm font-semibold text-gray-800 dark:text-gray-200">تفعيل وكيل الصوت</p><p className="text-xs text-gray-500">استخدم ElevenLabs للمحادثات الصوتية</p></div>
+                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle ElevenLabs">
+                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
+                  </button>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
+                  <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">Agent ID *</Label>
+                  <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
+                </div>
+                <p className="text-xs text-gray-400">من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID</p>
+                <Button onClick={handleSaveElevenLabs} disabled={elevenLabsSaving} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5">
+                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ إعدادات ElevenLabs"}
+                </Button>
               </div>
             )}
           </IntegrationCard>

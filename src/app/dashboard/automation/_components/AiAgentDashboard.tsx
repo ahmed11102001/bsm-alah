@@ -18,7 +18,7 @@ import {
   Plus, Trash2, Edit3, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
   ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload,
-  Mic, MessageCircle, Globe, Users, ListChecks, Wand2,
+  MessageCircle, Globe, Users, ListChecks, Wand2,
 } from "lucide-react";
 
 interface AiAgentSettings {
@@ -130,7 +130,7 @@ interface ChatMessage {
 }
 
 // تابات الصفحة الرئيسية (نفس منطق تبويبات dashboard/reports — قسم دائم لكل موضوع)
-type MainTab = "overview" | "identity" | "knowledge" | "behavior" | "channels";
+type MainTab = "overview" | "identity" | "knowledge" | "behavior";
 // تابات فرعية جوه "مصادر المعرفة"
 type KnowledgeTab = "catalog" | "policies" | "website";
 
@@ -183,12 +183,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   // Drawers/Modals (السياسات فقط؛ مصادر المعرفة الأخرى لها واجهاتها المباشرة)
   const [showPolicyDrawer, setShowPolicyDrawer] = useState(false);
   const [policyForm, setPolicyForm] = useState({ id: "", type: "return_policy", title: "", content: "" });
-  const [showElevenLabsModal, setShowElevenLabsModal] = useState(false);
 
   // Catalog manual entry (نموذج الإضافة/التعديل — القائمة نفسها بقت products/setProducts الموحّدة)
   const [manualProductForm, setManualProductForm] = useState<CatalogItem>({ ...emptyCatalogItem });
   const [addingManualProduct, setAddingManualProduct] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -588,7 +587,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     { id: "identity", label: isAr ? "الهوية" : "Identity", icon: Wand2 },
     { id: "knowledge", label: isAr ? "مصادر المعرفة" : "Knowledge", icon: Layers },
     { id: "behavior", label: isAr ? "السلوك والحدود" : "Behavior & Limits", icon: Shield },
-    { id: "channels", label: isAr ? "قنوات إضافية" : "Channels", icon: Mic },
   ];
 
   return (
@@ -1085,74 +1083,6 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               <Label className="text-xs mb-1 block">{isAr ? "قواعد مخصصة (Custom Rules)" : "Custom Rules"}</Label>
               <Textarea value={guardrails.customRules || ""} onChange={e => setGuardrails(g => ({ ...g, customRules: e.target.value }))} placeholder={isAr ? "مثال: لو سألوا عن الشحن الدولي قول مش متاح حالياً." : "E.g. If asked about international shipping, reply not available."} className="min-h-[80px] text-xs resize-none rounded-xl" />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════ قنوات إضافية ═══════════════ */}
-      {mainTab === "channels" && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center font-bold">
-                  <Mic className="w-5 h-5" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">ElevenLabs Voice Agent</h3>
-                  <p className="text-xs text-gray-400">{isAr ? "قناة اختيارية إضافية — رد بالصوت في المحادثات" : "Optional extra channel — voice replies in chat"}</p>
-                </div>
-              </div>
-              <Switch
-                checked={agent.elevenLabsEnabled}
-                onCheckedChange={v => setAgent(f => ({ ...f, elevenLabsEnabled: v }))}
-              />
-            </div>
-
-            {agent.elevenLabsEnabled && (
-              <div className="space-y-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
-                  <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  {isAr
-                    ? "كل يوزر بـ Agent بصوته هو — التحاسب عليهم برا وني. اعمل Agent على ElevenLabs وحط الـ API Key والـ Agent ID هنا."
-                    : "Each user has their own ElevenLabs voice agent — billed separately from Wani. Create an Agent in ElevenLabs and place the API Key and Agent ID here."}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
-                    <Input
-                      type="password"
-                      value={agent.elevenLabsApiKey}
-                      onChange={e => setAgent(f => ({ ...f, elevenLabsApiKey: e.target.value }))}
-                      placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      dir="ltr"
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Agent ID *</Label>
-                    <Input
-                      value={agent.elevenLabsAgentId}
-                      onChange={e => setAgent(f => ({ ...f, elevenLabsAgentId: e.target.value }))}
-                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      dir="ltr"
-                      className="rounded-xl text-xs"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400">
-                  {isAr ? "من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID" : "From ElevenLabs Dashboard → Conversational AI → Agent → Copy ID"}
-                </p>
-              </div>
-            )}
-
-            <Button
-              onClick={() => saveAgentSettings()}
-              disabled={saving}
-              className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (isAr ? "حفظ إعدادات القناة" : "Save channel settings")}
-            </Button>
           </div>
         </div>
       )}
