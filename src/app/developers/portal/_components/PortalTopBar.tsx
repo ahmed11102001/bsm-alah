@@ -33,7 +33,7 @@ export default function PortalTopBar({
     window.location.href = "/developers/signin";
   }
 
-  const docsActive = pathname.startsWith("/developers/portal/endpoints");
+  const docsActive = pathname.startsWith("/developers/docs");
 
   return (
     <>
@@ -304,7 +304,7 @@ export default function PortalTopBar({
         {/* 2. روابط المطوّر العامة */}
         <nav className="ptopbar-links">
           <Link
-            href="/developers/portal/endpoints"
+            href="/developers/docs"
             className={`ptopbar-link docs-btn ${docsActive ? "active" : ""}`}
           >
             <BookOpen size={14} />

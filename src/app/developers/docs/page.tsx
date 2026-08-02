@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowLeft } from "lucide-react";
-import { useLanguage } from "../../_components/LanguageProvider";
+import { useLanguage } from "../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type HttpMethod = "POST" | "GET";
