@@ -24,10 +24,11 @@ export async function POST(req: NextRequest) {
     const authHeader = `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64")}`;
     const test = await fetch(`${storeUrl}/wp-json/wc/v3/products?per_page=1`, { headers: { Authorization: authHeader, Accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
     if (test.status === 401 || test.status === 403) return NextResponse.json({ error: "Consumer Key/Secret are invalid or missing permissions" }, { status: 422 });
-    if (!test.ok) return NextResponse.json({ error: `Could not connect to WooCommerce (HTTP ${test.status})` }, { status: 422 });
+    if (!test.ok) return NextResponse.json({ error: "تعذر الاتصال بمتجر WooCommerce. تأكد من رابط المتجر وبيانات API والصلاحيات." }, { status: 422 });
+    const products = await test.json().catch(() => []);
+    const productsAvailable = Number(test.headers.get("X-WP-Total") || test.headers.get("x-wp-total") || (Array.isArray(products) ? products.length : 0));
     await prisma.wooCommerceStore.upsert({ where: { userId }, update: { storeUrl, consumerKey: encryptToken(consumerKey), consumerSecret: encryptToken(consumerSecret), isConnected: true, isActive: true }, create: { userId, storeName: new URL(storeUrl).hostname, storeUrl, consumerKey: encryptToken(consumerKey), consumerSecret: encryptToken(consumerSecret), isConnected: true, isActive: true } });
-    try { void (await import("@/inngest/client")).inngest.send({ name: "product/sync.requested", data: { userId, source: "woocommerce" } }); } catch (error) { console.error("[WooCommerce Connect REST] Failed to trigger sync", error); }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, storeName: new URL(storeUrl).hostname, productsAvailable });
   } catch (error: any) {
     console.error("[WooCommerce Connect REST] Error:", error);
     return NextResponse.json({ error: error?.message || "Could not connect to WooCommerce" }, { status: 422 });

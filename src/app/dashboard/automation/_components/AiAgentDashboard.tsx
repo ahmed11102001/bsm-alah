@@ -158,6 +158,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [wooForm, setWooForm] = useState({ storeUrl: "", consumerKey: "", consumerSecret: "" });
   const [connectingWoo, setConnectingWoo] = useState(false);
+  const [wooConnected, setWooConnected] = useState<{ storeName: string; productsAvailable: number } | null>(null);
+  const [selectedStoreSource, setSelectedStoreSource] = useState<"shopify" | "easyorders" | "woocommerce" | null>(null);
 
   // Test Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -329,13 +331,13 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     }
   };
 
-  const triggerProductSync = async () => {
+  const triggerProductSync = async (source: "shopify" | "easyorders" | "woocommerce" | "all" = "all") => {
     setSyncingProducts(true);
     try {
       const res = await fetch("/api/ai-agent/products/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "all" }),
+        body: JSON.stringify({ source }),
       });
       if (res.ok) {
         toast.success(isAr ? "تم بدء مزامنة المنتجات في الخلفية" : "Product sync started in background");
@@ -355,12 +357,20 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       const res = await fetch("/api/woocommerce/connect-rest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(wooForm) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Connection failed");
-      toast.success(isAr ? "تم الاتصال بـ WooCommerce وبدأت المزامنة" : "WooCommerce connected; sync started");
-      setWooForm({ storeUrl: "", consumerKey: "", consumerSecret: "" });
+      setWooConnected({ storeName: data.storeName || new URL(wooForm.storeUrl).hostname, productsAvailable: data.productsAvailable || 0 });
+      setWooForm(f => ({ ...f, consumerKey: "••••••••••••", consumerSecret: "••••••••••••" }));
+      toast.success(isAr ? "تم الاتصال بنجاح" : "Connected successfully");
       setOnboardingSubMode("store");
-      await loadAllData();
-    } catch (error: any) { toast.error(error.message || (isAr ? "فشل الاتصال" : "Connection failed")); }
+    } catch (error: any) { toast.error(error.message || (isAr ? "تعذر الاتصال بمتجر WooCommerce. تأكد من الرابط وبيانات API والصلاحيات." : "Could not connect to WooCommerce. Check the store URL, API credentials, and permissions.")); }
     finally { setConnectingWoo(false); }
+  };
+
+  const syncSelectedStore = async () => {
+    if (selectedStoreSource === "woocommerce" && wooConnected) {
+      await triggerProductSync("woocommerce");
+    } else {
+      window.open("/dashboard/store", "_blank");
+    }
   };
 
   // ── Upload product image to Cloudinary ──
@@ -734,7 +744,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
-                onClick={triggerProductSync}
+                onClick={() => triggerProductSync()}
                 disabled={syncingProducts}
                 className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-2xl text-xs gap-2 px-4 shadow-sm"
               >
@@ -1142,15 +1152,33 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       {/* Option A: Store Sync */}
                       <button
-                        onClick={() => setOnboardingSubMode("store")}
+                        onClick={() => { setSelectedStoreSource("shopify"); setOnboardingSubMode("store"); }}
                         className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group"
                       >
                         <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🛍️</span>
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">{isAr ? "جلب تلقائي من المتجر" : "Sync from Store"}</span>
+                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">Shopify</span>
                         <span className="text-[10px] text-gray-400 mt-1">{isAr ? "استورد منتجاتك تلقائيًا من Shopify أو EasyOrders" : "Import products automatically"}</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setSelectedStoreSource("easyorders"); setOnboardingSubMode("store"); }}
+                        className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-all group"
+                      >
+                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">📦</span>
+                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">EasyOrders</span>
+                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "مصدر المنتجات" : "Product source"}</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setSelectedStoreSource("woocommerce"); setOnboardingSubMode("store"); }}
+                        className="flex flex-col items-center text-center p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-violet-500 hover:bg-violet-50/40 dark:hover:bg-violet-950/20 transition-all group"
+                      >
+                        <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🟣</span>
+                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">WooCommerce</span>
+                        <span className="text-[10px] text-gray-400 mt-1">{isAr ? "مصدر المنتجات" : "Product source"}</span>
                       </button>
 
                       {/* Option B: Manual Entry */}
@@ -1185,7 +1213,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/50 dark:bg-gray-900/30 text-right" dir={isAr ? "rtl" : "ltr"}>
                     <div className="flex items-center justify-between">
                       <h5 className="font-bold text-xs text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                        🛍️ {isAr ? "مزامنة منصات المتاجر" : "Store Platforms Sync"}
+                        🛍️ {isAr ? "مصادر المنتجات" : "Product Sources"}
                       </h5>
                       <button onClick={() => setOnboardingSubMode("select")} className="text-[11px] text-emerald-600 hover:underline">
                         {isAr ? "← تغيير الخيار" : "← Change option"}
@@ -1205,7 +1233,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-500/20 text-xs space-y-2">
                         <div className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
                           <AlertCircle className="w-4 h-4" />
-                          {isAr ? "لا يوجد متجر متصل حالياً" : "No store connected yet"}
+                          {isAr ? "لا يوجد مصدر منتجات متصل حالياً" : "No product source connected yet"}
                         </div>
                         <p className="text-[11px] text-amber-600 dark:text-amber-400">
                           {isAr ? "اربط Shopify أو EasyOrders لاستيراد منتجاتك تلقائياً، أو اختر الإدخال اليدوي لإضافة منتجاتك الآن." : "Connect Shopify or EasyOrders to import products automatically, or select manual entry."}
@@ -1220,15 +1248,36 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         </div>
                       </div>
                     )}
-                    <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">WooCommerce REST API</div>
+                    {selectedStoreSource && selectedStoreSource !== "woocommerce" && <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{selectedStoreSource === "shopify" ? "Shopify" : "EasyOrders"}</div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{isAr ? "اربط المتجر من صفحة التكاملات، ثم استخدم المزامنة لجلب المنتجات." : "Connect this store from Integrations, then sync its products."}</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => window.open("/dashboard/store", "_blank")} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] rounded-xl">{isAr ? "ربط المتجر" : "Connect Store"}</Button>
+                        <Button size="sm" variant="outline" onClick={() => triggerProductSync(selectedStoreSource)} disabled={syncingProducts} className="flex-1 text-[11px] rounded-xl"><RefreshCw className={`w-3 h-3 ${syncingProducts ? "animate-spin" : ""}`} />{isAr ? "مزامنة" : "Sync"}</Button>
+                      </div>
+                    </div>}
+                    {selectedStoreSource === "woocommerce" && <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط متجر WooCommerce" : "Connect WooCommerce Store"}</div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{isAr ? "أدخل بيانات API الخاصة بمتجرك لجلب المنتجات والأسعار والمخزون تلقائيًا." : "Enter your store API details to import products, prices, and stock automatically."}</p>
+                      {wooConnected ? (
+                        <div className="space-y-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20 p-3 text-xs">
+                          <div className="font-bold text-emerald-700 dark:text-emerald-300">✓ {isAr ? "تم الاتصال بنجاح" : "Connected successfully"}</div>
+                          <div className="text-emerald-700/80 dark:text-emerald-300/80">{isAr ? "المتجر" : "Store"}: {wooConnected.storeName}</div>
+                          <div className="text-emerald-700/80 dark:text-emerald-300/80">{isAr ? "المنتجات المتاحة" : "Available products"}: {wooConnected.productsAvailable}</div>
+                          <Button onClick={syncSelectedStore} disabled={syncingProducts} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold">
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} />{isAr ? "مزامنة المنتجات الآن" : "Sync Products Now"}
+                          </Button>
+                          <Button variant="outline" onClick={() => { setWooConnected(null); setWooForm({ storeUrl: "", consumerKey: "", consumerSecret: "" }); }} className="w-full rounded-xl text-xs">{isAr ? "تغيير بيانات الاتصال" : "Change connection details"}</Button>
+                        </div>
+                      ) : <>
                       <Input value={wooForm.storeUrl} onChange={e => setWooForm(f => ({ ...f, storeUrl: e.target.value }))} placeholder="https://store.example.com" dir="ltr" className="text-xs rounded-xl" />
                       <Input value={wooForm.consumerKey} onChange={e => setWooForm(f => ({ ...f, consumerKey: e.target.value }))} placeholder="ck_..." dir="ltr" className="text-xs rounded-xl" />
                       <Input type="password" value={wooForm.consumerSecret} onChange={e => setWooForm(f => ({ ...f, consumerSecret: e.target.value }))} placeholder="cs_..." dir="ltr" className="text-xs rounded-xl" />
                       <Button onClick={connectWooCommerce} disabled={connectingWoo || !wooForm.storeUrl || !wooForm.consumerKey || !wooForm.consumerSecret} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold">
                         {connectingWoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}{isAr ? "اختبار اتصال WooCommerce" : "Test WooCommerce Connection"}
                       </Button>
-                    </div>
+                      </>}
+                    </div>}
                   </div>
                 )}
 
