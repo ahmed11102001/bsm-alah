@@ -10,7 +10,7 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 import * as Sentry from "@sentry/nextjs";
-import type { RelevantProduct } from "@/lib/product-search";
+import type { RelevantProduct, SuggestedProduct } from "@/lib/product-search";
 import { AIAgentResponseSchema } from "@/lib/schemas";
 
 export interface AgentContext {
@@ -28,6 +28,11 @@ export interface AgentContext {
 
   // ── NEW: Structured Knowledge Sources ──
   relevantProducts?: RelevantProduct[];
+  suggestedProducts?: SuggestedProduct[];
+  salesBehavior?: {
+    goal: "customer_service" | "balanced" | "sales_focused";
+    suggestDiscounts?: boolean;
+  };
   faqs?: { question: string; answer: string }[];
   policies?: { type: string; title: string; content: string }[];
   guardrails?: {
@@ -105,6 +110,16 @@ function buildSystemPrompt(ctx: AgentContext): string {
       lines.push(`── الأسعار ──\n${ctx.pricingInfo.trim()}`, "");
   }
 
+  if (ctx.suggestedProducts && ctx.suggestedProducts.length > 0) {
+    lines.push("-- Additional products that may be suggested when genuinely relevant --");
+    ctx.suggestedProducts.forEach((p) => {
+      const typeLabel = p.suggestionType === "upsell" ? "higher-value alternative" : p.suggestionType === "cross_sell" ? "complementary product" : "similar alternative";
+      const priceStr = p.price != null ? `${p.price} ${p.currency || "EGP"}` : "price unavailable";
+      lines.push(`[ID: ${p.id}] (${typeLabel}) ${p.name} - ${priceStr}`);
+    });
+    lines.push("Suggest these only when natural and useful; never force or repeat offers in every message. If suggested, include its exact ID in product_ids.", "");
+  }
+
   // ── 2) FAQs ──
   if (ctx.faqs && ctx.faqs.length > 0) {
     lines.push("── الأسئلة الشائعة والإجابات ──");
@@ -152,12 +167,22 @@ function buildSystemPrompt(ctx: AgentContext): string {
   // ── 4) Guardrails & Rules ──
   const g = ctx.guardrails;
   const maxLines = g?.maxReplyLines ?? 3;
+  const goalInstruction = ctx.salesBehavior?.goal === "sales_focused"
+    ? "Help the customer make a purchase decision and confidently suggest a suitable product without being pushy."
+    : ctx.salesBehavior?.goal === "customer_service"
+      ? "Focus on answering accurately. Suggest additional products only when the customer explicitly asks."
+      : "Help the customer reach their main need first, then suggest an additional relevant product only when genuinely useful and without pressure.";
 
   lines.push(
     "── قواعد الرد ──",
     `- تكلم بأسلوب ${toneLabel}.`,
     `- ردودك قصيرة ومباشرة (${maxLines} سطور بحد أقصى).`,
   );
+
+  lines.push(`- ${goalInstruction}`);
+  lines.push(ctx.salesBehavior?.suggestDiscounts
+    ? "- Mention a discount only when explicitly present in product data or brand policies. Never invent a discount, coupon, percentage, or offer."
+    : "- Never offer or suggest a discount or promotion unless explicitly present in the available data.");
 
   if (g?.strictKnowledgeOnly ?? true) {
     lines.push("- إذا لم تكن الإجابة موجودة بوضوح في الكتالوج أو الأسئلة الشائعة أو السياسات المتاحة أعلاه، لا تخمّن ولا تبتكر إجابة من عندك إطلاقاً. أبلغ العميل بأدب أن المعلومة غير متوفرة حالياً أو حوّل الطلب لموظف خدمة العملاء.");

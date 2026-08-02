@@ -10,6 +10,11 @@ export interface RelevantProduct {
   stock: number | null;
   variants: any;
   url: string | null;
+  category?: string | null;
+}
+
+export interface SuggestedProduct extends RelevantProduct {
+  suggestionType: "upsell" | "cross_sell" | "alternative";
 }
 
 /**
@@ -142,6 +147,7 @@ export async function getRelevantProducts(
       stock: true,
       variants: true,
       url: true,
+      category: true,
       searchText: true,
     },
     take: 150, // Expanded candidate pool before scoring
@@ -194,5 +200,55 @@ export async function getRelevantProducts(
       stock: product.stock,
       variants: product.variants,
       url: product.url,
+      category: product.category,
     }));
+}
+
+export async function getSuggestedProducts(
+  userId: string,
+  primaryProduct: { id: string; category: string | null; price: number | null; relatedProductIds?: string[] },
+  settings: { suggestAlternatives: boolean; suggestUpsell: boolean; suggestCrossSell: boolean },
+  limit: number,
+): Promise<SuggestedProduct[]> {
+  if (!userId || !primaryProduct?.id) return [];
+  const safeLimit = Math.min(Math.max(limit || 1, 1), 3);
+  const candidates: SuggestedProduct[] = [];
+  const baseWhere = { userId, isActive: true, id: { not: primaryProduct.id } };
+  const select = {
+    id: true, name: true, price: true, currency: true, description: true,
+    stock: true, variants: true, url: true, category: true,
+  } as const;
+
+  if (settings.suggestUpsell && primaryProduct.category && primaryProduct.price != null) {
+    const upsell = await prisma.product.findFirst({
+      where: { ...baseWhere, category: primaryProduct.category, price: { gt: primaryProduct.price } },
+      orderBy: { price: "asc" }, select,
+    });
+    if (upsell) candidates.push({ ...upsell, suggestionType: "upsell" });
+  }
+
+  if (settings.suggestAlternatives && primaryProduct.category) {
+    const alternatives = await prisma.product.findMany({
+      where: { ...baseWhere, category: primaryProduct.category },
+      select, take: 50,
+    });
+    alternatives.sort((a, b) => Math.abs((a.price ?? 0) - (primaryProduct.price ?? 0)) - Math.abs((b.price ?? 0) - (primaryProduct.price ?? 0)));
+    candidates.push(...alternatives.map((p) => ({ ...p, suggestionType: "alternative" as const })));
+  }
+
+  if (settings.suggestCrossSell) {
+    const primary = primaryProduct.relatedProductIds
+      ? primaryProduct
+      : await prisma.product.findUnique({ where: { id: primaryProduct.id }, select: { relatedProductIds: true } });
+    const relatedIds = primary?.relatedProductIds ?? [];
+    if (relatedIds.length > 0) {
+      const related = await prisma.product.findMany({ where: { ...baseWhere, id: { in: relatedIds } }, select });
+      const byId = new Map(related.map((p) => [p.id, p]));
+      candidates.push(...relatedIds.flatMap((id) => { const p = byId.get(id); return p ? [{ ...p, suggestionType: "cross_sell" as const }] : []; }));
+    }
+  }
+
+  const unique = new Map<string, SuggestedProduct>();
+  for (const candidate of candidates) if (!unique.has(candidate.id)) unique.set(candidate.id, candidate);
+  return Array.from(unique.values()).slice(0, safeLimit);
 }

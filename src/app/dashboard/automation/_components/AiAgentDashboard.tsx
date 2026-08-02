@@ -74,6 +74,12 @@ interface ProductStats {
   };
 }
 
+interface RelationProduct {
+  id: string;
+  name: string;
+  relatedProductIds: string[];
+}
+
 interface CatalogItem {
   id: string;
   name: string;
@@ -134,7 +140,16 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     maxReplyLines: 3,
     customRules: null,
   });
+  const [salesBehavior, setSalesBehavior] = useState({
+    goal: "balanced" as "customer_service" | "balanced" | "sales_focused",
+    suggestAlternatives: true,
+    suggestUpsell: true,
+    suggestCrossSell: false,
+    suggestDiscounts: false,
+    maxSuggestedProducts: 1,
+  });
   const [productStats, setProductStats] = useState<ProductStats>({ total: 0 });
+  const [relationProducts, setRelationProducts] = useState<RelationProduct[]>([]);
   const [syncingProducts, setSyncingProducts] = useState(false);
 
   // Modals
@@ -177,12 +192,13 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts] = await Promise.all([
+      const [resAgent, resFaqs, resPolicies, resGuardrails, resProducts, resSales] = await Promise.all([
         fetch("/api/ai-agent"),
         fetch("/api/ai-agent/faq"),
         fetch("/api/ai-agent/policies"),
         fetch("/api/ai-agent/guardrails"),
-        fetch("/api/ai-agent/products?pageSize=1"),
+        fetch("/api/ai-agent/products?pageSize=100"),
+        fetch("/api/ai-agent/sales-behavior"),
       ]);
 
       if (resAgent.ok) {
@@ -199,6 +215,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       if (resProducts.ok) {
         const pData = await resProducts.json();
         setProductStats({ total: pData.total || 0, lastSync: pData.lastSync });
+        setRelationProducts((pData.products || []).map((product: any) => ({ id: product.id, name: product.name, relatedProductIds: product.relatedProductIds || [] })));
+      }
+      if (resSales.ok) {
+        const data = await resSales.json();
+        setSalesBehavior(prev => ({ ...prev, ...data }));
       }
     } catch (e) {
       console.error("[AiAgentDashboard] Load error:", e);
@@ -349,6 +370,28 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     } finally {
       setSyncingProducts(false);
     }
+  };
+
+  const saveSalesBehavior = async () => {
+    try {
+      const res = await fetch("/api/ai-agent/sales-behavior", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(salesBehavior),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(isAr ? "تم حفظ سلوك المبيعات" : "Sales behavior saved");
+    } catch { toast.error(isAr ? "حدث خطأ أثناء حفظ سلوك المبيعات" : "Failed to save sales behavior"); }
+  };
+
+  const saveProductRelations = async (productId: string, relatedProductIds: string[]) => {
+    const res = await fetch(`/api/ai-agent/products/${productId}/related`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ relatedProductIds }),
+    });
+    if (!res.ok) { toast.error(isAr ? "تعذر حفظ روابط المنتجات" : "Failed to save product relationships"); return; }
+    setRelationProducts(products => products.map(product => product.id === productId ? { ...product, relatedProductIds } : product));
+    toast.success(isAr ? "تم حفظ المنتجات المكملة" : "Related products saved");
   };
 
   const connectWooCommerce = async () => {
@@ -720,7 +763,57 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </Button>
         </div>
 
-        {/* 4. Product Catalog Knowledge (Featured Card) */}
+        {/* 4. Sales Behavior */}
+        <div className="md:col-span-2 lg:col-span-3 bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "سلوك المبيعات" : "Sales Behavior"}</h3>
+              <p className="text-xs text-gray-500 mt-1">{isAr ? "حدد هدف المساعد وطريقة اقتراح المنتجات من الكتالوج." : "Choose the assistant goal and how it suggests catalog products."}</p>
+            </div>
+            <Button onClick={saveSalesBehavior} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold"><Save className="w-3.5 h-3.5" />{isAr ? "حفظ" : "Save"}</Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+            {(["customer_service", "balanced", "sales_focused"] as const).map(goal => (
+              <label key={goal} className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2.5 text-xs cursor-pointer">
+                <input type="radio" name="sales-goal" checked={salesBehavior.goal === goal} onChange={() => setSalesBehavior(s => ({ ...s, goal }))} />
+                {goal === "customer_service" ? (isAr ? "خدمة العملاء" : "Customer service") : goal === "balanced" ? (isAr ? "متوازن (موصى به)" : "Balanced (recommended)") : (isAr ? "زيادة المبيعات" : "Sales focused")}
+              </label>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            {([
+              ["suggestAlternatives", isAr ? "اقتراح بدائل مناسبة" : "Suggest suitable alternatives"],
+              ["suggestUpsell", isAr ? "اقتراح منتج أعلى سعرًا" : "Suggest a higher-value option"],
+              ["suggestCrossSell", isAr ? "اقتراح منتجات مكملة" : "Suggest complementary products"],
+              ["suggestDiscounts", isAr ? "ذكر العروض والخصومات الموجودة فقط" : "Mention existing discounts only"],
+            ] as const).map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300">
+                <span>{label}</span><Switch checked={salesBehavior[key]} onCheckedChange={value => setSalesBehavior(s => ({ ...s, [key]: value }))} />
+              </div>
+            ))}
+          </div>
+          {salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2">{isAr ? "الاقتراحات المكملة تحتاج ربط المنتجات يدويًا من الكتالوج أولًا." : "Complementary suggestions require manual product relationships in the catalog."}</p>}
+          {salesBehavior.suggestCrossSell && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+            <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط المنتجات المكملة" : "Link complementary products"}</div>
+            {relationProducts.slice(0, 20).map(product => (
+              <div key={product.id} className="flex items-center gap-2">
+                <span className="text-[11px] flex-1 truncate text-gray-600 dark:text-gray-400">{product.name}</span>
+                <select multiple value={product.relatedProductIds} onChange={event => saveProductRelations(product.id, Array.from(event.target.selectedOptions).map(option => option.value))} className="w-48 min-h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[10px] p-1">
+                  {relationProducts.filter(other => other.id !== product.id).map(other => <option key={other.id} value={other.id}>{other.name}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>}
+          <div className="flex items-center gap-3 mt-4 text-xs">
+            <Label>{isAr ? "أقصى عدد منتجات مقترحة" : "Maximum suggested products"}</Label>
+            <Select value={String(salesBehavior.maxSuggestedProducts)} onValueChange={value => setSalesBehavior(s => ({ ...s, maxSuggestedProducts: Number(value) }))}>
+              <SelectTrigger className="w-20 rounded-xl text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="1">1</SelectItem><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem></SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* 5. Product Catalog Knowledge (Featured Card) */}
         <div className="md:col-span-2 lg:col-span-3 bg-gradient-to-br from-emerald-950/90 via-emerald-900/90 to-teal-950/90 text-white rounded-3xl p-6 border border-emerald-500/30 shadow-md">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">

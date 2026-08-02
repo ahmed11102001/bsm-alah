@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
         price: true, compareAtPrice: true, currency: true,
         images: true, stock: true, category: true, tags: true,
         url: true, isActive: true,
+        relatedProductIds: true,
         lastSyncedAt: true, updatedAt: true,
       },
     }),

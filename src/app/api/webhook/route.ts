@@ -983,12 +983,12 @@ async function handleAutomation(ctx: {
   }
 
   // ── NEW: Retrieve structured knowledge sources ──────────────────────────
-  const { getRelevantProducts } = await import("@/lib/product-search");
+  const { getRelevantProducts, getSuggestedProducts } = await import("@/lib/product-search");
 
   const relevantProducts = await getRelevantProducts(userId, messageText, 5);
 
   // FAQ + Policies + Guardrails — fetch all (small data, no retrieval needed)
-  const [faqs, policies, guardrails] = await Promise.all([
+  const [faqs, policies, guardrails, salesSettings] = await Promise.all([
     prisma.brandFAQ.findMany({
       where: { userId },
       orderBy: { sortOrder: "asc" },
@@ -1007,7 +1007,20 @@ async function handleAutomation(ctx: {
         maxReplyLines: true, customRules: true,
       },
     }),
+    prisma.salesBehaviorSettings.findUnique({ where: { userId } }),
   ]);
+
+  let suggestedProducts: import("@/lib/product-search").SuggestedProduct[] = [];
+  if (relevantProducts.length > 0 && salesSettings && (salesSettings.suggestAlternatives || salesSettings.suggestUpsell || salesSettings.suggestCrossSell)) {
+    const primary = relevantProducts[0];
+    const fullPrimary = await prisma.product.findUnique({
+      where: { id: primary.id },
+      select: { id: true, category: true, price: true, relatedProductIds: true },
+    });
+    if (fullPrimary) {
+      suggestedProducts = await getSuggestedProducts(userId, fullPrimary, salesSettings, Math.min(salesSettings.maxSuggestedProducts, 3));
+    }
+  }
 
   const result = await getAIReply(
     aiMessages,
@@ -1024,6 +1037,8 @@ async function handleAutomation(ctx: {
       websiteButtonText: agent.websiteButtonText,
       // ── NEW structured knowledge ──
       relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
+      suggestedProducts: suggestedProducts.length > 0 ? suggestedProducts : undefined,
+      salesBehavior: salesSettings ? { goal: salesSettings.goal, suggestDiscounts: salesSettings.suggestDiscounts } : undefined,
       faqs: faqs.length > 0 ? faqs : undefined,
       policies: policies.length > 0 ? policies : undefined,
       guardrails: guardrails ?? undefined,
@@ -1070,7 +1085,10 @@ async function handleAutomation(ctx: {
   let productImageUrl: string | undefined;
   if (result.productIds?.length && relevantProducts.length > 0) {
     // Validate: only accept IDs from the retrieved context (security)
-    const retrievedIdSet = new Set(relevantProducts.map(p => p.id));
+    const retrievedIdSet = new Set([
+      ...relevantProducts.map(p => p.id),
+      ...suggestedProducts.map(p => p.id),
+    ]);
     const validIds = result.productIds.filter(id => retrievedIdSet.has(id));
 
     if (validIds.length > 0) {
