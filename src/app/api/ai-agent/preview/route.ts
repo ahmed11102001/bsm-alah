@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
         select: {
           noInventPrices: true, noInventProducts: true,
           noMentionCompetitors: true, noSharePersonal: true,
-          alwaysHandoffComplaints: true, maxReplyLines: true,
-          customRules: true,
+          strictKnowledgeOnly: true, alwaysHandoffComplaints: true,
+          maxReplyLines: true, customRules: true,
         },
       }),
     ]);

@@ -540,8 +540,9 @@ model AIGuardrail {
   userId                  String   @unique
   noInventPrices          Boolean  @default(true)
   noInventProducts        Boolean  @default(true)
-  noMentionCompetitors    Boolean  @default(false)
+  noMentionCompetitors    Boolean  @default(true)
   noSharePersonal         Boolean  @default(true)
+  strictKnowledgeOnly     Boolean  @default(true)
   alwaysHandoffComplaints Boolean  @default(true)
   maxReplyLines           Int      @default(3)
   customRules             String?  @db.Text

@@ -261,3 +261,29 @@ export const AdminTestimonialPatchSchema = z.object({
   action: z.enum(["approve", "reject"]),
 });
 export type AdminTestimonialPatchInput = z.infer<typeof AdminTestimonialPatchSchema>;
+
+// ─── AI Guardrails & Agent ───────────────────────────────────────────────────
+
+/** PUT /api/ai-agent/guardrails */
+export const AIGuardrailSchema = z.object({
+  noInventPrices: z.boolean().optional().default(true),
+  noInventProducts: z.boolean().optional().default(true),
+  noMentionCompetitors: z.boolean().optional().default(true),
+  noSharePersonal: z.boolean().optional().default(true),
+  strictKnowledgeOnly: z.boolean().optional().default(true),
+  alwaysHandoffComplaints: z.boolean().optional().default(true),
+  maxReplyLines: z.number().int().min(1).max(10).optional().default(3),
+  customRules: z.string().trim().max(1000).nullable().optional(),
+});
+export type AIGuardrailInput = z.infer<typeof AIGuardrailSchema>;
+
+/** Output JSON schema for AI agent response */
+export const AIAgentResponseSchema = z.object({
+  reply: z.string().optional().nullable(),
+  action: z.enum(["handoff"]).optional().nullable(),
+  reason: z.string().optional().nullable(),
+  priority: z.enum(["high", "normal"]).optional().nullable(),
+  offTopic: z.boolean().optional(),
+  product_ids: z.array(z.string()).optional(),
+});
+export type AIAgentResponseOutput = z.infer<typeof AIAgentResponseSchema>;

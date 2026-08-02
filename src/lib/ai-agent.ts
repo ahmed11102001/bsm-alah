@@ -11,6 +11,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import type { RelevantProduct } from "@/lib/product-search";
+import { AIAgentResponseSchema } from "@/lib/schemas";
 
 export interface AgentContext {
   brandName?: string | null;
@@ -34,6 +35,7 @@ export interface AgentContext {
     noInventProducts?: boolean;
     noMentionCompetitors?: boolean;
     noSharePersonal?: boolean;
+    strictKnowledgeOnly?: boolean;
     alwaysHandoffComplaints?: boolean;
     maxReplyLines?: number;
     customRules?: string | null;
@@ -157,14 +159,17 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `- ردودك قصيرة ومباشرة (${maxLines} سطور بحد أقصى).`,
   );
 
+  if (g?.strictKnowledgeOnly ?? true) {
+    lines.push("- إذا لم تكن الإجابة موجودة بوضوح في الكتالوج أو الأسئلة الشائعة أو السياسات المتاحة أعلاه، لا تخمّن ولا تبتكر إجابة من عندك إطلاقاً. أبلغ العميل بأدب أن المعلومة غير متوفرة حالياً أو حوّل الطلب لموظف خدمة العملاء.");
+  }
   if (g?.noInventPrices ?? true) {
     lines.push("- لا تخترع أسعاراً أو معلومات غير موجودة في السياق أعلاه.");
   }
   if (g?.noInventProducts ?? true) {
     lines.push("- لو العميل سأل عن منتج مش موجود في قائمتك، قوله بأدب إنه مش متاح ولا تخترع منتجات.");
   }
-  if (g?.noMentionCompetitors) {
-    lines.push("- لا تذكر أو تقارن نفسك بأي منافسين.");
+  if (g?.noMentionCompetitors ?? true) {
+    lines.push("- لا تذكر أو تقارن نفسك بأي منافسين إطلاقاً.");
   }
   if (g?.noSharePersonal ?? true) {
     lines.push("- لا تلمس أو تطلب أو تطلع العميل على أي بيانات شخصية أو حساسة.");
@@ -361,21 +366,28 @@ function parseAgentJSON(raw: string): AgentResult {
       .replace(/\s*```\s*$/, "")
       .trim();
 
-    const parsed = JSON.parse(cleaned);
+    const parsedJson = JSON.parse(cleaned);
+    const zodResult = AIAgentResponseSchema.safeParse(parsedJson);
 
-    const offTopic = parsed.offTopic === true;
-    const reply =
-      typeof parsed.reply === "string" ? parsed.reply.trim() : null;
-    const action = parsed.action === "handoff" ? "handoff" : null;
-    const reason = typeof parsed.reason === "string" ? parsed.reason.trim() : null;
-    const priority = parsed.priority === "high" ? "high" : "normal";
+    if (!zodResult.success) {
+      // Fallback: If JSON schema validation fails, try extracting string reply or fallback
+      const replyFallback = typeof parsedJson?.reply === "string" ? parsedJson.reply.trim() : null;
+      if (replyFallback) return { ok: true, reply: replyFallback, action: null };
+      return { ok: false, error: "Zod validation failed for AI response JSON" };
+    }
 
-    // ── NEW: extract product_ids (validated, max 3) ──
+    const data = zodResult.data;
+    const offTopic = data.offTopic === true;
+    const reply = data.reply?.trim() ?? null;
+    const action = data.action === "handoff" ? "handoff" : null;
+    const reason = data.reason?.trim() ?? null;
+    const priority = data.priority === "high" ? "high" : "normal";
+
     let productIds: string[] | undefined;
-    if (Array.isArray(parsed.product_ids)) {
-      const ids = parsed.product_ids
-        .filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
-        .map((id: string) => id.trim())
+    if (Array.isArray(data.product_ids)) {
+      const ids = data.product_ids
+        .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+        .map((id) => id.trim())
         .slice(0, 3);
       productIds = ids.length ? ids : undefined;
     }

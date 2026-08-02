@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { AIGuardrailSchema, parseInput } from "@/lib/schemas";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -26,8 +27,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(guardrails ?? {
     noInventPrices: true,
     noInventProducts: true,
-    noMentionCompetitors: false,
+    noMentionCompetitors: true,
     noSharePersonal: true,
+    strictKnowledgeOnly: true,
     alwaysHandoffComplaints: true,
     maxReplyLines: 3,
     customRules: null,
@@ -45,26 +47,13 @@ export async function PUT(req: NextRequest) {
   const blocked = guardResponse(guard);
   if (blocked) return blocked;
 
-  const body = await req.json();
-  const {
-    noInventPrices,
-    noInventProducts,
-    noMentionCompetitors,
-    noSharePersonal,
-    alwaysHandoffComplaints,
-    maxReplyLines,
-    customRules,
-  } = body;
+  const rawBody = await req.json().catch(() => ({}));
+  const parsed = parseInput(AIGuardrailSchema, rawBody);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
 
-  const payload = {
-    noInventPrices: typeof noInventPrices === "boolean" ? noInventPrices : true,
-    noInventProducts: typeof noInventProducts === "boolean" ? noInventProducts : true,
-    noMentionCompetitors: typeof noMentionCompetitors === "boolean" ? noMentionCompetitors : false,
-    noSharePersonal: typeof noSharePersonal === "boolean" ? noSharePersonal : true,
-    alwaysHandoffComplaints: typeof alwaysHandoffComplaints === "boolean" ? alwaysHandoffComplaints : true,
-    maxReplyLines: typeof maxReplyLines === "number" ? Math.max(1, Math.min(10, maxReplyLines)) : 3,
-    customRules: typeof customRules === "string" ? customRules.trim() || null : null,
-  };
+  const payload = parsed.data;
 
   const result = await prisma.aIGuardrail.upsert({
     where: { userId },

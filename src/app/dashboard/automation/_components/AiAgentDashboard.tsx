@@ -58,6 +58,7 @@ interface GuardrailsData {
   noInventProducts: boolean;
   noMentionCompetitors: boolean;
   noSharePersonal: boolean;
+  strictKnowledgeOnly: boolean;
   alwaysHandoffComplaints: boolean;
   maxReplyLines: number;
   customRules: string | null;
@@ -126,8 +127,9 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [guardrails, setGuardrails] = useState<GuardrailsData>({
     noInventPrices: true,
     noInventProducts: true,
-    noMentionCompetitors: false,
+    noMentionCompetitors: true,
     noSharePersonal: true,
+    strictKnowledgeOnly: true,
     alwaysHandoffComplaints: true,
     maxReplyLines: 3,
     customRules: null,
@@ -1576,6 +1578,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">{isAr ? "عدم التخمين إذا كانت المعلومة غير متوفرة" : "Do not guess if information is unavailable"}</Label>
+              <Switch checked={guardrails.strictKnowledgeOnly} onCheckedChange={v => setGuardrails(g => ({ ...g, strictKnowledgeOnly: v }))} />
+            </div>
             <div className="flex items-center justify-between">
               <Label className="text-xs cursor-pointer">{isAr ? "عدم اختراع أسعار غير متوفرة" : "Do not hallucinate prices"}</Label>
               <Switch checked={guardrails.noInventPrices} onCheckedChange={v => setGuardrails(g => ({ ...g, noInventPrices: v }))} />
