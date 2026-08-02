@@ -1356,12 +1356,15 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                               </div>
                               <div>
                                 <Label className="text-[10px] mb-0.5 block">{isAr ? "المخزون" : "Stock"}</Label>
-                                <Select value={manualProductForm.stock || "available"} onValueChange={v => setManualProductForm(f => ({ ...f, stock: v }))}>
+                                <Select
+                                  value={manualProductForm.stock === "" ? "not-tracked" : manualProductForm.stock || "available"}
+                                  onValueChange={v => setManualProductForm(f => ({ ...f, stock: v === "not-tracked" ? "" : v }))}
+                                >
                                   <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="available">{isAr ? "متوفر" : "In Stock"}</SelectItem>
                                     <SelectItem value="unavailable">{isAr ? "غير متوفر" : "Out of Stock"}</SelectItem>
-                                    <SelectItem value="">{isAr ? "غير متابع" : "Not Tracked"}</SelectItem>
+                                    <SelectItem value="not-tracked">{isAr ? "غير متابع" : "Not Tracked"}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
