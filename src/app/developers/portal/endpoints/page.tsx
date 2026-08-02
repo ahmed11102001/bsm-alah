@@ -433,7 +433,7 @@ export default function ApiDocsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
-        .docs-root { min-height:100vh; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:${language === 'ar' ? 'rtl' : 'ltr'}; color:#fff; }
+        .docs-root { height:100%; overflow-y:auto; overflow-x:hidden; background:#060810; font-family:'IBM Plex Sans Arabic',sans-serif; direction:${language === 'ar' ? 'rtl' : 'ltr'}; color:#fff; }
         .docs-root::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(32,211,120,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(32,211,120,0.025) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
         .docs-inner { max-width:1000px; margin:0 auto; padding:40px 32px; position:relative; z-index:1; opacity:0; transform:translateY(10px); transition:opacity .4s,transform .4s; }
         .docs-inner.visible { opacity:1; transform:translateY(0); }

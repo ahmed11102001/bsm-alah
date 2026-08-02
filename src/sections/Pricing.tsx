@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Minus, Sparkles, Zap, Shield, Bot, Store, Brain } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 import { usePixel } from "@/hooks/usePixel";
+import { canUseBillingCycle } from "@/lib/pricing";
 
 // ─── config ───────────────────────────────────────────────────────────────────
 const BASE_PRICES = [0, 249, 599, 1199];
@@ -59,7 +60,7 @@ function PricingCard({
   isAr: boolean;
   numLocale: string;
   visible: boolean;
-  onCTA: (slug: string, isFree: boolean, price: number) => void;
+  onCTA: (slug: string, isFree: boolean, price: number, cycle: Cycle) => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
@@ -207,14 +208,14 @@ function PricingCard({
         {/* CTA */}
         {isEnterprise ? (
           <button
-            onClick={() => onCTA(slug, false, ENTERPRISE_OFFER)}
+            onClick={() => onCTA(slug, false, ENTERPRISE_OFFER, cycle)}
             className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
           >
             {isAr ? "اشترك الآن" : "Subscribe Now"}
           </button>
         ) : (
           <button
-            onClick={() => onCTA(slug, isFree, price)}
+            onClick={() => onCTA(slug, isFree, price, cycle)}
             className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
           >
             {tr(plan.cta, lang)}
@@ -281,10 +282,11 @@ export default function Pricing({ lang }: PricingProps) {
 
   useEffect(() => { track("ViewContent", { content_name: "Pricing Section" }); }, []);
 
-  const handleCTA = (slug: string, isFree: boolean, price: number) => {
+  const handleCTA = (slug: string, isFree: boolean, price: number, selectedCycle: Cycle) => {
     if (isFree) { track("CompleteRegistration", { content_name: "Free Plan" }); router.push("/register"); return; }
     track("InitiateCheckout", { content_name: slug, content_ids: [slug], content_type: "product", value: price, currency: "EGP", num_items: 1 });
-    router.push(`/checkout?plan=${slug}&cycle=${cycle}`);
+    const billingCycle = canUseBillingCycle(slug, selectedCycle) ? selectedCycle : "monthly";
+    router.push(`/checkout?plan=${slug}&cycle=${billingCycle}`);
   };
 
   const fadeUp = (delay: number): React.CSSProperties => ({
@@ -347,14 +349,15 @@ export default function Pricing({ lang }: PricingProps) {
           {plans.map((plan, i) => {
             const s = PLAN_STYLES[i];
             const base = BASE_PRICES[i];
-            const price = computePrice(base, cycle);
             const slug = (plan as any).slug as string;
+            const planCycle = canUseBillingCycle(slug, cycle) ? cycle : "monthly";
+            const price = computePrice(base, planCycle);
             const isFree = base === 0;
             const isEnterprise = slug === "enterprise";
             const Icon = PLAN_ICONS[i];
-            const disc = CYCLES.find(c => c.key === cycle)!.discount;
+            const disc = CYCLES.find(c => c.key === planCycle)!.discount;
             const saving = base > 0 && disc > 0
-              ? Math.round(base * disc * (cycle === "quarterly" ? 3 : 12))
+              ? Math.round(base * disc * (planCycle === "quarterly" ? 3 : 12))
               : 0;
 
             return (

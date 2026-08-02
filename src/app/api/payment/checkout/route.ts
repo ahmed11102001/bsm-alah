@@ -85,10 +85,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "الباقة غير صالحة" }, { status: 400 });
 
         const plan = SUBSCRIPTION_PLANS[planSlug];
-        const cycleInfo = BILLING_CYCLES[cycle] ?? BILLING_CYCLES.monthly;
-        cartTotal = computePrice(plan.monthly, cycle) * cycleInfo.months;
+        const billingCycle: BillingCycle = planSlug === "starter"
+            ? "monthly"
+            : (BILLING_CYCLES[cycle] ? cycle : "monthly");
+        const cycleInfo = BILLING_CYCLES[billingCycle];
+        cartTotal = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
         itemName = `اشتراك ${plan.name} — ${cycleInfo.label}`;
-        payLoadObj = { type: "subscription", planSlug, cycle, userId: ownerId };
+        payLoadObj = { type: "subscription", planSlug, cycle: billingCycle, userId: ownerId };
 
     } else if (type === "ai_credits") {
         if (!sub || sub.plan !== "enterprise")

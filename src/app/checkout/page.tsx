@@ -11,7 +11,7 @@ import {
 import { usePixel } from "@/hooks/usePixel";
 import {
   SUBSCRIPTION_PLANS, BILLING_CYCLES, TOKEN_PACKAGES, MCP_ADDON_PACKAGES,
-  computePrice,
+  canUseBillingCycle, computePrice,
   type PlanSlug, type BillingCycle, type TokenPackageId,
 } from "@/lib/pricing";
 
@@ -70,10 +70,12 @@ function CheckoutContent() {
   const plan = planSlug && SUBSCRIPTION_PLANS[planSlug]
     ? SUBSCRIPTION_PLANS[planSlug]
     : SUBSCRIPTION_PLANS.pro;
-  const cycle = BILLING_CYCLES[cycleKey] ?? BILLING_CYCLES.monthly;
+  const requestedCycle: BillingCycle = BILLING_CYCLES[cycleKey] ? cycleKey : "monthly";
+  const effectiveCycleKey: BillingCycle = canUseBillingCycle(plan.slug, requestedCycle) ? requestedCycle : "monthly";
+  const cycle = BILLING_CYCLES[effectiveCycleKey];
   const Icon = mcpAddonPkg ? Bot : tokenPkg ? Zap : plan.icon;
 
-  const pricePerMonth = computePrice(plan.monthly, cycleKey);
+  const pricePerMonth = computePrice(plan.monthly, effectiveCycleKey);
   const totalDue = mcpAddonPkg
     ? mcpAddonPkg.priceEGP
     : tokenPkg
@@ -160,7 +162,7 @@ function CheckoutContent() {
     } else if (tokenPkg) {
       body = { type: "ai_credits", packageId: tokenPkg.id };
     } else {
-      body = { type: "subscription", planSlug: plan.slug, cycle: cycleKey };
+      body = { type: "subscription", planSlug: plan.slug, cycle: effectiveCycleKey };
     }
 
     // لو فيه كوبون أضفه للـ body

@@ -62,6 +62,11 @@ export const BILLING_CYCLES = {
 
 export type BillingCycle = keyof typeof BILLING_CYCLES;
 
+/** الخصم الربع سنوي والسنوي متاحان لـ Pro وEnterprise فقط. */
+export function canUseBillingCycle(plan: string, cycle: BillingCycle): boolean {
+  return cycle === "monthly" || plan === "pro" || plan === "enterprise";
+}
+
 // ─── باقات التوكن الإضافية ────────────────────────────────────────────────────
 export const TOKEN_PACKAGES = [
   {
