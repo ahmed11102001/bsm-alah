@@ -236,6 +236,7 @@ function EndpointCard({ ep, lang, t }: { ep: Endpoint; lang: string; t: (en: str
     }}>
       {/* Header — click to expand */}
       <button
+        className="endpoint-header"
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%", padding: "18px 22px",
@@ -245,10 +246,10 @@ function EndpointCard({ ep, lang, t }: { ep: Endpoint; lang: string; t: (en: str
         }}
       >
         <MethodBadge method={ep.method} />
-        <span style={{ fontFamily: "Fira Code, monospace", fontSize: 13, color: "rgba(255,255,255,0.7)", direction: "ltr", textAlign: "left" }}>
+        <span className="endpoint-path" style={{ fontFamily: "Fira Code, monospace", fontSize: 13, color: "rgba(255,255,255,0.7)", direction: "ltr", textAlign: "left" }}>
           {ep.path}
         </span>
-        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", flex: 1 }}>{lang === 'ar' ? ep.summaryAr : ep.summary}</span>
+        <span className="endpoint-summary" style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", flex: 1 }}>{lang === 'ar' ? ep.summaryAr : ep.summary}</span>
         {ep.auth && (
           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "rgba(239,68,68,0.08)", color: "#f87171", border: "1px solid rgba(239,68,68,0.15)", flexShrink: 0 }}>
             🔑 {t("Auth Required", "يحتاج Auth")}
@@ -261,13 +262,13 @@ function EndpointCard({ ep, lang, t }: { ep: Endpoint; lang: string; t: (en: str
 
       {/* Expanded content */}
       {open && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="endpoint-content" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Description */}
           <div style={{ padding: "16px 22px", background: "rgba(255,255,255,0.01)" }}>
             <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7 }}>{lang === 'ar' ? ep.descAr : ep.desc}</p>
           </div>
 
-          <div style={{ padding: "0 22px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div className="endpoint-grid" style={{ padding: "0 22px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
             {/* Left: Params */}
             <div>
               {/* Headers */}
@@ -311,7 +312,7 @@ function EndpointCard({ ep, lang, t }: { ep: Endpoint; lang: string; t: (en: str
 
             {/* Right: Response preview */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, marginTop: 8 }}>
+              <div className="response-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, marginTop: 8 }}>
                 <SectionLabel style={{ margin: 0 }}>Response Example</SectionLabel>
                 <div style={{ display: "flex", gap: 6 }}>
                   {(["success", "error"] as const).map(t2 => (
@@ -490,9 +491,38 @@ export default function ApiDocsPage() {
         .base-url-label { font-size:11px; color:rgba(32,211,120,0.7); font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
         .base-url-value { font-family:'Fira Code',monospace; font-size:13px; color:rgba(255,255,255,0.8); flex:1; }
 
+        .endpoint-header { min-width:0; }
+        .endpoint-path { min-width:0; overflow-wrap:anywhere; }
+        .endpoint-summary { min-width:0; }
+        .endpoint-content, .endpoint-grid { min-width:0; }
+        .endpoint-grid table { table-layout:fixed; }
+        .endpoint-grid td { overflow-wrap:anywhere; vertical-align:top; }
+        .response-toolbar { flex-wrap:wrap; gap:8px; }
+        .code-block { overflow-x:auto; white-space:pre; }
+
         @media(max-width:700px) {
-          .docs-inner { padding:20px 16px; }
-          .tabs { flex-wrap:wrap; }
+          .docs-inner { padding:20px 12px 32px; }
+          .docs-header { margin-bottom:20px; }
+          .docs-title { font-size:22px; }
+          .docs-subtitle { font-size:13px; line-height:1.6; }
+          .tabs { width:100%; flex-wrap:wrap; margin-bottom:20px; }
+          .tab { flex:1 1 calc(50% - 4px); padding:9px 8px; font-size:12px; }
+          .base-url-banner { align-items:flex-start; flex-wrap:wrap; padding:12px; gap:8px; }
+          .base-url-value { flex:1 1 calc(100% - 88px); min-width:0; font-size:11px; overflow-wrap:anywhere; }
+          .base-url-banner > button { margin-inline-start:auto; }
+          .auth-section { padding:18px 14px; }
+          .endpoint-header { padding:14px 12px !important; gap:8px !important; flex-wrap:wrap; }
+          .endpoint-path { order:2; flex:1 1 calc(100% - 72px); font-size:11px !important; }
+          .endpoint-summary { order:3; flex:1 1 100%; font-size:13px !important; }
+          .endpoint-header > span:last-child { order:4; margin-inline-start:auto; }
+          .endpoint-content > div:first-child { padding:13px 14px !important; }
+          .endpoint-grid { grid-template-columns:1fr !important; gap:18px !important; padding:0 14px 16px !important; }
+          .endpoint-grid table { font-size:11px !important; }
+          .endpoint-grid td { padding-block:6px !important; }
+          .response-toolbar { align-items:flex-start !important; }
+          .response-toolbar > div { flex-wrap:wrap; }
+          .ref-panel { overflow-x:auto; }
+          .ref-table { min-width:560px; }
         }
       `}</style>
 
