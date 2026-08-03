@@ -84,13 +84,13 @@ export const translations = {
 
       // ── AI Usage Card ───────────────────────────────────────────────────────
       ai: {
-        title:           "مساعد المبيعات الذكي",
+        title:           " وني AI",
         renews:          "يتجدد أول كل شهر",
         usedThisMonth:   "مستخدم هذا الشهر",
         remainingPlan:   "متبقي من الباقة",
         bonusBalance:    "رصيد إضافي",
         addTokens:       "شراء توكن إضافية",
-        upgradeCta:      "فعّل مساعد المبيعات الذكي",
+        upgradeCta:      "فعّل وني AI",
         upgradeDesc:     "ردّ على عملاءك تلقائياً بالذكاء الاصطناعي — متاح في باقة Enterprise",
         upgradeBtn:      "ترقية للـ Enterprise",
         packs: {
@@ -634,13 +634,13 @@ vipCriteria: {
 
       // ── AI Usage Card ───────────────────────────────────────────────────────
       ai: {
-        title:           "AI Sales Assistant",
+        title:           "WANI AI agent",
         renews:          "Renews on the 1st of each month",
         usedThisMonth:   "Used this month",
         remainingPlan:   "Remaining in plan",
         bonusBalance:    "Bonus balance",
         addTokens:       "Buy extra tokens",
-        upgradeCta:      "Activate AI Sales Assistant",
+        upgradeCta:      "Activate WANI AI agent",
         upgradeDesc:     "Automatically reply to your customers using AI — available on Enterprise plan",
         upgradeBtn:      "Upgrade to Enterprise",
         packs: {
