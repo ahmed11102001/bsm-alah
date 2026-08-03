@@ -805,9 +805,7 @@ export default function API() {
     ? "Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه."
     : "Claude AI is available on Pro plan and above. Please upgrade.";
   const canUseElevenLabs = planTier === "pro" || planTier === "enterprise";
-  const elevenLabsLockMessage = locale === "ar"
-    ? "ربط ElevenLabs متاح من باقة Pro فما فوق. قم بترقية الباقة."
-    : "ElevenLabs integration is available on Pro and above. Please upgrade.";
+  const elevenLabsLockMessage = "ElevenLabs integration is available on Pro and above. Please upgrade.";
   const isStoreCardLocked = (id: CardId) =>
     !canUseStoreIntegrations && (id === "shopify" || id === "easyorders" || id === "woocommerce");
   const isClaudeCardLocked = (id: CardId) => !canUseClaude && id === "claude";
@@ -838,8 +836,8 @@ export default function API() {
   };
 
   const handleSaveElevenLabs = async () => {
-    if (!elevenLabsAgentId.trim()) { toast.error(locale === "ar" ? "أدخل Agent ID أولاً" : "Enter the Agent ID first"); return; }
-    if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) { toast.error(locale === "ar" ? "أدخل ElevenLabs API Key أولاً" : "Enter the ElevenLabs API key first"); return; }
+    if (!elevenLabsAgentId.trim()) { toast.error("Enter the Agent ID first"); return; }
+    if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) { toast.error("Enter the ElevenLabs API key first"); return; }
     setElevenLabsSaving(true);
     try {
       const r = await fetch("/api/ai-agent", {
@@ -856,9 +854,9 @@ export default function API() {
       if (!r.ok) throw new Error(d.error ?? "Save failed");
       setElevenLabsAgentData(d);
       setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
-      toast.success(locale === "ar" ? "تم حفظ إعدادات ElevenLabs بنجاح" : "ElevenLabs settings saved");
+      toast.success("ElevenLabs settings saved");
     } catch (e: any) {
-      toast.error(e?.message ?? (locale === "ar" ? "تعذر حفظ الإعدادات" : "Could not save settings"));
+      toast.error(e?.message ?? "Could not save settings");
     } finally { setElevenLabsSaving(false); }
   };
 
@@ -1052,12 +1050,6 @@ export default function API() {
         ],
       },
       {
-        id: "webhook",
-        title: api.cards.webhook.title,
-        subtitle: api.cards.webhook.subtitle,
-        steps: api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
-      },
-      {
         id: "claude",
         title: "Claude AI",
         subtitle: "اربط وني بـ Claude وتحكم بكل حاجة من الشات",
@@ -1070,12 +1062,18 @@ export default function API() {
       {
         id: "elevenlabs",
         title: "ElevenLabs",
-        subtitle: "ربط وكيل الصوت الخاص بك",
+        subtitle: "Connect your voice agent",
         steps: [
-          { title: "أنشئ Agent", desc: "أنشئ وكيلًا صوتيًا من ElevenLabs Conversational AI" },
-          { title: "أدخل البيانات", desc: "الصق API Key وAgent ID الخاصين بك" },
-          { title: "فعّل الصوت", desc: "احفظ الإعدادات لاستخدام وكيل الصوت مع Wani" },
+          { title: "Create an Agent", desc: "Create a voice agent in ElevenLabs Conversational AI" },
+          { title: "Enter credentials", desc: "Paste your API Key and Agent ID" },
+          { title: "Enable voice", desc: "Save the settings to use your voice agent with Wani" },
         ],
+      },
+      {
+        id: "webhook",
+        title: api.cards.webhook.title,
+        subtitle: api.cards.webhook.subtitle,
+        steps: api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
       },
     ];
 
@@ -1166,12 +1164,12 @@ export default function API() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-purple-200 dark:border-purple-900/50" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center"><Lock className="w-5 h-5 text-purple-500" /></div>
-              <div><p className="font-bold text-gray-900 dark:text-white text-sm">ElevenLabs — باقة Pro+</p><p className="text-xs text-gray-500 dark:text-gray-400">غير متاح للباقة المجانية وباقة Starter</p></div>
+              <div><p className="font-bold text-gray-900 dark:text-white text-sm">ElevenLabs — Pro+ plan</p><p className="text-xs text-gray-500 dark:text-gray-400">Not available on Free or Starter</p></div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">اربط وكيل الصوت الخاص بك من ElevenLabs بعد الترقية إلى Pro أو Enterprise.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Connect your ElevenLabs voice agent after upgrading to Pro or Enterprise.</p>
             <div className="flex gap-2">
-              <button onClick={() => { setShowElevenLabsUpgrade(false); window.location.href = "/checkout?plan=pro"; }} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition"><Zap className="w-4 h-4 inline-block ml-1" /> ترقية الآن</button>
-              <button onClick={() => setShowElevenLabsUpgrade(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">لاحقًا</button>
+              <button onClick={() => { setShowElevenLabsUpgrade(false); window.location.href = "/checkout?plan=pro"; }} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition"><Zap className="w-4 h-4 inline-block mr-1" /> Upgrade now</button>
+              <button onClick={() => setShowElevenLabsUpgrade(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">Later</button>
             </div>
           </div>
         </div>
@@ -1406,10 +1404,10 @@ export default function API() {
               <div className="space-y-4">
                 <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
                   <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <span>اربط Agent الصوت من ElevenLabs. يتم حفظ مفتاح API بشكل مشفر ولا يتم عرضه بعد الحفظ.</span>
+                  <span>Connect your ElevenLabs voice agent. Your API key is encrypted and never shown after saving.</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
-                  <div><p className="text-sm font-semibold text-gray-800 dark:text-gray-200">تفعيل وكيل الصوت</p><p className="text-xs text-gray-500">استخدم ElevenLabs للمحادثات الصوتية</p></div>
+                  <div><p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Enable voice agent</p><p className="text-xs text-gray-500">Use ElevenLabs for voice conversations</p></div>
                   <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle ElevenLabs">
                     <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
                   </button>
@@ -1422,9 +1420,9 @@ export default function API() {
                   <Label className="text-xs mb-1 block">Agent ID *</Label>
                   <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
                 </div>
-                <p className="text-xs text-gray-400">من ElevenLabs Dashboard → Conversational AI → Agent → Copy ID</p>
+                <p className="text-xs text-gray-400">From ElevenLabs Dashboard → Conversational AI → Agent → Copy ID</p>
                 <Button onClick={handleSaveElevenLabs} disabled={elevenLabsSaving} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5">
-                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ إعدادات ElevenLabs"}
+                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save ElevenLabs settings"}
                 </Button>
               </div>
             )}

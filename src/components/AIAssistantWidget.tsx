@@ -12,10 +12,13 @@ interface Message {
   role: "bot" | "user";
   text: string;
 }
-type Step = "welcome" | "business" | "goal" | "volume" | "form" | "done";
+type Step = "welcome" | "audience" | "business" | "developerNeed" | "goal" | "volume" | "form" | "done";
 interface Selections {
+  audience?: "marketer" | "developer";
   business?: string;
   businessLabel?: string;
+  developerNeed?: string;
+  developerNeedLabel?: string;
   goal?:     string;
   volume?:   string;
 }
@@ -37,6 +40,20 @@ const FLOW = {
       { label: "ابدأ 🚀",   value: "start"  },
       { label: "لاحقاً",    value: "later"  },
     ],
+
+    audienceQ: "خليني أوجهك بسرعة — أنت مسوّق ولا مطوّر؟ 👇",
+    audienceButtons: [
+      { label: "📣 مسوّق / صاحب نشاط", value: "marketer" },
+      { label: "💻 مطوّر", value: "developer" },
+    ],
+    developerNeedQ: "ممتاز! إيه اللي بتدور عليه من خدمات وني للمطورين؟ 👇",
+    developerNeedButtons: [
+      { label: "🧩 Developer Portal", value: "developer_portal" },
+      { label: "🔐 OTP APIs", value: "otp" },
+      { label: "💬 WhatsApp API", value: "whatsapp_api" },
+      { label: "✨ لسه بستكشف", value: "exploring" },
+    ],
+    developerFormMsg: "تمام — أقدر أوضحلك أفضل طريقة للبدء بالخدمة المناسبة. سيب اسمك ورقمك وفريق المطورين هيتواصل معاك قريبًا.",
 
     step1Q: "ممتاز! نشاطك إيه؟ 👇",
     step1Buttons: [
@@ -101,6 +118,20 @@ const FLOW = {
       { label: "Let's Start 🚀", value: "start" },
       { label: "Maybe Later",    value: "later" },
     ],
+
+    audienceQ: "Let me point you in the right direction — are you a marketer or a developer? 👇",
+    audienceButtons: [
+      { label: "📣 Marketer / Business owner", value: "marketer" },
+      { label: "💻 Developer", value: "developer" },
+    ],
+    developerNeedQ: "Great! Which WANI developer service are you looking for? 👇",
+    developerNeedButtons: [
+      { label: "🧩 Developer Portal", value: "developer_portal" },
+      { label: "🔐 OTP APIs", value: "otp" },
+      { label: "💬 WhatsApp API", value: "whatsapp_api" },
+      { label: "✨ Still exploring", value: "exploring" },
+    ],
+    developerFormMsg: "Great — I can help you get started with the right developer service. Leave your name and number and our developer team will contact you soon.",
 
     step1Q: "Great! What's your business type? 👇",
     step1Buttons: [
@@ -277,8 +308,22 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
       return;
     }
     pushUserMessage(f.welcomeButtons[0].label);
-    setStep("business");
-    setTimeout(() => pushBotMessage(f.step1Q, 800), 200);
+    setStep("audience");
+    setTimeout(() => pushBotMessage(f.audienceQ, 800), 200);
+  };
+
+  // ── Step 1: Audience ────────────────────────────────────────────────────
+  const handleAudience = (value: string, label: string) => {
+    pushUserMessage(label);
+    const audience = value === "developer" ? "developer" : "marketer";
+    setSelections(s => ({ ...s, audience }));
+    if (audience === "developer") {
+      setStep("developerNeed");
+      setTimeout(() => pushBotMessage(f.developerNeedQ, 800), 200);
+    } else {
+      setStep("business");
+      setTimeout(() => pushBotMessage(f.step1Q, 800), 200);
+    }
   };
 
   // ── Step 1: Business ─────────────────────────────────────────────────────
@@ -290,6 +335,18 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
     setTimeout(() => {
       pushBotMessage(vp, 800);
       setTimeout(() => pushBotMessage(f.step2Q, 1800), 800);
+    }, 200);
+  };
+
+  // ── Step 2: Developer service ───────────────────────────────────────────
+  const handleDeveloperNeed = (value: string, label: string) => {
+    pushUserMessage(label);
+    setSelections(s => ({ ...s, business: "developer", developerNeed: value, developerNeedLabel: label, goal: value, volume: "developer" }));
+    setStep("form");
+    setFormStartT(Date.now());
+    setTimeout(() => {
+      pushBotMessage(f.developerFormMsg, 800);
+      setTimeout(() => setShowForm(true), 1600);
     }, 200);
   };
 
@@ -354,21 +411,25 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
   // ── Current step number for progress ────────────────────────────────────
   const stepNum =
     step === "welcome" ? 0 :
-    step === "business" ? 1 :
-    step === "goal"     ? 2 :
-    step === "volume"   ? 3 :
+    step === "audience" ? 1 :
+    step === "business" || step === "developerNeed" ? 2 :
+    step === "goal"     ? 3 :
+    step === "volume"   ? 4 :
     step === "form"     ? 4 : 4;
 
   // ── Buttons to show under messages ───────────────────────────────────────
   const showWelcomeBtns = step === "welcome"  && !isTyping && messages.length > 0;
-  const showBiz         = step === "business" && !isTyping && messages.length >= 2;
-  const showGoal        = step === "goal"     && !isTyping && messages.length >= 4;
-  const showVolume      = step === "volume"   && !isTyping && messages.length >= 6;
+  const showAudience    = step === "audience" && !isTyping && messages.length >= 2;
+  const showBiz         = step === "business" && !isTyping && messages.length >= 4;
+  const showDeveloperNeed = step === "developerNeed" && !isTyping && messages.length >= 4;
+  const showGoal        = step === "goal"     && !isTyping && messages.length >= 8;
+  const showVolume      = step === "volume"   && !isTyping && messages.length >= 10;
 
   // ── WhatsApp CTA link ────────────────────────────────────────────────────
   const waHref = `https://wa.me/${SALES_WA}?text=${encodeURIComponent(
-    f.waMsg(formName || "زائر", selections.businessLabel ?? selections.business ?? "", selections.goal ?? "")
+    f.waMsg(formName || "زائر", selections.businessLabel ?? selections.developerNeedLabel ?? selections.business ?? "", selections.goal ?? selections.developerNeed ?? "")
   )}`;
+  const developerCtaHref = "/developers";
 
   // ═════════════════════════════════════════════════════════════════════════
   // Render
@@ -505,11 +566,39 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
               </div>
             )}
 
+            {/* ── Audience buttons ── */}
+            {showAudience && (
+              <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
+                {f.audienceButtons.map(b => (
+                  <button key={b.value} onClick={() => handleAudience(b.value, b.label)}
+                    className="bg-gray-800 hover:bg-gray-700 text-gray-100 text-xs
+                               px-3 py-2.5 rounded-xl border border-gray-700 hover:border-[#25D366]
+                               transition-all duration-200 active:scale-95 text-center">
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* ── Business buttons ── */}
             {showBiz && (
               <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
                 {f.step1Buttons.map(b => (
                   <button key={b.value} onClick={() => handleBusiness(b.value, b.label)}
+                    className="bg-gray-800 hover:bg-gray-700 text-gray-100 text-xs
+                               px-3 py-2.5 rounded-xl border border-gray-700 hover:border-[#25D366]
+                               transition-all duration-200 active:scale-95 text-center">
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Developer service buttons ── */}
+            {showDeveloperNeed && (
+              <div className="grid grid-cols-2 gap-1.5 wp-fade-in">
+                {f.developerNeedButtons.map(b => (
+                  <button key={b.value} onClick={() => handleDeveloperNeed(b.value, b.label)}
                     className="bg-gray-800 hover:bg-gray-700 text-gray-100 text-xs
                                px-3 py-2.5 rounded-xl border border-gray-700 hover:border-[#25D366]
                                transition-all duration-200 active:scale-95 text-center">
@@ -591,9 +680,16 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
             {/* ── Done CTAs ── */}
             {step === "done" && !isTyping && messages.some(m => m.text.includes("✅")) && (
               <div className="flex flex-col gap-2 wp-fade-in">
+                {selections.audience === "developer" && (
+                  <a href={developerCtaHref}
+                    className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white font-semibold
+                               py-2.5 rounded-xl text-sm text-center transition-all duration-200 active:scale-[.98]">
+                    {lang === "ar" ? "🚀 ادخل Developer Portal" : "🚀 Explore Developer Portal"}
+                  </a>
+                )}
                 <a href={waHref} target="_blank" rel="noopener noreferrer"
-                  className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white font-semibold
-                             py-2.5 rounded-xl text-sm text-center transition-all duration-200 active:scale-[.98]">
+                  className={`w-full ${selections.audience === "developer" ? "bg-gray-800 hover:bg-gray-700" : "bg-[#25D366] hover:bg-[#20bb5a]"} text-white font-semibold
+                             py-2.5 rounded-xl text-sm text-center transition-all duration-200 active:scale-[.98]`}>
                   {f.ctaWhatsapp}
                 </a>
                 <button

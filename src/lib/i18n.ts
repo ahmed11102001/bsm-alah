@@ -477,6 +477,7 @@ vipCriteria: {
         statusLost:      "خسارة",
         headers: ["الاسم", "الهاتف", "النشاط", "الهدف", "الحجم", "اللغة", "التاريخ", "الحالة", ""],
         bizLabels: {
+          developer:   "مطور",
           store:       "متجر إلكتروني",
           services:    "شركة خدمات",
           clinic:      "عيادة",
@@ -485,6 +486,10 @@ vipCriteria: {
           other:       "نشاط آخر",
         },
         goalLabels: {
+          developer_portal: "Developer Portal",
+          otp:           "واجهات OTP",
+          whatsapp_api: "WhatsApp API",
+          exploring:    "استكشاف خدمات المطورين",
           automation:  "أتمتة الردود",
           campaigns:   "حملات واتساب",
           integration: "ربط المتجر",
@@ -1016,6 +1021,7 @@ vipCriteria: {
         statusLost:      "Lost",
         headers: ["Name", "Phone", "Business", "Goal", "Volume", "Lang", "Date", "Status", ""],
         bizLabels: {
+          developer:   "Developer",
           store:       "Online Store",
           services:    "Services",
           clinic:      "Clinic",
@@ -1024,6 +1030,10 @@ vipCriteria: {
           other:       "Other",
         },
         goalLabels: {
+          developer_portal: "Developer Portal",
+          otp:           "OTP APIs",
+          whatsapp_api: "WhatsApp API",
+          exploring:    "Exploring developer services",
           automation:  "Automation",
           campaigns:   "Campaigns",
           integration: "Integration",
