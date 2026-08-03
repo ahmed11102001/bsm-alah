@@ -145,7 +145,7 @@ function FAQCategory({
 }
 
 // ── CTA مع scroll reveal ──────────────────────────────────────────────────────
-function FAQCTA({ lang }: { lang: Lang }) {
+function FAQCTA({ lang, onLoginClick }: { lang: Lang; onLoginClick?: () => void }) {
   const { ref, visible } = useInView(0.2);
   const isAr      = lang === "ar";
   const ArrowIcon = isAr ? ArrowLeft : ArrowRight;
@@ -167,16 +167,16 @@ function FAQCTA({ lang }: { lang: Lang }) {
         <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">{tr(t.faq.ctaTitle, lang)}</h3>
         <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto leading-relaxed">{tr(t.faq.ctaSub, lang)}</p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href="/auth"
-            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a] active:scale-[.98] text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm shadow-lg shadow-green-200"
+          <button
+            onClick={onLoginClick}
+            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a] active:scale-[.98] text-[#06371f] font-extrabold px-7 py-3.5 rounded-xl transition-all text-sm shadow-lg shadow-green-200 cursor-pointer"
           >
             {tr(t.faq.ctaBtn, lang)}
             <ArrowIcon className="w-4 h-4" />
-          </a>
-          <a href="/auth" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors">
+          </button>
+          <button onClick={onLoginClick} className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors cursor-pointer">
             {tr(t.faq.ctaLink, lang)}
-          </a>
+          </button>
         </div>
       </div>
     </div>
@@ -184,7 +184,7 @@ function FAQCTA({ lang }: { lang: Lang }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function FAQ({ lang }: { lang: Lang }) {
+export default function FAQ({ lang, onLoginClick }: { lang: Lang; onLoginClick?: () => void }) {
   const isAr = lang === "ar";
   const items = t.faq.items;
 
@@ -213,7 +213,7 @@ export default function FAQ({ lang }: { lang: Lang }) {
           ))}
         </div>
 
-        <FAQCTA lang={lang} />
+        <FAQCTA lang={lang} onLoginClick={onLoginClick} />
 
       </div>
     </section>

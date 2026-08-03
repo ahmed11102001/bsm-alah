@@ -64,8 +64,8 @@ function HomeContent() {
       <RevealSection><Partners    lang={lang} /></RevealSection>
       <RevealSection><HowItWorks  lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
       <RevealSection><Pricing     lang={lang} /></RevealSection>
-      <RevealSection><Testimonials lang={lang} /></RevealSection>
-      <RevealSection><FAQ         lang={lang} /></RevealSection>
+      <RevealSection><Testimonials lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
+      <RevealSection><FAQ         lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
       <RevealSection><Footer      lang={lang} /></RevealSection>
 
       <LoginModal

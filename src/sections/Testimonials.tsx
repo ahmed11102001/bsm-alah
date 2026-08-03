@@ -148,7 +148,7 @@ function TestimonialForm({ onClose, onSuccess, lang }: { onClose: () => void; on
 }
 
 /* ── Main Component ────────────────────────────────────────────────────────── */
-export default function Testimonials({ lang }: { lang: Lang }) {
+export default function Testimonials({ lang, onLoginClick }: { lang: Lang; onLoginClick?: () => void }) {
   const { data: session } = useSession();
   const [items, setItems] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,13 +483,13 @@ export default function Testimonials({ lang }: { lang: Lang }) {
                 <MessageCircle className="w-4 h-4" />
                 {isAr ? "سيب رأيك" : "Leave a review"}
               </button>
-              <a
-                href="/auth"
-                className="flex items-center gap-2 bg-[#25D366] text-white px-7 py-3 rounded-full text-sm font-bold hover:bg-[#20b557] active:scale-[.98] transition-all shadow-lg shadow-[#25D366]/25"
+              <button
+                onClick={onLoginClick}
+                className="flex items-center gap-2 bg-[#25D366] text-white px-7 py-3 rounded-full text-sm font-bold hover:bg-[#20b557] active:scale-[.98] transition-all shadow-lg shadow-[#25D366]/25 cursor-pointer"
               >
                 {isAr ? "جرّب Wani الآن" : "Try Wani Now"}
                 <ChevronLeft className={`w-4 h-4 ${isAr ? "" : "rotate-180"}`} />
-              </a>
+              </button>
             </div>
             <p className="text-xs text-gray-400 mt-3">
               {isAr ? "بدون بطاقة ائتمان" : "No credit card required"}
