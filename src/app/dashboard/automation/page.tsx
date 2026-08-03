@@ -711,8 +711,17 @@ export default function Automation() {
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}>
-            {tab === "automation" ? <LayoutGrid className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "الذكاء الاصطناعي", "AI")}
+            {tab === "automation" ? (
+              <LayoutGrid className="w-4 h-4" />
+            ) : (
+              <img
+                src="/ai-wani.svg"
+                alt=""
+                aria-hidden="true"
+                className="w-5 h-5 rounded-full object-cover"
+              />
+            )}
+            {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "AI وني", "AI Wani")}
             {tab === "ai" && !isEnterprise && <span className="text-[10px]">🔒</span>}
             {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-green-500" />}
           </button>
