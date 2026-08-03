@@ -154,6 +154,25 @@ function CheckoutContent() {
     setPaying(true);
     setPayError("");
 
+    if (!mcpAddonPkg && !tokenPkg) {
+      const salesWhatsapp = process.env.NEXT_PUBLIC_SALES_WHATSAPP?.replace(/\D/g, "");
+      if (!salesWhatsapp) {
+        setPayError("رقم واتساب المبيعات غير مُعد حالياً. حاول مرة أخرى لاحقاً.");
+        setPaying(false);
+        return;
+      }
+
+      const message = [
+        "مرحباً، أنا جاهز للدفع عبر واتساب.",
+        `الباقة: ${plan.name}`,
+        `الدورة: ${cycle.label}`,
+        `الإجمالي: ${finalTotal.toLocaleString("ar-EG")} جنيه`,
+      ].join("\n");
+
+      window.location.href = `https://wa.me/${salesWhatsapp}?text=${encodeURIComponent(message)}`;
+      return;
+    }
+
     // ── تحديد نوع ومعطيات العملية ──────────────────────────────────────────
     let body: Record<string, string>;
 
