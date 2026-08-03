@@ -596,7 +596,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-900/10 via-emerald-800/5 to-teal-900/10 dark:from-emerald-950/40 dark:to-teal-950/30 p-6 rounded-3xl border border-emerald-500/20 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img src="/ai wani.svg" alt="Wani" className="w-full h-full object-cover" />
+            <img src="/ai-wani.svg" alt="Wani" className="w-full h-full object-cover" />
           </span>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -620,8 +620,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           <button
             onClick={() => saveAgentSettings({ isEnabled: !agent.isEnabled })}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all shadow-sm ${agent.isEnabled
-                ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+              ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+              : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
               }`}
           >
             {agent.isEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
@@ -637,8 +637,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             key={t.id}
             onClick={() => setMainTab(t.id)}
             className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${mainTab === t.id
-                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
           >
             <t.icon className="w-4 h-4" /> {t.label}
@@ -786,8 +786,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 key={id}
                 onClick={() => setKnowledgeTab(id)}
                 className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${knowledgeTab === id
-                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
               >
                 <Icon className="w-4 h-4" /> {label}
