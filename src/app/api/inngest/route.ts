@@ -40,6 +40,7 @@ import {
   productSyncOnDemand,
 } from "@/inngest/product-sync-functions";
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
+import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
 
 const inngestHandler = serve({
   client: inngest,
@@ -49,6 +50,7 @@ const inngestHandler = serve({
     processQueueItem,
     handleNewLeadBot,
     processDelayedStoreAutomation,
+    reconcileStoreAutomationClaims,
     handleShopifyOrderCreated,
     handleShopifyOrderFulfilled,
     handleShopifyOrderUpdated,

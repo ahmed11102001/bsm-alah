@@ -158,7 +158,15 @@ export async function verifyOtp(
 
   // Already verified
   if (otp.status === "VERIFIED") {
-    return { success: true, phone: otp.phone, alreadyVerified: true };
+    // A verified token is single-use. Keep this invariant inside the helper
+    // so every caller rejects replay by default instead of remembering to
+    // inspect an auxiliary flag.
+    return {
+      success: false,
+      error: "OTP تم التحقق منه مسبقاً ولا يمكن استخدامه مرة أخرى",
+      phone: otp.phone,
+      alreadyVerified: true,
+    };
   }
 
   // Failed OTP

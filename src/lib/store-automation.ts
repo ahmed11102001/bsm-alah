@@ -34,6 +34,7 @@ export interface TriggerStoreAutomationParams {
   contactId: string;
   templateVars?: TemplateVars | null;
   storeOrderId?: string;
+  abandonedCartId?: string;
 }
 
 function buildAutomationWhere(
@@ -60,6 +61,7 @@ export async function executeStoreAutomationSend(
     contactId,
     templateVars = null,
     storeOrderId,
+    abandonedCartId,
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
@@ -85,14 +87,33 @@ export async function executeStoreAutomationSend(
 
   const account = automation.user?.whatsappAccount;
   if (!account) return { sent: false, reason: "no_whatsapp_account" };
+  // Claims must happen immediately before the WhatsApp call. The timestamp
+  // makes rollback ownership-safe: a failed request can only release its own
+  // claim, never a newer concurrent request's claim.
+  let confirmationClaimedAt: Date | null = null;
+  let shippedClaimedAt: Date | null = null;
+  let cartClaimedAt: Date | null = null;
+
+  if (automationType === "order_confirm" && storeOrderId) {
+    confirmationClaimedAt = new Date();
+    const claim = await prisma.storeOrder.updateMany({
+      where: { id: storeOrderId, confirmationClaimedAt: null, confirmationMessageId: null },
+      data: { confirmationClaimedAt },
+    });
+    if (claim.count !== 1) {
+      return { sent: false, reason: "already_confirmed_or_in_progress" };
+    }
+  }
+
   // ── Atomic claim for order_shipped (prerequisite for smart follow-up) ──
   // Claim before sending to avoid duplicate sends when the webhook/handler
   // is invoked concurrently for the same order.
   let claimedShipped = false;
   if (automationType === "order_shipped" && storeOrderId) {
+    shippedClaimedAt = new Date();
     const claim = await prisma.storeOrder.updateMany({
       where: { id: storeOrderId, shippedAt: null, shippedMessageId: null },
-      data: { shippedAt: new Date() },
+      data: { shippedAt: shippedClaimedAt },
     });
     claimedShipped = claim.count === 1;
     if (!claimedShipped) {
@@ -101,17 +122,33 @@ export async function executeStoreAutomationSend(
     }
   }
 
-  const result = await sendWhatsAppMessage({
-    toPhone: customerPhone,
-    phoneNumberId: account.phoneNumberId,
-    accessToken: decryptToken(account.accessToken),
-    messageType: "template",
-    templateName: automation.template.name,
-    templateLang: automation.template.language ?? "ar",
-    // لو templateVars موجودة بتحقنها، لو null القالب بيتبعت بدون vars
-    templateVars,
-    content: null,
-  });
+  if (automationType === "cart_abandon" && abandonedCartId) {
+    cartClaimedAt = new Date();
+    const claim = await prisma.abandonedCart.updateMany({
+      where: { id: abandonedCartId, recoveredAt: null, sentAt: null, sendClaimedAt: null },
+      data: { sendClaimedAt: cartClaimedAt },
+    });
+    if (claim.count !== 1) {
+      return { sent: false, reason: "already_abandoned_cart_sent_or_in_progress" };
+    }
+  }
+
+  let result;
+  try {
+    result = await sendWhatsAppMessage({
+      toPhone: customerPhone,
+      phoneNumberId: account.phoneNumberId,
+      accessToken: decryptToken(account.accessToken),
+      messageType: "template",
+      templateName: automation.template.name,
+      templateLang: automation.template.language ?? "ar",
+      templateVars,
+      content: null,
+    });
+  } catch (error) {
+    await releaseAutomationClaims({ storeOrderId, abandonedCartId, confirmationClaimedAt, shippedClaimedAt, cartClaimedAt });
+    throw error;
+  }
 
 
   await prisma.message.create({
@@ -134,20 +171,21 @@ export async function executeStoreAutomationSend(
       data: { sentCount: { increment: 1 }, lastSentAt: new Date() },
     }).catch(() => { });
 
-    if (automationType === "order_confirm" && storeOrderId && result.whatsappMsgId) {
+    if (automationType === "order_confirm" && storeOrderId) {
       await prisma.storeOrder.update({
         where: { id: storeOrderId },
         data: {
           status: "awaiting_confirmation",
-          confirmationMessageId: result.whatsappMsgId,
+          ...(result.whatsappMsgId ? { confirmationMessageId: result.whatsappMsgId } : {}),
+          confirmationClaimedAt: null,
         },
       }).catch((e) => console.error("[StoreAuto] Failed to update StoreOrder with confirmationMessageId", e));
     }
 
-    if (automationType === "order_shipped" && storeOrderId && result.whatsappMsgId) {
+    if (automationType === "order_shipped" && storeOrderId) {
       await prisma.storeOrder.update({
         where: { id: storeOrderId },
-        data: { shippedMessageId: result.whatsappMsgId },
+        data: result.whatsappMsgId ? { shippedMessageId: result.whatsappMsgId } : {},
       }).catch((e) => console.error("[StoreAuto] Failed to update StoreOrder with shippedMessageId", e));
 
       // Schedule smart follow-up (fire and forget)
@@ -157,6 +195,14 @@ export async function executeStoreAutomationSend(
       } catch (e) {
         console.error("[SmartFollowUp] Failed to schedule shipping follow-up:", e);
       }
+
+    }
+
+    if (automationType === "cart_abandon" && abandonedCartId && cartClaimedAt) {
+      await prisma.abandonedCart.updateMany({
+        where: { id: abandonedCartId, sendClaimedAt: cartClaimedAt, sentAt: null },
+        data: { sentAt: new Date(), sendClaimedAt: null },
+      }).catch((e) => console.error("[StoreAuto] Failed to finalize abandoned cart claim", e));
     }
   } else {
     await prisma.storeAutomation.update({
@@ -164,13 +210,7 @@ export async function executeStoreAutomationSend(
       data: { failedCount: { increment: 1 } },
     }).catch(() => { });
 
-    // Rollback shipped claim on failure (but NOT shippedMessageId)
-    if (claimedShipped && storeOrderId) {
-      await prisma.storeOrder.updateMany({
-        where: { id: storeOrderId },
-        data: { shippedAt: null },
-      }).catch(() => { });
-    }
+    await releaseAutomationClaims({ storeOrderId, abandonedCartId, confirmationClaimedAt, shippedClaimedAt, cartClaimedAt });
   }
 
   console.log(result.ok
@@ -193,6 +233,41 @@ export async function executeStoreAutomationSend(
   return { sent: result.ok, reason: result.ok ? undefined : result.error };
 }
 
+async function releaseAutomationClaims({
+  storeOrderId,
+  abandonedCartId,
+  confirmationClaimedAt,
+  shippedClaimedAt,
+  cartClaimedAt,
+}: {
+  storeOrderId?: string;
+  abandonedCartId?: string;
+  confirmationClaimedAt: Date | null;
+  shippedClaimedAt: Date | null;
+  cartClaimedAt: Date | null;
+}) {
+  const operations = [];
+  if (storeOrderId && confirmationClaimedAt) {
+    operations.push(prisma.storeOrder.updateMany({
+      where: { id: storeOrderId, confirmationClaimedAt, confirmationMessageId: null },
+      data: { confirmationClaimedAt: null },
+    }));
+  }
+  if (storeOrderId && shippedClaimedAt) {
+    operations.push(prisma.storeOrder.updateMany({
+      where: { id: storeOrderId, shippedAt: shippedClaimedAt, shippedMessageId: null },
+      data: { shippedAt: null },
+    }));
+  }
+  if (abandonedCartId && cartClaimedAt) {
+    operations.push(prisma.abandonedCart.updateMany({
+      where: { id: abandonedCartId, sendClaimedAt: cartClaimedAt, sentAt: null },
+      data: { sendClaimedAt: null },
+    }));
+  }
+  await Promise.all(operations).catch((error) => console.error("[StoreAuto] Failed to release claim", error));
+}
+
 export async function triggerStoreAutomation(
   params: TriggerStoreAutomationParams
 ): Promise<{ sent: boolean; reason?: string }> {
@@ -205,6 +280,7 @@ export async function triggerStoreAutomation(
     contactId,
     templateVars = null,
     storeOrderId,
+    abandonedCartId,
   } = params;
 
   const automation = await prisma.storeAutomation.findUnique({
@@ -234,6 +310,7 @@ export async function triggerStoreAutomation(
         templateVars,
         delayMinutes: automation.delayMinutes,
         storeOrderId,
+        abandonedCartId,
       },
     });
     console.log(`[StoreAuto] ⏱ Scheduled ${automationType} to send in ${automation.delayMinutes} mins for ${customerPhone}`);

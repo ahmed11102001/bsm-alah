@@ -9,6 +9,9 @@ const mockPrisma = vi.hoisted(() => ({
     updateMany: vi.fn(),
     update: vi.fn(),
   },
+  abandonedCart: {
+    updateMany: vi.fn(),
+  },
   message: {
     create: vi.fn(),
   },
@@ -53,6 +56,7 @@ describe("Store Automation Module", () => {
     vi.clearAllMocks();
 
     mockPrisma.storeOrder.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.abandonedCart.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.storeOrder.update.mockResolvedValue({});
     mockPrisma.message.create.mockResolvedValue({});
     mockPrisma.storeAutomation.update.mockResolvedValue({});
@@ -91,7 +95,7 @@ describe("Store Automation Module", () => {
 
       const res = await executeStoreAutomationSend({
         ...baseParams,
-        automationType: "order_shipped", // only order_shipped has the claim logic
+        automationType: "order_shipped",
       });
 
       expect(res.sent).toBe(false);
@@ -152,12 +156,43 @@ describe("Store Automation Module", () => {
       expect(res.reason).toBe("API down");
 
       // Verify rollback of claim
-      expect(mockPrisma.storeOrder.updateMany).toHaveBeenLastCalledWith({
-        where: { id: "order-1" },
+      expect(mockPrisma.storeOrder.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ id: "order-1", shippedAt: expect.any(Date), shippedMessageId: null }),
         data: { shippedAt: null },
-      });
+      }));
       
       expect(mockNotifications.notifyStoreAutoFailed).toHaveBeenCalled();
+    });
+
+    it("order_confirm concurrent executions send only once", async () => {
+      mockPrisma.storeAutomation.findUnique.mockResolvedValue(mockAutomationData);
+      mockPrisma.storeOrder.updateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const results = await Promise.all([
+        executeStoreAutomationSend(baseParams),
+        executeStoreAutomationSend(baseParams),
+      ]);
+
+      expect(results.filter(result => result.sent)).toHaveLength(1);
+      expect(mockWhatsAppApi.sendWhatsAppMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it("cart_abandon concurrent executions send only once", async () => {
+      mockPrisma.storeAutomation.findUnique.mockResolvedValue(mockAutomationData);
+      mockPrisma.abandonedCart.updateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const params = { ...baseParams, automationType: "cart_abandon" as const, abandonedCartId: "cart-1", storeOrderId: undefined };
+      const results = await Promise.all([
+        executeStoreAutomationSend(params),
+        executeStoreAutomationSend(params),
+      ]);
+
+      expect(results.filter(result => result.sent)).toHaveLength(1);
+      expect(mockWhatsAppApi.sendWhatsAppMessage).toHaveBeenCalledTimes(1);
     });
   });
 

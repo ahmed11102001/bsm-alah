@@ -798,6 +798,7 @@ export const processDelayedStoreAutomation = inngest.createFunction(
       templateVars,
       delayMinutes,
       storeOrderId,
+      abandonedCartId,
     } = event.data;
 
     // الانتظار للمدة المحددة بالدقائق
@@ -817,6 +818,7 @@ export const processDelayedStoreAutomation = inngest.createFunction(
         contactId,
         templateVars,
         storeOrderId,
+        abandonedCartId,
       });
     });
 

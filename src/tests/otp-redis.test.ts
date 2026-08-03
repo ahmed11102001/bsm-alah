@@ -189,13 +189,14 @@ describe("OTP Redis Module", () => {
       expect(updatedValue.status).toBe("EXPIRED");
     });
     
-    it("OTP حالة VERIFIED → بيرجع alreadyVerified: true", async () => {
+    it("OTP حالة VERIFIED → بيرفض replay حتى لو الـ caller تجاهل alreadyVerified", async () => {
       const verifiedOtp = makeMockOtp({ status: "VERIFIED" });
       mockRedis.get.mockResolvedValue(JSON.stringify(verifiedOtp));
 
       const res = await verifyOtp("t", validCode, validProjectId);
-      expect(res.success).toBe(true);
+      expect(res.success).toBe(false);
       expect(res.alreadyVerified).toBe(true);
+      expect(res.error).toMatch(/لا يمكن استخدامه مرة أخرى/);
     });
   });
 

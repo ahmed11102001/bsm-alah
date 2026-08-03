@@ -248,6 +248,7 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
             recoveryUrl ?? "",
           ],
         },
+        abandonedCartId: cart?.id,
       });
     });
 

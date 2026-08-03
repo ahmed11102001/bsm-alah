@@ -621,6 +621,7 @@ model StoreOrder {
   currency              String      @default("EGP")
   status                String      @default("pending")
   confirmationMessageId String?
+  confirmationClaimedAt DateTime?
   rawData               Json?
   contactId             String?
   createdAt             DateTime    @default(now())
@@ -663,6 +664,8 @@ model StoreOrder {
   @@index([orderedAt])
   @@index([wooCommerceStoreId])
   @@index([userId, confirmationMessageId])
+  @@index([confirmationClaimedAt])
+  @@index([shippedAt, shippedMessageId])
   @@index([followUpStage])
   @@index([userId, followUpMessageId])
   @@index([cancelReasonStage])
@@ -742,6 +745,7 @@ model AbandonedCart {
   cartItems          Json? // [{ title, quantity, price }]
   recoveryUrl        String? // رابط إكمال الشراء من Shopify
   sentAt             DateTime? // وقت إرسال رسالة السلة
+  sendClaimedAt      DateTime? // claim ذري قبل إرسال رسالة السلة
   recoveredAt        DateTime? // وقت الشراء الفعلي بعد الرسالة
   shopifyStoreId     String?
   wooCommerceStoreId String?
@@ -761,6 +765,7 @@ model AbandonedCart {
   @@index([shopifyStoreId])
   @@index([followUpStage])
   @@index([userId, followUpMessageId])
+  @@index([sendClaimedAt, sentAt])
 }
 
 model Article {
