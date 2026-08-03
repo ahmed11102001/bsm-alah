@@ -332,7 +332,7 @@ export default function Testimonials({ lang }: { lang: Lang }) {
               className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center shadow-2xl ring-4 ring-white"
               style={{ animation: visible ? "pulse-glow 3s ease-in-out infinite" : "none" }}
             >
-              <img src="/ai-wani.svg" alt="Wani" className="w-14 h-14 rounded-full object-cover" />
+              <img src="/favicon.svg" alt="Wani" className="w-14 h-14 rounded-full object-cover" />
             </div>
           </div>
 
@@ -383,7 +383,7 @@ export default function Testimonials({ lang }: { lang: Lang }) {
                       key={`${item.id}-${pos}`}
                       className={`transition-all duration-500 ease-out ${
                         isCenter
-                          ? "w-[340px] md:w-[380px] z-10"
+                          ? "w-[360px] md:w-[420px] z-10"
                           : "w-[260px] md:w-[300px] z-0 hidden sm:block"
                       }`}
                       style={{
@@ -396,34 +396,34 @@ export default function Testimonials({ lang }: { lang: Lang }) {
                         filter: isCenter ? "none" : "blur(1px)",
                       }}
                     >
-                      <div className={`bg-white rounded-2xl border ${isCenter ? "border-[#25D366]/30 shadow-xl shadow-[#25D366]/5" : "border-gray-200/80 shadow-md"} p-6 transition-all duration-500`}>
+                      <div className={`rounded-2xl border ${isCenter ? "bg-gray-900 border-gray-800 shadow-2xl shadow-[#25D366]/20" : "bg-white border-gray-200/80 shadow-md"} p-6 transition-all duration-500`}>
                         {/* Avatar + Name header */}
                         <div className="flex items-center gap-3 mb-4">
-                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ring-2 ring-white shadow-md`}>
+                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ring-2 ring-[rgba(255,255,255,0.2)] shadow-md`}>
                             {item.name.charAt(0)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                              <p className={`font-bold text-sm ${isCenter ? "text-white" : "text-gray-900"}`}>{item.name}</p>
                               {isCenter && (
                                 <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="#25D366">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                                 </svg>
                               )}
                             </div>
-                            <p className="text-xs text-gray-400 truncate">{item.brandName}</p>
+                            <p className={`text-xs truncate ${isCenter ? "text-gray-400" : "text-gray-400"}`}>{item.brandName}</p>
                           </div>
                         </div>
 
                         {/* Content */}
-                        <p className={`text-gray-600 leading-relaxed mb-5 ${isCenter ? "text-sm" : "text-xs line-clamp-3"}`}>
+                        <p className={`leading-relaxed mb-5 ${isCenter ? "text-sm text-gray-200" : "text-xs text-gray-600 line-clamp-3"}`}>
                           {item.content}
                         </p>
 
                         {/* Tags */}
                         <div className="flex flex-wrap gap-2 mb-4">
                           {tags.map((tag, ti) => (
-                            <span key={ti} className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1 text-[11px] font-medium text-gray-500">
+                            <span key={ti} className={`flex items-center gap-1 border rounded-full px-2.5 py-1 text-[11px] font-medium ${isCenter ? "bg-gray-800 border-gray-700 text-gray-300" : "bg-gray-50 border-gray-100 text-gray-500"}`}>
                               <tag.icon className="w-3 h-3 text-[#25D366]" />
                               {isAr ? tag.label : tag.labelEn}
                             </span>
@@ -435,7 +435,7 @@ export default function Testimonials({ lang }: { lang: Lang }) {
                           {[1, 2, 3, 4, 5].map(n => (
                             <Star
                               key={n}
-                              className={`w-4 h-4 ${n <= item.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"}`}
+                              className={`w-4 h-4 ${n <= item.rating ? "fill-amber-400 text-amber-400" : isCenter ? "text-gray-700" : "text-gray-200"}`}
                             />
                           ))}
                         </div>
