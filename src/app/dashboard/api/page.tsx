@@ -515,12 +515,14 @@ function EasyOrdersContent({ apiKey, setApiKey, storeName, setStoreName, webhook
   );
 }
 
-// ─── WooCommerce Content ──────────────────────────────────────────────────────
+// ─── WooCommerce Content (Unified: Webhook + REST API) ────────────────────────
 interface WooStatus {
   connected: boolean;
   storeName?: string;
+  storeUrl?: string;
   totalSynced?: number;
   lastSyncAt?: string | null;
+  productsAvailable?: number;
 }
 
 function WooCommerceContent({ status, onRefresh, locale }: {
@@ -528,12 +530,17 @@ function WooCommerceContent({ status, onRefresh, locale }: {
   onRefresh: () => void;
   locale: string;
 }) {
+  const isAr = locale === "ar";
   const [storeName, setStoreName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
+  const [consumerKey, setConsumerKey] = useState("");
+  const [consumerSecret, setConsumerSecret] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [urlLoaded, setUrlLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [showKeys, setShowKeys] = useState(false);
+  const [syncingProducts, setSyncingProducts] = useState(false);
 
   const loadWebhookUrl = useCallback(async () => {
     if (urlLoaded) return;
@@ -548,90 +555,184 @@ function WooCommerceContent({ status, onRefresh, locale }: {
 
   async function handleConnect() {
     setError("");
-    if (!storeName.trim()) { setError("أدخل اسم المتجر"); return; }
+    if (!storeName.trim()) { setError(isAr ? "أدخل اسم المتجر" : "Store name is required"); return; }
+    if (!storeUrl.trim()) { setError(isAr ? "أدخل رابط المتجر" : "Store URL is required"); return; }
+    if (!consumerKey.trim() || !consumerSecret.trim()) { setError(isAr ? "أدخل Consumer Key و Consumer Secret" : "Consumer Key and Secret are required"); return; }
     setLoading(true);
     try {
       const r = await fetch("/api/woocommerce/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName: storeName.trim(), storeUrl: storeUrl.trim() }),
+        body: JSON.stringify({
+          storeName: storeName.trim(),
+          storeUrl: storeUrl.trim(),
+          consumerKey: consumerKey.trim(),
+          consumerSecret: consumerSecret.trim(),
+        }),
       });
       const d = await r.json();
-      if (!r.ok) { setError(d.error ?? "فشل الحفظ"); return; }
-      toast.success("✅ تم حفظ بيانات المتجر — افتح WooCommerce وأضف الـ Webhook URL");
+      if (!r.ok) { setError(d.error ?? (isAr ? "فشل الربط" : "Connection failed")); return; }
+      if (d.webhookUrl) setWebhookUrl(d.webhookUrl);
+      toast.success(
+        isAr
+          ? `✅ تم ربط ${d.storeName} بنجاح — ${d.productsAvailable ?? 0} منتج متاح — بدأت مزامنة المنتجات تلقائياً`
+          : `✅ ${d.storeName} connected — ${d.productsAvailable ?? 0} products available — product sync started`
+      );
+      setStoreName(""); setStoreUrl(""); setConsumerKey(""); setConsumerSecret("");
       onRefresh();
-    } catch { setError("خطأ في الاتصال"); }
+    } catch { setError(isAr ? "خطأ في الاتصال" : "Connection error"); }
     finally { setLoading(false); }
   }
 
   async function handleDisconnect() {
-    if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
+    if (!confirm(isAr ? "هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟" : "This will disconnect the store and stop automations. Are you sure?")) return;
     const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
-    if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
-    else toast.error("فشل فك الربط");
+    if (r.ok) { toast.success(isAr ? "تم فك الربط" : "Disconnected"); onRefresh(); }
+    else toast.error(isAr ? "فشل فك الربط" : "Failed to disconnect");
+  }
+
+  async function handleSyncProducts() {
+    setSyncingProducts(true);
+    try {
+      const r = await fetch("/api/ai-agent/products/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "woocommerce" }),
+      });
+      if (r.ok) toast.success(isAr ? "تم بدء مزامنة المنتجات في الخلفية" : "Product sync started in background");
+      else toast.error(isAr ? "فشل بدء المزامنة" : "Failed to start sync");
+    } catch { toast.error(isAr ? "خطأ أثناء المزامنة" : "Sync error"); }
+    finally { setSyncingProducts(false); }
   }
 
   const dateStr = status?.lastSyncAt
-    ? new Date(status.lastSyncAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-US")
+    ? new Date(status.lastSyncAt).toLocaleString(isAr ? "ar-EG" : "en-US")
     : "";
 
   return (
     <div className="space-y-3">
       {/* Connected Badge */}
       {status?.connected && (
-        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-xs text-green-700 dark:text-green-300 font-medium">
-              {status.storeName} — {(status.totalSynced ?? 0).toLocaleString("ar-EG")} طلب مستلم
-            </p>
-            {dateStr && <p className="text-[10px] text-green-600/70 dark:text-green-400/70">آخر طلب: {dateStr}</p>}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                {status.storeName} — {(status.totalSynced ?? 0).toLocaleString(isAr ? "ar-EG" : "en-US")} {isAr ? "طلب مستلم" : "orders received"}
+              </p>
+              {dateStr && <p className="text-[10px] text-green-600/70 dark:text-green-400/70">{isAr ? "آخر طلب" : "Last order"}: {dateStr}</p>}
+            </div>
+            <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-            <Trash2 className="w-4 h-4" />
+
+          {/* Sync Products button for connected stores */}
+          <button
+            onClick={handleSyncProducts}
+            disabled={syncingProducts}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl
+                       border border-purple-200 dark:border-purple-800 text-xs font-medium
+                       text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20
+                       disabled:opacity-50 transition"
+          >
+            {syncingProducts
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {isAr ? "جاري مزامنة المنتجات..." : "Syncing products..."}</>
+              : <><RefreshCw className="w-3.5 h-3.5" /> {isAr ? "مزامنة المنتجات للذكاء الاصطناعي" : "Sync products for AI"}</>}
           </button>
         </div>
       )}
 
-      {/* Store Name */}
-      <div>
-        <Label className="text-xs dark:text-gray-400">اسم المتجر</Label>
-        <Input
-          placeholder="متجر WooCommerce"
-          value={status?.connected ? (status.storeName ?? "") : storeName}
-          onChange={e => setStoreName(e.target.value)}
-          disabled={status?.connected}
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600"
-        />
-      </div>
-
-      {/* Store URL */}
+      {/* ── فورم الربط (قبل الربط فقط) ── */}
       {!status?.connected && (
-        <div>
-          <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-            <Globe className="w-3 h-3" /> رابط المتجر (اختياري)
-          </Label>
-          <Input
-            placeholder="https://mystore.com"
-            dir="ltr"
-            value={storeUrl}
-            onChange={e => setStoreUrl(e.target.value)}
-            className="mt-1 dark:bg-gray-700 dark:border-gray-600"
-          />
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs dark:text-gray-400">{isAr ? "اسم المتجر *" : "Store name *"}</Label>
+            <Input
+              placeholder={isAr ? "مثال: متجري" : "E.g. My Store"}
+              value={storeName}
+              onChange={e => setStoreName(e.target.value)}
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Globe className="w-3 h-3" /> {isAr ? "رابط المتجر *" : "Store URL *"}
+            </Label>
+            <Input
+              placeholder="https://mystore.com"
+              dir="ltr"
+              value={storeUrl}
+              onChange={e => setStoreUrl(e.target.value)}
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Key className="w-3 h-3 text-purple-500" /> Consumer Key *
+            </Label>
+            <Input
+              placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              dir="ltr"
+              value={consumerKey}
+              onChange={e => setConsumerKey(e.target.value)}
+              type={showKeys ? "text" : "password"}
+              className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Key className="w-3 h-3 text-purple-500" /> Consumer Secret *
+            </Label>
+            <div className="relative mt-1">
+              <Input
+                placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                dir="ltr"
+                value={consumerSecret}
+                onChange={e => setConsumerSecret(e.target.value)}
+                type={showKeys ? "text" : "password"}
+                className="font-mono dark:bg-gray-700 dark:border-gray-600 pl-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKeys(v => !v)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          {/* How to get credentials hint */}
+          <div className="p-2.5 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-800/30">
+            <p className="text-[10px] text-purple-700 dark:text-purple-400 leading-4">
+              📋 <strong>WooCommerce → Settings → Advanced → REST API → Add key</strong>
+              <br />
+              {isAr ? "اختر صلاحيات" : "Choose permissions"}: <strong>Read</strong> ({isAr ? "أو Read/Write لدعم كامل" : "or Read/Write for full support"})
+              <br />
+              {isAr ? "انسخ الـ Consumer Key والـ Consumer Secret" : "Copy the Consumer Key and Consumer Secret"}
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Webhook URL */}
+      {/* Webhook URL — always visible */}
       <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+        <Label className="text-xs dark:text-gray-400 flex items-center gap-1 mb-1">
           <LinkIcon className="w-3 h-3" /> Webhook URL
+          <span className="text-gray-400 font-normal">
+            {status?.connected
+              ? (isAr ? "(أضفه يدوياً في WooCommerce)" : "(add manually in WooCommerce)")
+              : (isAr ? "(يظهر بعد الربط)" : "(shown after connection)")}
+          </span>
         </Label>
-        <div className="mt-1">
-          <CopyInput value={webhookUrl} placeholder="جاري التحميل..." />
-        </div>
-        <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1">
-          ⚠️ افتح WooCommerce → Settings → Advanced → Webhooks → أضف هذا الرابط لحدث &quot;Order created&quot; و &quot;Order updated&quot;
-        </p>
+        <CopyInput value={webhookUrl} placeholder={isAr ? "جاري التحميل..." : "Loading..."} />
+        {status?.connected && (
+          <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1">
+            ⚠️ {isAr
+              ? "افتح WooCommerce → Settings → Advanced → Webhooks → أضف هذا الرابط لحدث \"Order created\" و \"Order updated\""
+              : "Open WooCommerce → Settings → Advanced → Webhooks → Add this URL for \"Order created\" and \"Order updated\""}
+          </p>
+        )}
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
@@ -639,13 +740,13 @@ function WooCommerceContent({ status, onRefresh, locale }: {
       {!status?.connected && (
         <Button
           onClick={handleConnect}
-          disabled={loading}
+          disabled={loading || !storeName.trim() || !storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()}
           size="sm"
           className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
         >
           {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ...</>
-            : <><Globe className="w-4 h-4" /> حفظ وتفعيل المتجر</>}
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {isAr ? "جاري الربط والتحقق..." : "Connecting & verifying..."}</>
+            : <><Globe className="w-4 h-4" /> {isAr ? "ربط المتجر" : "Connect Store"}</>}
         </Button>
       )}
     </div>
@@ -1041,12 +1142,12 @@ export default function API() {
       },
       {
         id: "woocommerce",
-        title: "ربط WooCommerce",
-        subtitle: "عن طريق Webhook تلقائي",
+        title: locale === "ar" ? "ربط WooCommerce" : "Connect WooCommerce",
+        subtitle: locale === "ar" ? "ربط موحّد — أوردرات + منتجات AI" : "Unified — orders + AI products",
         steps: [
-          { title: "احفظ اسم المتجر", desc: "أدخل اسم متجرك واضغط حفظ للحصول على الـ Webhook URL" },
-          { title: "أضف الـ Webhook", desc: "WooCommerce → Settings → Advanced → Webhooks → Add webhook" },
-          { title: "اختر الحدث", desc: "اختر 'Order created' + 'Order updated' وألصق الـ URL" },
+          { title: locale === "ar" ? "أدخل بيانات المتجر" : "Enter store details", desc: locale === "ar" ? "اسم المتجر + الرابط + Consumer Key/Secret من WooCommerce REST API" : "Store name + URL + Consumer Key/Secret from WooCommerce REST API" },
+          { title: locale === "ar" ? "اضغط ربط المتجر" : "Click Connect", desc: locale === "ar" ? "هنتحقق من صحة البيانات ونبدأ مزامنة المنتجات تلقائياً" : "We'll verify credentials and auto-sync products" },
+          { title: locale === "ar" ? "أضف الـ Webhook" : "Add the Webhook", desc: locale === "ar" ? "انسخ الـ Webhook URL وأضفه في WooCommerce → Settings → Advanced → Webhooks" : "Copy the Webhook URL and add it in WooCommerce → Settings → Advanced → Webhooks" },
         ],
       },
       {
