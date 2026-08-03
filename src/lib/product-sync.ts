@@ -94,7 +94,10 @@ export async function syncShopifyProducts(
         const firstVariant = p.variants?.[0];
         const price = firstVariant?.price != null ? parseFloat(firstVariant.price) : null;
         const compareAtPrice = firstVariant?.compare_at_price != null ? parseFloat(firstVariant.compare_at_price) : null;
-        const stock = p.variants?.reduce((sum: number, v: any) => sum + (v.inventory_quantity || 0), 0) ?? null;
+        const rawStock = p.variants?.reduce((sum: number, v: any) => sum + (v.inventory_quantity || 0), 0) ?? null;
+        const allUnmanaged = Boolean(p.variants?.length) &&
+          p.variants.every((v: any) => v.inventory_management == null || v.inventory_policy === "continue");
+        const stock = (rawStock == null || (rawStock <= 0 && allUnmanaged)) ? null : rawStock;
         const images: string[] = (p.images || []).map((img: any) => img.src).filter(Boolean);
         const tags: string[] = typeof p.tags === "string" ? p.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : (Array.isArray(p.tags) ? p.tags : []);
         const category = p.product_type || null;

@@ -21,7 +21,7 @@ import { toast } from "sonner";
 type Lang = "ar" | "en";
 const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
 
-type CardId = "shipping" | "cart" | "campaign" | "order_confirm";
+type CardId = "order_confirm" | "shipping" | "cart" | "campaign" ;
 
 function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
