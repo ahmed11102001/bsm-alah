@@ -44,7 +44,7 @@ export interface AgentContext {
     noSharePersonal?: boolean;
     strictKnowledgeOnly?: boolean;
     alwaysHandoffComplaints?: boolean;
-    maxReplyLines?: number;
+    responseStyle?: string;
     customRules?: string | null;
   };
 }
@@ -176,7 +176,12 @@ function buildSystemPrompt(ctx: AgentContext): string {
 
   // ── 4) Guardrails & Rules ──
   const g = ctx.guardrails;
-  const maxLines = g?.maxReplyLines ?? 3;
+  const responseStyle = g?.responseStyle ?? "natural";
+  const responseStyleInstruction = responseStyle === "short"
+    ? "أجب بشكل مباشر ومختصر، واذكر المعلومات الضرورية فقط."
+    : responseStyle === "detailed"
+      ? "قدّم شرحًا شاملًا وتفاصيل إضافية عندما تكون مفيدة، مع الحفاظ على وضوح الرد."
+      : "أجب بشكل طبيعي ومتوازن، مع تفاصيل كافية للإجابة بدون إطالة غير ضرورية.";
   const goalInstruction = ctx.salesBehavior?.goal === "sales_focused"
     ? "Help the customer make a purchase decision and confidently suggest a suitable product without being pushy."
     : ctx.salesBehavior?.goal === "customer_service"
@@ -186,7 +191,7 @@ function buildSystemPrompt(ctx: AgentContext): string {
   lines.push(
     "── قواعد الرد ──",
     `- تكلم بأسلوب ${toneLabel}.`,
-    `- ردودك قصيرة ومباشرة (${maxLines} سطور بحد أقصى).`,
+    `- أسلوب وطول الإجابة: ${responseStyleInstruction}`,
   );
 
   lines.push(`- ${goalInstruction}`);

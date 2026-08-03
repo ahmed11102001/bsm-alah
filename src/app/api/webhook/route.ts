@@ -1003,7 +1003,7 @@ async function handleAutomation(ctx: {
         noInventPrices: true, noInventProducts: true,
         noMentionCompetitors: true, noSharePersonal: true,
         strictKnowledgeOnly: true, alwaysHandoffComplaints: true,
-        maxReplyLines: true, customRules: true,
+        responseStyle: true, customRules: true,
       },
     }),
     prisma.salesBehaviorSettings.findUnique({ where: { userId } }),

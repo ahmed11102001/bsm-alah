@@ -272,7 +272,7 @@ export const AIGuardrailSchema = z.object({
   noSharePersonal: z.boolean().optional().default(true),
   strictKnowledgeOnly: z.boolean().optional().default(true),
   alwaysHandoffComplaints: z.boolean().optional().default(true),
-  maxReplyLines: z.number().int().min(1).max(10).optional().default(3),
+  responseStyle: z.enum(["short", "natural", "detailed"]).optional().default("natural"),
   customRules: z.string().trim().max(1000).nullable().optional(),
 });
 export type AIGuardrailInput = z.infer<typeof AIGuardrailSchema>;

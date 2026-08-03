@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
           noInventPrices: true, noInventProducts: true,
           noMentionCompetitors: true, noSharePersonal: true,
           strictKnowledgeOnly: true, alwaysHandoffComplaints: true,
-          maxReplyLines: true, customRules: true,
+          responseStyle: true, customRules: true,
         },
       }),
     ]);

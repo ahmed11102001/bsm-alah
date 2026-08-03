@@ -554,7 +554,7 @@ model AIGuardrail {
   noSharePersonal         Boolean  @default(true)
   strictKnowledgeOnly     Boolean  @default(true)
   alwaysHandoffComplaints Boolean  @default(true)
-  maxReplyLines           Int      @default(3)
+  responseStyle           String   @default("natural")
   customRules             String?  @db.Text
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt

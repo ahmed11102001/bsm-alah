@@ -30,7 +30,7 @@ describe("AI Guardrails & Response Zod Schemas", () => {
       noMentionCompetitors: true,
       strictKnowledgeOnly: true,
       alwaysHandoffComplaints: true,
-      maxReplyLines: 3,
+      responseStyle: "natural",
       customRules: "ممنوع التوصيل يوم الجمعة",
     });
 

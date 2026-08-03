@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     noSharePersonal: true,
     strictKnowledgeOnly: true,
     alwaysHandoffComplaints: true,
-    maxReplyLines: 3,
+    responseStyle: "natural",
     customRules: null,
   });
 }

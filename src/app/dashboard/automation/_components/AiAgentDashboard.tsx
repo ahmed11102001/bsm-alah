@@ -54,7 +54,7 @@ interface GuardrailsData {
   noSharePersonal: boolean;
   strictKnowledgeOnly: boolean;
   alwaysHandoffComplaints: boolean;
-  maxReplyLines: number;
+  responseStyle: "short" | "natural" | "detailed";
   customRules: string | null;
 }
 
@@ -157,7 +157,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     noSharePersonal: true,
     strictKnowledgeOnly: true,
     alwaysHandoffComplaints: true,
-    maxReplyLines: 3,
+    responseStyle: "natural",
     customRules: null,
   });
   const [salesBehavior, setSalesBehavior] = useState({
@@ -1074,9 +1074,35 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 <Label className="text-xs cursor-pointer">{isAr ? "تحويل الشكاوى والغضب للبشر فوراً" : "Auto handoff for complaints"}</Label>
                 <Switch checked={guardrails.alwaysHandoffComplaints} onCheckedChange={v => setGuardrails(g => ({ ...g, alwaysHandoffComplaints: v }))} />
               </div>
-              <div>
-                <Label className="text-xs mb-1 block">{isAr ? "أقصى عدد سطور للرد" : "Max lines per reply"}</Label>
-                <Input type="number" min={1} max={10} value={guardrails.maxReplyLines} onChange={e => setGuardrails(g => ({ ...g, maxReplyLines: Number(e.target.value) || 3 }))} className="rounded-xl text-xs h-8" />
+              <div className="space-y-2">
+                <Label className="text-xs mb-1 block">{isAr ? "أسلوب الرد" : "Response style"}</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: "short" as const, ar: "مختصر", en: "Short", descAr: "إجابات مباشرة وسريعة، بدون تفاصيل زائدة", descEn: "Direct answers with only the essential information" },
+                    { value: "natural" as const, ar: "طبيعي", en: "Natural", descAr: "إجابات متوازنة وواضحة بدون إطالة غير ضرورية", descEn: "Balanced, clear answers without unnecessary length" },
+                    { value: "detailed" as const, ar: "مفصل", en: "Detailed", descAr: "شرح شامل وتفاصيل إضافية عندما تكون مفيدة", descEn: "Thorough explanations with useful extra detail" },
+                  ]).map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setGuardrails(g => ({ ...g, responseStyle: option.value }))}
+                      className={`rounded-xl border px-2 py-2 text-xs transition text-center ${guardrails.responseStyle === option.value
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                        : "border-gray-200 text-gray-500 hover:border-emerald-300 dark:border-gray-700 dark:text-gray-400"
+                        }`}
+                    >
+                      <span className="flex items-center justify-center gap-1 font-semibold">
+                        <span className={`h-2.5 w-2.5 rounded-full border ${guardrails.responseStyle === option.value ? "border-emerald-500 bg-emerald-500" : "border-gray-400"}`} />
+                        {isAr ? option.ar : option.en}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] leading-relaxed text-gray-400">
+                  {isAr
+                    ? ({ short: "إجابات مباشرة وسريعة، بدون تفاصيل زائدة", natural: "إجابات متوازنة وواضحة بدون إطالة غير ضرورية", detailed: "شرح شامل وتفاصيل إضافية عندما تكون مفيدة" } as const)[guardrails.responseStyle]
+                    : ({ short: "Direct answers with only the essential information", natural: "Balanced, clear answers without unnecessary length", detailed: "Thorough explanations with useful extra detail" } as const)[guardrails.responseStyle]}
+                </p>
               </div>
             </div>
             <div className="mt-4">
