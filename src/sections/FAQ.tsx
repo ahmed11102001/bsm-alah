@@ -168,13 +168,13 @@ function FAQCTA({ lang }: { lang: Lang }) {
         <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto leading-relaxed">{tr(t.faq.ctaSub, lang)}</p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
-            href="#"
+            href="/auth"
             className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a] active:scale-[.98] text-white font-bold px-7 py-3.5 rounded-xl transition-all text-sm shadow-lg shadow-green-200"
           >
             {tr(t.faq.ctaBtn, lang)}
             <ArrowIcon className="w-4 h-4" />
           </a>
-          <a href="#" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors">
+          <a href="/auth" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors">
             {tr(t.faq.ctaLink, lang)}
           </a>
         </div>
