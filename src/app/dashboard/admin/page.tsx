@@ -437,12 +437,12 @@ export default function AdminPage() {
   const PLAN_LABELS = adm.plans;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 transition-colors" dir={dir}>
-      <div className="max-w-5xl mx-auto">
+    <div className="admin-page min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-colors" dir={dir}>
+      <div className="max-w-5xl mx-auto min-w-0">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="admin-page-header flex items-center justify-between gap-4 mb-6">
+          <div className="admin-page-title flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
@@ -451,7 +451,7 @@ export default function AdminPage() {
               <p className="text-xs text-gray-400 dark:text-gray-500">{adm.subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="admin-page-actions flex items-center gap-3 flex-wrap justify-end">
             <button
                onClick={() => router.push('/strategies')}
                className="px-5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-600 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-900/50 dark:hover:to-purple-900/50 dark:text-indigo-400 rounded-full text-sm font-bold transition-all shadow-sm border border-indigo-100 dark:border-indigo-800 flex items-center gap-2 transform hover:scale-105"
@@ -467,7 +467,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1 mb-6 w-fit flex-wrap">
+        <div className="admin-tabs flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1 mb-6 w-full sm:w-fit flex-wrap">
           {([
             { id: "users",        label: adm.tabs.users,        icon: Shield             },
             { id: "testimonials", label: adm.tabs.testimonials, icon: MessageSquareQuote },
@@ -494,7 +494,7 @@ export default function AdminPage() {
                 <h2 className="font-semibold text-gray-900 dark:text-white">{adm.users.createTitle}</h2>
                 <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-5 h-5" /></button>
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 {[
                   { label: adm.users.fields.name,     key: "name",     type: "text",     ph: adm.users.placeholders.name     },
                   { label: adm.users.fields.email,    key: "email",    type: "email",    ph: adm.users.placeholders.email    },
@@ -558,7 +558,8 @@ export default function AdminPage() {
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
             ) : (
-              <table className="w-full">
+              <div className="admin-table-scroll">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                     {adm.users.headers.map((h, i) => (
@@ -692,6 +693,7 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             {/* Pagination footer */}
             {!loading && (pageIdx > 0 || nextCursor) && (
@@ -800,7 +802,7 @@ export default function AdminPage() {
                   <h2 className="font-semibold text-gray-900 dark:text-white">{adm.coupons.createTitle}</h2>
                   <button onClick={() => setShowCouponF(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-5 h-5" /></button>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{adm.coupons.fields.prefix}</label>
                     <input value={couponForm.prefix} placeholder="SAVE"
@@ -859,7 +861,8 @@ export default function AdminPage() {
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500 text-sm">{adm.coupons.empty}</div>
             ) : (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="admin-table-scroll">
+                <table className="w-full min-w-[720px] text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                     <tr>{adm.coupons.headers.map((h, i) => (
                       <th key={i} className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{h}</th>
@@ -900,6 +903,7 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>
@@ -1244,7 +1248,8 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="admin-table-scroll">
+                <table className="w-full min-w-[720px] text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                     <tr>
                       {adm.leads.headers.map((h, i) => (
@@ -1328,6 +1333,7 @@ export default function AdminPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>

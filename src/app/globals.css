@@ -742,3 +742,52 @@ textarea:focus {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
 }
+
+/* Dashboard responsive surfaces */
+.settings-dialog {
+  width: calc(100vw - 1rem);
+  max-height: calc(100dvh - 1rem);
+  overscroll-behavior: contain;
+}
+
+.settings-dialog [data-slot="dialog-header"] {
+  text-align: start;
+}
+
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table-scroll table {
+  max-width: none;
+}
+
+@media (max-width: 639px) {
+  .admin-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-page-actions {
+    justify-content: stretch;
+  }
+
+  .admin-page-actions > button {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.5rem;
+  }
+
+  .admin-tabs > button {
+    flex: 1 1 calc(50% - 0.25rem);
+    justify-content: center;
+    min-height: 2.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .settings-dialog {
+    border-radius: 1.25rem;
+  }
+}

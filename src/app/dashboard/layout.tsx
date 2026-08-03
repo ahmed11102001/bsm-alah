@@ -163,7 +163,7 @@ function SettingsModal({ open, onClose, data, onSaved }: {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg" dir={dir}>
+      <DialogContent className="settings-dialog max-w-lg p-4 sm:p-6" dir={dir}>
         <DialogHeader>
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <Settings className="w-5 h-5 text-[#25D366]" /> {s.title}
@@ -171,11 +171,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
           <DialogDescription>{s.description}</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" dir={dir}>
-          <TabsList className="w-full mb-4">
-            <TabsTrigger value="profile" className="flex-1 text-xs">{s.tabs.profile}</TabsTrigger>
-            <TabsTrigger value="password" className="flex-1 text-xs">{s.tabs.password}</TabsTrigger>
-            {isOwner && <TabsTrigger value="whatsapp" className="flex-1 text-xs">{s.tabs.whatsapp}</TabsTrigger>}
+        <Tabs defaultValue="profile" dir={dir} className="settings-tabs min-w-0">
+          <TabsList className="w-full mb-4 h-auto min-h-10 gap-1 overflow-x-auto justify-start">
+            <TabsTrigger value="profile" className="flex-1 min-w-[7rem] text-xs">{s.tabs.profile}</TabsTrigger>
+            <TabsTrigger value="password" className="flex-1 min-w-[7rem] text-xs">{s.tabs.password}</TabsTrigger>
+            {isOwner && <TabsTrigger value="whatsapp" className="flex-1 min-w-[7rem] text-xs">{s.tabs.whatsapp}</TabsTrigger>}
           </TabsList>
 
           {/* ── Profile ── */}

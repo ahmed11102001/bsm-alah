@@ -201,9 +201,15 @@ export default function HeroCinematic() {
     if (!w || !h) return "translate(0px,0px) scale(1)";
     const worldW = w * WORLD_SCALE;
     const worldH = h * WORLD_SCALE;
-    const tx = w / 2 - target.x * worldW * target.scale;
-    const ty = h / 2 - target.y * worldH * target.scale;
-    return `translate(${tx}px, ${ty}px) scale(${target.scale})`;
+    // The desktop camera can zoom into the oversized world. On narrow screens
+    // that same zoom crops the headline/cards because the viewport is only a
+    // few hundred pixels wide. Keep the active scene centered, but cap the
+    // zoom based on the available width so the widest scene remains visible.
+    const mobileScale = Math.min(target.scale, Math.max(0.56, w / 560));
+    const scale = w < 640 ? mobileScale : target.scale;
+    const tx = w / 2 - target.x * worldW * scale;
+    const ty = h / 2 - target.y * worldH * scale;
+    return `translate(${tx}px, ${ty}px) scale(${scale})`;
   }
 
   // ─── محتوى حقيقي ────────────────────────────────────────────────────────────
@@ -257,7 +263,7 @@ export default function HeroCinematic() {
   const dimTransform = (i: number) => (active === i ? "scale(1)" : "scale(0.96)");
 
   return (
-    <div style={{ maxWidth: "980px", margin: "0 auto", padding: "32px 20px 8px" }}>
+    <div style={{ maxWidth: "980px", margin: "0 auto", padding: stage.w > 0 && stage.w < 640 ? "20px 12px 8px" : "32px 20px 8px" }}>
       <div
         ref={stageRef}
         style={{
