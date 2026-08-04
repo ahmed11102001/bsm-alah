@@ -17,6 +17,15 @@ function resolveOwnerId(session: any): string {
 type RangeKey = "7d" | "30d" | "90d";
 const RANGE_DAYS: Record<RangeKey, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
+type AutomationPerformanceItem = {
+    id: string;
+    name: string;
+    source: "rule" | "ai";
+    isEnabled: boolean;
+    triggered: number;
+    successRate: number | null;
+};
+
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
@@ -128,14 +137,14 @@ export async function GET(req: NextRequest) {
             ruleStatsMap.set(r.automationRuleId, entry);
         });
 
-        const automationPerformance = automationRules
+        const automationPerformance: AutomationPerformanceItem[] = automationRules
             .map(rule => {
                 const s = ruleStatsMap.get(rule.id) ?? { success: 0, failure: 0 };
                 const triggered = s.success + s.failure;
                 return {
                     id: rule.id,
                     name: rule.name,
-                    source: "rule" as const,
+                    source: "rule",
                     isEnabled: rule.isEnabled,
                     triggered,
                     successRate: triggered > 0 ? Math.round((s.success / triggered) * 100) : null,
@@ -153,7 +162,7 @@ export async function GET(req: NextRequest) {
                 automationPerformance.unshift({
                     id: "wani-ai-agent",
                     name: "Wani",
-                    source: "ai" as const,
+                    source: "ai",
                     isEnabled: aiAgent.isEnabled,
                     triggered: agentTriggered,
                     successRate: agentTriggered > 0 ? Math.round((agentSuccess / agentTriggered) * 100) : null,
