@@ -34,6 +34,7 @@ export default function PortalTopBar({
   }
 
   const docsActive = pathname.startsWith("/developers/docs");
+  const marketersActive = pathname.startsWith("/marketers");
 
   return (
     <>
@@ -303,6 +304,11 @@ export default function PortalTopBar({
 
         {/* 2. روابط المطوّر العامة */}
         <nav className="ptopbar-links">
+          <Link href="/marketers" className={`ptopbar-link ${marketersActive ? "active" : ""}`}>
+            📣
+            {t("Marketers", "المسوقين")}
+          </Link>
+
           <Link
             href="/developers/docs"
             className={`ptopbar-link docs-btn ${docsActive ? "active" : ""}`}

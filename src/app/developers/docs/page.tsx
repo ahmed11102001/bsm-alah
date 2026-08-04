@@ -517,17 +517,19 @@ export default function ApiDocsPage() {
           .endpoint-header > span:last-child { order:4; margin-inline-start:auto; }
           .endpoint-content > div:first-child { padding:13px 14px !important; }
           .endpoint-grid { grid-template-columns:1fr !important; gap:18px !important; padding:0 14px 16px !important; }
+          /* Stack table rows vertically on small screens so text wraps instead of being clipped */
           .endpoint-grid table { display:block; width:100% !important; font-size:11px !important; }
           .endpoint-grid tbody { display:block; width:100%; }
-          .endpoint-grid tr { display:grid; grid-template-columns:minmax(0,30%) minmax(0,22%) minmax(0,48%); width:100%; }
-          .endpoint-grid td { display:block; min-width:0; width:auto !important; padding:6px 3px !important; overflow-wrap:anywhere; word-break:break-word; }
+          .endpoint-grid tr { display:block; width:100%; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+          .endpoint-grid td { display:block; min-width:0; width:100% !important; padding:6px 3px !important; overflow-wrap:anywhere; word-break:break-word; }
           .response-toolbar { align-items:flex-start !important; }
           .response-toolbar > div { flex-wrap:wrap; }
           .ref-panel { overflow:hidden; }
+          /* Make reference tables stack on mobile to avoid horizontal clipping */
           .ref-table { display:block; width:100%; min-width:0; }
           .ref-table thead, .ref-table tbody { display:block; width:100%; }
-          .ref-table tr { display:grid; grid-template-columns:minmax(0,25%) minmax(0,35%) minmax(0,40%); width:100%; }
-          .ref-table th, .ref-table td { display:block; min-width:0; width:auto; padding:9px 7px; overflow-wrap:anywhere; word-break:break-word; }
+          .ref-table tr { display:block; width:100%; border-bottom:1px solid rgba(255,255,255,0.05); }
+          .ref-table th, .ref-table td { display:block; min-width:0; width:100%; padding:9px 7px; overflow-wrap:anywhere; word-break:break-word; }
           .auth-section > div[style*="justify-content"] { flex-wrap:wrap; gap:6px; }
           .auth-section > div[style*="justify-content"] > span { max-width:100%; overflow-wrap:anywhere; }
         }
