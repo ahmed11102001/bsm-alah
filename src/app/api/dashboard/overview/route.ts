@@ -137,14 +137,14 @@ export async function GET(req: NextRequest) {
             ruleStatsMap.set(r.automationRuleId, entry);
         });
 
-        const automationPerformance: AutomationPerformanceItem[] = automationRules
+        const automationPerformance = automationRules
             .map(rule => {
                 const s = ruleStatsMap.get(rule.id) ?? { success: 0, failure: 0 };
                 const triggered = s.success + s.failure;
                 return {
                     id: rule.id,
                     name: rule.name,
-                    source: "rule",
+                    source: "rule" as const,
                     isEnabled: rule.isEnabled,
                     triggered,
                     successRate: triggered > 0 ? Math.round((s.success / triggered) * 100) : null,
@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
             })
             .filter(r => r.triggered > 0 || r.isEnabled)
             .sort((a, b) => b.triggered - a.triggered)
-            .slice(0, 4);
+            .slice(0, 4) as AutomationPerformanceItem[];
 
         if (aiAgent) {
             const agentSuccess = agentAnalytics.find(a => a.success)?._count.id ?? 0;
