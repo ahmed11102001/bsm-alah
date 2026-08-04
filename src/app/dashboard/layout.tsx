@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tabs";
 import {
   Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
-  Lock, Wifi, Sun, Moon, Monitor, Languages,
+  Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
@@ -427,6 +427,7 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
 }
 function UserMenuBadge({ initials, displayName, planName, dir, onOpenSettings, locale }: { initials: string, displayName: string, planName: string, dir: string, onOpenSettings: () => void, locale: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const usageRouter = useRouter();
 
   return (
     <div className="relative">
@@ -453,6 +454,11 @@ function UserMenuBadge({ initials, displayName, planName, dir, onOpenSettings, l
               <button onClick={() => { setIsOpen(false); onOpenSettings(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
                 <Settings className="w-4 h-4" />
                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+              </button>
+
+              <button onClick={() => { setIsOpen(false); usageRouter.push("/dashboard/usage"); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
+                <BarChart3 className="w-4 h-4" />
+                <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
               </button>
 
               <div onClick={() => setIsOpen(false)} className="w-full">
