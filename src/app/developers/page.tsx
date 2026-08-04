@@ -75,12 +75,20 @@ function PageContent() {
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <Link
               href="/"
-              className="top-nav-link"
+              className="marketers-nav-btn"
               style={{
                 fontSize: "13px",
-                color: "rgba(255,255,255,0.6)",
+                fontWeight: 600,
+                color: "#25D366",
+                background: "rgba(37, 211, 102, 0.12)",
+                border: "1px solid rgba(37, 211, 102, 0.3)",
+                padding: "5px 14px",
+                borderRadius: "20px",
                 textDecoration: "none",
-                transition: "color 0.15s",
+                transition: "all 0.2s ease",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
               }}
             >
               {t("Marketers", "المسوقين")}
@@ -183,6 +191,12 @@ function PageContent() {
       <style>{`
         .top-nav-link:hover {
           color: #ffffff !important;
+        }
+        .marketers-nav-btn:hover {
+          background: rgba(37, 211, 102, 0.25) !important;
+          border-color: rgba(37, 211, 102, 0.6) !important;
+          box-shadow: 0 0 14px rgba(37, 211, 102, 0.35);
+          color: #25D366 !important;
         }
         @media (max-width: 600px) {
           nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 12px; }
