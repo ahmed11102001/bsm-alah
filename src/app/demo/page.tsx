@@ -1,10 +1,26 @@
-export default function DemoPage() {
+
+"use client";
+
+// نسخة أولية من dashboard overview هنطورها في الخطوة الجاية بنفس تصميم
+// src/app/dashboard/page.tsx بالظبط. دلوقتي بس شاشة بسيطة تأكد إن الـ shell شغال.
+
+import { useSubscription } from "./_lib/dashboard-context";
+import { useLanguage } from "@/lib/language-context";
+
+export default function DemoHomePage() {
+  const { dashData } = useSubscription();
+  const { locale } = useLanguage();
+
+  if (!dashData) return null;
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 text-white px-4">
-      <div className="max-w-2xl text-center space-y-4">
-        <p className="text-4xl font-bold">قريباً الديمو</p>
-        <p className="text-sm text-slate-300">سنعلن عن صفحة الديمو قريباً.</p>
-      </div>
-    </main>
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold">
+        {locale === "ar" ? `أهلًا، ${dashData.user.name}` : `Welcome, ${dashData.user.name}`}
+      </h1>
+      <p className="text-sm text-gray-500">
+        {locale === "ar" ? "شاشة النظرة العامة الكاملة جاية في الخطوة الجاية." : "Full overview screen coming in the next step."}
+      </p>
+    </div>
   );
 }
