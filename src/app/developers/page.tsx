@@ -74,7 +74,20 @@ function PageContent() {
           {/* Links moved from Bottom Bar to Top Bar */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <Link
+              href="/"
+              className="top-nav-link"
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                textDecoration: "none",
+                transition: "color 0.15s",
+              }}
+            >
+              {t("Marketers", "المسوقين")}
+            </Link>
+            <Link
               href="/developers/docs"
+              className="top-nav-link"
               style={{
                 fontSize: "13px",
                 color: "rgba(255,255,255,0.6)",
@@ -86,6 +99,7 @@ function PageContent() {
             </Link>
             <Link
               href="/developers/privacy"
+              className="top-nav-link"
               style={{
                 fontSize: "13px",
                 color: "rgba(255,255,255,0.6)",
@@ -97,6 +111,7 @@ function PageContent() {
             </Link>
             <Link
               href="/developers/terms"
+              className="top-nav-link"
               style={{
                 fontSize: "13px",
                 color: "rgba(255,255,255,0.6)",
@@ -166,6 +181,9 @@ function PageContent() {
 
       {/* ── GLOBAL STYLES ───────────────────────────────────────────────── */}
       <style>{`
+        .top-nav-link:hover {
+          color: #ffffff !important;
+        }
         @media (max-width: 600px) {
           nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 12px; }
         }

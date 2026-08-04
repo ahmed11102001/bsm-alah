@@ -215,6 +215,8 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 {isAr ? "للمطورين — OTP API" : "Developers — OTP API"}
               </Link>
 
+              
+
               <button
                 onClick={() => { onLangChange(lang === "ar" ? "en" : "ar"); closeMobile(); }}
                 className="flex items-center gap-2 w-full py-3 px-3 rounded-xl text-gray-500 font-medium hover:bg-gray-50 transition-colors text-sm"
