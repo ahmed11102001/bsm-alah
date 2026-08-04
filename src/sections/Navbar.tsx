@@ -133,6 +133,24 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 </button>
               </Link>
 
+              {/* Demo btn */}
+              <Link href="/demo" style={{ textDecoration: "none" }}>
+                <button
+                  className="h-9 text-sm gap-1.5 flex items-center transition-all duration-200 px-4 rounded-lg"
+                  style={{
+                    background:  "transparent",
+                    color:       isLight ? "#374151" : "rgba(255,255,255,0.75)",
+                    border:      `1px solid ${isLight ? "#e5e7eb" : "rgba(255,255,255,0.15)"}`,
+                    fontFamily:  "inherit",
+                    cursor:      "pointer",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#25D366"; (e.currentTarget as HTMLButtonElement).style.color = "#25D366"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = isLight ? "#e5e7eb" : "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLButtonElement).style.color = isLight ? "#374151" : "rgba(255,255,255,0.75)"; }}
+                >
+                  {isAr ? "ديمو" : "Demo"}
+                </button>
+              </Link>
+
               {/* Login btn — يتغير شكله بعد الـ fold */}
               <Button
                 onClick={onLoginClick}
@@ -215,7 +233,12 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 {isAr ? "للمطورين — OTP API" : "Developers — OTP API"}
               </Link>
 
-              
+              <Link href="/demo" onClick={closeMobile}
+                className="flex items-center gap-2 w-full py-3 px-3 rounded-xl font-medium transition-colors text-sm"
+                style={{ color: "#25D366", animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 240ms both",
+                  textDecoration: "none" }}>
+                {isAr ? "ديمو" : "Demo"}
+              </Link>
 
               <button
                 onClick={() => { onLangChange(lang === "ar" ? "en" : "ar"); closeMobile(); }}
