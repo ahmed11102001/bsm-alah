@@ -20,8 +20,8 @@ export const t = {
 
   // ── Hero ────────────────────────────────────────────────────────────────────
   hero: {
-    badge: { ar: "🤖 مدعوم بالذكاء الاصطناعي", en: "🤖 Powered by AI" },
-    h1a: { ar: "بيع أكثر بـ", en: "Sell More with" },
+    badge: { ar: "وني AIشريك ميتا الرسمي", en: "AI WANI Official MetaPartner" },
+    h1a: { ar: "بيع أكتر بـ", en: "Sell More with" },
     h1highlight: { ar: "AI يبيع عنك", en: "AI That Sells For You" },
     h1b: { ar: "على الواتساب — ٢٤/٧", en: "on WhatsApp — 24/7" },
     subtitle: {
@@ -33,23 +33,9 @@ export const t = {
     stat3: { ar: "ربط متجرك فوراً", en: "Connect Your Store" },
     cta: { ar: "جرّب مجاناً — بدون بطاقة", en: "Try Free — No Card Needed" },
     ctaWatch: { ar: "شاهد كيف يعمل", en: "See How It Works" },
-    // chat mockup
-    chatHeader: { ar: "وني AI", en: "WANI AI" },
-    chatOnline: { ar: "يعمل الآن", en: "Active now" },
-    msg1: { ar: "عاوز اعرف سعر المنتج ده؟", en: "What's the price of this product?" },
-    msg2: { ar: "⚡ أهلاً! سعره ٢٩٩ج — ومتاح للشحن فوراً. هبعتلك رابط الطلب؟", en: "⚡ Hi! It's 299 EGP — available for immediate shipping. Want me to send the order link?" },
-    msg3: { ar: "تم تأكيد طلبك تلقائياً ✅ — رقم التتبع: #4821", en: "Your order was auto-confirmed ✅ — Tracking: #4821" },
-    typing: { ar: "AI يكتب...", en: "AI typing..." },
-    statMsg: { ar: "رد تلقائي", en: "Auto Reply" },
-    statCont: { ar: "صفقة أُغلقت", en: "Deal Closed" },
-    chatInput: { ar: "اكتب رسالة...", en: "Type a message..." },
-    floatSent: { ar: "صفقة أُغلقت! 🎉", en: "Deal Closed! 🎉" },
-    floatSentSub: { ar: "بدون تدخل بشري", en: "Zero human effort" },
-    floatConts: { ar: "أتمتة نشطة", en: "Automation Active" },
-    floatContsSub: { ar: "٥٬٦٧٨ رسالة تلقائية", en: "5,678 auto messages" },
-    floatRate: { ar: "معدل الإغلاق", en: "Close Rate" },
+    
     // trust strip
-    trust1: { ar: "إعداد في ١٥ دقيقة", en: "Setup in 15 minutes" },
+    trust1: { ar: "تكاملات متعددة", en: "Multiple integrations" },
     trust2: { ar: "تحديثات مستمرة", en: "Continuous updates" },
     trust3: { ar: "تحكم سلس", en: "Seamless control" },
   },
@@ -65,7 +51,7 @@ export const t = {
     },
     stat1: { ar: "نسبة التسليم", en: "Delivery Rate" },
     stat2: { ar: "وقت الإعداد", en: "Setup Time" },
-    stat2v: { ar: "١٥ دقيقة", en: "15 minutes" },
+    stat2v: { ar: "5دقائق", en: "5 minutes" },
     stat3: { ar: "دعم فني", en: "Support" },
     stat4: { ar: "واتساب API رسمي", en: "Official WhatsApp API" },
     items: [
