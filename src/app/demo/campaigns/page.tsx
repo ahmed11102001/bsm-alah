@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Megaphone, MessageSquare, RefreshCw, Eye, Trash2, Send, Calendar, Plus, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
+import { Loader2, Megaphone, MessageSquare, RefreshCw, Eye, Trash2, Send, Calendar, Plus, ChevronLeft, ChevronRight, Users, X, CheckCircle } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
 import { useTemplateParser } from "@/hooks/useTemplateParser";

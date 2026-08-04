@@ -6,7 +6,8 @@
 
 import type { DashboardData } from "./dashboard-context";
 import type { Audience } from "@/app/dashboard/contacts/_components/types";
-import type { Campaign, Template, AudienceOption } from "@/app/dashboard/campaigns/_components/types";
+import type { Campaign, Template as CampaignTemplate, AudienceOption } from "@/app/dashboard/campaigns/_components/types";
+import type { Template as DashboardTemplate } from "@/app/dashboard/templates/_components/types";
 import type { Message } from "@/app/dashboard/chat/_components/types";
 
 export const DEMO_STORE_NAME = "متجر ليالي للعطور";
@@ -234,7 +235,7 @@ export const DEMO_CHAT_AUDIENCES = [
   { id: "aud-3", name: "زوار المتجر" },
 ];
 
-export const DEMO_CAMPAIGN_TEMPLATES: Template[] = [
+export const DEMO_CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   {
     id: "tmpl-1",
     name: "عرض خاص العيد",
@@ -246,7 +247,7 @@ export const DEMO_CAMPAIGN_TEMPLATES: Template[] = [
   {
     id: "tmpl-2",
     name: "تذكير بالعربة المتروكة",
-    content: "مرحباً {{1}}، لديك عناصر متروكة في عربتك. اكمل الطلب الآن واحصل على شحن مجاني.",
+    content: "أهلاً {{1}}، لا تفوت الشحن المجاني وحصل على منتجك قبل نهاية اليوم.",
     status: "approved",
     language: "ar",
     category: "UTILITY",
@@ -254,7 +255,23 @@ export const DEMO_CAMPAIGN_TEMPLATES: Template[] = [
   {
     id: "tmpl-3",
     name: "شكراً لتواصلك",
-    content: "شكراً لتواصلك معنا {{1}}. سنعود إليك خلال 24 ساعة.",
+    content: "شكراً لتواصلك معنا {{1}}! هل تفضل العطور الشرقية أم العطور الزهرية؟",
+    status: "approved",
+    language: "ar",
+    category: "SERVICE",
+  },
+  {
+    id: "tmpl-4",
+    name: "استعادة العملاء",
+    content: "مرحباً {{1}}، اشتقنا لك! عد الآن واحصل على خصم 15% على منتجك القادم.",
+    status: "approved",
+    language: "ar",
+    category: "MARKETING",
+  },
+  {
+    id: "tmpl-5",
+    name: "عرض VIP الخاص",
+    content: "عزيزي {{1}}، كعميل VIP نقدم لك تجربة فاخرة مع هدية مجانية عند الطلب هذا الأسبوع.",
     status: "approved",
     language: "ar",
     category: "SERVICE",
@@ -320,11 +337,11 @@ export const DEMO_CAMPAIGNS: Campaign[] = [
     scheduledAt: null,
     createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
     completedAt: new Date(Date.now() - 9.5 * 24 * 3600 * 1000).toISOString(),
-    template: { name: "عرض خاص العيد", content: "مرحباً {{1}}! استمتع بخصم 20% على العطور المختارة حتى نهاية الأسبوع.", category: "MARKETING" },
+    template: { name: "عرض VIP الخاص", content: "عزيزي {{1}}، كعميل VIP نقدم لك تجربة فاخرة مع هدية مجانية عند الطلب هذا الأسبوع.", category: "SERVICE" },
   },
   {
     id: "demo-cmp-5",
-    name: "صيانة القالب التجريبي",
+    name: "متابعة الترحيب",
     status: "draft",
     sentCount: 0,
     deliveredCount: 0,
@@ -335,7 +352,7 @@ export const DEMO_CAMPAIGNS: Campaign[] = [
     scheduledAt: null,
     createdAt: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString(),
     completedAt: null,
-    template: { name: "شكراً لتواصلك", content: "شكراً لتواصلك معنا {{1}}. سنعود إليك خلال 24 ساعة.", category: "SERVICE" },
+    template: { name: "شكراً لتواصلك", content: "شكراً لتواصلك معنا {{1}}! هل تفضل العطور الشرقية أم العطور الزهرية؟", category: "SERVICE" },
   },
 ];
 
@@ -344,6 +361,86 @@ export const DEMO_CAMPAIGN_AUDIENCES: AudienceOption[] = [
   { id: "demo-aud-engaged", name: "عملاء متفاعلون", type: "engaged", contactCount: 184 },
   { id: "demo-aud-no-response", name: "مهملون من دون رد", type: "no-response", contactCount: 98 },
   { id: "demo-aud-custom-1", name: "قائمة العروض الخاصة", type: "custom", contactCount: 12 },
+];
+
+export const DEMO_TEMPLATES: DashboardTemplate[] = [
+  {
+    id: "demo-tpl-1",
+    name: "order_confirmation",
+    category: "UTILITY",
+    language: "ar",
+    status: "APPROVED",
+    body: "مرحباً {{1}} 👋\n\nطلبك رقم #{{2}} تم تأكيده بنجاح. سنرسل لك تفاصيل الشحن قريباً.",
+    headerType: "none",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "أرسل لي التتبع", value: "TRACK_ORDER" },
+      { type: "quick_reply", text: "تعديل الطلب", value: "EDIT_ORDER" },
+    ],
+    exampleVars: ["أحمد", "12345"],
+    createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "demo-tpl-2",
+    name: "abandoned_cart_reminder",
+    category: "MARKETING",
+    language: "ar",
+    status: "PENDING",
+    body: "أهلاً {{1}}، نسيت منتجاً في سلتك بقيمة {{2}}. اكمل الطلب الآن واحصل على شحن مجاني!",
+    headerType: "image",
+    footer: "Wani Store",
+    buttons: [
+      { type: "url", text: "أكمل الطلب", value: "https://demo.wani.app/cart" },
+    ],
+    exampleVars: ["سارة", "240 ج.م"],
+    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "demo-tpl-3",
+    name: "support_followup",
+    category: "UTILITY",
+    language: "ar",
+    status: "REJECTED",
+    rejectedReason: "يجب تعديل نص الافتتاحية لتجنب الحشو.",
+    body: "مرحباً {{1}}، نتمنى أن يكون طلبك قد وصل. هل تحتاج أي مساعدة إضافية؟",
+    headerType: "none",
+    footer: "Wani Store",
+    buttons: [
+      { type: "quick_reply", text: "نعم، أحتاج مساعدة", value: "NEED_HELP" },
+      { type: "quick_reply", text: "لا شكراً", value: "NO_THANKS" },
+    ],
+    exampleVars: ["أحمد"],
+    createdAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "demo-tpl-4",
+    name: "vip_offer",
+    category: "MARKETING",
+    language: "ar",
+    status: "PAUSED",
+    body: "عزيزي {{1}}, كعميل VIP نقدّم لك خصم 25% على المنتج المفضل لديك. العرض ينتهي غداً.",
+    headerType: "none",
+    footer: "Wani Store",
+    exampleVars: ["خالد"],
+    createdAt: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 11 * 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "demo-tpl-5",
+    name: "otp_login",
+    category: "AUTHENTICATION",
+    language: "en",
+    status: "APPROVED",
+    body: "Your login code is {{1}}. It expires in 10 minutes.",
+    headerType: "none",
+    footer: "Wani Secure",
+    exampleVars: ["123456"],
+    createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
+  },
 ];
 
 export const DEMO_CONTACT_AUDIENCES: Audience[] = [
