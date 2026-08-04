@@ -577,7 +577,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         sidebarCollapsed ? "w-20" : "w-64"
       } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
-          sidebarCollapsed ? "justify-center px-2" : "justify-between px-4"
+          sidebarCollapsed ? "justify-center px-2" : "px-6"
         }`}>
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -589,17 +589,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </div>
-          <button
-            onClick={toggleSidebar}
-            title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-          >
-            {dir === "rtl" ? (
-              sidebarCollapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
-            ) : (
-              sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />
-            )}
-          </button>
         </div>
 
         <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
