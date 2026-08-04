@@ -24,6 +24,7 @@ import {
 import {
   Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
@@ -499,6 +500,21 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // "/dashboard" → "home", "/dashboard/campaigns" → "campaigns" ... إلخ
   const activeSection = pathname === "/dashboard" ? "home" : (pathname.split("/")[2] ?? "home");
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("wani_sidebar_collapsed");
+    if (saved === "true") setSidebarCollapsed(true);
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem("wani_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
+
   useEffect(() => {
     const handleTriggerReview = () => {
       if (!dashData || dashData.user.hasTestimonial) return;
@@ -557,58 +573,95 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-colors duration-200 ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
-        <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
-            <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${
+        sidebarCollapsed ? "w-20" : "w-64"
+      } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
+        <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
+          sidebarCollapsed ? "justify-center px-2" : "justify-between px-4"
+        }`}>
+          <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+            </div>
+            {!sidebarCollapsed && (
+              <span className="text-lg font-bold truncate">
+                {locale === "ar" ? "وني" : "WANI"}
+              </span>
+            )}
           </div>
-          <span className="text-lg font-bold mx-3">
-            {locale === "ar" ? "وني" : "WANI"}
-          </span>
+          <button
+            onClick={toggleSidebar}
+            title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+          >
+            {dir === "rtl" ? (
+              sidebarCollapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
+            ) : (
+              sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />
+            )}
+          </button>
         </div>
 
-        <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto">
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
           {sidebarItems.map((item) => (
             <Link key={item.id} href={sidebarHref(item.id)}
               data-sidebar-id={item.id}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${activeSection === item.id
+              title={sidebarCollapsed ? item.label : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                sidebarCollapsed ? "justify-center px-0" : ""
+              } ${activeSection === item.id
                 ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
                 : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 }`}>
-              <item.icon className="w-[18px] h-[18px]" />
-              <span>{item.label}</span>
+              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
 
           {isSuper && (
             <Link href={sidebarHref("admin")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${activeSection === "admin"
+              title={sidebarCollapsed ? t.sidebar.admin : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${
+                sidebarCollapsed ? "justify-center px-0" : ""
+              } ${activeSection === "admin"
                 ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
                 : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
                 }`}>
-              <adminItem.icon className="w-[18px] h-[18px]" />
-              <span>{t.sidebar.admin}</span>
+              <adminItem.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
             </Link>
           )}
         </nav>
 
-        <div className="border-t border-gray-100 dark:border-gray-700 p-4 flex-shrink-0 space-y-1">
-          <ThemeToggle />
-          <LanguageToggle />
+        <div className="border-t border-gray-100 dark:border-gray-700 p-3 flex-shrink-0 space-y-1">
+          <ThemeToggle compact={sidebarCollapsed} />
+          <LanguageToggle compact={sidebarCollapsed} />
 
-          <div className="flex items-center gap-2.5 py-2">
-            <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-              {initials}
+          {!sidebarCollapsed ? (
+            <div className="flex items-center gap-2.5 py-2">
+              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">{displayName}</p>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{displayName}</p>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+          ) : (
+            <div className="flex justify-center py-2" title={`${displayName} (${planName})`}>
+              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {initials}
+              </div>
             </div>
-          </div>
+          )}
 
           <button onClick={() => signOut({ callbackUrl: "/" })}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm">
-            <LogOut className="w-4 h-4" /><span>{t.signOut}</span>
+            title={sidebarCollapsed ? t.signOut : undefined}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm ${
+              sidebarCollapsed ? "justify-center px-0" : ""
+            }`}>
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!sidebarCollapsed && <span>{t.signOut}</span>}
           </button>
         </div>
       </aside>
@@ -710,7 +763,11 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Main ── */}
-      <main className={`flex-1 min-w-0 ${dir === "rtl" ? "lg:mr-64" : "lg:ml-64"}`}>
+      <main className={`flex-1 min-w-0 transition-all duration-300 ${
+        dir === "rtl" 
+          ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64") 
+          : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
+      }`}>
         {/* Header */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
 
@@ -725,6 +782,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               <span className="block w-[18px] h-0.5 bg-current rounded-full" />
               <span className="block w-[18px] h-0.5 bg-current rounded-full" />
             </div>
+          </button>
+
+          {/* Desktop Toggle Button in Topbar */}
+          <button
+            onClick={toggleSidebar}
+            className="hidden lg:flex items-center p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
           </button>
 
           <div className="flex-1 hidden lg:block" />
