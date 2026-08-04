@@ -4,11 +4,89 @@ import { useState } from "react";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "@/lib/dashboard-context";
 import { SUBSCRIPTION_PLANS } from "@/lib/pricing";
+import { PLAN_COLORS, limitLabel, usagePct } from "@/app/dashboard/_shared";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import {
-  Bot, Sparkles, Loader2, BarChart3,
+  Bot, Sparkles, Loader2, BarChart3, Star, RefreshCw, ArrowUpRight,
 } from "lucide-react";
+
+// ─── PlanCard Component ──────────────────────────────────────────────────────
+function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
+  const { t } = useLanguage();
+  const p = t.home.plan;
+  const contactsPct = usagePct(plan.usage.contacts, plan.limits.contacts);
+  const campaignsPct = usagePct(plan.usage.campaignsThisMonth, plan.limits.campaignsPerMonth);
+  const teamPct = usagePct(plan.usage.teamMembers, plan.limits.teamMembers);
+  const isNearLimit = (pct: number) => pct >= 80;
+  const isEnterprise = plan.plan === "enterprise";
+
+  return (
+    <Card className="border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Star className="w-4 h-4 text-amber-500" />
+              <span className="font-bold text-sm">{p.title}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold px-3 py-1 rounded-full ${PLAN_COLORS[plan.plan] ?? "bg-gray-100 text-gray-600"}`}>
+                {plan.planName}
+              </span>
+              <span className="text-xs text-gray-400">{plan.status === "active" ? p.active : p.expired}</span>
+            </div>
+          </div>
+          {!isEnterprise && (
+            <div className="flex gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline"
+                className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
+                onClick={() => toast.info("قريباً — نظام الدفع")}>
+                <RefreshCw className="w-3 h-3" /> {p.changePlan}
+              </Button>
+              <Button size="sm"
+                className="text-xs h-8 gap-1 bg-[#25D366] hover:bg-[#20bb5a] text-white"
+                onClick={() => toast.info("قريباً — نظام الدفع")}>
+                <ArrowUpRight className="w-3 h-3" /> {p.upgrade}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { label: p.contacts, used: plan.usage.contacts, limit: plan.limits.contacts, pct: contactsPct },
+            { label: p.campaignsMonth, used: plan.usage.campaignsThisMonth, limit: plan.limits.campaignsPerMonth, pct: campaignsPct },
+            { label: p.teamMembers, used: plan.usage.teamMembers, limit: plan.limits.teamMembers, pct: teamPct },
+          ].map(item => (
+            <div key={item.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
+                <span className={`text-xs font-semibold ${isNearLimit(item.pct) ? "text-orange-500" : ""}`}>
+                  {item.used.toLocaleString()} / {limitLabel(item.limit)}
+                </span>
+              </div>
+              <Progress value={item.pct} className={`h-1.5 ${isNearLimit(item.pct) ? "[&>div]:bg-orange-400" : "[&>div]:bg-[#25D366]"}`} />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-gray-50 dark:border-gray-700">
+          {(Object.entries(p.features) as [keyof typeof p.features, string][]).map(([key, label]) => {
+            const on = plan.limits[key as keyof typeof plan.limits] as boolean;
+            return (
+              <span key={key} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${on ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                : "bg-gray-100 text-gray-400 dark:bg-gray-700 line-through"
+                }`}>{label}</span>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── WANI AI Enterprise Token Card ───────────────────────────────────────────
 function EnterpriseTokenCard({ data }: { data: DashboardData }) {
@@ -280,6 +358,9 @@ export default function UsagePage() {
           </p>
         </div>
       </div>
+
+      {/* ── Plan Card ── */}
+      <PlanCard plan={dashData.plan} />
 
       {/* ── WANI AI Token Card ── */}
       {isEnterprise ? (
