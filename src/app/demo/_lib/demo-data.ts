@@ -443,6 +443,21 @@ export const DEMO_TEMPLATES: DashboardTemplate[] = [
   },
 ];
 
+export interface DemoTeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "FULL_ACCESS" | "CHAT_ONLY" | "OWNER";
+  inviteCode: string | null;
+}
+
+export const DEMO_TEAM_MEMBERS: DemoTeamMember[] = [
+  { id: "demo-user-1", name: DEMO_USER_NAME, email: DEMO_USER_EMAIL, role: "OWNER", inviteCode: null },
+  { id: "demo-team-2", name: "سارة أحمد", email: "sara@layali-perfumes.com", role: "FULL_ACCESS", inviteCode: null },
+  { id: "demo-team-3", name: "محمود سيد", email: "mahmoud@layali-perfumes.com", role: "CHAT_ONLY", inviteCode: null },
+  { id: "demo-team-4", name: "نور الدين", email: "nour@layali-perfumes.com", role: "CHAT_ONLY", inviteCode: "TEAM4829" },
+];
+
 export const DEMO_CONTACT_AUDIENCES: Audience[] = [
   {
     id: "demo-aud-vip",

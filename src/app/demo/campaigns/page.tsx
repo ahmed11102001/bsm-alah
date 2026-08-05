@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, Megaphone, MessageSquare, RefreshCw, Eye, Trash2, Send, Calendar, Plus, ChevronLeft, ChevronRight, Users, X, CheckCircle } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-import { useSubscription } from "@/lib/dashboard-context";
+import { useSubscription } from "../_lib/dashboard-context";
 import { useTemplateParser } from "@/hooks/useTemplateParser";
 import { tr } from "@/app/dashboard/campaigns/_components/i18n";
 import { cleanNumber, isValidPhone } from "@/app/dashboard/campaigns/_components/helpers";
@@ -254,7 +254,7 @@ export default function DemoCampaignsPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{total} {tr("totalCampaignsSubtitle", lang)}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button onClick={() => {}} className="inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:border-green-400 transition">
+          <button onClick={() => { }} className="inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:border-green-400 transition">
             <RefreshCw className="w-4 h-4" />
           </button>
           <Button onClick={openCampaignDialog} className={atLimit ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-2" : "bg-[#25D366] hover:bg-[#20bb5a] text-white gap-2"}>
