@@ -426,56 +426,6 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
     </div>
   );
 }
-function UserMenuBadge({ initials, displayName, planName, dir, onOpenSettings, locale }: { initials: string, displayName: string, planName: string, dir: string, onOpenSettings: () => void, locale: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const usageRouter = useRouter();
-
-  return (
-    <div className="relative">
-      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 focus:outline-none rounded-full">
-        <div className={`${dir === "rtl" ? "text-right" : "text-left"} hidden sm:block`}>
-          <p className="text-sm font-semibold leading-tight text-gray-900 dark:text-white">{displayName}</p>
-          <p className="text-[10px] text-gray-400">{planName}</p>
-        </div>
-        <div className="w-9 h-9 rounded-full bg-[#25D366] hover:bg-[#20bb5a] transition-colors flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-transparent hover:ring-[#25D366]/20">
-          {initials}
-        </div>
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-56 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden`}>
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 sm:hidden">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">{displayName}</p>
-              <p className="text-xs text-gray-500">{planName}</p>
-            </div>
-
-            <div className="p-2 space-y-0.5">
-              <button onClick={() => { setIsOpen(false); onOpenSettings(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
-                <Settings className="w-4 h-4" />
-                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-              </button>
-
-              <button onClick={() => { setIsOpen(false); usageRouter.push("/dashboard/usage"); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
-                <BarChart3 className="w-4 h-4" />
-                <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
-              </button>
-
-              <div onClick={() => setIsOpen(false)} className="w-full">
-                <LanguageToggle />
-              </div>
-              <div onClick={() => setIsOpen(false)} className="w-full">
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 // ─── Dashboard Shell (Sidebar + Topbar + Mobile Menu) ────────────────────────
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -493,9 +443,20 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { dashData, loadingDash, refreshDash, hasMetaConnection, isSuper } = useSubscription();
   const [showSettings, setShowSettings] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    setAccountPanelOpen(false);
+  }, [pathname]);
+
+  const accountLabel = locale === "ar" ? "الحساب" : "Account";
+  const openAccountPanel = () => {
+    if (sidebarCollapsed) setSidebarCollapsed(false);
+    setAccountPanelOpen((prev) => !prev);
+  };
 
   // "/dashboard" → "home", "/dashboard/campaigns" → "campaigns" ... إلخ
   const activeSection = pathname === "/dashboard" ? "home" : (pathname.split("/")[2] ?? "home");
@@ -607,6 +568,60 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
 
+          <button
+            type="button"
+            onClick={openAccountPanel}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+              sidebarCollapsed ? "justify-center px-0" : ""
+            } ${accountPanelOpen
+              ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            }`}
+          >
+            <User className="w-[18px] h-[18px] flex-shrink-0" />
+            {!sidebarCollapsed && (
+              <div className="min-w-0 text-left">
+                <p className="truncate">{accountLabel}</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
+              </div>
+            )}
+          </button>
+
+          {!sidebarCollapsed && accountPanelOpen && (
+            <div className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 space-y-2">
+              <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{accountLabel}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setAccountPanelOpen(false); openSettings(); }}
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Settings className="w-4 h-4" />
+                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/usage"); }}
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+              </button>
+              <LanguageToggle />
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="w-full flex items-center gap-3 text-sm text-red-500 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{t.signOut}</span>
+              </button>
+            </div>
+          )}
+
           {isSuper && (
             <Link href={sidebarHref("admin")}
               title={sidebarCollapsed ? t.sidebar.admin : undefined}
@@ -622,37 +637,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <div className="border-t border-gray-100 dark:border-gray-700 p-3 flex-shrink-0 space-y-1">
-          <ThemeToggle compact={sidebarCollapsed} />
-          <LanguageToggle compact={sidebarCollapsed} />
-
-          {!sidebarCollapsed ? (
-            <div className="flex items-center gap-2.5 py-2">
-              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate">{displayName}</p>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center py-2" title={`${displayName} (${planName})`}>
-              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                {initials}
-              </div>
-            </div>
-          )}
-
-          <button onClick={() => signOut({ callbackUrl: "/" })}
-            title={sidebarCollapsed ? t.signOut : undefined}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm ${
-              sidebarCollapsed ? "justify-center px-0" : ""
-            }`}>
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!sidebarCollapsed && <span>{t.signOut}</span>}
-          </button>
-        </div>
       </aside>
 
       {/* ── Mobile Full-Screen Menu ── */}
@@ -724,29 +708,46 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           </nav>
 
           {/* Footer actions */}
-          <div className="px-4 mt-4 mb-6 space-y-1.5">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-                <ThemeToggle />
-              </div>
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="px-4 mt-4 mb-6">
+            <button
+              type="button"
+              onClick={() => setAccountPanelOpen((prev) => !prev)}
+              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+            >
+              <User className="w-5 h-5 flex-shrink-0" />
+              <span>{accountLabel}</span>
+            </button>
+
+            {accountPanelOpen && (
+              <div className="mt-3 space-y-2 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <button
+                  type="button"
+                  onClick={() => { openSettings(); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { router.push("/dashboard/usage"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+                </button>
                 <LanguageToggle />
+                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={() => { signOut({ callbackUrl: "/" }); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{t.signOut}</span>
+                </button>
               </div>
-              <button
-                onClick={() => { openSettings(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
-              >
-                <Settings className="w-5 h-5 flex-shrink-0" />
-                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-              </button>
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-red-500"
-              >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
-                <span>{t.signOut}</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -804,14 +805,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             )}
             <div id="assistant-header-slot" className="flex items-center" />
 
-            <UserMenuBadge
-              initials={initials}
-              displayName={displayName}
-              planName={planName}
-              dir={dir}
-              onOpenSettings={openSettings}
-              locale={locale}
-            />
           </div>
         </header>
 
