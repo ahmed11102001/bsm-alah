@@ -22,7 +22,7 @@ import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import {
-  Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
+  User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3,
   ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
