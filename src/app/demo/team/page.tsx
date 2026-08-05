@@ -8,7 +8,38 @@ import {
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "../_lib/dashboard-context";
-import { DEMO_TEAM_MEMBERS, type DemoTeamMember } from "../_lib/demo-data";
+
+type DemoTeamMember = {
+    id: string;
+    name: string | null;
+    email: string;
+    role: "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
+    inviteCode?: string | null;
+};
+
+const INITIAL_TEAM_MEMBERS: DemoTeamMember[] = [
+    {
+        id: "demo-user-1",
+        name: "عميل وني",
+        email: "demo@wani.app",
+        role: "OWNER",
+        inviteCode: "WANI01",
+    },
+    {
+        id: "demo-team-2",
+        name: "ليلى محمد",
+        email: "layla@wani.app",
+        role: "FULL_ACCESS",
+        inviteCode: "TEAM02",
+    },
+    {
+        id: "demo-team-3",
+        name: "سارة علي",
+        email: "sara@wani.app",
+        role: "CHAT_ONLY",
+        inviteCode: "TEAM03",
+    },
+];
 
 const ROLE_CFG = {
     OWNER: { icon: ShieldAlert, pill: "bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-300", avatar: "from-amber-500  to-amber-600" },
@@ -90,7 +121,7 @@ export default function DemoTeamPage() {
     const { t, dir, locale } = useLanguage();
     const tm = t.team;
 
-    const [members, setMembers] = useState<DemoTeamMember[]>(DEMO_TEAM_MEMBERS);
+    const [members, setMembers] = useState<DemoTeamMember[]>(INITIAL_TEAM_MEMBERS);
     const [submitting, setSubmitting] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
