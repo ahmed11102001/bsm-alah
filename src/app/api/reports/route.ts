@@ -14,7 +14,7 @@ function resolveUserId(session: any): string {
 
 function dateRange(from?: string | null, to?: string | null) {
   const gte = from ? new Date(from) : new Date(Date.now() - 30 * 86400_000);
-  const lte = to   ? new Date(to)   : new Date();
+  const lte = to ? new Date(to) : new Date();
   lte.setHours(23, 59, 59, 999);
   return { gte, lte };
 }
@@ -37,15 +37,15 @@ export async function GET(req: NextRequest) {
       if (block) return block;
     }
 
-    const from  = searchParams.get("from");
-    const to    = searchParams.get("to");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const range = dateRange(from, to);
 
     switch (type) {
-      case "overview":  return overview(userId, range);
+      case "overview": return overview(userId, range);
       case "customers": return customers(userId, range, searchParams);
-      case "team":      return team(userId);
-      case "logs":      return logs(userId, range, searchParams);
+      case "team": return team(userId);
+      case "logs": return logs(userId, range, searchParams);
       default:
         return NextResponse.json(
           { error: "نوع غير معروف" },
@@ -71,9 +71,9 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
     prisma.message.count({ where: { userId, direction: MessageDirection.outbound, createdAt: range } }),
     // delivered = delivered + read (اللي اتقرأ اتوصّل بالتأكيد)
     prisma.message.count({ where: { userId, status: { in: [MessageStatus.delivered, MessageStatus.read] }, createdAt: range } }),
-    prisma.message.count({ where: { userId, status: MessageStatus.read,            createdAt: range } }),
-    prisma.message.count({ where: { userId, status: MessageStatus.failed,          createdAt: range } }),
-    prisma.message.count({ where: { userId, direction: MessageDirection.inbound,   createdAt: range } }),
+    prisma.message.count({ where: { userId, status: MessageStatus.read, createdAt: range } }),
+    prisma.message.count({ where: { userId, status: MessageStatus.failed, createdAt: range } }),
+    prisma.message.count({ where: { userId, direction: MessageDirection.inbound, createdAt: range } }),
     prisma.contact.count({ where: { userId, createdAt: range } }),
 
     // best campaigns (top 5 by readCount)
@@ -85,10 +85,11 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
     }),
 
     // daily messages for chart — raw messages grouped by date
-    prisma.$queryRaw<{ day: string; sent: bigint; received: bigint }[]>`
+    prisma.$queryRaw<{ day: string; sent: bigint; delivered: bigint; received: bigint }[]>`
       SELECT
         TO_CHAR("createdAt", 'YYYY-MM-DD') AS day,
         COUNT(*) FILTER (WHERE direction = 'outbound') AS sent,
+        COUNT(*) FILTER (WHERE direction = 'outbound' AND status IN ('delivered', 'read')) AS delivered,
         COUNT(*) FILTER (WHERE direction = 'inbound')  AS received
       FROM "Message"
       WHERE "userId" = ${userId}
@@ -114,18 +115,19 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
   ]);
 
   const deliveryRate = totalSent > 0 ? +((totalDelivered / totalSent) * 100).toFixed(1) : 0;
-  const readRate     = totalSent > 0 ? +((totalRead      / totalSent) * 100).toFixed(1) : 0;
-  const replyRate    = totalSent > 0 ? +((inbound        / totalSent) * 100).toFixed(1) : 0;
+  const readRate = totalSent > 0 ? +((totalRead / totalSent) * 100).toFixed(1) : 0;
+  const replyRate = totalSent > 0 ? +((inbound / totalSent) * 100).toFixed(1) : 0;
 
   const daily = dailyRaw.map((r) => ({
-    day:      r.day,
-    sent:     Number(r.sent),
+    day: r.day,
+    sent: Number(r.sent),
+    delivered: Number(r.delivered),
     received: Number(r.received),
   }));
 
   const hourly = hourlyRaw.map((r) => ({
     hour: Number(r.hour),
-    cnt:  Number(r.cnt),
+    cnt: Number(r.cnt),
   }));
 
   return NextResponse.json({
@@ -262,15 +264,15 @@ async function team(ownerId: string) {
     }),
   ]);
 
-  const sentMap   = new Map(sentPerUser.map((r)   => [r.userId, r._count.id]));
+  const sentMap = new Map(sentPerUser.map((r) => [r.userId, r._count.id]));
   const repliedMap = new Map(repliedPerUser.map((r) => [r.userId, r._count.id]));
 
   const result = members.map((m) => ({
-    id:       m.id,
-    name:     m.name ?? m.email,
-    role:     m.role,
-    sent:     sentMap.get(m.id)    ?? 0,
-    replied:  repliedMap.get(m.id) ?? 0,
+    id: m.id,
+    name: m.name ?? m.email,
+    role: m.role,
+    sent: sentMap.get(m.id) ?? 0,
+    replied: repliedMap.get(m.id) ?? 0,
   }));
 
   return NextResponse.json(result);
@@ -282,8 +284,8 @@ async function logs(
   range: { gte: Date; lte: Date },
   params: URLSearchParams
 ) {
-  const page   = Math.max(parseInt(params.get("page")  ?? "1"),  1);
-  const limit  = Math.min(parseInt(params.get("limit") ?? "50"), 100);
+  const page = Math.max(parseInt(params.get("page") ?? "1"), 1);
+  const limit = Math.min(parseInt(params.get("limit") ?? "50"), 100);
   const status = params.get("status");
   const search = params.get("search");
   const msgType = params.get("msgType");
@@ -292,9 +294,9 @@ async function logs(
     userId,
     createdAt: range,
   };
-  if (status)  where.status  = status;
-  if (msgType) where.type    = msgType;
-  if (search)  where.contact = { phone: { contains: search } };
+  if (status) where.status = status;
+  if (msgType) where.type = msgType;
+  if (search) where.contact = { phone: { contains: search } };
 
   const [total, messages] = await Promise.all([
     prisma.message.count({ where }),
@@ -304,9 +306,9 @@ async function logs(
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        contact:  { select: { phone: true, name: true } },
+        contact: { select: { phone: true, name: true } },
         campaign: { select: { name: true } },
-        user:     { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
       },
     }),
   ]);

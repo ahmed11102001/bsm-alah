@@ -102,19 +102,28 @@ export const translations = {
       // ── Home Overview Widgets ────────────────────────────────────────────────
       overview: {
         messaging: {
-          title: "أداء الرسائل",
+          title: "الرسائل يومياً",
           range7: "٧ أيام",
           range30: "٣٠ يوم",
           range90: "٣ شهور",
-          sent: "مرسل",
+          sent: "رسائل مرسلة",
           delivered: "تم التوصيل",
           replies: "ردود",
+          inbound: "رسائل واردة",
           empty: "لا توجد رسائل في هذه الفترة",
         },
         campaignBreakdown: {
           running: "قيد التنفيذ",
           scheduled: "مجدولة",
           completed: "مكتملة",
+        },
+        templateCost: {
+          title: "تكلفة القوالب",
+          reports: "تقارير",
+          totalSpend: "إجمالي الإنفاق",
+          marketing: "قوالب تسويقية",
+          service: "قوالب خدمية",
+          empty: "لا توجد بيانات إنفاق بعد",
         },
         automation: {
           title: "أداء الأتمتة",
@@ -699,19 +708,28 @@ export const translations = {
       // ── Home Overview Widgets ────────────────────────────────────────────────
       overview: {
         messaging: {
-          title: "Messaging Performance",
+          title: "Messages per day",
           range7: "7 Days",
           range30: "30 Days",
           range90: "3 Months",
-          sent: "Sent",
+          sent: "Sent messages",
           delivered: "Delivered",
           replies: "Replies",
+          inbound: "Inbound messages",
           empty: "No messages in this period",
         },
         campaignBreakdown: {
           running: "Running",
           scheduled: "Scheduled",
           completed: "Completed",
+        },
+        templateCost: {
+          title: "Templates Cost",
+          reports: "Reports",
+          totalSpend: "Total spend",
+          marketing: "Marketing templates",
+          service: "Service templates",
+          empty: "No spending data yet",
         },
         automation: {
           title: "Automation Performance",

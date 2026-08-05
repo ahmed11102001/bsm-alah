@@ -211,17 +211,19 @@ export default function ReportsOverviewPage() {
                       <Tooltip
                         formatter={(value: any, name: any) => [
                           value,
-                          name === "sent" ? pageText[locale].charts.sent : pageText[locale].charts.received,
+                          name === "sent" ? pageText[locale].charts.sent : name === "delivered" ? pageText[locale].charts.delivered : pageText[locale].charts.received,
                         ]}
                         labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
                       />
-                      <Line type="monotone" dataKey="sent" stroke="#22c55e" strokeWidth={2} dot={false} name="sent" />
-                      <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" />
+                      <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={false} name="sent" />
+                      <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={false} name="delivered" />
+                      <Line type="monotone" dataKey="received" stroke="#9333ea" strokeWidth={2} dot={false} name="received" />
                     </LineChart>
                   </ResponsiveContainer>
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-500 inline-block" /> {pageText[locale].charts.campaignsLegendSent}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-500 inline-block" /> {pageText[locale].charts.campaignsLegendReceived}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-600 inline-block" /> {pageText[locale].charts.campaignsLegendSent}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-600 inline-block" /> {pageText[locale].charts.campaignsLegendDelivered}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-purple-600 inline-block" /> {pageText[locale].charts.campaignsLegendReceived}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -311,8 +313,8 @@ export default function ReportsOverviewPage() {
                     fetchCustomers(s.value);
                   }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${custSegment === s.value
-                      ? "border-green-500 bg-green-50 text-green-700"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300 bg-white"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300 bg-white"
                     }`}
                 >
                   {s.icon} {s.label}
@@ -431,8 +433,8 @@ export default function ReportsOverviewPage() {
                             <td className="py-3 px-4 font-medium text-gray-800">{m.name}</td>
                             <td className="py-3 px-4">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.role === "OWNER" ? "bg-purple-100 text-purple-700" :
-                                  m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700" :
-                                    "bg-gray-100 text-gray-600"
+                                m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700" :
+                                  "bg-gray-100 text-gray-600"
                                 }`}>
                                 {m.role === "OWNER" ? (locale === "ar" ? "مالك" : "Owner") : m.role === "FULL_ACCESS" ? (locale === "ar" ? "وصول كامل" : "Full Access") : (locale === "ar" ? "دردشة فقط" : "Chat Only")}
                               </span>

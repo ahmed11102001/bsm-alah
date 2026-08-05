@@ -11,7 +11,7 @@ export interface Overview {
     inbound: number; uniqueContacts: number;
     deliveryRate: number; readRate: number; replyRate: number;
   };
-  daily: { day: string; sent: number; received: number }[];
+  daily: { day: string; sent: number; delivered: number; received: number }[];
   hourly: { hour: number; cnt: number }[];
   bestCampaigns: { name: string; sentCount: number; deliveredCount: number; readCount: number; failedCount: number; rate: number }[];
 }
@@ -136,11 +136,13 @@ export const pageText: Record<"ar" | "en", Record<string, any>> = {
     charts: {
       dailyTitle: "الرسائل يومياً",
       sent: "مرسل",
+      delivered: "تم التوصيل",
       received: "وارد",
       bestSendTimeTitle: "أفضل أوقات الإرسال",
       bestCampaignsTitle: "أفضل الحملات أداءً",
       noData: "لا توجد بيانات",
       campaignsLegendSent: "رسائل مرسلة",
+      campaignsLegendDelivered: "تم التوصيل",
       campaignsLegendReceived: "رسائل واردة",
       teamActivity: "نشاط الفريق",
       teamSent: "رسائل مرسلة",
@@ -283,11 +285,13 @@ export const pageText: Record<"ar" | "en", Record<string, any>> = {
     charts: {
       dailyTitle: "Messages per day",
       sent: "Sent",
+      delivered: "Delivered",
       received: "Received",
       bestSendTimeTitle: "Best send times",
       bestCampaignsTitle: "Top performing campaigns",
       noData: "No data",
       campaignsLegendSent: "Sent messages",
+      campaignsLegendDelivered: "Delivered messages",
       campaignsLegendReceived: "Inbound messages",
       teamActivity: "Team activity",
       teamSent: "Sent",
