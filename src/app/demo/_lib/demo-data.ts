@@ -443,21 +443,6 @@ export const DEMO_TEMPLATES: DashboardTemplate[] = [
   },
 ];
 
-export interface DemoTeamMember {
-  id: string;
-  name: string | null;
-  email: string;
-  role: "FULL_ACCESS" | "CHAT_ONLY" | "OWNER";
-  inviteCode: string | null;
-}
-
-export const DEMO_TEAM_MEMBERS: DemoTeamMember[] = [
-  { id: "demo-user-1", name: DEMO_USER_NAME, email: DEMO_USER_EMAIL, role: "OWNER", inviteCode: null },
-  { id: "demo-team-2", name: "سارة أحمد", email: "sara@layali-perfumes.com", role: "FULL_ACCESS", inviteCode: null },
-  { id: "demo-team-3", name: "محمود سيد", email: "mahmoud@layali-perfumes.com", role: "CHAT_ONLY", inviteCode: null },
-  { id: "demo-team-4", name: "نور الدين", email: "nour@layali-perfumes.com", role: "CHAT_ONLY", inviteCode: "TEAM4829" },
-];
-
 export const DEMO_CONTACT_AUDIENCES: Audience[] = [
   {
     id: "demo-aud-vip",
@@ -522,4 +507,160 @@ export const DEMO_CONTACT_AUDIENCES: Audience[] = [
     contactCount: 68,
     createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
   },
+];
+
+// ─────────────────────────────────────────────────────────────────────────
+// بيانات ديمو لصفحة التقارير (كل التابات) وصفحة المتجر
+// ─────────────────────────────────────────────────────────────────────────
+import type { Overview, CustomerRow, TeamRow, LogsData, StoreReportData } from "@/app/dashboard/reports/_shared";
+import type { AutomationReportData } from "@/app/dashboard/reports/automation/page";
+import type { StoreData, Customer, AutomationItem, AutomationTemplate } from "@/app/dashboard/store/_components/types";
+
+export const DEMO_REPORTS_OVERVIEW: Overview = {
+  totals: {
+    sent: 18420, delivered: 17960, read: 15310, failed: 460,
+    inbound: 3284, uniqueContacts: 4812,
+    deliveryRate: 97.5, readRate: 85.2, replyRate: 22.4,
+  },
+  daily: Array.from({ length: 14 }, (_, i) => ({
+    day: new Date(Date.now() - (13 - i) * 24 * 3600 * 1000).toISOString().slice(0, 10),
+    sent: 1100 + Math.round(Math.sin(i / 2) * 200 + i * 15),
+    received: 180 + Math.round(Math.cos(i / 2) * 40 + i * 4),
+  })),
+  hourly: Array.from({ length: 24 }, (_, h) => ({
+    hour: h, cnt: h >= 10 && h <= 23 ? Math.round(40 + Math.sin((h - 10) / 4) * 35 + Math.random() * 15) : Math.round(Math.random() * 8),
+  })),
+  bestCampaigns: [
+    { name: "عرض الربيع 2026", sentCount: 1240, deliveredCount: 1180, readCount: 1050, failedCount: 10, rate: 84.7 },
+    { name: "متابعة عملاء VIP", sentCount: 180, deliveredCount: 178, readCount: 165, failedCount: 1, rate: 91.7 },
+    { name: "تذكير العربات", sentCount: 420, deliveredCount: 402, readCount: 348, failedCount: 2, rate: 82.9 },
+  ],
+};
+
+export const DEMO_REPORTS_CUSTOMERS: CustomerRow[] = [
+  { id: "demo-cust-1", phone: "201001112233", name: "ندى حمدي", lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(), totalMessages: 32, unreadCount: 1, createdAt: new Date(Date.now() - 120 * 24 * 3600 * 1000).toISOString() },
+  { id: "demo-cust-2", phone: "201004445566", name: "سالي صلاح", lastMessageAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), totalMessages: 18, unreadCount: 0, createdAt: new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString() },
+  { id: "demo-cust-3", phone: "201007778899", name: "خالد المصري", lastMessageAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), totalMessages: 47, unreadCount: 0, createdAt: new Date(Date.now() - 200 * 24 * 3600 * 1000).toISOString() },
+  { id: "demo-cust-4", phone: "201009990011", name: "مريم جمال", lastMessageAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), totalMessages: 9, unreadCount: 2, createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString() },
+  { id: "demo-cust-5", phone: "201002223344", name: "أحمد خالد", lastMessageAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), totalMessages: 5, unreadCount: 0, createdAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString() },
+];
+
+export const DEMO_REPORTS_TEAM: TeamRow[] = [
+  { id: "demo-user-1", name: DEMO_USER_NAME, role: "OWNER", sent: 820, replied: 640 },
+  { id: "demo-team-2", name: "ياسمين عادل", role: "FULL_ACCESS", sent: 410, replied: 355 },
+  { id: "demo-team-3", name: "عمر شريف", role: "CHAT_ONLY", sent: 260, replied: 198 },
+];
+
+export const DEMO_REPORTS_LOGS: LogsData = {
+  total: 5, page: 1, limit: 50,
+  messages: [
+    { id: "demo-log-1", content: "متى ستحمل العطر الجديد؟", type: "text", status: "read", direction: "inbound", createdAt: new Date(Date.now() - 45 * 60000).toISOString(), contact: { phone: "201001112233", name: "ندى حمدي" }, campaign: null, user: null },
+    { id: "demo-log-2", content: "أهلاً! العطر الجديد هيتوفر الأسبوع الجاي إن شاء الله ✨", type: "text", status: "delivered", direction: "outbound", createdAt: new Date(Date.now() - 43 * 60000).toISOString(), contact: { phone: "201001112233", name: "ندى حمدي" }, campaign: null, user: { name: DEMO_USER_NAME, email: DEMO_USER_EMAIL } },
+    { id: "demo-log-3", content: null, type: "template", status: "delivered", direction: "outbound", createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), contact: { phone: "201004445566", name: "سالي صلاح" }, campaign: { name: "تذكير العربات" }, user: null },
+    { id: "demo-log-4", content: "هل السعر يشمل الشحن؟", type: "text", status: "read", direction: "inbound", createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), contact: { phone: "201007778899", name: "خالد المصري" }, campaign: null, user: null },
+    { id: "demo-log-5", content: null, type: "image", status: "failed", direction: "outbound", createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), contact: { phone: "201009990011", name: "مريم جمال" }, campaign: { name: "عرض الربيع 2026" }, user: { name: "ياسمين عادل", email: "yasmin@demo.wani.app" } },
+  ],
+};
+
+export const DEMO_REPORTS_STORE: StoreReportData = {
+  summary: {
+    totalOrders: 312, totalRevenue: 186_400,
+    totalCampaignRevenue: 54_200, campaignRevenueShare: 29.1,
+    totalUniqueCustomers: 248, storesConnected: 1,
+  },
+  stores: [
+    { source: "shopify", name: "متجر ليالي للعطور", connectedAt: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(), isActive: true },
+  ],
+  campaignRevenue: [
+    { id: "demo-cmp-1", name: "عرض الربيع 2026", revenue: 28_400, ordersCount: 46, sentCount: 1240, readCount: 1050, completedAt: new Date(Date.now() - 5.5 * 24 * 3600 * 1000).toISOString(), createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString() },
+    { id: "demo-cmp-4", name: "متابعة عملاء VIP", revenue: 19_800, ordersCount: 14, sentCount: 180, readCount: 165, completedAt: new Date(Date.now() - 9.5 * 24 * 3600 * 1000).toISOString(), createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString() },
+    { id: "demo-cmp-2", name: "تذكير العربات", revenue: 6_000, ordersCount: 9, sentCount: 420, readCount: 348, completedAt: null, createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() },
+  ],
+  topCustomers: [
+    { phone: "201007778899", name: "خالد المصري", ordersCount: 9, totalSpent: 12_400, currency: "EGP" },
+    { phone: "201001112233", name: "ندى حمدي", ordersCount: 6, totalSpent: 8_950, currency: "EGP" },
+    { phone: "201004445566", name: "سالي صلاح", ordersCount: 5, totalSpent: 6_200, currency: "EGP" },
+  ],
+  ordersByStatus: [
+    { status: "confirmed", count: 210, revenue: 132_000 },
+    { status: "pending", count: 58, revenue: 31_400 },
+    { status: "cancelled", count: 44, revenue: 23_000 },
+  ],
+  dailyTrend: Array.from({ length: 14 }, (_, i) => ({
+    day: new Date(Date.now() - (13 - i) * 24 * 3600 * 1000).toISOString().slice(0, 10),
+    orders: 15 + Math.round(Math.sin(i / 3) * 6 + i * 0.4),
+    revenue: 8500 + Math.round(Math.sin(i / 3) * 2200 + i * 250),
+  })),
+  confirmedOrders: [
+    { id: "demo-ord-1", orderNumber: "#4821", externalId: "4821", customerName: "خالد المصري", customerPhone: "201007778899", status: "confirmed", total: 1450, currency: "EGP", orderedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString() },
+    { id: "demo-ord-2", orderNumber: "#4820", externalId: "4820", customerName: "ندى حمدي", customerPhone: "201001112233", status: "confirmed", total: 890, currency: "EGP", orderedAt: new Date(Date.now() - 8 * 3600 * 1000).toISOString() },
+    { id: "demo-ord-3", orderNumber: "#4819", externalId: "4819", customerName: "سالي صلاح", customerPhone: "201004445566", status: "pending", total: 620, currency: "EGP", orderedAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString() },
+  ],
+  confirmedOrdersTotal: 210,
+};
+
+export const DEMO_AUTOMATION_REPORT: AutomationReportData = {
+  kpis: {
+    totalAutomations: 6, activeAutomations: 5, stoppedAutomations: 1,
+    automationsWithErrors: 0, totalRuns: 1840, totalSuccess: 1746,
+    totalFailures: 94, successRate: 94.9,
+  },
+  rules: [
+    { id: "demo-rule-1", name: "رسالة ترحيب", type: "welcome", isEnabled: true, runCount: 640, successCount: 615, failureCount: 25, lastRun: new Date(Date.now() - 20 * 60000).toISOString() },
+    { id: "demo-rule-2", name: "تذكير عربة متروكة", type: "cart_abandon", isEnabled: true, runCount: 420, successCount: 380, failureCount: 40, lastRun: new Date(Date.now() - 90 * 60000).toISOString() },
+    { id: "demo-rule-3", name: "تأكيد الطلب", type: "order_confirm", isEnabled: true, runCount: 312, successCount: 305, failureCount: 7, lastRun: new Date(Date.now() - 3 * 3600 * 1000).toISOString() },
+    { id: "demo-rule-4", name: "إشعار الشحن", type: "order_shipped", isEnabled: false, runCount: 0, successCount: 0, failureCount: 0, lastRun: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString() },
+  ],
+  errorLog: [
+    { id: "demo-err-1", title: "فشل إرسال رسالة تذكير العربة", details: "انتهت صلاحية القالب — يحتاج موافقة Meta جديدة.", time: new Date(Date.now() - 6 * 3600 * 1000).toISOString() },
+  ],
+  topAutomations: [
+    { name: "رسالة ترحيب", runs: 640 },
+    { name: "تذكير عربة متروكة", runs: 420 },
+    { name: "تأكيد الطلب", runs: 312 },
+  ],
+  aiMetrics: {
+    avgResponseTime: "8.2s", fastestResponse: "2.1s", slowestResponse: "24.4s",
+    aiRepliesCount: 2840, aiSuccessRate: 91.4, humanHandoffs: 186,
+  },
+  timeSaved: { totalAutoReplies: 2840, estimatedHoursSaved: 94, efficiencyGain: 62 },
+  timeline: [
+    { time: new Date(Date.now() - 20 * 60000).toISOString(), title: "تشغيل ناجح: رسالة ترحيب" },
+    { time: new Date(Date.now() - 90 * 60000).toISOString(), title: "تشغيل ناجح: تذكير عربة متروكة" },
+    { time: new Date(Date.now() - 6 * 3600 * 1000).toISOString(), title: "خطأ: فشل إرسال رسالة تذكير العربة" },
+  ],
+  funnel: { steps: ["استلام رسالة", "رد تلقائي", "متابعة", "تحويل"], values: [1840, 1746, 940, 312] },
+};
+
+// ─── صفحة المتجر (تكامل Shopify/EasyOrders/WooCommerce) ─────────────────────
+export const DEMO_STORE_DATA: StoreData = {
+  shopify: {
+    id: "demo-store-1", storeName: DEMO_STORE_NAME, source: "shopify",
+    totalOrders: 312, totalCustomers: 248, campaignRevenue: 54_200,
+    connectedAt: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(),
+    isActive: true, lastSyncAt: new Date(Date.now() - 12 * 60000).toISOString(), totalSynced: 96,
+  },
+  easyorders: null,
+  woocommerce: null,
+};
+
+export const DEMO_STORE_CUSTOMERS: Customer[] = [
+  { phone: "201007778899", name: "خالد المصري", ordersCount: 9, totalSpent: 12_400, currency: "EGP", lastOrder: { orderNumber: "#4821", total: 1450, status: "confirmed", orderedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString() } },
+  { phone: "201001112233", name: "ندى حمدي", ordersCount: 6, totalSpent: 8_950, currency: "EGP", lastOrder: { orderNumber: "#4820", total: 890, status: "confirmed", orderedAt: new Date(Date.now() - 8 * 3600 * 1000).toISOString() } },
+  { phone: "201004445566", name: "سالي صلاح", ordersCount: 5, totalSpent: 6_200, currency: "EGP", lastOrder: { orderNumber: "#4819", total: 620, status: "pending", orderedAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString() } },
+  { phone: "201009990011", name: "مريم جمال", ordersCount: 3, totalSpent: 2_100, currency: "EGP", lastOrder: { orderNumber: "#4815", total: 700, status: "confirmed", orderedAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString() } },
+];
+
+export const DEMO_STORE_AUTOMATION_TEMPLATES: AutomationTemplate[] = [
+  { id: "demo-tmpl-confirm", name: "تأكيد الطلب" },
+  { id: "demo-tmpl-shipped", name: "إشعار الشحن" },
+  { id: "demo-tmpl-promo", name: "عرض ترويجي" },
+  { id: "demo-tmpl-cart", name: "تذكير عربة متروكة" },
+];
+
+export const DEMO_STORE_AUTOMATIONS: AutomationItem[] = [
+  { id: "demo-auto-1", type: "order_confirm", isEnabled: true, templateId: "demo-tmpl-confirm", template: { id: "demo-tmpl-confirm", name: "تأكيد الطلب" }, sentCount: 305, failedCount: 7, lastSentAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(), isDedicated: false, dedicatedTemplate: null },
+  { id: "demo-auto-2", type: "order_shipped", isEnabled: false, templateId: "demo-tmpl-shipped", template: { id: "demo-tmpl-shipped", name: "إشعار الشحن" }, sentCount: 0, failedCount: 0, lastSentAt: null, isDedicated: false, dedicatedTemplate: null },
+  { id: "demo-auto-3", type: "promo", isEnabled: true, templateId: "demo-tmpl-promo", template: { id: "demo-tmpl-promo", name: "عرض ترويجي" }, sentCount: 640, failedCount: 25, lastSentAt: new Date(Date.now() - 20 * 60000).toISOString(), isDedicated: false, dedicatedTemplate: null },
+  { id: "demo-auto-4", type: "cart_abandon", isEnabled: true, templateId: "demo-tmpl-cart", template: { id: "demo-tmpl-cart", name: "تذكير عربة متروكة" }, sentCount: 420, failedCount: 40, lastSentAt: new Date(Date.now() - 90 * 60000).toISOString(), delayMinutes: 60, isDedicated: false, dedicatedTemplate: null },
 ];

@@ -68,7 +68,7 @@ interface FunnelData {
   values: number[];
 }
 
-interface AutomationReportData {
+export interface AutomationReportData {
   kpis: {
     totalAutomations: number;
     activeAutomations: number;
