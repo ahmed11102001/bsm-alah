@@ -532,7 +532,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      await prisma.$transaction(async (tx) => {
+      const { contactId } = await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
           where: { phone_userId: { phone: from, userId } },
           // deletedAt: null ???? ?? ???????? ???? ?????? ???? ???? ??? ???? ????? ?????
@@ -558,6 +558,8 @@ export async function POST(req: NextRequest) {
             mediaUrl,
           },
         });
+
+        return { contactId: contact.id };
       });
 
       // ????? ????? ????? ?????
@@ -570,10 +572,10 @@ export async function POST(req: NextRequest) {
       await Promise.all([
         inngest.send({
           name: "agent-conversation.nudge-cancel",
-          data: { contactId: contact.id },
+          data: { contactId },
         }),
         prisma.contact.update({
-          where: { id: contact.id },
+          where: { id: contactId },
           data: { nudgeCountInThread: 0 },
         }),
       ]).catch((e) => console.error("[NUDGE] Failed to cancel/reset nudge state:", e));
