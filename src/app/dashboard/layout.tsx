@@ -453,10 +453,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     setAccountPanelOpen(false);
   }, [pathname]);
 
-  // Close the account popover when clicking anywhere outside it.
+  // Desktop: close the floating Account menu when clicking outside it or pressing Escape.
   useEffect(() => {
     if (!accountPanelOpen) return;
-    // Desktop account menu is a floating popover. Mobile keeps its inline menu.
     if (!window.matchMedia("(min-width: 1024px)").matches) return;
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -561,7 +560,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col overflow-visible transition-all duration-300 ${
+      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${
         sidebarCollapsed ? "w-20" : "w-64"
       } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
@@ -579,8 +578,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Dashboard navigation scrolls independently.
-            The divider + Account section below stay fixed in the sidebar. */}
+        {/* Dashboard navigation: this is the ONLY scrollable area.
+            Admin stays here, directly under Integrations, above the divider. */}
         <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {sidebarItems.map((item) => (
             <Link key={item.id} href={sidebarHref(item.id)}
@@ -596,9 +595,24 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
+
+          {/* Admin is part of navigation — NOT part of Account. */}
+          {isSuper && (
+            <Link href={sidebarHref("admin")}
+              title={sidebarCollapsed ? t.sidebar.admin : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${
+                sidebarCollapsed ? "justify-center px-0" : ""
+              } ${activeSection === "admin"
+                ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
+                : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+                }`}>
+              <adminItem.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
+            </Link>
+          )}
         </nav>
 
-        {/* Fixed bottom section — separated from dashboard navigation */}
+        {/* Fixed Account section — the ONLY item below the divider. */}
         <div
           ref={accountMenuRef}
           className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${
@@ -608,7 +622,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={openAccountPanel}
-            title={sidebarCollapsed ? accountLabel : undefined}
+            title={sidebarCollapsed ? `${accountLabel} — ${planName}` : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
               sidebarCollapsed ? "justify-center px-0" : ""
             } ${accountPanelOpen
@@ -617,19 +631,25 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             }`}
           >
             <User className="w-[18px] h-[18px] flex-shrink-0" />
+
             {!sidebarCollapsed && (
-              <div className="min-w-0 text-left">
-                <p className="truncate">{accountLabel}</p>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <p className="truncate">{accountLabel}</p>
+                  {/* Each user's current subscription plan appears beside Account. */}
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${planColor}`}>
+                    {planName}
+                  </span>
+                </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
               </div>
             )}
           </button>
 
-          {/* Account menu is intentionally outside the sidebar flow.
-              It opens beside the sidebar instead of pushing/expanding its content. */}
+          {/* Desktop popup: floats BESIDE the sidebar, never inside its layout/scroll area. */}
           {accountPanelOpen && (
             <div
-              className={`absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${
+              className={`hidden lg:block absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${
                 dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
               }`}
             >
@@ -678,22 +698,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
-
-          {/* Admin stays outside the dashboard scroll area as well. */}
-          {isSuper && (
-            <Link href={sidebarHref("admin")}
-              title={sidebarCollapsed ? t.sidebar.admin : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${
-                sidebarCollapsed ? "justify-center px-0" : ""
-              } ${activeSection === "admin"
-                ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
-                : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
-                }`}>
-              <adminItem.icon className="w-[18px] h-[18px] flex-shrink-0" />
-              {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
-            </Link>
-          )}
         </div>
+
       </aside>
 
       {/* ── Mobile Full-Screen Menu ── */}
@@ -772,7 +778,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200"
             >
               <User className="w-5 h-5 flex-shrink-0" />
-              <span>{accountLabel}</span>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <span>{accountLabel}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${planColor}`}>
+                    {planName}
+                  </span>
+                </div>
+                <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</span>
+              </div>
             </button>
 
             {accountPanelOpen && (
