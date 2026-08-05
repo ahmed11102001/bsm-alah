@@ -41,6 +41,7 @@ import {
 } from "@/inngest/product-sync-functions";
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
+import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
 
 const inngestHandler = serve({
   client: inngest,
@@ -76,6 +77,8 @@ const inngestHandler = serve({
     scheduleCampaignFollowUpFn,
     sendCampaignFollowUpMsgFn,
     campaignFollowUpActionFn,
+    // ── Conversation Nudge ──
+    conversationNudgeFn,
   ],
 });
 

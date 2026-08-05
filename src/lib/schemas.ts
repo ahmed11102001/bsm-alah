@@ -285,5 +285,7 @@ export const AIAgentResponseSchema = z.object({
   priority: z.enum(["high", "normal"]).optional().nullable(),
   offTopic: z.boolean().optional(),
   product_ids: z.array(z.string()).optional(),
+  // ← جديد: هل الرد ده بيستنى تفاعل من العميل؟ (لنظام Conversation Nudge)
+  expectsReply: z.boolean().optional(),
 });
 export type AIAgentResponseOutput = z.infer<typeof AIAgentResponseSchema>;

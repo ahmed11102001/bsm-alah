@@ -229,6 +229,9 @@ model Contact {
   handoffReason     String?
   handoffAt         DateTime?
   lastAiRepliedAt   DateTime?
+  // ── Conversation Nudge: عدد الـ nudges اللي اتبعتت في الجلسة الحالية ──
+  // بيتصفّر لما العميل يبعت رسالة جديدة. cap = 1 نُدج لكل فترة سكوت.
+  nudgeCountInThread Int               @default(0)
   audience          Audience?          @relation(fields: [audienceId], references: [id])
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages          Message[]

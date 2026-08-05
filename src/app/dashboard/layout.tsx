@@ -1,7 +1,7 @@
 "use client";
 
 import "@/app/globals.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -447,10 +447,37 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setAccountPanelOpen(false);
   }, [pathname]);
+
+  // Close the account popover when clicking anywhere outside it.
+  useEffect(() => {
+    if (!accountPanelOpen) return;
+    // Desktop account menu is a floating popover. Mobile keeps its inline menu.
+    if (!window.matchMedia("(min-width: 1024px)").matches) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!accountMenuRef.current?.contains(target)) {
+        setAccountPanelOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAccountPanelOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [accountPanelOpen]);
 
   const accountLabel = locale === "ar" ? "الحساب" : "Account";
   const openAccountPanel = () => {
@@ -534,7 +561,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${
+      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col overflow-visible transition-all duration-300 ${
         sidebarCollapsed ? "w-20" : "w-64"
       } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
@@ -552,7 +579,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
+        {/* Dashboard navigation scrolls independently.
+            The divider + Account section below stay fixed in the sidebar. */}
+        <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {sidebarItems.map((item) => (
             <Link key={item.id} href={sidebarHref(item.id)}
               data-sidebar-id={item.id}
@@ -567,10 +596,19 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
+        </nav>
 
+        {/* Fixed bottom section — separated from dashboard navigation */}
+        <div
+          ref={accountMenuRef}
+          className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${
+            sidebarCollapsed ? "p-2" : "p-3"
+          }`}
+        >
           <button
             type="button"
             onClick={openAccountPanel}
+            title={sidebarCollapsed ? accountLabel : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
               sidebarCollapsed ? "justify-center px-0" : ""
             } ${accountPanelOpen
@@ -587,45 +625,65 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             )}
           </button>
 
-          {!sidebarCollapsed && accountPanelOpen && (
-            <div className="mt-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 space-y-2">
-              <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{accountLabel}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
+          {/* Account menu is intentionally outside the sidebar flow.
+              It opens beside the sidebar instead of pushing/expanding its content. */}
+          {accountPanelOpen && (
+            <div
+              className={`absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${
+                dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
+              }`}
+            >
+              <div className="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{planName}</p>
+                  </div>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => { setAccountPanelOpen(false); openSettings(); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4 flex-shrink-0" />
                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/usage"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                <BarChart3 className="w-4 h-4" />
+                <BarChart3 className="w-4 h-4 flex-shrink-0" />
                 <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
               </button>
+
               <LanguageToggle />
               <ThemeToggle />
-              <button
-                type="button"
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="w-full flex items-center gap-3 text-sm text-red-500 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>{t.signOut}</span>
-              </button>
+
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-1.5 mt-1">
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="w-full flex items-center gap-3 text-sm text-red-500 px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  <span>{t.signOut}</span>
+                </button>
+              </div>
             </div>
           )}
 
+          {/* Admin stays outside the dashboard scroll area as well. */}
           {isSuper && (
             <Link href={sidebarHref("admin")}
               title={sidebarCollapsed ? t.sidebar.admin : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-2 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${
                 sidebarCollapsed ? "justify-center px-0" : ""
               } ${activeSection === "admin"
                 ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
@@ -635,8 +693,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
             </Link>
           )}
-        </nav>
-
+        </div>
       </aside>
 
       {/* ── Mobile Full-Screen Menu ── */}

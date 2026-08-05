@@ -66,6 +66,11 @@ export interface AgentResult {
   offTopic?: boolean;
   tokensUsed?: number;   // ← إجمالي التوكن المستهلكة (input + output)
   productIds?: string[]; // ← المنتجات المقترحة/المذكورة من الـ context (أقصى 3)
+  // ← جديد: هل الرد ده بيستنى تفاعل/رد من العميل، ولا المحادثة وصلت لنقطة ختامية؟
+  //    بيتحدد من الـ AI نفسه وقت توليد الرد (مش بمنطق خارجي)، وبيُستخدم فقط
+  //    لجدولة "Conversation Nudge" لو العميل سكت. Default آمن = false (fail-safe:
+  //    أحسن ما نبعتش nudge زيادة من ما نبعته وهو مش لازم).
+  expectsReply: boolean;
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -236,7 +241,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `  "action": null,`,
     `  "reason": null,`,
     `  "priority": null,`,
-    `  "product_ids": []`,
+    `  "product_ids": [],`,
+    `  "expectsReply": true`,
     `}`,
     "",
     `قيم action المتاحة:`,
@@ -247,7 +253,25 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `  "reason": سبب مختصر وواضح بالعربي أو الإنجليزي (مثال: "العميل طلب استرجاع مبلغ")`,
     `  "priority": "high" لو عاجل (شكوى/غضب واضح)، أو "normal" غير كده`,
     "",
-    `لو ردك بيتكلم عن منتج معين أو أكتر من قائمة "المنتجات المتاحة حالياً" أعلاه، حط الـ IDs بتاعتها في قائمة "product_ids" (بحد أقصى 3 منتجات). استخدم الـ ID الحقيقي المكتوب في القائمة فقط!`
+    `لو ردك بيتكلم عن منتج معين أو أكتر من قائمة "المنتجات المتاحة حالياً" أعلاه، حط الـ IDs بتاعتها في قائمة "product_ids" (بحد أقصى 3 منتجات). استخدم الـ ID الحقيقي المكتوب في القائمة فقط!`,
+    "",
+    "── expectsReply ──",
+    "بالإضافة للرد، لازم ترجع expectsReply (true/false) بيوضح هل ردك محتاج تفاعل تاني من العميل:",
+    "",
+    "expectsReply = true لما:",
+    "- سألت سؤال محتاج إجابة (مقاس؟ لون؟ عنوان الشحن؟)",
+    "- طلبت معلومة إضافية عشان تكمل",
+    "- عرضت خيارات وبتستنى العميل يختار",
+    "- قلت هتتواصل تاني أو هتبعت تفاصيل قريب",
+    "",
+    "expectsReply = false لما:",
+    "- شكرت العميل / ودّعته",
+    "- أكّدت إتمام عملية شراء أو أوردر",
+    "- جاوبت على سؤال إجابة كاملة نهائية من غير أي مطلوب تاني من العميل",
+    "- حللت مشكلة وأكّدت الحل",
+    "- المحادثة وصلت لنقطة طبيعية للانتهاء",
+    "",
+    "كن متحفظ: لو مش متأكد، خلي expectsReply = false (أفضل ما نتجنب إزعاج العميل من إننا نلاحقه بعد ما خلص)."
   );
 
   return lines.join("\n");
@@ -260,7 +284,7 @@ async function callGemini(
   ctx: AgentContext,
 ): Promise<AgentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing" };
+  if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing" , expectsReply: false };
 
   const systemPrompt = buildSystemPrompt(ctx);
   const configuredModel = process.env.GEMINI_MODEL?.trim();
@@ -306,12 +330,12 @@ async function callGemini(
         const err = await res.text();
         console.error("[AI-AGENT/GEMINI] Error:", res.status, { model, err });
         if (res.status === 404) continue;
-        return { ok: false, error: `Gemini error ${res.status}` };
+        return { ok: false, error: `Gemini error ${res.status}` , expectsReply: false };
       }
 
       const data = await res.json();
       const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      if (!raw.trim()) return { ok: false, error: "Empty response from Gemini" };
+      if (!raw.trim()) return { ok: false, error: "Empty response from Gemini" , expectsReply: false };
       const tokensUsed: number =
         (data?.usageMetadata?.promptTokenCount ?? 0) +
         (data?.usageMetadata?.candidatesTokenCount ?? 0);
@@ -319,14 +343,14 @@ async function callGemini(
       return { ...parsed, tokensUsed };
     }
 
-    return { ok: false, error: "No supported Gemini model found" };
+    return { ok: false, error: "No supported Gemini model found" , expectsReply: false };
   } catch (err: any) {
     Sentry.captureException(err, {
       tags: { component: "ai-agent" },
       extra: { userId: ctx.userId ?? null, provider: "gemini" },
     });
     console.error("[AI-AGENT/GEMINI] Network error:", err);
-    return { ok: false, error: err.message ?? "Network error" };
+    return { ok: false, error: err.message ?? "Network error" , expectsReply: false };
   }
 }
 
@@ -337,7 +361,7 @@ async function callOpenAI(
   ctx: AgentContext,
 ): Promise<AgentResult> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { ok: false, error: "OPENAI_API_KEY is missing" };
+  if (!apiKey) return { ok: false, error: "OPENAI_API_KEY is missing" , expectsReply: false };
 
   const systemPrompt = buildSystemPrompt(ctx);
 
@@ -376,12 +400,12 @@ async function callOpenAI(
     if (!res.ok) {
       const err = await res.text();
       console.error("[AI-AGENT/OPENAI] Error:", res.status, err);
-      return { ok: false, error: `OpenAI error ${res.status}` };
+      return { ok: false, error: `OpenAI error ${res.status}` , expectsReply: false };
     }
 
     const data = await res.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? "";
-    if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" };
+    if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" , expectsReply: false };
     const tokensUsed: number = data?.usage?.total_tokens ?? 0;
     const parsed = parseAgentJSON(raw);
     return { ...parsed, tokensUsed };
@@ -391,7 +415,7 @@ async function callOpenAI(
       extra: { userId: ctx.userId ?? null, provider: "openai" },
     });
     console.error("[AI-AGENT/OPENAI] Network error:", err);
-    return { ok: false, error: err.message ?? "Network error" };
+    return { ok: false, error: err.message ?? "Network error" , expectsReply: false };
   }
 }
 
@@ -412,8 +436,8 @@ function parseAgentJSON(raw: string): AgentResult {
     if (!zodResult.success) {
       // Fallback: If JSON schema validation fails, try extracting string reply or fallback
       const replyFallback = typeof parsedJson?.reply === "string" ? parsedJson.reply.trim() : null;
-      if (replyFallback) return { ok: true, reply: replyFallback, action: null };
-      return { ok: false, error: "Zod validation failed for AI response JSON" };
+      if (replyFallback) return { ok: true, reply: replyFallback, action: null, expectsReply: false };
+      return { ok: false, error: "Zod validation failed for AI response JSON", expectsReply: false };
     }
 
     const data = zodResult.data;
@@ -422,6 +446,9 @@ function parseAgentJSON(raw: string): AgentResult {
     const action = data.action === "handoff" ? "handoff" : null;
     const reason = data.reason?.trim() ?? null;
     const priority = data.priority === "high" ? "high" : "normal";
+    // Fail-safe: لو الموديل مبعتش expectsReply، اعتبرها false — أحسن ما نفوّت
+    // nudge لازم من ما نبعت nudge مش لازم ويضايق العميل.
+    const expectsReply = data.expectsReply === true;
 
     let productIds: string[] | undefined;
     if (Array.isArray(data.product_ids)) {
@@ -433,7 +460,7 @@ function parseAgentJSON(raw: string): AgentResult {
     }
 
     if (!reply && !offTopic)
-      return { ok: false, error: "reply field missing in AI response" };
+      return { ok: false, error: "reply field missing in AI response", expectsReply: false };
 
     return {
       ok: true,
@@ -443,12 +470,13 @@ function parseAgentJSON(raw: string): AgentResult {
       priority,
       offTopic: offTopic || undefined,
       productIds,
+      expectsReply,
     };
   } catch {
     // لو الـ AI فشل يرجع JSON صح، نعامل الـ raw كـ reply عادي
     const fallback = raw.trim();
-    if (fallback) return { ok: true, reply: fallback, action: null };
-    return { ok: false, error: "Failed to parse AI response as JSON" };
+    if (fallback) return { ok: true, reply: fallback, action: null, expectsReply: false };
+    return { ok: false, error: "Failed to parse AI response as JSON", expectsReply: false };
   }
 }
 

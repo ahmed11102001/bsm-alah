@@ -11,6 +11,7 @@ import { normalizePhone } from "@/lib/phone";
 import { callVoiceAgent, uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import { transcribeAudio, estimateWhisperTokens } from "@/lib/whisper";
 import { warnDeprecatedSecretOnce } from "@/lib/env-deprecation";
+import { inngest } from "@/inngest/client";
 
 // -----------------------------------------------------------------------------
 // HELPER: ?????? ?? ????? Meta (HMAC-SHA256)
@@ -562,6 +563,21 @@ export async function POST(req: NextRequest) {
       // ????? ????? ????? ?????
       await notifyNewMessage(userId, from);
 
+      // ─── Conversation Nudge: العميل بعت رسالة جديدة → ألغي أي nudge مجدول ───
+      // (لو مفيش nudge مجدول أصلاً، الـ cancel ده مجرد no-op — رخيص وآمن)
+      // وصفّر العدّاد: الـ cap (nudge واحد) بتاع فترة السكوت اللي فاتت، مش
+      // بتاع المحادثة كلها — لو سكت تاني بعد كده يستاهل nudge جديد.
+      await Promise.all([
+        inngest.send({
+          name: "agent-conversation.nudge-cancel",
+          data: { contactId: contact.id },
+        }),
+        prisma.contact.update({
+          where: { id: contact.id },
+          data: { nudgeCountInThread: 0 },
+        }),
+      ]).catch((e) => console.error("[NUDGE] Failed to cancel/reset nudge state:", e));
+
       // Step 4: ????? ??????? ??? ????? ???? ?? Meta — ????? ??? Vercel
       const triggersAutomation =
         !smartFollowUpHandled && (
@@ -809,6 +825,7 @@ async function handleAutomation(ctx: {
       if (metaRes.ok) {
         const metaData = await metaRes.json();
         const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
+        const sentAt = new Date(); // نفس القيمة في message.sentAt و contact.lastAiRepliedAt
 
         await prisma.$transaction([
           prisma.message.create({
@@ -822,16 +839,28 @@ async function handleAutomation(ctx: {
               senderType: MessageSenderType.ai,
               whatsappId: whatsappMsgId,
               mediaUrl: audioUrl,
-              sentAt: new Date(),
+              sentAt,
             },
           }),
           prisma.contact.update({
             where: { id: contactRecord.id },
-            data: { lastAiRepliedAt: new Date() },
+            data: { lastAiRepliedAt: sentAt },
           }),
         ]);
 
         console.log(`[VOICE-AGENT] ✅ Audio reply sent to ${from} via ${agentSettings.provider}`);
+
+        // ─── Conversation Nudge (نفس منطق الرد النصي) ───────────────────────
+        if (aiResult.expectsReply) {
+          await inngest.send({
+            name: "agent-conversation.nudge-check",
+            data: {
+              contactId: contactRecord.id,
+              userId,
+              triggerMessageAt: sentAt.toISOString(),
+            },
+          }).catch((e) => console.error("[NUDGE] Failed to schedule nudge-check event:", e));
+        }
       } else {
         console.error("[VOICE-AGENT] WhatsApp send failed:", await metaRes.text());
       }
@@ -1106,7 +1135,7 @@ async function handleAutomation(ctx: {
     }
   }
 
-  await sendReply({
+  const sendResult = await sendReply({
     userId, from,
     replyText: result.reply,
     replyMediaUrl: productImageUrl,
@@ -1114,6 +1143,26 @@ async function handleAutomation(ctx: {
     ruleName: `AI/${agent.provider}`,
     isAI: true,
   });
+
+  // ─── Conversation Nudge: لو الرد لسه بيستنى تفاعل من العميل، جدول متابعة ───
+  // الـ AI نفسه حدد expectsReply وقت توليد الرد (شايف السياق كامل) — مش
+  // بمنطق خارجي بيدور على كلمات مفتاحية. لو المحادثة اتقفلت طبيعياً
+  // (شراء تم، استفسار اتحل) الـ AI بيرجع expectsReply=false ومفيش nudge.
+  //
+  // بنستخدم بالظبط نفس sentAt اللي اتكتب في contact.lastAiRepliedAt (رجعها
+  // sendReply) كـ "بصمة" — لو رد AI تاني حصل بعد كده، lastAiRepliedAt هيبقى
+  // مختلف عن القيمة دي وقت التحقق، والـ Inngest function هتلاحظ الفرق
+  // ومتبعتش nudge قديم على رد اتجاوز بالفعل.
+  if (result.expectsReply && sendResult?.contactId) {
+    await inngest.send({
+      name: "agent-conversation.nudge-check",
+      data: {
+        contactId: sendResult.contactId,
+        userId,
+        triggerMessageAt: sendResult.sentAt.toISOString(),
+      },
+    }).catch((e) => console.error("[NUDGE] Failed to schedule nudge-check event:", e));
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1206,6 +1255,8 @@ async function sendReply(ctx: {
 
   const metaData = await metaRes.json();
   const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
+  const sentAt = new Date(); // ← نفس القيمة بتتحط في message.sentAt وفي contact.lastAiRepliedAt
+                              //   عشان الـ caller يقدر يستخدمها كـ "بصمة" دقيقة للـ nudge scheduling
 
   await prisma.$transaction([
     prisma.message.create({
@@ -1218,19 +1269,20 @@ async function sendReply(ctx: {
         status: MessageStatus.sent,
         senderType,
         whatsappId: whatsappMsgId,
-        sentAt: new Date(),
+        sentAt,
       },
     }),
     // تحديث lastAiRepliedAt لو الرد من AI أو bot
     ...(isAI ? [
       prisma.contact.update({
         where: { id: contact.id },
-        data: { lastAiRepliedAt: new Date() },
+        data: { lastAiRepliedAt: sentAt },
       }),
     ] : []),
   ]);
 
   console.log(`[AUTOMATION] Done — replied to ${from} via "${ruleName}" (senderType=${senderType})`);
+  return { contactId: contact.id, sentAt };
 }
 
 // -----------------------------------------------------------------------------
