@@ -55,6 +55,17 @@ function templateMsgCost(count: number, category: string): number {
   return count * price;
 }
 
+// ─── Sponsor spotlight — edit these fields to change the partner shown on Home ──
+const SPONSOR = {
+  logoLetter: "P",
+  name: "Paymob",
+  tagline: {
+    ar: "قبول مدفوعات أونلاين بكل طرق الدفع في مصر مباشرة من روابط واتساب — بدون أكواد.",
+    en: "Accept online payments with every payment method in Egypt, straight from WhatsApp links — no code needed.",
+  },
+  url: "https://paymob.com",
+};
+
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false, whatsappConnected = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean; whatsappConnected?: boolean;
 }) {
@@ -270,77 +281,31 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      {/* ── Template Cost (Marketing vs Service) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
-                <PieChartIcon className="w-4 h-4 text-indigo-600" />
+      {/* ── Wani AI Agent + Sponsor spotlight ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* ── Sponsor spotlight — shown to everyone, clearly labeled ── */}
+        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+          <CardContent className="p-0 h-full">
+            <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 text-white font-extrabold text-2xl shadow-sm">
+                {SPONSOR.logoLetter}
               </div>
-              <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
+              <div className="flex-1 min-w-0 text-center sm:text-start">
+                <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-full mb-1.5">
+                  {ov.sponsor.badge}
+                </span>
+                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{SPONSOR.name}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{SPONSOR.tagline[locale]}</p>
+                <a
+                  href={SPONSOR.url}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 rounded-xl px-4 py-2 mt-3 transition-colors"
+                >
+                  {ov.sponsor.cta}
+                </a>
+              </div>
             </div>
-            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-[#25D366] hover:underline flex-shrink-0">
-              {ov.templateCost.reports}
-            </button>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-5 pb-4">
-            {loadingCost ? (
-              <div className="h-[200px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
-            ) : !templateCost || templateCostTotal === 0 ? (
-              <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
-                <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-xs">{ov.templateCost.empty}</p>
-              </div>
-            ) : (
-              <>
-                <div className="relative h-[190px]">
-                  <PieResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: "marketing", value: templateCost.marketing },
-                          { name: "service", value: templateCost.service },
-                        ]}
-                        dataKey="value"
-                        innerRadius="62%"
-                        outerRadius="90%"
-                        startAngle={90}
-                        endAngle={-270}
-                        stroke="none"
-                      >
-                        <Cell fill="#22c55e" />
-                        <Cell fill="#4f6ef7" />
-                      </Pie>
-                    </PieChart>
-                  </PieResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-[11px] text-gray-400">{ov.templateCost.totalSpend}</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">${templateCostTotal.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
-                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] flex-shrink-0" />
-                      {ov.templateCost.marketing}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ${templateCost.marketing.toFixed(2)} <span className="text-gray-400">({marketingPct}%)</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
-                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#4f6ef7] flex-shrink-0" />
-                      {ov.templateCost.service}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ${templateCost.service.toFixed(2)} <span className="text-gray-400">({servicePct}%)</span>
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
@@ -415,8 +380,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         )}
       </div>
 
-      {/* ── Automation Performance + Recent Conversations ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+      {/* ── Automation Performance + Recent Conversations + Template Cost ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.automation.title}</CardTitle>
@@ -508,6 +473,79 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   </button>
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Template Cost (Marketing vs Service) ── */}
+        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
+                <PieChartIcon className="w-4 h-4 text-indigo-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
+            </div>
+            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-[#25D366] hover:underline flex-shrink-0">
+              {ov.templateCost.reports}
+            </button>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-5 pb-4">
+            {loadingCost ? (
+              <div className="h-[200px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+            ) : !templateCost || templateCostTotal === 0 ? (
+              <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
+                <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-xs">{ov.templateCost.empty}</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative h-[190px]">
+                  <PieResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "marketing", value: templateCost.marketing },
+                          { name: "service", value: templateCost.service },
+                        ]}
+                        dataKey="value"
+                        innerRadius="62%"
+                        outerRadius="90%"
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                      >
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#4f6ef7" />
+                      </Pie>
+                    </PieChart>
+                  </PieResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-[11px] text-gray-400">{ov.templateCost.totalSpend}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">${templateCostTotal.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] flex-shrink-0" />
+                      {ov.templateCost.marketing}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.marketing.toFixed(2)} <span className="text-gray-400">({marketingPct}%)</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#4f6ef7] flex-shrink-0" />
+                      {ov.templateCost.service}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.service.toFixed(2)} <span className="text-gray-400">({servicePct}%)</span>
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

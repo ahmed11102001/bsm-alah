@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────────────────────────
 // مركز بيانات الديمو الوهمية كلها. أي صفحة ديمو جديدة تستورد من هنا بدل ما
 // تكرر بيانات وهمية جوه الملف نفسه — عشان الشخصية (اسم المتجر، الأرقام،
 // العملاء) تفضل متسقة عبر كل الصفحات.
@@ -128,6 +128,7 @@ export const DEMO_OVERVIEW_DATA = {
     { id: "rule-abandon-cart", name: "تذكير عربة متروكة", source: "rule" as const, isEnabled: true, triggered: 84, successRate: 79 },
     { id: "wani-ai-agent", name: "Wani AI", source: "ai" as const, isEnabled: true, triggered: 72, successRate: 86 },
   ],
+  aiAgentReplies: 72,
   recentConversations: [
     { id: "demo-c-1", name: "ندي حمدي", lastMessage: "متى ستحمل العطر الجديد؟", lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(), status: "auto", unread: true },
     { id: "demo-c-2", name: "سالي صلاح", lastMessage: "هل السعر يشمل الشحن؟", lastMessageAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), status: "needs_human", unread: false },
@@ -136,6 +137,10 @@ export const DEMO_OVERVIEW_DATA = {
     { id: "demo-c-5", name: "أحمد خالد", lastMessage: "أريد أطيب العطور الرجالية", lastMessageAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), status: "needs_human", unread: true },
   ],
 };
+
+// ─── Template spending breakdown (Marketing vs Service) for the Home donut card ──
+export const DEMO_TEMPLATE_COST = { marketing: 96.40, service: 41.85 };
+
 export const DEMO_CHAT_CONVERSATIONS = [
   {
     contact: { id: "demo-c-1", name: "نور أحمد", phone: "201234567890" },
@@ -522,18 +527,12 @@ export const DEMO_REPORTS_OVERVIEW: Overview = {
     inbound: 3284, uniqueContacts: 4812,
     deliveryRate: 97.5, readRate: 85.2, replyRate: 22.4,
   },
-  daily: Array.from({ length: 14 }, (_, i) => {
-    const sent = 1100 + Math.round(Math.sin(i / 2) * 200 + i * 15);
-    const delivered = Math.round(sent * (0.965 + (i % 3) * 0.008));
-    const received = 180 + Math.round(Math.cos(i / 2) * 40 + i * 4);
-
-    return {
-      day: new Date(Date.now() - (13 - i) * 24 * 3600 * 1000).toISOString().slice(0, 10),
-      sent,
-      delivered,
-      received,
-    };
-  }),
+  daily: Array.from({ length: 14 }, (_, i) => ({
+    day: new Date(Date.now() - (13 - i) * 24 * 3600 * 1000).toISOString().slice(0, 10),
+    sent: 1100 + Math.round(Math.sin(i / 2) * 200 + i * 15),
+    delivered: 1050 + Math.round(Math.sin(i / 2) * 200 + i * 15),
+    received: 180 + Math.round(Math.cos(i / 2) * 40 + i * 4),
+  })),
   hourly: Array.from({ length: 24 }, (_, h) => ({
     hour: h, cnt: h >= 10 && h <= 23 ? Math.round(40 + Math.sin((h - 10) / 4) * 35 + Math.random() * 15) : Math.round(Math.random() * 8),
   })),

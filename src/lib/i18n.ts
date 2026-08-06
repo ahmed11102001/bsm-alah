@@ -134,6 +134,10 @@ export const translations = {
           lowerCtaPro: "رقّي لـ Professional",
           lowerCtaEnterprise: "رقّي لـ Enterprise",
         },
+        sponsor: {
+          badge: "برعاية",
+          cta: "اعرف أكتر",
+        },
         automation: {
           title: "أداء الأتمتة",
           headers: {
@@ -748,6 +752,10 @@ export const translations = {
           lowerHook: "Upgrade to Professional to get Claude AI + natural voice with ElevenLabs, or jump straight to Enterprise and get it all with Wani, the AI agent that replies and closes sales on its own.",
           lowerCtaPro: "Upgrade to Professional",
           lowerCtaEnterprise: "Upgrade to Enterprise",
+        },
+        sponsor: {
+          badge: "Sponsored",
+          cta: "Learn more",
         },
         automation: {
           title: "Automation Performance",

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "./_lib/dashboard-context";
@@ -9,19 +9,21 @@ import { STATUS_BADGE } from "@/app/dashboard/_shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer,
 } from "recharts";
 import {
   MessageSquare, Send, BarChart3,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
+  PieChart as PieChartIcon, Lock, Sparkles,
 } from "lucide-react";
-import { DEMO_OVERVIEW_DATA } from "./_lib/demo-data";
+import { DEMO_OVERVIEW_DATA, DEMO_TEMPLATE_COST } from "./_lib/demo-data";
 
 interface OverviewData {
   range: "7d" | "30d" | "90d";
   campaignBreakdown: { draft: number; scheduled: number; running: number; completed: number; failed: number };
   messagingPerformance: Array<{ date: string; sent: number; delivered: number; replies: number }>;
+  aiAgentReplies: number;
   automationPerformance: Array<{
     id: string; name: string; source: "rule" | "ai"; isEnabled: boolean;
     triggered: number; successRate: number | null;
@@ -43,6 +45,17 @@ const STATUS_BADGE_CLS: Record<string, string> = {
   human_active: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
 };
 
+// ─── Sponsor spotlight — edit these fields to change the partner shown on Home ──
+const SPONSOR = {
+  logoLetter: "P",
+  name: "Paymob",
+  tagline: {
+    ar: "قبول مدفوعات أونلاين بكل طرق الدفع في مصر مباشرة من روابط واتساب — بدون أكواد.",
+    en: "Accept online payments with every payment method in Egypt, straight from WhatsApp links — no code needed.",
+  },
+  url: "https://paymob.com",
+};
+
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false, whatsappConnected = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean; whatsappConnected?: boolean;
 }) {
@@ -56,13 +69,15 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
 
-  const [overview, setOverview] = useState<OverviewData | null>(DEMO_OVERVIEW_DATA as OverviewData);
-  const [loadingOverview, setLoadingOverview] = useState(false);
-  const [range, setRange] = useState<"7d" | "30d" | "90d">("7d");
-
-  useEffect(() => {
-    setOverview({ ...(DEMO_OVERVIEW_DATA as OverviewData), range });
-  }, [range]);
+  const overview: OverviewData = DEMO_OVERVIEW_DATA as OverviewData;
+  const loadingOverview = false;
+  const planTier = data.plan.plan;
+  const hasAiAgent = data.plan.limits.aiAgent;
+  const isProPlan = planTier === "pro";
+  const templateCost = DEMO_TEMPLATE_COST;
+  const templateCostTotal = templateCost.marketing + templateCost.service;
+  const marketingPct = templateCostTotal > 0 ? Math.round((templateCost.marketing / templateCostTotal) * 100) : 0;
+  const servicePct = templateCostTotal > 0 ? 100 - marketingPct : 0;
 
   const relativeTime = useCallback((iso: string | null) => {
     if (!iso) return "";
@@ -213,50 +228,100 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm mb-5">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5 flex-wrap gap-2">
-          <CardTitle className="text-base font-bold">{ov.messaging.title}</CardTitle>
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-            {(["7d", "30d", "90d"] as const).map(r => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${range === r ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
-              >
-                {r === "7d" ? ov.messaging.range7 : r === "30d" ? ov.messaging.range30 : ov.messaging.range90}
-              </button>
-            ))}
-          </div>
-        </CardHeader>
-        <CardContent className="px-2 sm:px-5 pb-4">
-          {loadingOverview ? (
-            <div className="h-[240px] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
-          ) : !overview || overview.messagingPerformance.every(d => d.sent === 0 && d.delivered === 0 && d.replies === 0) ? (
-            <div className="h-[240px] flex flex-col items-center justify-center text-gray-400">
-              <BarChart3 className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-xs">{ov.messaging.empty}</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={overview.messagingPerformance} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-100 dark:text-gray-800" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => new Date(d).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })} stroke="currentColor" className="text-gray-400" />
-                <YAxis tick={{ fontSize: 11 }} stroke="currentColor" className="text-gray-400" />
-                <Tooltip
-                  labelFormatter={d => new Date(d).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
-                  contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => value === "sent" ? ov.messaging.sent : value === "delivered" ? ov.messaging.delivered : ov.messaging.replies} />
-                <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="replies" stroke="#9333ea" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* ── Wani AI Agent + Sponsor spotlight ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* ── Sponsor spotlight — shown to everyone, clearly labeled ── */}
+        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+          <CardContent className="p-0 h-full">
+            <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 text-white font-extrabold text-2xl shadow-sm">
+                {SPONSOR.logoLetter}
+              </div>
+              <div className="flex-1 min-w-0 text-center sm:text-start">
+                <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-full mb-1.5">
+                  {ov.sponsor.badge}
+                </span>
+                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{SPONSOR.name}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{SPONSOR.tagline[locale]}</p>
+                <a
+                  href={SPONSOR.url}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 rounded-xl px-4 py-2 mt-3 transition-colors"
+                >
+                  {ov.sponsor.cta}
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Wani AI Agent — real stat for Enterprise, upsell hook below it ── */}
+        {hasAiAgent ? (
+          <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-emerald-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col items-center justify-center h-[240px] text-center">
+              <p className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{numFmt(overview.aiAgentReplies)}</p>
+              <p className="text-xs text-gray-400 mt-2 max-w-[220px]">{ov.aiAgentCard.enterpriseSubtitle}</p>
+            </CardContent>
+          </Card>
+        ) : isProPlan ? (
+          <Card className="relative overflow-hidden border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-gray-900 dark:to-gray-900">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+              <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.proHook}</p>
+              <button
+                onClick={() => router.push("/checkout?plan=enterprise")}
+                className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                {ov.aiAgentCard.proCta}
+              </button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="relative overflow-hidden border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-gray-900 dark:to-gray-900">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+              <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.lowerHook}</p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  onClick={() => router.push("/checkout?plan=pro")}
+                  className="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-xl px-4 py-2.5 transition-colors"
+                >
+                  {ov.aiAgentCard.lowerCtaPro}
+                </button>
+                <button
+                  onClick={() => router.push("/checkout?plan=enterprise")}
+                  className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {ov.aiAgentCard.lowerCtaEnterprise}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.automation.title}</CardTitle>
@@ -283,8 +348,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold truncate">{a.name}</span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${a.successRate == null ? "bg-gray-100 text-gray-500 dark:bg-gray-800" :
-                            a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
-                              "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                          a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
+                            "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
                           }`}>
                           {a.successRate == null ? ov.automation.noData : `${a.successRate}%`}
                         </span>
@@ -348,6 +413,77 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   </button>
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Template Cost (Marketing vs Service) ── */}
+        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
+                <PieChartIcon className="w-4 h-4 text-indigo-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
+            </div>
+            <button onClick={() => router.push("/demo/reports/cost")} className="text-xs text-gray-400 hover:text-[#25D366] hover:underline flex-shrink-0">
+              {ov.templateCost.reports}
+            </button>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-5 pb-4">
+            {templateCostTotal === 0 ? (
+              <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
+                <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-xs">{ov.templateCost.empty}</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative h-[190px]">
+                  <PieResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "marketing", value: templateCost.marketing },
+                          { name: "service", value: templateCost.service },
+                        ]}
+                        dataKey="value"
+                        innerRadius="62%"
+                        outerRadius="90%"
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                      >
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#4f6ef7" />
+                      </Pie>
+                    </PieChart>
+                  </PieResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-[11px] text-gray-400">{ov.templateCost.totalSpend}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">${templateCostTotal.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] flex-shrink-0" />
+                      {ov.templateCost.marketing}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.marketing.toFixed(2)} <span className="text-gray-400">({marketingPct}%)</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#4f6ef7] flex-shrink-0" />
+                      {ov.templateCost.service}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.service.toFixed(2)} <span className="text-gray-400">({servicePct}%)</span>
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
