@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import {
     Home, Users, Send, FileText, MessageSquare,
-    BarChart3, Bot, ShoppingBag, Code,
+    BarChart3, Bot, ShoppingBag, Code, User,
 } from "lucide-react";
 
 export interface TourStep {
@@ -93,6 +93,14 @@ export const TOUR_STEPS: TourStep[] = [
         titleEn: "Integrations",
         descAr: "التكاملات - للمطورين: وصّل واتساب بأنظمتك الخاصة وتحكم برمجيًا.",
         descEn: "Integrations - for developers: connect WhatsApp to your custom systems programmatically.",
+    },
+    {
+        sidebarId: "account",
+        icon: User,
+        titleAr: "الحساب",
+        titleEn: "Account",
+        descAr: "الحساب - هنا تلاقي اسمك وباقتك الحالية، وتقدر تفتح الإعدادات، تتابع الاستهلاك والتوكنز، تغيّر اللغة أو الوضع الليلي، أو تسجّل خروج.",
+        descEn: "Account - your name and current plan live here. Open settings, check usage & tokens, switch language or dark mode, or sign out.",
     },
 ];
 

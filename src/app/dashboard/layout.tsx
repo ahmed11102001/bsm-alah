@@ -536,7 +536,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   };
 
   // نفس التنقل البرمجي القديم (كان window event / setActiveSection) بقى router.push حقيقي
-  const navigateTo = (section: string) => router.push(sidebarHref(section));
+  const navigateTo = (section: string) => {
+    if (section === "account") return; // Account is a popup menu, not its own page — nothing to route to.
+    router.push(sidebarHref(section));
+  };
 
   useEffect(() => {
     const h = (e: any) => { if (e.detail) navigateTo(e.detail); };
@@ -560,12 +563,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${
-        sidebarCollapsed ? "w-20" : "w-64"
-      } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
-        <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
-          sidebarCollapsed ? "justify-center px-2" : "px-6"
-        }`}>
+      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
+        } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
+        <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
+          }`}>
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
               <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
@@ -585,11 +586,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             <Link key={item.id} href={sidebarHref(item.id)}
               data-sidebar-id={item.id}
               title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                sidebarCollapsed ? "justify-center px-0" : ""
-              } ${activeSection === item.id
-                ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
+                } ${activeSection === item.id
+                  ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 }`}>
               <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
               {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
@@ -600,11 +600,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {isSuper && (
             <Link href={sidebarHref("admin")}
               title={sidebarCollapsed ? t.sidebar.admin : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${
-                sidebarCollapsed ? "justify-center px-0" : ""
-              } ${activeSection === "admin"
-                ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
-                : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${sidebarCollapsed ? "justify-center px-0" : ""
+                } ${activeSection === "admin"
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
+                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
                 }`}>
               <adminItem.icon className="w-[18px] h-[18px] flex-shrink-0" />
               {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
@@ -615,20 +614,19 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         {/* Fixed Account section — the ONLY item below the divider. */}
         <div
           ref={accountMenuRef}
-          className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${
-            sidebarCollapsed ? "p-2" : "p-3"
-          }`}
+          className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${sidebarCollapsed ? "p-2" : "p-3"
+            }`}
         >
           <button
             type="button"
+            data-sidebar-id="account"
             onClick={openAccountPanel}
             title={sidebarCollapsed ? `${accountLabel} — ${planName}` : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-              sidebarCollapsed ? "justify-center px-0" : ""
-            } ${accountPanelOpen
-              ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-              : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
+              } ${accountPanelOpen
+                ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
           >
             <User className="w-[18px] h-[18px] flex-shrink-0" />
 
@@ -649,9 +647,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {/* Desktop popup: floats BESIDE the sidebar, never inside its layout/scroll area. */}
           {accountPanelOpen && (
             <div
-              className={`hidden lg:block absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${
-                dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
-              }`}
+              className={`hidden lg:block absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
+                }`}
             >
               <div className="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
@@ -824,11 +821,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Main ── */}
-      <main className={`flex-1 min-w-0 transition-all duration-300 ${
-        dir === "rtl" 
-          ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64") 
+      <main className={`flex-1 min-w-0 transition-all duration-300 ${dir === "rtl"
+          ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
           : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
-      }`}>
+        }`}>
         {/* Header */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
 
