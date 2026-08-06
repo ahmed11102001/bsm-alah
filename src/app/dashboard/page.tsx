@@ -9,13 +9,12 @@ import { STATUS_BADGE } from "@/app/dashboard/_shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
-import {
   MessageSquare, Send, BarChart3,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
+  PieChart as PieChartIcon,
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer } from "recharts";
 
 // ─── Overview widgets data shape (from /api/dashboard/overview) ──────────────
 interface OverviewData {
@@ -43,6 +42,18 @@ const STATUS_BADGE_CLS: Record<string, string> = {
   human_active: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
 };
 
+// ─── Egypt WhatsApp Conversation Pricing (USD) — same source as /reports/cost ──
+const EG_PRICES: Record<string, number> = {
+  MARKETING: 0.0125,
+  UTILITY: 0.004,
+  AUTHENTICATION: 0.0175,
+  SERVICE: 0,
+};
+function templateMsgCost(count: number, category: string): number {
+  const price = EG_PRICES[category?.toUpperCase()] ?? EG_PRICES.MARKETING;
+  return count * price;
+}
+
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false, whatsappConnected = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean; whatsappConnected?: boolean;
 }) {
@@ -56,21 +67,48 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
 
-  // ─── Overview widgets (Messaging Performance / Automation / Conversations) ───
+  // ─── Overview widgets (Automation / Conversations) ───
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
-  const [range, setRange] = useState<"7d" | "30d" | "90d">("7d");
 
   useEffect(() => {
     let cancelled = false;
     setLoadingOverview(true);
-    fetch(`/api/dashboard/overview?range=${range}`)
+    fetch(`/api/dashboard/overview?range=7d`)
       .then(r => (r.ok ? r.json() : null))
       .then(json => { if (!cancelled) setOverview(json); })
       .catch(() => { if (!cancelled) setOverview(null); })
       .finally(() => { if (!cancelled) setLoadingOverview(false); });
     return () => { cancelled = true; };
-  }, [range]);
+  }, []);
+
+  // ─── Template Cost breakdown (Marketing vs Service) — real data from campaigns ──
+  const [templateCost, setTemplateCost] = useState<{ marketing: number; service: number } | null>(null);
+  const [loadingCost, setLoadingCost] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingCost(true);
+    fetch("/api/campaigns?limit=100")
+      .then(r => (r.ok ? r.json() : null))
+      .then(json => {
+        if (cancelled) return;
+        const list = Array.isArray(json) ? json : (json?.campaigns ?? []);
+        let marketing = 0;
+        let service = 0;
+        for (const c of list) {
+          if (!c.sentCount) continue;
+          const category = c.template?.category ?? "MARKETING";
+          const cost = templateMsgCost(c.sentCount, category);
+          if (category?.toUpperCase() === "MARKETING") marketing += cost;
+          else service += cost;
+        }
+        setTemplateCost({ marketing, service });
+      })
+      .catch(() => { if (!cancelled) setTemplateCost(null); })
+      .finally(() => { if (!cancelled) setLoadingCost(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const relativeTime = useCallback((iso: string | null) => {
     if (!iso) return "";
@@ -119,6 +157,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       </div>
     ), { duration: 6000 });
   };
+
+  const templateCostTotal = (templateCost?.marketing ?? 0) + (templateCost?.service ?? 0);
+  const marketingPct = templateCostTotal > 0 ? Math.round(((templateCost?.marketing ?? 0) / templateCostTotal) * 100) : 0;
+  const servicePct = templateCostTotal > 0 ? 100 - marketingPct : 0;
 
   return (
     <div dir={dir}>
@@ -224,50 +266,80 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      {/* ── Messaging Performance ── */}
-      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm mb-5">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5 flex-wrap gap-2">
-          <CardTitle className="text-base font-bold">{ov.messaging.title}</CardTitle>
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-            {(["7d", "30d", "90d"] as const).map(r => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${range === r ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"
-                  }`}
-              >
-                {r === "7d" ? ov.messaging.range7 : r === "30d" ? ov.messaging.range30 : ov.messaging.range90}
-              </button>
-            ))}
-          </div>
-        </CardHeader>
-        <CardContent className="px-2 sm:px-5 pb-4">
-          {loadingOverview ? (
-            <div className="h-[240px] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
-          ) : !overview || overview.messagingPerformance.every(d => d.sent === 0 && d.delivered === 0 && d.replies === 0) ? (
-            <div className="h-[240px] flex flex-col items-center justify-center text-gray-400">
-              <BarChart3 className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-xs">{ov.messaging.empty}</p>
+      {/* ── Template Cost (Marketing vs Service) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
+                <PieChartIcon className="w-4 h-4 text-indigo-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={overview.messagingPerformance} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-100 dark:text-gray-800" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => new Date(d).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })} stroke="currentColor" className="text-gray-400" />
-                <YAxis tick={{ fontSize: 11 }} stroke="currentColor" className="text-gray-400" />
-                <Tooltip
-                  labelFormatter={d => new Date(d).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
-                  contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => value === "sent" ? ov.messaging.sent : value === "delivered" ? ov.messaging.delivered : ov.messaging.replies} />
-                <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="replies" stroke="#9333ea" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-[#25D366] hover:underline flex-shrink-0">
+              {ov.templateCost.reports}
+            </button>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-5 pb-4">
+            {loadingCost ? (
+              <div className="h-[200px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+            ) : !templateCost || templateCostTotal === 0 ? (
+              <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
+                <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-xs">{ov.templateCost.empty}</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative h-[190px]">
+                  <PieResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "marketing", value: templateCost.marketing },
+                          { name: "service", value: templateCost.service },
+                        ]}
+                        dataKey="value"
+                        innerRadius="62%"
+                        outerRadius="90%"
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                      >
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#4f6ef7" />
+                      </Pie>
+                    </PieChart>
+                  </PieResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-[11px] text-gray-400">{ov.templateCost.totalSpend}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">${templateCostTotal.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] flex-shrink-0" />
+                      {ov.templateCost.marketing}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.marketing.toFixed(2)} <span className="text-gray-400">({marketingPct}%)</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#4f6ef7] flex-shrink-0" />
+                      {ov.templateCost.service}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      ${templateCost.service.toFixed(2)} <span className="text-gray-400">({servicePct}%)</span>
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── Automation Performance + Recent Conversations ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
@@ -297,8 +369,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold truncate">{a.name}</span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${a.successRate == null ? "bg-gray-100 text-gray-500 dark:bg-gray-800" :
-                            a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
-                              "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                          a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
+                            "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
                           }`}>
                           {a.successRate == null ? ov.automation.noData : `${a.successRate}%`}
                         </span>
