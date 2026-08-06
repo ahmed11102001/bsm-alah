@@ -135,8 +135,8 @@ export const translations = {
           lowerCtaEnterprise: "رقّي لـ Enterprise",
         },
         sponsor: {
-          badge: "برعاية",
-          cta: "اعرف أكتر",
+          badge: "مساحة إعلانية",
+          cta: "تواصل معانا",
         },
         automation: {
           title: "أداء الأتمتة",
@@ -754,8 +754,8 @@ export const translations = {
           lowerCtaEnterprise: "Upgrade to Enterprise",
         },
         sponsor: {
-          badge: "Sponsored",
-          cta: "Learn more",
+          badge: "Ad space",
+          cta: "Contact us",
         },
         automation: {
           title: "Automation Performance",
