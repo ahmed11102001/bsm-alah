@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { MessageDirection, MessageStatus } from "@/types/enums";
+import { MessageDirection, MessageStatus, MessageSenderType } from "@/types/enums";
 
 function resolveOwnerId(session: any): string {
     return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
             // ── Raw messages in range — grouped into a daily series in JS below ──
             prisma.message.findMany({
                 where: { userId: ownerId, deletedAt: null, createdAt: { gte: since } },
-                select: { createdAt: true, direction: true, status: true },
+                select: { createdAt: true, direction: true, status: true, senderType: true },
             }),
 
             // ── Classic keyword/welcome automation rules performance ──
@@ -115,9 +115,11 @@ export async function GET(req: NextRequest) {
             d.setDate(d.getDate() + i);
             seriesMap.set(dayKey(d), { sent: 0, delivered: 0, replies: 0 });
         }
+        let aiAgentReplies = 0;
         for (const m of messagesInRange) {
             const key = dayKey(new Date(m.createdAt));
             const bucket = seriesMap.get(key);
+            if (m.senderType === MessageSenderType.ai) aiAgentReplies += 1;
             if (!bucket) continue;
             if (m.direction === MessageDirection.outbound) {
                 bucket.sent += 1;
@@ -190,6 +192,7 @@ export async function GET(req: NextRequest) {
             range: rangeParam,
             campaignBreakdown,
             messagingPerformance: series,
+            aiAgentReplies,
             automationPerformance,
             recentConversations,
         });

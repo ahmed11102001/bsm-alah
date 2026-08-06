@@ -125,6 +125,15 @@ export const translations = {
           service: "قوالب خدمية",
           empty: "لا توجد بيانات إنفاق بعد",
         },
+        aiAgentCard: {
+          title: "وني الوكيل الذكي",
+          enterpriseSubtitle: "رسالة رد عليها وني تلقائياً آخر 7 أيام",
+          proHook: "خلّي وني يرد على عملائك ويقفل البيع 24/7 من غير ما تحرك ساكن — متاح بس في باقة Enterprise.",
+          proCta: "رقّي لـ Enterprise",
+          lowerHook: "رقّي لـ Professional وهتاخد Claude AI + توليد صوت طبيعي بالـ ElevenLabs، أو اقفز على طول لـ Enterprise واستمتع بيهم كلهم مع وني الوكيل الذكي اللي بيرد ويقفل البيع لوحده.",
+          lowerCtaPro: "رقّي لـ Professional",
+          lowerCtaEnterprise: "رقّي لـ Enterprise",
+        },
         automation: {
           title: "أداء الأتمتة",
           headers: {
@@ -730,6 +739,15 @@ export const translations = {
           marketing: "Marketing templates",
           service: "Service templates",
           empty: "No spending data yet",
+        },
+        aiAgentCard: {
+          title: "Wani AI Agent",
+          enterpriseSubtitle: "messages Wani replied to automatically, last 7 days",
+          proHook: "Let Wani reply to your customers and close sales 24/7 while you do nothing — Enterprise plan only.",
+          proCta: "Upgrade to Enterprise",
+          lowerHook: "Upgrade to Professional to get Claude AI + natural voice with ElevenLabs, or jump straight to Enterprise and get it all with Wani, the AI agent that replies and closes sales on its own.",
+          lowerCtaPro: "Upgrade to Professional",
+          lowerCtaEnterprise: "Upgrade to Enterprise",
         },
         automation: {
           title: "Automation Performance",

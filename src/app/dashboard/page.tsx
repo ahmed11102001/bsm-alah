@@ -12,7 +12,7 @@ import {
   MessageSquare, Send, BarChart3,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
-  PieChart as PieChartIcon,
+  PieChart as PieChartIcon, Lock, Sparkles,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer } from "recharts";
 
@@ -21,6 +21,7 @@ interface OverviewData {
   range: "7d" | "30d" | "90d";
   campaignBreakdown: { draft: number; scheduled: number; running: number; completed: number; failed: number };
   messagingPerformance: Array<{ date: string; sent: number; delivered: number; replies: number }>;
+  aiAgentReplies: number;
   automationPerformance: Array<{
     id: string; name: string; source: "rule" | "ai"; isEnabled: boolean;
     triggered: number; successRate: number | null;
@@ -63,6 +64,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const ov = h.overview;
   const [metaPrompt, setMetaPrompt] = useState<string | null>(null);
   const { stats, recentCampaigns, user } = data;
+  const planTier = data.plan.plan;
+  const hasAiAgent = data.plan.limits.aiAgent;
+  const isProPlan = planTier === "pro";
   const firstName = (user.name ?? "").split(" ")[0] || (locale === "ar" ? "مرحباً" : "there");
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
@@ -339,6 +343,76 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             )}
           </CardContent>
         </Card>
+
+        {/* ── Wani AI Agent — real stat for Enterprise, upsell hook below it ── */}
+        {hasAiAgent ? (
+          <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-emerald-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col items-center justify-center h-[240px] text-center">
+              {loadingOverview ? (
+                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+              ) : (
+                <>
+                  <p className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{numFmt(overview?.aiAgentReplies ?? 0)}</p>
+                  <p className="text-xs text-gray-400 mt-2 max-w-[220px]">{ov.aiAgentCard.enterpriseSubtitle}</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ) : isProPlan ? (
+          <Card className="relative overflow-hidden border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-gray-900 dark:to-gray-900">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+              <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.proHook}</p>
+              <button
+                onClick={() => router.push("/checkout?plan=enterprise")}
+                className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                {ov.aiAgentCard.proCta}
+              </button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="relative overflow-hidden border border-purple-100 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50 via-white to-white dark:from-purple-950/30 dark:via-gray-900 dark:to-gray-900">
+            <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
+              <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.lowerHook}</p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  onClick={() => router.push("/checkout?plan=pro")}
+                  className="flex items-center justify-center gap-1.5 text-sm font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-xl px-4 py-2.5 transition-colors"
+                >
+                  {ov.aiAgentCard.lowerCtaPro}
+                </button>
+                <button
+                  onClick={() => router.push("/checkout?plan=enterprise")}
+                  className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {ov.aiAgentCard.lowerCtaEnterprise}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* ── Automation Performance + Recent Conversations ── */}
