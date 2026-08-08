@@ -12,7 +12,7 @@ import {
   MessageSquare, Send, BarChart3,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
-  PieChart as PieChartIcon, Lock, Sparkles, Megaphone,
+  PieChart as PieChartIcon, Lock, Sparkles,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer } from "recharts";
 
@@ -55,18 +55,75 @@ function templateMsgCost(count: number, category: string): number {
   return count * price;
 }
 
-// ─── House ad — Wani's own ad-space listing, shown until a real sponsor is sold ──
-const AD_SLOT = {
-  name: {
-    ar: "احجز مساحتك الإعلانية هنا",
-    en: "Reserve your ad space here",
-  },
-  tagline: {
-    ar: "وصّل خدمتك لآلاف أصحاب المتاجر والشركات اللي بيستخدموا واتساب بيزنس يوميًا من خلال WANI.",
-    en: "Reach thousands of store owners and businesses using WhatsApp Business every day through WANI.",
-  },
-  email: "ads@wani.app",
-};
+// ─── WANI Partner — v1: يعرض مميزات وني نفسها بالتدوير، لحد ما نبني بانل
+// التحكم في المحتوى ومحتوى عملاء Enterprise (خطوات تالية، مش دلوقتي) ─────────
+const WANI_FEATURES: {
+  icon: typeof Bot;
+  title: { ar: string; en: string };
+  desc: { ar: string; en: string };
+}[] = [
+    {
+      icon: Bot,
+      title: { ar: "وكيل واني الذكي 🤖", en: "WANI AI Agent 🤖" },
+      desc: {
+        ar: "بيرد على استفسارات عملائك ويقفل البيع لوحده على واتساب، على مدار الساعة.",
+        en: "Answers your customers and closes sales on WhatsApp, around the clock.",
+      },
+    },
+    {
+      icon: Zap,
+      title: { ar: "أتمتة المتجر ⚡", en: "Store Automation ⚡" },
+      desc: {
+        ar: "تأكيد الطلبات ومتابعة الشحن بتتبعت أوتوماتيك من غير ما تلمس حاجة.",
+        en: "Order confirmations and shipping updates sent automatically.",
+      },
+    },
+    {
+      icon: Send,
+      title: { ar: "حملات واتساب 📢", en: "WhatsApp Campaigns 📢" },
+      desc: {
+        ar: "وصّل عرضك لآلاف العملاء بضغطة واحدة، مع تقارير لحظية.",
+        en: "Reach thousands of customers with one click, with live reporting.",
+      },
+    },
+  ];
+
+function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex(i => (i + 1) % WANI_FEATURES.length), 4500);
+    return () => clearInterval(id);
+  }, []);
+
+  const feature = WANI_FEATURES[index];
+  const Icon = feature.icon;
+
+  return (
+    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 bg-gradient-to-br from-[#25D366]/5 via-white to-white dark:from-[#25D366]/10 dark:via-gray-800/40 dark:to-gray-800/40">
+      <CardContent className="p-0 h-full">
+        <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
+          <div key={`icon-${index}`}
+            className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-[#25D366]/20 flex items-center justify-center flex-shrink-0 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+            <Icon className="w-7 h-7 text-[#25D366]" />
+          </div>
+          <div key={`text-${index}`} className="flex-1 min-w-0 text-center sm:text-start animate-in fade-in slide-in-from-bottom-1 duration-500">
+            <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full mb-1.5">
+              WANI Partner
+            </span>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{feature.title[locale]}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{feature.desc[locale]}</p>
+          </div>
+          <div className="hidden sm:flex flex-col gap-1.5 flex-shrink-0">
+            {WANI_FEATURES.map((_, i) => (
+              <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-[#25D366]" : "bg-gray-200 dark:bg-gray-600"}`} />
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit = false, whatsappConnected = false }: {
   data: DashboardData; onCreateCampaign: () => void; onOpenSettings: () => void; campaignAtLimit?: boolean; whatsappConnected?: boolean;
@@ -283,31 +340,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      {/* ── Wani AI Agent + Sponsor spotlight ── */}
+      {/* ── Wani AI Agent + WANI Partner ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-        {/* ── Sponsor spotlight — shown to everyone, clearly labeled ── */}
-        <Card className="border border-dashed border-gray-300 dark:border-gray-600 shadow-sm overflow-hidden lg:col-span-2 bg-gray-50/60 dark:bg-gray-800/30">
-          <CardContent className="p-0 h-full">
-            <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
-              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Megaphone className="w-7 h-7 text-gray-400" />
-              </div>
-              <div className="flex-1 min-w-0 text-center sm:text-start">
-                <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-400 px-2 py-0.5 rounded-full mb-1.5">
-                  {ov.sponsor.badge}
-                </span>
-                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{AD_SLOT.name[locale]}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{AD_SLOT.tagline[locale]}</p>
-                <a
-                  href={`mailto:${AD_SLOT.email}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 rounded-xl px-4 py-2 mt-3 transition-colors"
-                >
-                  {ov.sponsor.cta}
-                </a>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <WaniPartnerCard locale={locale as "ar" | "en"} />
 
         {/* ── Wani AI Agent — real stat for Enterprise, upsell hook below it ── */}
         {hasAiAgent ? (
@@ -408,8 +443,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold truncate">{a.name}</span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${a.successRate == null ? "bg-gray-100 text-gray-500 dark:bg-gray-800" :
-                            a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
-                              "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                          a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
+                            "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
                           }`}>
                           {a.successRate == null ? ov.automation.noData : `${a.successRate}%`}
                         </span>
