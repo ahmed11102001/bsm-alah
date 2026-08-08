@@ -24,7 +24,7 @@ import {
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Handshake,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
@@ -680,6 +680,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/wani-partner"); }}
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Handshake className="w-4 h-4 flex-shrink-0 text-emerald-500" />
+                <span>WANI Partner</span>
+              </button>
+
               <LanguageToggle />
               <ThemeToggle />
 
@@ -803,6 +812,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 >
                   <BarChart3 className="w-4 h-4" />
                   <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { router.push("/dashboard/wani-partner"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                >
+                  <Handshake className="w-4 h-4 text-emerald-500" />
+                  <span>WANI Partner</span>
                 </button>
                 <LanguageToggle />
                 <ThemeToggle />
