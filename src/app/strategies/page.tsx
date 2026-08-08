@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import type { Locale } from "@/lib/i18n";
@@ -195,15 +196,13 @@ function StrategyCard({ s, locale }: { s: StrategyDef; locale: Locale }) {
   }
 
   return (
-    <a
-      href={`/strategies/${s.slug}.html`}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/strategies/${s.slug}`}
       className="block h-full active:scale-[0.98] transition-transform duration-150"
       aria-label={s.name[locale]}
     >
       {content}
-    </a>
+    </Link>
   );
 }
 
