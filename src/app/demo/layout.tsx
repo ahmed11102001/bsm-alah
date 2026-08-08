@@ -1,4 +1,3 @@
-
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -38,9 +37,11 @@ import {
 import {
   Users, Settings, LogOut, Phone, Mail,
   Lock, Wifi, Sun, Moon, Monitor, Languages, Bell,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, CheckCircle, XCircle, AlertTriangle,
+  ShoppingBag, Clock, Sparkles, CheckCircle2, Bot, MessageSquare, CheckCheck, X,
 } from "lucide-react";
 import DemoModeBanner from "./_components/DemoModeBanner";
+import { DEMO_NOTIFICATIONS, type DemoNotification } from "./_lib/demo-data";
 
 // ─── Theme Toggle (نفس الأصلي بالظبط، مفيش فيه أي fetch) ─────────────────────
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
@@ -92,38 +93,125 @@ function LanguageToggle({ compact = false }: { compact?: boolean }) {
   );
 }
 
-// ─── جرس إشعارات ثابت (بدون fetch) — عشان الشكل يفضل موجود من غير نداء حقيقي ──
+// ─── جرس إشعارات — نسخة كاملة من NotificationBell الحقيقي (نفس الأيقونة/اللون
+// لكل نوع، نفس الـ badge والـ mark-as-read)، بس بيانات ثابتة من غير polling ──
+const NOTIF_ICON: Record<DemoNotification["type"], React.ReactNode> = {
+  CAMPAIGN_SUCCESS: <CheckCircle className="w-4 h-4 text-green-500" />,
+  CAMPAIGN_FAILED: <XCircle className="w-4 h-4 text-red-500" />,
+  CAMPAIGN_PARTIAL: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
+  PLAN_LIMIT_REACHED: <AlertTriangle className="w-4 h-4 text-orange-500" />,
+  NEW_MESSAGE: <MessageSquare className="w-4 h-4 text-blue-500" />,
+  STORE_AUTO_SENT: <ShoppingBag className="w-4 h-4 text-emerald-500" />,
+  STORE_AUTO_FAILED: <ShoppingBag className="w-4 h-4 text-red-500" />,
+  SUBSCRIPTION_EXPIRING: <Clock className="w-4 h-4 text-amber-500" />,
+  PAYMENT_FAILED: <AlertTriangle className="w-4 h-4 text-red-600" />,
+  WHATSAPP_TOKEN_EXPIRING: <Wifi className="w-4 h-4 text-orange-500" />,
+  AI_TOKENS_LOW: <Sparkles className="w-4 h-4 text-yellow-500" />,
+  SUBSCRIPTION_SUCCESS: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+  ORDER_CONFIRMED: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+  ORDER_CANCELLED: <XCircle className="w-4 h-4 text-red-500" />,
+  AI_HANDOFF_NEEDED: <Bot className="w-4 h-4 text-purple-500" />,
+  SMART_FOLLOWUP_ALERT: <AlertTriangle className="w-4 h-4 text-orange-500" />,
+};
+
+const NOTIF_BG: Record<DemoNotification["type"], string> = {
+  CAMPAIGN_SUCCESS: "bg-green-50 dark:bg-green-900/20",
+  CAMPAIGN_FAILED: "bg-red-50 dark:bg-red-900/20",
+  CAMPAIGN_PARTIAL: "bg-yellow-50 dark:bg-yellow-900/20",
+  PLAN_LIMIT_REACHED: "bg-orange-50 dark:bg-orange-900/20",
+  NEW_MESSAGE: "bg-blue-50 dark:bg-blue-900/20",
+  STORE_AUTO_SENT: "bg-emerald-50 dark:bg-emerald-900/20",
+  STORE_AUTO_FAILED: "bg-red-50 dark:bg-red-900/20",
+  SUBSCRIPTION_EXPIRING: "bg-amber-50 dark:bg-amber-900/20",
+  PAYMENT_FAILED: "bg-red-50 dark:bg-red-900/20",
+  WHATSAPP_TOKEN_EXPIRING: "bg-orange-50 dark:bg-orange-900/20",
+  AI_TOKENS_LOW: "bg-yellow-50 dark:bg-yellow-900/20",
+  SUBSCRIPTION_SUCCESS: "bg-green-50 dark:bg-green-900/20",
+  ORDER_CONFIRMED: "bg-green-50 dark:bg-green-900/20",
+  ORDER_CANCELLED: "bg-red-50 dark:bg-red-900/20",
+  AI_HANDOFF_NEEDED: "bg-purple-50 dark:bg-purple-900/20",
+  SMART_FOLLOWUP_ALERT: "bg-orange-50 dark:bg-orange-900/20",
+};
+
+function timeAgoAr(dateStr: string, locale: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (locale !== "ar") {
+    if (m < 1) return "Just now";
+    if (m < 60) return `${m} mins ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} hours ago`;
+    return `${Math.floor(h / 24)} days ago`;
+  }
+  if (m < 1) return "الآن";
+  if (m < 60) return `منذ ${m} دقيقة`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `منذ ${h} ساعة`;
+  return `منذ ${Math.floor(h / 24)} يوم`;
+}
+
 function DemoNotificationBell() {
   const { locale, dir } = useLanguage();
+  const lang: "ar" | "en" = locale === "en" ? "en" : "ar";
   const [open, setOpen] = useState(false);
-  const items = locale === "ar" ? [
-    { icon: "📦", text: "تم شحن طلب #4821" },
-    { icon: "💬", text: "رسالة جديدة من عميل" },
-    { icon: "🛒", text: "عربة متروكة تحتاج متابعة" },
-  ] : [
-    { icon: "📦", text: "Order #4821 was shipped" },
-    { icon: "💬", text: "New message from a customer" },
-    { icon: "🛒", text: "Abandoned cart needs follow-up" },
-  ];
+  const [notifs, setNotifs] = useState<DemoNotification[]>(DEMO_NOTIFICATIONS);
+  const unread = notifs.filter(n => !n.isRead).length;
+
+  const markAsRead = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
 
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="relative p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
         <Bell className="w-5 h-5" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+        {unread > 0 && (
+          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
-            <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-500">
-              {locale === "ar" ? "الإشعارات" : "Notifications"}
+          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-[22rem] max-w-[calc(100vw-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
+                {unread > 0 && (
+                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unread} {lang === "ar" ? "جديد" : "New"}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-1">
+                {unread > 0 && (
+                  <button onClick={markAllRead} className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1">
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    {lang === "ar" ? "الكل مقروء" : "Mark all read"}
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 mr-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="p-2 space-y-1">
-              {items.map((n, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <span className="text-base">{n.icon}</span>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">{n.text}</p>
+
+            <div className="overflow-y-auto max-h-96">
+              {notifs.map(notif => (
+                <div key={notif.id} onClick={() => markAsRead(notif.id)}
+                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition border-b border-gray-50 dark:border-gray-800 last:border-0 ${!notif.isRead ? "bg-blue-50/40 dark:bg-blue-900/10" : ""}`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${NOTIF_BG[notif.type]}`}>
+                    {NOTIF_ICON[notif.type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`break-words text-sm leading-snug ${!notif.isRead ? "font-semibold text-gray-900 dark:text-white" : "font-medium text-gray-700 dark:text-gray-300"}`}>
+                      {notif.title[lang]}
+                    </p>
+                    <p className="break-words text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug whitespace-pre-line">{notif.body[lang]}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{timeAgoAr(notif.createdAt, locale)}</p>
+                  </div>
+                  {!notif.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />}
                 </div>
               ))}
             </div>
@@ -457,212 +545,207 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <DemoModeBanner />
       <div className="flex flex-1 min-h-0">
 
-      {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-9 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${
-        sidebarCollapsed ? "w-20" : "w-64"
-      } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
-        <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${
-          sidebarCollapsed ? "justify-center px-2" : "px-6"
-        }`}>
-          <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
-            </div>
-            {!sidebarCollapsed && (
-              <span className="text-lg font-bold truncate">
-                {locale === "ar" ? "وني" : "WANI"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
-          {sidebarItems.map((item) => (
-            <Link key={item.id} href={sidebarHref(item.id)}
-              data-sidebar-id={item.id}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                sidebarCollapsed ? "justify-center px-0" : ""
-              } ${activeSection === item.id
-                ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                }`}>
-              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-              {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="border-t border-gray-100 dark:border-gray-700 p-3 flex-shrink-0 space-y-1">
-          <ThemeToggle compact={sidebarCollapsed} />
-          <LanguageToggle compact={sidebarCollapsed} />
-
-          {!sidebarCollapsed ? (
-            <div className="flex items-center gap-2.5 py-2">
-              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate">{displayName}</p>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center py-2" title={`${displayName} (${planName})`}>
-              <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                {initials}
-              </div>
-            </div>
-          )}
-
-          <button onClick={() => router.push("/")}
-            title={sidebarCollapsed ? t.signOut : undefined}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm ${
-              sidebarCollapsed ? "justify-center px-0" : ""
+        {/* ── Desktop Sidebar ── */}
+        <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-9 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
+          } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
+          <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
             }`}>
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!sidebarCollapsed && <span>{locale === "ar" ? "الخروج من الديمو" : "Exit demo"}</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Mobile Full-Screen Menu ── */}
-      {mobileMenuOpen && (
-        <div
-          dir={dir}
-          className="lg:hidden fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col overflow-y-auto"
-        >
-          <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
+            <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+              <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
                 <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
-              <span className="text-base font-bold">
-                {locale === "ar" ? "وني" : "WANI"}
-              </span>
-            </div>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl leading-none"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 mx-4 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-            <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold flex-shrink-0">
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{displayName}</p>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+              {!sidebarCollapsed && (
+                <span className="text-lg font-bold truncate">
+                  {locale === "ar" ? "وني" : "WANI"}
+                </span>
+              )}
             </div>
           </div>
 
-          <nav className="px-4 mt-4 space-y-1.5">
+          <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
             {sidebarItems.map((item) => (
-              <Link
-                key={item.id}
-                href={sidebarHref(item.id)}
+              <Link key={item.id} href={sidebarHref(item.id)}
                 data-sidebar-id={item.id}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
-                  ? "bg-[#25D366] text-white shadow-sm"
-                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                  }`}
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                <span>{item.label}</span>
+                title={sidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
+                  } ${activeSection === item.id
+                    ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  }`}>
+                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
               </Link>
             ))}
           </nav>
 
-          <div className="px-4 mt-4 mb-6 space-y-1.5">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-                <ThemeToggle />
+          <div className="border-t border-gray-100 dark:border-gray-700 p-3 flex-shrink-0 space-y-1">
+            <ThemeToggle compact={sidebarCollapsed} />
+            <LanguageToggle compact={sidebarCollapsed} />
+
+            {!sidebarCollapsed ? (
+              <div className="flex items-center gap-2.5 py-2">
+                <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{displayName}</p>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+                </div>
               </div>
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-                <LanguageToggle />
+            ) : (
+              <div className="flex justify-center py-2" title={`${displayName} (${planName})`}>
+                <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  {initials}
+                </div>
+              </div>
+            )}
+
+            <button onClick={() => router.push("/")}
+              title={sidebarCollapsed ? t.signOut : undefined}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-sm ${sidebarCollapsed ? "justify-center px-0" : ""
+                }`}>
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              {!sidebarCollapsed && <span>{locale === "ar" ? "الخروج من الديمو" : "Exit demo"}</span>}
+            </button>
+          </div>
+        </aside>
+
+        {/* ── Mobile Full-Screen Menu ── */}
+        {mobileMenuOpen && (
+          <div
+            dir={dir}
+            className="lg:hidden fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col overflow-y-auto"
+          >
+            <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
+                  <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+                </div>
+                <span className="text-base font-bold">
+                  {locale === "ar" ? "وني" : "WANI"}
+                </span>
               </div>
               <button
-                onClick={() => { openSettings(); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl leading-none"
               >
-                <Settings className="w-5 h-5 flex-shrink-0" />
-                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
-              </button>
-              <button
-                onClick={() => router.push("/")}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-red-500"
-              >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
-                <span>{locale === "ar" ? "الخروج من الديمو" : "Exit demo"}</span>
+                ✕
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ── Main ── */}
-      <main className={`flex-1 min-w-0 transition-all duration-300 ${
-        dir === "rtl"
-          ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
-          : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
-      }`}>
-        {/* Header */}
-        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-9 z-30 transition-colors duration-200">
-
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-            aria-label="Open menu"
-          >
-            <div className="flex flex-col gap-[5px]">
-              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
-              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
-              <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+            <div className="flex items-center gap-3 mx-4 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold flex-shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">{displayName}</p>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+              </div>
             </div>
-          </button>
 
-          <button
-            onClick={toggleSidebar}
-            className="hidden lg:flex items-center p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
-          >
-            {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
-          </button>
+            <nav className="px-4 mt-4 space-y-1.5">
+              {sidebarItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={sidebarHref(item.id)}
+                  data-sidebar-id={item.id}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                    }`}
+                >
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
 
-          <div className="flex-1 hidden lg:block" />
-
-          <div className="flex items-center gap-2">
-            <DemoNotificationBell />
-
-            <ClaudeHeaderBadge
-              locale={locale}
-              dir={dir}
-              onNavigate={navigateTo}
-              isOpen={activeTopPanel === "claude"}
-              onOpenChange={openClaudePanel}
-            />
-
-            <UserMenuBadge
-              initials={initials}
-              displayName={displayName}
-              planName={planName}
-              dir={dir}
-              onOpenSettings={openSettings}
-              locale={locale}
-            />
+            <div className="px-4 mt-4 mb-6 space-y-1.5">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <ThemeToggle />
+                </div>
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <LanguageToggle />
+                </div>
+                <button
+                  onClick={() => { openSettings(); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700"
+                >
+                  <Settings className="w-5 h-5 flex-shrink-0" />
+                  <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+                </button>
+                <button
+                  onClick={() => router.push("/")}
+                  className="w-full flex items-center gap-4 px-5 py-3.5 text-[15px] text-red-500"
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  <span>{locale === "ar" ? "الخروج من الديمو" : "Exit demo"}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </header>
+        )}
 
-        <div className="p-4 lg:p-6">
-          {children}
-        </div>
-      </main>
+        {/* ── Main ── */}
+        <main className={`flex-1 min-w-0 transition-all duration-300 ${dir === "rtl"
+            ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
+            : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
+          }`}>
+          {/* Header */}
+          <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-9 z-30 transition-colors duration-200">
 
-      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} />
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+              aria-label="Open menu"
+            >
+              <div className="flex flex-col gap-[5px]">
+                <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+                <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+                <span className="block w-[18px] h-0.5 bg-current rounded-full" />
+              </div>
+            </button>
+
+            <button
+              onClick={toggleSidebar}
+              className="hidden lg:flex items-center p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+
+            <div className="flex-1 hidden lg:block" />
+
+            <div className="flex items-center gap-2">
+              <DemoNotificationBell />
+
+              <ClaudeHeaderBadge
+                locale={locale}
+                dir={dir}
+                onNavigate={navigateTo}
+                isOpen={activeTopPanel === "claude"}
+                onOpenChange={openClaudePanel}
+              />
+
+              <UserMenuBadge
+                initials={initials}
+                displayName={displayName}
+                planName={planName}
+                dir={dir}
+                onOpenSettings={openSettings}
+                locale={locale}
+              />
+            </div>
+          </header>
+
+          <div className="p-4 lg:p-6">
+            {children}
+          </div>
+        </main>
+
+        <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} data={dashData} />
       </div>
     </div>
   );

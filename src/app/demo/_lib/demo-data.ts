@@ -14,6 +14,108 @@ export const DEMO_STORE_NAME = "متجر ليالي للعطور";
 export const DEMO_USER_NAME = "عميل وني";
 export const DEMO_USER_EMAIL = "demo@wani.app";
 
+// ─── إشعارات وهمية — نسخة من كل نوع إشعار بيعمله السيستم الحقيقي فعليًا ─────
+// (نفس الـ 16 نوع الموجودين في src/types/enums.ts::NotificationType، ونفس
+// صيغة العنوان/المحتوى ثنائية اللغة اللي بيعملها src/lib/notifications.ts)
+export interface DemoNotification {
+  id: string;
+  type:
+  | "CAMPAIGN_SUCCESS" | "CAMPAIGN_FAILED" | "CAMPAIGN_PARTIAL"
+  | "PLAN_LIMIT_REACHED" | "NEW_MESSAGE" | "STORE_AUTO_SENT" | "STORE_AUTO_FAILED"
+  | "SUBSCRIPTION_EXPIRING" | "PAYMENT_FAILED" | "WHATSAPP_TOKEN_EXPIRING"
+  | "AI_TOKENS_LOW" | "SUBSCRIPTION_SUCCESS" | "ORDER_CONFIRMED" | "ORDER_CANCELLED"
+  | "AI_HANDOFF_NEEDED" | "SMART_FOLLOWUP_ALERT";
+  title: { ar: string; en: string };
+  body: { ar: string; en: string };
+  isRead: boolean;
+  createdAt: string;
+}
+
+const minAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+
+export const DEMO_NOTIFICATIONS: DemoNotification[] = [
+  {
+    id: "n-1", type: "AI_HANDOFF_NEEDED", isRead: false, createdAt: minAgo(4),
+    title: { ar: "🔴 عاجل — 🤖 AI طلب تحويل المحادثة", en: "🔴 Urgent — 🤖 AI requested handoff" },
+    body: { ar: "العميل: منى عبد الله\nالسبب: سؤال عن مناطق شحن غير مغطاة بالرد الآلي", en: "Customer: Mona Abdallah\nReason: Question about an uncovered shipping area" },
+  },
+  {
+    id: "n-2", type: "ORDER_CONFIRMED", isRead: false, createdAt: minAgo(6),
+    title: { ar: "✅ تم تأكيد الطلب #4821", en: "✅ Order #4821 confirmed" },
+    body: { ar: "قامت العميلة (سارة أحمد) بتأكيد الطلب #4821 بنجاح.", en: "Customer (Sara Ahmed) successfully confirmed order #4821." },
+  },
+  {
+    id: "n-3", type: "STORE_AUTO_SENT", isRead: false, createdAt: minAgo(40),
+    title: { ar: "🛒 تم إرسال قالب تحديث الشحن", en: "🛒 Shipping Update template sent" },
+    body: { ar: "Shopify: تم إرسال \"wani_order_shipped\" إلى عمر خالد", en: "Shopify: \"wani_order_shipped\" sent to Omar Khaled" },
+  },
+  {
+    id: "n-4", type: "CAMPAIGN_SUCCESS", isRead: true, createdAt: minAgo(150),
+    title: { ar: "✅ تم إرسال الحملة بنجاح", en: "✅ Campaign sent successfully" },
+    body: { ar: "حملة \"عروض الجمعة البيضاء\" — تم إرسال 3,200 رسالة بنجاح", en: "Campaign \"Black Friday Offer\" — 3,200 messages sent successfully" },
+  },
+  {
+    id: "n-5", type: "CAMPAIGN_PARTIAL", isRead: true, createdAt: minAgo(200),
+    title: { ar: "⚠️ الحملة اكتملت جزئياً", en: "⚠️ Campaign partially completed" },
+    body: { ar: "حملة \"متابعة عملاء VIP\" — 178 ناجحة، 2 فاشلة", en: "Campaign \"VIP Follow-up\" — 178 sent, 2 failed" },
+  },
+  {
+    id: "n-6", type: "SMART_FOLLOWUP_ALERT", isRead: true, createdAt: minAgo(260),
+    title: { ar: "🔴 تقييم منخفض من عميل", en: "🔴 Low customer rating" },
+    body: { ar: "العميل 201033445566 قيّم الطلب 4805 بـ 2 نجوم", en: "Customer 201033445566 rated order 4805 2 stars" },
+  },
+  {
+    id: "n-7", type: "AI_TOKENS_LOW", isRead: true, createdAt: minAgo(400),
+    title: { ar: "⚠️ رصيد الذكاء الاصطناعي منخفض", en: "⚠️ AI tokens low" },
+    body: { ar: "لقد استهلكت 82% من رصيد الذكاء الاصطناعي لهذا الشهر.", en: "You have used 82% of your AI tokens for this month." },
+  },
+  {
+    id: "n-8", type: "WHATSAPP_TOKEN_EXPIRING", isRead: true, createdAt: minAgo(600),
+    title: { ar: "⚠️ تنبيه: اقتراب انتهاء صلاحية ربط واتساب", en: "⚠️ WhatsApp token expiring soon" },
+    body: { ar: "ربط واتساب الخاص بك سينتهي خلال 5 أيام. يرجى إعادة الربط لضمان استمرار البوت.", en: "Your WhatsApp connection will expire in 5 days. Please reconnect to keep the bot running." },
+  },
+  {
+    id: "n-9", type: "SUBSCRIPTION_SUCCESS", isRead: true, createdAt: minAgo(1400),
+    title: { ar: "🎉 تم تفعيل الباقة بنجاح", en: "🎉 Subscription activated successfully" },
+    body: { ar: "تم تفعيل باقة (Enterprise) الخاصة بك بنجاح. استمتع بميزات وني!", en: "Your (Enterprise) plan has been activated successfully. Enjoy WANI features!" },
+  },
+  {
+    id: "n-10", type: "NEW_MESSAGE", isRead: true, createdAt: minAgo(18),
+    title: { ar: "💬 رسالة واردة جديدة", en: "💬 New incoming message" },
+    body: { ar: "رسالة جديدة من 201099887766", en: "New message from 201099887766" },
+  },
+  {
+    id: "n-11", type: "ORDER_CANCELLED", isRead: true, createdAt: minAgo(2200),
+    title: { ar: "❌ تم إلغاء الطلب #4805", en: "❌ Order #4805 cancelled" },
+    body: { ar: "قام العميل (يوسف إبراهيم) بإلغاء الطلب #4805.", en: "Customer (Youssef Ibrahim) cancelled order #4805." },
+  },
+  {
+    id: "n-12", type: "PLAN_LIMIT_REACHED", isRead: true, createdAt: minAgo(2900),
+    title: { ar: "🚨 وصلت لحد الباقة", en: "🚨 Plan limit reached" },
+    body: { ar: "وصلت للحد الأقصى لـ الحملات الشهرية في باقتك الحالية", en: "You've reached the limit for monthly campaigns in your current plan" },
+  },
+  {
+    id: "n-13", type: "SUBSCRIPTION_EXPIRING", isRead: true, createdAt: minAgo(4000),
+    title: { ar: "⚠️ باقتك ستنتهي قريباً", en: "⚠️ Subscription expiring soon" },
+    body: { ar: "باقتك (Enterprise) ستنتهي بعد 7 أيام. يرجى التجديد لتجنب توقف الخدمة.", en: "Your (Enterprise) plan expires in 7 days. Please renew to avoid service interruption." },
+  },
+  {
+    id: "n-14", type: "PAYMENT_FAILED", isRead: true, createdAt: minAgo(5200),
+    title: { ar: "❌ فشل عملية الدفع", en: "❌ Payment failed" },
+    body: { ar: "لم نتمكن من تجديد باقة (Enterprise). يرجى التحقق من طريقة الدفع الخاصة بك.", en: "We couldn't renew your (Enterprise) plan. Please check your payment method." },
+  },
+  {
+    id: "n-15", type: "STORE_AUTO_FAILED", isRead: true, createdAt: minAgo(6100),
+    title: { ar: "❌ فشل إرسال قالب استرداد السلة", en: "❌ Cart Recovery template failed" },
+    body: { ar: "Shopify: فشل إرسال \"wani_cart_abandon\" إلى 201288997766 — رقم غير نشط على واتساب", en: "Shopify: Failed to send \"wani_cart_abandon\" to 201288997766 — number not active on WhatsApp" },
+  },
+  {
+    id: "n-16", type: "CAMPAIGN_FAILED", isRead: true, createdAt: minAgo(7000),
+    title: { ar: "❌ فشل إرسال الحملة", en: "❌ Campaign failed" },
+    body: { ar: "حملة \"اختبار قالب قديم\" — فشل إرسال 45 رسالة", en: "Campaign \"Old template test\" — 45 messages failed" },
+  },
+];
+
 export const DEMO_DASHBOARD_DATA: DashboardData = {
   user: {
     id: "demo-user-1",
