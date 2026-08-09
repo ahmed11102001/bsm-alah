@@ -1097,7 +1097,7 @@ export default function API() {
   };
 
   const copyClaudeText = (type: "key" | "config") => {
-    const host = typeof window !== "undefined" ? window.location.host : "whatsprosystem.vercel.app";
+    const host = typeof window !== "undefined" ? window.location.host : "aiwni.com";
     const text = type === "key"
       ? `Bearer ${claudeApiKey}`
       : JSON.stringify({
@@ -1428,8 +1428,8 @@ export default function API() {
                   <CopyInput
                     value={typeof window !== "undefined"
                       ? `https://${window.location.host}/api/mcp`
-                      : "https://whatsprosystem.vercel.app/api/mcp"}
-                    placeholder="https://whatsprosystem.vercel.app/api/mcp"
+                      : "https://aiwni.com/api/mcp"}
+                    placeholder="https://aiwni.com/api/mcp"
                   />
                   <p className="text-[10px] text-gray-400 dark:text-gray-500">
                     استخدم هذا الرابط + المفتاح أعلاه في إعدادات Claude Desktop
@@ -1449,7 +1449,7 @@ export default function API() {
     "whatspro": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch",
-               "https://${typeof window !== "undefined" ? window.location.host : "whatsprosystem.vercel.app"}/api/mcp"],
+               "https://${typeof window !== "undefined" ? window.location.host : "aiwni.com"}/api/mcp"],
       "env": {
         "AUTHORIZATION": "Bearer ${claudeApiKey}"
       }

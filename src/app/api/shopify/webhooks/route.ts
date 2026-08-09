@@ -24,7 +24,7 @@ function userToken(userId: string): string {
 }
 
 export function generateShopifyWebhookUrl(userId: string): string {
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   const token = userToken(userId);
   return `${base}/api/shopify/webhooks?uid=${userId}&token=${token}`;
 }

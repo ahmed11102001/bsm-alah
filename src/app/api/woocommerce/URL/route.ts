@@ -6,7 +6,7 @@ import { createHmac }       from "crypto";
 import prisma               from "@/lib/prisma";
 
 export function generateWooWebhookUrl(userId: string): string {
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   const token = createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
     .update(`woo:${userId}`)
     .digest("hex")

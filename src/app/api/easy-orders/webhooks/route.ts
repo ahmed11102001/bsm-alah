@@ -14,7 +14,7 @@ function userToken(userId: string): string {
 }
 
 export function generateEasyOrderWebhookUrl(userId: string): string {
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   const token = userToken(userId);
   return `${base}/api/easy-orders/webhooks?uid=${userId}&token=${token}`;
 }

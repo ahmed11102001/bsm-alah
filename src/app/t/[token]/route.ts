@@ -38,7 +38,7 @@ export async function GET(
       new URL(
         "/",
         process.env.NEXT_PUBLIC_APP_URL ??
-          "https://whatsprosystem.vercel.app"
+          "https://aiwni.com"
       ),
       { status: 302 }
     );
@@ -52,7 +52,7 @@ export async function GET(
       new URL(
         "/",
         process.env.NEXT_PUBLIC_APP_URL ??
-          "https://whatsprosystem.vercel.app"
+          "https://aiwni.com"
       ),
       { status: 302 }
     );
@@ -103,7 +103,7 @@ export async function GET(
       new URL(
         "/",
         process.env.NEXT_PUBLIC_APP_URL ??
-          "https://whatsprosystem.vercel.app"
+          "https://aiwni.com"
       ),
       { status: 302 }
     );

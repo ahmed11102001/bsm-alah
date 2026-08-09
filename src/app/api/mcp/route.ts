@@ -476,7 +476,7 @@ async function runTool(name: string, args: any, ownerId: string) {
         return { error: `ترتيب المتغيرات غير صحيح — يجب أن تكون {{1}} {{2}} ... بدون تخطي` };
     }
 
-    const host = process.env.NEXTAUTH_URL ?? "https://whatsprosystem.vercel.app";
+    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
 
     const res = await fetch(`${host}/api/templates`, {
       method: "POST",
@@ -535,7 +535,7 @@ async function runTool(name: string, args: any, ownerId: string) {
     if (!template)
       return { error: `القالب "${template_id}" غير موجود أو لا ينتمي لحسابك` };
 
-    const host = process.env.NEXTAUTH_URL ?? "https://whatsprosystem.vercel.app";
+    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
 
     const res = await fetch(`${host}/api/templates`, {
       method: "DELETE",
@@ -589,7 +589,7 @@ async function runTool(name: string, args: any, ownerId: string) {
     const numbers = audience.contacts.map(c => c.phone);
 
     // بعت request لـ campaigns API مع نفس الـ apiKey للمصادقة
-    const host = process.env.NEXTAUTH_URL ?? "https://whatsprosystem.vercel.app";
+    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
 
     const apiKey = await prisma.user.findUnique({
       where: { id: ownerId },

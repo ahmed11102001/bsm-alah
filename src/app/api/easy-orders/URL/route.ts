@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const eoBlocked = guardResponse(eoGuard);
   if (eoBlocked) return eoBlocked;
 
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   const token = userToken(user.id);
 
   // المسار الصحيح: /api/easy-orders/webhooks

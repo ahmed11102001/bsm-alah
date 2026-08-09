@@ -6,7 +6,7 @@ export async function GET() {
   return NextResponse.redirect(
     new URL(
       "/dashboard?tab=api",
-      process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app"
+      process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com"
     )
   );
 }

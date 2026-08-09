@@ -26,7 +26,7 @@ export function generateClickToken(
 
 // ─── بناء الـ tracked URL اللي هيتبعت في الرسالة ────────────────────────────
 export function buildTrackedUrl(token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://whatsprosystem.vercel.app";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   return `${base}/t/${token}`;
 }
 

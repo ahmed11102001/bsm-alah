@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WANI - وني",
     description: "أرسل آلاف الرسائل لعملائك بنقرة واحدة مع تقارير مفصلة وأتمتة كاملة.",
-    url: "https://whatsprosystem.vercel.app",
+    url: "https://aiwni.com",
     siteName: "WANI",
     locale: "ar_EG",
     type: "website",

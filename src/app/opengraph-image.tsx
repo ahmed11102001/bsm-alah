@@ -131,7 +131,7 @@ export default async function OgImage() {
             display: "flex",
           }}
         >
-          whatsprosystem.vercel.app
+          aiwni.com
         </div>
       </div>
     ),
