@@ -15,6 +15,9 @@ import {
   PieChart as PieChartIcon, Lock, Sparkles,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer } from "recharts";
+import {
+  PartnerCardTemplate, type PartnerCardContent,
+} from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 
 // ─── Overview widgets data shape (from /api/dashboard/overview) ──────────────
 interface OverviewData {
@@ -55,8 +58,8 @@ function templateMsgCost(count: number, category: string): number {
   return count * price;
 }
 
-// ─── WANI Partner — v1: يعرض مميزات وني نفسها بالتدوير، لحد ما نبني بانل
-// التحكم في المحتوى ومحتوى عملاء Enterprise (خطوات تالية، مش دلوقتي) ─────────
+// ─── WANI Partner — الكارت بقى متحكَّم فيه من /dashboard/wani-partner (أدمن بس).
+// الـ Array ده بقى Fallback بس: بيتعرض لو لسه محدش ضاف أي كارت من الصفحة ─────
 const WANI_FEATURES: {
   icon: typeof Bot;
   title: { ar: string; en: string };
@@ -88,15 +91,48 @@ const WANI_FEATURES: {
     },
   ];
 
+interface DbPartnerCard extends PartnerCardContent {
+  id: string;
+  template: number;
+}
+
 function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   const [index, setIndex] = useState(0);
+  // null = لسه بيحمّل، [] = محدش عمل كارت من /dashboard/wani-partner لسه
+  const [dbCards, setDbCards] = useState<DbPartnerCard[] | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setIndex(i => (i + 1) % WANI_FEATURES.length), 4500);
-    return () => clearInterval(id);
+    let cancelled = false;
+    fetch("/api/wani-partner")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((json) => { if (!cancelled) setDbCards(Array.isArray(json) ? json : []); })
+      .catch(() => { if (!cancelled) setDbCards([]); });
+    return () => { cancelled = true; };
   }, []);
 
-  const feature = WANI_FEATURES[index];
+  const useDbCards = !!dbCards && dbCards.length > 0;
+  const total = useDbCards ? dbCards!.length : WANI_FEATURES.length;
+
+  useEffect(() => {
+    setIndex(0);
+    const id = setInterval(() => setIndex((i) => (i + 1) % total), 4500);
+    return () => clearInterval(id);
+  }, [total]);
+
+  // ── محتوى مُتحكَّم فيه من /dashboard/wani-partner (5 تيمبلت مختلفة) ──
+  if (useDbCards) {
+    const card = dbCards![index % dbCards!.length];
+    return (
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
+        <CardContent className="p-0 h-[240px] relative">
+          <PartnerCardTemplate template={card.template} content={card} animKey={card.id} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Fallback (default): يعرض مميزات وني نفسها بالتدوير لحد ما يتضاف كارت ──
+  const feature = WANI_FEATURES[index % WANI_FEATURES.length];
   const Icon = feature.icon;
 
   return (

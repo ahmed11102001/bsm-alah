@@ -380,6 +380,29 @@ model Coupon {
   @@index([active])
 }
 
+/// كارت "WANI Partner" في الداشبورد — بيتحكم فيه الأدمن من صفحة
+/// /dashboard/wani-partner بدل ما يبقى Array ثابت في الكود (src/app/dashboard/page.tsx)
+model WaniPartnerCard {
+  id        String   @id @default(cuid())
+  /// شكل/حركة الكارت — رقم من 1 لـ 5 (كل رقم تصميم وانيميشن مختلف)
+  template  Int      @default(1)
+  brandName String
+  title     String
+  tagline   String
+  ctaText   String
+  ctaLink   String
+  /// صورة الخلفية بس (Cloudinary) — من غير أي نص عليها، النص بيتحط بالكود فوقها
+  image     String
+  active    Boolean  @default(true)
+  /// ترتيب الظهور في الـ rotation
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+  @@index([order])
+}
+
 model ShopifyStore {
   id          String            @id @default(cuid())
   userId      String            @unique

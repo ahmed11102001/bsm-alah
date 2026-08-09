@@ -262,6 +262,31 @@ export const AdminTestimonialPatchSchema = z.object({
 });
 export type AdminTestimonialPatchInput = z.infer<typeof AdminTestimonialPatchSchema>;
 
+// ─── Admin — WANI Partner Card ───────────────────────────────────────────────
+
+/** POST /api/admin/wani-partner */
+export const AdminCreateWaniPartnerCardSchema = z.object({
+  template: z.number().int().min(1).max(5).optional().default(1),
+  brandName: nonEmptyStr.max(40, "اسم البراند طويل جداً"),
+  title: nonEmptyStr.max(80, "العنوان طويل جداً"),
+  tagline: nonEmptyStr.max(140, "الجملة طويلة جداً"),
+  ctaText: nonEmptyStr.max(30, "نص الزر طويل جداً"),
+  ctaLink: nonEmptyStr.max(500, "الرابط طويل جداً"),
+  image: z.string().trim().url("رابط الصورة غير صالح"),
+  active: z.boolean().optional().default(true),
+  order: z.number().int().optional().default(0),
+});
+export type AdminCreateWaniPartnerCardInput = z.infer<typeof AdminCreateWaniPartnerCardSchema>;
+
+/** PATCH /api/admin/wani-partner */
+export const AdminWaniPartnerCardPatchSchema = AdminCreateWaniPartnerCardSchema
+  .partial()
+  .extend({ id: nonEmptyStr });
+export type AdminWaniPartnerCardPatchInput = z.infer<typeof AdminWaniPartnerCardPatchSchema>;
+
+/** DELETE /api/admin/wani-partner */
+export const AdminWaniPartnerCardDeleteSchema = z.object({ id: nonEmptyStr });
+
 // ─── AI Guardrails & Agent ───────────────────────────────────────────────────
 
 /** PUT /api/ai-agent/guardrails */
