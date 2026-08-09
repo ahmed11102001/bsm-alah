@@ -1,6 +1,6 @@
 // src/app/api/admin/wani-partner/route.ts
-// إدارة كارت "WANI Partner" في الداشبورد — بدل ما المحتوى يبقى ثابت في الكود
-// (src/app/dashboard/page.tsx) بقى متحكم فيه من صفحة /dashboard/wani-partner.
+// تاب "WANI Partner" في /dashboard/admin — قائمة كل الكروت اللي اليوزرز
+// بعتوها (pending/approved/rejected)، والأدمن بيقبل/يرفض/يرتّب من هنا.
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -18,52 +18,82 @@ async function requireSuper() {
   return session;
 }
 
-// GET — جيب كل كروت الـ Partner (للأدمن، شامل الغير مفعّل)
+// GET — كل الكروت (كل الحالات)، pending الأول عشان تتراجع بسرعة
 export async function GET() {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const cards = await prisma.waniPartnerCard.findMany({
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    orderBy: [{ createdAt: "desc" }],
+    include: {
+      user: { select: { id: true, name: true, email: true, brandName: true } },
+    },
   });
+
+  // pending الأول، بعدين approved، بعدين rejected
+  const priority: Record<string, number> = { pending: 0, approved: 1, rejected: 2 };
+  cards.sort((a: { status: string }, b: { status: string }) => priority[a.status] - priority[b.status]);
 
   return NextResponse.json(cards);
 }
 
-// POST — إنشاء كارت جديد
+// POST — كارت رسمي بيضيفه الأدمن مباشرة لحسابه، بيتعتمد أوتوماتيك (بدون مراجعة لنفسه)
 export async function POST(req: NextRequest) {
   const session = await requireSuper();
-  if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user?.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const parsed = parseInput(AdminCreateWaniPartnerCardSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const card = await prisma.waniPartnerCard.create({ data: parsed.data });
+  const card = await prisma.waniPartnerCard.upsert({
+    where: { userId: session.user.id },
+    create: {
+      ...parsed.data,
+      userId: session.user.id,
+      status: "approved",
+      reviewedAt: new Date(),
+      reviewedBy: session.user.id,
+    },
+    update: {
+      ...parsed.data,
+      status: "approved",
+      rejectionReason: null,
+      reviewedAt: new Date(),
+      reviewedBy: session.user.id,
+    },
+  });
+
   return NextResponse.json(card, { status: 201 });
 }
 
-// PATCH — تحديث كارت (شامل تبديل active وإعادة الترتيب)
+// PATCH — قبول/رفض الكارت، أو أي تعديل إداري (ترتيب، تفعيل، تعديل محتوى)
 export async function PATCH(req: NextRequest) {
   const session = await requireSuper();
-  if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user?.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const parsed = parseInput(AdminWaniPartnerCardPatchSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const { id, ...rest } = parsed.data;
+  const { id, status, rejectionReason, ...rest } = parsed.data;
 
   const current = await prisma.waniPartnerCard.findUnique({ where: { id } });
   if (!current) return NextResponse.json({ error: "الكارت غير موجود" }, { status: 404 });
 
-  const updated = await prisma.waniPartnerCard.update({
-    where: { id },
-    data: rest,
-  });
+  const data: Record<string, unknown> = { ...rest };
+  if (status) {
+    data.status = status;
+    data.reviewedAt = new Date();
+    data.reviewedBy = session.user.id;
+    data.rejectionReason = status === "rejected" ? (rejectionReason ?? null) : null;
+  } else if (rejectionReason !== undefined) {
+    data.rejectionReason = rejectionReason;
+  }
 
+  const updated = await prisma.waniPartnerCard.update({ where: { id }, data });
   return NextResponse.json(updated);
 }
 
-// DELETE — حذف كارت
+// DELETE — الأدمن يقدر يمسح أي كارت (إجراء رقابي)
 export async function DELETE(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });

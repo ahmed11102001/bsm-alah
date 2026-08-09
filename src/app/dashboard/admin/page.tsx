@@ -8,8 +8,12 @@ import {
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
   Target, Download, Phone, Bot, Send, Power, PowerOff, Sparkles,
+  Handshake, Clock, CheckCircle2, XCircle, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import {
+  PartnerCardTemplate, PARTNER_TEMPLATES, type PartnerCardContent,
+} from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const PLANS = ["free", "starter", "pro", "enterprise"] as const;
@@ -50,8 +54,18 @@ interface Lead {
   status: "NEW" | "CONTACTED" | "CONVERTED" | "LOST";
   notes: string | null; createdAt: string;
 }
+interface WaniPartnerCardRow extends PartnerCardContent {
+  id: string;
+  template: number;
+  status: "pending" | "approved" | "rejected";
+  rejectionReason: string | null;
+  active: boolean;
+  order: number;
+  createdAt: string;
+  user: { id: string; name: string | null; email: string; brandName: string | null };
+}
 
-type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads";
+type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads" | "wani-partner";
 
 const blankArticle = {
   title: "", slug: "", excerpt: "", content: "", coverImage: "", published: false,
@@ -136,6 +150,14 @@ export default function AdminPage() {
   const [leadTotal,     setLeadTotal]     = useState(0);
   const [updatingLead,  setUpdatingLead]  = useState<string | null>(null);
 
+  // wani partner
+  const [waniCards,      setWaniCards]      = useState<WaniPartnerCardRow[]>([]);
+  const [loadingWani,    setLoadingWani]    = useState(false);
+  const [rejectingId,    setRejectingId]    = useState<string | null>(null);
+  const [rejectReason,   setRejectReason]   = useState("");
+  const [waniActionId,   setWaniActionId]   = useState<string | null>(null);
+
+
   // lead bot
   interface Template { id: string; name: string; language: string; status: string; }
   interface LeadBotConfig { id: string; templateId: string | null; templateName: string | null; templateLang: string; isActive: boolean; sentCount: number; }
@@ -199,6 +221,62 @@ export default function AdminPage() {
       setLeadTotal(data.total);
     }
     setLoadingL(false);
+  };
+
+  // ── WANI Partner: مراجعة كروت اليوزرز ──────────────────────────────────────
+  const fetchWaniCards = async () => {
+    setLoadingWani(true);
+    const r = await fetch("/api/admin/wani-partner");
+    if (r.ok) setWaniCards(await r.json());
+    setLoadingWani(false);
+  };
+
+  const handleWaniApprove = async (id: string) => {
+    setWaniActionId(id);
+    await fetch("/api/admin/wani-partner", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "approved" }),
+    });
+    await fetchWaniCards();
+    setWaniActionId(null);
+  };
+
+  const handleWaniRejectSubmit = async (id: string) => {
+    setWaniActionId(id);
+    await fetch("/api/admin/wani-partner", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "rejected", rejectionReason: rejectReason.trim() || undefined }),
+    });
+    setRejectingId(null);
+    setRejectReason("");
+    await fetchWaniCards();
+    setWaniActionId(null);
+  };
+
+  const handleWaniDelete = async (id: string) => {
+    if (!confirm(locale === "ar" ? "متأكد إنك عايز تمسح الكارت ده؟" : "Delete this card?")) return;
+    setWaniActionId(id);
+    await fetch("/api/admin/wani-partner", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    await fetchWaniCards();
+    setWaniActionId(null);
+  };
+
+  const handleWaniMove = async (card: WaniPartnerCardRow, direction: -1 | 1) => {
+    const approved = waniCards.filter(c => c.status === "approved").sort((a, b) => a.order - b.order);
+    const idx = approved.findIndex(c => c.id === card.id);
+    const swapWith = approved[idx + direction];
+    if (!swapWith) return;
+    await Promise.all([
+      fetch("/api/admin/wani-partner", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: card.id, order: swapWith.order }) }),
+      fetch("/api/admin/wani-partner", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: swapWith.id, order: card.order }) }),
+    ]);
+    await fetchWaniCards();
   };
 
   const fetchBotConfig = async () => {
@@ -266,10 +344,15 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIdx, cursors, userSearch, showDeleted]);
   useEffect(() => {
+    fetchWaniCards();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
     if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")      fetchCoupons();
     if (activeTab === "articles")     fetchArticles();
     if (activeTab === "leads")        { fetchLeads(leadStatus); fetchBotConfig(); }
+    if (activeTab === "wani-partner") fetchWaniCards();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
@@ -474,6 +557,7 @@ export default function AdminPage() {
             { id: "coupons",      label: adm.tabs.coupons,      icon: Ticket             },
             { id: "articles",     label: adm.tabs.articles,     icon: FileText           },
             { id: "leads",        label: adm.leads.tab,         icon: Target             },
+            { id: "wani-partner", label: locale === "ar" ? "شركاء واني" : "WANI Partner", icon: Handshake },
           ] as { id: Tab; label: string; icon: any }[]).map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowArticleF(false); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -482,6 +566,11 @@ export default function AdminPage() {
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}>
               <tab.icon className="w-4 h-4" />{tab.label}
+              {tab.id === "wani-partner" && waniCards.filter(c => c.status === "pending").length > 0 && (
+                <span className={`text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center ${activeTab === tab.id ? "bg-white/25 text-white" : "bg-amber-500 text-white"}`}>
+                  {waniCards.filter(c => c.status === "pending").length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1334,6 +1423,127 @@ export default function AdminPage() {
                   </tbody>
                 </table>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ WANI PARTNER ══ */}
+        {activeTab === "wani-partner" && (
+          <div>
+            {loadingWani ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+            ) : waniCards.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
+                <Handshake className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 dark:text-gray-500 text-sm">
+                  {locale === "ar" ? "محدش عمل كارت لسه" : "No cards submitted yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {waniCards.map((card) => {
+                  const statusMeta = {
+                    pending:  { icon: Clock,        color: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",     label: locale === "ar" ? "قيد المراجعة" : "Pending" },
+                    approved: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800", label: locale === "ar" ? "معتمد" : "Approved" },
+                    rejected: { icon: XCircle,      color: "text-red-600 dark:text-red-400",        bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",             label: locale === "ar" ? "مرفوض" : "Rejected" },
+                  }[card.status];
+                  const StatusIcon = statusMeta.icon;
+                  const approvedSorted = waniCards.filter(c => c.status === "approved").sort((a, b) => a.order - b.order);
+                  const approvedIdx = approvedSorted.findIndex(c => c.id === card.id);
+                  const busy = waniActionId === card.id;
+
+                  return (
+                    <div key={card.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                      <div className="h-40 relative">
+                        <PartnerCardTemplate template={card.template} content={card} interactive={false} />
+                        {!card.active && card.status === "approved" && (
+                          <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                            <span className="text-white text-xs font-semibold px-2.5 py-1 rounded-full bg-black/40 border border-white/20">
+                              {locale === "ar" ? "متوقف من اليوزر" : "Paused by user"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{card.title}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {card.user.brandName || card.user.name || card.user.email} ·{" "}
+                              {PARTNER_TEMPLATES.find(m => m.id === card.template)?.name[locale as "ar" | "en"]}
+                            </p>
+                          </div>
+                          <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${statusMeta.bg} ${statusMeta.color}`}>
+                            <StatusIcon className="w-3 h-3" /> {statusMeta.label}
+                          </span>
+                        </div>
+
+                        {card.status === "rejected" && card.rejectionReason && (
+                          <p className="text-[11px] text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg px-2.5 py-1.5">{card.rejectionReason}</p>
+                        )}
+
+                        {rejectingId === card.id ? (
+                          <div className="space-y-2">
+                            <input
+                              value={rejectReason}
+                              onChange={e => setRejectReason(e.target.value)}
+                              placeholder={locale === "ar" ? "سبب الرفض (اختياري)" : "Rejection reason (optional)"}
+                              className={inp}
+                            />
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => handleWaniRejectSubmit(card.id)} disabled={busy}
+                                className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 transition disabled:opacity-50">
+                                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                                {locale === "ar" ? "تأكيد الرفض" : "Confirm reject"}
+                              </button>
+                              <button onClick={() => { setRejectingId(null); setRejectReason(""); }}
+                                className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2">
+                                {locale === "ar" ? "إلغاء" : "Cancel"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              {card.status !== "approved" && (
+                                <button onClick={() => handleWaniApprove(card.id)} disabled={busy}
+                                  className="flex items-center gap-1.5 bg-[#25D366] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#20b557] transition disabled:opacity-50">
+                                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  {locale === "ar" ? "قبول" : "Approve"}
+                                </button>
+                              )}
+                              {card.status !== "rejected" && (
+                                <button onClick={() => { setRejectingId(card.id); setRejectReason(""); }} disabled={busy}
+                                  className="flex items-center gap-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-50">
+                                  <X className="w-3.5 h-3.5" />
+                                  {locale === "ar" ? "رفض" : "Reject"}
+                                </button>
+                              )}
+                              {card.status === "approved" && (
+                                <>
+                                  <button onClick={() => handleWaniMove(card, -1)} disabled={approvedIdx <= 0}
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "لأعلى" : "Up"}>
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => handleWaniMove(card, 1)} disabled={approvedIdx === -1 || approvedIdx === approvedSorted.length - 1}
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "لأسفل" : "Down"}>
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            <button onClick={() => handleWaniDelete(card.id)} disabled={busy}
+                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 disabled:opacity-50" title={locale === "ar" ? "حذف" : "Delete"}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

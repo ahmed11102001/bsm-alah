@@ -66,6 +66,7 @@ model User {
   websitePages             WebsitePage[]
   websiteCrawlSettings     WebsiteCrawlSettings?
   productSyncLogs          ProductSyncLog[]
+  waniPartnerCard          WaniPartnerCard?
 
   @@index([email])
   @@index([workspaceId])
@@ -380,12 +381,16 @@ model Coupon {
   @@index([active])
 }
 
-/// كارت "WANI Partner" في الداشبورد — بيتحكم فيه الأدمن من صفحة
-/// /dashboard/wani-partner بدل ما يبقى Array ثابت في الكود (src/app/dashboard/page.tsx)
+/// كارت "WANI Partner" في الداشبورد — اليوزر بيصمم كارته من صفحة
+/// /dashboard/wani-partner، وبيدخل الـ rotation بعد موافقة الأدمن من
+/// تاب "WANI Partner" في /dashboard/admin (src/app/dashboard/page.tsx بيعرض
+/// المعتمد والمفعّل بس).
 model WaniPartnerCard {
-  id        String   @id @default(cuid())
+  id     String @id @default(cuid())
+  userId String @unique // كارت واحد لكل يوزر
+
   /// شكل/حركة الكارت — رقم من 1 لـ 5 (كل رقم تصميم وانيميشن مختلف)
-  template  Int      @default(1)
+  template  Int    @default(1)
   brandName String
   title     String
   tagline   String
@@ -393,14 +398,32 @@ model WaniPartnerCard {
   ctaLink   String
   /// صورة الخلفية بس (Cloudinary) — من غير أي نص عليها، النص بيتحط بالكود فوقها
   image     String
-  active    Boolean  @default(true)
-  /// ترتيب الظهور في الـ rotation
-  order     Int      @default(0)
+
+  /// حالة مراجعة الأدمن — أي تعديل في المحتوى بيرجّعها pending تاني
+  status          WaniPartnerCardStatus @default(pending)
+  rejectionReason String?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+
+  /// تشغيل/إيقاف — بيتحكم فيه اليوزر نفسه بعد الموافقة، من غير ما يحتاج مراجعة تانية
+  active Boolean @default(true)
+  /// ترتيب الظهور في الـ rotation — الأدمن بيظبطه بين الكروت المعتمدة
+  order  Int     @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
   @@index([active])
   @@index([order])
+}
+
+enum WaniPartnerCardStatus {
+  pending
+  approved
+  rejected
 }
 
 model ShopifyStore {
