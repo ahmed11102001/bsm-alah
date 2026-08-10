@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 // Helper function to upload mock/placeholder media files to Meta and get a handle
 async function getMetaMediaHandle(accessToken: string, mediaType: string): Promise<string> {
   // 1. Get App ID
-  const appRes: Response = await fetch(`https://graph.facebook.com/v21.0/app?access_token=${accessToken}`);
+  const appRes: Response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/app?access_token=${accessToken}`);
   if (!appRes.ok) throw new Error("Failed to fetch App ID from Meta");
   const appData: any = await appRes.json();
   const appId = appData.id;
@@ -35,7 +36,7 @@ async function getMetaMediaHandle(accessToken: string, mediaType: string): Promi
 
   // 3. Initiate upload session
   const initRes: Response = await fetch(
-    `https://graph.facebook.com/v21.0/${appId}/uploads?file_length=${fileBuffer.length}&file_type=${fileType}&access_token=${accessToken}`,
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${appId}/uploads?file_length=${fileBuffer.length}&file_type=${fileType}&access_token=${accessToken}`,
     { method: "POST" }
   );
   if (!initRes.ok) {
@@ -46,7 +47,7 @@ async function getMetaMediaHandle(accessToken: string, mediaType: string): Promi
   const uploadSessionId = initData.id;
 
   // 4. Upload file
-  const uploadRes: Response = await fetch(`https://graph.facebook.com/v21.0/${uploadSessionId}`, {
+  const uploadRes: Response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${uploadSessionId}`, {
     method: "POST",
     headers: {
       "Authorization": `OAuth ${accessToken}`,
@@ -221,7 +222,7 @@ export async function POST(req: Request) {
       }
 
       // Send template to Meta Graph API
-      const metaUrl = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates`;
+      const metaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.wabaId}/message_templates`;
       const response = await fetch(metaUrl, {
         method: "POST",
         headers: {
@@ -295,7 +296,7 @@ export async function DELETE(req: Request) {
         });
         if (account && account.accessToken && account.wabaId) {
           const decryptedToken = decryptToken(account.accessToken).trim();
-          const deleteUrl = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?name=${template.name}`;
+          const deleteUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.wabaId}/message_templates?name=${template.name}`;
           const res = await fetch(deleteUrl, {
             method: "DELETE",
             headers: {

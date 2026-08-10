@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 // ── POST /api/developers/projects/[id]/otp-templates/sync ────────────────────
 export async function POST(
@@ -32,7 +33,7 @@ export async function POST(
     const plainAccessToken = decryptToken(connection.accessToken);
 
     // Fetch templates from Meta
-    const metaUrl = `https://graph.facebook.com/v21.0/${connection.wabaId}/message_templates?limit=100&fields=id,name,status,category,language,rejected_reason`;
+    const metaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${connection.wabaId}/message_templates?limit=100&fields=id,name,status,category,language,rejected_reason`;
     const metaRes = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${plainAccessToken}` },
     });

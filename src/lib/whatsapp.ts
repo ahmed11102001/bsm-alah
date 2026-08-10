@@ -1,6 +1,7 @@
 ﻿import prisma from "@/lib/prisma";
 import { normalizePhone } from "@/lib/phone";
 import { decryptToken }  from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 export async function sendMessage(
   userId: string,
@@ -22,7 +23,7 @@ export async function sendMessage(
     }
 
     const response = await fetch(
-      `https://graph.facebook.com/v21.0/${whatsappAccount.phoneNumberId}/messages`,
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${whatsappAccount.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {

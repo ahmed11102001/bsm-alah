@@ -1,6 +1,8 @@
 // src/lib/whatsapp-api.ts
 // ─── كود إرسال الرسائل — مكان واحد بيتاستخدم من Inngest والـ queue ────────────
 
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+
 export interface InteractiveButton {
   id: string;
   title: string;
@@ -193,7 +195,7 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
 
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${item.phoneNumberId}/messages`,
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${item.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {

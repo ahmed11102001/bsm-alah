@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { encryptToken, decryptToken } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 // 1. دالة حفظ إعدادات الربط (Access Token, IDs)
 export async function saveWhatsAppSettings(data: {
@@ -57,7 +58,7 @@ export async function syncWhatsAppTemplates() {
     const decryptedToken = decryptToken(account.accessToken).trim();
 
     let remoteTemplates: any[] = [];
-    let nextUrl: string | null = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?limit=100`;
+    let nextUrl: string | null = `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.wabaId}/message_templates?limit=100`;
 
     // Loop through paginated results
     while (nextUrl) {

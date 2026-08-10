@@ -1,5 +1,6 @@
 // src/lib/cloudinary.ts
 import { v2 as cloudinary } from "cloudinary";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
@@ -61,7 +62,7 @@ export async function downloadFromMetaAndUpload(
 ): Promise<string> {
   // الخطوة 1: جيب URL الملف من Meta
   const infoRes = await fetch(
-    `https://graph.facebook.com/v21.0/${encodeURIComponent(metaMediaId)}`,
+    `https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(metaMediaId)}`,
     { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
   );
 

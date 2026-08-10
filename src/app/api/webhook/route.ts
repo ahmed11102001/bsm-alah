@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
 import { notifyNewMessage, notifyAiHandoffNeeded } from "@/lib/notifications";
@@ -808,7 +809,7 @@ async function handleAutomation(ctx: {
       }
 
       const metaRes = await fetch(
-        `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`,
+        `https://graph.facebook.com/${GRAPH_API_VERSION}/${accountOwner.phoneNumberId}/messages`,
         {
           method: "POST",
           headers: {
@@ -1181,7 +1182,7 @@ async function sendReply(ctx: {
 }) {
   const { userId, from, replyText, replyMediaUrl, accountOwner, ruleName, isAI = false } = ctx;
   const senderType = isAI ? MessageSenderType.ai : MessageSenderType.bot;
-  const apiBase = `https://graph.facebook.com/v20.0/${accountOwner.phoneNumberId}/messages`;
+  const apiBase = `https://graph.facebook.com/${GRAPH_API_VERSION}/${accountOwner.phoneNumberId}/messages`;
   const headers = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${accountOwner.accessToken}`,

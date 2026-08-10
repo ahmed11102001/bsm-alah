@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType } from "@/types/enums";
 import { inngest } from "@/inngest/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { decryptToken } from "@/lib/crypto";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
@@ -343,7 +344,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
     const metaRes = await fetch(
-      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/messages`,
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {
@@ -479,7 +480,7 @@ async function sendMedia(userId: string, req: NextRequest) {
     uploadForm.append("messaging_product", "whatsapp");
 
     const uploadRes = await fetch(
-      `https://graph.facebook.com/v20.0/${account.phoneNumberId}/media`,
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.phoneNumberId}/media`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${decryptToken(account.accessToken)}` },

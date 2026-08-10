@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 export async function POST() {
   try {
@@ -21,7 +22,7 @@ export async function POST() {
     const decryptedToken = decryptToken(account.accessToken).trim();
 
     let remoteTemplates: any[] = [];
-    let nextUrl: string | null = `https://graph.facebook.com/v21.0/${account.wabaId}/message_templates?limit=100`;
+    let nextUrl: string | null = `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.wabaId}/message_templates?limit=100`;
 
     // Loop through paginated results
     while (nextUrl) {

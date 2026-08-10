@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, Zap }                             from "lucide-react";
 import { Button }                                    from "@/components/ui/button";
 import { toast }                                     from "sonner";
+import { GRAPH_API_VERSION }                         from "@/lib/meta-graph";
 
 /* ── Props ──────────────────────────────────────────────────────────────────── */
 interface EmbeddedSignupButtonProps {
@@ -64,7 +65,7 @@ export default function EmbeddedSignupButton({
         appId:            process.env.NEXT_PUBLIC_META_APP_ID!,
         autoLogAppEvents: true,
         xfbml:            false,
-        version:          process.env.NEXT_PUBLIC_GRAPH_API_VERSION ?? "v22.0",
+        version:          GRAPH_API_VERSION,
       });
       setSdkReady(true);
     };

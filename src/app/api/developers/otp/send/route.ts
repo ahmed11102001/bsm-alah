@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { decryptToken } from "@/lib/crypto";
 import { storeOtp } from "@/lib/otp-redis";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 interface AuthResult {
   projectId: string;
@@ -102,7 +103,7 @@ async function sendWhatsAppOtp(opts: {
   language: string;
   varCount: number;     // how many {{N}} in body
 }): Promise<{ success: boolean; metaMessageId?: string; error?: string }> {
-  const url = `https://graph.facebook.com/v21.0/${opts.phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.phoneNumberId}/messages`;
 
   // Build body parameters — fill all vars with the OTP code (most templates use 1 var)
   const bodyParams = Array.from({ length: Math.max(opts.varCount, 1) }, () => ({

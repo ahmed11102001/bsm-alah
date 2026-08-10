@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 export const runtime = "nodejs";
 
@@ -104,7 +105,7 @@ export async function GET(
       return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
     }
 
-    const mediaInfoRes = await fetch(`https://graph.facebook.com/v20.0/${encodeURIComponent(mediaId)}`, {
+    const mediaInfoRes = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(mediaId)}`, {
       headers: { Authorization: `Bearer ${decryptToken(account.accessToken)}` },
       cache: "no-store",
     });

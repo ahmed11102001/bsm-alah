@@ -18,8 +18,7 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { encryptToken } from "@/lib/crypto";
-
-const GRAPH_VERSION = process.env.NEXT_PUBLIC_GRAPH_API_VERSION ?? "v22.0";
+import { GRAPH_API_VERSION as GRAPH_VERSION } from "@/lib/meta-graph";
 
 export async function POST(
   req: NextRequest,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
+import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 
@@ -233,7 +234,7 @@ async function submitTemplateToMeta({
     }
   }
 
-  const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates`;
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/message_templates`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -265,7 +266,7 @@ async function deleteTemplateFromMeta({
   wabaId: string;
   templateName: string;
 }) {
-  const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates?name=${templateName}`;
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/message_templates?name=${templateName}`;
   const res = await fetch(url, {
     method: "DELETE",
     headers: {

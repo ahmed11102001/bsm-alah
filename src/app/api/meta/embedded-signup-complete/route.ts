@@ -20,8 +20,7 @@ import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { encryptToken }              from "@/lib/crypto";
-
-const GRAPH_VERSION = process.env.NEXT_PUBLIC_GRAPH_API_VERSION ?? "v22.0";
+import { GRAPH_API_VERSION as GRAPH_VERSION } from "@/lib/meta-graph";
 
 export async function POST(req: NextRequest) {
   /* ── 1. Auth check ───────────────────────────────────────────────────────── */
