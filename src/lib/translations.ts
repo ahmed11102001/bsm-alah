@@ -217,9 +217,12 @@ export const t = {
           { ar: "حملات غير محدودة", en: "Unlimited campaigns", ok: true },
           { ar: "كل أنواع الميديا", en: "All media types", ok: true },
           { ar: "تقارير متقدمة + Export", en: "Advanced reports + Export", ok: true },
-          { ar: "أتمة ذكية", en: "Smart automation", ok: true },
-          { ar: "ربط متجر + أتمتة كاملة", en: "Store + full automation", ok: true },
+          { ar: "اتمتة كاملة", en: "Full automation", ok: true },
+           { ar: "التكامل مع eleven labs", en: "Eleven Labs Integration", ok: true },
+          { ar: "ربط المتجر", en: "Store integration", ok: true },
           { ar: "كلود AI المساعد", en: "Claude AI Assistant", ok: true },
+          
+      
         ],
       },
       {
@@ -234,8 +237,7 @@ export const t = {
           { ar: "مستخدمون غير محدودون", en: "Unlimited users", ok: true },
           { ar: "حملات غير محدودة", en: "Unlimited campaigns", ok: true },
           { ar: "AI Sales Assistant ذكي", en: "Smart AI Sales Assistant", ok: true },
-          { ar: "ربط متجر + أتمتة كاملة", en: "Store + full automation", ok: true },
-          { ar: "كلود AI المساعد ", en: "Claude AI Assistant", ok: true },
+         { ar: "كارت شريك وني", en: "WANI Partner Card", ok: true },
           { ar: "API كامل", en: "Full API access", ok: true },
           { ar: "دعم VIP ٢٤/٧", en: "24/7 VIP support", ok: true },
         ],

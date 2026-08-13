@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Key, FileText, Wifi, WifiOff, Share2, AlertTriangle, Copy, Check, ExternalLink } from "lucide-react";
-import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import { useLanguage } from "../../../_components/LanguageProvider";
 
 interface ProjectData {
@@ -493,12 +492,6 @@ export default function ProjectOverviewPage() {
                 <AlertTriangle size={14} />
                 {t("This project is not connected to Meta — it won't be able to send OTPs", "المشروع ده مش مربوط بـ Meta — مش هيقدر يرسل OTP")}
               </div>
-
-              <EmbeddedSignupButton
-                locale={language}
-                endpoint={`/api/developers/projects/${projectId}/meta/embedded-signup-complete`}
-                onSuccess={() => fetchAll()}
-              />
 
               <button
                 className="btn-connect-meta-manual"

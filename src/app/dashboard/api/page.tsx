@@ -1332,18 +1332,6 @@ export default function API() {
                   connected={waConnected}
                   onDisconnect={handleDisconnectWhatsApp}
                   locale={locale}
-                  onAutoConnectSuccess={(phoneId, wabaId) => {
-                    setWaConnected(true);
-                    setWaData({ phoneNumberId: phoneId, wabaId: wabaId });
-                    setWaJustConnected(true);
-                    if (typeof window !== "undefined") {
-                      window.dispatchEvent(new CustomEvent("refresh-dash"));
-                    }
-                    closeTimerRef.current = setTimeout(() => {
-                      setOpenCard(null);
-                      setWaJustConnected(false);
-                    }, 2000);
-                  }}
                 />
               )
             )}
