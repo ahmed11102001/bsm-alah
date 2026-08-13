@@ -123,8 +123,8 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   if (useDbCards) {
     const card = dbCards![index % dbCards!.length];
     return (
-      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
-        <CardContent className="p-0 h-[240px] relative">
+      <Card className="h-full border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
+        <CardContent className="p-0 h-full min-h-[240px] relative">
           <PartnerCardTemplate template={card.template} content={card} animKey={card.id} />
         </CardContent>
       </Card>

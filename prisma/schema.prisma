@@ -66,7 +66,7 @@ model User {
   websitePages             WebsitePage[]
   websiteCrawlSettings     WebsiteCrawlSettings?
   productSyncLogs          ProductSyncLog[]
-  waniPartnerCard          WaniPartnerCard?
+  waniPartnerCards         WaniPartnerCard[]
 
   @@index([email])
   @@index([workspaceId])
@@ -387,7 +387,7 @@ model Coupon {
 /// المعتمد والمفعّل بس).
 model WaniPartnerCard {
   id     String @id @default(cuid())
-  userId String @unique // كارت واحد لكل يوزر
+  userId String // حتى 10 كروت لكل يوزر
 
   /// شكل/حركة الكارت — رقم من 1 لـ 5 (كل رقم تصميم وانيميشن مختلف)
   template  Int    @default(1)
@@ -418,6 +418,7 @@ model WaniPartnerCard {
   @@index([status])
   @@index([active])
   @@index([order])
+  @@index([userId])
 }
 
 enum WaniPartnerCardStatus {

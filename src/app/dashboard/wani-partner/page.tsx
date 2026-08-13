@@ -24,7 +24,7 @@ interface MyCard extends PartnerCardContent {
   active: boolean;
 }
 
-const EMPTY_FORM: PartnerCardContent & { template: number } = {
+const EMPTY_FORM: PartnerCardContent & { template: number; id?: string } = {
   template: 1, brandName: "", title: "", tagline: "", ctaText: "", ctaLink: "", image: "",
 };
 
@@ -39,7 +39,8 @@ export default function WaniPartnerPage() {
   const isAr = locale === "ar";
   const t = (ar: string, en: string) => (isAr ? ar : en);
 
-  const [card, setCard] = useState<MyCard | null | undefined>(undefined); // undefined = loading
+  const [cards, setCards] = useState<MyCard[] | undefined>(undefined); // undefined = loading
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -50,16 +51,17 @@ export default function WaniPartnerPage() {
   const load = useCallback(() => {
     fetch("/api/wani-partner/mine")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setCard(data ?? null))
-      .catch(() => setCard(null));
+      .then((data) => { const next = Array.isArray(data) ? data : []; setCards(next); setSelectedCardId((id) => id && next.some((c) => c.id === id) ? id : next[0]?.id ?? null); })
+      .catch(() => setCards([]));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   function startEdit() {
+    const card = cards?.find((c) => c.id === selectedCardId);
     if (card) {
       setForm({
-        template: card.template, brandName: card.brandName, title: card.title,
+        id: card.id, template: card.template, brandName: card.brandName, title: card.title,
         tagline: card.tagline, ctaText: card.ctaText, ctaLink: card.ctaLink, image: card.image,
       });
     } else {
@@ -91,8 +93,8 @@ export default function WaniPartnerPage() {
   }
 
   async function handleSave() {
-    if (!form.brandName.trim() || !form.title.trim() || !form.tagline.trim() || !form.ctaText.trim() || !form.ctaLink.trim() || !form.image.trim()) {
-      setError(t("لازم تملأ كل الحقول وترفع صورة الخلفية", "Fill in every field and upload a background image"));
+    if (!form.ctaText.trim() || !form.ctaLink.trim() || !form.image.trim()) {
+      setError(t("لازم تكتب بيانات زر CTA وترفع صورة الخلفية", "CTA text, CTA link, and a background image are required"));
       return;
     }
     setSaving(true);
@@ -116,14 +118,17 @@ export default function WaniPartnerPage() {
 
   async function handleDelete() {
     if (!confirm(t("متأكد إنك عايز تمسح الكارت؟ هيتشال من الداشبورد فورًا.", "Delete your card? It will be removed from the dashboard immediately."))) return;
-    await fetch("/api/wani-partner/mine", { method: "DELETE" });
-    setCard(null);
+    await fetch(`/api/wani-partner/mine?id=${encodeURIComponent(selectedCardId ?? "")}`, { method: "DELETE" });
+    setCards((current) => current?.filter((c) => c.id !== selectedCardId));
+    setSelectedCardId(null);
   }
 
   async function toggleActive() {
+    const card = cards?.find((c) => c.id === selectedCardId);
     if (!card) return;
-    const res = await fetch("/api/wani-partner/mine", {
+    const res = await fetch(`/api/wani-partner/mine?id=${encodeURIComponent(card.id)}`, {
       method: "PATCH",
+      // The selected card id is sent below so each card is independent.
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !card.active }),
     });
@@ -138,6 +143,7 @@ export default function WaniPartnerPage() {
     ctaLink: form.ctaLink || "#",
     image: form.image || "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1200&auto=format&fit=crop",
   };
+  const card = cards?.find((c) => c.id === selectedCardId) ?? null;
 
   return (
     <div dir={dir} className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -171,11 +177,22 @@ export default function WaniPartnerPage() {
         </p>
       </div>
 
-      {card === undefined ? (
+      {cards === undefined ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
       ) : !editing ? (
         <div className="space-y-4">
-          {card === null ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t(`الكروت ${cards.length}/10`, `Cards ${cards.length}/10`)}</p>
+            <button onClick={() => { setSelectedCardId(null); setForm(EMPTY_FORM); setEditing(true); setError(null); }} disabled={cards.length >= 10} className={btn}>
+              <Sparkles className="w-4 h-4" /> {t("إضافة كارت", "Add card")}
+            </button>
+          </div>
+          {cards.length > 0 && <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {cards.map((item, index) => <button key={item.id} onClick={() => setSelectedCardId(item.id)} className={`text-start rounded-xl border p-2 text-xs transition ${item.id === selectedCardId ? "border-[#25D366] bg-[#25D366]/5" : "border-gray-200 dark:border-gray-700"}`}>
+              <span className="font-semibold">{t("كارت", "Card")} {index + 1}</span><span className="block truncate text-gray-500">{item.title}</span>
+            </button>)}
+          </div>}
+          {!card ? (
             <div className="text-center py-14 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
               <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -299,7 +316,7 @@ export default function WaniPartnerPage() {
             {/* الحقول النصية */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("اسم البراند", "Brand name")}</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("اسم البراند (اختياري)", "Brand name (optional)")}</label>
                 <input value={form.brandName} onChange={(e) => setForm((f) => ({ ...f, brandName: e.target.value }))}
                   placeholder={t("مثال: متجرك", "e.g. Your Store")} className={inp} />
               </div>
@@ -310,12 +327,12 @@ export default function WaniPartnerPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("العنوان", "Title")}</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("العنوان (اختياري)", "Title (optional)")}</label>
               <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder={t("مثال: تخفيضات لحد آخر الشهر", "e.g. Sale until end of month")} className={inp} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("الجملة التسويقية", "Tagline")}</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">{t("الجملة التسويقية (اختياري)", "Tagline (optional)")}</label>
               <textarea value={form.tagline} rows={2} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
                 placeholder={t("جملة قصيرة تحت العنوان", "A short line under the title")} className={inp + " resize-none"} />
             </div>

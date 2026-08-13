@@ -45,19 +45,14 @@ export async function POST(req: NextRequest) {
   const parsed = parseInput(AdminCreateWaniPartnerCardSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const card = await prisma.waniPartnerCard.upsert({
-    where: { userId: session.user.id },
-    create: {
+  const count = await prisma.waniPartnerCard.count({ where: { userId: session.user.id } });
+  if (count >= 10) return NextResponse.json({ error: "مسموح بحد أقصى 10 كروت" }, { status: 409 });
+
+  const card = await prisma.waniPartnerCard.create({
+    data: {
       ...parsed.data,
       userId: session.user.id,
       status: "approved",
-      reviewedAt: new Date(),
-      reviewedBy: session.user.id,
-    },
-    update: {
-      ...parsed.data,
-      status: "approved",
-      rejectionReason: null,
       reviewedAt: new Date(),
       reviewedBy: session.user.id,
     },

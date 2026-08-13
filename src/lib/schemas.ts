@@ -265,7 +265,8 @@ export type AdminTestimonialPatchInput = z.infer<typeof AdminTestimonialPatchSch
 // ─── WANI Partner Card ────────────────────────────────────────────────────────
 
 /** محتوى الكارت اللي اليوزر بيصمّمه من /dashboard/wani-partner */
-export const UserWaniPartnerCardSchema = z.object({
+const LegacyUserWaniPartnerCardSchema = z.object({
+  id: z.string().trim().min(1).optional(),
   template: z.number().int().min(1).max(5).optional().default(1),
   brandName: nonEmptyStr.max(40, "اسم البراند طويل جداً"),
   title: nonEmptyStr.max(80, "العنوان طويل جداً"),
@@ -273,6 +274,11 @@ export const UserWaniPartnerCardSchema = z.object({
   ctaText: nonEmptyStr.max(30, "نص الزر طويل جداً"),
   ctaLink: nonEmptyStr.max(500, "الرابط طويل جداً"),
   image: z.string().trim().url("رابط الصورة غير صالح"),
+});
+export const UserWaniPartnerCardSchema = LegacyUserWaniPartnerCardSchema.extend({
+  brandName: z.string().trim().max(40).optional().default(""),
+  title: z.string().trim().max(80).optional().default(""),
+  tagline: z.string().trim().max(140).optional().default(""),
 });
 export type UserWaniPartnerCardInput = z.infer<typeof UserWaniPartnerCardSchema>;
 
