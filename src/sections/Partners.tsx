@@ -16,7 +16,7 @@ const PARTNERS = [
   { name: "Gemini", logoSrc: "/partners/gemini.svg", description: { ar: "سيلز AI", en: "AI Sales" }, accent: "#8B5CF6" },
 ] as const;
 
-const WHO_FOR = [
+const LEGACY_WHO_FOR = [
   {
     icon: "🛍️",
     title: { ar: "أصحاب المتاجر الإلكترونية", en: "E-commerce Owners" },
@@ -41,6 +41,13 @@ const WHO_FOR = [
     desc: { ar: "أتمتة تواصلك مع العملاء، فريق المبيعات، والدعم الفني في مكان واحد", en: "Automate customer communication, sales team & support in one place" },
     color: "from-purple-50 to-violet-50", border: "border-purple-200", iconBg: "bg-purple-100",
   },
+];
+
+const WHO_FOR = [
+  { icon: "🛍️", title: { ar: "المتاجر الإلكترونية", en: "E-commerce Stores" }, desc: { ar: "أكّد الطلبات، أرسل تحديثات الشحن، واسترجع العملاء عبر واتساب.", en: "Confirm orders, send shipping updates, and win customers back through WhatsApp." }, color: "from-green-50 to-emerald-50", border: "border-green-200", iconBg: "bg-green-100" },
+  { icon: "🏷️", title: { ar: "العلامات التجارية", en: "Brands" }, desc: { ar: "سوّق لمنتجاتك، أطلق حملات واتساب، وابنِ علاقات أقوى مع عملائك.", en: "Market your products, launch WhatsApp campaigns, and build stronger customer relationships." }, color: "from-orange-50 to-amber-50", border: "border-orange-200", iconBg: "bg-orange-100" },
+  { icon: "💬", title: { ar: "فرق المبيعات والدعم", en: "Sales & Support Teams" }, desc: { ar: "أدر محادثات فريقك، أتمت الردود، وتابع العملاء من مكان واحد.", en: "Manage team conversations, automate replies, and follow up with customers from one place." }, color: "from-blue-50 to-sky-50", border: "border-blue-200", iconBg: "bg-blue-100" },
+  { icon: "🤖", title: { ar: "الشركات التي تريد الأتمتة", en: "Businesses Ready to Automate" }, desc: { ar: "حوّل المحادثات المتكررة إلى عمليات تلقائية تعمل على مدار الساعة.", en: "Turn repetitive conversations into automated processes that run around the clock." }, color: "from-purple-50 to-violet-50", border: "border-purple-200", iconBg: "bg-purple-100" },
 ];
 
 // ── scroll reveal hook ────────────────────────────────────────────────────────
@@ -210,14 +217,14 @@ export default function Partners({ lang }: PartnersProps) {
             {WHO_FOR.map((item, idx) => (
               <div
                 key={idx}
-                className={`relative rounded-2xl border ${item.border} bg-gradient-to-br ${item.color} p-6 hover:shadow-md transition-shadow duration-200`}
+                className={`group relative rounded-2xl border ${item.border} bg-gradient-to-br ${item.color} p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-gray-200/60`}
                 style={{
                   opacity: whoVisible ? 1 : 0,
                   transform: whoVisible ? "translateY(0)" : "translateY(28px)",
                   transition: `opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${idx * 90}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${idx * 90}ms`,
                 }}
               >
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${item.iconBg} mb-4 text-2xl`}>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${item.iconBg} mb-4 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6`}>
                   {item.icon}
                 </div>
                 <h4 className="text-base font-bold text-gray-900 mb-2">{item.title[lang]}</h4>

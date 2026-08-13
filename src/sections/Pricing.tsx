@@ -282,23 +282,11 @@ export default function Pricing({ lang }: PricingProps) {
 
   useEffect(() => { track("ViewContent", { content_name: "Pricing Section" }); }, []);
 
-  const SALES_WA = process.env.NEXT_PUBLIC_SALES_WHATSAPP || "201281657907";
-
   const handleCTA = (slug: string, isFree: boolean, price: number, selectedCycle: Cycle) => {
     if (isFree) { track("CompleteRegistration", { content_name: "Free Plan" }); router.push("/register"); return; }
     track("InitiateCheckout", { content_name: slug, content_ids: [slug], content_type: "product", value: price, currency: "EGP", num_items: 1 });
 
-    const planLabel = slug === "starter" ? (isAr ? "Starter" : "Starter")
-      : slug === "pro" ? (isAr ? "Professional" : "Professional")
-      : slug === "enterprise" ? (isAr ? "Enterprise" : "Enterprise")
-      : slug;
-    const cycleLabel = selectedCycle === "monthly" ? (isAr ? "شهري" : "Monthly")
-      : selectedCycle === "quarterly" ? (isAr ? "ربع سنوي" : "Quarterly")
-      : (isAr ? "سنوي" : "Annual");
-    const msg = isAr
-      ? `السلام عليكم 👋\nأنا جاهز أشترك في باقة *${planLabel}* (${price} ج.م / ${cycleLabel}).\nممكن تفاصيل الاشتراك؟`
-      : `Hi 👋\nI'd like to subscribe to the *${planLabel}* plan (${price} EGP / ${cycleLabel}).\nCan you share the subscription details?`;
-    window.open(`https://wa.me/${SALES_WA}?text=${encodeURIComponent(msg)}`, "_blank");
+    router.push(`/checkout?plan=${encodeURIComponent(slug)}&cycle=${encodeURIComponent(selectedCycle)}`);
   };
 
   const fadeUp = (delay: number): React.CSSProperties => ({
