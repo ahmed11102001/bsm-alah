@@ -23,24 +23,29 @@ type Connection = {
 };
 
 function sheetRange(sheetName: string): string {
-  return `'${sheetName.replace(/'/g, "''")}'!A1:ZZ${GOOGLE_SHEETS_MAX_ROWS + 1}`;
+  // نقرأ صفًا زائدًا حتى نقدر نرفض الشيت الذي يتجاوز الحد بدل الاعتماد على حجم الـ grid.
+  return `'${sheetName.replace(/'/g, "''")}'!A1:ZZ${GOOGLE_SHEETS_MAX_ROWS + 2}`;
 }
 
 async function readRows(connection: Connection, spreadsheetId: string, sheetName: string) {
   const sheets = await getGoogleSheetsClient(connection);
   const metadata = await sheets.spreadsheets.get({
     spreadsheetId,
-    fields: "properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))",
+    fields: "properties(title),sheets(properties(sheetId,title))",
   });
   const sheet = (metadata.data.sheets ?? []).find((item) => item.properties?.title === sheetName);
   if (!sheet) throw new Error("صفحة الشيت غير موجودة أو لم يعد لديك صلاحية الوصول إليها");
-  const rowCount = sheet.properties?.gridProperties?.rowCount ?? 0;
-  if (rowCount > GOOGLE_SHEETS_MAX_ROWS + 1) {
-    throw new Error("الشيت يحتوي على أكثر من 10,000 جهة اتصال. الحد الأقصى للاستيراد حاليًا هو 10,000 جهة اتصال.");
-  }
-  const values = await sheets.spreadsheets.values.get({ spreadsheetId, range: sheetRange(sheetName) });
+  const values = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: sheetRange(sheetName),
+    valueRenderOption: "FORMATTED_VALUE",
+  });
   const rows = (values.data.values ?? []) as string[][];
   if (rows.length < 2) throw new Error("الشيت فارغ أو لا يحتوي على صفوف بيانات");
+  const actualRows = rows.slice(1).filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""));
+  if (actualRows.length > GOOGLE_SHEETS_MAX_ROWS) {
+    throw new Error("الشيت يحتوي على أكثر من 10,000 صف فعلي. الحد الأقصى للاستيراد حاليًا هو 10,000 جهة اتصال.");
+  }
   return {
     spreadsheetName: metadata.data.properties?.title ?? spreadsheetId,
     sheetId: sheet.properties?.sheetId?.toString() ?? null,
@@ -110,7 +115,7 @@ export async function importGoogleSheet(
         audienceId,
         spreadsheetId: input.spreadsheetId,
         spreadsheetName: source.spreadsheetName,
-        sheetId: input.sheetId ?? source.sheetId,
+        sheetId: input.sheetId != null ? String(input.sheetId) : source.sheetId,
         sheetName: input.sheetName,
         nameColumn: String(input.nameColumn),
         phoneColumn: String(input.phoneColumn),

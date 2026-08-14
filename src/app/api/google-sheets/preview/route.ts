@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getGoogleSheetsClient, ownedConnection } from "@/lib/google-sheets";
+import { getGoogleSheetsClient, ownedConnection, parseColumnIndex, GOOGLE_SHEETS_MAX_ROWS } from "@/lib/google-sheets";
+import { normalizePhone } from "@/lib/phone";
 
 function rangeFor(sheetName: string, endRow: number): string {
   const safeName = sheetName.replace(/'/g, "''");
@@ -24,12 +25,19 @@ export async function GET(req: NextRequest) {
         spreadsheetId,
         fields: "properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))",
       }),
-      sheets.spreadsheets.values.get({ spreadsheetId, range: rangeFor(sheetName, 11) }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: rangeFor(sheetName, GOOGLE_SHEETS_MAX_ROWS + 2), valueRenderOption: "FORMATTED_VALUE" }),
     ]);
     const currentSheet = (meta.data.sheets ?? []).find((sheet) => sheet.properties?.title === sheetName);
     if (!currentSheet) return NextResponse.json({ error: "صفحة الشيت غير موجودة" }, { status: 404 });
     const rows = (values.data.values ?? []) as string[][];
     const headers = rows[0] ?? [];
+    const phoneColumn = params.get("phoneColumn");
+    const phoneIndex = phoneColumn ? parseColumnIndex(phoneColumn, headers) : (headers.length > 1 ? 1 : 0);
+    const actualRows = rows.slice(1).filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""));
+    if (actualRows.length > GOOGLE_SHEETS_MAX_ROWS) {
+      return NextResponse.json({ error: "الشيت يحتوي على أكثر من 10,000 صف فعلي. الحد الأقصى للاستيراد حاليًا هو 10,000 جهة اتصال." }, { status: 400 });
+    }
+    const validRowCount = actualRows.filter((row) => Boolean(normalizePhone(String(row[phoneIndex] ?? "").trim()))).length;
     return NextResponse.json({
       connectionId: connection.id,
       spreadsheetId,
@@ -38,7 +46,8 @@ export async function GET(req: NextRequest) {
       sheetName,
       headers: headers.map((value, index) => ({ index, value: String(value ?? "") })),
       rows: rows.slice(1, 11).map((row) => headers.map((_, index) => String(row[index] ?? ""))),
-      rowCount: currentSheet.properties?.gridProperties?.rowCount ?? null,
+      // عدد العملاء الفعليين، وليس عدد الصفوف الافتراضية في Google grid.
+      rowCount: validRowCount,
     });
   } catch (error) {
     console.error("[GoogleSheets] preview failed", error);

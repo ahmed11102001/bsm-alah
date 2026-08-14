@@ -17,7 +17,7 @@ type Connection = {
 };
 
 type Spreadsheet = { id?: string | null; name?: string | null; modifiedTime?: string | null };
-type SheetTab = { sheetId?: number | null; title?: string | null; rowCount?: number | null };
+type SheetTab = { sheetId?: number | null; title?: string | null };
 type Preview = {
   spreadsheetName: string;
   sheetName: string;
@@ -85,6 +85,16 @@ export function GoogleSheetsImportDialog({
     finally { setLoading(false); }
   };
 
+  // يتحدث العدد عند تغيير عمود الهاتف؛ العدد محسوب من الصفوف الفعلية ذات الأرقام الصالحة.
+  useEffect(() => {
+    if (!preview || !connection || !spreadsheetId || !sheetName || !phoneColumn) return;
+    const query = new URLSearchParams({ connectionId: connection.id, spreadsheetId, sheetName, phoneColumn });
+    fetch(`/api/google-sheets/preview?${query}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data && typeof data.rowCount === "number") setPreview((current) => current ? { ...current, rowCount: data.rowCount } : current); })
+      .catch(() => { /* preview الأساسي ما زال صالحًا */ });
+  }, [preview?.sheetName, phoneColumn, connection?.id, spreadsheetId, sheetName]);
+
   const doImport = async () => {
     if (!connection || !preview) return;
     setImporting(true); setError("");
@@ -141,7 +151,8 @@ export function GoogleSheetsImportDialog({
               <div className="rounded-xl border dark:border-gray-700 overflow-auto">
                 <table className="w-full text-xs"><thead className="bg-gray-50 dark:bg-gray-700"><tr>{preview.headers.slice(0, 6).map((h) => <th key={h.index} className="p-2 text-start whitespace-nowrap">{h.value || `Column ${h.index + 1}`}</th>)}</tr></thead><tbody>{preview.rows.slice(0, 5).map((row, index) => <tr key={index} className="border-t dark:border-gray-700">{preview.headers.slice(0, 6).map((h) => <td key={h.index} className="p-2 whitespace-nowrap">{row[h.index] ?? ""}</td>)}</tr>)}</tbody></table>
               </div>
-              <div className="flex items-center justify-between text-sm text-gray-500"><span>{text("عدد الصفوف", "Rows", locale)}: {preview.rowCount ?? "—"}</span><Button onClick={doImport} disabled={importing || !nameColumn || !phoneColumn} className="bg-[#25D366] hover:bg-[#1fb956] text-white">{importing && <Loader2 className="w-4 h-4 animate-spin" />}{text("استيراد", "Import", locale)}</Button></div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{text("يفضل ضبط عمود الهاتف في Google Sheets على Plain text للحفاظ على الصفر الأول.", "Set the phone column to Plain text in Google Sheets to preserve leading zeros.", locale)}</p>
+              <div className="flex items-center justify-between text-sm text-gray-500"><span>{text("عدد العملاء", "Contacts", locale)}: {preview.rowCount ?? 0}</span><Button onClick={doImport} disabled={importing || !nameColumn || !phoneColumn || !preview.rowCount} className="bg-[#25D366] hover:bg-[#1fb956] text-white">{importing && <Loader2 className="w-4 h-4 animate-spin" />}{locale === "ar" ? `استيراد ${preview.rowCount ?? 0} عميل` : `Import ${preview.rowCount ?? 0} contacts`}</Button></div>
             </>}
             {error && <p className="text-sm text-red-500">{error}</p>}
             {!loading && spreadsheets.length === 0 && <p className="text-sm text-gray-500">{text("لا توجد ملفات Google Sheets متاحة.", "No accessible Google Sheets found.", locale)}</p>}
