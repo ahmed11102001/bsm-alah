@@ -425,6 +425,13 @@ export async function POST(req: NextRequest) {
           throw limitError;
         }
         const availableSlots = (await getContactsLimitStatus(userId)).available;
+        if (availableSlots <= 0) {
+          const limitError = new Error(finalLimitCheck.message);
+          (limitError as any).code = "CONTACT_LIMIT";
+          (limitError as any).newContacts = latestNewContacts.length;
+          (limitError as any).availableSlots = 0;
+          throw limitError;
+        }
         const allowedPhones = new Set(latestNewContacts.slice(0, availableSlots).map((contact) => contact.phone));
         contactsToWrite = unique.filter((contact) => latestExistingPhones.has(contact.phone) || allowedPhones.has(contact.phone));
       }

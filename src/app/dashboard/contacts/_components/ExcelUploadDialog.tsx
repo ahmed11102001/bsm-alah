@@ -24,11 +24,11 @@ interface ExcelUploadDialogProps {
   audNotes: string;
   setAudNotes: (s: string) => void;
   saving: boolean;
-  limitPrompt: { newContacts: number; availableSlots: number } | null;
+  limitPrompt?: { newContacts: number; availableSlots: number } | null;
   onParseFile: (file: File) => void;
   onSave: (allowPartial?: boolean) => void;
-  onConfirmPartial: () => void;
-  onCancelLimit: () => void;
+  onConfirmPartial?: () => void;
+  onCancelLimit?: () => void;
 }
 
 export function ExcelUploadDialog({
@@ -101,10 +101,10 @@ export function ExcelUploadDialog({
                   الملف يحتوي على {limitPrompt.newContacts.toLocaleString()} جهة جديدة، والمتاح في باقتك {limitPrompt.availableSlots.toLocaleString()} فقط. هل تريد استيراد المتاح؟
                 </p>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={onConfirmPartial} disabled={saving}>
+                  <Button type="button" size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => onConfirmPartial?.()} disabled={saving}>
                     استيراد {limitPrompt.availableSlots.toLocaleString()} فقط
                   </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={onCancelLimit} disabled={saving}>إلغاء</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => onCancelLimit?.()} disabled={saving}>إلغاء</Button>
                 </div>
               </div>
             )}
@@ -112,7 +112,7 @@ export function ExcelUploadDialog({
               <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
                 onClick={() => setExStep(1)}>{ct.excelDialog.prevBtn}</Button>
               <Button className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5"
-                onClick={onSave} disabled={saving || !audName.trim() || parsed.length === 0}>
+                onClick={() => onSave()} disabled={saving || !audName.trim() || parsed.length === 0}>
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {ct.excelDialog.saveBtn}
               </Button>
