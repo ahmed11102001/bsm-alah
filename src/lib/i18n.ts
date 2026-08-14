@@ -325,14 +325,14 @@ export const translations = {
       deleteSuccess: "تم الحذف",
       vipCriteria: {
         badge: "⭐ معايير الـ VIP",
-        rule1: "رد 3+ مرات خلال آخر 90 يوم",
+        rule1: "اتكلم في 3+ أيام مختلفة خلال آخر 90 يوم",
         rule2: "أو أجرى 2+ طلبات من المتجر",
       },
     },
     // vipCriteria — كتلة جديدة كاملة
     vipCriteria: {
       badge: "⭐ معايير الـ VIP",
-      rule1: "رد ٣+ مرات خلال آخر ٩٠ يوم",
+      rule1: "اتكلم في ٣+ أيام مختلفة خلال آخر ٩٠ يوم",
       rule2: "أو أجرى ٢+ طلبات من المتجر",
     },
 
@@ -941,13 +941,13 @@ export const translations = {
       deleteSuccess: "Deleted",
       vipCriteria: {
         badge: "⭐ VIP Criteria",
-        rule1: "Replied 3+ times in last 90 days",
+        rule1: "Chatted on 3+ different days in the last 90 days",
         rule2: "Or placed 2+ store orders",
       },
     },
     vipCriteria: {
       badge: "⭐ VIP Criteria",
-      rule1: "Replied 3+ times in last 90 days",
+      rule1: "Chatted on 3+ different days in the last 90 days",
       rule2: "Or placed 2+ store orders",
     },
 

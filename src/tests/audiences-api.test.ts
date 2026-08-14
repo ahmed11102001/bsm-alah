@@ -56,10 +56,13 @@ describe("GET /api/audiences — القوائم الذكية", () => {
     expect(res.status).toBe(401);
   });
 
-  it("VIP: بيجمع (تفاعل ≥3) و(طلبات ≥2) في ست واحدة من غير تكرار", async () => {
-    mockPrisma.message.groupBy.mockResolvedValueOnce([
-      { contactId: "c1", _count: { id: 5 } },
-      { contactId: "c2", _count: { id: 1 } }, // أقل من 3 → مستبعد
+  it("VIP: بيجمع (تفاعل في 3 أيام مختلفة) و(طلبات ≥2) في ست واحدة من غير تكرار", async () => {
+    mockPrisma.message.findMany.mockResolvedValueOnce([
+      { contactId: "c1", createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+      { contactId: "c1", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      { contactId: "c1", createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+      { contactId: "c2", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      { contactId: "c2", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) }, // نفس اليوم → مستبعد
     ]);
     mockPrisma.storeOrder.groupBy.mockResolvedValueOnce([
       { contactId: "c1", _count: { id: 3 } }, // موجود أصلاً من تفاعل الرسائل
@@ -78,9 +81,11 @@ describe("GET /api/audiences — القوائم الذكية", () => {
     expect(data.type).toBe("vip");
   });
 
-  it("VIP: لو فشل استعلام الطلبات (مثلاً المتجر مش متصل) → يكمل بمعيار التفاعل بس", async () => {
-    mockPrisma.message.groupBy.mockResolvedValueOnce([
-      { contactId: "c1", _count: { id: 4 } },
+  it("VIP: لو فشل استعلام الطلبات (مثلاً المتجر مش متصل) → يكمل بمعيار الأيام المختلفة", async () => {
+    mockPrisma.message.findMany.mockResolvedValueOnce([
+      { contactId: "c1", createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+      { contactId: "c1", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+      { contactId: "c1", createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
     ]);
     mockPrisma.storeOrder.groupBy.mockRejectedValueOnce(new Error("no store"));
     mockPrisma.contact.findMany.mockResolvedValueOnce([{ id: "c1", phone: "20100", name: null }]);

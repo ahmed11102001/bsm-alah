@@ -26,6 +26,24 @@ function normalizeContactsInput(contacts: any[]): { phone: string; name: string 
   ];
 }
 
+async function getReturningContactIds(userId: string, since: Date): Promise<string[]> {
+  const inboundMessages = await prisma.message.findMany({
+    where: { userId, direction: MessageDirection.inbound, createdAt: { gte: since } },
+    select: { contactId: true, createdAt: true },
+  });
+
+  const daysByContact = new Map<string, Set<string>>();
+  for (const message of inboundMessages) {
+    const days = daysByContact.get(message.contactId) ?? new Set<string>();
+    days.add(message.createdAt.toISOString().slice(0, 10));
+    daysByContact.set(message.contactId, days);
+  }
+
+  return [...daysByContact]
+    .filter(([, days]) => days.size >= 3)
+    .map(([contactId]) => contactId);
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
@@ -37,16 +55,9 @@ export async function GET(req: NextRequest) {
   if (audienceId) {
     // ── Check if it's a smart list ID ──────────────────────────────────────
     if (audienceId === "vip") {
-      // VIP: ≥ 3 inbound msgs in last 90 days OR ≥ 2 store orders
+      // VIP: inbound messages on ≥ 3 different days in last 90 days OR ≥ 2 store orders
       const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      const frequentEngaged = await prisma.message.groupBy({
-        by: ["contactId"],
-        where: { userId, direction: MessageDirection.inbound, createdAt: { gte: ninetyDaysAgo } },
-        _count: { id: true },
-        orderBy: { _count: { id: "desc" } },
-        take: 500,
-      });
-      const frequentIds = frequentEngaged.filter((r) => r._count.id >= 3).map((r) => r.contactId);
+      const frequentIds = await getReturningContactIds(userId, ninetyDaysAgo);
       let repeatBuyerIds: string[] = [];
       try {
         const orderGroups = await prisma.storeOrder.groupBy({
@@ -209,25 +220,12 @@ export async function GET(req: NextRequest) {
 
   // ── Smart card 2: VIP الحقيقيون ─────────────────────────────────────────────
   // المعايير (يكفي أي شرط):
-  //   A) ≥ 3 رسائل واردة (تفاعل متكرر) خلال آخر 90 يوم
+  //   A) رسائل واردة في ≥ 3 أيام مختلفة خلال آخر 90 يوم
   //   B) ≥ 2 طلبات من المتجر
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-  // A: تفاعل متكرر حديث
-  const frequentEngaged = await prisma.message.groupBy({
-    by: ["contactId"],
-    where: {
-      userId,
-      direction: MessageDirection.inbound,
-      createdAt: { gte: ninetyDaysAgo },
-    },
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 100,
-  });
-  const frequentIds = frequentEngaged
-    .filter((r) => r._count.id >= 3)
-    .map((r) => r.contactId);
+  // A: عودة العميل في أيام مختلفة
+  const frequentIds = await getReturningContactIds(userId, ninetyDaysAgo);
 
   // B: عملاء كرروا الشراء (طلبان أو أكثر)
   let repeatBuyerIds: string[] = [];
