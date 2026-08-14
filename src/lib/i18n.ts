@@ -247,6 +247,7 @@ export const translations = {
         smart: "قوائم ذكية",
         custom: "جمهور مخصص",
         excel: "الجمهور",
+        googleSheets: "جمهور Google Sheets",
       },
       card: {
         contact: "عضو",
@@ -863,6 +864,7 @@ export const translations = {
         smart: "Smart Lists",
         custom: "Custom Audiences",
         excel: "Audience",
+        googleSheets: "Google Sheets Audiences",
       },
       card: {
         contact: "member",

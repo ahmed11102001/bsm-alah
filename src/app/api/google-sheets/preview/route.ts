@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const [meta, values] = await Promise.all([
       sheets.spreadsheets.get({
         spreadsheetId,
-        fields: "properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))",
+        fields: "properties(title),sheets(properties(sheetId,title))",
       }),
       sheets.spreadsheets.values.get({ spreadsheetId, range: rangeFor(sheetName, GOOGLE_SHEETS_MAX_ROWS + 2), valueRenderOption: "FORMATTED_VALUE" }),
     ]);

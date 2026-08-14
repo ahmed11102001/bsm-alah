@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const sheets = await getGoogleSheetsClient(connection);
     const response = await sheets.spreadsheets.get({
       spreadsheetId,
-      fields: "spreadsheetId,properties(title),sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount)))",
+      fields: "spreadsheetId,properties(title),sheets(properties(sheetId,title,index))",
     });
     return NextResponse.json({
       spreadsheetId,
@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
         sheetId: sheet.properties?.sheetId,
         title: sheet.properties?.title,
         index: sheet.properties?.index,
-        rowCount: sheet.properties?.gridProperties?.rowCount,
       })),
     });
   } catch (error) {

@@ -6,9 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown, Sheet, RefreshCw, Unplug,
+  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown, Sheet, RefreshCw, Unplug, ChevronDown, FileSpreadsheet,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import type { Audience } from "./_components/types";
 import { normalizePhone, isValidPhone } from "./_components/phone-utils";
@@ -59,7 +63,7 @@ export default function Contacts() {
       const r = await fetch("/api/audiences");
       const d = await r.json();
       const list: Audience[] = Array.isArray(d) ? d : (d.audiences ?? []);
-      setAudiences(list.filter(a => a.type === "excel" || a.type === "custom"));
+      setAudiences(list.filter(a => a.type === "excel" || a.type === "custom" || a.type === "google_sheets"));
       setVip(list.find(a => a.type === "vip") ?? null);
       setEngaged(list.find(a => a.type === "engaged") ?? null);
       setNoResp(list.find(a => a.type === "no-response") ?? null);
@@ -223,6 +227,7 @@ export default function Contacts() {
   const filtered    = audiences.filter(a => !search || a.name.toLowerCase().includes(search.toLowerCase()));
   const customCards = filtered.filter(a => a.type === "custom");
   const excelCards  = filtered.filter(a => a.type === "excel");
+  const googleCards = filtered.filter(a => a.type === "google_sheets");
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
@@ -282,18 +287,29 @@ export default function Contacts() {
             className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-1.5 text-sm border-green-200 text-green-700 dark:border-green-800 dark:text-green-300"
-            onClick={() => setShowGoogle(true)}>
-            <Sheet className="w-4 h-4" /> {locale === "ar" ? "استيراد من Google Sheets" : "Import from Google Sheets"}
-          </Button>
-          <Button variant="outline" className="gap-1.5 text-sm dark:border-gray-700 dark:text-gray-300"
-            onClick={() => setShowCustom(true)}>
-            <PenLine className="w-4 h-4" /> {ct.createCustom}
-          </Button>
-          <Button className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5 text-sm"
-            onClick={() => { resetExcel(); setShowAdd(true); }}>
-            <Plus className="w-4 h-4" /> {ct.addContacts}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5 text-sm">
+                <Plus className="w-4 h-4" /> {locale === "ar" ? "إضافة جمهور" : "Add Audience"} <ChevronDown className="w-4 h-4 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className={`w-64 ${dir === "rtl" ? "text-right" : "text-left"}`}>
+              <DropdownMenuLabel className="text-xs text-gray-500">{locale === "ar" ? "اختار طريقة الإضافة" : "Choose an import method"}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => { resetExcel(); setShowAdd(true); }}>
+                <FileSpreadsheet className="w-4 h-4 text-gray-500" />
+                <span><span className="block text-sm font-medium">Excel / CSV</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "رفع ملف من الجهاز" : "Upload a local file"}</span></span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => setShowGoogle(true)}>
+                <Sheet className="w-4 h-4 text-green-600" />
+                <span><span className="block text-sm font-medium">Google Sheets</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "اختيار Spreadsheet ومزامنته" : "Import and sync a spreadsheet"}</span></span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => setShowCustom(true)}>
+                <PenLine className="w-4 h-4 text-purple-500" />
+                <span><span className="block text-sm font-medium">{locale === "ar" ? "إدخال مخصص" : "Custom input"}</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "كتابة الأرقام يدويًا" : "Enter contacts manually"}</span></span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -374,7 +390,21 @@ export default function Contacts() {
             </div>
           )}
 
-          {customCards.length === 0 && excelCards.length === 0 && !vip && !engaged && !noResp && (
+          {googleCards.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+                {ct.sections.googleSheets}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {googleCards.map(a => (
+                  <AudienceCard key={a.id} audience={a}
+                    onView={() => setDetailAud(a)} onEdit={() => setDetailAud(a)} onDelete={() => deleteAud(a.id)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customCards.length === 0 && excelCards.length === 0 && googleCards.length === 0 && !vip && !engaged && !noResp && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
                 <Users className="w-10 h-10 text-gray-300 dark:text-gray-600" />

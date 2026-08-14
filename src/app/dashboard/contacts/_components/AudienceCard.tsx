@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Users, MoreVertical, Eye, Edit2, Trash2, UserPlus, MessageSquareDashed, ChevronRight,
+  Users, MoreVertical, Eye, Edit2, Trash2, UserPlus, MessageSquareDashed, ChevronRight, Sheet,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -28,6 +28,11 @@ function getTypeConfig(t: ReturnType<typeof useLanguage>["t"]) {
       icon: <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />,
       badge: "", badgeColor: "",
     },
+    google_sheets: {
+      bg: "bg-green-50 dark:bg-green-900/20", border: "border-green-200 dark:border-green-800",
+      icon: <Sheet className="w-5 h-5 text-green-600 dark:text-green-400" />,
+      badge: "Google Sheets", badgeColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    },
   };
 }
 
@@ -36,7 +41,7 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
 }) {
   const { t, locale } = useLanguage();
   const c = t.contacts.card;
-  const cfg = getTypeConfig(t)[audience.type as "no-response" | "custom" | "excel"] ?? getTypeConfig(t).excel;
+  const cfg = getTypeConfig(t)[audience.type as "no-response" | "custom" | "excel" | "google_sheets"] ?? getTypeConfig(t).excel;
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
 
   return (
