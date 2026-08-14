@@ -9,7 +9,7 @@ export interface Audience {
   id: string;
   name: string;
   notes: string | null;
-  type: "excel" | "custom" | "vip" | "engaged" | "no-response";
+  type: "excel" | "custom" | "google_sheets" | "vip" | "engaged" | "no-response";
   contacts: ContactRow[];
   contactCount: number;
   createdAt: string;

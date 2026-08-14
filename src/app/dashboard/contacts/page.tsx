@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown,
+  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown, Sheet, RefreshCw, Unplug,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -18,6 +18,7 @@ import { AudienceCard } from "./_components/AudienceCard";
 import { AudienceDetailModal } from "./_components/AudienceDetailModal";
 import { ExcelUploadDialog } from "./_components/ExcelUploadDialog";
 import { CustomAudienceDialog } from "./_components/CustomAudienceDialog";
+import { GoogleSheetsImportDialog } from "./_components/GoogleSheetsImportDialog";
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Contacts() {
@@ -35,6 +36,9 @@ export default function Contacts() {
   const [showAdd,    setShowAdd]    = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [detailAud,  setDetailAud]  = useState<Audience | null>(null);
+  const [showGoogle, setShowGoogle] = useState(false);
+  const [googleConnection, setGoogleConnection] = useState<any>(null);
+  const [googleSyncing, setGoogleSyncing] = useState(false);
 
   // excel flow
   const [exStep,   setExStep]   = useState<1|2>(1);
@@ -64,6 +68,51 @@ export default function Contacts() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadGoogleConnection = useCallback(async () => {
+    try {
+      const connectionId = new URLSearchParams(window.location.search).get("connectionId");
+      const query = connectionId ? `?connectionId=${encodeURIComponent(connectionId)}` : "";
+      const r = await fetch(`/api/google-sheets/connection${query}`);
+      const data = await r.json();
+      setGoogleConnection(data.connection ?? null);
+      if (new URLSearchParams(window.location.search).get("googleSheets") === "connected") {
+        setShowGoogle(true);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+      const error = new URLSearchParams(window.location.search).get("googleSheetsError");
+      if (error) {
+        toast.error(error === "access_denied" ? "تم رفض صلاحية Google Sheets" : "تعذر ربط Google Sheets");
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } catch { /* connection is optional */ }
+  }, []);
+
+  useEffect(() => { loadGoogleConnection(); }, [loadGoogleConnection]);
+
+  const syncGoogle = async () => {
+    if (!googleConnection) return;
+    setGoogleSyncing(true);
+    try {
+      const r = await fetch("/api/google-sheets/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId: googleConnection.id }) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      toast.success("تمت مزامنة Google Sheets"); load(); loadGoogleConnection();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setGoogleSyncing(false); }
+  };
+
+  const disconnectGoogle = async () => {
+    if (!googleConnection || !window.confirm(locale === "ar" ? "فك ربط Google Sheets؟ لن يتم حذف جهات الاتصال." : "Disconnect Google Sheets? Contacts will not be deleted.")) return;
+    const r = await fetch("/api/google-sheets/disconnect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId: googleConnection.id }) });
+    if (r.ok) { setGoogleConnection(null); toast.success(locale === "ar" ? "تم فك الربط" : "Disconnected"); }
+  };
+
+  const setGoogleInterval = async (syncInterval: string) => {
+    if (!googleConnection) return;
+    await fetch("/api/google-sheets/connection", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId: googleConnection.id, syncInterval }) });
+    loadGoogleConnection();
+  };
 
   const parseFile = (file: File) => {
     const reader = new FileReader();
@@ -233,6 +282,10 @@ export default function Contacts() {
             className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="gap-1.5 text-sm border-green-200 text-green-700 dark:border-green-800 dark:text-green-300"
+            onClick={() => setShowGoogle(true)}>
+            <Sheet className="w-4 h-4" /> {locale === "ar" ? "استيراد من Google Sheets" : "Import from Google Sheets"}
+          </Button>
           <Button variant="outline" className="gap-1.5 text-sm dark:border-gray-700 dark:text-gray-300"
             onClick={() => setShowCustom(true)}>
             <PenLine className="w-4 h-4" /> {ct.createCustom}
@@ -250,6 +303,24 @@ export default function Contacts() {
         </div>
       ) : (
         <div className="space-y-8">
+
+          {googleConnection?.audienceId && (
+            <div className="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Sheet className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">Google Sheets · {googleConnection.spreadsheetName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{googleConnection.audience?.name} · {numFmt(googleConnection.audience?._count?.contacts ?? 0)} {locale === "ar" ? "عميل" : "contacts"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{locale === "ar" ? "المزامنة التلقائية:" : "Auto sync:"} <select value={googleConnection.syncInterval ?? "off"} onChange={(e) => setGoogleInterval(e.target.value)} className="bg-transparent font-medium"><option value="off">{locale === "ar" ? "متوقفة" : "Off"}</option><option value="hourly">{locale === "ar" ? "كل ساعة" : "Hourly"}</option><option value="6hours">{locale === "ar" ? "كل 6 ساعات" : "Every 6 hours"}</option><option value="daily">{locale === "ar" ? "يوميًا" : "Daily"}</option></select></p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" onClick={syncGoogle} disabled={googleSyncing} className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1"><RefreshCw className={`w-3.5 h-3.5 ${googleSyncing ? "animate-spin" : ""}`} />{locale === "ar" ? "مزامنة الآن" : "Sync now"}</Button>
+                <Button size="sm" variant="outline" onClick={() => setShowGoogle(true)}>{locale === "ar" ? "تغيير المصدر" : "Change source"}</Button>
+                <Button size="sm" variant="ghost" onClick={disconnectGoogle} className="text-red-500"><Unplug className="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
+          )}
 
           {/* ── Smart lists section ── */}
           {(vip || engaged || noResp) && (
@@ -343,6 +414,13 @@ export default function Contacts() {
         setCustInput={setCustInput}
         custSaving={custSaving}
         onSave={saveCustom}
+      />
+
+      <GoogleSheetsImportDialog
+        open={showGoogle}
+        onOpenChange={setShowGoogle}
+        connection={googleConnection}
+        onImported={() => { toast.success(locale === "ar" ? "تم استيراد الجمهور بنجاح" : "Audience imported successfully"); load(); loadGoogleConnection(); }}
       />
 
       <AudienceDetailModal audience={detailAud} open={!!detailAud} onClose={() => setDetailAud(null)}

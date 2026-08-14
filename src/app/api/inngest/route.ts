@@ -42,6 +42,7 @@ import {
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
 import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
+import { googleSheetsSyncCron } from "@/inngest/google-sheets-functions";
 
 const inngestHandler = serve({
   client: inngest,
@@ -79,6 +80,7 @@ const inngestHandler = serve({
     campaignFollowUpActionFn,
     // ── Conversation Nudge ──
     conversationNudgeFn,
+    googleSheetsSyncCron,
   ],
 });
 

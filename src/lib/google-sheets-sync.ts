@@ -1,0 +1,137 @@
+import prisma from "@/lib/prisma";
+import { checkContactsLimit } from "@/lib/plan-guard";
+import { normalizePhone } from "@/lib/phone";
+import {
+  GOOGLE_SHEETS_MAX_ROWS,
+  getGoogleSheetsClient,
+  parseColumnIndex,
+} from "@/lib/google-sheets";
+
+type Connection = {
+  id: string;
+  userId: string;
+  audienceId: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  tokenExpiresAt: Date | null;
+  spreadsheetId: string | null;
+  spreadsheetName: string | null;
+  sheetId: string | null;
+  sheetName: string | null;
+  nameColumn: string | null;
+  phoneColumn: string | null;
+};
+
+function sheetRange(sheetName: string): string {
+  return `'${sheetName.replace(/'/g, "''")}'!A1:ZZ${GOOGLE_SHEETS_MAX_ROWS + 1}`;
+}
+
+async function readRows(connection: Connection, spreadsheetId: string, sheetName: string) {
+  const sheets = await getGoogleSheetsClient(connection);
+  const metadata = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))",
+  });
+  const sheet = (metadata.data.sheets ?? []).find((item) => item.properties?.title === sheetName);
+  if (!sheet) throw new Error("صفحة الشيت غير موجودة أو لم يعد لديك صلاحية الوصول إليها");
+  const rowCount = sheet.properties?.gridProperties?.rowCount ?? 0;
+  if (rowCount > GOOGLE_SHEETS_MAX_ROWS + 1) {
+    throw new Error("الشيت يحتوي على أكثر من 10,000 جهة اتصال. الحد الأقصى للاستيراد حاليًا هو 10,000 جهة اتصال.");
+  }
+  const values = await sheets.spreadsheets.values.get({ spreadsheetId, range: sheetRange(sheetName) });
+  const rows = (values.data.values ?? []) as string[][];
+  if (rows.length < 2) throw new Error("الشيت فارغ أو لا يحتوي على صفوف بيانات");
+  return {
+    spreadsheetName: metadata.data.properties?.title ?? spreadsheetId,
+    sheetId: sheet.properties?.sheetId?.toString() ?? null,
+    headers: rows[0].map((value) => String(value ?? "")),
+    rows: rows.slice(1),
+  };
+}
+
+export async function importGoogleSheet(
+  connection: Connection,
+  input: { spreadsheetId: string; sheetId?: string | null; sheetName: string; nameColumn: unknown; phoneColumn: unknown },
+) {
+  const source = await readRows(connection, input.spreadsheetId, input.sheetName);
+  const nameIndex = parseColumnIndex(input.nameColumn, source.headers);
+  const phoneIndex = parseColumnIndex(input.phoneColumn, source.headers);
+  if (nameIndex < 0 || phoneIndex < 0 || nameIndex >= source.headers.length || phoneIndex >= source.headers.length) {
+    throw new Error("اختار عمود الاسم وعمود رقم الهاتف بشكل صحيح");
+  }
+
+  const byPhone = new Map<string, { phone: string; name: string | null }>();
+  for (const row of source.rows) {
+    const rawPhone = String(row[phoneIndex] ?? "").trim();
+    const phone = normalizePhone(rawPhone);
+    if (!phone) continue;
+    const name = String(row[nameIndex] ?? "").trim() || null;
+    const previous = byPhone.get(phone);
+    byPhone.set(phone, { phone, name: name || previous?.name || null });
+  }
+  const contacts = [...byPhone.values()];
+  if (contacts.length === 0) throw new Error("لم نجد أي أرقام هاتف صالحة في العمود المحدد");
+
+  const existing = await prisma.contact.findMany({
+    where: { userId: connection.userId, phone: { in: contacts.map((contact) => contact.phone) } },
+    select: { phone: true },
+  });
+  const existingPhones = new Set(existing.map((contact) => contact.phone));
+  const limitCheck = await checkContactsLimit(connection.userId, contacts.filter((contact) => !existingPhones.has(contact.phone)).length);
+  if (!limitCheck.allowed) throw new Error(limitCheck.message);
+
+  const result = await prisma.$transaction(async (tx) => {
+    let audienceId = connection.audienceId;
+    if (audienceId) {
+      const ownedAudience = await tx.audience.findFirst({ where: { id: audienceId, userId: connection.userId } });
+      if (!ownedAudience) throw new Error("جمهور Google Sheets غير موجود");
+    } else {
+      const audience = await tx.audience.create({
+        data: { userId: connection.userId, name: source.spreadsheetName || input.sheetName, type: "google_sheets" },
+      });
+      audienceId = audience.id;
+    }
+
+    for (const contact of contacts) {
+      await tx.contact.upsert({
+        where: { phone_userId: { phone: contact.phone, userId: connection.userId } },
+        update: {
+          audienceId,
+          deletedAt: null,
+          ...(contact.name ? { name: contact.name } : {}),
+        },
+        create: { userId: connection.userId, audienceId, phone: contact.phone, name: contact.name },
+      });
+    }
+
+    const savedConnection = await tx.googleSheetsConnection.update({
+      where: { id: connection.id },
+      data: {
+        audienceId,
+        spreadsheetId: input.spreadsheetId,
+        spreadsheetName: source.spreadsheetName,
+        sheetId: input.sheetId ?? source.sheetId,
+        sheetName: input.sheetName,
+        nameColumn: String(input.nameColumn),
+        phoneColumn: String(input.phoneColumn),
+        lastSyncAt: new Date(),
+      },
+    });
+    return { audienceId, savedConnection };
+  });
+
+  return { imported: contacts.length, created: contacts.filter((contact) => !existingPhones.has(contact.phone)).length, updated: contacts.filter((contact) => existingPhones.has(contact.phone)).length, ...result };
+}
+
+export async function syncGoogleSheet(connection: Connection) {
+  if (!connection.spreadsheetId || !connection.sheetName || connection.nameColumn === null || connection.phoneColumn === null) {
+    throw new Error("لم يتم إعداد مصدر Google Sheets بالكامل بعد");
+  }
+  return importGoogleSheet(connection, {
+    spreadsheetId: connection.spreadsheetId,
+    sheetId: connection.sheetId,
+    sheetName: connection.sheetName,
+    nameColumn: connection.nameColumn,
+    phoneColumn: connection.phoneColumn,
+  });
+}
