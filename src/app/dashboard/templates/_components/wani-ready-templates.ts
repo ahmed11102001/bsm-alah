@@ -9,8 +9,8 @@ export const WANI_READY: Template[] = [
         body: "مرحباً {{1}} 👋\n\nاستلمنا طلبك رقم #{{2}} بإجمالي {{3}} جنيه.\n\nتأكيد إنك عايز الأوردر ده يتنفذ فعلاً؟",
         footer: "Wani Store",
         buttons: [
-            { type: "quick_reply", text: "أيوه، أكّد الأوردر ✅", value: "CONFIRM_ORDER" },
-            { type: "quick_reply", text: "لأ، إلغاء ❌", value: "CANCEL_ORDER" },
+            { type: "quick_reply", text: "أيوه، أكّد الأوردر", value: "CONFIRM_ORDER" },
+            { type: "quick_reply", text: "لأ، إلغاء", value: "CANCEL_ORDER" },
         ],
         exampleVars: ["أحمد", "ORD-12345", "١٢٥ ج.م"],
     },
@@ -21,8 +21,8 @@ export const WANI_READY: Template[] = [
         body: "Hello {{1}} 👋\n\nWe received your order #{{2}} for {{3}}.\n\nPlease confirm you want to proceed.",
         footer: "Wani Store",
         buttons: [
-            { type: "quick_reply", text: "Yes, Confirm ✅", value: "CONFIRM_ORDER" },
-            { type: "quick_reply", text: "No, Cancel ❌", value: "CANCEL_ORDER" },
+            { type: "quick_reply", text: "Yes, Confirm", value: "CONFIRM_ORDER" },
+            { type: "quick_reply", text: "No, Cancel", value: "CANCEL_ORDER" },
         ],
         exampleVars: ["Ahmed", "ORD-12345", "$50"],
     },
