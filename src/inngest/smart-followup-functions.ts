@@ -144,7 +144,7 @@ export const sendCampaignFollowUpMsgFn = inngest.createFunction(
     id: "followup-campaign-send-msg",
     retries: 3,
     triggers: [{ event: "campaign_followup/send_msg" }],
-    concurrency: { limit: 10, key: "event.data.userId" }, // protect limits
+    concurrency: { limit: 5, key: "event.data.userId" }, // protect limits
   },
   async ({ event, step }: { event: any; step: any }) => {
     const { recordId, templateId, userId } = event.data;
