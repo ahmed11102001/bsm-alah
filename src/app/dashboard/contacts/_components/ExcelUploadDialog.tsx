@@ -24,13 +24,17 @@ interface ExcelUploadDialogProps {
   audNotes: string;
   setAudNotes: (s: string) => void;
   saving: boolean;
+  limitPrompt: { newContacts: number; availableSlots: number } | null;
   onParseFile: (file: File) => void;
-  onSave: () => void;
+  onSave: (allowPartial?: boolean) => void;
+  onConfirmPartial: () => void;
+  onCancelLimit: () => void;
 }
 
 export function ExcelUploadDialog({
   open, onOpenChange, exStep, setExStep, parsed, invalid,
-  audName, setAudName, audNotes, setAudNotes, saving, onParseFile, onSave,
+  audName, setAudName, audNotes, setAudNotes, saving, limitPrompt, onParseFile, onSave,
+  onConfirmPartial, onCancelLimit,
 }: ExcelUploadDialogProps) {
   const { t, dir } = useLanguage();
   const ct = t.contacts;
@@ -91,6 +95,19 @@ export function ExcelUploadDialog({
               ))}
               {parsed.length > 10 && <p className="text-xs text-gray-400">{ct.excelDialog.moreItems(parsed.length - 10)}</p>}
             </div>
+            {limitPrompt && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3 space-y-2">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  الملف يحتوي على {limitPrompt.newContacts.toLocaleString()} جهة جديدة، والمتاح في باقتك {limitPrompt.availableSlots.toLocaleString()} فقط. هل تريد استيراد المتاح؟
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={onConfirmPartial} disabled={saving}>
+                    استيراد {limitPrompt.availableSlots.toLocaleString()} فقط
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={onCancelLimit} disabled={saving}>إلغاء</Button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
                 onClick={() => setExStep(1)}>{ct.excelDialog.prevBtn}</Button>

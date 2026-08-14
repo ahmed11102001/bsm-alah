@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { checkContactsLimit } from "@/lib/plan-guard";
+import { acquireContactsLimitLock, checkContactsLimit, getContactsLimitStatus, type ContactsLimitStatus } from "@/lib/plan-guard";
 import { normalizePhone } from "@/lib/phone";
 import {
   GOOGLE_SHEETS_MAX_ROWS,
@@ -21,6 +21,13 @@ type Connection = {
   nameColumn: string | null;
   phoneColumn: string | null;
 };
+
+export class GoogleContactsLimitError extends Error {
+  readonly code = "CONTACT_LIMIT";
+  constructor(public readonly details: { status: ContactsLimitStatus; newContacts: number }) {
+    super("عدد جهات الاتصال الجديدة يتجاوز المساحة المتاحة في الباقة");
+  }
+}
 
 function sheetRange(sheetName: string): string {
   // نقرأ صفًا زائدًا حتى نقدر نرفض الشيت الذي يتجاوز الحد بدل الاعتماد على حجم الـ grid.
@@ -57,6 +64,7 @@ async function readRows(connection: Connection, spreadsheetId: string, sheetName
 export async function importGoogleSheet(
   connection: Connection,
   input: { spreadsheetId: string; sheetId?: string | null; sheetName: string; nameColumn: unknown; phoneColumn: unknown },
+  options: { allowPartial?: boolean } = {},
 ) {
   const source = await readRows(connection, input.spreadsheetId, input.sheetName);
   const nameIndex = parseColumnIndex(input.nameColumn, source.headers);
@@ -77,15 +85,27 @@ export async function importGoogleSheet(
   const contacts = [...byPhone.values()];
   if (contacts.length === 0) throw new Error("لم نجد أي أرقام هاتف صالحة في العمود المحدد");
 
-  const existing = await prisma.contact.findMany({
-    where: { userId: connection.userId, phone: { in: contacts.map((contact) => contact.phone) } },
-    select: { phone: true },
-  });
-  const existingPhones = new Set(existing.map((contact) => contact.phone));
-  const limitCheck = await checkContactsLimit(connection.userId, contacts.filter((contact) => !existingPhones.has(contact.phone)).length);
-  if (!limitCheck.allowed) throw new Error(limitCheck.message);
-
   const result = await prisma.$transaction(async (tx) => {
+    await acquireContactsLimitLock(tx, connection.userId);
+    // إعادة القراءة بعد القفل تمنع تجاوز الـ global limit عند تشغيل Importين معًا.
+    const latestExisting = await tx.contact.findMany({
+      where: { userId: connection.userId, phone: { in: contacts.map((contact) => contact.phone) } },
+      select: { phone: true },
+    });
+    const latestExistingPhones = new Set(latestExisting.map((contact) => contact.phone));
+    const latestNewContacts = contacts.filter((contact) => !latestExistingPhones.has(contact.phone));
+    const limitStatus = await getContactsLimitStatus(connection.userId);
+    if (!limitStatus.unlimited && latestNewContacts.length > limitStatus.available && !options.allowPartial) {
+      // Reuse the canonical guard so the normal plan-limit notification is emitted too.
+      await checkContactsLimit(connection.userId, latestNewContacts.length);
+      throw new GoogleContactsLimitError({ status: limitStatus, newContacts: latestNewContacts.length });
+    }
+    const allowedNewContacts = limitStatus.unlimited
+      ? latestNewContacts
+      : latestNewContacts.slice(0, limitStatus.available);
+    const allowedNewPhones = new Set(allowedNewContacts.map((contact) => contact.phone));
+    const contactsToWrite = contacts.filter((contact) => latestExistingPhones.has(contact.phone) || allowedNewPhones.has(contact.phone));
+
     let audienceId = connection.audienceId;
     if (audienceId) {
       const ownedAudience = await tx.audience.findFirst({ where: { id: audienceId, userId: connection.userId } });
@@ -97,7 +117,7 @@ export async function importGoogleSheet(
       audienceId = audience.id;
     }
 
-    for (const contact of contacts) {
+    for (const contact of contactsToWrite) {
       await tx.contact.upsert({
         where: { phone_userId: { phone: contact.phone, userId: connection.userId } },
         update: {
@@ -122,13 +142,30 @@ export async function importGoogleSheet(
         lastSyncAt: new Date(),
       },
     });
-    return { audienceId, savedConnection };
+    return {
+      audienceId, savedConnection,
+      contactsToWrite, latestExistingPhones, latestNewContacts, limitStatus,
+    };
   });
 
-  return { imported: contacts.length, created: contacts.filter((contact) => !existingPhones.has(contact.phone)).length, updated: contacts.filter((contact) => existingPhones.has(contact.phone)).length, ...result };
+  const created = result.contactsToWrite.filter((contact) => !result.latestExistingPhones.has(contact.phone)).length;
+  const updated = result.contactsToWrite.length - created;
+  return {
+    imported: result.contactsToWrite.length,
+    created,
+    updated,
+    skippedByLimit: result.latestNewContacts.length - created,
+    limitInfo: {
+      currentContacts: result.limitStatus.used,
+      newContacts: result.latestNewContacts.length,
+      availableSlots: result.limitStatus.unlimited ? null : result.limitStatus.available,
+      unlimited: result.limitStatus.unlimited,
+    },
+    audienceId: result.audienceId,
+  };
 }
 
-export async function syncGoogleSheet(connection: Connection) {
+export async function syncGoogleSheet(connection: Connection, options: { allowPartial?: boolean } = {}) {
   if (!connection.spreadsheetId || !connection.sheetName || connection.nameColumn === null || connection.phoneColumn === null) {
     throw new Error("لم يتم إعداد مصدر Google Sheets بالكامل بعد");
   }
@@ -138,5 +175,5 @@ export async function syncGoogleSheet(connection: Connection) {
     sheetName: connection.sheetName,
     nameColumn: connection.nameColumn,
     phoneColumn: connection.phoneColumn,
-  });
+  }, options);
 }

@@ -202,24 +202,34 @@ export default function ReportsOverviewPage() {
                   <CardTitle className="text-base font-semibold">{pageText[locale].charts.dailyTitle}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <LineChart data={overview.daily}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis dataKey="day" tick={{ fontSize: 11 }}
-                        tickFormatter={(v) => v.slice(5)} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        formatter={(value: any, name: any) => [
-                          value,
-                          name === "sent" ? pageText[locale].charts.sent : name === "delivered" ? pageText[locale].charts.delivered : pageText[locale].charts.received,
-                        ]}
-                        labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
-                      />
-                      <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={false} name="sent" />
-                      <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={false} name="delivered" />
-                      <Line type="monotone" dataKey="received" stroke="#9333ea" strokeWidth={2} dot={false} name="received" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {overview.daily.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-16">{pageText[locale].charts.noData}</p>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <LineChart data={overview.daily}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="day" tick={{ fontSize: 11 }}
+                            tickFormatter={(v) => v.slice(5)} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip
+                            formatter={(value: any, name: any) => [
+                              value,
+                              name === "sent" ? pageText[locale].charts.sent : name === "delivered" ? pageText[locale].charts.delivered : pageText[locale].charts.received,
+                            ]}
+                            labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
+                          />
+                          {/* بيوم واحد بس مفيش نقطتين ترسم بينهم خط، فبنظهر نقطة واضحة بدل ما الرسم يبان فاضي */}
+                          <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#2563eb", strokeWidth: 0 } : false} name="sent" />
+                          <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#16a34a", strokeWidth: 0 } : false} name="delivered" />
+                          <Line type="monotone" dataKey="received" stroke="#9333ea" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#9333ea", strokeWidth: 0 } : false} name="received" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      {overview.daily.length <= 1 && (
+                        <p className="text-xs text-gray-400 text-center mt-2">{pageText[locale].charts.notEnoughDailyData}</p>
+                      )}
+                    </>
+                  )}
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-600 inline-block" /> {pageText[locale].charts.campaignsLegendSent}</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-600 inline-block" /> {pageText[locale].charts.campaignsLegendDelivered}</span>

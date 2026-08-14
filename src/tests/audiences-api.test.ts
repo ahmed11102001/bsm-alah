@@ -10,11 +10,17 @@ vi.mock("next-auth", () => ({ getServerSession: mockGetServerSession }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 
 const mockCheckContactsLimit = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/plan-guard", () => ({ checkContactsLimit: mockCheckContactsLimit }));
+const mockGetContactsLimitStatus = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/plan-guard", () => ({
+  checkContactsLimit: mockCheckContactsLimit,
+  getContactsLimitStatus: mockGetContactsLimitStatus,
+  acquireContactsLimitLock: vi.fn(),
+}));
 
 const mockTx = vi.hoisted(() => ({
   audience: { create: vi.fn(), findUniqueOrThrow: vi.fn() },
-  contact:  { upsert: vi.fn(), updateMany: vi.fn() },
+  contact:  { upsert: vi.fn(), updateMany: vi.fn(), findMany: vi.fn() },
+  $executeRaw: vi.fn(),
 }));
 
 const mockPrisma = vi.hoisted(() => ({
@@ -146,6 +152,7 @@ describe("POST /api/audiences — إنشاء جمهور جديد", () => {
     mockGetServerSession.mockReset();
     mockGetServerSession.mockResolvedValue(SESSION);
     mockCheckContactsLimit.mockResolvedValue({ allowed: true });
+    mockGetContactsLimitStatus.mockResolvedValue({ used: 0, available: 100, unlimited: false, message: "" });
     mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx));
     mockTx.audience.create.mockResolvedValue({ id: "aud-new" });
     mockTx.audience.findUniqueOrThrow.mockResolvedValue({
@@ -179,14 +186,15 @@ describe("POST /api/audiences — إنشاء جمهور جديد", () => {
     expect(mockCheckContactsLimit).toHaveBeenCalledWith("user-1", 1);
   });
 
-  it("تجاوز حد الباقة → 403 مع كود السبب والباقة المطلوبة", async () => {
+  it("تجاوز حد الباقة → 409 لتأكيد الاستيراد الجزئي", async () => {
     mockCheckContactsLimit.mockResolvedValueOnce({
       allowed: false, message: "تجاوزت حد جهات الاتصال", code: "LIMIT_EXCEEDED", requiredPlan: "pro",
     });
+    mockGetContactsLimitStatus.mockResolvedValueOnce({ used: 100, available: 0, unlimited: false, message: "تجاوزت حد جهات الاتصال" });
     const res = await POST(makeReq("POST", { name: "جمهور", contacts: [{ phone: "01012345678" }] }));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
     const data = await res.json();
-    expect(data.requiredPlan).toBe("pro");
+    expect(data.code).toBe("CONTACT_LIMIT");
   });
 
   it("نجاح الإنشاء → بيرجع 200 وبيانات الجمهور", async () => {

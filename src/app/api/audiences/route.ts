@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection } from "@/types/enums";
-import { checkContactsLimit } from "@/lib/plan-guard";
+import { acquireContactsLimitLock, checkContactsLimit, getContactsLimitStatus } from "@/lib/plan-guard";
 import { normalizePhone } from "@/lib/phone";
 
 function uid(session: any): string {
@@ -367,7 +367,7 @@ export async function POST(req: NextRequest) {
   const userId = uid(session);
 
   const body = await req.json();
-  const { name, notes, type = "excel", contacts } = body;
+  const { name, notes, type = "excel", contacts, allowPartial = false } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "اسم الجمهور مطلوب" }, { status: 400 });
   if (!Array.isArray(contacts) || contacts.length === 0)
@@ -377,8 +377,27 @@ export async function POST(req: NextRequest) {
   if (unique.length === 0)
     return NextResponse.json({ error: "لا توجد جهات اتصال صالحة" }, { status: 400 });
 
-  const limitCheck = await checkContactsLimit(userId, unique.length);
-  if (!limitCheck.allowed) {
+  const existingRows = (await prisma.contact.findMany({
+    where: { userId, phone: { in: unique.map((contact) => contact.phone) } },
+    select: { phone: true },
+  })) ?? [];
+  const existingPhones = new Set(existingRows.map((contact) => contact.phone));
+  const newCount = unique.filter((contact) => !existingPhones.has(contact.phone)).length;
+  const limitCheck = await checkContactsLimit(userId, newCount);
+  const isExcelImport = String(type || "excel") === "excel";
+  if (!limitCheck.allowed && isExcelImport && !allowPartial) {
+    const status = await getContactsLimitStatus(userId);
+    return NextResponse.json({
+      error: status.message || limitCheck.message,
+      code: "CONTACT_LIMIT",
+      needsConfirmation: true,
+      newContacts: newCount,
+      currentContacts: status.used,
+      availableSlots: status.unlimited ? null : status.available,
+      unlimited: status.unlimited,
+    }, { status: 409 });
+  }
+  if (!limitCheck.allowed && !isExcelImport) {
     return NextResponse.json(
       { error: limitCheck.message, code: limitCheck.code, requiredPlan: limitCheck.requiredPlan },
       { status: 403 }
@@ -386,12 +405,34 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const audience = await prisma.$transaction(async (tx) => {
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      // Serialize audience imports that consume the same global contact limit.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      const latestExistingRows = (await tx.contact.findMany({
+        where: { userId, phone: { in: unique.map((contact) => contact.phone) } },
+        select: { phone: true },
+      })) ?? [];
+      const latestExistingPhones = new Set(latestExistingRows.map((contact) => contact.phone));
+      const latestNewContacts = unique.filter((contact) => !latestExistingPhones.has(contact.phone));
+      const finalLimitCheck = await checkContactsLimit(userId, latestNewContacts.length);
+      let contactsToWrite = unique;
+      if (!finalLimitCheck.allowed) {
+        if (!isExcelImport || !allowPartial) {
+          const limitError = new Error(finalLimitCheck.message);
+          (limitError as any).code = "CONTACT_LIMIT";
+          (limitError as any).newContacts = latestNewContacts.length;
+          (limitError as any).availableSlots = (await getContactsLimitStatus(userId)).available;
+          throw limitError;
+        }
+        const availableSlots = (await getContactsLimitStatus(userId)).available;
+        const allowedPhones = new Set(latestNewContacts.slice(0, availableSlots).map((contact) => contact.phone));
+        contactsToWrite = unique.filter((contact) => latestExistingPhones.has(contact.phone) || allowedPhones.has(contact.phone));
+      }
       const createdAudience = await tx.audience.create({
         data: { name: name.trim(), type: String(type || "excel"), userId },
       });
 
-      for (const c of unique) {
+      for (const c of contactsToWrite) {
         await tx.contact.upsert({
           where: { phone_userId: { phone: c.phone, userId } },
           update: { audienceId: createdAudience.id, name: c.name ?? undefined, deletedAt: null },
@@ -399,14 +440,20 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return tx.audience.findUniqueOrThrow({
+      const savedAudience = await tx.audience.findUniqueOrThrow({
         where: { id: createdAudience.id },
         include: {
           contacts: { where: { deletedAt: null }, take: 5, select: { id: true, phone: true, name: true } },
           _count: { select: { contacts: { where: { deletedAt: null } } } },
         },
       });
+      return {
+        audience: savedAudience,
+        importedCount: contactsToWrite.length,
+        skippedByLimit: unique.length - contactsToWrite.length,
+      };
     });
+    const { audience, importedCount, skippedByLimit } = transactionResult;
 
     return NextResponse.json({
       success: true,
@@ -418,10 +465,18 @@ export async function POST(req: NextRequest) {
         contacts: audience.contacts,
         contactCount: audience._count.contacts,
         createdAt: audience.createdAt.toISOString(),
+        importedCount,
+        skippedByLimit,
       },
     });
   } catch (err: any) {
     console.error("POST /api/audiences:", err);
+    if (err?.code === "CONTACT_LIMIT") {
+      return NextResponse.json({ error: err.message, code: err.code, needsConfirmation: true, newContacts: err.newContacts, availableSlots: err.availableSlots }, { status: 409 });
+    }
+    if (err?.code === "LIMIT_REACHED" || err?.code === "LIMIT_EXCEEDED") {
+      return NextResponse.json({ error: err.message, code: err.code, requiredPlan: err.requiredPlan }, { status: 403 });
+    }
     return NextResponse.json({ error: err.message ?? "فشل الحفظ" }, { status: 500 });
   }
 }

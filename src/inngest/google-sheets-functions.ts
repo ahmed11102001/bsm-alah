@@ -16,13 +16,13 @@ export const googleSheetsSyncCron = inngest.createFunction(
         where: { syncInterval: { in: ["hourly", "6hours", "daily"] }, spreadsheetId: { not: null }, sheetName: { not: null } },
       });
       const now = Date.now();
-      const results: Array<{ connectionId: string; success: boolean; error?: string }> = [];
+      const results: Array<{ connectionId: string; success: boolean; skipped?: number; error?: string }> = [];
       for (const connection of connections) {
         const interval = INTERVAL_MS[connection.syncInterval ?? ""];
         if (!interval || (connection.lastSyncAt && now - connection.lastSyncAt.getTime() < interval)) continue;
         try {
-          await syncGoogleSheet(connection);
-          results.push({ connectionId: connection.id, success: true });
+          const syncResult = await syncGoogleSheet(connection, { allowPartial: true });
+          results.push({ connectionId: connection.id, success: true, skipped: syncResult.skippedByLimit });
         } catch (error: any) {
           console.error(`[GoogleSheets] scheduled sync failed for ${connection.id}`, error);
           results.push({ connectionId: connection.id, success: false, error: error?.message ?? "sync failed" });

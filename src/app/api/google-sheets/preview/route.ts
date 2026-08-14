@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getGoogleSheetsClient, ownedConnection, parseColumnIndex, GOOGLE_SHEETS_MAX_ROWS } from "@/lib/google-sheets";
 import { normalizePhone } from "@/lib/phone";
+import prisma from "@/lib/prisma";
+import { getContactsLimitStatus } from "@/lib/plan-guard";
 
 function rangeFor(sheetName: string, endRow: number): string {
   const safeName = sheetName.replace(/'/g, "''");
@@ -38,6 +40,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "الشيت يحتوي على أكثر من 10,000 صف فعلي. الحد الأقصى للاستيراد حاليًا هو 10,000 جهة اتصال." }, { status: 400 });
     }
     const validRowCount = actualRows.filter((row) => Boolean(normalizePhone(String(row[phoneIndex] ?? "").trim()))).length;
+    const validPhones = [...new Set(actualRows
+      .map((row) => normalizePhone(String(row[phoneIndex] ?? "").trim()))
+      .filter((phone): phone is string => Boolean(phone)))];
+    const existing = await prisma.contact.findMany({
+      where: { userId: connection.userId, phone: { in: validPhones } },
+      select: { phone: true },
+    });
+    const existingPhones = new Set(existing.map((contact) => contact.phone));
+    const limitStatus = await getContactsLimitStatus(connection.userId);
+    const newContacts = validPhones.filter((phone) => !existingPhones.has(phone)).length;
     return NextResponse.json({
       connectionId: connection.id,
       spreadsheetId,
@@ -48,6 +60,12 @@ export async function GET(req: NextRequest) {
       rows: rows.slice(1, 11).map((row) => headers.map((_, index) => String(row[index] ?? ""))),
       // عدد العملاء الفعليين، وليس عدد الصفوف الافتراضية في Google grid.
       rowCount: validRowCount,
+      limitInfo: {
+        currentContacts: limitStatus.used,
+        newContacts,
+        availableSlots: limitStatus.unlimited ? null : limitStatus.available,
+        unlimited: limitStatus.unlimited,
+      },
     });
   } catch (error) {
     console.error("[GoogleSheets] preview failed", error);

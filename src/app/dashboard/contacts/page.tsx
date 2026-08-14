@@ -51,6 +51,7 @@ export default function Contacts() {
   const [audName,  setAudName]  = useState("");
   const [audNotes, setAudNotes] = useState("");
   const [saving,   setSaving]   = useState(false);
+  const [excelLimitPrompt, setExcelLimitPrompt] = useState<{ newContacts: number; availableSlots: number } | null>(null);
 
   // custom flow
   const [custName,   setCustName]   = useState("");
@@ -101,7 +102,12 @@ export default function Contacts() {
       const r = await fetch("/api/google-sheets/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId: googleConnection.id }) });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
-      toast.success("تمت مزامنة Google Sheets"); load(); loadGoogleConnection();
+      if (data.skippedByLimit > 0) {
+        toast.success(`تمت مزامنة ${data.imported} جهة، وتم تجاهل ${data.skippedByLimit} جهة جديدة بسبب حد الباقة`);
+      } else {
+        toast.success("تمت مزامنة Google Sheets");
+      }
+      load(); loadGoogleConnection();
     } catch (e: any) { toast.error(e.message); }
     finally { setGoogleSyncing(false); }
   };
@@ -160,18 +166,27 @@ export default function Contacts() {
     reader.readAsArrayBuffer(file);
   };
 
-  const saveExcel = async () => {
+  const saveExcel = async (allowPartial = false) => {
     if (!audName.trim()) { toast.error(ct.excelDialog.nameErr); return; }
     if (parsed.length === 0) { toast.error(ct.excelDialog.noValidErr); return; }
     setSaving(true);
     try {
       const r = await fetch("/api/audiences", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: audName, notes: audNotes, type: "excel", contacts: parsed }),
+        body: JSON.stringify({ name: audName, notes: audNotes, type: "excel", contacts: parsed, allowPartial }),
       });
       const d = await r.json();
+      if (r.status === 409 && d.code === "CONTACT_LIMIT" && Number(d.availableSlots) > 0 && !allowPartial) {
+        setExcelLimitPrompt({ newContacts: Number(d.newContacts ?? parsed.length), availableSlots: Number(d.availableSlots) });
+        return;
+      }
       if (!r.ok) throw new Error(d.error);
-      toast.success(ct.excelDialog.saveSuccess(parsed.length));
+      setExcelLimitPrompt(null);
+      const imported = Number(d.data?.importedCount ?? parsed.length);
+      const skipped = Number(d.data?.skippedByLimit ?? 0);
+      toast.success(skipped > 0
+        ? `تم استيراد ${imported.toLocaleString()} جهة وتجاهل ${skipped.toLocaleString()} بسبب حد الباقة`
+        : ct.excelDialog.saveSuccess(imported));
       window.dispatchEvent(new Event("trigger-review-prompt"));
       setShowAdd(false); resetExcel(); load();
     } catch (e: any) { toast.error(e.message); }
@@ -209,6 +224,7 @@ export default function Contacts() {
 
   const resetExcel = () => {
     setExStep(1); setParsed([]); setInvalid(0); setAudName(""); setAudNotes("");
+    setExcelLimitPrompt(null);
   };
 
   const deleteAud = async (id: string) => {
@@ -431,8 +447,11 @@ export default function Contacts() {
         audNotes={audNotes}
         setAudNotes={setAudNotes}
         saving={saving}
+        limitPrompt={excelLimitPrompt}
         onParseFile={parseFile}
         onSave={saveExcel}
+        onConfirmPartial={() => saveExcel(true)}
+        onCancelLimit={() => setExcelLimitPrompt(null)}
       />
 
       <CustomAudienceDialog

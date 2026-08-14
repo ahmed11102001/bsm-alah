@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const connection = await ownedConnection(session.user.id, body.connectionId);
-    const result = await syncGoogleSheet(connection);
+    const result = await syncGoogleSheet(connection, { allowPartial: true });
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
     console.error("[GoogleSheets] sync failed", error);

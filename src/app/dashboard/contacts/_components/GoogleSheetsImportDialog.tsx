@@ -24,6 +24,12 @@ type Preview = {
   headers: { index: number; value: string }[];
   rows: string[][];
   rowCount: number | null;
+  limitInfo?: {
+    currentContacts: number;
+    newContacts: number;
+    availableSlots: number | null;
+    unlimited: boolean;
+  };
 };
 
 const text = (ar: string, en: string, locale: string) => locale === "ar" ? ar : en;
@@ -43,6 +49,7 @@ export function GoogleSheetsImportDialog({
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
+  const [limitPrompt, setLimitPrompt] = useState<{ newContacts: number; availableSlots: number } | null>(null);
 
   const getError = async (response: Response) => (await response.json().catch(() => ({}))).error || text("حدث خطأ غير متوقع", "Something went wrong", locale);
 
@@ -91,19 +98,26 @@ export function GoogleSheetsImportDialog({
     const query = new URLSearchParams({ connectionId: connection.id, spreadsheetId, sheetName, phoneColumn });
     fetch(`/api/google-sheets/preview?${query}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data && typeof data.rowCount === "number") setPreview((current) => current ? { ...current, rowCount: data.rowCount } : current); })
+      .then((data) => { if (data && typeof data.rowCount === "number") setPreview((current) => current ? { ...current, rowCount: data.rowCount, limitInfo: data.limitInfo } : current); })
       .catch(() => { /* preview الأساسي ما زال صالحًا */ });
   }, [preview?.sheetName, phoneColumn, connection?.id, spreadsheetId, sheetName]);
 
-  const doImport = async () => {
+  const doImport = async (allowPartial = false) => {
     if (!connection || !preview) return;
-    setImporting(true); setError("");
+    setImporting(true); setError(""); setLimitPrompt(null);
     try {
       const r = await fetch("/api/google-sheets/import", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId: connection.id, spreadsheetId, spreadsheetName, sheetId: tabs.find((tab) => tab.title === sheetName)?.sheetId, sheetName, nameColumn, phoneColumn }),
+        body: JSON.stringify({ connectionId: connection.id, spreadsheetId, spreadsheetName, sheetId: tabs.find((tab) => tab.title === sheetName)?.sheetId, sheetName, nameColumn, phoneColumn, allowPartial }),
       });
-      if (!r.ok) throw new Error(await getError(r));
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (r.status === 409 && data.code === "CONTACT_LIMIT" && Number(data.availableSlots) > 0) {
+          setLimitPrompt({ newContacts: data.newContacts, availableSlots: data.availableSlots });
+          return;
+        }
+        throw new Error(data.error || text("تعذر الاستيراد", "Import failed", locale));
+      }
       onOpenChange(false); onImported();
     } catch (e: any) { setError(e.message); }
     finally { setImporting(false); }
@@ -152,7 +166,23 @@ export function GoogleSheetsImportDialog({
                 <table className="w-full text-xs"><thead className="bg-gray-50 dark:bg-gray-700"><tr>{preview.headers.slice(0, 6).map((h) => <th key={h.index} className="p-2 text-start whitespace-nowrap">{h.value || `Column ${h.index + 1}`}</th>)}</tr></thead><tbody>{preview.rows.slice(0, 5).map((row, index) => <tr key={index} className="border-t dark:border-gray-700">{preview.headers.slice(0, 6).map((h) => <td key={h.index} className="p-2 whitespace-nowrap">{row[h.index] ?? ""}</td>)}</tr>)}</tbody></table>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">{text("يفضل ضبط عمود الهاتف في Google Sheets على Plain text للحفاظ على الصفر الأول.", "Set the phone column to Plain text in Google Sheets to preserve leading zeros.", locale)}</p>
-              <div className="flex items-center justify-between text-sm text-gray-500"><span>{text("عدد العملاء", "Contacts", locale)}: {preview.rowCount ?? 0}</span><Button onClick={doImport} disabled={importing || !nameColumn || !phoneColumn || !preview.rowCount} className="bg-[#25D366] hover:bg-[#1fb956] text-white">{importing && <Loader2 className="w-4 h-4 animate-spin" />}{locale === "ar" ? `استيراد ${preview.rowCount ?? 0} عميل` : `Import ${preview.rowCount ?? 0} contacts`}</Button></div>
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-xs space-y-1">
+                <p>{text("جهات الاتصال في الشيت", "Contacts in sheet", locale)}: <strong>{preview.rowCount ?? 0}</strong></p>
+                <p>{text("جهات اتصال جديدة", "New contacts", locale)}: <strong>{preview.limitInfo?.newContacts ?? preview.rowCount ?? 0}</strong></p>
+                <p>{text("جهات الاتصال الحالية", "Current contacts", locale)}: <strong>{preview.limitInfo?.currentContacts ?? "—"}</strong></p>
+                <p>{text("المتاح في الباقة", "Available in plan", locale)}: <strong>{preview.limitInfo?.unlimited ? text("غير محدود", "Unlimited", locale) : (preview.limitInfo?.availableSlots ?? "—")}</strong></p>
+              </div>
+              {preview.limitInfo && !preview.limitInfo.unlimited && preview.limitInfo.newContacts > (preview.limitInfo.availableSlots ?? 0) && (
+                <p className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-700 dark:text-amber-300">{text("الشيت أكبر من المساحة المتاحة. عند المتابعة سيتم طلب تأكيد لاستيراد العدد المسموح فقط.", "The sheet exceeds the available plan space. Continuing will ask for confirmation to import only the allowed amount.", locale)}</p>
+              )}
+              {preview.limitInfo && !preview.limitInfo.unlimited && preview.limitInfo.availableSlots === 0 && preview.limitInfo.newContacts > 0 && (
+                <p className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-xs text-red-700 dark:text-red-300">{text("لقد وصلت إلى الحد الأقصى لجهات الاتصال في باقتك. قم بحذف بعض الجهات أو قم بترقية الباقة لإضافة المزيد.", "You have reached your plan's contact limit. Delete contacts or upgrade your plan to add more.", locale)}</p>
+              )}
+              {limitPrompt && <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2 text-sm text-amber-800 dark:text-amber-200">
+                <p>{text(`الباقة تسمح بإضافة ${limitPrompt.availableSlots} جهة اتصال فقط، بينما الشيت يحتوي على ${limitPrompt.newContacts} جهة جديدة.`, `Your plan allows only ${limitPrompt.availableSlots} new contacts, while the sheet has ${limitPrompt.newContacts} new contacts.`, locale)}</p>
+                <div className="flex gap-2"><Button size="sm" onClick={() => doImport(true)} disabled={importing} className="bg-[#25D366] hover:bg-[#1fb956] text-white">{text(`استيراد ${limitPrompt.availableSlots} فقط`, `Import ${limitPrompt.availableSlots} only`, locale)}</Button><Button size="sm" variant="outline" onClick={() => setLimitPrompt(null)}>{text("إلغاء", "Cancel", locale)}</Button></div>
+              </div>}
+              <div className="flex items-center justify-between text-sm text-gray-500"><span>{text("عدد العملاء", "Contacts", locale)}: {preview.rowCount ?? 0}</span><Button onClick={() => doImport(false)} disabled={importing || !nameColumn || !phoneColumn || !preview.rowCount || (!!preview.limitInfo && !preview.limitInfo.unlimited && preview.limitInfo.availableSlots === 0 && preview.limitInfo.newContacts > 0)} className="bg-[#25D366] hover:bg-[#1fb956] text-white">{importing && <Loader2 className="w-4 h-4 animate-spin" />}{locale === "ar" ? `استيراد ${preview.limitInfo?.newContacts ?? preview.rowCount ?? 0} عميل` : `Import ${preview.limitInfo?.newContacts ?? preview.rowCount ?? 0} contacts`}</Button></div>
             </>}
             {error && <p className="text-sm text-red-500">{error}</p>}
             {!loading && spreadsheets.length === 0 && <p className="text-sm text-gray-500">{text("لا توجد ملفات Google Sheets متاحة.", "No accessible Google Sheets found.", locale)}</p>}

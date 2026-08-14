@@ -114,37 +114,53 @@ export async function checkContactsLimit(
   ownerId: string,
   addingCount = 1
 ): Promise<GuardResult> {
-  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
-  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
+  const status = await getContactsLimitStatus(ownerId);
+  if (status.unlimited || status.available >= addingCount) return { allowed: true };
 
-  const sub = await getSubscription(ownerId);
-  const plan = getEffectivePlan(sub);
-  const limit = PLANS[plan].contacts;
-
-  if (isUnlimited(limit)) return { allowed: true };
-
-  // نعد إجمالي الـ contacts الموجودة لليوزر (غير المحذوفة)
-  const totalContacts = await prisma.contact.count({
-    where: {
-      userId: ownerId,
-      deletedAt: null,
-    },
-  });
-
-  if (totalContacts + addingCount > limit) {
+  if (addingCount > 0) {
     await notifyPlanLimitReached(ownerId, "contacts");
     return {
       allowed: false,
-      code: "LIMIT_REACHED",
-      message: `وصلت للحد الأقصى للإجمالي (${limitLabel(limit)} جهة اتصال) في باقة ${PLAN_NAMES[plan]}. قم بالترقية لإضافة المزيد.`,
-      plan,
-      requiredPlan: nextPlan(plan),
-      limit,
-      used: totalContacts,
+      code: "LIMIT_REACHED", message: status.message,
+      plan: status.plan, requiredPlan: nextPlan(status.plan), limit: status.limit, used: status.used,
     };
   }
 
   return { allowed: true };
+}
+
+export type ContactsLimitStatus = {
+  plan: PlanTier;
+  limit: number;
+  used: number;
+  available: number;
+  unlimited: boolean;
+  message: string;
+};
+
+/** نفس مصدر الحقيقة المستخدم في checkContactsLimit، مع بيانات العرض للـ import preview. */
+export async function getContactsLimitStatus(ownerId: string): Promise<ContactsLimitStatus> {
+  const unlimitedPlan = (await isSuperAdmin(ownerId)) || (await isBetaBypass(ownerId));
+  const sub = await getSubscription(ownerId);
+  const plan = unlimitedPlan ? "enterprise" : getEffectivePlan(sub);
+  const limit = PLANS[plan].contacts;
+  const used = await prisma.contact.count({ where: { userId: ownerId, deletedAt: null } });
+  const unlimited = unlimitedPlan || isUnlimited(limit);
+  return {
+    plan, limit, used,
+    available: unlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, limit - used),
+    unlimited,
+    message: unlimited
+      ? ""
+      : used >= limit
+        ? `لقد وصلت إلى الحد الأقصى لجهات الاتصال في باقة ${PLAN_NAMES[plan]}. قم بحذف بعض جهات الاتصال أو قم بترقية الباقة لإضافة المزيد.`
+        : `وصلت للحد الأقصى للإجمالي (${limitLabel(limit)} جهة اتصال) في باقة ${PLAN_NAMES[plan]}. قم بالترقية لإضافة المزيد.`,
+  };
+}
+
+/** قفل PostgreSQL قصير المدى لتسلسل imports التي تتحقق من نفس global limit. */
+export async function acquireContactsLimitLock(tx: any, ownerId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ownerId}))`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
