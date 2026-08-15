@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -218,10 +218,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
       });
       const d = await r.json();
       if (!r.ok) { setErr(d.error); return; }
-      toast.success("تم إنشاء الحساب بنجاح!");
-      await signOut({ redirect: false });
-      await signIn("credentials", { email: regEmail.toLowerCase(), password: regPass, redirect: false });
-      onClose(); router.push(callbackUrl || "/dashboard");
+      toast.success("تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب.");
+      setLoginEmail(regEmail.toLowerCase());
+      go("login");
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };

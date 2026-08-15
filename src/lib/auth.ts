@@ -47,6 +47,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
+        if (user.role === "OWNER" && user.emailVerified === null) {
+          throw new Error("يرجى تأكيد بريدك الإلكتروني أولًا");
+        }
+
         // حماية: منع دخول الموظف قبل تفعيل حسابه
         if (user.role !== "OWNER" && user.inviteCode) {
           throw new Error("يرجى تفعيل حسابك أولاً باستخدام كود الانضمام");

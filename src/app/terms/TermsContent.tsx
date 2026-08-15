@@ -280,11 +280,11 @@ Should any dispute arise, the courts of Cairo shall have jurisdiction. We encour
     content: {
       ar: `لأي استفسارات حول هذه الشروط:
 
-البريد الإلكتروني: legal@wani.app
+البريد الإلكتروني: support@aiwni.com
 سيتم الرد خلال 72 ساعة من أيام العمل.`,
       en: `For any questions about these terms:
 
-Email: legal@wani.app
+Email: support@aiwni.com
 We aim to respond within 72 business hours.`,
     },
   },
@@ -490,7 +490,7 @@ export default function TermsContent() {
             {isAr ? "لديك سؤال حول شروط الاستخدام؟" : "Have a question about these terms?"}
           </p>
           <a
-            href="mailto:legal@wani.app"
+            href="mailto:support@aiwni.com"
             className="inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-[#20bb5a] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

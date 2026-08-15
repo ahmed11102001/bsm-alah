@@ -68,6 +68,7 @@ model User {
   productSyncLogs          ProductSyncLog[]
   waniPartnerCards         WaniPartnerCard[]
   googleSheetsConnections  GoogleSheetsConnection[]
+  emailVerificationTokens  EmailVerificationToken[]
 
   @@index([email])
   @@index([workspaceId])
@@ -125,6 +126,19 @@ model PasswordResetToken {
   userId    String
   expires   DateTime
   createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])

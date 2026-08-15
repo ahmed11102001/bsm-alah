@@ -65,7 +65,7 @@ npm start
 | PostgreSQL / Neon | قاعدة البيانات | [neon.tech](https://neon.tech) |
 | Meta WhatsApp API | إرسال واستقبال الرسائل | [developers.facebook.com](https://developers.facebook.com) |
 | Cloudinary | رفع الصور والملفات | [cloudinary.com](https://cloudinary.com) |
-| Resend | إرسال الإيميلات | [resend.com](https://resend.com) |
+| Bred24 SMTP | إرسال الإيميلات | mx.bareed24.com:587 |
 | Upstash Redis | Rate Limiting | [upstash.com](https://upstash.com) |
 | Inngest | Background Jobs | [inngest.com](https://inngest.com) |
 

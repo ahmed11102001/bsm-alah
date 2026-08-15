@@ -6,6 +6,8 @@ import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
 import { RegisterSchema, parseInput } from "@/lib/schemas";
+import crypto from "crypto";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const { user, verificationToken } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newUser = await tx.user.create({
         data: {
           email: email.toLowerCase().trim(),
@@ -66,11 +68,27 @@ export async function POST(req: Request) {
         },
       });
 
-      return newUser;
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      await tx.emailVerificationToken.create({
+        data: {
+          token: verificationToken,
+          userId: newUser.id,
+          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      return { user: newUser, verificationToken };
     });
 
+    try {
+      await sendVerificationEmail(user.email, verificationToken);
+    } catch (emailError) {
+      await prisma.emailVerificationToken.delete({ where: { token: verificationToken } });
+      console.error("[register] verification email delivery failed", emailError instanceof Error ? emailError.name : "unknown");
+    }
+
     return NextResponse.json(
-      { message: "تم إنشاء الحساب بنجاح", userId: user.id },
+      { message: "تم إنشاء الحساب بنجاح. راجع بريدك الإلكتروني لتأكيد الحساب.", userId: user.id },
       { status: 201 }
     );
   } catch (error) {

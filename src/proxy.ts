@@ -39,8 +39,6 @@ function buildCsp(nonce: string): string {
     "https://connect.facebook.net",
     // Cloudinary
     "https://*.cloudinary.com",
-    // Resend
-    "https://api.resend.com",
     // Inngest
     "https://api.inngest.com",
     // ElevenLabs

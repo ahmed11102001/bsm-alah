@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Mail, Phone, MapPin, Facebook, Instagram } from "lucide-react";
@@ -81,7 +81,7 @@ export default function Footer({ lang }: FooterProps) {
 
             <div className="flex flex-col gap-4">
               {[
-                { icon: Mail,   label: "support@whatspro.app", href: "mailto:support@whatspro.app" },
+                { icon: Mail,   label: "support@aiwni.com", href: "mailto:support@aiwni.com" },
                 { icon: Phone,  label: "+20 1281657907",        href: "tel:+201281657907", ltr: true },
                 { icon: MapPin, label: tr(f.location, lang),   href: "#" },
               ].map(({ icon: Icon, label, href, ltr }) => (

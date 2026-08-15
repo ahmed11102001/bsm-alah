@@ -172,10 +172,10 @@ We are not responsible for any violation on your part in this regard.`,
     content: {
       ar: `للاستفسارات المتعلقة ببورتال المطورين أو الـ API:
 
-البريد الإلكتروني: developers@wani.app`,
+البريد الإلكتروني: support@aiwni.com`,
       en: `For questions about the Developer Portal or the API:
 
-Email: developers@wani.app`,
+Email: support@aiwni.com`,
     },
   },
 ];
@@ -341,7 +341,7 @@ export default function DeveloperPrivacyPage() {
             {t("Have a question about this policy?", "لديك سؤال حول هذه السياسة؟")}
           </p>
           <a
-            href="mailto:developers@wani.app"
+            href="mailto:support@aiwni.com"
             style={{
               display: "inline-flex",
               alignItems: "center",

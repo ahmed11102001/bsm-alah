@@ -178,10 +178,10 @@ Meta reserves the right to suspend or disable any non-compliant number or develo
     content: {
       ar: `لأي استفسارات حول هذه الشروط أو الـ API:
 
-البريد الإلكتروني: developers@wani.app`,
+البريد الإلكتروني: support@aiwni.com`,
       en: `For any questions about these terms or the API:
 
-Email: developers@wani.app`,
+Email: support@aiwni.com`,
     },
   },
 ];
@@ -437,7 +437,7 @@ export default function DeveloperTermsPage() {
             {t("Have a question about these terms?", "لديك سؤال حول شروط الاستخدام؟")}
           </p>
           <a
-            href="mailto:developers@wani.app"
+            href="mailto:support@aiwni.com"
             style={{
               display: "inline-flex",
               alignItems: "center",

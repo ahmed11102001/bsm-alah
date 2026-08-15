@@ -145,7 +145,7 @@ These features are **entirely optional** and are only activated if you turn them
 — **Meta / WhatsApp:** لإرسال واستقبال الرسائل عبر WhatsApp Business API
 — **Neon / Vercel:** استضافة قاعدة البيانات والتطبيق
 — **Cloudinary:** تخزين الوسائط (الصور والملفات الصوتية) المرسَلة عبر واتساب
-— **Resend:** إرسال رسائل البريد الإلكتروني التشغيلية (تأكيد الحساب، الإشعارات)
+— **Bred24 SMTP:** إرسال رسائل البريد الإلكتروني التشغيلية (تأكيد الحساب، الإشعارات)
 — **OpenAI و Google Gemini:** توليد الردود الآلية وتفريغ الرسائل الصوتية، فقط عند تفعيلك لهذه الميزات
 — **ElevenLabs:** تشغيل الوكيل الصوتي، فقط عند تفعيله
 — **Shopify / EasyOrders:** عند ربط متجرك اختيارياً، لقراءة الطلبات وإرسال رسائل متعلقة بها
@@ -156,7 +156,7 @@ These features are **entirely optional** and are only activated if you turn them
 — **Meta / WhatsApp:** to send and receive messages via the WhatsApp Business API
 — **Neon / Vercel:** hosting for our database and application
 — **Cloudinary:** storage for media (images and audio files) sent via WhatsApp
-— **Resend:** sending transactional emails (account confirmation, notifications)
+— **Bred24 SMTP:** sending transactional emails (account confirmation, notifications)
 — **OpenAI and Google Gemini:** generating automated replies and transcribing voice messages, only when you enable these features
 — **ElevenLabs:** running the voice agent, only when enabled
 — **Shopify / EasyOrders:** when you optionally connect your store, to read orders and send related messages
@@ -268,11 +268,11 @@ We do not use tracking or advertising cookies.`,
     content: {
       ar: `إذا كانت لديك أي استفسارات حول سياسة الخصوصية، تواصل معنا:
 
-البريد الإلكتروني: privacy@wani.app
+البريد الإلكتروني: support@aiwni.com
 سيتم الرد خلال 72 ساعة من أيام العمل.`,
       en: `If you have any questions about this privacy policy, contact us:
 
-Email: privacy@wani.app
+Email: support@aiwni.com
 We aim to respond within 72 business hours.`,
     },
   },
@@ -412,7 +412,7 @@ export default function PrivacyContent() {
             {isAr ? "لديك سؤال حول سياسة الخصوصية؟" : "Have a question about this privacy policy?"}
           </p>
           <a
-            href="mailto:privacy@wani.app"
+            href="mailto:support@aiwni.com"
             className="inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-[#20bb5a] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
