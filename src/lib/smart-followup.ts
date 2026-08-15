@@ -171,6 +171,7 @@ export async function sendSessionText(
   opts?: { userId?: string; contactId?: string; label?: string }
 ) {
   const result = await sendWhatsAppMessage({
+    userId: opts?.userId,
     toPhone,
     phoneNumberId,
     accessToken,
@@ -208,6 +209,7 @@ export async function sendSessionButtons(
   opts?: { userId?: string; contactId?: string; label?: string }
 ) {
   const result = await sendWhatsAppMessage({
+    userId: opts?.userId,
     toPhone,
     phoneNumberId,
     accessToken,
@@ -247,6 +249,7 @@ async function sendSessionList(
   opts?: { userId?: string; contactId?: string; label?: string }
 ) {
   const result = await sendWhatsAppMessage({
+    userId: opts?.userId,
     toPhone,
     phoneNumberId,
     accessToken,
@@ -342,6 +345,7 @@ export async function sendShippingFollowUpNow(storeOrderId: string, originalDela
   }
 
   const result = await sendWhatsAppMessage({
+    userId: order.userId,
     toPhone:       order.customerPhone,
     phoneNumberId: account.phoneNumberId,
     accessToken:   decryptToken(account.accessToken),
@@ -448,6 +452,7 @@ export async function sendCartFollowUpNow(abandonedCartId: string, originalDelay
   }
 
   const result = await sendWhatsAppMessage({
+    userId: cart.userId,
     toPhone:       cart.customerPhone,
     phoneNumberId: account.phoneNumberId,
     accessToken:   decryptToken(account.accessToken),

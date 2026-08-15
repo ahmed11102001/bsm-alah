@@ -126,6 +126,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const contactId = contactMap.get(rawPhone);
 
     const result = await sendWhatsAppMessage({
+      userId: ownerId,
       toPhone:       rawPhone,
       phoneNumberId: account.phoneNumberId,
       accessToken:   decryptedToken,

@@ -176,6 +176,7 @@ export const processCampaign = inngest.createFunction(
         // إرسال الرسالة
         const result = await step.run(`send-${msg.id}`, async () => {
           return await sendWhatsAppMessage({
+            userId: campaign.userId,
             toPhone: msg.toPhone,
             phoneNumberId: account.phoneNumberId,
             accessToken: decryptToken(account.accessToken),
@@ -429,6 +430,7 @@ export const sendDirectMessage = inngest.createFunction(
 
     const result = await step.run("send-message", async () => {
       return await sendWhatsAppMessage({
+        userId: item.userId,
         toPhone: item.toPhone,
         phoneNumberId: item.whatsappAccount!.phoneNumberId,
         accessToken: decryptToken(item.whatsappAccount!.accessToken),
@@ -570,6 +572,7 @@ export const processQueueItem = inngest.createFunction(
     // ── Step 2: إرسال الرسالة ──────────────────────────────────────────────────
     const sendResult = await step.run("send-message", async () => {
       return sendWhatsAppMessage({
+        userId: item.userId,
         toPhone: item.toPhone,
         phoneNumberId: account.phoneNumberId,
         accessToken: account.accessToken,
@@ -747,6 +750,7 @@ export const handleNewLeadBot = inngest.createFunction(
       if (!normalizedPhone) return { ok: false, error: "invalid phone" };
 
       return await sendWhatsAppMessage({
+        userId: config.ownerId,
         toPhone: normalizedPhone,
         phoneNumberId: wa.phoneNumberId,
         accessToken: decryptToken(wa.accessToken),

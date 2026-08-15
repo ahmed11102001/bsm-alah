@@ -160,6 +160,7 @@ export const conversationNudgeFn = inngest.createFunction(
       if (!nudge.ok || !nudge.text) return { sent: false, reason: "nudge_generation_failed" };
 
       const result = await sendWhatsAppMessage({
+        userId,
         toPhone: contact.phone,
         phoneNumberId: account.phoneNumberId,
         accessToken: decryptToken(account.accessToken),

@@ -135,7 +135,13 @@ export async function PATCH(req: NextRequest) {
     const { accessToken, phoneNumberId, wabaId } = body;
     const account = await prisma.whatsAppAccount.upsert({
       where:  { userId: ownerId },
-      update: { accessToken: encryptToken(accessToken), phoneNumberId, wabaId },
+      update: {
+        accessToken: encryptToken(accessToken), phoneNumberId, wabaId,
+        tokenStatus: "UNKNOWN", tokenExpiresAt: null, lastTokenCheckAt: null,
+        tokenDataAccessExpiresAt: null, tokenWarning7SentAt: null,
+        tokenWarning3SentAt: null, tokenWarning1SentAt: null,
+        tokenExpiredNotifiedAt: null, tokenInvalidNotifiedAt: null,
+      },
       create: { userId: ownerId, accessToken: encryptToken(accessToken), phoneNumberId, wabaId },
     });
 

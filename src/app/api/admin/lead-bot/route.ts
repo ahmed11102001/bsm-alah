@@ -127,6 +127,7 @@ async function sendToAllPendingLeads(
     if (!normalizedPhone) { failed++; continue; }
 
     const result = await sendWhatsAppMessage({
+      userId: config!.ownerId,
       toPhone:       normalizedPhone,
       phoneNumberId,
       accessToken,

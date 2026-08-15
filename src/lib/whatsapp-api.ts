@@ -2,6 +2,7 @@
 // ─── كود إرسال الرسائل — مكان واحد بيتاستخدم من Inngest والـ queue ────────────
 
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+import { markWhatsAppTokenInvalidByPhoneNumberId } from "@/lib/whatsapp-token";
 
 export interface InteractiveButton {
   id: string;
@@ -20,6 +21,7 @@ export interface InteractiveList {
 }
 
 export interface SendMessageParams {
+  userId?: string;
   toPhone: string;
   phoneNumberId: string;
   accessToken: string;
@@ -34,6 +36,15 @@ export interface SendMessageParams {
     buttons?: InteractiveButton[];
     list?: InteractiveList;
   };
+}
+
+export function isTokenError(error: any): boolean {
+  const code = Number(error?.code ?? error?.error?.code);
+  const subcode = Number(error?.error_subcode ?? error?.error?.error_subcode);
+  if (code === 190 || code === 200) return true;
+  if ([458, 459, 460, 463, 467].includes(subcode)) return true;
+  const message = String(error?.message ?? error?.error?.message ?? "").toLowerCase();
+  return message.includes("invalid oauth") || message.includes("access token") && message.includes("expired");
 }
 
 export interface SendResult {
@@ -210,8 +221,20 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
     if (res.status === 429 || data?.error?.code === 80007)
       return { ok: false, isRateLimit: true, error: "Rate limit — 429" };
 
-    if (data?.error?.code === 190 || data?.error?.code === 200)
+    if (isTokenError(data?.error)) {
+      if (item.userId) {
+        try {
+          await markWhatsAppTokenInvalidByPhoneNumberId(
+            item.phoneNumberId,
+            data.error.message,
+            item.userId,
+          );
+        } catch (statusError) {
+          console.error("[WHATSAPP TOKEN] failed to persist token error:", statusError);
+        }
+      }
       return { ok: false, isTokenError: true, error: data.error.message };
+    }
 
     if (data?.error)
       return { ok: false, error: data.error.message };

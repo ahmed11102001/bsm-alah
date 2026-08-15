@@ -138,6 +138,15 @@ model WhatsAppAccount {
   wabaId         String         @unique
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  tokenStatus    WhatsAppTokenStatus @default(UNKNOWN)
+  tokenExpiresAt DateTime?
+  lastTokenCheckAt DateTime?
+  tokenDataAccessExpiresAt DateTime?
+  tokenWarning7SentAt DateTime?
+  tokenWarning3SentAt DateTime?
+  tokenWarning1SentAt DateTime?
+  tokenExpiredNotifiedAt DateTime?
+  tokenInvalidNotifiedAt DateTime?
   backoffCount   Int            @default(0)
   backoffUntil   DateTime?
   dailyResetAt   DateTime       @default(now())
@@ -145,6 +154,14 @@ model WhatsAppAccount {
   messagingTier  Int            @default(1)
   messageQueues  MessageQueue[]
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum WhatsAppTokenStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  INVALID
+  UNKNOWN
 }
 
 model MessageQueue {

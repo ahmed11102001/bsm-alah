@@ -10,7 +10,8 @@ import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { decryptToken } from "@/lib/crypto";
-import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyAiTokensLow } from "@/lib/notifications";
+import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyWhatsAppTokenExpired, notifyWhatsAppTokenInvalid, notifyAiTokensLow } from "@/lib/notifications";
+import { checkWhatsAppAccountToken, WhatsAppTokenStatus, TokenCheckUnavailableError } from "@/lib/whatsapp-token";
 
 // ─── Constants (string literals بدل enum لتجنب مشاكل prisma generate) ────────
 const QueueStatus = { sent: "sent", failed: "failed" } as const;
@@ -30,6 +31,7 @@ async function sendTemplateToContact({
   ruleId: string;
 }) {
   const result = await sendWhatsAppMessage({
+    userId,
     toPhone: phone,
     phoneNumberId: account.phoneNumberId,
     accessToken: decryptToken(account.accessToken),
@@ -412,30 +414,81 @@ export const whatsappTokenExpiryCheck = inngest.createFunction(
     triggers: [{ cron: "0 8 * * *" }], // 8 UTC = 10 Cairo
   },
   async ({ step }) => {
-    const cutoffDate = new Date();
-    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 50);
+    const checkCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const accounts = await step.run("get-expiring-whatsapp-tokens", async () => {
+    const accounts = await step.run("get-whatsapp-tokens-due-for-check", async () => {
       return await prisma.whatsAppAccount.findMany({
         where: {
-          updatedAt: { lte: cutoffDate }, // آخر تحديث من 50 يوم أو أقدم
+          tokenStatus: { notIn: ["INVALID", "EXPIRED"] },
+          OR: [
+            { lastTokenCheckAt: null },
+            { lastTokenCheckAt: { lte: checkCutoff } },
+          ],
         },
-        select: { id: true, userId: true, updatedAt: true },
+        select: {
+          id: true, userId: true, accessToken: true, tokenStatus: true,
+          tokenWarning7SentAt: true, tokenWarning3SentAt: true,
+          tokenWarning1SentAt: true, tokenExpiredNotifiedAt: true,
+          tokenInvalidNotifiedAt: true,
+        },
       });
     });
 
     if (accounts.length === 0) return { processed: 0 };
 
-    await step.run("send-token-expiry-warnings", async () => {
-      for (const acc of accounts) {
-        const diffMs = Date.now() - new Date(acc.updatedAt).getTime();
-        const daysSinceUpdate = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const daysLeft = Math.max(0, 60 - daysSinceUpdate);
-        await notifyWhatsAppTokenExpiring(acc.userId, daysLeft);
-      }
-    });
+    let checked = 0;
+    let skipped = 0;
+    for (const acc of accounts) {
+      const result = await step.run(`debug-whatsapp-token-${acc.id}`, async () => {
+        try {
+          return await checkWhatsAppAccountToken(acc);
+        } catch (error) {
+          if (!(error instanceof TokenCheckUnavailableError)) {
+            console.error(`[WHATSAPP TOKEN] debug_token failed for account ${acc.id}:`, error);
+          }
+          return null;
+        }
+      });
+      if (!result) { skipped++; continue; }
+      checked++;
 
-    return { processed: accounts.length };
+      const status = result.updated.tokenStatus as string;
+      if (status === WhatsAppTokenStatus.INVALID) {
+        const claim = await prisma.whatsAppAccount.updateMany({
+          where: { id: acc.id, tokenInvalidNotifiedAt: null },
+          data: { tokenInvalidNotifiedAt: new Date() },
+        });
+        if (claim.count) await notifyWhatsAppTokenInvalid(acc.userId);
+        continue;
+      }
+      if (status === WhatsAppTokenStatus.EXPIRED) {
+        const claim = await prisma.whatsAppAccount.updateMany({
+          where: { id: acc.id, tokenExpiredNotifiedAt: null },
+          data: { tokenExpiredNotifiedAt: new Date() },
+        });
+        if (claim.count) await notifyWhatsAppTokenExpired(acc.userId);
+        continue;
+      }
+      if (status !== WhatsAppTokenStatus.EXPIRING_SOON) continue;
+
+      const expiryValues = [result.updated.tokenExpiresAt, result.updated.tokenDataAccessExpiresAt]
+        .filter(Boolean)
+        .map(value => new Date(value as string | Date));
+      const expiry = expiryValues.sort((a, b) => a.getTime() - b.getTime())[0];
+      if (!expiry) continue;
+      const daysLeft = Math.max(1, Math.ceil((expiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+      const threshold = daysLeft <= 1 ? 1 : daysLeft <= 3 ? 3 : 7;
+      const sentField = threshold === 1 ? "tokenWarning1SentAt" : threshold === 3 ? "tokenWarning3SentAt" : "tokenWarning7SentAt";
+      const claim = await prisma.whatsAppAccount.updateMany({
+        where: { id: acc.id, [sentField]: null },
+        data: { [sentField]: new Date() },
+      });
+      if (claim.count) {
+        await notifyWhatsAppTokenExpiring(acc.userId, threshold);
+      }
+    }
+
+    return { processed: accounts.length, checked, skipped };
   }
 );
 

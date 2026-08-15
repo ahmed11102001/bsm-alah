@@ -232,6 +232,34 @@ export async function notifyWhatsAppTokenExpiring(userId: string, daysLeft: numb
   });
 }
 
+export async function notifyWhatsAppTokenInvalid(userId: string, reason?: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.WHATSAPP_TOKEN_EXPIRING,
+    title: bi("❌ توكن واتساب غير صالح", "❌ WhatsApp access token is invalid"),
+    body: bi(
+      "تعذر استخدام توكن واتساب. أعد ربط حساب Meta من صفحة التكاملات لاستئناف الإرسال.",
+      "Your WhatsApp access token was rejected. Reconnect Meta from Integrations to resume sending.",
+    ),
+    link: "/dashboard?section=api",
+    meta: { tokenStatus: "INVALID", reason: reason?.slice(0, 200) },
+  });
+}
+
+export async function notifyWhatsAppTokenExpired(userId: string) {
+  await createNotification({
+    userId,
+    type: NotificationType.WHATSAPP_TOKEN_EXPIRING,
+    title: bi("❌ انتهت صلاحية توكن واتساب", "❌ WhatsApp access token expired"),
+    body: bi(
+      "انتهت صلاحية توكن واتساب. أعد ربط حساب Meta لاستئناف الإرسال.",
+      "Your WhatsApp access token has expired. Reconnect Meta to resume sending.",
+    ),
+    link: "/dashboard?section=api",
+    meta: { tokenStatus: "EXPIRED" },
+  });
+}
+
 export async function notifyAiTokensLow(userId: string, usedPct: number) {
   await createNotification({
     userId,

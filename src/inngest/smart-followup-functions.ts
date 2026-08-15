@@ -181,6 +181,7 @@ export const sendCampaignFollowUpMsgFn = inngest.createFunction(
       const { decryptToken } = await import("@/lib/crypto");
       
       return sendWhatsAppMessage({
+        userId,
         toPhone: record.customerPhone,
         phoneNumberId: record.user.whatsappAccount!.phoneNumberId,
         accessToken: decryptToken(record.user.whatsappAccount!.accessToken),

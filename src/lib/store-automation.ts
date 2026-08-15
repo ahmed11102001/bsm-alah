@@ -136,6 +136,7 @@ export async function executeStoreAutomationSend(
   let result;
   try {
     result = await sendWhatsAppMessage({
+      userId,
       toPhone: customerPhone,
       phoneNumberId: account.phoneNumberId,
       accessToken: decryptToken(account.accessToken),
