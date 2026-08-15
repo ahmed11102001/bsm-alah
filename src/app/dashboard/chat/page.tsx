@@ -65,7 +65,11 @@ export default function ChatPage() {
   const msgAreaRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef<boolean>(true);
   const isInitialLoad = useRef<boolean>(true);
-  const lastMsgCount = useRef<number>(0);
+  const messagesRef = useRef<Message[]>([]);
+  const messageRequestId = useRef(0);
+  const messageRequestRef = useRef<AbortController | null>(null);
+  const messageRequestInFlight = useRef(false);
+  const pendingScroll = useRef<"initial" | "new" | null>(null);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
 
   // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
@@ -102,38 +106,65 @@ export default function ChatPage() {
     finally { setLoadingConvs(false); }
   }, [filter, search]);
 
-  const fetchMsgs = useCallback(async (contactId: string) => {
-    setLoadingMsgs(true);
+  const fetchMsgs = useCallback(async (contactId: string, initial = false) => {
+    // لا نسمح بتداخل polling requests؛ النتيجة القديمة لا يجب أن تكتب فوق الأحدث.
+    if (messageRequestInFlight.current && !initial) return;
+    const requestId = ++messageRequestId.current;
+    if (initial) messageRequestRef.current?.abort();
+    const controller = new AbortController();
+    messageRequestRef.current = controller;
+    messageRequestInFlight.current = true;
+    if (initial) setLoadingMsgs(true);
     try {
-      const r = await fetch(`/api/chat?type=messages&contactId=${contactId}`);
+      const r = await fetch(`/api/chat?type=messages&contactId=${contactId}`, { signal: controller.signal });
       const d = await r.json();
       const newMsgs: Message[] = d.messages ?? [];
+      if (requestId !== messageRequestId.current || controller.signal.aborted) return;
 
       // حفظ الـ scroll position قبل أي update
       const el = msgAreaRef.current;
       const prevScrollTop = el?.scrollTop ?? 0;
       const prevScrollH = el?.scrollHeight ?? 0;
       const wasAtBottom = isAtBottom.current;
+      const previousMessages = messagesRef.current;
+      const previousCount = previousMessages.length;
+      const changed = newMsgs.length !== previousCount || newMsgs.some((msg, i) => {
+        const previous = previousMessages[i];
+        return !previous || previous.id !== msg.id || previous.status !== msg.status || previous.reactions?.length !== msg.reactions?.length;
+      });
 
-      lastMsgCount.current = newMsgs.length;
-      setMessages(newMsgs);
+      if (changed) {
+        messagesRef.current = newMsgs;
+        setMessages(newMsgs);
+      }
       setConvs(prev => prev.map(c =>
         c.contact.id === contactId ? { ...c, unreadCount: 0 } : c
       ));
 
       // لو المستخدم مش في الأسفل (بيقرأ رسايل قديمة) → رجّع نفس الـ position
-      if (!wasAtBottom && !isInitialLoad.current && el) {
+      const hasNewMessages = newMsgs.length > previousCount;
+      if (!wasAtBottom && !initial && hasNewMessages && el) {
         // لو في رسايل جديدة فعلاً → أظهر indicator
-        if (newMsgs.length > (lastMsgCount.current || 0)) {
-          setHasNewMsgs(true);
-        }
+        setHasNewMsgs(true);
         requestAnimationFrame(() => {
           el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollH);
         });
       } else {
-        setHasNewMsgs(false);
+        if (initial || wasAtBottom) setHasNewMsgs(false);
       }
-    } finally { setLoadingMsgs(false); }
+      if (initial) pendingScroll.current = "initial";
+      else if (wasAtBottom && hasNewMessages) pendingScroll.current = "new";
+    } catch (error) {
+      // إلغاء طلب قديم عند تبديل المحادثة متوقع ولا يجب أن يغيّر واجهة المستخدم.
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.warn("Failed to refresh chat messages", error);
+      }
+    } finally {
+      if (requestId === messageRequestId.current) {
+        messageRequestInFlight.current = false;
+        if (initial) setLoadingMsgs(false);
+      }
+    }
   }, []);
 
   const selectConv = useCallback((conv: Conversation, mode: "chat" | "timeline" = "chat") => {
@@ -141,8 +172,10 @@ export default function ChatPage() {
     setChatViewMode(mode);
     isInitialLoad.current = true;   // ← أول فتح للمحادثة → scroll للأسفل
     isAtBottom.current = true;
-    lastMsgCount.current = 0;
-    fetchMsgs(conv.contact.id);
+    messagesRef.current = [];
+    setMessages([]);
+    pendingScroll.current = "initial";
+    fetchMsgs(conv.contact.id, true);
     setShowTpl(false); setShowAttach(false);
     setMobileShowChat(true);
     if (pollRef.current) clearInterval(pollRef.current);
@@ -172,7 +205,10 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchConvs(); fetchTemplates(); fetchAudiences();
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      messageRequestRef.current?.abort();
+    };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
 
   // ── بولينج دوري لقائمة المحادثات (sidebar) ─────────────────────────
@@ -193,17 +229,19 @@ export default function ChatPage() {
     if (messages.length === 0) return;
 
     // حالة 1: أول تحميل للمحادثة → scroll فوري بدون animation
-    if (isInitialLoad.current) {
+    if (isInitialLoad.current || pendingScroll.current === "initial") {
       endRef.current?.scrollIntoView({ behavior: "auto" });
       isInitialLoad.current = false;
+      pendingScroll.current = null;
       return;
     }
 
     // حالة 2: المستخدم في الأسفل → scroll smooth للرسائل الجديدة
     // حالة 3: المستخدم بيقرأ من فوق → لا تحرك إيه (fetchMsgs هيرجع الـ position)
-    if (isAtBottom.current) {
+    if (pendingScroll.current === "new" && isAtBottom.current) {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
     }
+    pendingScroll.current = null;
   }, [messages]);
 
   // ── Actions ──────────────────────────────────────────────────────
@@ -726,7 +764,7 @@ export default function ChatPage() {
                 backgroundColor: msgAreaBg,
               }}
             >
-              {loadingMsgs ? (
+              {loadingMsgs && messages.length === 0 ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-7 h-7 animate-spin text-gray-300" />
                 </div>

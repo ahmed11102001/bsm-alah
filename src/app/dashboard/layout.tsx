@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tabs";
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
-  Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3,
+  Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3, Copy, Eye, EyeOff,
   ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Handshake,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
@@ -105,6 +105,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   const [wAccessToken, setWAccessToken] = useState("");
   const [wPhoneNumberId, setWPhoneNumberId] = useState("");
   const [wWabaId, setWWabaId] = useState("");
+  const [credentialsUnlocked, setCredentialsUnlocked] = useState(false);
+  const [credentialPassword, setCredentialPassword] = useState("");
+  const [showCredentialPassword, setShowCredentialPassword] = useState(false);
+  const [revealingCredentials, setRevealingCredentials] = useState(false);
+  const [credentialCopyRequested, setCredentialCopyRequested] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -113,10 +118,63 @@ function SettingsModal({ open, onClose, data, onSaved }: {
     if (data) {
       setName(data.user.name ?? "");
       setPhone(data.user.phone ?? "");
+      setWAccessToken("");
       setWPhoneNumberId(data.whatsapp?.phoneNumberId ?? "");
       setWWabaId(data.whatsapp?.wabaId ?? "");
+      setCredentialsUnlocked(false);
+      setCredentialPassword("");
+      setCredentialCopyRequested(false);
     }
   }, [data]);
+
+  useEffect(() => {
+    if (!open) {
+      setWAccessToken("");
+      setCredentialsUnlocked(false);
+      setCredentialPassword("");
+      setShowCredentialPassword(false);
+      setCredentialCopyRequested(false);
+    }
+  }, [open]);
+
+  const revealWhatsappCredentials = async () => {
+    if (!credentialPassword || revealingCredentials) return;
+    setRevealingCredentials(true);
+    try {
+      const r = await fetch("/api/me/settings/whatsapp-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: credentialPassword }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setWAccessToken(d.accessToken ?? "");
+      setWPhoneNumberId(d.phoneNumberId ?? "");
+      setWWabaId(d.wabaId ?? "");
+      setCredentialsUnlocked(true);
+      setCredentialPassword("");
+      setShowCredentialPassword(false);
+      if (credentialCopyRequested && d.accessToken) {
+        await navigator.clipboard.writeText(d.accessToken);
+        toast.success(locale === "ar" ? "تم نسخ Access Token" : "Access Token copied");
+      }
+      setCredentialCopyRequested(false);
+    } catch (error: any) {
+      toast.error(error.message ?? (locale === "ar" ? "فشل التحقق" : "Verification failed"));
+    } finally {
+      setRevealingCredentials(false);
+    }
+  };
+
+  const copyWhatsappValue = async (value: string, label: string, secret = false) => {
+    if (secret && !credentialsUnlocked) {
+      setCredentialCopyRequested(true);
+      setShowCredentialPassword(true);
+      return;
+    }
+    await navigator.clipboard.writeText(value);
+    toast.success(locale === "ar" ? `تم نسخ ${label}` : `${label} copied`);
+  };
 
   const save = async (type: string, payload: object) => {
     setSaving(true);
@@ -316,26 +374,64 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">{s.whatsapp.accessToken}</Label>
-                <Input dir="ltr" type="password" value={wAccessToken} onChange={e => setWAccessToken(e.target.value)}
-                  placeholder="EAAxxxxxx..." className="text-sm rounded-xl font-mono" />
+                <div className="flex gap-2">
+                  <Input dir="ltr" type={credentialsUnlocked ? "text" : "password"}
+                    value={credentialsUnlocked ? wAccessToken : "••••••••••••••••••••"}
+                    readOnly placeholder="EAAxxxxxx..." className="text-sm rounded-xl font-mono flex-1" />
+                  <Button type="button" variant="outline" size="icon" title={credentialsUnlocked ? "إخفاء التوكن" : "عرض التوكن"}
+                    onClick={() => {
+                      if (credentialsUnlocked) { setCredentialsUnlocked(false); setWAccessToken(""); }
+                      else setShowCredentialPassword(true);
+                    }}>
+                    {credentialsUnlocked ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button type="button" variant="outline" size="icon" title="نسخ Access Token"
+                    onClick={() => copyWhatsappValue(wAccessToken, "Access Token", true)}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                {showCredentialPassword && !credentialsUnlocked && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-3 space-y-2">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">أدخل كلمة المرور لعرض أو نسخ Access Token.</p>
+                    <div className="flex gap-2">
+                      <Input type="password" value={credentialPassword} autoFocus
+                        onChange={e => setCredentialPassword(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") revealWhatsappCredentials(); }}
+                        placeholder="كلمة المرور" className="text-sm rounded-xl flex-1" />
+                      <Button type="button" onClick={revealWhatsappCredentials}
+                        disabled={revealingCredentials || !credentialPassword}
+                        className="bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+                        {revealingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">{s.whatsapp.phoneNumberId}</Label>
-                <Input dir="ltr" value={wPhoneNumberId} onChange={e => setWPhoneNumberId(e.target.value)}
-                  className="text-sm rounded-xl font-mono" />
+                <div className="flex gap-2">
+                  <Input dir="ltr" value={wPhoneNumberId} readOnly disabled
+                    placeholder="يظهر تلقائيًا بعد الربط" className="text-sm rounded-xl font-mono flex-1" />
+                  <Button type="button" variant="outline" size="icon" title="نسخ Phone Number ID"
+                    disabled={!wPhoneNumberId} onClick={() => copyWhatsappValue(wPhoneNumberId, "Phone Number ID")}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">{s.whatsapp.wabaId}</Label>
-                <Input dir="ltr" value={wWabaId} onChange={e => setWWabaId(e.target.value)}
-                  className="text-sm rounded-xl font-mono" />
+                <div className="flex gap-2">
+                  <Input dir="ltr" value={wWabaId} readOnly disabled
+                    placeholder="يظهر تلقائيًا بعد الربط" className="text-sm rounded-xl font-mono flex-1" />
+                  <Button type="button" variant="outline" size="icon" title="نسخ WABA ID"
+                    disabled={!wWabaId} onClick={() => copyWhatsappValue(wWabaId, "WABA ID")}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                onClick={() => save("whatsapp", { accessToken: wAccessToken, phoneNumberId: wPhoneNumberId, wabaId: wWabaId })}
-                disabled={saving || !wAccessToken || !wPhoneNumberId || !wWabaId}
-                className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
-                {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-                {s.whatsapp.saveBtn}
-              </Button>
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-3 text-xs text-gray-500 dark:text-gray-400">
+                بيانات الربط تتم قراءتها تلقائيًا من Meta ولا يمكن تعديلها من هنا.
+              </div>
             </TabsContent>
           )}
         </Tabs>
