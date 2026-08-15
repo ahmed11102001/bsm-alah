@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     let itemName: string;
     let payLoadObj: object;   // JSON object كما تطلب الدوكيومنتيشن
 
-    const appUrl = (process.env.NEXTAUTH_URL ?? "https://whatspro.app").replace(/\/$/, "");
+    const appUrl = (process.env.NEXTAUTH_URL ?? "https://aiwni.com").replace(/\/$/, "");
 
     if (type === "subscription") {
         if (!planSlug || !SUBSCRIPTION_PLANS[planSlug])

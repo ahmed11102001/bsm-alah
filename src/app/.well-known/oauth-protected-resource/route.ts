@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  const base = (process.env.NEXTAUTH_URL ?? "https://whatsprosystem.vercel.app").replace(/\/$/, "");
+  const base = (process.env.NEXTAUTH_URL ?? "https://aiwni.com").replace(/\/$/, "");
 
   return Response.json(
     {

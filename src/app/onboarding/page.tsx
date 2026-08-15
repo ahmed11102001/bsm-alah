@@ -95,7 +95,7 @@ function OnboardingInner() {
               أهلاً، {session.user.name?.split(" ")[0]} 👋
             </h1>
             <p className="text-sm text-gray-500 leading-relaxed">
-              خطوة أخيرة — أدخل رقم واتساب Business الخاص بك
+              خطوة أخيرة — أدخل رقم واتساب  الخاص بك
               <br />
               عشان تبدأ ترسل وتستقبل الرسائل
             </p>
@@ -105,7 +105,7 @@ function OnboardingInner() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                رقم واتساب Business
+                رقم الواتساب 
               </Label>
               <div className="relative">
                 <Phone className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />

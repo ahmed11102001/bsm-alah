@@ -202,7 +202,7 @@ export async function POST(req: Request) {
               type: "URL",
               text: btn.text,
               url: urlVal,
-              ...(hasVar ? { example: ["https://whatspro.com/example"] } : {})
+              ...(hasVar ? { example: ["https://aiwni.com/example"] } : {})
             };
           } else if (btn.type === "phone") {
             return {

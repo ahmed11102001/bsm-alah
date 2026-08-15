@@ -6,7 +6,7 @@ import { useLanguage } from "@/lib/language-context";
 import {
   Handshake, ArrowLeft, ArrowRight, Sparkles, Pencil, Trash2,
   Check, X, Loader2, ImageIcon, ExternalLink, Clock, CheckCircle2,
-  XCircle, Power, PowerOff, Info,
+  XCircle, Power, PowerOff, Info, LockKeyhole,
 } from "lucide-react";
 import {
   PARTNER_TEMPLATES, PartnerCardTemplate, type PartnerCardContent,
@@ -40,6 +40,7 @@ export default function WaniPartnerPage() {
   const t = (ar: string, en: string) => (isAr ? ar : en);
 
   const [cards, setCards] = useState<MyCard[] | undefined>(undefined); // undefined = loading
+  const [accessDenied, setAccessDenied] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -50,7 +51,15 @@ export default function WaniPartnerPage() {
 
   const load = useCallback(() => {
     fetch("/api/wani-partner/mine")
-      .then((r) => (r.ok ? r.json() : null))
+      .then(async (r) => {
+        if (r.status === 403) {
+          setAccessDenied(true);
+          setCards([]);
+          return [];
+        }
+        setAccessDenied(false);
+        return r.ok ? r.json() : null;
+      })
       .then((data) => { const next = Array.isArray(data) ? data : []; setCards(next); setSelectedCardId((id) => id && next.some((c) => c.id === id) ? id : next[0]?.id ?? null); })
       .catch(() => setCards([]));
   }, []);
@@ -177,7 +186,20 @@ export default function WaniPartnerPage() {
         </p>
       </div>
 
-      {cards === undefined ? (
+      {accessDenied ? (
+        <div className="rounded-3xl border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/30 dark:to-gray-900 p-8 sm:p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
+            <LockKeyhole className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("ميزة WANI Partner متاحة لباقة Enterprise", "WANI Partner is available on Enterprise")}</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-gray-600 dark:text-gray-300">
+            {t("صمّم كروت شراكة وني واعرضها داخل داشبورد العملاء بعد الترقية إلى باقة Enterprise.", "Create WANI Partner cards and showcase them across customer dashboards by upgrading to Enterprise.")}
+          </p>
+          <Link href="/checkout?plan=enterprise" className={btn + " mx-auto mt-6 w-fit"}>
+            <Sparkles className="h-4 w-4" /> {t("الترقية إلى Enterprise", "Upgrade to Enterprise")}
+          </Link>
+        </div>
+      ) : cards === undefined ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
       ) : !editing ? (
         <div className="space-y-4">

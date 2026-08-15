@@ -1434,7 +1434,7 @@ export default function API() {
                       <pre className="text-xs font-mono bg-gray-950 text-green-400 rounded-xl p-4 overflow-x-auto leading-relaxed" dir="ltr">
                         {`{
   "mcpServers": {
-    "whatspro": {
+    "wani": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch",
                "https://${typeof window !== "undefined" ? window.location.host : "aiwni.com"}/api/mcp"],

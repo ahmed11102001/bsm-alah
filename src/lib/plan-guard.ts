@@ -350,6 +350,22 @@ export async function checkFeature(
   };
 }
 
+/** WANI Partner is an Enterprise-only workspace feature. */
+export async function checkEnterpriseAccess(ownerId: string): Promise<GuardResult> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return { allowed: true };
+
+  const plan = getEffectivePlan(await getSubscription(ownerId));
+  if (plan === "enterprise") return { allowed: true };
+
+  return {
+    allowed: false,
+    code: "FEATURE_LOCKED",
+    message: `ميزة WANI Partner متاحة في باقة Enterprise فقط. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
+    plan,
+    requiredPlan: "enterprise",
+  };
+}
+
 // ─── Helper: الباقة التالية ──────────────────────────────────────────────────
 function nextPlan(current: PlanTier): PlanTier | undefined {
   const order: PlanTier[] = ["free", "starter", "pro", "enterprise"];

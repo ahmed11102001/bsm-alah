@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 // ── Configure VAPID ─────────────────────────────────────────────────────────
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
-let VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:whatsprosystem@gmail.com";
+let VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? "mailto:support@aiwni.com";
 
 if (VAPID_SUBJECT && !VAPID_SUBJECT.startsWith("mailto:") && !VAPID_SUBJECT.startsWith("http")) {
   VAPID_SUBJECT = `mailto:${VAPID_SUBJECT}`;

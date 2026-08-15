@@ -1,4 +1,4 @@
-// Service Worker — WhatsPro Push Notifications
+// Service Worker — WANI Push Notifications
 // يستقبل Push events ويعرض إشعارات النظام
 
 const ICON = "/favicon.jpg";
@@ -6,7 +6,7 @@ const DEFAULT_URL = "/dashboard";
 
 // ── Push Event Handler ──────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
-  let data = { title: "WhatsPro", body: "لديك إشعار جديد", url: DEFAULT_URL };
+  let data = { title: "WANI", body: "لديك إشعار جديد", url: DEFAULT_URL };
 
   try {
     if (event.data) {
@@ -32,7 +32,7 @@ self.addEventListener("push", (event) => {
       { action: "open", title: "فتح" },
       { action: "dismiss", title: "تجاهل" },
     ],
-    tag: data.tag || "whatspro-" + Date.now(),
+    tag: data.tag || "wani-" + Date.now(),
     renotify: true,
   };
 
