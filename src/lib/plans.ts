@@ -66,7 +66,7 @@ export const PLANS: Record<PlanTier, PlanLimits> = {
   },
   enterprise: {
     contacts:           -1,
-    teamMembers:        -1,
+    teamMembers:        10,
     campaignsPerMonth:  -1,
     aiTokensPerMonth:   1_000_000,
     mcpCommandsPerMonth: -1,         // ← غير محدود

@@ -60,7 +60,7 @@ describe("PLANS — consistency checks", () => {
     expect(ep.apiAccess).toBe(true);
     expect(ep.storeIntegration).toBe(true);
     expect(ep.contacts).toBe(-1);
-    expect(ep.teamMembers).toBe(-1);
+    expect(ep.teamMembers).toBe(10);
     expect(ep.campaignsPerMonth).toBe(-1);
   });
 

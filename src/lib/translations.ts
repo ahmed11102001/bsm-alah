@@ -234,11 +234,10 @@ export const t = {
         features: [
 
           { ar: "جهات اتصال غير محدودة", en: "Unlimited contacts", ok: true },
-          { ar: "مستخدمون غير محدودون", en: "Unlimited users", ok: true },
-          { ar: " تحكم كامل", en: " full access", ok: true },
-          { ar: "AI Sales Assistant ذكي", en: "Smart AI Sales Assistant", ok: true },
-         { ar: "كارت شركاء وني", en: "WANI Partner Card", ok: true },
+          { ar: "حتى ١٠ مستخدمين", en: "Up to 10 users", ok: true },
+          { ar: "مساعد مبيعات AI ذكي", en: "Smart AI Sales Assistant", ok: true },
           { ar: "API كامل", en: "Full API access", ok: true },
+         { ar: "كارت شركاء وني", en: "WANI Partner Card", ok: true },
           { ar: "دعم VIP ٢٤/٧", en: "24/7 VIP support", ok: true },
         ],
       },

@@ -44,7 +44,7 @@ export const SUBSCRIPTION_PLANS = {
     color:      "text-purple-600",
     features:   [
       "جهات اتصال غير محدودة",
-      "مستخدمون غير محدودون",
+      "١٠ مستخدمين",
       "AI Sales Assistant (1M توكن/شهر)",
       "قاعدة بيانات مخصصة",
     ],

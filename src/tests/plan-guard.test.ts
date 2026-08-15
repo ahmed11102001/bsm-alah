@@ -232,12 +232,13 @@ describe("checkTeamLimit", () => {
     expect(result.allowed).toBe(false);
   });
 
-  it("enterprise — unlimited team → دايماً allowed", async () => {
+  it("enterprise — 10 users → blocks after the plan limit", async () => {
     mockPrisma.subscription.findUnique.mockResolvedValue(makeSub("enterprise"));
-    mockPrisma.user.count.mockResolvedValue(999);
+    mockPrisma.user.count.mockResolvedValue(9); // 9 members + owner = 10
 
     const result = await checkTeamLimit("user_1");
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.limit).toBe(10);
   });
 });
 
