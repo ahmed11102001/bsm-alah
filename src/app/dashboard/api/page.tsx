@@ -1102,7 +1102,7 @@ export default function API() {
       ? `Bearer ${claudeApiKey}`
       : JSON.stringify({
         mcpServers: {
-          whatspro: {
+          wani: {
             command: "npx",
             args: ["-y", "@modelcontextprotocol/server-fetch", `https://${host}/api/mcp`],
             env: { AUTHORIZATION: `Bearer ${claudeApiKey}` },

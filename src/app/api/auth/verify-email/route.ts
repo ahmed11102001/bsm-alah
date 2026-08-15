@@ -18,8 +18,6 @@ export async function GET(req: Request) {
       prisma.emailVerificationToken.deleteMany({ where: { userId: record.userId } }),
     ]);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
-    if (baseUrl) return NextResponse.redirect(`${baseUrl.replace(/\/$/, "")}/login?verified=1`);
     return NextResponse.json({ success: true, message: "تم تأكيد البريد الإلكتروني" });
   } catch (error) {
     console.error("[verify-email] verification failed", error instanceof Error ? error.name : "unknown");

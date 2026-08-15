@@ -43,7 +43,7 @@ export async function sendResetEmail(to: string, token: string) {
 }
 
 export async function sendVerificationEmail(to: string, token: string) {
-  const verifyUrl = `${getBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const verifyUrl = `${getBaseUrl()}/verify-email?token=${encodeURIComponent(token)}`;
   await sendEmail({
     to,
     subject: "تأكيد بريدك الإلكتروني — واني",

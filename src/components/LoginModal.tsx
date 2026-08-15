@@ -29,6 +29,12 @@ interface LoginModalProps {
 // ─── Animations ───────────────────────────────────────────────────────────────
 const easeSmooth = cubicBezier(0.25, 0.1, 0.25, 1);
 
+function maskEmail(email: string) {
+  const [local, domain] = email.trim().split("@", 2);
+  if (!local || !domain) return email;
+  return `${local[0]}***@${domain}`;
+}
+
 const slide = {
   initial: { opacity: 0, x: 24 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.22, ease: easeSmooth } },
@@ -327,7 +333,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium text-gray-700">كلمة المرور</Label>
-                        <button type="button" onClick={() => go("forgot")}
+                        <button type="button" onClick={() => { setForgotEmail(loginEmail.trim()); go("forgot"); }}
                           className="text-xs text-[#25D366] hover:underline">
                           نسيت كلمة المرور؟
                         </button>
@@ -515,12 +521,19 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
 
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
-                    <div className="relative">
-                      <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                      <Input type="email" required value={forgotEmail}
-                        onChange={e => setForgotEmail(e.target.value)}
-                        placeholder="example@email.com" className="rounded-xl pr-10 h-12 text-sm" />
-                    </div>
+                    {forgotEmail ? (
+                      <div className="flex h-12 items-center justify-between rounded-xl border border-green-200 bg-green-50 px-3 text-sm">
+                        <span className="flex items-center gap-2 text-gray-700"><Mail className="w-4 h-4 text-[#25D366]" />{maskEmail(forgotEmail)}</span>
+                        <button type="button" onClick={() => setForgotEmail("")} className="text-xs text-[#128C7E] hover:underline">تغيير</button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
+                        <Input type="email" required value={forgotEmail}
+                          onChange={e => setForgotEmail(e.target.value)}
+                          placeholder="example@email.com" className="rounded-xl pr-10 h-12 text-sm" />
+                      </div>
+                    )}
                   </div>
 
                   {err && <ErrMsg msg={err} />}
