@@ -10,40 +10,52 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
     id: "acceptance",
     title: { ar: "القبول والموافقة", en: "Acceptance & Agreement" },
     content: {
-      ar: `بالتسجيل في منصة Wani أو استخدامها بأي شكل، فإنك تقر بأنك قرأت هذه الشروط وفهمتها ووافقت عليها بالكامل.
+      ar: `يُعد تسجيلك في Wani أو استخدامك للمنصة بأي شكل موافقةً صريحة منك على هذه الشروط وعلى سياسة الخصوصية المرتبطة بها.
 
-إذا كنت تستخدم المنصة نيابةً عن شركة أو مؤسسة، فإنك تؤكد أن لديك الصلاحية القانونية للموافقة على هذه الشروط باسمها.
+إذا كنت تسجّل أو تستخدم Wani نيابةً عن شركة أو مؤسسة، فإنك تُقرّ بأنك تملك الصلاحية القانونية الكاملة للموافقة على هذه الشروط نيابةً عنها، وأن الكيان نفسه يصبح ملزمًا بها.
 
-يحق لنا تعديل هذه الشروط في أي وقت. سنخطرك بأي تغييرات جوهرية قبل 7 أيام من سريانها.`,
-      en: `By registering for or using the Wani platform in any way, you confirm that you have read, understood, and fully agreed to these terms.
+تحتفظ Wani بحقها في تعديل هذه الشروط من وقت لآخر. في حال إجراء تغييرات جوهرية، سيتم إخطارك قبل سريانها بمدة لا تقل عن 7 أيام، ما لم يستدعِ الأمر تغييرًا فوريًا لأسباب قانونية أو أمنية.
 
-If you are using the platform on behalf of a company or organization, you confirm that you have the legal authority to accept these terms on its behalf.
+استمرار استخدامك للمنصة بعد سريان أي تعديل يُعد قبولًا منك للشروط المُحدَّثة.`,
+      en: `By registering for or using the Wani platform in any way, you confirm your explicit agreement to these terms and to the associated Privacy Policy.
 
-We may modify these terms at any time. We will notify you of any material changes at least 7 days before they take effect.`,
+If you are registering or using Wani on behalf of a company or organization, you confirm that you have full legal authority to accept these terms on its behalf, and that entity becomes bound by them.
+
+Wani reserves the right to modify these terms from time to time. In the case of material changes, you will be notified at least 7 days before they take effect, unless an immediate change is required for legal or security reasons.
+
+Continuing to use the platform after any amendment takes effect constitutes your acceptance of the updated terms.`,
     },
   },
   {
     id: "service-description",
     title: { ar: "وصف الخدمة", en: "Service Description" },
     content: {
-      ar: `Wani منصة SaaS (برمجيات كخدمة) تتيح لك:
+      ar: `Wani منصة SaaS (برمجيات كخدمة) لإدارة WhatsApp Business Platform الرسمية. تشمل الخدمة، حسب الخطة والميزات المتاحة:
 
-— إدارة حملات تسويقية عبر WhatsApp Business API
-— إرسال رسائل نصية وقوالب وملفات ميديا بالجملة
-— إدارة جهات الاتصال والجماهير المستهدفة
-— تتبع إحصائيات الإرسال والتسليم والقراءة
-— إدارة المحادثات الفردية مع العملاء
+— إدارة المحادثات مع العملاء
+— إرسال واستقبال الرسائل
+— إرسال قوالب الرسائل (Templates) المعتمدة من Meta
+— إنشاء وإدارة الحملات التسويقية
+— إدارة جهات الاتصال والجماهير (Audiences)
+— بناء الأتمتة (Automations)
+— الرسائل التفاعلية والأزرار
+— التقارير والإحصائيات
+— التكاملات الخارجية المتاحة (Shopify، WooCommerce، EasyOrders، Google Sheets، حسب الخطة)
 
-الخدمة تعمل عبر WhatsApp Business API الرسمية المقدمة من Meta. أنت تحتاج إلى حساب Meta Business موثّق وموافق عليه مسبقاً للاستفادة من الخدمة.`,
-      en: `Wani is a SaaS (software-as-a-service) platform that lets you:
+Wani لا تضمن وصول الرسائل المُرسَلة إلى مستلميها بنسبة 100%، ولا تضمن عدم تعرّض حساب WhatsApp Business الخاص بك لأي قيود من جانب Meta. تعتمد بعض خدمات Wani على WhatsApp Business Platform وMeta وخدمات تابعة لجهات خارجية أخرى، وقد يتأثر توفرها بالتغيرات أو القرارات الصادرة عن تلك الجهات، خارج نطاق سيطرة Wani.`,
+      en: `Wani is a SaaS platform for managing the official WhatsApp Business Platform. Depending on your plan and available features, the service includes:
 
-— Manage marketing campaigns through the WhatsApp Business API
-— Send bulk text messages, templates, and media files
-— Manage contacts and target audiences
-— Track sending, delivery, and read statistics
-— Manage one-on-one conversations with customers
+— Managing conversations with customers
+— Sending and receiving messages
+— Sending Meta-approved message templates
+— Creating and managing marketing campaigns
+— Managing contacts and audiences
+— Building automations
+— Interactive messages and buttons
+— Reports and analytics
+— Available external integrations (Shopify, WooCommerce, EasyOrders, Google Sheets, depending on plan)
 
-The service operates through the official WhatsApp Business API provided by Meta. You need a verified, pre-approved Meta Business account to use the service.`,
+Wani does not guarantee that sent messages will reach 100% of their recipients, nor that your WhatsApp Business account will be free from restrictions imposed by Meta. Some Wani services depend on the WhatsApp Business Platform, Meta, and other third-party services, and their availability may be affected by changes or decisions made by those parties, outside Wani's control.`,
     },
   },
   {
@@ -51,23 +63,23 @@ The service operates through the official WhatsApp Business API provided by Meta
     title: { ar: "الحساب والمسؤولية", en: "Account & Responsibility" },
     content: {
       ar: `**إنشاء الحساب:**
+— يجوز إنشاء حساب واحد لكل شركة أو كيان تجاري، مع إمكانية إضافة مستخدمين وأعضاء فريق للحساب نفسه وفق حدود وصلاحيات الخطة المشترك بها
 — يجب أن يكون عمرك 18 سنة أو أكثر
-— يجب تقديم معلومات دقيقة وحديثة عند التسجيل
-— حساب واحد لكل شخص أو كيان تجاري
+— يجب تقديم معلومات دقيقة وحديثة عند التسجيل، وتحديثها عند تغيّرها
 
 **مسؤوليتك:**
 — أنت مسؤول عن الحفاظ على سرية بيانات تسجيل دخولك
-— أي نشاط يتم من خلال حسابك هو مسؤوليتك الكاملة
+— أي نشاط يتم من خلال حسابك، بما في ذلك عبر أعضاء الفريق المُصرَّح لهم، هو مسؤوليتك الكاملة
 — يجب إخطارنا فوراً في حال الاشتباه في أي وصول غير مصرح به
 — لا يجوز مشاركة الحساب أو بيانات الدخول مع أطراف غير مصرح لها`,
       en: `**Creating an account:**
+— One account may be created per company or business entity, with the ability to add users and team members under the same account according to your plan's limits and permissions
 — You must be 18 years of age or older
-— You must provide accurate and current information at sign-up
-— One account per person or business entity
+— You must provide accurate and current information at sign-up, and update it when it changes
 
 **Your responsibility:**
 — You are responsible for keeping your login credentials confidential
-— Any activity through your account is your full responsibility
+— Any activity through your account, including via authorized team members, is your full responsibility
 — You must notify us immediately if you suspect unauthorized access
 — The account or login credentials must not be shared with unauthorized parties`,
     },
@@ -76,42 +88,92 @@ The service operates through the official WhatsApp Business API provided by Meta
     id: "meta-compliance",
     title: { ar: "الامتثال لسياسات Meta وواتساب", en: "Compliance with Meta & WhatsApp Policies" },
     content: {
-      ar: `هذا القسم بالغ الأهمية. منصتنا تعمل عبر WhatsApp Business API، وأنت ملزم بالامتثال التام لسياسات Meta:
+      ar: `يخضع استخدامك لـ Wani، باعتبارها منصة مبنية فوق WhatsApp Business Platform، لسياسات Meta وWhatsApp السارية في كل وقت. يجب عليك استيفاء المتطلبات التي تفرضها Meta وWhatsApp على نوع الحساب والخدمة التي تستخدمها.
 
 **ما يجب عليك فعله:**
-— الحصول على موافقة صريحة (Opt-in) من كل شخص قبل إرسال رسائل تسويقية له
-— توفير آلية واضحة لإلغاء الاشتراك (Opt-out) والالتزام بها فوراً
-— استخدام القوالب المعتمدة من Meta فقط لبدء المحادثات
-— الالتزام بحدود الإرسال المحددة لتجنب حظر الرقم
-— الإفصاح عن هويتك التجارية بوضوح في رسائلك
+— الحصول على موافقة مسبقة (Opt-in) مناسبة من كل مستلم قبل إرسال رسائل تسويقية له، والاحتفاظ بما يثبت ذلك
+— توفير آلية واضحة لإلغاء الاشتراك (Opt-out) والالتزام بتنفيذها فوراً
+— استخدام قوالب Meta المعتمدة في الحالات التي تستوجب ذلك
+— الالتزام بنافذة خدمة العملاء ذات الـ24 ساعة عند إرسال رسائل حرة خارج نطاق القوالب
+— الالتزام بحدود الإرسال ومعايير الجودة وكافة سياسات WhatsApp
 
 **ما لا يُسمح به إطلاقاً:**
 — إرسال Spam أو رسائل غير مرغوب فيها
-— إرسال محتوى مضلل أو مخادع أو احتيالي
-— إرسال محتوى يحرّض على الكراهية أو العنف
-— التحايل على قواعد Meta أو محاولة اختراقها
-— شراء قوائم أرقام هاتفية وإرسال رسائل بدون موافقة
+— إرسال محتوى مضلل أو مخادع أو احتيالي أو غير قانوني
+— شراء قوائم أرقام هاتفية وإرسال رسائل بدون موافقة أصحابها
+— محاولة التحايل على أنظمة Meta أو WhatsApp أو تجاوز القيود المفروضة عليها
 
 **تبعات المخالفة:**
-Meta تحتفظ بحق تعليق أو إيقاف أي رقم مخالف. Wani غير مسؤولة عن أي إيقاف يصدر من Meta نتيجة مخالفتك لسياساتهم.`,
-      en: `This section is critically important. Our platform operates through the WhatsApp Business API, and you are required to fully comply with Meta's policies:
+Meta هي الجهة الوحيدة التي تملك سلطة اتخاذ قرارات تعليق أو تقييد أو حظر أرقام وحسابات WhatsApp Business، وفق سياساتها الخاصة. Wani لا تستطيع، ولا تضمن، منع حدوث ذلك. مع ذلك، فإن هذا لا يُضعف الحقوق الممنوحة لك بموجب Wani Protection Guarantee الموضح في القسم التالي، والتي تخضع لشروطها الخاصة المستقلة.`,
+      en: `As a platform built on top of the WhatsApp Business Platform, your use of Wani is subject to Meta's and WhatsApp's policies in effect at all times. You must meet the requirements Meta and WhatsApp impose based on your account and service type.
 
 **What you must do:**
-— Obtain explicit opt-in consent from each person before sending them marketing messages
+— Obtain appropriate prior opt-in consent from each recipient before sending them marketing messages, and retain proof of it
 — Provide a clear opt-out mechanism and honor it immediately
-— Use only Meta-approved templates to initiate conversations
-— Stay within the applicable sending limits to avoid your number being blocked
-— Clearly disclose your business identity in your messages
+— Use Meta-approved templates where required
+— Honor the 24-hour customer service window when sending free-form messages outside of templates
+— Stay within sending limits, quality standards, and all applicable WhatsApp policies
 
 **What is never allowed:**
 — Sending spam or unsolicited messages
-— Sending misleading, deceptive, or fraudulent content
-— Sending content that incites hatred or violence
-— Circumventing or attempting to bypass Meta's rules
+— Sending misleading, deceptive, fraudulent, or unlawful content
 — Purchasing phone number lists and messaging them without consent
+— Attempting to circumvent Meta's or WhatsApp's systems or bypass their restrictions
 
 **Consequences of violations:**
-Meta reserves the right to suspend or disable any non-compliant number. Wani is not responsible for any suspension issued by Meta as a result of your violation of their policies.`,
+Meta alone has the authority to suspend, restrict, or disable WhatsApp Business numbers and accounts under its own policies. Wani cannot, and does not, guarantee this will not happen. This does not, however, diminish the rights granted to you under the Wani Protection Guarantee described in the next section, which is governed by its own independent terms.`,
+    },
+  },
+  {
+    id: "protection-guarantee",
+    title: { ar: "ضمان الحماية — Wani Protection Guarantee", en: "Wani Protection Guarantee" },
+    content: {
+      ar: `تقدّم Wani لعملائها المؤهلين ضمان استرداد مشروط يُعرف بـ "Wani Protection Guarantee". هذا ضمان استرداد مشروط، وليس ضمانًا ضد الحظر — Wani لا تستطيع أن تضمن عدم تعرّض رقمك للحظر من Meta، ولا أن تحدد بشكل مطلق سبب أي قرار تتخذه Meta. ما تقدمه Wani هو التزام باسترداد جزء من قيمة الاشتراك للحالات المؤهلة، بعد مراجعة الحالة.
+
+**شروط الاستحقاق (يجب استيفاء الجميع):**
+— أن يكون رقم WhatsApp محل المطالبة متصلًا فعليًا بحساب Wani وقت الحظر
+— أن يكون الحظر قد وقع أثناء فترة اشتراك سارٍ في Wani
+— ألا يكون الرقم نفسه مستخدَمًا على منصة أو مزود WhatsApp API آخر خلال فترة المراجعة
+— الالتزام الكامل بسياسات Meta وWhatsApp، بما في ذلك Opt-in ونافذة الـ24 ساعة والقوالب المعتمدة وحدود الإرسال
+— عدم إرسال Spam أو محتوى محظور أو استخدام قوائم أرقام مُشتراة
+— إبلاغ Wani بواقعة الحظر خلال 48–72 ساعة من علمك بها
+— تقديم ما يثبت الحظر، والسماح لفريق Wani بمراجعة سجلات الحساب المتعلقة بالمطالبة
+
+**آلية المراجعة:**
+يراجع فريق Wani ما هو متاح لديه من بيانات الحساب (معرّفات الرسائل، أوقات الإرسال، الحملات، الأتمتة، القوالب، حالة الالتزام بنافذة الـ24 ساعة، وسجل الأنشطة قبل الحظر مباشرةً). عدم وجود نشاط معيّن في سجلات Wani قد يكون دليلًا على أن هذا النشاط لم يتم من خلال المنصة، لكنه لا يمثّل وحده إثباتًا نهائيًا لسبب قرار Meta.
+
+**قيمة ومدة الاسترداد:**
+الاسترداد يكون بقيمة الجزء المتبقي غير المُستخدَم من الاشتراك الشهري المدفوع، ولا يشمل مدفوعات أشهر سابقة منقضية بالكامل. تتم معالجة الطلبات المؤهلة خلال 5 إلى 15 يوم عمل من تاريخ اكتمال المراجعة والموافقة عليها.
+
+**حالات عدم الاستحقاق:**
+— استخدام منصة أخرى على نفس الرقم خلال فترة المراجعة
+— مخالفة سياسات Meta أو WhatsApp، أو إرسال Spam، أو عدم وجود Opt-in مطلوب
+— استخدام قوائم مشتراة أو تجاوز حدود الإرسال أو استخدام قوالب غير معتمدة عند الحاجة إليها
+— عدم تقديم المعلومات المطلوبة، أو تقديم معلومات غير صحيحة
+— ثبوت أن سبب الحظر نشاط تم خارج Wani، أو عدم توفر معلومات كافية لربط الحظر بفترة استخدام Wani`,
+      en: `Wani offers eligible customers a conditional refund guarantee known as the "Wani Protection Guarantee." This is a conditional refund guarantee — not a guarantee against being banned. Wani cannot guarantee your number will not be blocked by Meta, nor can it definitively determine the reason behind any Meta decision. What Wani commits to is refunding part of your subscription value for eligible cases, following a case review.
+
+**Eligibility requirements (all must be met):**
+— The WhatsApp number in question must be actively connected to a Wani account at the time of the ban
+— The ban must have occurred during an active Wani subscription period
+— The same number must not have been used on another WhatsApp API platform or provider during the review period
+— Full compliance with Meta and WhatsApp policies, including opt-in, the 24-hour window, approved templates, and sending limits
+— No spam, prohibited content, or purchased number lists
+— Notifying Wani of the ban within 48–72 hours of becoming aware of it
+— Providing proof of the ban and allowing Wani's team to review the account records related to the claim
+
+**Review process:**
+Wani's team reviews the account data available to it (message IDs, sending times, campaigns, automations, templates, 24-hour window compliance status, and the activity log immediately preceding the ban). The absence of a particular activity in Wani's records may indicate that activity did not occur through the platform, but it does not by itself constitute conclusive proof of the reason for Meta's decision.
+
+**Refund value and timeline:**
+The refund covers the unused remaining portion of the paid monthly subscription and does not include payments for fully elapsed prior months. Eligible claims are processed within 5 to 15 business days from the date the review is completed and approved.
+
+**Cases of ineligibility:**
+— Using another platform on the same number during the review period
+— Violating Meta or WhatsApp policies, sending spam, or lacking required opt-in
+— Using purchased lists, exceeding sending limits, or using unapproved templates where required
+— Failing to provide requested information, or providing false information
+— A determined cause outside of Wani, or insufficient information to link the ban to the Wani usage period`,
     },
   },
   {
@@ -122,24 +184,32 @@ Meta reserves the right to suspend or disable any non-compliant number. Wani is 
 — خطة مجانية: 100 جهة اتصال، 3 حملات، مستخدم واحد
 — خطة Starter: 249 جنيه/شهر — 2,000 جهة اتصال، 50 حملة
 — خطة Professional: 599 جنيه/شهر — 15,000 جهة اتصال، حملات غير محدودة
-— خطة Enterprise: تسعير مخصص حسب الاحتياج
+— خطة Enterprise: 1199جنيه/شهر جهات اتصال غير محدودة
+
+قد تختلف الحدود والمزايا التفصيلية، وتخضع بشكل نهائي للحدود الموضحة فعليًا داخل لوحة تحكم Wani وقت الاشتراك.
 
 **شروط الدفع:**
 — الاشتراك يُجدَّد تلقائياً كل شهر ما لم يُلغَ قبل موعد التجديد
-— لا تُستَرد المبالغ المدفوعة عن الفترات المنقضية
+— لا تُستَرد المبالغ المدفوعة عن الفترات المنقضية، إلا في الحالات التي تنص عليها سياسات Wani صراحةً، بما فيها الحالات المؤهلة بموجب Wani Protection Guarantee
 — في حال إلغاء الاشتراك، تظل الخدمة متاحة حتى نهاية الفترة المدفوعة
-— نحتفظ بحق تغيير الأسعار مع إخطار مسبق 30 يوماً`,
+— نحتفظ بحق تغيير الأسعار مع إخطار مسبق 30 يوماً
+
+في حال فشل عملية الدفع، يجوز تعليق بعض الميزات المدفوعة أو تحويل الحساب إلى وضع محدود، وفق السياسة المعمول بها.`,
       en: `**Available plans:**
 — Free plan: 100 contacts, 3 campaigns, 1 user
 — Starter plan: 249 EGP/month — 2,000 contacts, 50 campaigns
 — Professional plan: 599 EGP/month — 15,000 contacts, unlimited campaigns
 — Enterprise plan: custom pricing based on your needs
 
+Detailed limits and features may vary and are ultimately governed by the limits shown to you inside the Wani dashboard at the time of subscription.
+
 **Payment terms:**
 — Subscriptions renew automatically each month unless cancelled before the renewal date
-— Amounts paid for elapsed periods are non-refundable
+— Amounts paid for elapsed periods are non-refundable, except where Wani's policies explicitly state otherwise, including cases eligible under the Wani Protection Guarantee
 — If you cancel, the service remains available until the end of the paid period
-— We reserve the right to change prices with 30 days' advance notice`,
+— We reserve the right to change prices with 30 days' advance notice
+
+If a payment fails, some paid features may be suspended, or the account may be moved to a limited status, per the applicable policy.`,
     },
   },
   {
@@ -148,24 +218,28 @@ Meta reserves the right to suspend or disable any non-compliant number. Wani is 
     content: {
       ar: `يُحظر استخدام المنصة في أي مما يلي:
 
-— إرسال رسائل ترويجية بدون موافقة المستلمين
+— إرسال رسائل غير مرغوب فيها (Spam)
 — الاحتيال أو التصيد الإلكتروني أو انتحال الهوية
 — نشر محتوى مخالف للقانون المصري أو الدولي
 — التشهير أو انتهاك حقوق الملكية الفكرية للغير
 — إرسال فيروسات أو برمجيات خبيثة
 — محاولة اختراق المنصة أو التلاعب بأنظمتها
 — إعادة بيع الخدمة دون إذن كتابي مسبق منا
-— استخدام الخدمة لأغراض سياسية أو انتخابية بدون التزام كامل بالقوانين المعمول بها`,
+— استخدام الخدمة لأغراض سياسية أو انتخابية بالمخالفة للقوانين أو سياسات الجهات المعنية
+
+في حال ظهور أي نشاط يمثّل خطرًا محتملًا على الحساب أو على المنصة، يحق لـ Wani تقييد الحملات أو الإرسال مؤقتًا، دون أن يقتصر الإجراء على إنهاء الحساب فقط.`,
       en: `Using the platform for any of the following is prohibited:
 
-— Sending promotional messages without recipient consent
+— Sending spam or unsolicited messages
 — Fraud, phishing, or impersonation
 — Publishing content that violates Egyptian or international law
 — Defamation or infringement of others' intellectual property rights
 — Sending viruses or malicious software
 — Attempting to breach the platform or tamper with its systems
 — Reselling the service without our prior written permission
-— Using the service for political or electoral purposes without full compliance with applicable laws`,
+— Using the service for political or electoral purposes in violation of applicable laws or relevant policies
+
+If any activity emerges that poses a potential risk to the account or the platform, Wani may temporarily restrict campaigns or sending, not limited to account termination alone.`,
     },
   },
   {
@@ -173,43 +247,55 @@ Meta reserves the right to suspend or disable any non-compliant number. Wani is 
     title: { ar: "ملكية البيانات", en: "Data Ownership" },
     content: {
       ar: `**بياناتك ملكك:**
-— أنت تحتفظ بكامل ملكية بياناتك: جهات الاتصال، الرسائل، القوالب
-— نحن نمنحك ترخيصاً محدوداً لاستخدام المنصة لمعالجة بياناتك
+— تظل جميع بيانات العميل ومحتواه — جهات الاتصال، الرسائل، القوالب، الحملات، وأي محتوى آخر — ملكًا خالصًا للمستخدم
 — لا ندّعي أي ملكية على المحتوى الذي تنشئه أو ترسله
 
 **ترخيص الاستخدام:**
-بالتسجيل في المنصة، تمنحنا ترخيصاً محدوداً لمعالجة بياناتك بالقدر اللازم لتشغيل الخدمة وتحسينها فقط.`,
+تحصل Wani فقط على الحقوق اللازمة لاستضافة ومعالجة بياناتك بغرض تقديم الخدمة نيابةً عنك، وفق ما هو موضح في سياسة الخصوصية. لا تمتلك Wani أي حقوق إضافية على محتواك خارج هذا النطاق.`,
       en: `**Your data is yours:**
-— You retain full ownership of your data: contacts, messages, templates
-— We grant you a limited license to use the platform to process your data
+— All customer data and content — contacts, messages, templates, campaigns, and any other content — remains solely owned by the user
 — We claim no ownership over content you create or send
 
 **License to us:**
-By registering for the platform, you grant us a limited license to process your data only to the extent necessary to operate and improve the service.`,
+Wani only obtains the rights necessary to host and process your data for the purpose of providing the service on your behalf, as described in the Privacy Policy. Wani has no additional rights over your content beyond this scope.`,
+    },
+  },
+  {
+    id: "privacy",
+    title: { ar: "الخصوصية ومعالجة البيانات", en: "Privacy & Data Processing" },
+    content: {
+      ar: `تخضع كافة عمليات جمع ومعالجة البيانات الشخصية على منصة Wani لسياسة الخصوصية الخاصة بنا، والتي تُعد وثيقة منفصلة ومكمّلة لهذه الشروط وليست بديلًا عنها.
+
+تغطي سياسة الخصوصية بالتفصيل: البيانات التي تجمعها Wani، بيانات الحساب وجهات الاتصال، محتوى الرسائل، البيانات المتبادلة مع WhatsApp وMeta، بيانات التكاملات الخارجية (Google Sheets، Shopify، WooCommerce، EasyOrders)، الملفات والوسائط، بيانات الدفع، ملفات تعريف الارتباط، مزودي الخدمات الخارجيين، مدة الاحتفاظ بالبيانات، آلية الحذف، وحقوقك المتعلقة ببياناتك.
+
+يُرجى مراجعة سياسة الخصوصية كاملة للاطلاع على التفاصيل الكاملة.`,
+      en: `All collection and processing of personal data on the Wani platform is governed by our Privacy Policy, a separate document that complements these terms rather than replacing them.
+
+The Privacy Policy covers in detail: the data Wani collects, account and contact data, message content, data exchanged with WhatsApp and Meta, external integration data (Google Sheets, Shopify, WooCommerce, EasyOrders), files and media, payment data, cookies, third-party service providers, data retention periods, deletion mechanisms, and your rights regarding your data.
+
+Please review the full Privacy Policy for complete details.`,
     },
   },
   {
     id: "service-availability",
     title: { ar: "توفر الخدمة والصيانة", en: "Service Availability & Maintenance" },
     content: {
-      ar: `نسعى لتوفير الخدمة بنسبة 99% من الوقت، لكن لا يمكننا ضمان توفر مستمر بدون انقطاع.
+      ar: `تسعى Wani إلى توفير الخدمة بأعلى درجة ممكنة من الاستمرارية، لكنها لا تقدم ضمانًا قانونيًا (SLA) بتوفر متواصل أو خالٍ من الانقطاعات، ما لم ينص اتفاق منفصل ومكتوب على خلاف ذلك.
 
 **حالات قد تنقطع فيها الخدمة:**
 — صيانة دورية مجدولة (سنخطرك مسبقاً)
 — أعطال تقنية غير متوقعة
-— انقطاعات في خدمة WhatsApp API من جانب Meta
-— قوة قاهرة خارجة عن إرادتنا
-
-لا نتحمل مسؤولية الخسائر الناجمة عن انقطاع الخدمة في هذه الحالات.`,
-      en: `We aim to keep the service available 99% of the time, but we cannot guarantee uninterrupted availability.
+— تغيرات أو انقطاعات في خدمات Meta أو WhatsApp Business Platform
+— أعطال لدى مزودي الخدمات الخارجيين المتكاملين مع Wani
+— قوة قاهرة خارجة عن إرادتنا`,
+      en: `Wani strives to provide the service with the highest possible level of continuity, but does not offer a legal SLA guaranteeing uninterrupted availability unless a separate written agreement states otherwise.
 
 **Situations that may cause interruptions:**
 — Scheduled routine maintenance (we'll notify you in advance)
 — Unexpected technical failures
-— WhatsApp API outages on Meta's side
-— Force majeure events beyond our control
-
-We are not liable for losses arising from service interruptions in these situations.`,
+— Changes or outages in Meta or WhatsApp Business Platform services
+— Outages at third-party service providers integrated with Wani
+— Force majeure events beyond our control`,
     },
   },
   {
@@ -217,23 +303,27 @@ We are not liable for losses arising from service interruptions in these situati
     title: { ar: "حدود المسؤولية", en: "Limitation of Liability" },
     content: {
       ar: `**نخلي مسؤوليتنا من:**
-— أي إيقاف لحسابك على Meta أو WhatsApp نتيجة مخالفتك لسياساتهم
+— قرارات Meta المتعلقة بتعليق أو تقييد أو حظر أي حساب أو رقم WhatsApp
 — فقدان عملاء أو صفقات نتيجة عدم وصول رسائلك
-— أي أضرار غير مباشرة أو تبعية أو عرضية
 — محتوى الرسائل التي ترسلها أنت عبر المنصة
-— دقة بيانات الإحصائيات المقدمة من Meta
+— الأعطال أو الانقطاعات الناتجة عن خدمات خارجية (Meta، WhatsApp، مزودي التكامل، خدمات الدفع)
+— الأضرار غير المباشرة أو التبعية أو العرضية، حيثما يسمح القانون بذلك
+
+هذا القسم لا يتعارض مع الالتزامات المنصوص عليها في Wani Protection Guarantee. أي حقوق استرداد تنشأ بموجبه تخضع لشروطها الخاصة الموضحة أعلاه، ولا تتأثر بمجرد وجود هذا القسم العام.
 
 **الحد الأقصى للتعويض:**
-في جميع الأحوال، لا تتجاوز مسؤوليتنا تجاهك مبلغ ما دفعته فعلياً في آخر 3 أشهر.`,
+في جميع الأحوال، لا تتجاوز مسؤولية Wani تجاهك قيمة ما دفعته فعليًا خلال آخر 3 أشهر، دون الإخلال بأي حقوق لا يجوز التنازل عنها قانونيًا.`,
       en: `**We disclaim liability for:**
-— Any suspension of your Meta or WhatsApp account resulting from your violation of their policies
+— Meta's decisions regarding suspending, restricting, or banning any WhatsApp account or number
 — Loss of customers or deals due to messages not being delivered
-— Any indirect, consequential, or incidental damages
 — The content of messages you send through the platform
-— The accuracy of statistics data provided by Meta
+— Outages or interruptions caused by third-party services (Meta, WhatsApp, integration providers, payment services)
+— Indirect, consequential, or incidental damages, wherever the law permits such exclusion
+
+This section does not conflict with the commitments set out in the Wani Protection Guarantee. Any refund rights arising under it are governed by its own terms described above, and are not affected merely by the existence of this general liability section.
 
 **Maximum compensation:**
-In all cases, our liability to you will not exceed the amount you actually paid in the last 3 months.`,
+In all cases, Wani's liability to you will not exceed the amount you actually paid in the last 3 months, without prejudice to any rights that cannot be legally waived.`,
     },
   },
   {
@@ -244,22 +334,26 @@ In all cases, our liability to you will not exceed the amount you actually paid 
 يمكنك إلغاء حسابك في أي وقت من إعدادات الحساب. تظل بياناتك متاحة للتصدير لمدة 30 يوماً بعد الإلغاء.
 
 **من جانبنا:**
-نحتفظ بحق تعليق أو إنهاء حسابك فوراً في حال:
-— مخالفة جسيمة لهذه الشروط أو سياسات Meta
-— الاشتباه في نشاط احتيالي أو ضار
+نحتفظ بحق تعليق أو إنهاء حسابك في حال:
+— مخالفة جسيمة لهذه الشروط
+— نشاط احتيالي مؤكد
+— خطر أمني على المنصة أو مستخدمين آخرين
+— مخالفة صريحة لسياسات Meta أو WhatsApp
 — عدم سداد المستحقات المالية
 
-سنخطرك مسبقاً في حالات الإنهاء العادية، باستثناء المخالفات الجسيمة.`,
+قد تُطبَّق بعض القيود فورًا في حالات الخطر الجسيم، مع إخطارك في أقرب وقت ممكن بعد ذلك.`,
       en: `**On your part:**
 You can cancel your account at any time from your account settings. Your data remains available for export for 30 days after cancellation.
 
 **On our part:**
-We reserve the right to suspend or terminate your account immediately in the event of:
-— A serious violation of these terms or Meta's policies
-— Suspected fraudulent or harmful activity
+We reserve the right to suspend or terminate your account in the event of:
+— A serious violation of these terms
+— Confirmed fraudulent activity
+— A security risk to the platform or other users
+— A clear violation of Meta or WhatsApp policies
 — Non-payment of amounts due
 
-We will notify you in advance for ordinary terminations, except in cases of serious violations.`,
+Some restrictions may apply immediately in cases of serious risk, with notification to you as soon as possible afterward.`,
     },
   },
   {
@@ -268,10 +362,10 @@ We will notify you in advance for ordinary terminations, except in cases of seri
     content: {
       ar: `تخضع هذه الشروط وتُفسَّر وفقاً لقوانين جمهورية مصر العربية.
 
-في حال نشوء أي نزاع، يكون الاختصاص القضائي لمحاكم القاهرة. نشجع على حل النزاعات ودياً في المقام الأول عبر التواصل المباشر معنا.`,
+في حال نشوء أي نزاع، يكون الاختصاص القضائي لمحاكم الاسكندرية، دون الإخلال بأي حقوق إلزامية أخرى قد تكون مقررة للمستخدم بموجب القانون.`,
       en: `These terms are governed by and construed in accordance with the laws of the Arab Republic of Egypt.
 
-Should any dispute arise, the courts of Cairo shall have jurisdiction. We encourage resolving disputes amicably in the first instance by contacting us directly.`,
+Should any dispute arise, the courts of Cairo shall have jurisdiction, without prejudice to any other mandatory rights the user may have under the law.`,
     },
   },
   {
@@ -450,6 +544,8 @@ export default function TermsContent() {
                   ? "border-amber-200 bg-amber-50/30"
                   : section.id === "prohibited"
                   ? "border-red-100 bg-red-50/20"
+                  : section.id === "protection-guarantee"
+                  ? "border-[#25D366]/30 bg-[#f0fdf4] ring-1 ring-[#25D366]/20"
                   : "border-gray-100"
               }`}
             >
@@ -460,22 +556,37 @@ export default function TermsContent() {
                       ? "bg-amber-100"
                       : section.id === "prohibited"
                       ? "bg-red-100"
+                      : section.id === "protection-guarantee"
+                      ? "bg-[#25D366]"
                       : "bg-[#f0fdf4]"
                   }`}
                 >
-                  <span
-                    className={`font-bold text-sm ${
-                      section.id === "meta-compliance"
-                        ? "text-amber-600"
-                        : section.id === "prohibited"
-                        ? "text-red-500"
-                        : "text-[#25D366]"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
+                  {section.id === "protection-guarantee" ? (
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  ) : (
+                    <span
+                      className={`font-bold text-sm ${
+                        section.id === "meta-compliance"
+                          ? "text-amber-600"
+                          : section.id === "prohibited"
+                          ? "text-red-500"
+                          : "text-[#25D366]"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                  )}
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 pt-1">{section.title[locale]}</h2>
+                <div className="pt-1">
+                  <h2 className="text-xl font-bold text-gray-900">{section.title[locale]}</h2>
+                  {section.id === "protection-guarantee" && (
+                    <span className="inline-block mt-1 text-xs font-semibold text-[#0d7a6e] bg-white border border-[#25D366]/30 rounded-full px-2.5 py-0.5">
+                      {isAr ? "ميزة حصرية من Wani" : "Exclusive Wani feature"}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className={`text-gray-600 leading-relaxed text-[15px] ${isAr ? "pr-13" : "pl-13"}`}>
                 {renderBody(section.content[locale])}

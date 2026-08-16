@@ -263,15 +263,27 @@ async function team(ownerId: string) {
       where: { userId: { in: memberIds }, direction: MessageDirection.inbound },
       _count: { id: true },
     }),
-    // ── عدد المحادثات المعيّنة حاليًا لكل عضو (توزيع الحمل) ──
+    // ── عدد المحادثات المعيّنة حاليًا لكل عضو (من محادثات الشات الفعلية) ──
     prisma.contact.groupBy({
       by: ["assignedToUserId"],
-      where: { userId: ownerId, deletedAt: null, assignedToUserId: { in: memberIds } },
+      where: {
+        userId: ownerId,
+        deletedAt: null,
+        isArchived: false,
+        messages: { some: { deletedAt: null } },
+        assignedToUserId: { in: memberIds },
+      },
       _count: { id: true },
     }),
-    // ── عدد المحادثات اللي لسه من غير مسؤول ──
+    // ── عدد المحادثات اللي لسه من غير مسؤول (من محادثات الشات الفعلية) ──
     prisma.contact.count({
-      where: { userId: ownerId, deletedAt: null, assignedToUserId: null },
+      where: {
+        userId: ownerId,
+        deletedAt: null,
+        isArchived: false,
+        messages: { some: { deletedAt: null } },
+        assignedToUserId: null,
+      },
     }),
   ]);
 
