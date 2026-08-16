@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { getRelevantProducts } from "@/lib/product-search";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { requirePermission } from "@/lib/permissions";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -19,7 +20,10 @@ async function resolveUserId(session: any): Promise<string | null> {
 // ── POST — تجربة مساعد الذكاء الاصطناعي (Test Chat / Preview) ──
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const denied = requirePermission(session, "AI_AGENT_MANAGE");
+
+  if (denied) return denied;
   const userId = await resolveUserId(session);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

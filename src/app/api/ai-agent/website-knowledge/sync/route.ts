@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { assertSafeUrl } from "@/lib/website-crawl";
 import { inngest } from "@/inngest/client";
+import { requirePermission } from "@/lib/permissions";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -17,7 +18,10 @@ async function resolveUserId(session: any): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const denied = requirePermission(session, "AI_AGENT_MANAGE");
+
+  if (denied) return denied;
   const userId = await resolveUserId(session);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const blocked = guardResponse(await checkFeature(userId, "aiAgent"));

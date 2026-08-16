@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { inngest } from "@/inngest/client";
+import { requirePermission } from "@/lib/permissions";
 
 async function resolveUserId(session: any): Promise<string | null> {
   const directId = session?.user?.id;
@@ -18,7 +19,10 @@ async function resolveUserId(session: any): Promise<string | null> {
 // ── POST — طلب مزامنة فورية للمنتجات (عبر Inngest) ──
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const denied = requirePermission(session, "AI_AGENT_MANAGE");
+
+  if (denied) return denied;
   const userId = await resolveUserId(session);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
