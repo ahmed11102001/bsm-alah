@@ -142,6 +142,7 @@ export const ReplyType = {
   TEXT: "TEXT",
   TEMPLATE: "TEMPLATE",
   AI: "AI",
+  INTERACTIVE_MENU: "INTERACTIVE_MENU",
 } as const;
 export type ReplyType = (typeof ReplyType)[keyof typeof ReplyType];
 

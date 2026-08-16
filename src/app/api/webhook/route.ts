@@ -581,9 +581,93 @@ export async function POST(req: NextRequest) {
         }),
       ]).catch((e) => console.error("[NUDGE] Failed to cancel/reset nudge state:", e));
 
-      // Step 4: ????? ??????? ??? ????? ???? ?? Meta — ????? ??? Vercel
+      // ─── Interactive Menu Button Flow ───
+      let interactiveMenuHandled = false;
+      const buttonId = msg.type === "button"
+        ? msg.button?.payload
+        : msg.type === "interactive"
+          ? (msg.interactive?.button_reply?.id ?? msg.interactive?.list_reply?.id)
+          : undefined;
+
+      if (buttonId && payload !== "CONFIRM_ORDER" && payload !== "CANCEL_ORDER" && !smartFollowUpHandled) {
+        try {
+          const activeInteraction = await prisma.automationInteraction.findFirst({
+            where: {
+              contactId,
+              userId,
+              state: "WAITING",
+            },
+            orderBy: { createdAt: "desc" },
+          });
+
+          if (activeInteraction) {
+            if (activeInteraction.processedEventId === msg.id) {
+              console.log(`[INTERACTIVE-MENU] Duplicate event ${msg.id} ignored for interaction ${activeInteraction.id}`);
+              interactiveMenuHandled = true;
+            } else {
+              const snapshot = activeInteraction.buttonSnapshot as Array<{ buttonId: string; text: string; nextStepId?: string | null }>;
+              const matchedButton = Array.isArray(snapshot)
+                ? snapshot.find((b: any) => b.buttonId === buttonId)
+                : null;
+
+              if (!matchedButton) {
+                console.log(`[INTERACTIVE-MENU] Stale interactive button interaction — buttonId: ${buttonId} not in snapshot for interaction ${activeInteraction.id}`);
+                await prisma.automationInteraction.update({
+                  where: { id: activeInteraction.id },
+                  data: {
+                    state: "STALE",
+                    selectedButtonId: buttonId,
+                    processedEventId: msg.id,
+                    completedAt: new Date(),
+                  },
+                });
+                interactiveMenuHandled = true;
+              } else {
+                console.log(`[INTERACTIVE-MENU] Customer selected button "${matchedButton.text}" (${buttonId}) for interaction ${activeInteraction.id}`);
+                await prisma.automationInteraction.update({
+                  where: { id: activeInteraction.id },
+                  data: {
+                    state: "COMPLETED",
+                    selectedButtonId: buttonId,
+                    processedEventId: msg.id,
+                    completedAt: new Date(),
+                  },
+                });
+
+                interactiveMenuHandled = true;
+
+                if (matchedButton.nextStepId) {
+                  const targetNextStepId = matchedButton.nextStepId;
+                  after(async () => {
+                    try {
+                      await executeAutomationStep({
+                        userId,
+                        from,
+                        contactId,
+                        accountOwner,
+                        stepId: targetNextStepId,
+                        hops: 1,
+                      });
+                    } catch (stepErr) {
+                      console.error(`[INTERACTIVE-MENU] Error executing next step ${targetNextStepId}:`, stepErr);
+                    }
+                  });
+                }
+              }
+            }
+          } else {
+            console.log(`[INTERACTIVE-MENU] Stale interactive button interaction — buttonId: ${buttonId} (no active WAITING interaction) for ${from}`);
+            interactiveMenuHandled = true;
+          }
+        } catch (interactiveErr) {
+          console.error("[INTERACTIVE-MENU] Button handling error:", interactiveErr);
+        }
+      }
+
+      // Step 4: فحص الأتمتة بعد إرسال 200 لـ Meta — ينفذ عبر Vercel after
       const triggersAutomation =
-        !smartFollowUpHandled && (
+        !smartFollowUpHandled &&
+        !interactiveMenuHandled && (
           (type === MessageType.text && content.trim()) ||
           type === MessageType.image ||
           type === MessageType.audio
@@ -687,11 +771,18 @@ async function handleAutomation(ctx: {
 
   const textLower = messageText.toLowerCase().trim();
 
-  // -- 0: Voice Agent — ?? ????? ??? ???????? ??? ?????? ElevenLabs ?? ?? ???? --
+  // ── 0: Supersede any WAITING Interactive Menu interaction for this contact when customer sends a message ──
   const contactRecord = await prisma.contact.findFirst({
     where: { phone: from, userId },
     select: { id: true, name: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
   });
+
+  if (contactRecord?.id) {
+    await prisma.automationInteraction.updateMany({
+      where: { contactId: contactRecord.id, userId, state: "WAITING" },
+      data: { state: "SUPERSEDED" },
+    }).catch((e) => console.error("[INTERACTIVE-MENU] Failed to supersede WAITING interactions:", e));
+  }
 
   if (contactRecord?.voiceAgentEnabled) {
     // ── Plan guard: token quota (نفس الـ text AI) ─────────────────────────
@@ -872,9 +963,9 @@ async function handleAutomation(ctx: {
     }
   }
 
-  // -- 2: FIRST_MESSAGE — ????? ??????? ???? ????? -------------------------
-  // ??????? ?????? ?? ??? DB ??? ?? handleAutomation ?????
-  // ??? ??? ??????? = 1 ???? ?? ??? ????? ?? ?????? ??
+  // -- 2: FIRST_MESSAGE — رسالة الترحيب لأول رسالة -------------------------
+  // الرسالة الحالية تم حفظها في DB قبل أن تبدأ handleAutomation
+  // فإذا كان عدد الرسائل = 1 فهذه أول رسالة من العميل
   const contactForFirst = contactRecord ?? await prisma.contact.findFirst({
     where: { phone: from, userId },
     select: { id: true },
@@ -889,36 +980,50 @@ async function handleAutomation(ctx: {
       const welcomeRule = await prisma.automationRule.findFirst({
         where: { userId, triggerType: TriggerType.FIRST_MESSAGE, isEnabled: true },
         orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, replyContent: true, replyMediaUrl: true },
+        select: { id: true, name: true, replyType: true, replyContent: true, replyMediaUrl: true, interactiveConfig: true },
       });
 
-      if (welcomeRule?.replyContent?.trim()) {
-        console.log(`[BOT] FIRST_MESSAGE ? "${welcomeRule.name}" for ${from}`);
-        await sendReply({
-          userId, from,
-          replyText: welcomeRule.replyContent.trim(),
-          replyMediaUrl: welcomeRule.replyMediaUrl ?? undefined,
-          accountOwner,
-          ruleName: welcomeRule.name,
-        });
-        return; // ?? ???? ??? keyword ?? ??? AI
+      if (welcomeRule) {
+        if (welcomeRule.replyType === ReplyType.INTERACTIVE_MENU && welcomeRule.interactiveConfig) {
+          console.log(`[BOT] FIRST_MESSAGE (Interactive Menu) → "${welcomeRule.name}" for ${from}`);
+          await sendInteractiveMenuReply({
+            userId,
+            contactId: contactForFirst.id,
+            from,
+            accountOwner,
+            ruleId: welcomeRule.id,
+            ruleName: welcomeRule.name,
+            interactiveConfig: welcomeRule.interactiveConfig as any,
+          });
+          return;
+        } else if (welcomeRule.replyContent?.trim()) {
+          console.log(`[BOT] FIRST_MESSAGE → "${welcomeRule.name}" for ${from}`);
+          await sendReply({
+            userId, from,
+            replyText: welcomeRule.replyContent.trim(),
+            replyMediaUrl: welcomeRule.replyMediaUrl ?? undefined,
+            accountOwner,
+            ruleName: welcomeRule.name,
+          });
+          return;
+        }
       }
     }
   }
 
-  // -- 1: Keyword Bot — ??? ??????? ????????? ???????? ---------------------
+  // -- 1: Keyword Bot — بوت الكلمات المفتاحية ---------------------
   const keywordRules = await prisma.automationRule.findMany({
     where: {
       userId,
       isEnabled: true,
       triggerType: TriggerType.KEYWORD,
-      replyType: ReplyType.TEXT,
+      replyType: { in: [ReplyType.TEXT, ReplyType.INTERACTIVE_MENU] },
     },
     orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, triggerValue: true, replyContent: true, replyMediaUrl: true, humanKeywords: true },
+    select: { id: true, name: true, triggerValue: true, replyType: true, replyContent: true, replyMediaUrl: true, humanKeywords: true, interactiveConfig: true },
   });
 
-  // Human takeover — ?? ?????? ?? ?????? ?? ?????? ???? ?????
+  // Human takeover — لو الرسالة من العميل فيها كلمة طلب إنسان
   const humanTriggered = keywordRules.some(r =>
     r.humanKeywords?.some(kw => {
       const kn = kw?.toLowerCase().trim();
@@ -931,16 +1036,30 @@ async function handleAutomation(ctx: {
     return;
   }
 
-  // Keyword match — ??? ?????
+  // Keyword match — فحص الكلمات
   const matched = keywordRules.find(r =>
     r.triggerValue?.trim() &&
     textLower.includes(r.triggerValue.toLowerCase().trim())
   );
 
   if (matched) {
+    if (matched.replyType === ReplyType.INTERACTIVE_MENU && matched.interactiveConfig) {
+      console.log(`[BOT] Keyword matched (Interactive Menu) → "${matched.name}" for "${messageText}"`);
+      await sendInteractiveMenuReply({
+        userId,
+        contactId: contactForFirst?.id ?? contactRecord!.id,
+        from,
+        accountOwner,
+        ruleId: matched.id,
+        ruleName: matched.name,
+        interactiveConfig: matched.interactiveConfig as any,
+      });
+      return;
+    }
+
     const replyText = matched.replyContent?.trim();
     if (!replyText) return;
-    console.log(`[BOT] Keyword matched ? "${matched.name}" for "${messageText}"`);
+    console.log(`[BOT] Keyword matched → "${matched.name}" for "${messageText}"`);
     await sendReply({ userId, from, replyText: replyText ?? "", replyMediaUrl: matched.replyMediaUrl ?? undefined, accountOwner, ruleName: matched.name });
     return;
   }
@@ -1286,6 +1405,204 @@ async function sendReply(ctx: {
 
   console.log(`[AUTOMATION] Done — replied to ${from} via "${ruleName}" (senderType=${senderType})`);
   return { contactId: contact.id, sentAt };
+}
+
+// -----------------------------------------------------------------------------
+// Helper: إرسال قائمة تفاعلية عبر WhatsApp Cloud API
+// -----------------------------------------------------------------------------
+async function sendInteractiveMenuReply(ctx: {
+  userId: string;
+  contactId: string;
+  from: string;
+  accountOwner: { id?: string; accessToken: string; phoneNumberId: string };
+  ruleId: string;
+  ruleName: string;
+  interactiveConfig: {
+    body: string;
+    footer?: string;
+    buttons: Array<{ buttonId: string; text: string; nextStepId?: string | null }>;
+  };
+}) {
+  const { userId, contactId, from, accountOwner, ruleId, ruleName, interactiveConfig } = ctx;
+  const { sendWhatsAppMessage } = await import("@/lib/whatsapp-api");
+
+  if (!interactiveConfig.buttons?.length || interactiveConfig.buttons.length > 3) {
+    console.error(`[INTERACTIVE-MENU] Invalid button count (${interactiveConfig.buttons?.length}) for rule "${ruleName}"`);
+    return;
+  }
+
+  let waAccountId = accountOwner.id;
+  if (!waAccountId) {
+    const wa = await prisma.whatsAppAccount.findFirst({
+      where: { phoneNumberId: accountOwner.phoneNumberId },
+      select: { id: true },
+    });
+    waAccountId = wa?.id || "";
+  }
+
+  const buttons = interactiveConfig.buttons.slice(0, 3).map(b => ({
+    id: b.buttonId,
+    title: b.text.slice(0, 20),
+  }));
+
+  const res = await sendWhatsAppMessage({
+    userId,
+    toPhone: from,
+    phoneNumberId: accountOwner.phoneNumberId,
+    accessToken: accountOwner.accessToken,
+    messageType: "interactive_buttons",
+    templateName: null,
+    templateLang: "ar",
+    templateVars: null,
+    content: interactiveConfig.body,
+    interactive: {
+      body: interactiveConfig.body,
+      footer: interactiveConfig.footer || undefined,
+      buttons,
+    },
+  });
+
+  if (!res.ok) {
+    console.error(`[INTERACTIVE-MENU] Send failed for ${from} via "${ruleName}":`, res.error);
+    return;
+  }
+
+  const sentAt = new Date();
+
+  // إنشاء سجل الرسالة
+  const msgRecord = await prisma.message.create({
+    data: {
+      userId,
+      contactId,
+      content: interactiveConfig.body,
+      type: MessageType.text,
+      direction: MessageDirection.outbound,
+      status: MessageStatus.sent,
+      senderType: MessageSenderType.bot,
+      whatsappId: res.whatsappMsgId ?? null,
+      sentAt,
+    },
+  });
+
+  // إنهاء أي تفاعل سابق نشط كـ SUPERSEDED
+  await prisma.automationInteraction.updateMany({
+    where: { contactId, userId, state: "WAITING" },
+    data: { state: "SUPERSEDED" },
+  }).catch(() => {});
+
+  // حفظ التفاعل الجديد مع نسخة snapshot من الأزرار
+  if (waAccountId) {
+    await prisma.automationInteraction.create({
+      data: {
+        userId,
+        contactId,
+        whatsappAccountId: waAccountId,
+        phoneNumberId: accountOwner.phoneNumberId,
+        automationRuleId: ruleId,
+        outboundMessageId: msgRecord.id,
+        buttonSnapshot: interactiveConfig.buttons as any,
+        state: "WAITING",
+      },
+    });
+  }
+
+  console.log(`[INTERACTIVE-MENU] Sent interactive menu "${ruleName}" to ${from}`);
+}
+
+// -----------------------------------------------------------------------------
+// Helper: تنفيذ الخطوة التالية بعد ضغط الزر مع حماية ضد الـ infinite loops
+// -----------------------------------------------------------------------------
+async function executeAutomationStep(ctx: {
+  userId: string;
+  from: string;
+  contactId: string;
+  accountOwner: { id?: string; accessToken: string; phoneNumberId: string };
+  stepId: string;
+  hops?: number;
+}) {
+  const { userId, from, contactId, accountOwner, stepId, hops = 1 } = ctx;
+
+  const MAX_HOPS = 10;
+  if (hops > MAX_HOPS) {
+    console.warn(`[AUTOMATION] Max hops limit (${MAX_HOPS}) reached for ${from}. Stopping execution to prevent circular loops.`);
+    return;
+  }
+
+  // Multi-tenant check: الخطوة يجب أن تكون موجودة ومفعلة وتتبع نفس اليوزر
+  const rule = await prisma.automationRule.findFirst({
+    where: { id: stepId, userId, isEnabled: true },
+    select: {
+      id: true,
+      name: true,
+      replyType: true,
+      replyContent: true,
+      replyMediaUrl: true,
+      templateId: true,
+      interactiveConfig: true,
+    },
+  });
+
+  if (!rule) {
+    console.log(`[AUTOMATION] Step ${stepId} not found, disabled, or unauthorized for user ${userId}. Safe finish.`);
+    return;
+  }
+
+  console.log(`[AUTOMATION] Executing step "${rule.name}" (type: ${rule.replyType}, hop: ${hops}) for ${from}`);
+
+  if (rule.replyType === ReplyType.TEXT && rule.replyContent) {
+    await sendReply({
+      userId,
+      from,
+      replyText: rule.replyContent.trim(),
+      replyMediaUrl: rule.replyMediaUrl ?? undefined,
+      accountOwner,
+      ruleName: rule.name,
+    });
+  } else if (rule.replyType === ReplyType.INTERACTIVE_MENU && rule.interactiveConfig) {
+    await sendInteractiveMenuReply({
+      userId,
+      contactId,
+      from,
+      accountOwner,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      interactiveConfig: rule.interactiveConfig as any,
+    });
+  } else if (rule.replyType === ReplyType.TEMPLATE && rule.templateId) {
+    const template = await prisma.template.findFirst({
+      where: { id: rule.templateId, userId },
+      select: { name: true, language: true },
+    });
+    if (template) {
+      const { sendWhatsAppMessage } = await import("@/lib/whatsapp-api");
+      const res = await sendWhatsAppMessage({
+        userId,
+        toPhone: from,
+        phoneNumberId: accountOwner.phoneNumberId,
+        accessToken: accountOwner.accessToken,
+        messageType: "template",
+        templateName: template.name,
+        templateLang: template.language || "ar",
+        templateVars: null,
+        content: null,
+      });
+      if (res.ok) {
+        await prisma.message.create({
+          data: {
+            userId,
+            contactId,
+            content: `[Template: ${template.name}]`,
+            type: MessageType.template,
+            direction: MessageDirection.outbound,
+            status: MessageStatus.sent,
+            senderType: MessageSenderType.bot,
+            whatsappId: res.whatsappMsgId ?? null,
+            sentAt: new Date(),
+          },
+        });
+      }
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

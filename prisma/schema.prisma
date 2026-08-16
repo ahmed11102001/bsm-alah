@@ -37,6 +37,7 @@ model User {
   aiAgent                  AIAgent?
   audiences                Audience[]
   automationRules          AutomationRule[]
+  automationInteractions   AutomationInteraction[]
   campaigns                Campaign[]
   contacts                 Contact[]
   easyOrdersStore          EasyOrdersStore?
@@ -168,6 +169,7 @@ model WhatsAppAccount {
   dailySentCount Int            @default(0)
   messagingTier  Int            @default(1)
   messageQueues  MessageQueue[]
+  automationInteractions AutomationInteraction[]
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -298,6 +300,7 @@ model Contact {
   assignedToUserId  String?
   assignedTo        User?              @relation("AssignedConversations", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   messages          Message[]
+  automationInteractions AutomationInteraction[]
   storeOrders       StoreOrder[]
 
   @@unique([phone, userId])
@@ -560,7 +563,9 @@ model AutomationRule {
   extraInstructions String?
   humanKeywords     String[]
   pauseOnReply      Boolean               @default(true)
+  interactiveConfig Json?
   analytics         AutomationAnalytics[]
+  interactions      AutomationInteraction[]
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   template          Template?             @relation(fields: [templateId], references: [id])
@@ -569,6 +574,41 @@ model AutomationRule {
   @@index([userId, isEnabled])
   @@index([triggerType])
   @@index([userId, triggerType])
+}
+
+enum AutomationInteractionState {
+  WAITING
+  SUPERSEDED
+  COMPLETED
+  STALE
+  FAILED
+}
+
+model AutomationInteraction {
+  id                 String                     @id @default(cuid())
+  userId             String
+  contactId          String
+  whatsappAccountId  String
+  phoneNumberId      String
+  automationRuleId   String
+  outboundMessageId  String?
+  buttonSnapshot     Json
+  state              AutomationInteractionState @default(WAITING)
+  selectedButtonId   String?
+  processedEventId   String?                    @unique
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  completedAt        DateTime?
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact         Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+  automationRule AutomationRule  @relation(fields: [automationRuleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, contactId, state])
+  @@index([contactId, state, createdAt])
+  @@index([whatsappAccountId, phoneNumberId])
+  @@index([automationRuleId])
 }
 
 model AIAgent {
@@ -1141,6 +1181,7 @@ enum ReplyType {
   TEXT
   TEMPLATE
   AI
+  INTERACTIVE_MENU
 }
 
 enum AIProvider {

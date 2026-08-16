@@ -30,18 +30,32 @@ import {
 import {
   Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare, ImageIcon,
   Zap, ToggleLeft, ToggleRight, CheckCircle, Save, Sparkles, Key,
-  X,
+  X, ListFilter, CornerDownLeft,
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
 } from "lucide-react";
 import SmartFollowUpTab from "@/app/dashboard/automation/SmartFollowUp/page";
 import AiAgentDashboard from "@/app/dashboard/automation/_components/AiAgentDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface AutomationButton {
+  buttonId: string;
+  text: string;
+  nextStepId?: string | null;
+}
+
+interface InteractiveConfig {
+  body: string;
+  footer?: string;
+  buttons: AutomationButton[];
+}
+
 interface AutomationRule {
   id: string; name: string; isEnabled: boolean;
   triggerType: string; triggerValue: string | null;
   replyType: string; replyContent: string | null; replyMediaUrl: string | null;
-  templateId: string | null; createdAt: string;
+  templateId: string | null;
+  interactiveConfig?: InteractiveConfig | null;
+  createdAt: string;
 }
 interface Template { id: string; name: string; content: string; status: string; }
 interface Audience {
@@ -66,7 +80,7 @@ const EMPTY_AGENT: AIAgent = {
   systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
 };
-type AutoSubTab = "keywords" | "welcome" | "smart_followup" | "timebased" | "ab";
+type AutoSubTab = "keywords" | "welcome" | "interactive" | "smart_followup" | "timebased" | "ab";
 
 const DAYS_AR = [
   { key: "sun", ar: "الأحد", en: "Sunday" }, { key: "mon", ar: "الاثنين", en: "Monday" },
@@ -78,6 +92,7 @@ const DAYS_AR = [
 const subTabs: { id: AutoSubTab; ar: string; en: string; icon: any }[] = [
   { id: "keywords", ar: "الكلمات", en: "Keywords", icon: Key },
   { id: "welcome", ar: "الترحيب", en: "Welcome", icon: Hand },
+  { id: "interactive", ar: "قائمة تفاعلية", en: "Interactive Menu", icon: ListFilter },
   { id: "smart_followup", ar: "المتابعة الذكية", en: "Smart Follow-up", icon: Sparkles },
   { id: "timebased", ar: "الزمنية", en: "Scheduled", icon: CalendarClock },
   { id: "ab", ar: "A/B اختبار", en: "A/B Test", icon: FlaskConical },
@@ -141,23 +156,39 @@ function TemplatePicker({ templates, value, onChange, lang }: {
   );
 }
 
-function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, lang }: {
+function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, allRules = [], lang }: {
   rule: AutomationRule; onToggle: () => void; onEdit: () => void;
-  onDelete: () => void; showKeyword?: boolean; lang: Lang;
+  onDelete: () => void; showKeyword?: boolean; allRules?: AutomationRule[]; lang: Lang;
 }) {
+  const isInteractive = rule.replyType === "INTERACTIVE_MENU";
+  const interactiveCfg = rule.interactiveConfig;
+
   return (
     <div className={`bg-white dark:bg-gray-800 border rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all
       ${rule.isEnabled ? "border-gray-200 dark:border-gray-700 hover:shadow-md" : "border-gray-100 dark:border-gray-700/50 opacity-60"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-            ${rule.isEnabled ? "bg-green-50 text-green-600" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
-            <Key className="w-4 h-4" />
+            ${rule.isEnabled
+              ? (isInteractive ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" : "bg-green-50 text-green-600")
+              : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
+            {isInteractive ? <ListFilter className="w-4 h-4" /> : <Key className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{rule.name}</p>
-            {showKeyword && rule.triggerValue && (
-              <p className="text-xs text-gray-400 mt-0.5 font-mono">"{rule.triggerValue}"</p>
+            {isInteractive ? (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium">
+                  {rule.triggerType === "FIRST_MESSAGE" ? tx(lang, "أول رسالة (ترحيب)", "First Message (Welcome)") : `"${rule.triggerValue}"`}
+                </span>
+                <span className="text-[11px] text-gray-400">
+                  {interactiveCfg?.buttons?.length ?? 0} {tx(lang, "أزرار", "buttons")}
+                </span>
+              </div>
+            ) : (
+              showKeyword && rule.triggerValue && (
+                <p className="text-xs text-gray-400 mt-0.5 font-mono">"{rule.triggerValue}"</p>
+              )
             )}
           </div>
         </div>
@@ -177,20 +208,51 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, lang }
           </DropdownMenu>
         </div>
       </div>
-      {rule.replyMediaUrl && (
-        <div className="relative w-full rounded-lg overflow-hidden max-h-24">
-          <img src={rule.replyMediaUrl} alt="" className="w-full object-cover max-h-24" />
-          {rule.replyContent && (
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1">
-              <p className="text-[10px] text-white line-clamp-1">{rule.replyContent}</p>
+
+      {isInteractive ? (
+        <div className="space-y-2">
+          {interactiveCfg?.body && (
+            <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed whitespace-pre-wrap">
+              {interactiveCfg.body}
+            </p>
+          )}
+          {interactiveCfg?.buttons && interactiveCfg.buttons.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {interactiveCfg.buttons.map((b, idx) => {
+                const targetRule = allRules.find(r => r.id === b.nextStepId);
+                return (
+                  <span key={b.buttonId || idx} className="text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-md px-2 py-0.5 flex items-center gap-1">
+                    <span className="font-medium">{b.text}</span>
+                    {targetRule && (
+                      <span className="text-indigo-600 dark:text-indigo-400 text-[10px] flex items-center gap-0.5">
+                        <CornerDownLeft className="w-2.5 h-2.5" />
+                        {targetRule.name}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
+      ) : (
+        <>
+          {rule.replyMediaUrl && (
+            <div className="relative w-full rounded-lg overflow-hidden max-h-24">
+              <img src={rule.replyMediaUrl} alt="" className="w-full object-cover max-h-24" />
+              {rule.replyContent && (
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1">
+                  <p className="text-[10px] text-white line-clamp-1">{rule.replyContent}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {!rule.replyMediaUrl && rule.replyContent && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed">{rule.replyContent}</p>
+          )}
+          {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg w-fit">{tx(lang, "قالب واتساب معتمد", "Approved WhatsApp template")}</span>}
+        </>
       )}
-      {!rule.replyMediaUrl && rule.replyContent && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 line-clamp-2 leading-relaxed">{rule.replyContent}</p>
-      )}
-      {rule.templateId && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg w-fit">{tx(lang, "قالب واتساب معتمد", "Approved WhatsApp template")}</span>}
     </div>
   );
 }
@@ -290,9 +352,54 @@ export default function Automation() {
 
   useEffect(() => { load(); }, [load]);
 
-  const kwRules = rules.filter(r => r.triggerType === "KEYWORD");
-  const welcomeRules = rules.filter(r => r.triggerType === "FIRST_MESSAGE");
+  const kwRules = rules.filter(r => r.triggerType === "KEYWORD" && r.replyType !== "INTERACTIVE_MENU");
+  const welcomeRules = rules.filter(r => r.triggerType === "FIRST_MESSAGE" && r.replyType !== "INTERACTIVE_MENU");
+  const interactiveRules = rules.filter(r => r.replyType === "INTERACTIVE_MENU");
   const timeRules = rules.filter(r => r.triggerType === "TIME_BASED");
+
+  // ─── Interactive Menu form state ──────────────────────────────────────────
+  const [interactiveForm, setInteractiveForm] = useState<{
+    name: string;
+    triggerType: "FIRST_MESSAGE" | "KEYWORD";
+    keyword: string;
+    body: string;
+    footer: string;
+    buttons: Array<{ buttonId: string; text: string; nextStepId: string }>;
+  }>({
+    name: "",
+    triggerType: "FIRST_MESSAGE",
+    keyword: "",
+    body: "",
+    footer: "",
+    buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+  });
+
+  const handleAddInteractiveButton = () => {
+    if (interactiveForm.buttons.length >= 3) return;
+    setInteractiveForm(f => ({
+      ...f,
+      buttons: [
+        ...f.buttons,
+        { buttonId: `btn_${Date.now()}_${f.buttons.length + 1}`, text: "", nextStepId: "" }
+      ],
+    }));
+  };
+
+  const handleUpdateInteractiveButton = (index: number, field: "text" | "nextStepId", value: string) => {
+    setInteractiveForm(f => {
+      const updated = [...f.buttons];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...f, buttons: updated };
+    });
+  };
+
+  const handleRemoveInteractiveButton = (index: number) => {
+    if (interactiveForm.buttons.length <= 1) return;
+    setInteractiveForm(f => ({
+      ...f,
+      buttons: f.buttons.filter((_, i) => i !== index),
+    }));
+  };
 
   // ─── Dialog open ──────────────────────────────────────────────────────────
   const handleMediaUpload = async (file: File) => {
@@ -311,27 +418,128 @@ export default function Automation() {
 
   const openCreate = (mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(null);
-    setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
+    if (mode === "interactive") {
+      setInteractiveForm({
+        name: "",
+        triggerType: "FIRST_MESSAGE",
+        keyword: "",
+        body: "",
+        footer: "",
+        buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+      });
+    } else {
+      setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
+    }
     setShowDialog(true);
   };
 
   const openEdit = (rule: AutomationRule, mode: AutoSubTab) => {
     setDialogMode(mode); setEditTarget(rule);
-    let days: string[] = []; let hour = "09"; let minute = "00";
-    let tbAudienceId = ""; let tbMaxContacts = "500";
-    if (rule.triggerType === "TIME_BASED" && rule.triggerValue) {
-      try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch { }
+    if (mode === "interactive") {
+      const cfg = rule.interactiveConfig;
+      setInteractiveForm({
+        name: rule.name,
+        triggerType: (rule.triggerType === "KEYWORD" ? "KEYWORD" : "FIRST_MESSAGE"),
+        keyword: rule.triggerValue ?? "",
+        body: cfg?.body || rule.replyContent || "",
+        footer: cfg?.footer || "",
+        buttons: (cfg?.buttons && cfg.buttons.length > 0)
+          ? cfg.buttons.map(b => ({
+              buttonId: b.buttonId,
+              text: b.text,
+              nextStepId: b.nextStepId || "",
+            }))
+          : [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+      });
+    } else {
+      let days: string[] = []; let hour = "09"; let minute = "00";
+      let tbAudienceId = ""; let tbMaxContacts = "500";
+      if (rule.triggerType === "TIME_BASED" && rule.triggerValue) {
+        try { const p = JSON.parse(rule.triggerValue); days = p.days ?? []; hour = p.hour ?? "09"; minute = p.minute ?? "00"; tbAudienceId = p.audienceId ?? ""; tbMaxContacts = String(p.maxContacts ?? 500); } catch { }
+      }
+      setRuleForm({
+        name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "", replyMediaUrl: rule.replyMediaUrl ?? "",
+        templateId: rule.templateId ?? "",
+        days, hour, minute, tbAudienceId, tbMaxContacts,
+      });
     }
-    setRuleForm({
-      name: rule.name, keyword: rule.triggerValue ?? "", reply: rule.replyContent ?? "", replyMediaUrl: rule.replyMediaUrl ?? "",
-      templateId: rule.templateId ?? "",
-      days, hour, minute, tbAudienceId, tbMaxContacts,
-    });
     setShowDialog(true);
   };
 
   // ─── Save rule ────────────────────────────────────────────────────────────
   const saveRule = async () => {
+    if (dialogMode === "interactive") {
+      const { name, triggerType, keyword, body, footer, buttons } = interactiveForm;
+      if (!name.trim()) { toast.error(tx(lang, "اسم القاعدة مطلوب", "Rule name is required")); return; }
+      if (triggerType === "KEYWORD" && !keyword.trim()) {
+        toast.error(tx(lang, "الكلمة المفتاحية مطلوبة", "Keyword is required"));
+        return;
+      }
+      if (!body.trim()) {
+        toast.error(tx(lang, "نص الرسالة مطلوب", "Message body is required"));
+        return;
+      }
+      if (buttons.length === 0 || buttons.length > 3) {
+        toast.error(tx(lang, "يجب تحديد بين 1 و 3 أزرار", "Must specify between 1 and 3 buttons"));
+        return;
+      }
+      for (let i = 0; i < buttons.length; i++) {
+        if (!buttons[i].text.trim()) {
+          toast.error(tx(lang, `نص الزر ${i + 1} مطلوب`, `Button ${i + 1} text is required`));
+          return;
+        }
+        if (buttons[i].text.trim().length > 20) {
+          toast.error(tx(lang, `نص الزر ${i + 1} لا يتجاوز 20 حرفاً (حد واتساب)`, `Button ${i + 1} text must not exceed 20 characters`));
+          return;
+        }
+        if (editTarget && buttons[i].nextStepId === editTarget.id) {
+          toast.error(tx(lang, "لا يمكن للزر الانتقال لنفس القائمة لمنع التكرار اللانهائي", "A button cannot transition to its own rule"));
+          return;
+        }
+      }
+
+      setSaving(true);
+      try {
+        const payload = {
+          name: name.trim(),
+          triggerType,
+          triggerValue: triggerType === "KEYWORD" ? keyword.trim() : null,
+          replyType: "INTERACTIVE_MENU",
+          replyContent: body.trim(),
+          interactiveConfig: {
+            body: body.trim(),
+            footer: footer.trim() || undefined,
+            buttons: buttons.map(b => ({
+              buttonId: b.buttonId,
+              text: b.text.trim(),
+              nextStepId: b.nextStepId.trim() || null,
+            })),
+          },
+          humanKeywords: [],
+          pauseOnReply: true,
+        };
+        const method = editTarget ? "PATCH" : "POST";
+        const bodyReq = editTarget ? JSON.stringify({ id: editTarget.id, ...payload }) : JSON.stringify(payload);
+        const r = await fetch("/api/automation", { method, headers: { "Content-Type": "application/json" }, body: bodyReq });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error);
+        if (editTarget) {
+          toast.success(tx(lang, "تم التعديل", "Updated"));
+          setRules(prev => prev.map(x => x.id === editTarget.id ? d : x));
+        } else {
+          toast.success(tx(lang, "تم الإضافة", "Added"));
+          setRules(prev => [...prev, d]);
+        }
+        window.dispatchEvent(new Event("trigger-review-prompt"));
+        setShowDialog(false);
+      } catch (e: any) {
+        toast.error(e.message ?? tx(lang, "خطأ في الحفظ", "Save failed"));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     const { name, keyword, reply, templateId, days, hour, minute, tbAudienceId, tbMaxContacts } = ruleForm;
     if (!name.trim()) { toast.error(tx(lang, "اسم القاعدة مطلوب", "Rule name is required")); return; }
 
@@ -455,6 +663,7 @@ export default function Automation() {
   const badgeCount: Record<AutoSubTab, number> = {
     keywords: kwRules.filter(r => r.isEnabled).length,
     welcome: welcomeRules.filter(r => r.isEnabled).length,
+    interactive: interactiveRules.filter(r => r.isEnabled).length,
     smart_followup: 0,
     timebased: timeRules.filter(r => r.isEnabled).length,
     ab: 0,
@@ -495,7 +704,7 @@ export default function Automation() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {kwRules.map(rule => (
-              <RuleCard key={rule.id} rule={rule} lang={lang} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "keywords")} onDelete={() => deleteRule(rule.id)} />
+              <RuleCard key={rule.id} rule={rule} lang={lang} allRules={rules} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "keywords")} onDelete={() => deleteRule(rule.id)} />
             ))}
           </div>
         )}
@@ -519,7 +728,7 @@ export default function Automation() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {welcomeRules.map(rule => (
-                <RuleCard key={rule.id} rule={rule} lang={lang} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "welcome")} onDelete={() => deleteRule(rule.id)} />
+                <RuleCard key={rule.id} rule={rule} lang={lang} allRules={rules} showKeyword={false} onToggle={() => toggleRule(rule)} onEdit={() => openEdit(rule, "welcome")} onDelete={() => deleteRule(rule.id)} />
               ))}
               {welcomeRules.length < 3 && (
                 <button onClick={() => openCreate("welcome")}
@@ -530,6 +739,56 @@ export default function Automation() {
             </div>
           )}
         </div>
+      </div>
+    );
+
+    if (activeSubTab === "interactive") return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{tx(lang, "قائمة تفاعلية (Reply Buttons)", "Interactive Menu")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {interactiveRules.length > 0
+                ? tx(lang, `${interactiveRules.filter(r => r.isEnabled).length} مفعّلة من ${interactiveRules.length}`, `${interactiveRules.filter(r => r.isEnabled).length} active out of ${interactiveRules.length}`)
+                : tx(lang, "أرسل رسائل بأزرار خيارات تمكّن العميل من التفاعل الفوري", "Send messages with reply buttons for instant customer actions")}
+            </p>
+          </div>
+          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 h-9 text-sm shadow-sm" onClick={() => openCreate("interactive")}>
+            <Plus className="w-4 h-4" /> {tx(lang, "قائمة جديدة", "New Menu")}
+          </Button>
+        </div>
+
+        <div className="flex items-start gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3 mb-4 text-sm text-indigo-700 dark:text-indigo-300">
+          <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />
+          <span>{tx(lang, "القائمة التفاعلية ترسل رسالة واتساب مع حتى 3 أزرار رد سريعة. عند ضغط العميل على أي زر يتم تنفيذ الخطوة التالية المرتبطة به فوراً.", "Interactive menu sends a WhatsApp message with up to 3 reply buttons. When the customer clicks a button, its connected next step executes automatically.")}</span>
+        </div>
+
+        {interactiveRules.length === 0 ? (
+          <EmptyState
+            icon={<ListFilter className="w-10 h-10 text-indigo-300" />}
+            title={tx(lang, "لا توجد قوائم تفاعلية بعد", "No interactive menus yet")}
+            desc={tx(lang, "أنشئ قائمة تفاعلية لتمكين عملائك من اختيار الخدمات أو المنتجات بضغطة زر واحدة", "Create an interactive menu to let customers choose services or products with a single tap")}
+            action={
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2" onClick={() => openCreate("interactive")}>
+                <Plus className="w-4 h-4" /> {tx(lang, "إنشاء أول قائمة تفاعلية", "Create your first interactive menu")}
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {interactiveRules.map(rule => (
+              <RuleCard
+                key={rule.id}
+                rule={rule}
+                lang={lang}
+                allRules={rules}
+                onToggle={() => toggleRule(rule)}
+                onEdit={() => openEdit(rule, "interactive")}
+                onDelete={() => deleteRule(rule.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
 
@@ -779,27 +1038,225 @@ export default function Automation() {
       {/* AI Tab — Phase 2 UX Dashboard, Knowledge Cards & Live Test Chat */}
       {activeTab === "ai" && <AiAgentDashboard lang={lang} />}
 
-      {/* Dialog — shared for keyword / welcome / noreply / timebased */}
+      {/* Dialog — shared for keyword / welcome / interactive / timebased */}
       <Dialog open={showDialog} onOpenChange={v => { if (!v) setShowDialog(false); }}>
-        <DialogContent className="max-w-md" dir={lang === "ar" ? "rtl" : "ltr"}>
+        <DialogContent className={dialogMode === "interactive" ? "max-w-2xl max-h-[90vh] overflow-y-auto" : "max-w-md"} dir={lang === "ar" ? "rtl" : "ltr"}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               {dialogMode === "keywords" && <><Key className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل الكلمة", "Edit keyword") : tx(lang, "كلمة مفتاحية جديدة", "New keyword")}</>}
               {dialogMode === "welcome" && <><Hand className="w-5 h-5 text-green-500" /> {editTarget ? tx(lang, "تعديل رسالة الترحيب", "Edit welcome message") : tx(lang, "رسالة ترحيب جديدة", "New welcome message")}</>}
+              {dialogMode === "interactive" && <><ListFilter className="w-5 h-5 text-indigo-600" /> {editTarget ? tx(lang, "تعديل القائمة التفاعلية", "Edit Interactive Menu") : tx(lang, "قائمة تفاعلية جديدة", "New Interactive Menu")}</>}
               {dialogMode === "timebased" && <><CalendarClock className="w-5 h-5 text-purple-500" /> {editTarget ? tx(lang, "تعديل الجدولة", "Edit schedule") : tx(lang, "جدولة زمنية جديدة", "New schedule")}</>}
             </DialogTitle>
             <DialogDescription>
               {dialogMode === "keywords" && tx(lang, "لما العميل يكتب الكلمة دي، البوت يرد فوراً", "When the customer sends this keyword, the bot replies instantly")}
               {dialogMode === "welcome" && tx(lang, "ترسل تلقائياً على أول رسالة من عميل جديد", "Sent automatically on the first message from a new customer")}
+              {dialogMode === "interactive" && tx(lang, "أرسل رسالة تحتوي على أزرار خيارات تفاعلية، وينتقل العميل للخطوة المرتبطة بكل زر", "Send an interactive menu with reply buttons that execute connected next steps")}
               {dialogMode === "timebased" && tx(lang, "ترسل قالباً في وقت وأيام محددة أسبوعياً", "Sends a template at selected weekly time slots")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
-              <Label className="text-sm mb-1.5 block">{tx(lang, "اسم القاعدة", "Rule name")} *</Label>
-              <Input value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder={tx(lang, "مثال: رد السعر", "e.g. Price reply")} />
-            </div>
+            {dialogMode !== "interactive" && (
+              <div>
+                <Label className="text-sm mb-1.5 block">{tx(lang, "اسم القاعدة", "Rule name")} *</Label>
+                <Input value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder={tx(lang, "مثال: رد السعر", "e.g. Price reply")} />
+              </div>
+            )}
+
+            {dialogMode === "interactive" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                {/* Form fields */}
+                <div className="md:col-span-7 space-y-4">
+                  <div>
+                    <Label className="text-sm mb-1.5 block">{tx(lang, "اسم القائمة", "Menu name")} *</Label>
+                    <Input
+                      value={interactiveForm.name}
+                      onChange={e => setInteractiveForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder={tx(lang, "مثال: القائمة الرئيسية / خيارات الخدمة", "e.g. Main Menu / Service Options")}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm mb-1.5 block">{tx(lang, "نوع المشغّل (Trigger)", "Trigger Type")} *</Label>
+                      <Select
+                        value={interactiveForm.triggerType}
+                        onValueChange={(v: "FIRST_MESSAGE" | "KEYWORD") => setInteractiveForm(f => ({ ...f, triggerType: v }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIRST_MESSAGE">{tx(lang, "أول رسالة (ترحيب)", "First Message (Welcome)")}</SelectItem>
+                          <SelectItem value="KEYWORD">{tx(lang, "كلمة مفتاحية", "Keyword")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {interactiveForm.triggerType === "KEYWORD" && (
+                      <div>
+                        <Label className="text-sm mb-1.5 block">{tx(lang, "الكلمة المفتاحية", "Keyword")} *</Label>
+                        <Input
+                          value={interactiveForm.keyword}
+                          onChange={e => setInteractiveForm(f => ({ ...f, keyword: e.target.value }))}
+                          placeholder={tx(lang, "مثال: قائمة / خدمات", "e.g. menu / services")}
+                          dir="rtl"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-sm block">{tx(lang, "نص الرسالة (Message Body)", "Message Body")} *</Label>
+                      <span className="text-[11px] text-gray-400 font-mono">{interactiveForm.body.length}/1024</span>
+                    </div>
+                    <Textarea
+                      value={interactiveForm.body}
+                      onChange={e => setInteractiveForm(f => ({ ...f, body: e.target.value.slice(0, 1024) }))}
+                      placeholder={tx(lang, "أهلاً بك 👋\nاختر الخدمة التي تناسبك من الخيارات التالية:", "Hello 👋\nPlease choose a service from the options below:")}
+                      className="min-h-[100px] resize-none text-sm"
+                      dir="rtl"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-sm block flex items-center gap-1.5">
+                        <span>{tx(lang, "نص التذييل (Footer)", "Footer text")}</span>
+                        <span className="text-gray-400 font-normal text-xs">{tx(lang, "(اختياري)", "(optional)")}</span>
+                      </Label>
+                      <span className="text-[11px] text-gray-400 font-mono">{interactiveForm.footer.length}/60</span>
+                    </div>
+                    <Input
+                      value={interactiveForm.footer}
+                      onChange={e => setInteractiveForm(f => ({ ...f, footer: e.target.value.slice(0, 60) }))}
+                      placeholder={tx(lang, "مثال: اختر خياراً للمتابعة", "e.g. Select to continue")}
+                      dir="rtl"
+                    />
+                  </div>
+
+                  {/* Buttons Builder */}
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <span>{tx(lang, "أزرار الرد (Reply Buttons)", "Reply Buttons")}</span>
+                        <span className="text-xs font-normal text-gray-400 font-mono">({interactiveForm.buttons.length}/3)</span>
+                      </Label>
+                    </div>
+
+                    <div className="space-y-3">
+                      {interactiveForm.buttons.map((btn, idx) => (
+                        <div key={btn.buttonId || idx} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                              {tx(lang, `الزر ${idx + 1}`, `Button ${idx + 1}`)}
+                            </span>
+                            {interactiveForm.buttons.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveInteractiveButton(idx)}
+                                className="text-gray-400 hover:text-red-500 transition p-1"
+                                title={tx(lang, "حذف الزر", "Delete button")}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <Label className="text-xs text-gray-500">{tx(lang, "نص الزر", "Button Text")} *</Label>
+                                <span className="text-[10px] text-gray-400 font-mono">{btn.text.length}/20</span>
+                              </div>
+                              <Input
+                                value={btn.text}
+                                onChange={e => handleUpdateInteractiveButton(idx, "text", e.target.value.slice(0, 20))}
+                                placeholder={idx === 0 ? tx(lang, "الأسعار", "Pricing") : idx === 1 ? tx(lang, "المنتجات", "Products") : tx(lang, "خدمة العملاء", "Support")}
+                                className="h-8 text-xs bg-white dark:bg-gray-800"
+                                dir="rtl"
+                              />
+                            </div>
+
+                            <div>
+                              <Label className="text-xs text-gray-500 mb-1 block">{tx(lang, "الخطوة التالية (Next Step)", "Next Step")}</Label>
+                              <Select
+                                value={btn.nextStepId || "NONE"}
+                                onValueChange={v => handleUpdateInteractiveButton(idx, "nextStepId", v === "NONE" ? "" : v)}
+                              >
+                                <SelectTrigger className="h-8 text-xs bg-white dark:bg-gray-800">
+                                  <SelectValue placeholder={tx(lang, "اختر الخطوة التالية...", "Choose next step...")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="NONE">{tx(lang, "بدون خطوة تالية (تسجيل الاختيار فقط)", "None (Record choice only)")}</SelectItem>
+                                  {rules
+                                    .filter(r => r.id !== editTarget?.id)
+                                    .map(r => (
+                                      <SelectItem key={r.id} value={r.id}>
+                                        {r.name} {r.replyType === "INTERACTIVE_MENU" ? `(${tx(lang, "قائمة", "menu")})` : ""}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddInteractiveButton}
+                        disabled={interactiveForm.buttons.length >= 3}
+                        className="w-full gap-1.5 text-xs h-9 border-dashed"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        {tx(lang, "إضافة زر جديد", "Add Button")}
+                      </Button>
+                      {interactiveForm.buttons.length >= 3 && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center mt-1 font-medium">
+                          {tx(lang, "الحد الأقصى 3 أزرار (وفقاً لقيود واتساب الرسمية)", "Maximum 3 buttons (WhatsApp Cloud API limit)")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live WhatsApp Preview */}
+                <div className="md:col-span-5 flex flex-col items-center justify-start pt-2">
+                  <Label className="text-xs font-semibold text-gray-500 mb-2">{tx(lang, "معاينة واتساب المباشرة", "WhatsApp Live Preview")}</Label>
+                  <div className="w-full max-w-[260px] bg-[#EFEAE2] dark:bg-[#0b141a] rounded-2xl p-3 border border-gray-300 dark:border-gray-800 shadow-inner">
+                    <div className="bg-white dark:bg-[#202c33] rounded-2xl rounded-tr-sm p-3 shadow-sm border border-gray-200/50 dark:border-gray-700/50 space-y-2">
+                      <p className="text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                        {interactiveForm.body || tx(lang, "نص الرسالة سيظهر هنا...", "Message body will appear here...")}
+                      </p>
+                      {interactiveForm.footer && (
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700/50 pt-1">
+                          {interactiveForm.footer}
+                        </p>
+                      )}
+                      <div className="text-[9px] text-gray-400 text-left pt-0.5">
+                        12:00 PM
+                      </div>
+                    </div>
+
+                    {/* Interactive buttons mockup */}
+                    <div className="mt-1.5 space-y-1">
+                      {interactiveForm.buttons.map((b, idx) => (
+                        <div
+                          key={b.buttonId || idx}
+                          className="bg-white dark:bg-[#202c33] text-[#00a884] dark:text-[#00a884] font-medium text-xs text-center py-2 px-3 rounded-xl shadow-sm border border-gray-200/60 dark:border-gray-700/60 truncate cursor-default select-none hover:bg-gray-50 dark:hover:bg-[#222e35] transition"
+                        >
+                          {b.text.trim() || `${tx(lang, "زر", "Button")} ${idx + 1}`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {dialogMode === "keywords" && (
               <>
@@ -950,7 +1407,11 @@ export default function Automation() {
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Button variant="outline" onClick={() => setShowDialog(false)}>{tx(lang, "إلغاء", "Cancel")}</Button>
             <div className="flex-1" />
-            <Button className="bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={saveRule} disabled={saving}>
+            <Button
+              className={dialogMode === "interactive" ? "bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5" : "bg-green-500 hover:bg-green-600 text-white gap-1.5"}
+              onClick={saveRule}
+              disabled={saving}
+            >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               {editTarget ? tx(lang, "حفظ التعديلات", "Save changes") : tx(lang, "إضافة", "Add")}
             </Button>

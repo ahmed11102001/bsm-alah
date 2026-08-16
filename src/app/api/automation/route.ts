@@ -9,12 +9,25 @@ import {
   AutomationCreateSchema,
   AutomationPatchSchema,
   AutomationDeleteSchema,
+  InteractiveMenuConfigSchema,
   parseInput,
 } from "@/lib/schemas";
 import { requirePermission } from "@/lib/permissions";
 
 function ownerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
+
+async function validateInteractiveConfig(userId: string, config: unknown, currentRuleId?: string) {
+  const parsed = InteractiveMenuConfigSchema.safeParse(config);
+  if (!parsed.success) return "إعدادات القائمة التفاعلية غير صحيحة";
+  const nextStepIds = parsed.data.buttons.map(button => button.nextStepId).filter((id): id is string => Boolean(id));
+  if (currentRuleId && nextStepIds.includes(currentRuleId)) return "لا يمكن للقائمة الانتقال إلى نفسها";
+  if (nextStepIds.length) {
+    const count = await prisma.automationRule.count({ where: { id: { in: nextStepIds }, userId } });
+    if (count !== new Set(nextStepIds).size) return "يوجد Next Step غير تابع لهذا الحساب";
+  }
+  return null;
 }
 
 // GET /api/automation
@@ -49,6 +62,7 @@ export async function POST(req: NextRequest) {
   const {
     name, triggerType, triggerValue, replyType, replyContent,
     templateId, extraInstructions, humanKeywords, pauseOnReply, replyMediaUrl,
+    interactiveConfig,
   } = parsed.data;
 
   // تحقق خاص بـ AI — يحتاج DB
@@ -61,6 +75,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         error: "يجب إدخال وصف النشاط في إعدادات البراند أولاً قبل استخدام الرد الذكي",
       }, { status: 400 });
+  }
+
+  // تحقق خاص بـ القائمة التفاعلية
+  if (replyType === ReplyType.INTERACTIVE_MENU) {
+    const validationError = await validateInteractiveConfig(owner, interactiveConfig);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
   }
 
   const rule = await prisma.automationRule.create({
@@ -76,6 +98,7 @@ export async function POST(req: NextRequest) {
       extraInstructions: extraInstructions?.trim() || null,
       humanKeywords:     humanKeywords.map((k: string) => k.trim()).filter(Boolean),
       pauseOnReply,
+      interactiveConfig: replyType === ReplyType.INTERACTIVE_MENU ? (interactiveConfig as any) : null,
     },
   });
 
@@ -92,11 +115,21 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const { id, ...rest } = parsed.data as any;
+  const owner = ownerId(session);
 
   const existing = await prisma.automationRule.findFirst({
-    where: { id, userId: ownerId(session) },
+    where: { id, userId: owner },
   });
   if (!existing) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
+
+  const targetReplyType = rest.replyType ?? existing.replyType;
+  if (targetReplyType === ReplyType.INTERACTIVE_MENU && (rest.interactiveConfig !== undefined || rest.replyType !== undefined)) {
+    const cfgToValidate = rest.interactiveConfig !== undefined ? rest.interactiveConfig : existing.interactiveConfig;
+    const validationError = await validateInteractiveConfig(owner, cfgToValidate, id);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+  }
 
   const updated = await prisma.automationRule.update({ where: { id }, data: rest });
   return NextResponse.json(updated);

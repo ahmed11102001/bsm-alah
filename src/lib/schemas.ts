@@ -164,6 +164,23 @@ export type TeamInviteInput = z.infer<typeof TeamInviteSchema>;
 const triggerValues = Object.values(TriggerType) as [string, ...string[]];
 const replyValues = Object.values(ReplyType) as [string, ...string[]];
 
+const InteractiveButtonSchema = z.object({
+  buttonId: z.string().trim().min(1).max(100),
+  text: z.string().trim().min(1).max(20),
+  nextStepId: z.string().trim().min(1).max(100).nullable().optional(),
+});
+
+export const InteractiveMenuConfigSchema = z.object({
+  body: z.string().trim().min(1).max(1024),
+  footer: z.string().trim().max(60).optional().default(""),
+  buttons: z.array(InteractiveButtonSchema).min(1).max(3),
+}).superRefine((data, ctx) => {
+  const ids = data.buttons.map(button => button.buttonId);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["buttons"], message: "buttonId values must be unique" });
+  }
+});
+
 /** POST /api/automation */
 export const AutomationCreateSchema = z
   .object({
@@ -177,6 +194,7 @@ export const AutomationCreateSchema = z
     humanKeywords: z.array(z.string().trim()).optional().default([]),
     pauseOnReply: z.boolean().optional().default(true),
     replyMediaUrl: z.string().url().optional().or(z.literal("")),
+    interactiveConfig: InteractiveMenuConfigSchema.optional(),
   })
   .superRefine((data, ctx) => {
     if (data.triggerType === TriggerType.KEYWORD && !data.triggerValue) {
@@ -199,6 +217,9 @@ export const AutomationCreateSchema = z
         path: ["templateId"],
         message: "اختر قالباً",
       });
+    }
+    if (data.replyType === ReplyType.INTERACTIVE_MENU && !data.interactiveConfig) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["interactiveConfig"], message: "Interactive menu configuration is required" });
     }
   });
 export type AutomationCreateInput = z.infer<typeof AutomationCreateSchema>;
