@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getGoogleDriveClient, ownedConnection } from "@/lib/google-sheets";
+import { requirePermission } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+
+  if (denied) return denied;
   try {
-    const connection = await ownedConnection(session.user.id, new URL(req.url).searchParams.get("connectionId"));
+    const connection = await ownedConnection(session!.user.id, new URL(req.url).searchParams.get("connectionId"));
     const drive = await getGoogleDriveClient(connection);
     const response = await drive.files.list({
       q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",

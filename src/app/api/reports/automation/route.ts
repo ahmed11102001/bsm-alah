@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -47,8 +48,8 @@ function timeAgo(date: Date | null): string {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    const denied = requirePermission(session, "REPORTS_VIEW");
+    if (denied) return denied;
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);

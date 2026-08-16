@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getGoogleSheetsClient, ownedConnection } from "@/lib/google-sheets";
+import { requirePermission } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+
+  if (denied) return denied;
   const params = new URL(req.url).searchParams;
   const spreadsheetId = params.get("spreadsheetId");
   if (!spreadsheetId) return NextResponse.json({ error: "spreadsheetId مطلوب" }, { status: 400 });
   try {
-    const connection = await ownedConnection(session.user.id, params.get("connectionId"));
+    const connection = await ownedConnection(session!.user.id, params.get("connectionId"));
     const sheets = await getGoogleSheetsClient(connection);
     const response = await sheets.spreadsheets.get({
       spreadsheetId,

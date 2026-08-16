@@ -3,14 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ownedConnection } from "@/lib/google-sheets";
 import { GoogleContactsLimitError, importGoogleSheet } from "@/lib/google-sheets-sync";
+import { requirePermission } from "@/lib/permissions";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+
+  if (denied) return denied;
   try {
     const body = await req.json();
     if (!body.connectionId || !body.spreadsheetId || !body.sheetName) return NextResponse.json({ error: "بيانات Google Sheets ناقصة" }, { status: 400 });
-    const connection = await ownedConnection(session.user.id, body.connectionId);
+    const connection = await ownedConnection(session!.user.id, body.connectionId);
     const result = await importGoogleSheet(connection, body, { allowPartial: body.allowPartial === true });
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+import { requirePermission, hasPermission } from "@/lib/permissions";
 
 // Helper function to upload mock/placeholder media files to Meta and get a handle
 async function getMetaMediaHandle(accessToken: string, mediaType: string): Promise<string> {
@@ -69,10 +70,9 @@ async function getMetaMediaHandle(accessToken: string, mediaType: string): Promi
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
-    }
-    const ownerId = (session.user as any).parentId || session.user.id;
+    const denied = requirePermission(session, "TEMPLATES_VIEW");
+    if (denied) return denied;
+    const ownerId = (session!.user as any).parentId || session!.user.id;
     const templates = await prisma.template.findMany({
       where: { userId: ownerId },
       orderBy: { createdAt: "desc" }
@@ -84,7 +84,9 @@ export async function GET(req: Request) {
 }
 
 // helper: resolves ownerId from session OR MCP internal header
-async function resolveOwner(req: Request): Promise<string | null> {
+// لو النداء عن طريق الجلسة (مش MCP)، بيتحقق كمان من TEMPLATES_MANAGE.
+// بيرجع null لو مفيش مستخدم، أو "FORBIDDEN" لو مستخدم بس من غير صلاحية.
+async function resolveOwner(req: Request): Promise<string | null | "FORBIDDEN"> {
   // MCP internal call — header set by MCP route itself (server-to-server)
   const mcpInternal = (req as any).headers?.get?.("x-mcp-internal");
   const mcpOwnerId = (req as any).headers?.get?.("x-mcp-user-id");
@@ -92,6 +94,7 @@ async function resolveOwner(req: Request): Promise<string | null> {
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
+  if (!hasPermission(session.user.role, "TEMPLATES_MANAGE")) return "FORBIDDEN";
   return (session.user as any).parentId || session.user.id;
 }
 
@@ -99,6 +102,8 @@ async function resolveOwner(req: Request): Promise<string | null> {
 export async function POST(req: Request) {
   try {
     const ownerId = await resolveOwner(req);
+    if (ownerId === "FORBIDDEN")
+      return NextResponse.json({ error: "ليس لديك صلاحية للقيام بهذا الإجراء" }, { status: 403 });
     if (!ownerId) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
     const {
@@ -277,6 +282,8 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const ownerId = await resolveOwner(req);
+    if (ownerId === "FORBIDDEN")
+      return NextResponse.json({ error: "ليس لديك صلاحية للقيام بهذا الإجراء" }, { status: 403 });
     if (!ownerId) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     const { id } = await req.json();
 

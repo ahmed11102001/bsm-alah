@@ -12,6 +12,7 @@ import {
 import { enqueueCampaign } from "@/lib/queue";
 import { inngest } from "@/inngest/client";
 import { decryptToken } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
@@ -20,8 +21,8 @@ function resolveUserId(session: any): string {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    const denied = requirePermission(session, "CAMPAIGNS_VIEW");
+    if (denied) return denied;
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);
@@ -148,8 +149,8 @@ export async function POST(req: NextRequest) {
     }
 
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    const denied = requirePermission(session, "CAMPAIGNS_MANAGE");
+    if (denied) return denied;
 
     const userId = resolveUserId(session);
 
@@ -167,8 +168,8 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    const denied = requirePermission(session, "CAMPAIGNS_MANAGE");
+    if (denied) return denied;
 
     const userId = resolveUserId(session);
     const { id } = await req.json();

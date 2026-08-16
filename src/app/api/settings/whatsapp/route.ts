@@ -3,14 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { encryptToken } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
-    }
-    const ownerId = ((session.user as any).parentId as string | null) ?? (session.user as any).id;
+    const denied = requirePermission(session, "WHATSAPP_SETTINGS");
+    if (denied) return denied;
+    const ownerId = ((session!.user as any).parentId as string | null) ?? (session!.user as any).id;
 
     const { accessToken, phoneNumberId, wabaId } = await req.json();
 
@@ -56,11 +56,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "WHATSAPP_SETTINGS");
+    if (denied) return denied;
     const ownerId =
-      ((session.user as any).parentId as string | null) ?? (session.user as any).id;
+      ((session!.user as any).parentId as string | null) ?? (session!.user as any).id;
 
     // ── 1. وقّف الـ campaigns الشغّالة أو المجدولة ───────────────────────────
     // الـ campaign محتاجة access token — لو مفيش ربط الإرسال هيفشل

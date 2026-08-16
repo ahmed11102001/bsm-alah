@@ -30,6 +30,7 @@ import {
     createFawaterakInvoice,
     buildFawaterakCustomer,
 } from "@/lib/fawaterak";
+import { requirePermission } from "@/lib/permissions";
 
 function resolveOwnerId(session: any): string {
     return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -38,8 +39,8 @@ function resolveOwnerId(session: any): string {
 export async function POST(req: NextRequest) {
     // ── Auth ──────────────────────────────────────────────────────────────────
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-        return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    const denied = requirePermission(session, "BILLING_MANAGE");
+    if (denied) return denied;
 
     const ownerId = resolveOwnerId(session);
 

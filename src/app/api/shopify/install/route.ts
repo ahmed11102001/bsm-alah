@@ -5,6 +5,7 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { encryptToken }              from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 // الـ topics اللي محتاجينها — بالترتيب الصح
 const REQUIRED_TOPICS = [
@@ -128,8 +129,10 @@ async function verifyAccessToken(shop: string, token: string): Promise<boolean> 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email)
-      return NextResponse.json({ error: "يجب تسجيل الدخول أولاً" }, { status: 401 });
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const body = await req.json();
     const { storeName, shopDomain, accessToken } = body as {
@@ -165,7 +168,7 @@ export async function POST(req: NextRequest) {
     const verifiedDomain: string = normalized;
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser)
@@ -260,11 +263,13 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser)

@@ -5,16 +5,18 @@ import { authOptions }      from "@/lib/auth";
 import prisma               from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
+import { requirePermission } from "@/lib/permissions";
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser) return NextResponse.json({ error: "Not found" }, { status: 404 });

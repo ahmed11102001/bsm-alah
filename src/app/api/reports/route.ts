@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus } from "@/types/enums";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { requirePermission } from "@/lib/permissions";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -22,8 +23,8 @@ function dateRange(from?: string | null, to?: string | null) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user)
-      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    const denied = requirePermission(session, "REPORTS_VIEW");
+    if (denied) return denied;
 
     const userId = resolveUserId(session);
     const { searchParams } = new URL(req.url);

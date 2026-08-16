@@ -16,6 +16,7 @@ import prisma                        from "@/lib/prisma";
 import { sendWhatsAppMessage }       from "@/lib/whatsapp-api";
 import { decryptToken }              from "@/lib/crypto";
 import { MessageDirection, MessageStatus, MessageType } from "@/types/enums";
+import { requirePermission } from "@/lib/permissions";
 
 type StoreSource = "shopify" | "easyorders" | "woocommerce";
 
@@ -39,9 +40,8 @@ function getStoreId(user: any, source: StoreSource): string | undefined {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+  if (denied) return denied;
 
   const ownerId = resolveOwnerId(session);
 

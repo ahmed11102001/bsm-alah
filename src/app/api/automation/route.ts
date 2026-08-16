@@ -11,6 +11,7 @@ import {
   AutomationDeleteSchema,
   parseInput,
 } from "@/lib/schemas";
+import { requirePermission } from "@/lib/permissions";
 
 function ownerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -19,7 +20,8 @@ function ownerId(session: any): string {
 // GET /api/automation
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "AUTOMATION_VIEW");
+  if (denied) return denied;
 
   const rules = await prisma.automationRule.findMany({
     where:   { userId: ownerId(session) },
@@ -32,17 +34,14 @@ export async function GET() {
 // POST /api/automation
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "AUTOMATION_MANAGE");
+  if (denied) return denied;
 
   // Plan guard: automation — starter فأعلى
   const owner = ownerId(session);
   const agGuard = await checkFeature(owner, "scheduledCampaigns");
   const agBlocked = guardResponse(agGuard);
   if (agBlocked) return agBlocked;
-
-  // فقط OWNER / FULL_ACCESS
-  if ((session.user as any).role === "CHAT_ONLY")
-    return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
 
   const parsed = parseInput(AutomationCreateSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -86,7 +85,8 @@ export async function POST(req: NextRequest) {
 // PATCH /api/automation — تعديل جزئي
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "AUTOMATION_MANAGE");
+  if (denied) return denied;
 
   const parsed = parseInput(AutomationPatchSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -105,7 +105,8 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/automation
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "AUTOMATION_MANAGE");
+  if (denied) return denied;
 
   const parsed = parseInput(AutomationDeleteSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });

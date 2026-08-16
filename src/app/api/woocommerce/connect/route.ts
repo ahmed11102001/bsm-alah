@@ -8,13 +8,16 @@ import { generateWooWebhookUrl }     from "@/app/api/woocommerce/URL/route";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { encryptToken }              from "@/lib/crypto";
 import { inngest }                   from "@/inngest/client";
+import { requirePermission } from "@/lib/permissions";
 
 // ─── POST — ربط متجر WooCommerce (موحّد: credentials + webhook) ──────────────
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email)
-      return NextResponse.json({ error: "يجب تسجيل الدخول أولاً" }, { status: 401 });
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const body = await req.json().catch(() => ({}));
     const storeName    = typeof body.storeName === "string" ? body.storeName.trim() : "";
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "WooCommerce REST API requires HTTPS" }, { status: 400 });
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
@@ -115,11 +118,13 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });

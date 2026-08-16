@@ -6,14 +6,15 @@ import { authOptions } from "@/lib/auth";
 import crypto from "crypto";
 import { checkTeamLimit, guardResponse } from "@/lib/plan-guard";
 import { TeamInviteSchema, parseInput } from "@/lib/schemas";
+import { requirePermission } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+  const denied = requirePermission(session, "TEAM_VIEW");
+  if (denied) return denied;
 
   const team = await prisma.user.findMany({
-    where:   { parentId: session.user.id, deletedAt: null },
+    where:   { parentId: session!.user.id, deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(team);
@@ -21,10 +22,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role === "CHAT_ONLY")
-    return NextResponse.json({ error: "لا تملك صلاحية إضافة أعضاء" }, { status: 403 });
+  const denied = requirePermission(session, "TEAM_MANAGE");
+  if (denied) return denied;
 
-  const check = await checkTeamLimit(session.user.id);
+  const check = await checkTeamLimit(session!.user.id);
   const block = guardResponse(check);
   if (block) return block;
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
   const newMember = await prisma.user.create({
     data: {
       email, name, role,
-      parentId:   session.user.id,
+      parentId:   session!.user.id,
       inviteCode: inviteCode,
       password:   `PENDING_${crypto.randomUUID()}`,
     },
@@ -53,7 +54,8 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ status: 401 });
+  const denied = requirePermission(session, "TEAM_MANAGE");
+  if (denied) return denied;
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -61,7 +63,7 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "id مطلوب" }, { status: 400 });
 
   const member = await prisma.user.findFirst({
-    where: { id, parentId: session.user.id },
+    where: { id, parentId: session!.user.id },
   });
   if (!member) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
 

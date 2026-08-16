@@ -10,6 +10,7 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { OrderSource }               from "@/types/enums";
 import { decryptToken, encryptToken, isEncrypted } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 const PAGE_SIZE = 100;
 
@@ -34,12 +35,13 @@ interface EasyOrderItem {
 // ─── GET — حالة المزامنة الحالية ─────────────────────────────────────────────
 export async function GET(): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+  if (denied) return denied;
 
   const user = await prisma.user.findUnique({
-    where:  { email: session.user.email },
+    where:  { email: session!.user.email },
     select: {
       id:              true,
       easyOrdersStore: {
@@ -75,12 +77,13 @@ export async function GET(): Promise<NextResponse> {
 // ─── POST — ربط المتجر وسحب الطلبات ─────────────────────────────────────────
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+  if (denied) return denied;
 
   const user = await prisma.user.findUnique({
-    where:  { email: session.user.email },
+    where:  { email: session!.user.email },
     select: {
       id:              true,
       easyOrdersStore: {

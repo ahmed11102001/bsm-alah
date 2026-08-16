@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { createHmac } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { requirePermission } from "@/lib/permissions";
 
 function userToken(userId: string): string {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
@@ -17,7 +18,10 @@ function userToken(userId: string): string {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+  if (denied) return denied;
 
   const user = await prisma.user.findUnique({
     where:  { email: session.user?.email! },

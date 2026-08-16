@@ -7,15 +7,18 @@ import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { registerAllWebhooks }       from "@/app/api/shopify/install/route";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email)
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+    const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+
+    if (denied) return denied;
 
     const dbUser = await prisma.user.findUnique({
-      where:  { email: session.user.email },
+      where:  { email: session!.user.email },
       select: { id: true, parentId: true },
     });
     if (!dbUser)

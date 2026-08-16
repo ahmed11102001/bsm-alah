@@ -5,6 +5,7 @@ import { getGoogleSheetsClient, ownedConnection, parseColumnIndex, GOOGLE_SHEETS
 import { normalizePhone } from "@/lib/phone";
 import prisma from "@/lib/prisma";
 import { getContactsLimitStatus } from "@/lib/plan-guard";
+import { requirePermission } from "@/lib/permissions";
 
 function rangeFor(sheetName: string, endRow: number): string {
   const safeName = sheetName.replace(/'/g, "''");
@@ -13,14 +14,17 @@ function rangeFor(sheetName: string, endRow: number): string {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+
+  if (denied) return denied;
   const params = new URL(req.url).searchParams;
   const spreadsheetId = params.get("spreadsheetId");
   const sheetName = params.get("sheetName");
   if (!spreadsheetId || !sheetName) return NextResponse.json({ error: "spreadsheetId و sheetName مطلوبان" }, { status: 400 });
 
   try {
-    const connection = await ownedConnection(session.user.id, params.get("connectionId"));
+    const connection = await ownedConnection(session!.user.id, params.get("connectionId"));
     const sheets = await getGoogleSheetsClient(connection);
     const [meta, values] = await Promise.all([
       sheets.spreadsheets.get({

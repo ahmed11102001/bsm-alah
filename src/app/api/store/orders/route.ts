@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 
 const PAGE_SIZE = 20;
 
@@ -15,9 +16,8 @@ function resolveOwnerId(session: any): string {
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+  if (denied) return denied;
 
   const ownerId = resolveOwnerId(session);
 
