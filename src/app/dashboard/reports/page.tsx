@@ -19,7 +19,7 @@ import {
   BarChart3, Users, TrendingUp, Send, CheckCircle,
   Eye, XCircle, MessageSquare, Clock,
   FileSpreadsheet, Printer, Loader2, AlertCircle,
-  UserCheck, Archive, RefreshCw, Shield,
+  UserCheck, Archive, RefreshCw, Shield, UserX,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/language-context";
@@ -52,6 +52,7 @@ export default function ReportsOverviewPage() {
 
   // ── Team ─────────────────────────────────────────────────────────
   const [team, setTeam] = useState<TeamRow[]>([]);
+  const [unassignedCount, setUnassignedCount] = useState(0);
   const [loadingTeam, setLT] = useState(false);
 
   // ── Fetchers ─────────────────────────────────────────────────────
@@ -75,7 +76,9 @@ export default function ReportsOverviewPage() {
     setLT(true);
     try {
       const r = await fetch("/api/reports?type=team");
-      setTeam(await r.json());
+      const data = await r.json();
+      setTeam(data.members ?? []);
+      setUnassignedCount(data.unassigned ?? 0);
     } finally { setLT(false); }
   }, []);
 
@@ -394,6 +397,19 @@ export default function ReportsOverviewPage() {
             </div>
           ) : (
             <div className="space-y-5">
+              {/* Unassigned summary */}
+              {unassignedCount > 0 && (
+                <div className="flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3.5">
+                  <UserX className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                      {formatNumber(unassignedCount, numberLocale)} {pageText[locale].charts.teamUnassigned}
+                    </p>
+                    <p className="text-xs text-amber-600/80 dark:text-amber-500/70">{pageText[locale].charts.teamUnassignedHint}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Team chart */}
               <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                 <CardHeader className="pb-2">
@@ -432,6 +448,7 @@ export default function ReportsOverviewPage() {
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الصلاحية" : "Role"}</th>
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الرسائل المرسلة" : "Sent Messages"}</th>
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الردود" : "Replies"}</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].charts.teamAssigned}</th>
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "معدل الرد" : "Reply Rate"}</th>
                       </tr>
                     </thead>
@@ -451,6 +468,9 @@ export default function ReportsOverviewPage() {
                             </td>
                             <td className="py-3 px-4 text-gray-700 font-medium">{formatNumber(m.sent, numberLocale)}</td>
                             <td className="py-3 px-4 text-gray-700">{formatNumber(m.replied, numberLocale)}</td>
+                            <td className="py-3 px-4 text-gray-700">
+                              {m.role === "CHAT_ONLY" || m.role === "FULL_ACCESS" ? formatNumber(m.assigned, numberLocale) : "—"}
+                            </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">

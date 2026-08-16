@@ -67,10 +67,16 @@ export async function DELETE(req: Request) {
   });
   if (!member) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
 
-  await prisma.user.update({
-    where: { id },
-    data:  { deletedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id },
+      data:  { deletedAt: new Date() },
+    }),
+    prisma.contact.updateMany({
+      where: { assignedToUserId: id },
+      data: { assignedToUserId: null },
+    }),
+  ]);
 
   return NextResponse.json({ success: true });
 }

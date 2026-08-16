@@ -250,9 +250,9 @@ async function team(ownerId: string) {
     select: { id: true, name: true, email: true, role: true },
   });
 
-  const memberIds = members.map((m) => m.id);
+  const memberIds = members.map((m: { id: string }) => m.id);
 
-  const [sentPerUser, repliedPerUser] = await Promise.all([
+  const [sentPerUser, repliedPerUser, assignedPerUser, unassignedCount] = await Promise.all([
     prisma.message.groupBy({
       by: ["userId"],
       where: { userId: { in: memberIds }, direction: MessageDirection.outbound },
@@ -263,20 +263,32 @@ async function team(ownerId: string) {
       where: { userId: { in: memberIds }, direction: MessageDirection.inbound },
       _count: { id: true },
     }),
+    // ── عدد المحادثات المعيّنة حاليًا لكل عضو (توزيع الحمل) ──
+    prisma.contact.groupBy({
+      by: ["assignedToUserId"],
+      where: { userId: ownerId, deletedAt: null, assignedToUserId: { in: memberIds } },
+      _count: { id: true },
+    }),
+    // ── عدد المحادثات اللي لسه من غير مسؤول ──
+    prisma.contact.count({
+      where: { userId: ownerId, deletedAt: null, assignedToUserId: null },
+    }),
   ]);
 
-  const sentMap = new Map(sentPerUser.map((r) => [r.userId, r._count.id]));
-  const repliedMap = new Map(repliedPerUser.map((r) => [r.userId, r._count.id]));
+  const sentMap = new Map(sentPerUser.map((r: { userId: string; _count: { id: number } }) => [r.userId, r._count.id]));
+  const repliedMap = new Map(repliedPerUser.map((r: { userId: string; _count: { id: number } }) => [r.userId, r._count.id]));
+  const assignedMap = new Map(assignedPerUser.map((r: { assignedToUserId: string | null; _count: { id: number } }) => [r.assignedToUserId, r._count.id]));
 
-  const result = members.map((m) => ({
+  const result = members.map((m: { id: string; name: string | null; email: string; role: string }) => ({
     id: m.id,
     name: m.name ?? m.email,
     role: m.role,
     sent: sentMap.get(m.id) ?? 0,
     replied: repliedMap.get(m.id) ?? 0,
+    assigned: assignedMap.get(m.id) ?? 0,
   }));
 
-  return NextResponse.json(result);
+  return NextResponse.json({ members: result, unassigned: unassignedCount });
 }
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────

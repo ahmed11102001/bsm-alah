@@ -23,7 +23,7 @@ export interface CustomerRow {
 }
 
 export interface TeamRow {
-  id: string; name: string; role: string; sent: number; replied: number;
+  id: string; name: string; role: string; sent: number; replied: number; assigned: number;
 }
 
 export interface LogRow {
@@ -148,6 +148,9 @@ export const pageText: Record<"ar" | "en", Record<string, any>> = {
       teamActivity: "نشاط الفريق",
       teamSent: "رسائل مرسلة",
       teamReplied: "ردود",
+      teamAssigned: "محادثات معيّنة",
+      teamUnassigned: "محادثات غير معيّنة",
+      teamUnassignedHint: "لسه محدش شايلها",
       campaignRevenueTitle: "نسبة إيرادات حملات واتساب",
       campaignRevenueLabel: "إيرادات الحملات:",
       totalLabel: "إجمالي:",
@@ -298,6 +301,9 @@ export const pageText: Record<"ar" | "en", Record<string, any>> = {
       teamActivity: "Team activity",
       teamSent: "Sent",
       teamReplied: "Replied",
+      teamAssigned: "Assigned conversations",
+      teamUnassigned: "Unassigned conversations",
+      teamUnassignedHint: "Nobody's picked these up yet",
       campaignRevenueTitle: "WhatsApp campaign revenue share",
       campaignRevenueLabel: "Campaign revenue:",
       totalLabel: "Total:",

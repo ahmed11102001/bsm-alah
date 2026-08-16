@@ -43,7 +43,15 @@ export async function PATCH(req: NextRequest) {
   if (!contactId || assignedToUserId === undefined) return NextResponse.json({ error: "contactId و assignedToUserId مطلوبان" }, { status: 400 });
 
   const ownerId = tenantId(session!);
-  const contact = await prisma.contact.findFirst({ where: { id: contactId, userId: ownerId, deletedAt: null }, select: { id: true } });
+  const contact = await prisma.contact.findFirst({
+    where: {
+      id: contactId,
+      userId: ownerId,
+      deletedAt: null,
+      messages: { some: { deletedAt: null } },
+    },
+    select: { id: true },
+  });
   if (!contact) return NextResponse.json({ error: "المحادثة غير موجودة" }, { status: 404 });
 
   if (assignedToUserId) {

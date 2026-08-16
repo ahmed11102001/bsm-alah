@@ -30,7 +30,14 @@ export async function GET(req: NextRequest) {
   const date = sp.get("date") || "all";
   const tenantId = ownerId(session);
 
-  const where: any = { userId: tenantId, deletedAt: null };
+  // A Contact becomes a conversation only after at least one non-deleted
+  // message is attached to it. Keep this constraint server-side so search,
+  // filters, pagination, select-all and counts all operate on conversations.
+  const where: any = {
+    userId: tenantId,
+    deletedAt: null,
+    messages: { some: { deletedAt: null } },
+  };
   if (search) where.OR = [
     { name: { contains: search, mode: "insensitive" } },
     { phone: { contains: search } },
@@ -85,7 +92,13 @@ export async function PATCH(req: NextRequest) {
   if (contactIds.length > 5000) return NextResponse.json({ error: "عدد المحادثات كبير جدًا" }, { status: 400 });
 
   const tenantId = ownerId(session);
-  const count = await prisma.contact.count({ where: { id: { in: contactIds }, userId: tenantId, deletedAt: null } });
+  const conversationScope = {
+    id: { in: contactIds },
+    userId: tenantId,
+    deletedAt: null,
+    messages: { some: { deletedAt: null } },
+  };
+  const count = await prisma.contact.count({ where: conversationScope });
   if (count !== contactIds.length) return NextResponse.json({ error: "بعض المحادثات غير تابعة للحساب الحالي" }, { status: 404 });
 
   if (assignedToUserId) {
@@ -93,6 +106,6 @@ export async function PATCH(req: NextRequest) {
     if (!member) return NextResponse.json({ error: "عضو الفريق غير صالح" }, { status: 404 });
   }
 
-  const result = await prisma.contact.updateMany({ where: { id: { in: contactIds }, userId: tenantId, deletedAt: null }, data: { assignedToUserId } });
+  const result = await prisma.contact.updateMany({ where: conversationScope, data: { assignedToUserId } });
   return NextResponse.json({ success: true, count: result.count, assignedToUserId });
 }
