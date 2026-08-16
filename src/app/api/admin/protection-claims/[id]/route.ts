@@ -19,14 +19,14 @@ async function requireSuper() {
 // ─── GET /api/admin/protection-claims/[id] ────────────────────────────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireSuper();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const claimId = params.id;
+  const { id: claimId } = await params;
 
   const claim = await prisma.protectionClaim.findUnique({
     where: { id: claimId },
@@ -108,14 +108,14 @@ export async function GET(
 // ─── PATCH /api/admin/protection-claims/[id] ──────────────────────────────────
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireSuper();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const claimId = params.id;
+  const { id: claimId } = await params;
   const body = await req.json();
   const parsed = parseInput(AdminProtectionClaimDecisionSchema, body);
 

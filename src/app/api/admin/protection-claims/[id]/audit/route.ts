@@ -14,14 +14,14 @@ async function requireSuper() {
 // ─── POST /api/admin/protection-claims/[id]/audit ─────────────────────────────
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireSuper();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const claimId = params.id;
+  const { id: claimId } = await params;
 
   try {
     const result = await runProtectionAudit(claimId, session.user.id);
