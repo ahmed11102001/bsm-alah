@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const user = await prisma.user.findUnique({
-    where:  { email: session.user?.email! },
+    where: { email: session!.user.email! },
     select: { id: true },
   });
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const eoBlocked = guardResponse(eoGuard);
   if (eoBlocked) return eoBlocked;
 
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
   const token = userToken(user.id);
 
   // المسار الصحيح: /api/easy-orders/webhooks

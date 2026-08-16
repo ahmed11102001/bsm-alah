@@ -71,7 +71,7 @@ export function Bubble({
 
   return (
     <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`} dir="ltr">
-      <div className="relative inline-block max-w-[80%] sm:max-w-[68%]">
+      <div className="group relative inline-block max-w-[80%] sm:max-w-[68%]">
         {showReactions && onReact && (
           <div className={`absolute -top-10 z-20 flex items-center gap-1 rounded-full shadow-lg border px-2 py-1
             ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
@@ -89,10 +89,10 @@ export function Bubble({
         )}
 
         {(onReply || onCopy || onForward) && (
-          <div className={`absolute -top-8 z-10 flex gap-1 rounded-lg border p-1 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${isMe ? "right-0" : "left-0"} ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-200"}`}>
-            {onReply && <button title={lang === "ar" ? "رد" : "Reply"} onClick={e => { e.stopPropagation(); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-3.5 h-3.5" /></button>}
-            {onCopy && msg.content && <button title={lang === "ar" ? "نسخ" : "Copy"} onClick={e => { e.stopPropagation(); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-3.5 h-3.5" /></button>}
-            {onForward && <button title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={e => { e.stopPropagation(); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-3.5 h-3.5" /></button>}
+          <div className={`pointer-events-auto absolute -top-9 z-30 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${isMe ? "right-0" : "left-0"} ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}>
+            {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={e => { e.stopPropagation(); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
+            {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={e => { e.stopPropagation(); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
+            {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={e => { e.stopPropagation(); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
           </div>
         )}
         <div
