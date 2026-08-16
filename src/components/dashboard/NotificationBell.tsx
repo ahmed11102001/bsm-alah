@@ -15,13 +15,13 @@ interface Notification {
 }
 
 const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
-  CAMPAIGN_SUCCESS: <CheckCircle  className="w-4 h-4 text-green-500"  />,
-  CAMPAIGN_FAILED:  <XCircle      className="w-4 h-4 text-red-500"    />,
+  CAMPAIGN_SUCCESS: <CheckCircle className="w-4 h-4 text-green-500" />,
+  CAMPAIGN_FAILED: <XCircle className="w-4 h-4 text-red-500" />,
   CAMPAIGN_PARTIAL: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
   PLAN_LIMIT_REACHED: <AlertTriangle className="w-4 h-4 text-orange-500" />,
-  NEW_MESSAGE:      <MessageSquare className="w-4 h-4 text-blue-500"   />,
-  STORE_AUTO_SENT:  <ShoppingBag   className="w-4 h-4 text-emerald-500" />,
-  STORE_AUTO_FAILED:<ShoppingBag   className="w-4 h-4 text-red-500"     />,
+  NEW_MESSAGE: <MessageSquare className="w-4 h-4 text-blue-500" />,
+  STORE_AUTO_SENT: <ShoppingBag className="w-4 h-4 text-emerald-500" />,
+  STORE_AUTO_FAILED: <ShoppingBag className="w-4 h-4 text-red-500" />,
   SUBSCRIPTION_EXPIRING: <Clock className="w-4 h-4 text-amber-500" />,
   PAYMENT_FAILED: <AlertTriangle className="w-4 h-4 text-red-600" />,
   WHATSAPP_TOKEN_EXPIRING: <Wifi className="w-4 h-4 text-orange-500" />,
@@ -31,16 +31,18 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   ORDER_CANCELLED: <XCircle className="w-4 h-4 text-red-500" />,
   AI_HANDOFF_NEEDED: <Bot className="w-4 h-4 text-purple-500" />,
   SMART_FOLLOWUP_ALERT: <AlertTriangle className="w-4 h-4 text-orange-500" />,
+  AUTOMATION_FAILED: <XCircle className="w-4 h-4 text-red-500" />,
+  AUTOMATION_LOOP_STOPPED: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
-  CAMPAIGN_SUCCESS:   "bg-green-50",
-  CAMPAIGN_FAILED:    "bg-red-50",
-  CAMPAIGN_PARTIAL:   "bg-yellow-50",
+  CAMPAIGN_SUCCESS: "bg-green-50",
+  CAMPAIGN_FAILED: "bg-red-50",
+  CAMPAIGN_PARTIAL: "bg-yellow-50",
   PLAN_LIMIT_REACHED: "bg-orange-50",
-  NEW_MESSAGE:        "bg-blue-50",
-  STORE_AUTO_SENT:    "bg-emerald-50",
-  STORE_AUTO_FAILED:  "bg-red-50",
+  NEW_MESSAGE: "bg-blue-50",
+  STORE_AUTO_SENT: "bg-emerald-50",
+  STORE_AUTO_FAILED: "bg-red-50",
   SUBSCRIPTION_EXPIRING: "bg-amber-50",
   PAYMENT_FAILED: "bg-red-50",
   WHATSAPP_TOKEN_EXPIRING: "bg-orange-50",
@@ -50,6 +52,8 @@ const TYPE_BG: Record<NotificationType, string> = {
   ORDER_CANCELLED: "bg-red-50",
   AI_HANDOFF_NEEDED: "bg-purple-50",
   SMART_FOLLOWUP_ALERT: "bg-orange-50",
+  AUTOMATION_FAILED: "bg-red-50",
+  AUTOMATION_LOOP_STOPPED: "bg-yellow-50",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {
