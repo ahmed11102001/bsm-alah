@@ -71,6 +71,9 @@ export default function ChatPage() {
   const messageRequestInFlight = useRef(false);
   const pendingScroll = useRef<"initial" | "new" | null>(null);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
+  const [assignmentMembers, setAssignmentMembers] = useState<{ id: string; name: string | null; email: string; image: string | null }[]>([]);
+  const [canAssign, setCanAssign] = useState(false);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwarding, setForwarding] = useState<Message | null>(null);
   const [forwardSearch, setForwardSearch] = useState("");
@@ -187,6 +190,32 @@ export default function ChatPage() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => fetchMsgs(conv.contact.id), 8000);
   }, [fetchMsgs]);
+
+  useEffect(() => {
+    if (!selected) { setAssignmentMembers([]); setCanAssign(false); return; }
+    let active = true;
+    fetch(`/api/chat/assignment?contactId=${encodeURIComponent(selected.contact.id)}`)
+      .then(r => r.json())
+      .then(d => { if (active) { setAssignmentMembers(d.members ?? []); setCanAssign(Boolean(d.canAssign)); } })
+      .catch(() => { if (active) { setAssignmentMembers([]); setCanAssign(false); } });
+    return () => { active = false; };
+  }, [selected?.contact.id]);
+
+  const updateAssignment = async (assignedToUserId: string | null) => {
+    if (!selected || assignmentLoading) return;
+    const previous = selected;
+    const member = assignmentMembers.find(m => m.id === assignedToUserId) ?? null;
+    setAssignmentLoading(true);
+    setSelected({ ...selected, contact: { ...selected.contact, assignedToUserId, assignedTo: member ? { id: member.id, name: member.name } : null } });
+    try {
+      const r = await fetch("/api/chat/assignment", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contactId: selected.contact.id, assignedToUserId }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      setConvs(prev => prev.map(c => c.contact.id === selected.contact.id ? { ...c, contact: { ...c.contact, assignedToUserId, assignedTo: member ? { id: member.id, name: member.name } : null } } : c));
+      toast.success(lang === "ar" ? "تم تحديث مسؤول المحادثة" : "Conversation assignment updated");
+    } catch (e: any) {
+      setSelected(previous); toast.error(e.message ?? (lang === "ar" ? "تعذر تحديث التعيين" : "Could not update assignment"));
+    } finally { setAssignmentLoading(false); }
+  };
 
   const fetchTemplates = useCallback(async () => {
     const r = await fetch("/api/templates");
@@ -677,6 +706,22 @@ export default function ChatPage() {
                 <div>
                   <p className={`font-semibold text-sm ${textMain}`}>{selected.contact.name ?? selected.contact.phone}</p>
                   <p className={`text-xs ${textSub}`}>{selected.contact.phone}</p>
+                </div>
+                <div className="hidden md:flex items-center gap-1.5 ml-3">
+                  <span className={`text-[11px] ${textSub}`}>{lang === "ar" ? "مسؤول المحادثة" : "Assigned to"}</span>
+                  {canAssign ? (
+                    <select
+                      value={selected.contact.assignedToUserId ?? ""}
+                      disabled={assignmentLoading}
+                      onChange={e => updateAssignment(e.target.value || null)}
+                      className={`max-w-[150px] rounded-lg border px-2 py-1 text-xs outline-none ${inputBg} ${textMain} ${border} disabled:opacity-60`}
+                    >
+                      <option value="">{lang === "ar" ? "غير معيّنة" : "Unassigned"}</option>
+                      {assignmentMembers.map(member => <option key={member.id} value={member.id}>{member.name || member.email}</option>)}
+                    </select>
+                  ) : (
+                    <span className={`text-xs font-medium ${textMain}`}>{selected.contact.assignedTo?.name || (lang === "ar" ? "غير معيّنة" : "Unassigned")}</span>
+                  )}
                 </div>
               </div>
 

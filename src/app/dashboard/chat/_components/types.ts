@@ -2,7 +2,7 @@
 
 export interface Audience { id: string; name: string }
 export interface Template { id: string; name: string; content: string; status: string }
-export interface Contact { id: string; name: string | null; phone: string }
+export interface Contact { id: string; name: string | null; phone: string; assignedToUserId?: string | null; assignedTo?: { id: string; name: string | null } | null }
 export interface LastMsg {
   id: string; content: string | null; type: string;
   direction: string; status: string; createdAt: string;

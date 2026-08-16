@@ -8,10 +8,19 @@ import { inngest } from "@/inngest/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { decryptToken } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
+
+function contactScope(session: any, contactId: string) {
+  return {
+    id: contactId,
+    userId: uid(session),
+    ...(session.user.role === "CHAT_ONLY" ? { assignedToUserId: session.user.id } : {}),
+  };
 }
 
 // ─── GET /api/chat ─────────────────────────────────────────────────────────────
@@ -19,17 +28,18 @@ function uid(session: any): string {
 //   ?type=messages&contactId=
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CHAT_VIEW");
+  if (denied) return denied;
   const userId = uid(session);
   const sp = new URL(req.url).searchParams;
   const type = sp.get("type") ?? "conversations";
 
-  if (type === "messages") return getMessages(userId, sp);
-  return getConversations(userId, sp);
+  if (type === "messages") return getMessages(userId, sp, session);
+  return getConversations(userId, sp, session);
 }
 
 // ─── GET conversations ────────────────────────────────────────────────────────
-async function getConversations(userId: string, sp: URLSearchParams) {
+async function getConversations(userId: string, sp: URLSearchParams, session: any) {
   const rawFilter = sp.get("filter");
   const filter =
     rawFilter === "unread" ||
@@ -49,6 +59,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     userId,
     isArchived: isArchivedFilter,
     deletedAt: null,
+    ...(session.user.role === "CHAT_ONLY" ? { assignedToUserId: session.user.id } : {}),
     messages: {
       some: { direction: MessageDirection.inbound, deletedAt: null },
     },
@@ -76,6 +87,8 @@ async function getConversations(userId: string, sp: URLSearchParams) {
     take: 100,
     select: {
       id: true, name: true, phone: true,
+      assignedToUserId: true,
+      assignedTo: { select: { id: true, name: true } },
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
       voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true,
@@ -142,7 +155,7 @@ async function getConversations(userId: string, sp: URLSearchParams) {
   }
 
   const conversations = result.map((c: typeof contacts[number]) => ({
-    contact: { id: c.id, name: c.name, phone: c.phone },
+    contact: { id: c.id, name: c.name, phone: c.phone, assignedToUserId: c.assignedToUserId, assignedTo: c.assignedTo },
     lastMessage: c.messages[0] ?? null,
     unreadCount: c._count.messages,
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
@@ -158,11 +171,11 @@ async function getConversations(userId: string, sp: URLSearchParams) {
 }
 
 // ─── GET messages ─────────────────────────────────────────────────────────────
-async function getMessages(userId: string, sp: URLSearchParams) {
+async function getMessages(userId: string, sp: URLSearchParams, session: any) {
   const contactId = sp.get("contactId");
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
 
-  const contact = await prisma.contact.findFirst({ where: { id: contactId, userId } });
+  const contact = await prisma.contact.findFirst({ where: contactScope(session, contactId) });
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
   const messages = await prisma.message.findMany({
@@ -202,14 +215,15 @@ async function getMessages(userId: string, sp: URLSearchParams) {
 //   Content-Type: multipart/form-data → media file (image/video/audio/document)
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CHAT_SEND");
+  if (denied) return denied;
   const userId = uid(session);
 
   const ct = req.headers.get("content-type") ?? "";
 
   // ── Media upload (multipart) ──────────────────────────────────────
   if (ct.includes("multipart/form-data")) {
-    return sendMedia(userId, req);
+    return sendMedia(userId, req, session);
   }
 
   // ── JSON message ─────────────────────────────────────────────────
@@ -217,10 +231,13 @@ export async function POST(req: NextRequest) {
   const { action, contactId, content, type, templateName, replyToMessageId } = body;
 
   if (action === "send") {
+    if (!contactId || !(await prisma.contact.findFirst({ where: contactScope(session, contactId), select: { id: true } }))) {
+      return NextResponse.json({ error: "المحادثة غير متاحة" }, { status: 404 });
+    }
     return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId });
   }
 
-  if (action === "forward") return forwardMessage(userId, body.sourceMessageId, body.targetContactId);
+  if (action === "forward") return forwardMessage(userId, body.sourceMessageId, body.targetContactId, session);
 
   return NextResponse.json({ error: "action غير معروف" }, { status: 400 });
 }
@@ -237,7 +254,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
 
-  const contact = await prisma.contact.findFirst({ where: { id: contactId, userId } });
+  const contact = await prisma.contact.findFirst({ where: contactScope(session, contactId) });
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
   if (action === "archive" || action === "unarchive") {
@@ -333,7 +350,7 @@ export async function PATCH(req: NextRequest) {
 
     // جيب الـ whatsappId من الرسالة
     const message = await prisma.message.findFirst({
-      where: { id: messageId, userId },
+      where: { id: messageId, userId, contactId },
       select: { whatsappId: true },
     });
     if (!message?.whatsappId)
@@ -393,7 +410,7 @@ async function sendMessage(
   const [contact, account, replyTo] = await Promise.all([
     prisma.contact.findFirst({ where: { id: contactId, userId } }),
     prisma.whatsAppAccount.findUnique({ where: { userId } }),
-    replyToMessageId ? prisma.message.findFirst({ where: { id: replyToMessageId, userId }, select: { id: true, whatsappId: true } }) : null,
+    replyToMessageId ? prisma.message.findFirst({ where: { id: replyToMessageId, userId, contactId }, select: { id: true, whatsappId: true } }) : null,
   ]);
 
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
@@ -465,11 +482,14 @@ async function sendMessage(
   return NextResponse.json({ success: true, message: result.msg });
 }
 
-async function forwardMessage(userId: string, sourceMessageId?: string, targetContactId?: string) {
+async function forwardMessage(userId: string, sourceMessageId?: string, targetContactId?: string, session?: any) {
   if (!sourceMessageId || !targetContactId) return NextResponse.json({ error: "sourceMessageId و targetContactId مطلوبان" }, { status: 400 });
   const [source, target] = await Promise.all([
-    prisma.message.findFirst({ where: { id: sourceMessageId, userId, deletedAt: null } }),
-    prisma.contact.findFirst({ where: { id: targetContactId, userId, deletedAt: null } }),
+    prisma.message.findFirst({ where: {
+      id: sourceMessageId, userId, deletedAt: null,
+      ...(session?.user.role === "CHAT_ONLY" ? { contact: { assignedToUserId: session.user.id, userId } } : {}),
+    } }),
+    prisma.contact.findFirst({ where: session ? contactScope(session, targetContactId!) : { id: targetContactId, userId, deletedAt: null } }),
   ]);
   if (!source || !target) return NextResponse.json({ error: "الرسالة أو جهة الاتصال غير موجودة" }, { status: 404 });
   if (source.type === MessageType.template || source.type === MessageType.sticker) {
@@ -485,7 +505,7 @@ async function forwardMessage(userId: string, sourceMessageId?: string, targetCo
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
-async function sendMedia(userId: string, req: NextRequest) {
+async function sendMedia(userId: string, req: NextRequest, session: any) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -497,7 +517,7 @@ async function sendMedia(userId: string, req: NextRequest) {
 
     // جيب الـ contact والـ account بالتوازي
     const [contact, account] = await Promise.all([
-      prisma.contact.findFirst({ where: { id: contactId, userId } }),
+      prisma.contact.findFirst({ where: contactScope(session, contactId) }),
       prisma.whatsAppAccount.findUnique({ where: { userId } }),
     ]);
 

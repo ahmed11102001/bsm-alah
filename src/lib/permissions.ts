@@ -29,6 +29,7 @@ export type UserRole = "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
 export const PERMISSIONS = {
   CHAT_VIEW: "CHAT_VIEW",
   CHAT_SEND: "CHAT_SEND",
+  CHAT_ASSIGN: "CHAT_ASSIGN",
 
   CONTACTS_VIEW: "CONTACTS_VIEW",
   CONTACTS_MANAGE: "CONTACTS_MANAGE",
@@ -73,6 +74,7 @@ const ROLE_PERMISSIONS: Record<Exclude<UserRole, "OWNER">, Permission[]> = {
   FULL_ACCESS: [
     "CHAT_VIEW",
     "CHAT_SEND",
+    "CHAT_ASSIGN",
     "CONTACTS_VIEW",
     "CONTACTS_MANAGE",
     "CAMPAIGNS_VIEW",

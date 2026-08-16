@@ -28,6 +28,7 @@ export async function GET(req: Request) {
     const contacts = await prisma.contact.findMany({
       where: {
         userId,
+        ...(session!.user.role === "CHAT_ONLY" ? { assignedToUserId: session!.user.id } : {}),
         isArchived: false,
         lastMessageAt: {
           not: null,
@@ -75,6 +76,8 @@ export async function GET(req: Request) {
         phone: true,
         notes: true,
         audienceId: true,
+        assignedToUserId: true,
+        assignedTo: { select: { id: true, name: true } },
 
         isPinned: true,
         isArchived: true,
@@ -118,6 +121,8 @@ export async function GET(req: Request) {
         phone: c.phone,
         notes: c.notes,
         audienceId: c.audienceId,
+        assignedToUserId: c.assignedToUserId,
+        assignedTo: c.assignedTo,
       },
 
       lastMessage: c.messages[0] || null,

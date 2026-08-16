@@ -53,6 +53,7 @@ model User {
   trackedClicks            TrackedClick[]
   parent                   User?                     @relation("TeamHierarchy", fields: [parentId], references: [id])
   members                  User[]                    @relation("TeamHierarchy")
+  assignedConversations    Contact[]                 @relation("AssignedConversations")
   whatsappAccount          WhatsAppAccount?
   pushSubscriptions        PushSubscription[]
   automationAnalytics      AutomationAnalytics[]
@@ -294,11 +295,14 @@ model Contact {
   nudgeCountInThread Int               @default(0)
   audience          Audience?          @relation(fields: [audienceId], references: [id])
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedToUserId  String?
+  assignedTo        User?              @relation("AssignedConversations", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   messages          Message[]
   storeOrders       StoreOrder[]
 
   @@unique([phone, userId])
   @@index([userId])
+  @@index([assignedToUserId])
   @@index([phone])
   @@index([lastMessageAt])
 }

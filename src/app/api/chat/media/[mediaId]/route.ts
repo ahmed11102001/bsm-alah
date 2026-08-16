@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+import { requirePermission } from "@/lib/permissions";
 
 export const runtime = "nodejs";
 
@@ -41,9 +42,8 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-    }
+    const denied = requirePermission(session, "CHAT_VIEW");
+    if (denied) return denied;
 
     const userId = uid(session);
     const { mediaId: rawMediaId } = await params;
@@ -54,7 +54,7 @@ export async function GET(
     if (mediaId.startsWith("http")) {
       // تحقق إن الرسالة موجودة وتابعة للمستخدم ده
       const message = await prisma.message.findFirst({
-        where: { userId, mediaUrl: mediaId, deletedAt: null },
+        where: { userId, mediaUrl: mediaId, deletedAt: null, ...(session!.user.role === "CHAT_ONLY" ? { contact: { assignedToUserId: session!.user.id } } : {}) },
         select: { id: true, type: true },
       });
       if (!message) {
@@ -78,6 +78,7 @@ export async function GET(
         userId,
         mediaUrl: mediaId,
         deletedAt: null,
+        ...(session!.user.role === "CHAT_ONLY" ? { contact: { assignedToUserId: session!.user.id } } : {}),
       },
       select: {
         id: true,
