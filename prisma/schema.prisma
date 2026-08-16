@@ -71,6 +71,9 @@ model User {
   waniPartnerCards         WaniPartnerCard[]
   googleSheetsConnections  GoogleSheetsConnection[]
   emailVerificationTokens  EmailVerificationToken[]
+  protectionClaims         ProtectionClaim[]
+  reviewedProtectionClaims ProtectionClaim[]         @relation("ReviewedProtectionClaims")
+  protectionAuditLogs      ProtectionAuditLog[]
 
   @@index([email])
   @@index([workspaceId])
@@ -170,6 +173,7 @@ model WhatsAppAccount {
   messagingTier  Int            @default(1)
   messageQueues  MessageQueue[]
   automationInteractions AutomationInteraction[]
+  protectionClaims       ProtectionClaim[]
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -391,15 +395,18 @@ model Message {
   senderType  MessageSenderType @default(human)
   reactions   Json?             @default("[]")
   replyToMessageId String?
+  automationRuleId String?
   campaign    Campaign?         @relation(fields: [campaignId], references: [id])
   contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   replyTo      Message?         @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
   replies      Message[]        @relation("MessageReply")
+  automationRule AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([contactId])
   @@index([campaignId])
+  @@index([automationRuleId])
   @@index([status])
   @@index([createdAt])
   @@index([contactId, createdAt])
@@ -566,6 +573,7 @@ model AutomationRule {
   interactiveConfig Json?
   analytics         AutomationAnalytics[]
   interactions      AutomationInteraction[]
+  messages          Message[]
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   template          Template?             @relation(fields: [templateId], references: [id])
@@ -1589,3 +1597,63 @@ model WebsiteCrawlSettings {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ─── Protection Claims & Guarantee Audit ──────────────────────────────────────
+
+enum ProtectionClaimStatus {
+  NEEDS_REVIEW
+  ELIGIBLE
+  NOT_ELIGIBLE
+  PENDING_EVIDENCE
+}
+
+model ProtectionClaim {
+  id                String                @id @default(cuid())
+  userId            String
+  whatsappAccountId String
+  phoneNumber       String
+  reportedAt        DateTime              @default(now())
+  banDetectedAt     DateTime
+  status            ProtectionClaimStatus @default(NEEDS_REVIEW)
+  refundAmount      Float?
+  currency          String                @default("EGP")
+  refundStatus      String                @default("NONE") // NONE, APPROVED_PENDING_PROCESSING, PROCESSED
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  decisionReason    String?               @db.Text
+  adminNotes        String?               @db.Text
+  customerNotes     String?               @db.Text
+  evidenceSnapshot  Json?
+  evidenceFiles     Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount   WhatsAppAccount       @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+  reviewer          User?                 @relation("ReviewedProtectionClaims", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  auditLogs         ProtectionAuditLog[]
+
+  @@index([userId])
+  @@index([whatsappAccountId])
+  @@index([phoneNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ProtectionAuditLog {
+  id          String          @id @default(cuid())
+  claimId     String
+  adminUserId String
+  action      String          // CREATE_CLAIM, RUN_AUDIT, RE_RUN_AUDIT, UPDATE_STATUS, APPROVE_REFUND, REJECT_CLAIM, REQUEST_EVIDENCE, UPDATE_NOTES
+  result      String?
+  details     Json?
+  createdAt   DateTime        @default(now())
+
+  claim       ProtectionClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  adminUser   User            @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
+  @@index([adminUserId])
+  @@index([createdAt])
+}
+

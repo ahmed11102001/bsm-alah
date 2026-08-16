@@ -194,3 +194,11 @@ export const ORDER_CANCEL_REASON_IDS = {
   changedMind: "order_cancel_reason_changed_mind",
   other: "order_cancel_reason_other",
 } as const;
+
+export const ProtectionClaimStatus = {
+  NEEDS_REVIEW: "NEEDS_REVIEW",
+  ELIGIBLE: "ELIGIBLE",
+  NOT_ELIGIBLE: "NOT_ELIGIBLE",
+  PENDING_EVIDENCE: "PENDING_EVIDENCE",
+} as const;
+export type ProtectionClaimStatus = (typeof ProtectionClaimStatus)[keyof typeof ProtectionClaimStatus];

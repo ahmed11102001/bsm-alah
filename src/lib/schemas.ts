@@ -357,3 +357,37 @@ export const AIAgentResponseSchema = z.object({
   expectsReply: z.boolean().optional(),
 });
 export type AIAgentResponseOutput = z.infer<typeof AIAgentResponseSchema>;
+
+// ─── Protection Claims & Guarantee Audit ──────────────────────────────────────
+
+/** POST /api/admin/protection-claims — إنشاء Claim جديد */
+export const AdminCreateProtectionClaimSchema = z.object({
+  whatsappAccountId: nonEmptyStr,
+  banDetectedAt: z.string().datetime().or(z.string().min(1)),
+  customerNotes: z.string().trim().max(2000).optional(),
+  adminNotes: z.string().trim().max(2000).optional(),
+  evidenceFiles: z.array(z.string()).optional(),
+});
+export type AdminCreateProtectionClaimInput = z.infer<typeof AdminCreateProtectionClaimSchema>;
+
+/** PATCH /api/admin/protection-claims/[id] — قرار المشرف الإداري */
+export const AdminProtectionClaimDecisionSchema = z.object({
+  status: z.enum(["NEEDS_REVIEW", "ELIGIBLE", "NOT_ELIGIBLE", "PENDING_EVIDENCE"]),
+  decisionReason: z.string().trim().max(2000).optional(),
+  adminNotes: z.string().trim().max(2000).optional(),
+  refundAmount: z.number().nonnegative().optional().nullable(),
+  refundStatus: z.enum(["NONE", "APPROVED_PENDING_PROCESSING", "PROCESSED"]).optional(),
+}).refine(
+  data => {
+    // سبب القرار إجباري عند الرفض (NOT_ELIGIBLE)
+    if (data.status === "NOT_ELIGIBLE" && (!data.decisionReason || data.decisionReason.trim().length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "سبب القرار (Decision Reason) إجباري عند رفض الطلب",
+    path: ["decisionReason"],
+  }
+);
+export type AdminProtectionClaimDecisionInput = z.infer<typeof AdminProtectionClaimDecisionSchema>;

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter }  from "next/navigation";
 import {
-  Shield, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
+  Shield, ShieldCheck, Plus, Pencil, Trash2, RotateCcw, X, Check, Loader2,
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
   Target, Download, Phone, Bot, Send, Power, PowerOff, Sparkles,
@@ -15,6 +15,7 @@ import {
   PartnerCardTemplate, PARTNER_TEMPLATES, type PartnerCardContent,
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
+import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const PLANS = ["free", "starter", "pro", "enterprise"] as const;
@@ -66,7 +67,7 @@ interface WaniPartnerCardRow extends PartnerCardContent {
   user: { id: string; name: string | null; email: string; brandName: string | null };
 }
 
-type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads" | "wani-partner";
+type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads" | "wani-partner" | "protection-claims";
 
 const blankArticle = {
   title: "", slug: "", excerpt: "", content: "", coverImage: "", published: false,
@@ -95,6 +96,10 @@ export default function AdminPage() {
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
 
   const [activeTab, setActiveTab] = useState<Tab>("users");
+
+  // protection claims
+  const [needsReviewClaimsCount, setNeedsReviewClaimsCount] = useState(0);
+  const [openProtectionClaimModal, setOpenProtectionClaimModal] = useState(false);
 
   // users
   const [users,      setUsers]      = useState<User[]>([]);
@@ -224,6 +229,17 @@ export default function AdminPage() {
     setLoadingL(false);
   };
 
+  // ── Protection Claims: عدد الطلبات التي تحتاج مراجعة ──────────────────
+  const fetchProtectionClaimsCount = async () => {
+    try {
+      const r = await fetch("/api/admin/protection-claims?status=NEEDS_REVIEW");
+      if (r.ok) {
+        const d = await r.json();
+        setNeedsReviewClaimsCount(d.needsReviewCount ?? 0);
+      }
+    } catch {}
+  };
+
   // ── WANI Partner: مراجعة كروت اليوزرز ──────────────────────────────────────
   const fetchWaniCards = async () => {
     setLoadingWani(true);
@@ -346,14 +362,16 @@ export default function AdminPage() {
   }, [pageIdx, cursors, userSearch, showDeleted]);
   useEffect(() => {
     fetchWaniCards();
+    fetchProtectionClaimsCount();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    if (activeTab === "testimonials") fetchTestimonials(testimonialsTab);
-    if (activeTab === "coupons")      fetchCoupons();
-    if (activeTab === "articles")     fetchArticles();
-    if (activeTab === "leads")        { fetchLeads(leadStatus); fetchBotConfig(); }
-    if (activeTab === "wani-partner") fetchWaniCards();
+    if (activeTab === "testimonials")       fetchTestimonials(testimonialsTab);
+    if (activeTab === "coupons")            fetchCoupons();
+    if (activeTab === "articles")           fetchArticles();
+    if (activeTab === "leads")              { fetchLeads(leadStatus); fetchBotConfig(); }
+    if (activeTab === "wani-partner")       fetchWaniCards();
+    if (activeTab === "protection-claims")  fetchProtectionClaimsCount();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
@@ -547,6 +565,7 @@ export default function AdminPage() {
             {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
             {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
             {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
+            {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "طلب حماية جديد" : "New Claim"}</button>}
           </div>
         </div>
 
@@ -565,12 +584,13 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="admin-tabs flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1 mb-6 w-full sm:w-fit flex-wrap">
           {([
-            { id: "users",        label: adm.tabs.users,        icon: Shield             },
-            { id: "testimonials", label: adm.tabs.testimonials, icon: MessageSquareQuote },
-            { id: "coupons",      label: adm.tabs.coupons,      icon: Ticket             },
-            { id: "articles",     label: adm.tabs.articles,     icon: FileText           },
-            { id: "leads",        label: adm.leads.tab,         icon: Target             },
-            { id: "wani-partner", label: locale === "ar" ? "شركاء واني" : "WANI Partner", icon: Handshake },
+            { id: "users",             label: adm.tabs.users,        icon: Shield             },
+            { id: "testimonials",      label: adm.tabs.testimonials, icon: MessageSquareQuote },
+            { id: "coupons",           label: adm.tabs.coupons,      icon: Ticket             },
+            { id: "articles",          label: adm.tabs.articles,     icon: FileText           },
+            { id: "leads",             label: adm.leads.tab,         icon: Target             },
+            { id: "wani-partner",      label: locale === "ar" ? "شركاء واني" : "WANI Partner", icon: Handshake },
+            { id: "protection-claims", label: "Protection Claims",   icon: ShieldCheck        },
           ] as { id: Tab; label: string; icon: any }[]).map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowArticleF(false); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -582,6 +602,11 @@ export default function AdminPage() {
               {tab.id === "wani-partner" && waniCards.filter(c => c.status === "pending").length > 0 && (
                 <span className={`text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center ${activeTab === tab.id ? "bg-white/25 text-white" : "bg-amber-500 text-white"}`}>
                   {waniCards.filter(c => c.status === "pending").length}
+                </span>
+              )}
+              {tab.id === "protection-claims" && needsReviewClaimsCount > 0 && (
+                <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-4 h-4 flex items-center justify-center ${activeTab === tab.id ? "bg-white/25 text-white" : "bg-amber-500 text-white"}`}>
+                  {needsReviewClaimsCount}
                 </span>
               )}
             </button>
@@ -1560,6 +1585,17 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ══ PROTECTION CLAIMS ══ */}
+        {activeTab === "protection-claims" && (
+          <ProtectionClaimsTab
+            locale={locale}
+            dir={dir}
+            onNeedsReviewCountChange={setNeedsReviewClaimsCount}
+            openCreateRequested={openProtectionClaimModal}
+            onResetCreateRequest={() => setOpenProtectionClaimModal(false)}
+          />
         )}
 
       </div>

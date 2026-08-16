@@ -432,6 +432,7 @@ export const translations = {
         testimonials: "آراء العملاء",
         coupons: "الكوبونات",
         articles: "المقالات",
+        protectionClaims: "Protection Claims",
       },
       plans: {
         free: "مجانية",
@@ -1046,6 +1047,7 @@ export const translations = {
         testimonials: "Testimonials",
         coupons: "Coupons",
         articles: "Articles",
+        protectionClaims: "Protection Claims",
       },
       plans: {
         free: "Free",
