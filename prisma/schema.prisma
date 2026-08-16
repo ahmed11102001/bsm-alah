@@ -1607,6 +1607,13 @@ enum ProtectionClaimStatus {
   PENDING_EVIDENCE
 }
 
+enum BanStatus {
+  CUSTOMER_REPORTED
+  EVIDENCE_PROVIDED
+  VERIFIED
+  NOT_VERIFIED
+}
+
 model ProtectionClaim {
   id                String                @id @default(cuid())
   userId            String
@@ -1614,7 +1621,11 @@ model ProtectionClaim {
   phoneNumber       String
   reportedAt        DateTime              @default(now())
   banDetectedAt     DateTime
+  banStatus         BanStatus             @default(CUSTOMER_REPORTED)
   status            ProtectionClaimStatus @default(NEEDS_REVIEW)
+  calculatedRefund  Float?
+  overrideRefund    Float?
+  overrideReason    String?               @db.Text
   refundAmount      Float?
   currency          String                @default("EGP")
   refundStatus      String                @default("NONE") // NONE, APPROVED_PENDING_PROCESSING, PROCESSED

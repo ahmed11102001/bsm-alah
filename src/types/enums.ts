@@ -201,4 +201,13 @@ export const ProtectionClaimStatus = {
   NOT_ELIGIBLE: "NOT_ELIGIBLE",
   PENDING_EVIDENCE: "PENDING_EVIDENCE",
 } as const;
-export type ProtectionClaimStatus = (typeof ProtectionClaimStatus)[keyof typeof ProtectionClaimStatus];
+export type ProtectionClaimStatus = (typeof ProtectionClaimStatus)[keyof typeof ProtectionClaimStatus];
+
+export const BanStatus = {
+  CUSTOMER_REPORTED: "CUSTOMER_REPORTED",
+  EVIDENCE_PROVIDED: "EVIDENCE_PROVIDED",
+  VERIFIED: "VERIFIED",
+  NOT_VERIFIED: "NOT_VERIFIED",
+} as const;
+export type BanStatus = (typeof BanStatus)[keyof typeof BanStatus];
+

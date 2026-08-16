@@ -9,6 +9,7 @@ import type {
   MessageTimelineItem,
   CampaignSummaryItem,
   AutomationSummaryItem,
+  BanStatusType,
 } from "./types";
 
 /**
@@ -87,6 +88,39 @@ export function calculateSubscriptionRefund(
 }
 
 /**
+ * Helper: safely serializes a date to ISO string, returns null if invalid.
+ */
+function safeIsoDate(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  try {
+    const date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Determine source label for a message (Chat / Campaign / Automation / API)
+ */
+function getMessageSource(msg: any): string {
+  if (msg.campaign) {
+    return `Campaign — ${msg.campaign.name}`;
+  }
+  if (msg.automationRule) {
+    return `Automation — ${msg.automationRule.name}`;
+  }
+  if (msg.senderType === "bot" || msg.senderType === "ai") {
+    return "AI Agent";
+  }
+  if (msg.senderType === "system") {
+    return "System";
+  }
+  return "Chat";
+}
+
+/**
  * Runs the comprehensive Protection Audit on a claim.
  */
 export async function runProtectionAudit(
@@ -111,6 +145,10 @@ export async function runProtectionAudit(
 
   const { user, whatsappAccount, banDetectedAt } = claim;
   const banDate = new Date(banDetectedAt);
+  const banStatus: BanStatusType = (claim as any).banStatus || "CUSTOMER_REPORTED";
+
+  // Audit period: from account creation to ban reported time
+  const auditPeriodFrom = new Date(whatsappAccount.createdAt);
 
   // 1. Account Connection Check
   const accountConnectedAt = new Date(whatsappAccount.createdAt);
@@ -131,7 +169,7 @@ export async function runProtectionAudit(
     include: {
       contact: { select: { id: true, phone: true, name: true } },
       campaign: { select: { id: true, name: true, templateId: true } },
-      automationRule: { select: { id: true, name: true } },
+      automationRule: { select: { id: true, name: true, triggerType: true, replyType: true } },
     },
   });
 
@@ -147,8 +185,13 @@ export async function runProtectionAudit(
   const lastOutbound = outboundMessages[0] || null;
   const waniActivityFound = outboundMessages.length > 0;
 
+  // Count messages in the last 24h before ban specifically
+  const banWindow24hStart = new Date(banDate.getTime() - 24 * 60 * 60 * 1000);
+  const outboundLast24h = outboundMessages.filter(
+    (m: any) => new Date(m.createdAt).getTime() >= banWindow24hStart.getTime()
+  );
+
   // 4. 24-Hour Window & Template Compliance Analysis
-  // For each outbound message, determine if within 24h of an inbound message or if approved template
   let insideWindowCount = 0;
   let templatesOutsideWindowCount = 0;
   let violations24hCount = 0;
@@ -216,9 +259,14 @@ export async function runProtectionAudit(
       windowCompliance = "PASS";
     }
 
+    // Build enriched timeline item with proper timestamps
+    const msgCreatedAt = safeIsoDate(msg.createdAt);
+    const source = getMessageSource(msg);
+
     timelineItems.push({
       id: msg.id,
-      time: msg.createdAt.toISOString(),
+      createdAt: msgCreatedAt || "",
+      time: msgCreatedAt || "",
       type: msg.type,
       direction: msg.direction as "inbound" | "outbound",
       senderType: msg.senderType as any,
@@ -227,6 +275,8 @@ export async function runProtectionAudit(
       contactName: msg.contact?.name,
       templateName: msg.campaign?.name || msg.automationRule?.name,
       ruleName: msg.automationRule?.name,
+      source,
+      whatsappId: msg.whatsappId || null,
       status: msg.status,
       hoursSinceLastInbound: hoursDiff,
       windowCompliance,
@@ -249,7 +299,7 @@ export async function runProtectionAudit(
   const campaignSummaries: CampaignSummaryItem[] = recentCampaigns.map((c: any) => ({
     id: c.id,
     name: c.name,
-    createdAt: c.createdAt.toISOString(),
+    createdAt: safeIsoDate(c.createdAt) || "",
     status: c.status,
     sentCount: c.sentCount,
     deliveredCount: c.deliveredCount,
@@ -258,7 +308,7 @@ export async function runProtectionAudit(
     templateName: c.template?.name || null,
   }));
 
-  // 6. Automation Rules & Interactions Audit
+  // 6. Automation Rules & Interactions Audit - enriched with message count
   const automations = await prisma.automationRule.findMany({
     where: { userId: user.id },
     include: {
@@ -271,13 +321,31 @@ export async function runProtectionAudit(
     take: 10,
   });
 
+  // Count messages linked to each automation rule
+  const automationIds = automations.map((a: any) => a.id);
+  const automationMessageCounts = automationIds.length > 0
+    ? await prisma.message.groupBy({
+        by: ["automationRuleId"],
+        where: {
+          automationRuleId: { in: automationIds },
+          createdAt: { lte: banDate },
+        },
+        _count: { id: true },
+      })
+    : [];
+  const automationMsgCountMap = new Map(
+    automationMessageCounts.map((r: any) => [r.automationRuleId, r._count.id])
+  );
+
   const automationSummaries: AutomationSummaryItem[] = automations.map((a: any) => ({
     id: a.id,
     name: a.name,
+    ruleId: a.id,
     triggerType: a.triggerType,
     replyType: a.replyType,
-    lastTriggeredAt: a.interactions[0]?.createdAt.toISOString() || null,
+    lastTriggeredAt: safeIsoDate(a.interactions[0]?.createdAt) || null,
     interactionCount: a.interactions.length,
+    matchedMessagesCount: automationMsgCountMap.get(a.id) || 0,
   }));
 
   // 7. Template Compliance Check
@@ -323,7 +391,6 @@ export async function runProtectionAudit(
 
   // 9. Sending Limits Check
   // Check messages velocity in the 24 hours immediately before ban
-  const banWindow24hStart = new Date(banDate.getTime() - 24 * 60 * 60 * 1000);
   const countIn24hBeforeBan = await prisma.message.count({
     where: {
       userId: user.id,
@@ -335,11 +402,12 @@ export async function runProtectionAudit(
     },
   });
 
+  // If we can't determine the tier limit reliably, use UNKNOWN instead of PASS
   const sendingLimitsStatus: "PASS" | "FAIL" | "UNKNOWN" =
     countIn24hBeforeBan > 10000 && messagingTier === 1
       ? "FAIL"
       : countIn24hBeforeBan > 0
-      ? "PASS"
+      ? (messagingTier > 0 ? "PASS" : "UNKNOWN")
       : "UNKNOWN";
 
   // 10. Opt-in Check
@@ -348,7 +416,7 @@ export async function runProtectionAudit(
     where: { userId: user.id, deletedAt: null },
   });
   const optInStatus: "PASS" | "FAIL" | "NEEDS EVIDENCE" =
-    contactsCount > 0 ? "NEEDS EVIDENCE" : "UNKNOWN" as any;
+    contactsCount > 0 ? "NEEDS EVIDENCE" : "NEEDS EVIDENCE";
 
   // 11. Refund Estimation
   const refundEstimate = calculateSubscriptionRefund(
@@ -365,7 +433,7 @@ export async function runProtectionAudit(
       subtitle: isConnectedBeforeBan ? "Connected before ban date" : "Not connected at ban date",
       status: isConnectedBeforeBan ? "PASS" : "FAIL",
       details: `Account created: ${accountConnectedAt.toLocaleDateString("en-CA")}. Token Status: ${tokenStatus}. Messaging Tier: ${messagingTier}.`,
-      evidence: { createdAt: accountConnectedAt, tokenStatus, messagingTier },
+      evidence: { createdAt: accountConnectedAt.toISOString(), tokenStatus, messagingTier },
     },
     {
       id: "wani_activity",
@@ -375,9 +443,9 @@ export async function runProtectionAudit(
         : "No outbound messages found prior to ban",
       status: waniActivityFound ? "PASS" : "FAIL",
       details: lastOutbound
-        ? `Last message: ${new Date(lastOutbound.createdAt).toLocaleString()} (${lastOutbound.type}, sender: ${lastOutbound.senderType})`
+        ? `Last message: ${safeIsoDate(lastOutbound.createdAt) || "Unknown"} (${lastOutbound.type}, sender: ${lastOutbound.senderType})`
         : "No activity recorded through Wani before ban timestamp.",
-      evidence: { outboundCount: outboundMessages.length, lastOutbound },
+      evidence: { outboundCount: outboundMessages.length, lastOutbound: lastOutbound ? { id: lastOutbound.id, createdAt: safeIsoDate(lastOutbound.createdAt), type: lastOutbound.type } : null },
     },
     {
       id: "template_compliance",
@@ -412,8 +480,8 @@ export async function runProtectionAudit(
       title: "Sending Limits & Velocity",
       subtitle: `${countIn24hBeforeBan} messages sent in 24h window before ban (Tier ${messagingTier})`,
       status: sendingLimitsStatus,
-      details: `Daily sent count: ${dailySentCount}. Recent 24h velocity: ${countIn24hBeforeBan} msgs. Within allowed messaging rate limits.`,
-      evidence: { countIn24hBeforeBan, messagingTier, dailySentCount },
+      details: `Audit period: ${safeIsoDate(banWindow24hStart) || "Unknown"} → ${safeIsoDate(banDate) || "Unknown"}. Daily sent count: ${dailySentCount}. Recent 24h velocity: ${countIn24hBeforeBan} msgs.`,
+      evidence: { countIn24hBeforeBan, messagingTier, dailySentCount, auditPeriodFrom: safeIsoDate(banWindow24hStart), auditPeriodTo: safeIsoDate(banDate) },
     },
     {
       id: "opt_in",
@@ -444,18 +512,26 @@ export async function runProtectionAudit(
     templateComplianceStatus === "UNKNOWN" ||
     window24hStatus === "UNKNOWN" ||
     optInStatus === "NEEDS EVIDENCE" ||
+    sendingLimitsStatus === "UNKNOWN" ||
+    banStatus === "CUSTOMER_REPORTED" ||
     evaluated24hCount < 3
   ) {
     systemAssessment = "NEEDS_REVIEW";
-    assessmentSummary = "Some compliance data requires manual admin review or customer evidence verification.";
+    assessmentSummary = "Some compliance data requires manual admin review or customer evidence verification. Ban status is still customer-reported and not verified.";
   }
 
   // 14. Compile Snapshot
   const snapshot: EvidenceSnapshot = {
     auditedAt: new Date().toISOString(),
     auditedBy: adminUserId,
+    claimedBanDate: safeIsoDate(banDetectedAt) || "",
+    verifiedBanStatus: banStatus,
     systemAssessment,
     assessmentSummary,
+    auditPeriod: {
+      from: safeIsoDate(auditPeriodFrom) || "",
+      to: safeIsoDate(banDate) || "",
+    },
     accountCheck: {
       isConnected: isConnectedBeforeBan,
       connectedAt: accountConnectedAt.toISOString(),
@@ -467,8 +543,9 @@ export async function runProtectionAudit(
     },
     waniActivity: {
       found: waniActivityFound,
-      outboundCountBeforeBan: outboundMessages.length,
-      lastOutboundAt: lastOutbound?.createdAt.toISOString() || null,
+      totalOutboundCount: outboundMessages.length,
+      last24hOutboundCount: outboundLast24h.length,
+      lastOutboundAt: safeIsoDate(lastOutbound?.createdAt) || null,
       lastOutboundType: lastOutbound?.type || null,
       lastOutboundSender: lastOutbound?.senderType || null,
     },
@@ -489,7 +566,9 @@ export async function runProtectionAudit(
     sendingLimits: {
       status: sendingLimitsStatus,
       tier: messagingTier,
+      dailySentCount,
       recentVelocity24h: countIn24hBeforeBan,
+      auditPeriodDescription: `${safeIsoDate(banWindow24hStart) || "Unknown"} → ${safeIsoDate(banDate) || "Ban reported time"}`,
       notes: `${countIn24hBeforeBan} messages in 24h prior to ban`,
     },
     externalPlatform: {
@@ -511,6 +590,7 @@ export async function runProtectionAudit(
     where: { id: claimId },
     data: {
       evidenceSnapshot: snapshot as any,
+      calculatedRefund: refundEstimate.calculatedRefund,
       refundAmount: refundEstimate.calculatedRefund,
     },
     include: {
@@ -541,8 +621,12 @@ export async function runProtectionAudit(
       result: systemAssessment,
       details: {
         assessmentSummary,
+        verifiedBanStatus: banStatus,
         refundEstimate,
         evaluatedMessages: evaluated24hCount,
+        totalOutbound: outboundMessages.length,
+        last24hOutbound: outboundLast24h.length,
+        auditPeriod: { from: safeIsoDate(auditPeriodFrom), to: safeIsoDate(banDate) },
       } as any,
     },
   });

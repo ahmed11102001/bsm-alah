@@ -377,6 +377,8 @@ export const AdminProtectionClaimDecisionSchema = z.object({
   adminNotes: z.string().trim().max(2000).optional(),
   refundAmount: z.number().nonnegative().optional().nullable(),
   refundStatus: z.enum(["NONE", "APPROVED_PENDING_PROCESSING", "PROCESSED"]).optional(),
+  evidenceRequested: z.string().trim().max(2000).optional(),
+  confirmOverride: z.boolean().optional(),
 }).refine(
   data => {
     // سبب القرار إجباري عند الرفض (NOT_ELIGIBLE)
@@ -391,3 +393,25 @@ export const AdminProtectionClaimDecisionSchema = z.object({
   }
 );
 export type AdminProtectionClaimDecisionInput = z.infer<typeof AdminProtectionClaimDecisionSchema>;
+
+/** PATCH /api/admin/protection-claims/[id] — Override Refund Amount */
+export const AdminRefundOverrideSchema = z.object({
+  overrideRefund: z.number().nonnegative(),
+  overrideReason: nonEmptyStr,
+});
+export type AdminRefundOverrideInput = z.infer<typeof AdminRefundOverrideSchema>;
+
+/** PATCH /api/admin/protection-claims/[id] — Update Ban Status */
+export const AdminBanStatusUpdateSchema = z.object({
+  banStatus: z.enum(["CUSTOMER_REPORTED", "EVIDENCE_PROVIDED", "VERIFIED", "NOT_VERIFIED"]),
+});
+export type AdminBanStatusUpdateInput = z.infer<typeof AdminBanStatusUpdateSchema>;
+
+/** POST /api/admin/protection-claims/[id]/evidence — Add evidence entry */
+export const AdminAddEvidenceSchema = z.object({
+  type: z.enum(["BAN_SCREENSHOT", "META_RESTRICTION", "OPT_IN_PROOF", "NO_EXTERNAL_PROVIDER_DECLARATION", "OTHER"]),
+  url: z.string().url().optional(),
+  name: z.string().trim().max(500).optional(),
+  note: z.string().trim().max(2000).optional(),
+});
+export type AdminAddEvidenceInput = z.infer<typeof AdminAddEvidenceSchema>;

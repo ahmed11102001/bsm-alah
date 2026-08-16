@@ -4,6 +4,9 @@ import { calculateSubscriptionRefund } from "@/lib/protection/audit-engine";
 import {
   AdminCreateProtectionClaimSchema,
   AdminProtectionClaimDecisionSchema,
+  AdminRefundOverrideSchema,
+  AdminBanStatusUpdateSchema,
+  AdminAddEvidenceSchema,
   parseInput,
 } from "@/lib/schemas";
 
@@ -31,6 +34,29 @@ describe("Protection Claims & Refund Calculation", () => {
     expect(result.usedDays).toBe(19);
     // (599 / 30) * 11 = 219.63
     expect(result.calculatedRefund).toBeCloseTo(219.63, 1);
+  });
+
+  it("calculates prorated refund accurately for Enterprise plan (999 EGP)", () => {
+    // Aug 1 to Aug 31. Ban on Aug 15 (16 days remaining).
+    const start = new Date("2026-08-01T00:00:00Z");
+    const end = new Date("2026-08-31T00:00:00Z");
+    const ban = new Date("2026-08-15T00:00:00Z");
+
+    const result = calculateSubscriptionRefund(
+      {
+        plan: "enterprise",
+        currentPeriodStart: start,
+        currentPeriodEnd: end,
+        createdAt: start,
+      },
+      ban,
+      "EGP"
+    );
+
+    expect(result.monthlyPrice).toBe(999);
+    expect(result.remainingDays).toBe(16);
+    // (999 / 30) * 16 = 532.8
+    expect(result.calculatedRefund).toBeCloseTo(532.8, 1);
   });
 
   it("returns 0 refund when subscription is expired or free", () => {
@@ -100,5 +126,52 @@ describe("Protection Claims & Refund Calculation", () => {
       refundAmount: 350,
     });
     expect(validApproval.ok).toBe(true);
+  });
+
+  it("validates AdminRefundOverrideSchema properly requiring reason and nonnegative amount", () => {
+    const valid = parseInput(AdminRefundOverrideSchema, {
+      overrideRefund: 500,
+      overrideReason: "Manual adjustment approved by management",
+    });
+    expect(valid.ok).toBe(true);
+
+    const invalidMissingReason = parseInput(AdminRefundOverrideSchema, {
+      overrideRefund: 500,
+      overrideReason: "",
+    });
+    expect(invalidMissingReason.ok).toBe(false);
+
+    const invalidNegative = parseInput(AdminRefundOverrideSchema, {
+      overrideRefund: -10,
+      overrideReason: "Negative test",
+    });
+    expect(invalidNegative.ok).toBe(false);
+  });
+
+  it("validates AdminBanStatusUpdateSchema with proper enum values", () => {
+    const valid = parseInput(AdminBanStatusUpdateSchema, {
+      banStatus: "VERIFIED",
+    });
+    expect(valid.ok).toBe(true);
+
+    const invalid = parseInput(AdminBanStatusUpdateSchema, {
+      banStatus: "UNKNOWN_STATUS",
+    });
+    expect(invalid.ok).toBe(false);
+  });
+
+  it("validates AdminAddEvidenceSchema correctly", () => {
+    const valid = parseInput(AdminAddEvidenceSchema, {
+      type: "BAN_SCREENSHOT",
+      url: "https://res.cloudinary.com/demo/image/upload/v123/screenshot.png",
+      name: "Meta Ban Notice",
+      note: "Customer forwarded screenshot from WhatsApp Business App",
+    });
+    expect(valid.ok).toBe(true);
+
+    const invalidType = parseInput(AdminAddEvidenceSchema, {
+      type: "INVALID_TYPE",
+    });
+    expect(invalidType.ok).toBe(false);
   });
 });

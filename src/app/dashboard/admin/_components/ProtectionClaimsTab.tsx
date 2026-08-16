@@ -1,13 +1,14 @@
 // src/app/dashboard/admin/_components/ProtectionClaimsTab.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Shield, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2,
   XCircle, Clock, Search, RefreshCw, Plus, ArrowLeft,
   ExternalLink, FileText, Check, X, Loader2, User as UserIcon,
   Phone, Calendar, DollarSign, AlertCircle, Info, Send, Eye,
-  HelpCircle, Sparkles, MessageSquare, Layers, CheckSquare
+  HelpCircle, Sparkles, MessageSquare, Layers, CheckSquare,
+  Upload, Edit3, ChevronDown, ChevronUp
 } from "lucide-react";
 import type {
   EvidenceSnapshot,
@@ -16,6 +17,7 @@ import type {
   MessageTimelineItem,
   CampaignSummaryItem,
   AutomationSummaryItem,
+  CustomerEvidenceItem,
 } from "@/lib/protection/types";
 
 interface ProtectionClaimItem {
@@ -25,7 +27,11 @@ interface ProtectionClaimItem {
   phoneNumber: string;
   reportedAt: string;
   banDetectedAt: string;
+  banStatus?: string;
   status: "NEEDS_REVIEW" | "ELIGIBLE" | "NOT_ELIGIBLE" | "PENDING_EVIDENCE";
+  calculatedRefund?: number | null;
+  overrideRefund?: number | null;
+  overrideReason?: string | null;
   refundAmount: number | null;
   currency: string;
   refundStatus: string;
@@ -35,6 +41,7 @@ interface ProtectionClaimItem {
   adminNotes: string | null;
   customerNotes: string | null;
   evidenceSnapshot: EvidenceSnapshot | null;
+  evidenceFiles?: CustomerEvidenceItem[] | null;
   createdAt: string;
   user: {
     id: string;
@@ -121,6 +128,74 @@ const STATUS_BADGES: Record<string, { labelAr: string; labelEn: string; bg: stri
   },
 };
 
+const BAN_STATUS_LABELS: Record<string, { ar: string; en: string; color: string }> = {
+  CUSTOMER_REPORTED: { ar: "بلاغ عميل", en: "Customer Reported", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+  EVIDENCE_PROVIDED: { ar: "تم تقديم أدلة", en: "Evidence Provided", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
+  VERIFIED: { ar: "تم التحقق", en: "Verified", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  NOT_VERIFIED: { ar: "لم يتم التحقق", en: "Not Verified", color: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300" },
+};
+
+const EVIDENCE_TYPE_LABELS: Record<string, { ar: string; en: string }> = {
+  BAN_SCREENSHOT: { ar: "لقطة شاشة الحظر", en: "Meta Ban Screenshot" },
+  META_RESTRICTION: { ar: "دليل تقييد Meta", en: "Meta Restriction Evidence" },
+  OPT_IN_PROOF: { ar: "إثبات الموافقة", en: "Opt-in Evidence" },
+  NO_EXTERNAL_PROVIDER_DECLARATION: { ar: "إقرار عدم استخدام مزود آخر", en: "No External Provider Declaration" },
+  OTHER: { ar: "أدلة أخرى", en: "Other Supporting Evidence" },
+};
+
+/** Safely format a date string, never show "Invalid Date" */
+function formatDate(d: string | Date | null | undefined, locale: string, opts?: Intl.DateTimeFormatOptions): string {
+  if (!d) return "Unknown time";
+  try {
+    const date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return "Unknown time";
+    return date.toLocaleString(locale === "ar" ? "ar-EG" : "en-US", {
+      timeZone: "Africa/Cairo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      ...opts,
+    });
+  } catch {
+    return "Unknown time";
+  }
+}
+
+/** Short date only */
+function formatShortDate(d: string | Date | null | undefined, locale: string): string {
+  if (!d) return "Unknown";
+  try {
+    const date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return "Unknown";
+    return date.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+      timeZone: "Africa/Cairo",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "Unknown";
+  }
+}
+
+/** Time only */
+function formatTime(d: string | Date | null | undefined, locale: string): string {
+  if (!d) return "--:--";
+  try {
+    const date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return "--:--";
+    return date.toLocaleTimeString(locale === "ar" ? "ar-EG" : "en-US", {
+      timeZone: "Africa/Cairo",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "--:--";
+  }
+}
+
 export default function ProtectionClaimsTab({
   locale,
   dir,
@@ -143,7 +218,7 @@ export default function ProtectionClaimsTab({
   const [selectedClaim, setSelectedClaim] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [runningAudit, setRunningAudit] = useState(false);
-  const [timelineMessages, setTimelineMessages] = useState<MessageTimelineItem[]>([]);
+  const [timelineMessages, setTimelineMessages] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<CampaignSummaryItem[]>([]);
   const [automations, setAutomations] = useState<AutomationSummaryItem[]>([]);
   const [liveRefund, setLiveRefund] = useState<RefundCalculation | null>(null);
@@ -152,10 +227,30 @@ export default function ProtectionClaimsTab({
   const [decisionStatus, setDecisionStatus] = useState<"ELIGIBLE" | "NOT_ELIGIBLE" | "PENDING_EVIDENCE">("ELIGIBLE");
   const [decisionReason, setDecisionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
-  const [refundAmountInput, setRefundAmountInput] = useState<string>("");
+  const [evidenceRequested, setEvidenceRequested] = useState("");
   const [savingDecision, setSavingDecision] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [decisionSuccess, setDecisionSuccess] = useState<string | null>(null);
+
+  // Confirmation Dialog
+  const [showConfirmApprove, setShowConfirmApprove] = useState(false);
+
+  // Override Refund
+  const [showOverride, setShowOverride] = useState(false);
+  const [overrideAmount, setOverrideAmount] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [savingOverride, setSavingOverride] = useState(false);
+
+  // Ban Status
+  const [updatingBanStatus, setUpdatingBanStatus] = useState(false);
+
+  // Evidence Upload
+  const [showEvidenceForm, setShowEvidenceForm] = useState(false);
+  const [evidenceType, setEvidenceType] = useState("BAN_SCREENSHOT");
+  const [evidenceNote, setEvidenceNote] = useState("");
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create Form State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -215,6 +310,9 @@ export default function ProtectionClaimsTab({
     setLoadingDetail(true);
     setDecisionError(null);
     setDecisionSuccess(null);
+    setShowOverride(false);
+    setShowEvidenceForm(false);
+    setShowConfirmApprove(false);
     try {
       const res = await fetch(`/api/admin/protection-claims/${id}`);
       if (res.ok) {
@@ -229,8 +327,6 @@ export default function ProtectionClaimsTab({
         setDecisionStatus(data.claim.status === "NOT_ELIGIBLE" ? "NOT_ELIGIBLE" : "ELIGIBLE");
         setDecisionReason(data.claim.decisionReason || "");
         setAdminNotes(data.claim.adminNotes || "");
-        const calculatedAmount = data.claim.refundAmount ?? data.liveRefund?.calculatedRefund ?? 0;
-        setRefundAmountInput(calculatedAmount.toString());
       }
     } catch (err) {
       console.error("Failed to fetch claim detail:", err);
@@ -261,8 +357,8 @@ export default function ProtectionClaimsTab({
     }
   };
 
-  // Submit Admin Decision
-  const handleSaveDecision = async () => {
+  // Submit Admin Decision (with confirmation check for ELIGIBLE with UNKNOWN)
+  const handleSaveDecision = async (confirmed = false) => {
     if (!selectedClaimId) return;
     setDecisionError(null);
     setDecisionSuccess(null);
@@ -272,21 +368,39 @@ export default function ProtectionClaimsTab({
       return;
     }
 
+    // Check for UNKNOWN/NEEDS_EVIDENCE on approval → show confirmation
+    if (decisionStatus === "ELIGIBLE" && !confirmed) {
+      const snapshot: EvidenceSnapshot | null = selectedClaim?.evidenceSnapshot;
+      if (snapshot?.checklist) {
+        const unclearChecks = snapshot.checklist.filter(
+          (c) => c.status === "UNKNOWN" || c.status === "NEEDS EVIDENCE" || c.status === "NEEDS_EVIDENCE"
+        );
+        if (unclearChecks.length > 0 || snapshot.systemAssessment === "NEEDS_REVIEW") {
+          setShowConfirmApprove(true);
+          return;
+        }
+      }
+    }
+
     setSavingDecision(true);
+    setShowConfirmApprove(false);
     try {
       const payload: any = {
         status: decisionStatus,
         decisionReason: decisionReason.trim() || undefined,
         adminNotes: adminNotes.trim() || undefined,
+        confirmOverride: confirmed || false,
       };
 
       if (decisionStatus === "ELIGIBLE") {
-        const amt = parseFloat(refundAmountInput);
-        payload.refundAmount = isNaN(amt) ? 0 : amt;
+        const calc = liveRefund?.calculatedRefund ?? selectedClaim?.calculatedRefund ?? 0;
+        payload.refundAmount = selectedClaim?.overrideRefund ?? calc;
         payload.refundStatus = "APPROVED_PENDING_PROCESSING";
       } else if (decisionStatus === "NOT_ELIGIBLE") {
         payload.refundAmount = 0;
         payload.refundStatus = "NONE";
+      } else if (decisionStatus === "PENDING_EVIDENCE") {
+        payload.evidenceRequested = evidenceRequested.trim() || undefined;
       }
 
       const res = await fetch(`/api/admin/protection-claims/${selectedClaimId}`, {
@@ -312,6 +426,95 @@ export default function ProtectionClaimsTab({
       setDecisionError(isAr ? "خطأ في الاتصال بالخادم" : "Server connection error");
     } finally {
       setSavingDecision(false);
+    }
+  };
+
+  // Ban Status Update
+  const handleBanStatusUpdate = async (newStatus: string) => {
+    if (!selectedClaimId) return;
+    setUpdatingBanStatus(true);
+    try {
+      const res = await fetch(`/api/admin/protection-claims/${selectedClaimId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _action: "update_ban_status", banStatus: newStatus }),
+      });
+      if (res.ok) {
+        await fetchClaimDetails(selectedClaimId);
+      }
+    } catch (err) {
+      console.error("Ban status update failed:", err);
+    } finally {
+      setUpdatingBanStatus(false);
+    }
+  };
+
+  // Refund Override
+  const handleOverrideSubmit = async () => {
+    if (!selectedClaimId || !overrideAmount.trim() || !overrideReason.trim()) return;
+    setSavingOverride(true);
+    try {
+      const res = await fetch(`/api/admin/protection-claims/${selectedClaimId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _action: "refund_override",
+          overrideRefund: parseFloat(overrideAmount),
+          overrideReason: overrideReason.trim(),
+        }),
+      });
+      if (res.ok) {
+        setShowOverride(false);
+        setOverrideAmount("");
+        setOverrideReason("");
+        await fetchClaimDetails(selectedClaimId);
+      }
+    } catch (err) {
+      console.error("Override failed:", err);
+    } finally {
+      setSavingOverride(false);
+    }
+  };
+
+  // Evidence Upload
+  const handleEvidenceSubmit = async () => {
+    if (!selectedClaimId) return;
+    setUploadingEvidence(true);
+    try {
+      if (evidenceFile) {
+        const form = new FormData();
+        form.append("file", evidenceFile);
+        form.append("type", evidenceType);
+        form.append("note", evidenceNote);
+        form.append("name", evidenceFile.name);
+        const res = await fetch(`/api/admin/protection-claims/${selectedClaimId}/evidence`, {
+          method: "POST",
+          body: form,
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          alert(d.error || "Upload failed");
+        }
+      } else {
+        const res = await fetch(`/api/admin/protection-claims/${selectedClaimId}/evidence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: evidenceType, note: evidenceNote || undefined }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          alert(d.error || "Failed to add evidence");
+        }
+      }
+      setShowEvidenceForm(false);
+      setEvidenceFile(null);
+      setEvidenceNote("");
+      setEvidenceType("BAN_SCREENSHOT");
+      await fetchClaimDetails(selectedClaimId);
+    } catch (err) {
+      console.error("Evidence submit failed:", err);
+    } finally {
+      setUploadingEvidence(false);
     }
   };
 
@@ -375,7 +578,6 @@ export default function ProtectionClaimsTab({
         setCustomerNotesInput("");
         setAdminNotesInput("");
         await fetchClaims();
-        // Open the newly created claim details view
         if (newClaim?.id) {
           fetchClaimDetails(newClaim.id);
         }
@@ -423,9 +625,70 @@ export default function ProtectionClaimsTab({
     const snapshot: EvidenceSnapshot | null = selectedClaim.evidenceSnapshot;
     const currentStatusBadge = STATUS_BADGES[selectedClaim.status] || STATUS_BADGES.NEEDS_REVIEW;
     const StatusIcon = currentStatusBadge.icon;
+    const banStatusInfo = BAN_STATUS_LABELS[selectedClaim.banStatus || "CUSTOMER_REPORTED"] || BAN_STATUS_LABELS.CUSTOMER_REPORTED;
+    const evidenceFiles: CustomerEvidenceItem[] = (selectedClaim.evidenceFiles as CustomerEvidenceItem[]) || [];
+
+    // Effective refund = override or calculated
+    const effectiveRefund = selectedClaim.overrideRefund ?? selectedClaim.calculatedRefund ?? liveRefund?.calculatedRefund ?? 0;
 
     return (
       <div className="space-y-6">
+        {/* ── Confirmation Dialog for Approve with UNKNOWN ── */}
+        {showConfirmApprove && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowConfirmApprove(false)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+                  {isAr ? "تأكيد الموافقة على الاسترداد" : "Confirm Refund Approval"}
+                </h3>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                {isAr
+                  ? "بعض فحوصات الالتزام ما زالت تحتاج تحقق يدوي:"
+                  : "Some compliance checks still require manual verification:"}
+              </p>
+              <div className="space-y-1.5 mb-4">
+                {(snapshot?.checklist || [])
+                  .filter((c) => c.status === "UNKNOWN" || c.status === "NEEDS EVIDENCE" || c.status === "NEEDS_EVIDENCE")
+                  .map((c) => (
+                    <div key={c.id} className="flex items-center gap-2 text-xs p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{c.title}:</span>
+                      <span className="font-mono font-bold text-amber-700 dark:text-amber-300">{c.status}</span>
+                    </div>
+                  ))}
+              </div>
+              {snapshot?.systemAssessment === "NEEDS_REVIEW" && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mb-4 font-semibold">
+                  {isAr ? "تقييم النظام الحالي: NEEDS REVIEW 🟡" : "System assessment is currently: NEEDS REVIEW 🟡"}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mb-4">
+                {isAr ? "هل أنت متأكد أنك تريد الموافقة على هذا الاسترداد؟" : "Are you sure you want to approve this refund?"}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setShowConfirmApprove(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  {isAr ? "إلغاء" : "Cancel"}
+                </button>
+                <button
+                  onClick={() => handleSaveDecision(true)}
+                  disabled={savingDecision}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {savingDecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {isAr ? "تأكيد الموافقة على الاسترداد" : "Confirm Approve Refund"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navigation & Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <div className="flex items-center gap-4">
@@ -458,9 +721,9 @@ export default function ProtectionClaimsTab({
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {isAr ? "تاريخ البلاغ:" : "Reported:"} {new Date(selectedClaim.reportedAt).toLocaleString(isAr ? "ar-EG" : "en-US")}
+                {isAr ? "تاريخ البلاغ:" : "Reported:"} {formatDate(selectedClaim.reportedAt, locale)}
                 {" • "}
-                {isAr ? "تاريخ الحظر المدّعى:" : "Ban detected:"} {new Date(selectedClaim.banDetectedAt).toLocaleString(isAr ? "ar-EG" : "en-US")}
+                {isAr ? "تاريخ الحظر المدّعى:" : "Claimed ban date:"} {formatDate(selectedClaim.banDetectedAt, locale)}
               </p>
             </div>
           </div>
@@ -477,7 +740,41 @@ export default function ProtectionClaimsTab({
           </div>
         </div>
 
-        {/* Customer & Account Overview Grid */}
+        {/* ── Key Summary Bar: Status, Ban, Assessment, Refund ── */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "حالة الطلب" : "Claim Status"}</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${currentStatusBadge.bg} ${currentStatusBadge.text}`}>
+              <StatusIcon className="w-3 h-3" />
+              {isAr ? currentStatusBadge.labelAr : currentStatusBadge.labelEn}
+            </span>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "حالة الحظر" : "Ban Status"}</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${banStatusInfo.color}`}>
+              {isAr ? banStatusInfo.ar : banStatusInfo.en}
+            </span>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "تقييم النظام" : "Assessment"}</span>
+            <span className={`text-xs font-extrabold ${
+              snapshot?.systemAssessment === "ELIGIBLE" ? "text-emerald-600" :
+              snapshot?.systemAssessment === "NOT_ELIGIBLE" ? "text-rose-600" : "text-amber-600"
+            }`}>
+              {snapshot?.systemAssessment || "—"}
+            </span>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "المبلغ المحسوب" : "Calculated Refund"}</span>
+            <span className="text-sm font-black text-emerald-600">{effectiveRefund} {selectedClaim.currency || "EGP"}</span>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "الأيام المتبقية" : "Days Remaining"}</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{liveRefund?.remainingDays ?? 0}</span>
+          </div>
+        </div>
+
+        {/* Customer & Account + Ban Status Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
@@ -515,32 +812,37 @@ export default function ProtectionClaimsTab({
             </div>
           </div>
 
+          {/* Ban Status Card */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              <DollarSign className="w-4 h-4 text-emerald-500" />
-              {isAr ? "الضمان والاسترداد التلقائي" : "Guarantee & Refund"}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                {isAr ? "حالة الحظر" : "Ban Verification Status"}
+              </div>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-gray-900 dark:text-white">
-                {selectedClaim.refundAmount ?? liveRefund?.calculatedRefund ?? 0}
+            <div className="mb-2">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${banStatusInfo.color}`}>
+                {isAr ? banStatusInfo.ar : banStatusInfo.en}
               </span>
-              <span className="text-xs font-bold text-gray-500">{selectedClaim.currency || "EGP"}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {isAr
-                ? `متبقي ${liveRefund?.remainingDays ?? 0} يوم من الدورة الشهرية`
-                : `${liveRefund?.remainingDays ?? 0} days remaining in current cycle`}
+            <p className="text-[11px] text-gray-500 mb-2">
+              {isAr ? "تاريخ الحظر المدّعى:" : "Claimed Ban Date:"}{" "}
+              <span className="font-mono font-semibold">{formatDate(selectedClaim.banDetectedAt, locale)}</span>
             </p>
-            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
-              <span className="text-gray-400">{isAr ? "المراجع:" : "Reviewed by:"}</span>
-              <span className="font-medium text-gray-600 dark:text-gray-400">
-                {selectedClaim.reviewer?.name || selectedClaim.reviewer?.email || (isAr ? "لم يراجع بعد" : "Pending")}
-              </span>
-            </div>
+            <select
+              value={selectedClaim.banStatus || "CUSTOMER_REPORTED"}
+              onChange={(e) => handleBanStatusUpdate(e.target.value)}
+              disabled={updatingBanStatus}
+              className={inp + " text-xs py-1.5"}
+            >
+              {Object.entries(BAN_STATUS_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{isAr ? label.ar : label.en}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Customer Notes Banner if provided */}
+        {/* Customer Notes Banner */}
         {selectedClaim.customerNotes && (
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 flex gap-3 text-xs text-amber-900 dark:text-amber-200">
             <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -595,6 +897,13 @@ export default function ProtectionClaimsTab({
                     </span>
                   </div>
                   <p className="text-xs mt-1 font-medium">{snapshot.assessmentSummary}</p>
+                  {/* Audit Period */}
+                  {snapshot.auditPeriod && (
+                    <p className="text-[11px] mt-1 opacity-75">
+                      {isAr ? "فترة الفحص:" : "Audit period:"}{" "}
+                      {formatShortDate(snapshot.auditPeriod.from, locale)} → {formatShortDate(snapshot.auditPeriod.to, locale)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -619,7 +928,7 @@ export default function ProtectionClaimsTab({
             </h3>
             {snapshot && (
               <span className="text-[11px] text-gray-400">
-                {isAr ? "فُحص في:" : "Audited at:"} {new Date(snapshot.auditedAt).toLocaleString(isAr ? "ar-EG" : "en-US")}
+                {isAr ? "فُحص في:" : "Audited at:"} {formatDate(snapshot.auditedAt, locale)}
               </span>
             )}
           </div>
@@ -675,9 +984,40 @@ export default function ProtectionClaimsTab({
           </div>
         </div>
 
-        {/* ── 24-Hour Window & Template Details ── */}
+        {/* ── Sending Limits & Activity Summary ── */}
         {snapshot && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <Send className="w-4 h-4 text-indigo-500" />
+                {isAr ? "ملخص نشاط الإرسال (Activity Summary)" : "Sending Activity Summary"}
+              </h4>
+              <div className="space-y-2 text-xs">
+                {snapshot.auditPeriod && (
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 font-mono text-[11px]">
+                    {isAr ? "فترة التحليل:" : "Audit period:"}{" "}
+                    {formatShortDate(snapshot.auditPeriod.from, locale)} → {formatShortDate(snapshot.auditPeriod.to, locale)}
+                  </div>
+                )}
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-gray-500">{isAr ? "إجمالي الرسائل الصادرة:" : "Total Outbound:"}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{snapshot.waniActivity?.totalOutboundCount ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-gray-500">{isAr ? "آخر 24 ساعة قبل الحظر:" : "Last 24h Before Ban:"}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{snapshot.waniActivity?.last24hOutboundCount ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-gray-500">{isAr ? "آخر رسالة صادرة:" : "Last Outbound:"}</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{formatDate(snapshot.waniActivity?.lastOutboundAt, locale)}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-gray-500">{isAr ? "Messaging Tier:" : "Messaging Tier:"}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{snapshot.sendingLimits?.tier ?? "—"}</span>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
               <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-indigo-500" />
@@ -704,40 +1044,43 @@ export default function ProtectionClaimsTab({
                 </div>
               </div>
             </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-              <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple-500" />
-                {isAr ? "قوالب Meta المسجلة (Templates Compliance)" : "Meta Template Compliance"}
-              </h4>
-              {snapshot.templateCompliance.templatesFound.length === 0 ? (
-                <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "لا توجد قوالب مسجلة لهذا الحساب" : "No templates registered"}</p>
-              ) : (
-                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                  {snapshot.templateCompliance.templatesFound.map((tpl, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px] p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">{tpl.name}</p>
-                        <p className="text-[10px] text-gray-400 font-mono">{tpl.category} • {tpl.language}</p>
-                      </div>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          tpl.status.toUpperCase() === "APPROVED"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
-                            : "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300"
-                        }`}
-                      >
-                        {tpl.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
-        {/* ── Message Timeline ── */}
+        {/* ── Template Compliance ── */}
+        {snapshot && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-purple-500" />
+              {isAr ? "قوالب Meta المسجلة (Templates Compliance)" : "Meta Template Compliance"}
+            </h4>
+            {snapshot.templateCompliance.templatesFound.length === 0 ? (
+              <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "لا توجد قوالب مسجلة لهذا الحساب" : "No templates registered"}</p>
+            ) : (
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {snapshot.templateCompliance.templatesFound.map((tpl, i) => (
+                  <div key={i} className="flex items-center justify-between text-[11px] p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">{tpl.name}</p>
+                      <p className="text-[10px] text-gray-400 font-mono">{tpl.category} • {tpl.language}</p>
+                    </div>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        tpl.status.toUpperCase() === "APPROVED"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
+                          : "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300"
+                      }`}
+                    >
+                      {tpl.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Message Timeline (Enriched) ── */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-500" />
@@ -747,11 +1090,11 @@ export default function ProtectionClaimsTab({
           {timelineMessages.length === 0 ? (
             <p className="text-xs text-gray-400 py-6 text-center">{isAr ? "لا توجد رسائل مسجلة قبل تاريخ الحظر" : "No messages found prior to ban"}</p>
           ) : (
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {timelineMessages.map((msg) => (
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {timelineMessages.map((msg: any) => (
                 <div
                   key={msg.id}
-                  className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${
+                  className={`p-3 rounded-xl border text-xs ${
                     msg.direction === "inbound"
                       ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/40"
                       : msg.windowCompliance === "FAIL"
@@ -759,46 +1102,87 @@ export default function ProtectionClaimsTab({
                       : "bg-gray-50 dark:bg-gray-700/40 border-gray-200 dark:border-gray-700"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                        msg.direction === "inbound"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
-                      }`}
-                    >
-                      {msg.direction === "inbound" ? (isAr ? "وارد" : "Inbound") : (isAr ? "صادر" : "Outbound")}
-                    </span>
-
-                    <span className="text-[10px] text-gray-400 font-mono shrink-0">
-                      {new Date(msg.time).toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-800 dark:text-gray-200 truncate">
-                        {msg.contentSnippet || (msg.templateName ? `[Template: ${msg.templateName}]` : `[${msg.type}]`)}
-                      </p>
-                      {msg.contactPhone && (
-                        <p className="text-[10px] text-gray-400 font-mono">
-                          {msg.contactPhone} {msg.hoursSinceLastInbound !== null && `(Δ ${msg.hoursSinceLastInbound}h from inbound)`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-gray-400 uppercase font-mono">{msg.senderType}</span>
-                    {msg.direction === "outbound" && (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          msg.windowCompliance === "PASS"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300"
-                            : "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300"
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5 ${
+                          msg.direction === "inbound"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
                         }`}
                       >
-                        {msg.windowCompliance}
+                        {msg.direction === "inbound" ? "IN" : "OUT"}
                       </span>
-                    )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">
+                            {formatDate(msg.createdAt || msg.time, locale)}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded font-semibold uppercase text-gray-600 dark:text-gray-300">
+                            {msg.type}
+                          </span>
+                          <span className="text-[10px] text-gray-400 uppercase font-mono">{msg.senderType}</span>
+                        </div>
+
+                        {/* Source info */}
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                          <span className="font-semibold">{isAr ? "المصدر:" : "Source:"}</span>{" "}
+                          <span className={`font-medium ${msg.source?.includes("Campaign") ? "text-emerald-600" : msg.source?.includes("Automation") ? "text-purple-600" : "text-gray-500"}`}>
+                            {msg.source || "Unknown"}
+                          </span>
+                        </p>
+
+                        {/* Content snippet */}
+                        {msg.contentSnippet && (
+                          <p className="text-[11px] text-gray-800 dark:text-gray-200 truncate mt-0.5">
+                            {msg.contentSnippet}
+                          </p>
+                        )}
+
+                        {/* Automation details */}
+                        {msg.automationName && (
+                          <div className="mt-1 text-[10px] text-purple-600 dark:text-purple-400">
+                            <span className="font-bold">Automation:</span> {msg.automationName}
+                            {msg.automationTriggerType && <> • Trigger: {msg.automationTriggerType}</>}
+                            {msg.automationReplyType && <> • Reply: {msg.automationReplyType}</>}
+                          </div>
+                        )}
+
+                        {/* Meta Message ID */}
+                        {msg.whatsappId && (
+                          <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
+                            Meta ID: {msg.whatsappId}
+                          </p>
+                        )}
+
+                        {/* Contact & Window info */}
+                        {msg.contactPhone && (
+                          <p className="text-[10px] text-gray-400 font-mono">
+                            {msg.contactPhone} {msg.hoursSinceLastInbound !== null && `(Δ ${msg.hoursSinceLastInbound}h)`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {msg.status && (
+                        <span className="text-[10px] text-gray-400 font-mono uppercase">{msg.status}</span>
+                      )}
+                      {msg.direction === "outbound" && msg.windowCompliance && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            msg.windowCompliance === "PASS"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300"
+                              : msg.windowCompliance === "FAIL"
+                              ? "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300"
+                          }`}
+                        >
+                          {msg.windowCompliance}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -817,11 +1201,11 @@ export default function ProtectionClaimsTab({
               <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "لا توجد حملات مسجلة" : "No campaigns found"}</p>
             ) : (
               <div className="space-y-1.5">
-                {recentCampaigns.map((c) => (
+                {recentCampaigns.map((c: any) => (
                   <div key={c.id} className="p-2 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs flex justify-between items-center">
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">{c.name}</p>
-                      <p className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-gray-400">{formatShortDate(c.createdAt, locale)}</p>
                     </div>
                     <div className="text-[11px] text-end font-mono">
                       <span className="text-emerald-600">{c.sentCount} sent</span>
@@ -843,15 +1227,27 @@ export default function ProtectionClaimsTab({
               <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "لا توجد قواعد أتمتة" : "No automations found"}</p>
             ) : (
               <div className="space-y-1.5">
-                {automations.map((a) => (
-                  <div key={a.id} className="p-2 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">{a.name}</p>
-                      <p className="text-[10px] text-gray-400">{a.triggerType} → {a.replyType}</p>
+                {automations.map((a: any) => (
+                  <div key={a.id} className="p-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">{a.name}</p>
+                        <p className="text-[10px] text-gray-400">{a.triggerType} → {a.replyType}</p>
+                      </div>
+                      <span className="text-[11px] font-mono text-gray-500">
+                        {a.interactionCount} {isAr ? "تفاعل" : "triggers"}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono text-gray-500">
-                      {a.interactionCount} {isAr ? "تفاعل" : "triggers"}
-                    </span>
+                    {a.matchedMessagesCount > 0 && (
+                      <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-mono">
+                        {a.matchedMessagesCount} {isAr ? "رسالة مرتبطة" : "linked messages"}
+                      </p>
+                    )}
+                    {a.lastTriggeredAt && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {isAr ? "آخر تفعيل:" : "Last triggered:"} {formatDate(a.lastTriggeredAt, locale)}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -859,39 +1255,189 @@ export default function ProtectionClaimsTab({
           </div>
         </div>
 
+        {/* ── Customer Evidence Section ── */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-500" />
+              {isAr ? "أدلة العميل (Customer Evidence)" : "Customer Evidence"}
+            </h3>
+            <button
+              onClick={() => setShowEvidenceForm(!showEvidenceForm)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:hover:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {isAr ? "إضافة دليل" : "Add Evidence"}
+            </button>
+          </div>
+
+          {showEvidenceForm && (
+            <div className="mb-4 p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                  {isAr ? "نوع الدليل:" : "Evidence Type:"}
+                </label>
+                <select value={evidenceType} onChange={(e) => setEvidenceType(e.target.value)} className={inp + " text-xs"}>
+                  {Object.entries(EVIDENCE_TYPE_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{isAr ? label.ar : label.en}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                  {isAr ? "ملف (اختياري):" : "File (optional):"}
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)}
+                  className="text-xs text-gray-600 dark:text-gray-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                  {isAr ? "ملاحظة:" : "Note:"}
+                </label>
+                <input
+                  type="text"
+                  value={evidenceNote}
+                  onChange={(e) => setEvidenceNote(e.target.value)}
+                  placeholder={isAr ? "ملاحظة حول الدليل..." : "Note about this evidence..."}
+                  className={inp}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setShowEvidenceForm(false)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                  {isAr ? "إلغاء" : "Cancel"}
+                </button>
+                <button onClick={handleEvidenceSubmit} disabled={uploadingEvidence} className={btn + " text-xs py-1.5"}>
+                  {uploadingEvidence ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {isAr ? "رفع" : "Upload"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {evidenceFiles.length === 0 ? (
+            <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "لم يتم تقديم أدلة بعد" : "No evidence provided yet"}</p>
+          ) : (
+            <div className="space-y-2">
+              {evidenceFiles.map((ev: any) => {
+                const typeLabel = EVIDENCE_TYPE_LABELS[ev.type] || EVIDENCE_TYPE_LABELS.OTHER;
+                return (
+                  <div key={ev.id} className="p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">{isAr ? typeLabel.ar : typeLabel.en}</p>
+                      {ev.note && <p className="text-[11px] text-gray-500 mt-0.5">{ev.note}</p>}
+                      <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(ev.uploadedAt, locale)}</p>
+                    </div>
+                    {ev.url && (
+                      <a href={ev.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline text-[11px]">
+                        <ExternalLink className="w-3 h-3" /> {isAr ? "عرض" : "View"}
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── Refund Calculation Breakdown ── */}
         {liveRefund && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 p-5 shadow-sm">
-            <h3 className="font-bold text-sm text-indigo-950 dark:text-indigo-200 mb-3 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-indigo-600" />
-              {isAr ? "حساب قيمة الاسترداد النسبي (Prorated Refund Calculation)" : "Prorated Refund Calculation Breakdown"}
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-sm text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-indigo-600" />
+                {isAr ? "حساب قيمة الاسترداد النسبي (Prorated Refund)" : "Prorated Refund Calculation"}
+              </h3>
+              <button
+                onClick={() => setShowOverride(!showOverride)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white/80 dark:bg-gray-800/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 transition"
+              >
+                <Edit3 className="w-3 h-3" />
+                {isAr ? "تعديل يدوي" : "Override"}
+              </button>
+            </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "الباقة وسعرها الشهري:" : "Plan & Price:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "الباقة وسعرها:" : "Plan & Price:"}</span>
                 <span className="font-bold text-gray-900 dark:text-white">{liveRefund.plan} ({liveRefund.monthlyPrice} {liveRefund.currency})</span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "فترة الاشتراك الحالية:" : "Subscription Cycle:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "فترة الاشتراك:" : "Cycle:"}</span>
                 <span className="font-semibold text-gray-700 dark:text-gray-300">
-                  {liveRefund.subscriptionStart ? new Date(liveRefund.subscriptionStart).toLocaleDateString() : "-"} →{" "}
-                  {liveRefund.subscriptionEnd ? new Date(liveRefund.subscriptionEnd).toLocaleDateString() : "-"}
+                  {formatShortDate(liveRefund.subscriptionStart, locale)} → {formatShortDate(liveRefund.subscriptionEnd, locale)}
                 </span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "الأيام المستهلكة / المتبقية:" : "Used / Remaining Days:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "مستهلك / متبقي:" : "Used / Remaining:"}</span>
                 <span className="font-semibold text-gray-700 dark:text-gray-300">
-                  {liveRefund.usedDays} {isAr ? "مستهلك" : "used"} / <span className="font-bold text-emerald-600">{liveRefund.remainingDays} {isAr ? "متبقي" : "remaining"}</span>
+                  {liveRefund.usedDays}d / <span className="font-bold text-emerald-600">{liveRefund.remainingDays}d</span>
                 </span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "المبلغ المستحق تلقائياً:" : "Calculated Refund:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "المبلغ المحسوب:" : "Calculated Refund:"}</span>
                 <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
                   {liveRefund.calculatedRefund} {liveRefund.currency}
                 </span>
               </div>
             </div>
+
+            {/* Override display */}
+            {selectedClaim.overrideRefund != null && (
+              <div className="mt-3 p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs">
+                <p className="font-bold text-amber-800 dark:text-amber-300">
+                  {isAr ? "تعديل يدوي نافذ:" : "Active Override:"}
+                </p>
+                <p>
+                  <span className="text-gray-500">{isAr ? "الأصلي:" : "Original:"}</span>{" "}
+                  <span className="line-through">{liveRefund.calculatedRefund} {liveRefund.currency}</span>{" → "}
+                  <span className="font-black text-amber-700 dark:text-amber-300">{selectedClaim.overrideRefund} {selectedClaim.currency}</span>
+                </p>
+                {selectedClaim.overrideReason && (
+                  <p className="text-gray-500 mt-0.5">{isAr ? "السبب:" : "Reason:"} {selectedClaim.overrideReason}</p>
+                )}
+              </div>
+            )}
+
+            {/* Override form */}
+            {showOverride && (
+              <div className="mt-3 p-4 bg-white/90 dark:bg-gray-800/90 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-3">
+                <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                  {isAr ? "تعديل المبلغ يدوياً (Override Refund)" : "Override Refund Amount"}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                      {isAr ? "المبلغ الجديد (EGP):" : "New Amount (EGP):"}
+                    </label>
+                    <input type="number" step="0.01" min="0" value={overrideAmount} onChange={(e) => setOverrideAmount(e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                      {isAr ? "سبب التعديل (إجباري):" : "Override Reason (required):"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input type="text" value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder={isAr ? "مثال: تعديل إداري معتمد..." : "e.g. Manual adjustment approved..."} className={inp} />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowOverride(false)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                    {isAr ? "إلغاء" : "Cancel"}
+                  </button>
+                  <button
+                    onClick={handleOverrideSubmit}
+                    disabled={savingOverride || !overrideAmount.trim() || !overrideReason.trim()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 transition"
+                  >
+                    {savingOverride ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    {isAr ? "تطبيق التعديل" : "Apply Override"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -959,30 +1505,19 @@ export default function ProtectionClaimsTab({
               </div>
             </div>
 
-            {/* Refund Amount (when approving) */}
-            {decisionStatus === "ELIGIBLE" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-900/50">
-                <div>
-                  <label className="text-xs font-semibold text-emerald-900 dark:text-emerald-300 mb-1 block">
-                    {isAr ? "المبلغ المسترد (بالجنيه EGP):" : "Refund Amount (EGP):"}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={refundAmountInput}
-                    onChange={(e) => setRefundAmountInput(e.target.value)}
-                    className={inp}
-                  />
-                </div>
-                <div className="text-xs text-emerald-800 dark:text-emerald-300 flex flex-col justify-center">
-                  <span className="font-bold">{isAr ? "تنبيه هام:" : "Important:"}</span>
-                  <span>
-                    {isAr
-                      ? "الموافقة تسجل استحقاق العميل وتضع الطلب في حالة (Approved - Pending Processing) لحين إجراء التحويل المالي المعتمد."
-                      : "Approving records eligibility and marks refund status as Approved - Pending Processing."}
-                  </span>
-                </div>
+            {/* Evidence Requested (when requesting evidence) */}
+            {decisionStatus === "PENDING_EVIDENCE" && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
+                  {isAr ? "الأدلة المطلوبة:" : "Evidence Requested:"}
+                </label>
+                <textarea
+                  value={evidenceRequested}
+                  onChange={(e) => setEvidenceRequested(e.target.value)}
+                  rows={2}
+                  placeholder={isAr ? "مثال: يرجى إرسال لقطة شاشة لحالة الحظر من Meta..." : "e.g. Please provide a screenshot of the ban status from Meta..."}
+                  className={inp}
+                />
               </div>
             )}
 
@@ -1022,7 +1557,7 @@ export default function ProtectionClaimsTab({
             <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={handleSaveDecision}
+                onClick={() => handleSaveDecision(false)}
                 disabled={savingDecision}
                 className={btn}
               >
@@ -1044,19 +1579,47 @@ export default function ProtectionClaimsTab({
             {isAr ? "سجل تدقيق الإجراءات (Protection Audit Log)" : "Audit Trail History"}
           </h3>
 
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
             {(selectedClaim.auditLogs || []).map((log: any) => (
-              <div key={log.id} className="p-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs flex justify-between items-center">
-                <div>
-                  <span className="font-bold text-gray-900 dark:text-white">{log.action}</span>
-                  {log.result && <span className="text-gray-500 ml-2 font-mono">[{log.result}]</span>}
-                  <p className="text-[10px] text-gray-400">
-                    {isAr ? "بواسطة:" : "By:"} {log.adminUser?.name || log.adminUser?.email || "Admin"}
-                  </p>
+              <div key={log.id} className="p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl text-xs">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-bold text-gray-900 dark:text-white">{log.action}</span>
+                    {log.result && <span className="text-gray-500 ml-2 font-mono">[{log.result}]</span>}
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {isAr ? "بواسطة:" : "By:"} {log.adminUser?.name || log.adminUser?.email || "Admin"}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-gray-400 font-mono shrink-0">
+                    {formatDate(log.createdAt, locale)}
+                  </span>
                 </div>
-                <span className="text-[11px] text-gray-400 font-mono">
-                  {new Date(log.createdAt).toLocaleString(isAr ? "ar-EG" : "en-US")}
-                </span>
+                {/* Show details if they exist */}
+                {log.details && typeof log.details === "object" && (
+                  <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-600 text-[10px] text-gray-500 space-y-0.5">
+                    {log.details.decisionReason && (
+                      <p><span className="font-semibold">Reason:</span> {log.details.decisionReason}</p>
+                    )}
+                    {log.details.refundAmount != null && (
+                      <p><span className="font-semibold">Amount:</span> {log.details.refundAmount} EGP</p>
+                    )}
+                    {log.details.oldAmount != null && (
+                      <p><span className="font-semibold">Override:</span> {log.details.oldAmount} → {log.details.newAmount}</p>
+                    )}
+                    {log.details.reason && log.action === "REFUND_OVERRIDE" && (
+                      <p><span className="font-semibold">Reason:</span> {log.details.reason}</p>
+                    )}
+                    {log.details.evidenceRequested && (
+                      <p><span className="font-semibold">Evidence Requested:</span> {log.details.evidenceRequested}</p>
+                    )}
+                    {log.details.unknownChecksAtApproval && (
+                      <p><span className="font-semibold">Overridden checks:</span> {log.details.unknownChecksAtApproval.join(", ")}</p>
+                    )}
+                    {log.details.banStatus && (
+                      <p><span className="font-semibold">Ban Status:</span> {log.details.banStatus}</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1166,7 +1729,7 @@ export default function ProtectionClaimsTab({
             {/* Ban Date and Time */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "تاريخ ووقت الحظر المدّعى: *" : "Ban Date & Time: *"}
+                {isAr ? "تاريخ ووقت الحظر المدّعى: *" : "Claimed Ban Date & Time: *"}
               </label>
               <input
                 type="datetime-local"
@@ -1347,7 +1910,7 @@ export default function ProtectionClaimsTab({
                         {claim.phoneNumber}
                       </td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-[11px]">
-                        {new Date(claim.banDetectedAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+                        {formatShortDate(claim.banDetectedAt, locale)}
                       </td>
                       <td className="px-4 py-3">
                         <span

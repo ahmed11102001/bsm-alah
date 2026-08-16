@@ -1,0 +1,12 @@
+-- CreateEnum
+DO $$ BEGIN
+    CREATE TYPE "BanStatus" AS ENUM ('CUSTOMER_REPORTED', 'EVIDENCE_PROVIDED', 'VERIFIED', 'NOT_VERIFIED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- AlterTable ProtectionClaim
+ALTER TABLE "ProtectionClaim" ADD COLUMN IF NOT EXISTS "banStatus" "BanStatus" NOT NULL DEFAULT 'CUSTOMER_REPORTED';
+ALTER TABLE "ProtectionClaim" ADD COLUMN IF NOT EXISTS "calculatedRefund" DOUBLE PRECISION;
+ALTER TABLE "ProtectionClaim" ADD COLUMN IF NOT EXISTS "overrideRefund" DOUBLE PRECISION;
+ALTER TABLE "ProtectionClaim" ADD COLUMN IF NOT EXISTS "overrideReason" TEXT;

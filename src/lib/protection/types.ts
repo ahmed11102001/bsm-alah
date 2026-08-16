@@ -1,5 +1,7 @@
 // src/lib/protection/types.ts
 
+export type BanStatusType = "CUSTOMER_REPORTED" | "EVIDENCE_PROVIDED" | "VERIFIED" | "NOT_VERIFIED";
+
 export interface ComplianceCheckItem {
   id: string;
   title: string;
@@ -11,6 +13,7 @@ export interface ComplianceCheckItem {
 
 export interface MessageTimelineItem {
   id: string;
+  createdAt: string;
   time: string;
   type: string;
   direction: "inbound" | "outbound";
@@ -20,6 +23,8 @@ export interface MessageTimelineItem {
   contactName?: string | null;
   templateName?: string | null;
   ruleName?: string | null;
+  source: string; // e.g. "Chat", "Campaign — [name]", "Automation — [name]", "API"
+  whatsappId?: string | null;
   status: string;
   hoursSinceLastInbound?: number | null;
   windowCompliance?: "PASS" | "FAIL" | "UNKNOWN";
@@ -40,10 +45,12 @@ export interface CampaignSummaryItem {
 export interface AutomationSummaryItem {
   id: string;
   name: string;
+  ruleId: string;
   triggerType: string;
   replyType: string;
   lastTriggeredAt?: string | null;
   interactionCount: number;
+  matchedMessagesCount?: number;
 }
 
 export interface RefundCalculation {
@@ -59,11 +66,27 @@ export interface RefundCalculation {
   calculatedRefund: number;
 }
 
+export interface CustomerEvidenceItem {
+  id: string;
+  type: "BAN_SCREENSHOT" | "META_RESTRICTION" | "OPT_IN_PROOF" | "NO_EXTERNAL_PROVIDER_DECLARATION" | "OTHER";
+  url?: string;
+  name?: string;
+  note?: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface EvidenceSnapshot {
   auditedAt: string;
   auditedBy: string;
+  claimedBanDate: string;
+  verifiedBanStatus: BanStatusType;
   systemAssessment: "ELIGIBLE" | "NEEDS_REVIEW" | "NOT_ELIGIBLE";
   assessmentSummary: string;
+  auditPeriod: {
+    from: string;
+    to: string;
+  };
   accountCheck: {
     isConnected: boolean;
     connectedAt: string;
@@ -75,7 +98,8 @@ export interface EvidenceSnapshot {
   };
   waniActivity: {
     found: boolean;
-    outboundCountBeforeBan: number;
+    totalOutboundCount: number;
+    last24hOutboundCount: number;
     lastOutboundAt: string | null;
     lastOutboundType: string | null;
     lastOutboundSender: string | null;
@@ -103,7 +127,9 @@ export interface EvidenceSnapshot {
   sendingLimits: {
     status: "PASS" | "FAIL" | "UNKNOWN";
     tier: number;
+    dailySentCount: number;
     recentVelocity24h: number;
+    auditPeriodDescription: string;
     notes: string;
   };
   externalPlatform: {
