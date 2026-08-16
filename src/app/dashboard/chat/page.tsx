@@ -5,7 +5,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import {
-  Search, Send, Paperclip, Mic, X, MoreVertical, Check, CheckCheck,
+  Search, Send, Paperclip, Mic, X, Reply, MoreVertical, Check, CheckCheck,
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
@@ -71,6 +71,12 @@ export default function ChatPage() {
   const messageRequestInFlight = useRef(false);
   const pendingScroll = useRef<"initial" | "new" | null>(null);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [forwarding, setForwarding] = useState<Message | null>(null);
+  const [forwardSearch, setForwardSearch] = useState("");
+  const [forwardTargets, setForwardTargets] = useState<Conversation[]>([]);
+  const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
+  const [forwardingBusy, setForwardingBusy] = useState(false);
 
   // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
   const isExpired = useMemo(() => {
@@ -253,13 +259,37 @@ export default function ChatPage() {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", contactId: selected.contact.id, content: body, type: "text" }),
+        body: JSON.stringify({ action: "send", contactId: selected.contact.id, content: body, type: "text", replyToMessageId: replyingTo?.id }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); setText(body); }
-    finally { setSending(false); }
+    finally { setSending(false); setReplyingTo(null); }
   };
+
+  const copyMessage = async (msg: Message) => {
+    if (!msg.content) return;
+    try { await navigator.clipboard.writeText(msg.content); toast.success(lang === "ar" ? "تم نسخ الرسالة" : "Message copied"); }
+    catch { toast.error(lang === "ar" ? "تعذر نسخ الرسالة" : "Could not copy message"); }
+  };
+
+  const openForward = (msg: Message) => {
+    setForwarding(msg); setForwardTarget(null); setForwardSearch("");
+    fetch("/api/chat?type=conversations&filter=all").then(r => r.json()).then(d => setForwardTargets(d.conversations ?? [])).catch(() => setForwardTargets([]));
+  };
+
+  const submitForward = async () => {
+    if (!forwarding || !forwardTarget || forwardingBusy) return;
+    setForwardingBusy(true);
+    try {
+      const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "forward", sourceMessageId: forwarding.id, targetContactId: forwardTarget.contact.id }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      toast.success(lang === "ar" ? "تمت إعادة توجيه الرسالة" : "Message forwarded"); setForwarding(null);
+    } catch (e: any) { toast.error(e.message ?? (lang === "ar" ? "تعذر إعادة التوجيه" : "Forward failed")); }
+    finally { setForwardingBusy(false); }
+  };
+
+  const scrollToMessage = (id: string) => document.getElementById(`message-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   const sendReaction = async (msgId: string, emoji: string) => {
     if (!selected) return;
@@ -781,7 +811,7 @@ export default function ChatPage() {
                   {messages.map((msg, i) => {
                     const showDate = i === 0 || dateStr(messages[i - 1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                     return (
-                      <div key={msg.id}>
+                      <div key={msg.id} id={`message-${msg.id}`}>
                         {showDate && (
                           <div className="flex justify-center my-3">
                             <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
@@ -790,7 +820,7 @@ export default function ChatPage() {
                             </span>
                           </div>
                         )}
-                        <Bubble msg={msg} onReact={sendReaction} lang={lang} dark={dark} />
+                        <Bubble msg={msg} onReact={sendReaction} onReply={setReplyingTo} onCopy={copyMessage} onForward={openForward} onQuoteClick={scrollToMessage} lang={lang} dark={dark} />
                       </div>
                     );
                   })}
@@ -836,6 +866,16 @@ export default function ChatPage() {
             )}
 
             {/* Input bar */}
+            {replyingTo && (
+              <div className={`${headerBg} border-t ${border} px-3 py-2 flex items-center gap-2`}>
+                <Reply className="w-4 h-4 text-[#25d366]" />
+                <div className="min-w-0 flex-1 border-l-2 border-[#25d366] pl-2">
+                  <p className={`text-xs font-semibold ${textMain}`}>{replyingTo.direction === "outbound" ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer")}</p>
+                  <p className={`text-xs truncate ${textSub}`}>{replyingTo.content || replyingTo.type}</p>
+                </div>
+                <button onClick={() => setReplyingTo(null)} className={textSub}><X className="w-4 h-4" /></button>
+              </div>
+            )}
             <footer className={`${headerBg} px-2 sm:px-3 py-2.5 flex items-end gap-1.5 sm:gap-2 z-10 border-t ${border}`}>
               {/* Attach */}
               <div className="relative">
@@ -977,6 +1017,26 @@ export default function ChatPage() {
             </div>
           </div>
         )}
+      {forwarding && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setForwarding(null)}>
+          <div className={`${sidebarBg} rounded-2xl shadow-2xl w-full max-w-md p-4`} onClick={e => e.stopPropagation()} dir={dir}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
+              <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
+            </div>
+            <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
+            <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
+            <div className="max-h-56 overflow-y-auto space-y-1">
+              {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
+                <button key={c.contact.id} onClick={() => setForwardTarget(c)} className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3]" : hoverRow}`}>
+                  <span className={textMain}>{c.contact.name || c.contact.phone}</span><span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
+                </button>
+              ))}
+            </div>
+            <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-[#25d366] text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}</button>
+          </div>
+        </div>
+      )}
       </main>
     </div>
   );

@@ -30,6 +30,7 @@ export interface SendMessageParams {
   templateLang: string;
   templateVars: any;
   content: string | null;
+  replyToWhatsappId?: string | null;
   interactive?: {
     body: string;
     footer?: string;
@@ -202,6 +203,10 @@ export async function sendWhatsAppMessage(item: SendMessageParams): Promise<Send
       type: "text",
       text: { body: item.content ?? "" },
     };
+  }
+
+  if (item.replyToWhatsappId && payload && typeof payload === "object") {
+    (payload as { context?: { message_id: string } }).context = { message_id: item.replyToWhatsappId };
   }
 
   try {

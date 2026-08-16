@@ -417,6 +417,7 @@ export const sendDirectMessage = inngest.createFunction(
           templateLang: true,
           templateVars: true,
           content: true,
+          replyToWhatsappId: true,
           existingMessageId: true,
           whatsappAccountId: true,
           whatsappAccount: {
@@ -439,6 +440,7 @@ export const sendDirectMessage = inngest.createFunction(
         templateLang: item.templateLang,
         templateVars: item.templateVars,
         content: item.content,
+        replyToWhatsappId: item.replyToWhatsappId,
       });
     });
 
@@ -517,6 +519,7 @@ export const processQueueItem = inngest.createFunction(
           attempts: true,
           maxAttempts: true,
           existingMessageId: true,
+          replyToWhatsappId: true,
           status: true,
           whatsappAccount: {
             select: {
@@ -581,6 +584,7 @@ export const processQueueItem = inngest.createFunction(
         templateLang: item.templateLang,
         templateVars: item.templateVars,
         content: item.content,
+        replyToWhatsappId: item.replyToWhatsappId,
       });
     });
 

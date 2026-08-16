@@ -203,6 +203,7 @@ model MessageQueue {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   existingMessageId String?
+  replyToWhatsappId String?
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   whatsappAccount   WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
 
@@ -382,9 +383,12 @@ model Message {
   direction   MessageDirection  @default(outbound)
   senderType  MessageSenderType @default(human)
   reactions   Json?             @default("[]")
+  replyToMessageId String?
   campaign    Campaign?         @relation(fields: [campaignId], references: [id])
   contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo      Message?         @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies      Message[]        @relation("MessageReply")
 
   @@index([userId])
   @@index([contactId])

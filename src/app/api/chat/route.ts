@@ -177,6 +177,8 @@ async function getMessages(userId: string, sp: URLSearchParams) {
       id: true, content: true, type: true,
       direction: true, status: true,
       mediaUrl: true, createdAt: true,
+      replyToMessageId: true,
+      replyTo: { select: { id: true, content: true, type: true, mediaUrl: true, direction: true } },
     },
   });
 
@@ -212,11 +214,13 @@ export async function POST(req: NextRequest) {
 
   // ── JSON message ─────────────────────────────────────────────────
   const body = await req.json();
-  const { action, contactId, content, type, templateName } = body;
+  const { action, contactId, content, type, templateName, replyToMessageId } = body;
 
   if (action === "send") {
-    return sendMessage(userId, { contactId, content, type, templateName });
+    return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId });
   }
+
+  if (action === "forward") return forwardMessage(userId, body.sourceMessageId, body.targetContactId);
 
   return NextResponse.json({ error: "action غير معروف" }, { status: 400 });
 }
@@ -378,24 +382,29 @@ export async function PATCH(req: NextRequest) {
 async function sendMessage(
   userId: string,
   {
-    contactId, content, type = "text", templateName,
-  }: { contactId: string; content?: string; type?: string; templateName?: string }
+    contactId, content, type = "text", templateName, replyToMessageId,
+  }: { contactId: string; content?: string; type?: string; templateName?: string; replyToMessageId?: string }
 ) {
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
   if (type === "text" && !content?.trim())
     return NextResponse.json({ error: "محتوى الرسالة مطلوب" }, { status: 400 });
 
   // ── جيب الـ contact والـ account بالتوازي (بدل sequential) ─────
-  const [contact, account] = await Promise.all([
+  const [contact, account, replyTo] = await Promise.all([
     prisma.contact.findFirst({ where: { id: contactId, userId } }),
     prisma.whatsAppAccount.findUnique({ where: { userId } }),
+    replyToMessageId ? prisma.message.findFirst({ where: { id: replyToMessageId, userId }, select: { id: true, whatsappId: true } }) : null,
   ]);
 
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
   if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
   const isTemplate = type === "template" && !!templateName;
-  const msgType: MessageType = isTemplate ? MessageType.template : MessageType.text;
+  const isMedia = type === "media" && !!content;
+  const mediaKind = isMedia ? content!.split(":", 1)[0] : "";
+  const msgType: MessageType = isTemplate ? MessageType.template
+    : isMedia && Object.values(MessageType).includes(mediaKind as MessageType) ? mediaKind as MessageType
+    : MessageType.text;
   const msgContent = content ?? `[قالب] ${templateName}`;
 
   // ── احفظ الرسالة pending + ضيفها في الـ Queue في transaction واحدة ──────
@@ -407,6 +416,7 @@ async function sendMessage(
         type: msgType,
         direction: MessageDirection.outbound,
         status: MessageStatus.pending,
+        ...(replyTo ? { replyToMessageId: replyTo.id } : {}),
       },
     });
 
@@ -418,7 +428,7 @@ async function sendMessage(
         phoneNumberId: account.phoneNumberId,
         toPhone: contact.phone,
         contactId,
-        messageType: isTemplate ? "template" : "text",
+        messageType: isMedia ? "media" : isTemplate ? "template" : "text",
         templateName: isTemplate ? templateName : null,
         templateLang: "ar",
         content: isTemplate ? null : content!,
@@ -426,6 +436,7 @@ async function sendMessage(
         status: "pending",
         maxAttempts: 3,
         existingMessageId: msg.id,
+        replyToWhatsappId: replyTo?.whatsappId ?? null,
       },
     });
 
@@ -452,6 +463,25 @@ async function sendMessage(
   });
 
   return NextResponse.json({ success: true, message: result.msg });
+}
+
+async function forwardMessage(userId: string, sourceMessageId?: string, targetContactId?: string) {
+  if (!sourceMessageId || !targetContactId) return NextResponse.json({ error: "sourceMessageId و targetContactId مطلوبان" }, { status: 400 });
+  const [source, target] = await Promise.all([
+    prisma.message.findFirst({ where: { id: sourceMessageId, userId, deletedAt: null } }),
+    prisma.contact.findFirst({ where: { id: targetContactId, userId, deletedAt: null } }),
+  ]);
+  if (!source || !target) return NextResponse.json({ error: "الرسالة أو جهة الاتصال غير موجودة" }, { status: 404 });
+  if (source.type === MessageType.template || source.type === MessageType.sticker) {
+    return NextResponse.json({ error: "لا يمكن إعادة توجيه هذا النوع من الرسائل" }, { status: 400 });
+  }
+  if (source.type === MessageType.text) return sendMessage(userId, { contactId: target.id, content: source.content ?? "", type: "text" });
+  const queue = await prisma.messageQueue.findFirst({
+    where: { userId, existingMessageId: source.id, messageType: "media", status: { in: ["pending", "sent"] } },
+    orderBy: { createdAt: "desc" }, select: { content: true },
+  });
+  if (!queue?.content) return NextResponse.json({ error: "معرّف الوسائط غير متاح لإعادة التوجيه" }, { status: 400 });
+  return sendMessage(userId, { contactId: target.id, content: queue.content, type: "media" });
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
@@ -529,7 +559,7 @@ async function sendMedia(userId: string, req: NextRequest) {
     // map نوع الملف
     const msgTypeMap: Record<string, MessageType> = {
       image: MessageType.image,
-      video: MessageType.image,
+      video: MessageType.video,
       audio: MessageType.audio,
       document: MessageType.document,
     };
