@@ -100,6 +100,8 @@ export const NotificationType = {
   ORDER_CANCELLED: "ORDER_CANCELLED",
   AI_HANDOFF_NEEDED: "AI_HANDOFF_NEEDED",
   SMART_FOLLOWUP_ALERT: "SMART_FOLLOWUP_ALERT",
+  AUTOMATION_FAILED: "AUTOMATION_FAILED",
+  AUTOMATION_LOOP_STOPPED: "AUTOMATION_LOOP_STOPPED",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

@@ -42,6 +42,8 @@ export interface ButtonInteractionContext {
 export interface ProcessButtonDeps {
   executeNextStep: (stepId: string) => Promise<{ ok: boolean; error?: string }>;
   notifyButtonSelected?: (ctx: ButtonInteractionContext) => Promise<void>;
+  /** Called when the next step is missing/disabled or execution fails — surfaces the FAILED state to the admin. */
+  notifyFailure?: (ctx: ButtonInteractionContext, reason: string) => Promise<void>;
 }
 
 function parseSnapshot(raw: unknown): InteractiveButtonSnapshot[] {
@@ -179,35 +181,54 @@ export async function processInteractiveButtonClick(
     });
 
     if (!stepExists) {
-      console.warn(
-        `[INTERACTIVE-MENU] Next step ${matchedButton.nextStepId} missing/disabled for user ${userId} — marking FAILED`,
-      );
+      const reason = `Next step ${matchedButton.nextStepId} missing/disabled`;
+      console.warn(`[INTERACTIVE-MENU] ${reason} for user ${userId} — marking FAILED`);
       await prisma.automationInteraction.update({
         where: { id: candidate.id },
         data: { state: "FAILED", completedAt: new Date() },
       });
+      if (deps.notifyFailure) {
+        try {
+          await deps.notifyFailure(ctx, reason);
+        } catch (err) {
+          console.error(`[INTERACTIVE-MENU] Failure notification error for interaction ${candidate.id}:`, err);
+        }
+      }
       return { handled: true, outcome: "failed" };
     }
 
     try {
       const result = await deps.executeNextStep(matchedButton.nextStepId);
       if (!result.ok) {
-        console.error(
-          `[INTERACTIVE-MENU] Next step ${matchedButton.nextStepId} failed:`,
-          result.error ?? "unknown",
-        );
+        const reason = result.error ?? "unknown error";
+        console.error(`[INTERACTIVE-MENU] Next step ${matchedButton.nextStepId} failed:`, reason);
         await prisma.automationInteraction.update({
           where: { id: candidate.id },
           data: { state: "FAILED", completedAt: new Date() },
         });
+        if (deps.notifyFailure) {
+          try {
+            await deps.notifyFailure(ctx, reason);
+          } catch (err) {
+            console.error(`[INTERACTIVE-MENU] Failure notification error for interaction ${candidate.id}:`, err);
+          }
+        }
         return { handled: true, outcome: "failed" };
       }
     } catch (stepErr) {
-      console.error(`[INTERACTIVE-MENU] Next step ${matchedButton.nextStepId} threw:`, stepErr);
+      const reason = stepErr instanceof Error ? stepErr.message : String(stepErr);
+      console.error(`[INTERACTIVE-MENU] Next step ${matchedButton.nextStepId} threw:`, reason);
       await prisma.automationInteraction.update({
         where: { id: candidate.id },
         data: { state: "FAILED", completedAt: new Date() },
       });
+      if (deps.notifyFailure) {
+        try {
+          await deps.notifyFailure(ctx, reason);
+        } catch (err) {
+          console.error(`[INTERACTIVE-MENU] Failure notification error for interaction ${candidate.id}:`, err);
+        }
+      }
       return { handled: true, outcome: "failed" };
     }
   }
@@ -221,6 +242,15 @@ export async function processInteractiveButtonClick(
     `[INTERACTIVE-MENU] Interaction ${candidate.id} COMPLETED — nextStepId=${matchedButton.nextStepId ?? "null"}`,
   );
   return { handled: true, outcome: "completed" };
+}
+
+/** Best-effort name lookup for the loop-stopped notification (rule may be disabled/missing). */
+export async function findAutomationRuleName(userId: string, stepId: string): Promise<string> {
+  const rule = await prisma.automationRule.findFirst({
+    where: { id: stepId, userId },
+    select: { name: true },
+  });
+  return rule?.name ?? stepId;
 }
 
 /** Validate next-step rule exists for tenant (used by executeAutomationStep). */

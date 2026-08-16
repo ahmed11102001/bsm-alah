@@ -306,6 +306,45 @@ export async function notifyInteractiveButtonSelected(
   });
 }
 
+export async function notifyAutomationFailed(
+  userId: string,
+  automationName: string,
+  contactName: string,
+  contactId: string,
+  reason: string,
+) {
+  await createNotification({
+    userId,
+    type: NotificationType.AUTOMATION_FAILED,
+    title: bi("⚠️ فشل تنفيذ Automation", "⚠️ Automation execution failed"),
+    body: bi(
+      `فشل تنفيذ خطوة في "${automationName}" للعميل ${contactName}. السبب: ${reason}`,
+      `A step in "${automationName}" failed for customer ${contactName}. Reason: ${reason}`,
+    ),
+    link: `/dashboard?section=chat&contactId=${contactId}`,
+    meta: { contactId, automationName, reason, source: "interactive_menu_button" },
+  });
+}
+
+export async function notifyAutomationLoopStopped(
+  userId: string,
+  automationName: string,
+  contactId: string,
+  hops: number,
+) {
+  await createNotification({
+    userId,
+    type: NotificationType.AUTOMATION_LOOP_STOPPED,
+    title: bi("⚠️ تم إيقاف Automation", "⚠️ Automation stopped"),
+    body: bi(
+      `تم إيقاف "${automationName}" بعد تجاوز الحد المسموح لعدد الخطوات (${hops}) — على الأغلب فيه حلقة (loop) في الإعدادات.`,
+      `"${automationName}" was stopped after exceeding the max step limit (${hops}) — likely a loop in the configuration.`,
+    ),
+    link: `/dashboard?section=automation`,
+    meta: { contactId, automationName, hops, source: "interactive_menu_loop_protection" },
+  });
+}
+
 export async function notifyAiHandoffNeeded(
   userId: string,
   contactName: string,

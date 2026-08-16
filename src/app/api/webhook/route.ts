@@ -5,11 +5,18 @@ import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
-import { notifyNewMessage, notifyAiHandoffNeeded, notifyInteractiveButtonSelected } from "@/lib/notifications";
+import {
+  notifyNewMessage,
+  notifyAiHandoffNeeded,
+  notifyInteractiveButtonSelected,
+  notifyAutomationFailed,
+  notifyAutomationLoopStopped,
+} from "@/lib/notifications";
 import {
   processInteractiveButtonClick,
   supersedeWaitingInteractions,
   findEnabledAutomationStep,
+  findAutomationRuleName,
   isHopLimitExceeded,
   INTERACTIVE_MENU_MAX_HOPS,
 } from "@/lib/interactive-menu";
@@ -630,6 +637,15 @@ export async function POST(req: NextRequest) {
                   ctx.contactId,
                   ctx.button.text,
                   ctx.automationName,
+                );
+              },
+              notifyFailure: async (ctx, reason) => {
+                await notifyAutomationFailed(
+                  userId,
+                  ctx.automationName,
+                  ctx.contactName,
+                  ctx.contactId,
+                  reason,
                 );
               },
             },
@@ -1499,6 +1515,12 @@ async function executeAutomationStep(ctx: {
     console.warn(
       `[AUTOMATION] Max hops limit (${INTERACTIVE_MENU_MAX_HOPS}) reached for ${from}. Stopping execution to prevent circular loops.`,
     );
+    try {
+      const ruleName = await findAutomationRuleName(userId, stepId);
+      await notifyAutomationLoopStopped(userId, ruleName, contactId, hops);
+    } catch (err) {
+      console.error("[AUTOMATION] Failed to send loop-stopped notification:", err);
+    }
     return;
   }
 
