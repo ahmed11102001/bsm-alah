@@ -526,7 +526,7 @@ export default function ChatPage() {
       {/* ══════════ SIDEBAR ══════════ */}
       {/* On mobile: hidden when chat is open */}
       <aside className={`
-        ${sidebarBg} flex flex-col border-r ${border}
+        ${sidebarBg} flex flex-col min-h-0 border-r ${border}
         flex-shrink-0
         w-full sm:w-[340px]
         ${mobileShowChat ? "hidden sm:flex" : "flex"}
@@ -602,7 +602,7 @@ export default function ChatPage() {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {loadingConvs ? (
             <div className="flex justify-center items-center py-20">
               <Loader2 className="w-7 h-7 animate-spin text-gray-300" />
