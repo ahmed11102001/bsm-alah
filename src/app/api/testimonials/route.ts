@@ -37,12 +37,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // التحقق من عدم التكرار بالهاتف
+  // التحقق من المدخلات
   const { name, brandName, phone, rating, content } = await req.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
   if (!brandName?.trim()) return NextResponse.json({ error: "اسم البراند مطلوب" }, { status: 400 });
-  if (!phone?.trim()) return NextResponse.json({ error: "رقم الهاتف مطلوب" }, { status: 400 });
   if (!content?.trim()) return NextResponse.json({ error: "الرأي مطلوب" }, { status: 400 });
   if (!rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "التقييم يجب أن يكون من 1 إلى 5" }, { status: 400 });
@@ -51,28 +50,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "الرأي يجب أن يكون 20 حرف على الأقل" }, { status: 400 });
   }
 
-  // منع التكرار بنفس رقم الهاتف
-  const existing = await prisma.testimonial.findFirst({
-    where: { phone: phone.trim() },
-    select: { id: true },
-  });
-  if (existing) {
-    return NextResponse.json(
-      { error: "تم إرسال رأي بهذا الرقم من قبل" },
-      { status: 409 }
-    );
-  }
-
   const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+
+  // منع التكرار بالحساب أو برقم الهاتف
+  if (userId) {
+    const existing = await prisma.testimonial.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "تم إرسال تقييم من هذا الحساب من قبل" },
+        { status: 409 }
+      );
+    }
+  } else if (phone?.trim()) {
+    const existing = await prisma.testimonial.findFirst({
+      where: { phone: phone.trim() },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "تم إرسال رأي بهذا الرقم من قبل" },
+        { status: 409 }
+      );
+    }
+  }
 
   const testimonial = await prisma.testimonial.create({
     data: {
       name: name.trim(),
       brandName: brandName.trim(),
-      phone: phone.trim(),
+      phone: phone?.trim() || "",
       rating: Number(rating),
       content: content.trim(),
-      userId: session?.user?.id ?? null,
+      userId: userId ?? null,
       approved: false,
     },
   });

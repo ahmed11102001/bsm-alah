@@ -899,6 +899,13 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
 function CardGrid({ lang, onOpen }: { lang: Lang; onOpen: (id: CardId) => void }) {
   const cards: { id: CardId; icon: React.ReactNode; title: string; desc: string; ready: boolean }[] = [
     {
+      id: "order_confirm",
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      title: tx(lang, "متابعة تأكيد الاوردر", "Order Confirmation Follow-up"),
+      desc: tx(lang, "لو الاوردر اتلغي يعرف السبب", "Know the reason if order is canceled"),
+      ready: true,
+    },
+    {
       id: "shipping",
       icon: <Truck className="w-5 h-5" />,
       title: tx(lang, "متابعة أثناء الشحن", "Shipping Follow-up"),
@@ -917,13 +924,6 @@ function CardGrid({ lang, onOpen }: { lang: Lang; onOpen: (id: CardId) => void }
       icon: <Megaphone className="w-5 h-5" />,
       title: tx(lang, "متابعة الحملة التسويقية", "Campaign Follow-up"),
       desc: tx(lang, "يفلتر المهتمين ويحوّلهم لموظف مبيعات حسب ردهم", "Filters interested leads and routes them to a sales agent based on their reply"),
-      ready: true,
-    },
-    {
-      id: "order_confirm",
-      icon: <CheckCircle2 className="w-5 h-5" />,
-      title: tx(lang, "متابعة تاكيد الاوردر", "Order Confirmation Follow-up"),
-      desc: tx(lang, "لو الاوردر اتلغي يعرف السبب", "Know the reason if order is canceled"),
       ready: true,
     },
   ];

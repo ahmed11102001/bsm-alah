@@ -91,9 +91,9 @@ const DAYS_AR = [
 ];
 
 const subTabs: { id: AutoSubTab; ar: string; en: string; icon: any }[] = [
+  { id: "interactive", ar: "قائمة تفاعلية", en: "Interactive Menu", icon: ListFilter },
   { id: "keywords", ar: "الكلمات", en: "Keywords", icon: Key },
   { id: "welcome", ar: "الترحيب", en: "Welcome", icon: Hand },
-  { id: "interactive", ar: "قائمة تفاعلية", en: "Interactive Menu", icon: ListFilter },
   { id: "smart_followup", ar: "المتابعة الذكية", en: "Smart Follow-up", icon: Sparkles },
   { id: "timebased", ar: "الزمنية", en: "Scheduled", icon: CalendarClock },
   { id: "ab", ar: "A/B اختبار", en: "A/B Test", icon: FlaskConical },
@@ -266,7 +266,7 @@ export default function Automation() {
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
   const [activeTab, setActiveTab] = useState<"automation" | "ai">("automation");
-  const [activeSubTab, setActiveSubTab] = useState<AutoSubTab>("keywords");
+  const [activeSubTab, setActiveSubTab] = useState<AutoSubTab>("interactive");
 
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -1000,9 +1000,25 @@ export default function Automation() {
           {/* Inner sub-tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
             {subTabs.map(st => {
+              const isSmart = st.id === "smart_followup";
               // smart_followup و timebased و ab — pro فأعلى فقط
               const needsPro = st.id === "smart_followup" || st.id === "timebased" || st.id === "ab";
               const isLocked = needsPro && !isProOrAbove;
+              const isActive = activeSubTab === st.id;
+
+              let btnStyle = "";
+              if (isLocked) {
+                btnStyle = "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60";
+              } else if (isSmart) {
+                btnStyle = isActive
+                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/25 ring-2 ring-violet-400/40"
+                  : "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/40 font-bold";
+              } else if (isActive) {
+                btnStyle = "bg-green-500 text-white shadow-sm";
+              } else {
+                btnStyle = "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700";
+              }
+
               return (
                 <button key={st.id}
                   onClick={() => {
@@ -1019,18 +1035,12 @@ export default function Automation() {
                     if (isLocked) showLockToast(proLockMsg);
                   }}
                   title={isLocked ? proLockMsg : undefined}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0
-                    ${isLocked
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-60"
-                      : activeSubTab === st.id
-                        ? "bg-green-500 text-white shadow-sm"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}>
-                  <st.icon className="w-3.5 h-3.5" />
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${btnStyle}`}>
+                  <st.icon className={`w-3.5 h-3.5 ${isSmart && !isLocked && !isActive ? "text-violet-600 dark:text-violet-400" : ""}`} />
                   {lang === "ar" ? st.ar : st.en}
                   {isLocked && <span className="text-[10px]">🔒</span>}
                   {!isLocked && badgeCount[st.id] > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeSubTab === st.id ? "bg-white/20 text-white" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isActive ? "bg-white/20 text-white" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"}`}>
                       {badgeCount[st.id]}
                     </span>
                   )}

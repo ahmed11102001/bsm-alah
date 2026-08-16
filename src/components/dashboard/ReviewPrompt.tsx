@@ -10,13 +10,12 @@ import { Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
 
-export default function ReviewPrompt({ open, onClose, defaultName, defaultPhone }: { open: boolean; onClose: () => void; defaultName: string; defaultPhone: string; }) {
+export default function ReviewPrompt({ open, onClose, defaultName, defaultPhone }: { open: boolean; onClose: () => void; defaultName: string; defaultPhone?: string; }) {
   const { locale, dir } = useLanguage();
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [name, setName] = useState(defaultName || "");
   const [brandName, setBrandName] = useState("");
-  const [phone, setPhone] = useState(defaultPhone || "");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +24,6 @@ export default function ReviewPrompt({ open, onClose, defaultName, defaultPhone 
     desc: locale === "ar" ? "ساعدنا نطور المنصة للأفضل بمشاركتك تجربتك معنا!" : "Help us improve by sharing your experience!",
     name: locale === "ar" ? "الاسم" : "Name",
     brand: locale === "ar" ? "اسم البراند / النشاط" : "Brand / Business Name",
-    phone: locale === "ar" ? "رقم الهاتف" : "Phone Number",
     review: locale === "ar" ? "رأيك (أكثر من 20 حرف)" : "Your Review (min 20 chars)",
     submit: locale === "ar" ? "إرسال التقييم" : "Submit Review",
     cancel: locale === "ar" ? "ليس الآن" : "Not now",
@@ -42,7 +40,7 @@ export default function ReviewPrompt({ open, onClose, defaultName, defaultPhone 
       const res = await fetch("/api/testimonials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, brandName, phone, rating, content }),
+        body: JSON.stringify({ name, brandName, rating, content }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -85,19 +83,15 @@ export default function ReviewPrompt({ open, onClose, defaultName, defaultPhone 
         </div>
         
         <div className="p-6 space-y-4 bg-white dark:bg-gray-900">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs text-gray-500">{t.name}</Label>
               <Input value={name} onChange={e => setName(e.target.value)} className="bg-gray-50 dark:bg-gray-800 border-none rounded-xl" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">{t.phone}</Label>
-              <Input value={phone} onChange={e => setPhone(e.target.value)} dir="ltr" className="bg-gray-50 dark:bg-gray-800 border-none rounded-xl" />
+              <Label className="text-xs text-gray-500">{t.brand}</Label>
+              <Input value={brandName} onChange={e => setBrandName(e.target.value)} className="bg-gray-50 dark:bg-gray-800 border-none rounded-xl" />
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-gray-500">{t.brand}</Label>
-            <Input value={brandName} onChange={e => setBrandName(e.target.value)} className="bg-gray-50 dark:bg-gray-800 border-none rounded-xl" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">{t.review}</Label>

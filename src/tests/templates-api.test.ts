@@ -40,7 +40,7 @@ function makeReq(body?: object, headers: Record<string, string> = {}): Request {
   });
 }
 
-const SESSION = { user: { id: "user-1" } };
+const SESSION = { user: { id: "user-1", role: "OWNER" } };
 
 describe("GET /api/templates", () => {
   beforeEach(() => {
@@ -68,7 +68,7 @@ describe("GET /api/templates", () => {
   });
 
   it("بيستخدم parentId (حساب فرعي) لو موجود بدل الـ id", async () => {
-    mockGetServerSession.mockResolvedValueOnce({ user: { id: "sub-1", parentId: "owner-1" } });
+    mockGetServerSession.mockResolvedValueOnce({ user: { id: "sub-1", parentId: "owner-1", role: "FULL_ACCESS" } });
     mockPrisma.template.findMany.mockResolvedValueOnce([]);
 
     await GET(makeReq());
