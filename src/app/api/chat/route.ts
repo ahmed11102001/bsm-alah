@@ -27,15 +27,28 @@ function contactScope(session: any, contactId: string) {
 //   ?type=conversations&filter=all|unread|replied|today|archived&search=
 //   ?type=messages&contactId=
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  const denied = requirePermission(session, "CHAT_VIEW");
-  if (denied) return denied;
-  const userId = uid(session);
   const sp = new URL(req.url).searchParams;
   const type = sp.get("type") ?? "conversations";
+  try {
+    const session = await getServerSession(authOptions);
+    const denied = requirePermission(session, "CHAT_VIEW");
+    if (denied) return denied;
+    const userId = uid(session);
 
-  if (type === "messages") return getMessages(userId, sp, session);
-  return getConversations(userId, sp, session);
+    if (type === "messages") return getMessages(userId, sp, session);
+    return getConversations(userId, sp, session);
+  } catch (error: any) {
+    console.error("[CHAT GET] failed", {
+      type,
+      filter: sp.get("filter"),
+      search: sp.get("search"),
+      name: error?.name,
+      code: error?.code,
+      message: error?.message,
+      meta: error?.meta,
+    });
+    return NextResponse.json({ error: "تعذر تحميل المحادثات" }, { status: 500 });
+  }
 }
 
 // ─── GET conversations ────────────────────────────────────────────────────────

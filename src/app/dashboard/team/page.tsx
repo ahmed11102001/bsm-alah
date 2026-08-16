@@ -188,6 +188,15 @@ export default function TeamPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           {members.length > 0 ? tm.memberCount(members.length) : tm.subtitle}
         </p>
+        {isOwner && (
+          <button
+            onClick={() => router.push("/dashboard/team/conversations")}
+            className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#075E54] hover:bg-[#064944] text-white text-sm font-semibold transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            {locale === "ar" ? "إدارة المحادثات" : "Manage Conversations"}
+          </button>
+        )}
       </div>
 
       {/* Add member form */}
