@@ -187,15 +187,15 @@ export const AutomationCreateSchema = z
   .object({
     name: nonEmptyStr.max(200),
     triggerType: z.enum(triggerValues as [TriggerType, ...TriggerType[]]),
-    triggerValue: z.string().trim().optional(),
+    triggerValue: z.string().trim().optional().nullable(),
     replyType: z.enum(replyValues as [ReplyType, ...ReplyType[]]),
-    replyContent: z.string().trim().optional(),
-    templateId: z.string().optional(),
-    extraInstructions: z.string().trim().max(1000).optional(),
+    replyContent: z.string().trim().optional().nullable(),
+    templateId: z.string().optional().nullable(),
+    extraInstructions: z.string().trim().max(1000).optional().nullable(),
     humanKeywords: z.array(z.string().trim()).optional().default([]),
     pauseOnReply: z.boolean().optional().default(true),
-    replyMediaUrl: z.string().url().optional().or(z.literal("")),
-    interactiveConfig: InteractiveMenuConfigSchema.optional(),
+    replyMediaUrl: z.string().url().optional().or(z.literal("")).nullable(),
+    interactiveConfig: InteractiveMenuConfigSchema.optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.triggerType === TriggerType.KEYWORD && !data.triggerValue) {

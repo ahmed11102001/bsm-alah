@@ -2,24 +2,16 @@
 
 // ─────────────────────────────────────────────────────────────────────────
 // نسخة الديمو من src/app/dashboard/chat/page.tsx
-// الفروق المتعمدة عن الأصلي:
-//   - مفيش fetch("/api/chat") ولا polling — كل حاجة local state جاية من
-//     demo-data/chat-data.ts.
-//   - إرسال نص/قالب حقيقي محليًا (بيتضاف للمحادثة فعليًا وبيتحول لـ delivered
-//     بعد ثانية) — عشان يحس المستخدم إنه بيتفاعل فعلاً.
-//   - المرفقات (صورة/ملف/موقع/تسجيل صوتي) بتفتح نفس القائمة بصريًا، بس أي
-//     اختيار بيطلع toast "متاح في النسخة الكاملة" بدل ما يطلب صلاحيات جهاز
-//     حقيقية (كاميرا/مايك/موقع) من زوار الديمو.
-//   - أرشفة/حذف/إضافة لقائمة كلها شغالة محليًا فعليًا (state في الصفحة نفسها).
+// مطابقة تماماً لواجهة وتجربة الداشبورد مع محاكاة تفاعلية محلية كاملة
 // ─────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
-    Search, Send, Paperclip, Mic, X, MoreVertical, Loader2,
-    Image as ImageIcon, FileText, MapPin, Smile,
+    Search, Send, Paperclip, Mic, X, Reply, MoreVertical, Loader2,
+    Image as ImageIcon, FileText, Video, MapPin, Smile,
     MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
-    Megaphone, Clock, ChevronLeft, Bot,
+    Megaphone, Clock, ChevronLeft, Bot, Mic2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/language-context";
@@ -37,6 +29,7 @@ import { Bubble } from "./_components/bubble";
 import { TimelineView } from "./_components/timelineview";
 import {
     DEMO_CONVERSATIONS, DEMO_MESSAGES_BY_CONTACT, DEMO_TEMPLATES, DEMO_AUDIENCES,
+    DEMO_ASSIGNMENT_MEMBERS,
 } from "../_lib/chat-data";
 
 const demoLocked = (locale: string) => {
@@ -70,15 +63,33 @@ export default function DemoChatPage() {
     const [showAttach, setShowAttach] = useState(false);
     const [showEmoji, setShowEmoji] = useState(false);
     const [showTpl, setShowTpl] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+    const [hasNewMsgs, setHasNewMsgs] = useState(false);
+
+    // Forwarding
+    const [forwarding, setForwarding] = useState<Message | null>(null);
+    const [forwardSearch, setForwardSearch] = useState("");
+    const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
+    const [forwardingBusy, setForwardingBusy] = useState(false);
 
     const endRef = useRef<HTMLDivElement>(null);
+    const msgAreaRef = useRef<HTMLDivElement>(null);
+    const isAtBottom = useRef<boolean>(true);
 
     const selected = convs.find(c => c.contact.id === selectedId) ?? null;
     const messages = selectedId ? (msgsByContact[selectedId] ?? []) : [];
 
+    // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
+    const isExpired = useMemo(() => {
+        if (!selected) return false;
+        const lastInbound = messages.slice().reverse().find(m => m.direction === "inbound");
+        if (!lastInbound) return messages.length > 0;
+        return (Date.now() - new Date(lastInbound.createdAt).getTime()) > 24 * 60 * 60 * 1000;
+    }, [selected, messages]);
+
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "auto" });
-    }, [selectedId, messages.length]);
+    }, [selectedId]);
 
     // ── Theme classes (نفس الأصلي بالظبط) ──────────────────────────────────────
     const bg = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
@@ -97,11 +108,27 @@ export default function DemoChatPage() {
     const selectConv = (conv: Conversation, mode: "chat" | "timeline" = "chat") => {
         setSelectedId(conv.contact.id);
         setChatViewMode(mode);
-        setShowTpl(false); setShowAttach(false);
+        setShowTpl(false);
+        setShowAttach(false);
+        setReplyingTo(null);
         setMobileShowChat(true);
         if (conv.unreadCount > 0) {
             setConvs(prev => prev.map(c => c.contact.id === conv.contact.id ? { ...c, unreadCount: 0 } : c));
         }
+    };
+
+    const updateAssignment = (assignedToUserId: string | null) => {
+        if (!selected) return;
+        const member = DEMO_ASSIGNMENT_MEMBERS.find(m => m.id === assignedToUserId) ?? null;
+        setConvs(prev => prev.map(c => c.contact.id === selected.contact.id ? {
+            ...c,
+            contact: {
+                ...c.contact,
+                assignedToUserId,
+                assignedTo: member ? { id: member.id, name: member.name } : null,
+            },
+        } : c));
+        toast.success(lang === "ar" ? "تم تحديث مسؤول المحادثة" : "Conversation assignment updated");
     };
 
     const appendMessage = (contactId: string, msg: Message) => {
@@ -113,11 +140,31 @@ export default function DemoChatPage() {
 
     const sendText = () => {
         if (!text.trim() || !selected || sending) return;
-        const body = text; setText(""); setSending(true);
+        const body = text;
+        setText("");
+        setSending(true);
         const id = `m-${Date.now()}`;
-        const msg: Message = { id, content: body, type: "text", direction: "outbound", status: "sent", mediaUrl: null, createdAt: new Date().toISOString() };
+        const msg: Message = {
+            id,
+            content: body,
+            type: "text",
+            direction: "outbound",
+            status: "sent",
+            mediaUrl: null,
+            createdAt: new Date().toISOString(),
+            replyToMessageId: replyingTo?.id,
+            replyTo: replyingTo ? {
+                id: replyingTo.id,
+                content: replyingTo.content,
+                type: replyingTo.type,
+                mediaUrl: replyingTo.mediaUrl,
+                direction: replyingTo.direction,
+            } : null,
+        };
         appendMessage(selected.contact.id, msg);
         setSending(false);
+        setReplyingTo(null);
+
         // إحساس بالواقعية: بعد ثانية ونص الرسالة تتحول لـ "delivered"
         setTimeout(() => {
             setMsgsByContact(prev => ({
@@ -125,6 +172,47 @@ export default function DemoChatPage() {
                 [selected.contact.id]: (prev[selected.contact.id] ?? []).map(m => m.id === id ? { ...m, status: "delivered" } : m),
             }));
         }, 1400);
+    };
+
+    const copyMessage = async (msg: Message) => {
+        if (!msg.content) return;
+        try {
+            await navigator.clipboard.writeText(msg.content);
+            toast.success(lang === "ar" ? "تم نسخ الرسالة" : "Message copied");
+        } catch {
+            toast.error(lang === "ar" ? "تعذر نسخ الرسالة" : "Could not copy message");
+        }
+    };
+
+    const openForward = (msg: Message) => {
+        setForwarding(msg);
+        setForwardTarget(null);
+        setForwardSearch("");
+    };
+
+    const submitForward = () => {
+        if (!forwarding || !forwardTarget || forwardingBusy) return;
+        setForwardingBusy(true);
+        setTimeout(() => {
+            const id = `m-${Date.now()}`;
+            const forwardedMsg: Message = {
+                id,
+                content: forwarding.content,
+                type: forwarding.type,
+                direction: "outbound",
+                status: "delivered",
+                mediaUrl: forwarding.mediaUrl,
+                createdAt: new Date().toISOString(),
+            };
+            appendMessage(forwardTarget.contact.id, forwardedMsg);
+            toast.success(lang === "ar" ? "تمت إعادة توجيه الرسالة" : "Message forwarded");
+            setForwarding(null);
+            setForwardingBusy(false);
+        }, 350);
+    };
+
+    const scrollToMessage = (id: string) => {
+        document.getElementById(`message-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
 
     const sendReaction = (msgId: string, emoji: string) => {
@@ -201,6 +289,7 @@ export default function DemoChatPage() {
 
     const ATTACH_OPTIONS = [
         { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, color: "bg-purple-500" },
+        { key: "video", label: t[lang].videoLabel, icon: <Video className="w-4 h-4" />, color: "bg-red-500", disabled: true },
         { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, color: "bg-blue-500" },
     ];
 
@@ -259,6 +348,12 @@ export default function DemoChatPage() {
                         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                             <MessageSquare className={`w-12 h-12 mb-3 ${dark ? "text-[#2a3942]" : "text-gray-200"}`} />
                             <p className={`text-sm mb-1 ${textSub}`}>{t[lang].noConvs}</p>
+                            <p className={`text-xs mb-5 ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>{t[lang].noConvsHint}</p>
+                            <Button size="sm"
+                                className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-1.5"
+                                onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
+                                <Megaphone className="w-4 h-4" /> {t[lang].startCampaign}
+                            </Button>
                         </div>
                     ) : filteredConvs.map(conv => {
                         const isSelected = selectedId === conv.contact.id;
@@ -325,6 +420,19 @@ export default function DemoChatPage() {
                                     <p className={`font-semibold text-sm ${textMain}`}>{selected.contact.name ?? selected.contact.phone}</p>
                                     <p className={`text-xs ${textSub}`}>{selected.contact.phone}</p>
                                 </div>
+                                <div className="hidden md:flex items-center gap-1.5 ml-3">
+                                    <span className={`text-[11px] ${textSub}`}>{lang === "ar" ? "مسؤول المحادثة" : "Assigned to"}</span>
+                                    <select
+                                        value={selected.contact.assignedToUserId ?? ""}
+                                        onChange={e => updateAssignment(e.target.value || null)}
+                                        className={`max-w-[150px] rounded-lg border px-2 py-1 text-xs outline-none ${inputBg} ${textMain} ${border}`}
+                                    >
+                                        <option value="">{lang === "ar" ? "غير معيّنة" : "Unassigned"}</option>
+                                        {DEMO_ASSIGNMENT_MEMBERS.map(member => (
+                                            <option key={member.id} value={member.id}>{member.name || member.email}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-1">
@@ -333,6 +441,12 @@ export default function DemoChatPage() {
                     ${selected.textAiEnabled !== false ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]" : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
                                     <Bot className="w-3.5 h-3.5" />
                                     <span className="hidden sm:inline">{selected.textAiEnabled !== false ? t[lang].aiOn : t[lang].ai}</span>
+                                </button>
+                                <button onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
+                    ${selected.voiceAgentEnabled ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]" : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                                    <Mic2 className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">{selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}</span>
                                 </button>
                                 <button
                                     onClick={() => { setSelectedId(null); setMobileShowChat(false); }}
@@ -384,10 +498,39 @@ export default function DemoChatPage() {
                             </div>
                         )}
 
-                        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4" dir="ltr" style={{
-                            backgroundImage: dark ? "none" : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                            backgroundColor: msgAreaBg,
-                        }}>
+                        {/* Expired Window Warning */}
+                        {isExpired && (
+                            <div className={`px-3 py-2 border-b ${dark ? "bg-red-900/20 border-red-900/50 text-red-200" : "bg-red-50 border-red-100 text-red-700"}`}>
+                                <div className="flex items-start gap-2">
+                                    <span className="mt-0.5 text-lg leading-none">⚠️</span>
+                                    <div className="text-sm">
+                                        <p className="font-semibold">
+                                            {lang === "ar" ? "محادثة عدا عليها 24 ساعة بدون رد" : "Conversation expired (24h+ with no reply)"}
+                                        </p>
+                                        <p className="opacity-90 mt-0.5">
+                                            {lang === "ar"
+                                                ? "لو بعت رسالة عادية دلوقتي الواتساب هيحظرك. ابعت قالب من علامة الدبوس (📎) ف الشات، اختار قوالب، وابعت القالب المناسب."
+                                                : "Sending a regular message will get you blocked. Tap the attachment icon (📎), choose templates, and send an approved template."}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div
+                            ref={msgAreaRef}
+                            className="flex-1 overflow-y-auto px-3 sm:px-6 py-4" dir="ltr"
+                            onScroll={() => {
+                                const el = msgAreaRef.current;
+                                if (!el) return;
+                                const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                                isAtBottom.current = atBottom;
+                                if (atBottom) setHasNewMsgs(false);
+                            }}
+                            style={{
+                                backgroundImage: dark ? "none" : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                                backgroundColor: msgAreaBg,
+                            }}>
                             {messages.length === 0 ? (
                                 <div className="flex justify-center">
                                     <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
@@ -401,7 +544,7 @@ export default function DemoChatPage() {
                                     {messages.map((msg, i) => {
                                         const showDate = i === 0 || dateStr(messages[i - 1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                                         return (
-                                            <div key={msg.id}>
+                                            <div key={msg.id} id={`message-${msg.id}`}>
                                                 {showDate && (
                                                     <div className="flex justify-center my-3">
                                                         <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/70 text-gray-500"}`}>
@@ -409,11 +552,35 @@ export default function DemoChatPage() {
                                                         </span>
                                                     </div>
                                                 )}
-                                                <Bubble msg={msg} onReact={sendReaction} lang={lang} dark={dark} />
+                                                <Bubble
+                                                    msg={msg}
+                                                    onReact={sendReaction}
+                                                    onReply={setReplyingTo}
+                                                    onCopy={copyMessage}
+                                                    onForward={openForward}
+                                                    onQuoteClick={scrollToMessage}
+                                                    lang={lang}
+                                                    dark={dark}
+                                                />
                                             </div>
                                         );
                                     })}
                                     <div ref={endRef} />
+                                    {hasNewMsgs && (
+                                        <div className="sticky bottom-3 flex justify-center z-10 pointer-events-none">
+                                            <button
+                                                onClick={() => {
+                                                    endRef.current?.scrollIntoView({ behavior: "smooth" });
+                                                    setHasNewMsgs(false);
+                                                    isAtBottom.current = true;
+                                                }}
+                                                className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-lg transition-all"
+                                                style={{ background: dark ? "#005c4b" : "#25D366", color: "#fff" }}
+                                            >
+                                                ↓ رسائل جديدة
+                                            </button>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -435,6 +602,18 @@ export default function DemoChatPage() {
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Input bar quote preview */}
+                        {replyingTo && (
+                            <div className={`${headerBg} border-t ${border} px-3 py-2 flex items-center gap-2`}>
+                                <Reply className="w-4 h-4 text-[#25d366]" />
+                                <div className="min-w-0 flex-1 border-l-2 border-[#25d366] pl-2">
+                                    <p className={`text-xs font-semibold ${textMain}`}>{replyingTo.direction === "outbound" ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer")}</p>
+                                    <p className={`text-xs truncate ${textSub}`}>{replyingTo.content || replyingTo.type}</p>
+                                </div>
+                                <button onClick={() => setReplyingTo(null)} className={textSub}><X className="w-4 h-4" /></button>
                             </div>
                         )}
 
@@ -480,7 +659,7 @@ export default function DemoChatPage() {
                                             <button onClick={() => setShowEmoji(false)} className={textSub}><X className="w-4 h-4" /></button>
                                         </div>
                                         <div className="grid grid-cols-7 sm:grid-cols-8 gap-1 max-h-44 overflow-y-auto">
-                                            {["😀", "😂", "🥰", "😍", "😊", "🙏", "👍", "🔥", "❤️", "🎉", "😢", "😮", "🤔", "👏"].map(em => (
+                                            {["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🫣", "🤭", "🤫", "🤥", "😶", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "💀", "☠️", "👻", "👽", "🤖", "💩", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "👍", "👎", "👏", "🙌", "🤝", "🙏", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🤚", "🖐", "✋", "🖖", "💪", "🔥", "⭐", "✨", "💥", "💫", "🎉", "🎊", "🎈"].map(em => (
                                                 <button key={em} onClick={() => setText(t2 => t2 + em)} className={`text-xl rounded-lg p-0.5 transition-colors ${dark ? "hover:bg-[#2a3942]" : "hover:bg-gray-100"}`}>
                                                     {em}
                                                 </button>
@@ -521,6 +700,48 @@ export default function DemoChatPage() {
                             </div>
                             <h2 className={`text-xl font-light mb-2 ${textMain}`}>{t[lang].pickConv}</h2>
                             <p className={`text-sm mb-6 leading-relaxed ${textSub}`}>{t[lang].pickConvHint}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Forwarding Modal */}
+                {forwarding && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setForwarding(null)}>
+                        <div className={`${sidebarBg} rounded-2xl shadow-2xl w-full max-w-md p-4`} onClick={e => e.stopPropagation()} dir={dir}>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
+                                <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>
+                                {forwarding.content || forwarding.type}
+                            </div>
+                            <input
+                                value={forwardSearch}
+                                onChange={e => setForwardSearch(e.target.value)}
+                                placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"}
+                                className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`}
+                            />
+                            <div className="max-h-56 overflow-y-auto space-y-1">
+                                {convs
+                                    .filter(c => c.contact.id !== selectedId && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase()))
+                                    .map(c => (
+                                        <button
+                                            key={c.contact.id}
+                                            onClick={() => setForwardTarget(c)}
+                                            className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3] dark:bg-[#005c4b]/40" : hoverRow}`}
+                                        >
+                                            <span className={textMain}>{c.contact.name || c.contact.phone}</span>
+                                            <span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
+                                        </button>
+                                    ))}
+                            </div>
+                            <button
+                                disabled={!forwardTarget || forwardingBusy}
+                                onClick={submitForward}
+                                className="w-full mt-3 rounded-lg bg-[#25d366] hover:bg-[#20bb5a] text-white py-2 font-semibold disabled:opacity-50 transition-colors"
+                            >
+                                {forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}
+                            </button>
                         </div>
                     </div>
                 )}

@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, CheckCheck, Clock, FileText, Image as ImageIcon, Loader2, Paperclip, X } from "lucide-react";
+import { Check, CheckCheck, Clock, Copy, FileText, Forward, Image as ImageIcon, Loader2, Paperclip, Reply, X } from "lucide-react";
 import { t, type Lang } from "./i18n";
 import type { Message } from "./types";
 import { mediaSrc, linkify, timeStr } from "./utils";
@@ -14,10 +14,14 @@ const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 export function Bubble({
-    msg, onReact, lang, dark,
+    msg, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark,
 }: {
     msg: Message;
     onReact?: (msgId: string, emoji: string) => void;
+    onReply?: (msg: Message) => void;
+    onCopy?: (msg: Message) => void;
+    onForward?: (msg: Message) => void;
+    onQuoteClick?: (id: string) => void;
     lang: Lang;
     dark: boolean;
 }) {
@@ -67,7 +71,7 @@ export function Bubble({
 
     return (
         <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`} dir="ltr">
-            <div className="relative inline-block max-w-[80%] sm:max-w-[68%]">
+            <div className="group relative inline-block max-w-[80%] sm:max-w-[68%]">
                 {showReactions && onReact && (
                     <div className={`absolute -top-10 z-20 flex items-center gap-1 rounded-full shadow-lg border px-2 py-1
             ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
@@ -84,11 +88,25 @@ export function Bubble({
                     </div>
                 )}
 
+                {(onReply || onCopy || onForward) && (
+                    <div className={`pointer-events-auto absolute -top-9 z-30 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${isMe ? "right-0" : "left-0"} ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}>
+                        {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={e => { e.stopPropagation(); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
+                        {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={e => { e.stopPropagation(); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
+                        {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={e => { e.stopPropagation(); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
+                    </div>
+                )}
+
                 <div
                     onClick={() => onReact && setShowReactions(p => !p)}
                     className={`rounded-xl px-3 py-2 text-sm shadow-sm cursor-pointer
             ${isMe ? "rounded-tr-none" : "rounded-tl-none"} ${bubbleBg}`}
                 >
+                    {msg.replyTo && (
+                        <button type="button" onClick={e => { e.stopPropagation(); onQuoteClick?.(msg.replyTo!.id); }} className={`w-full text-left mb-2 border-l-4 rounded px-2 py-1 text-xs ${dark ? "bg-black/20 border-[#25d366] text-gray-300" : "bg-black/5 border-[#25d366] text-gray-600"}`}>
+                            <span className="font-semibold block">{msg.replyTo.direction === "outbound" ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer")}</span>
+                            <span className="line-clamp-2">{msg.replyTo.content || (lang === "ar" ? `مرفق ${msg.replyTo.type}` : `${msg.replyTo.type} attachment`)}</span>
+                        </button>
+                    )}
                     {msg.type === "image" && resolvedMediaSrc && (
                         <>
                             {/* Lightbox modal */}

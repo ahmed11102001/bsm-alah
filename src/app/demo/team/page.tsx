@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     UserPlus, ShieldCheck, MessageSquare, Trash2,
     ShieldAlert, Copy, CheckCircle2, Users,
@@ -119,6 +120,7 @@ function MemberCard({ member, isSelf, canDelete, copiedId, onDelete, onCopy }: {
 export default function DemoTeamPage() {
     const { canTeam: canAddMembers, teamAtMax: atLimit, dashData } = useSubscription();
     const { t, dir, locale } = useLanguage();
+    const router = useRouter();
     const tm = t.team;
 
     const [members, setMembers] = useState<DemoTeamMember[]>(INITIAL_TEAM_MEMBERS);
@@ -192,6 +194,15 @@ export default function DemoTeamPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {members.length > 0 ? tm.memberCount(members.length) : tm.subtitle}
                 </p>
+                {isOwner && (
+                    <button
+                        onClick={() => router.push("/demo/team/conversations")}
+                        className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#075E54] hover:bg-[#064944] text-white text-sm font-semibold transition-colors"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        {locale === "ar" ? "إدارة المحادثات" : "Manage Conversations"}
+                    </button>
+                )}
             </div>
 
             {/* Add member form */}
