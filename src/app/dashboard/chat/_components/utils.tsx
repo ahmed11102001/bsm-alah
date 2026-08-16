@@ -3,6 +3,7 @@
 // دوال مساعدة نقية — نُقلت من chat/page.tsx
 
 import { t, type Lang } from "./i18n";
+import type { ReactNode } from "react";
 
 export const avatarColor = (id: string) => {
   const colors = [
@@ -29,23 +30,71 @@ export function mediaSrc(mediaUrl: string, opts?: { download?: boolean }) {
   return opts?.download ? `${base}?download=1` : base;
 }
 
+const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"'`]+/giu;
+
+function trimUrlPunctuation(value: string) {
+  let url = value;
+  let trailing = "";
+
+  while (/[.,!?;:،؛…]$/.test(url)) {
+    trailing = url.slice(-1) + trailing;
+    url = url.slice(0, -1);
+  }
+
+  // Remove closing punctuation only when it is not balanced inside the URL.
+  const pairs: Array<[string, string]> = [["(", ")"], ["[", "]"], ["{", "}"]];
+  for (const [opening, closing] of pairs) {
+    while (url.endsWith(closing) && (url.match(new RegExp(`\\${closing}`, "g"))?.length ?? 0) > (url.match(new RegExp(`\\${opening}`, "g"))?.length ?? 0)) {
+      trailing = closing + trailing;
+      url = url.slice(0, -1);
+    }
+  }
+
+  return { url, trailing };
+}
+
+function safeHref(value: string) {
+  const href = /^www\./i.test(value) ? `https://${value}` : value;
+  try {
+    const parsed = new URL(href);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function linkify(text: string) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-  return parts.map((part, i) =>
-    urlRegex.test(part) ? (
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const raw = match[0];
+    const start = match.index ?? cursor;
+    const { url, trailing } = trimUrlPunctuation(raw);
+    const href = safeHref(url);
+
+    if (!href || !url) continue;
+    if (start > cursor) nodes.push(text.slice(cursor, start));
+    nodes.push(
       <a
-        key={i}
-        href={part}
+        key={`url-${key++}`}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="underline text-blue-400 break-all"
+        className="text-blue-400 underline underline-offset-2 break-all cursor-pointer hover:text-blue-300"
+        dir="ltr"
       >
-        {part}
+        {url}
       </a>
-    ) : part
-  );
+    );
+    if (trailing) nodes.push(trailing);
+    cursor = start + raw.length;
+  }
+
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes.length ? nodes : text;
 }
 
 
