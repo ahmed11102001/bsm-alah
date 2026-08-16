@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
 // مركز بيانات الديمو الوهمية كلها. أي صفحة ديمو جديدة تستورد من هنا بدل ما
 // تكرر بيانات وهمية جوه الملف نفسه — عشان الشخصية (اسم المتجر، الأرقام،
 // العملاء) تفضل متسقة عبر كل الصفحات.
@@ -654,9 +654,9 @@ export const DEMO_REPORTS_CUSTOMERS: CustomerRow[] = [
 ];
 
 export const DEMO_REPORTS_TEAM: TeamRow[] = [
-  { id: "demo-user-1", name: DEMO_USER_NAME, role: "OWNER", sent: 820, replied: 640 },
-  { id: "demo-team-2", name: "ياسمين عادل", role: "FULL_ACCESS", sent: 410, replied: 355 },
-  { id: "demo-team-3", name: "عمر شريف", role: "CHAT_ONLY", sent: 260, replied: 198 },
+  { id: "demo-user-1", name: DEMO_USER_NAME, role: "OWNER", sent: 820, replied: 640, assigned: 15 },
+  { id: "demo-team-2", name: "ياسمين عادل", role: "FULL_ACCESS", sent: 410, replied: 355, assigned: 8 },
+  { id: "demo-team-3", name: "عمر شريف", role: "CHAT_ONLY", sent: 260, replied: 198, assigned: 5 },
 ];
 
 export const DEMO_REPORTS_LOGS: LogsData = {
