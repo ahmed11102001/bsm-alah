@@ -117,9 +117,9 @@ function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => v
 function OrDivider() {
   return (
     <div className="flex items-center gap-3 my-1">
-      <div className="flex-1 h-px bg-gray-100" />
+      <div className="flex-1 h-px bg-gray-200" />
       <span className="text-xs text-gray-400">أو</span>
-      <div className="flex-1 h-px bg-gray-100" />
+      <div className="flex-1 h-px bg-gray-200" />
     </div>
   );
 }
@@ -279,25 +279,25 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
           type="button"
           onClick={onClose}
           aria-label="إغلاق"
-          className="absolute top-4 right-4 z-30 w-7 h-7 flex items-center justify-center rounded-full text-gray-300 bg-white/5 hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
+          className="absolute top-4 right-4 z-30 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-[#090A0B] text-white">
-          <div className="sticky top-0 z-20 border-b border-white/10 bg-[#090A0B]/95 backdrop-blur-sm px-7 pt-5 pb-4">
+        <div className="flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-white text-gray-900">
+          <div className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm px-7 pt-5 pb-4">
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center gap-2.5 mb-4">
               <span className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-[#25D366]">
                 <img src="/ai-wani.svg" alt="Wani" className="w-full h-full object-cover" />
               </span>
-              <span className="text-xl font-bold text-gray-50">
+              <span className="text-xl font-bold text-gray-900">
                 WANI
               </span>
             </motion.div>
 
             {(view === "login" || view === "register" || view === "join") && (
-              <div className="flex border-b border-white/10 mb-0">
+              <div className="flex border-b border-gray-100 mb-0">
                 <Tab active={view === "login"} onClick={() => go("login")}>دخول</Tab>
                 <Tab active={view === "register"} onClick={() => go("register")}>حساب جديد</Tab>
                 <Tab active={view === "join"} onClick={() => go("join")}>انضمام لفريق</Tab>
@@ -326,7 +326,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                         <Input type="email" required value={loginEmail}
                           onChange={e => setLoginEmail(e.target.value)}
                           placeholder="example@email.com"
-                          className="rounded-xl pr-10 h-12 text-sm" />
+                          className="rounded-xl pr-10 h-12 text-sm border-gray-200" />
                       </div>
                     </div>
 
@@ -368,13 +368,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                         <div className="relative">
                           <User className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
                           <Input required value={regFirst} onChange={e => setRegFirst(e.target.value)}
-                            placeholder="أحمد" className="rounded-xl pr-9 h-11 text-sm" />
+                            placeholder="أحمد" className="rounded-xl pr-9 h-11 text-sm border-gray-200" />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-gray-600">اسم العائلة</Label>
                         <Input required value={regLast} onChange={e => setRegLast(e.target.value)}
-                          placeholder="محمد" className="rounded-xl h-11 text-sm" />
+                          placeholder="محمد" className="rounded-xl h-11 text-sm border-gray-200" />
                       </div>
                     </div>
 
@@ -384,7 +384,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                         <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
                         <Input type="email" required value={regEmail}
                           onChange={e => setRegEmail(e.target.value)} placeholder="owner@email.com"
-                          className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors ${regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
+                          className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors border-gray-200 ${regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
                               regEmail && emailFormatOk ? "border-green-400 focus:ring-green-200" : ""
                             }`} />
                         <span className="absolute left-3 top-3">{emailIcon}</span>
@@ -397,7 +397,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                         <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
                         <Input required type="tel" value={regPhone}
                           onChange={e => setRegPhone(e.target.value)}
-                          placeholder="201234567890" className="rounded-xl pr-9 h-11 text-sm" dir="ltr" />
+                          placeholder="201234567890" className="rounded-xl pr-9 h-11 text-sm border-gray-200" dir="ltr" />
                       </div>
                     </div>
 
@@ -405,7 +405,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                       <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
                       <div className="relative">
                         <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                        <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl pr-9 h-11 text-sm" />
+                        <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl pr-9 h-11 text-sm border-gray-200" />
                       </div>
                       {regPass && (
                         <div className="flex gap-1 mt-1">
@@ -422,7 +422,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
                       <PasswordInput value={regConfirm} onChange={setRegConfirm}
-                        className={`rounded-xl h-11 text-sm ${regConfirm && regPass !== regConfirm ? "border-red-400" :
+                        className={`rounded-xl h-11 text-sm border-gray-200 ${regConfirm && regPass !== regConfirm ? "border-red-400" :
                             regConfirm && regPass === regConfirm ? "border-green-400" : ""
                           }`} />
                       {regConfirm && regPass !== regConfirm && (
@@ -430,12 +430,12 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                       )}
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                       <label htmlFor="terms-checkbox" className="flex items-start gap-3 cursor-pointer">
                         <input id="terms-checkbox" type="checkbox" checked={termsAccepted}
                           onChange={e => setTermsAccepted(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-gray-400 bg-black text-[#25D366] focus:ring-[#25D366]" />
-                        <span className="text-sm leading-relaxed text-gray-200">
+                          className="mt-1 h-4 w-4 rounded border-gray-300 bg-white text-[#25D366] focus:ring-[#25D366]" />
+                        <span className="text-sm leading-relaxed text-gray-700">
                           أوافق على{" "}
                           <a href="/terms" target="_blank" rel="noreferrer"
                             className="text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
@@ -453,7 +453,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
 
                     {err && <ErrMsg msg={err} />}
 
-                    <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-[#090A0B]/95 border-t border-white/10">
+                    <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-white/95 border-t border-gray-100">
                       <Button type="submit" disabled={busy || !termsAccepted || (!!regEmail && !emailFormatOk)}
                         className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60">
                         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}

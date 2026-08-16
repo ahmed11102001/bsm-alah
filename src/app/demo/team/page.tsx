@@ -28,14 +28,14 @@ const INITIAL_TEAM_MEMBERS: DemoTeamMember[] = [
     },
     {
         id: "demo-team-2",
-        name: "ليلى محمد",
+        name: "ندي حمدي",
         email: "layla@wani.app",
         role: "FULL_ACCESS",
         inviteCode: "TEAM02",
     },
     {
         id: "demo-team-3",
-        name: "سارة علي",
+        name: " احمد علي",
         email: "sara@wani.app",
         role: "CHAT_ONLY",
         inviteCode: "TEAM03",

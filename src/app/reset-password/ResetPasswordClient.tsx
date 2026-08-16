@@ -12,7 +12,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -125,12 +124,12 @@ export default function ResetPasswordClient() {
 
         <div className="p-8">
           {/* Logo */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-center gap-2.5 mb-8">
+            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden shadow-md shadow-green-600/20">
+              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
             </div>
-            <span className="text-xl font-bold">
-              واتس <span className="text-[#25D366]">برو</span>
+            <span className="text-2xl font-black tracking-tight text-gray-900">
+              WANI
             </span>
           </div>
 
