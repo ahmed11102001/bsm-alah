@@ -578,6 +578,7 @@ model AutomationRule {
 
 enum AutomationInteractionState {
   WAITING
+  PROCESSING
   SUPERSEDED
   COMPLETED
   STALE

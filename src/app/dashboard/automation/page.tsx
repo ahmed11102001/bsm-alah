@@ -41,6 +41,7 @@ interface AutomationButton {
   buttonId: string;
   text: string;
   nextStepId?: string | null;
+  notifyOnSelect?: boolean;
 }
 
 interface InteractiveConfig {
@@ -364,14 +365,14 @@ export default function Automation() {
     keyword: string;
     body: string;
     footer: string;
-    buttons: Array<{ buttonId: string; text: string; nextStepId: string }>;
+    buttons: Array<{ buttonId: string; text: string; nextStepId: string; notifyOnSelect: boolean }>;
   }>({
     name: "",
     triggerType: "FIRST_MESSAGE",
     keyword: "",
     body: "",
     footer: "",
-    buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+    buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "", notifyOnSelect: false }],
   });
 
   const handleAddInteractiveButton = () => {
@@ -380,12 +381,16 @@ export default function Automation() {
       ...f,
       buttons: [
         ...f.buttons,
-        { buttonId: `btn_${Date.now()}_${f.buttons.length + 1}`, text: "", nextStepId: "" }
+        { buttonId: `btn_${Date.now()}_${f.buttons.length + 1}`, text: "", nextStepId: "", notifyOnSelect: false }
       ],
     }));
   };
 
-  const handleUpdateInteractiveButton = (index: number, field: "text" | "nextStepId", value: string) => {
+  const handleUpdateInteractiveButton = (
+    index: number,
+    field: "text" | "nextStepId" | "notifyOnSelect",
+    value: string | boolean,
+  ) => {
     setInteractiveForm(f => {
       const updated = [...f.buttons];
       updated[index] = { ...updated[index], [field]: value };
@@ -425,7 +430,7 @@ export default function Automation() {
         keyword: "",
         body: "",
         footer: "",
-        buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+        buttons: [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "", notifyOnSelect: false }],
       });
     } else {
       setRuleForm({ name: "", keyword: "", reply: "", replyMediaUrl: "", templateId: "", days: [], hour: "09", minute: "00", tbAudienceId: "", tbMaxContacts: "500" });
@@ -448,8 +453,9 @@ export default function Automation() {
               buttonId: b.buttonId,
               text: b.text,
               nextStepId: b.nextStepId || "",
+              notifyOnSelect: b.notifyOnSelect === true,
             }))
-          : [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "" }],
+          : [{ buttonId: `btn_${Date.now()}_1`, text: "", nextStepId: "", notifyOnSelect: false }],
       });
     } else {
       let days: string[] = []; let hour = "09"; let minute = "00";
@@ -513,6 +519,7 @@ export default function Automation() {
               buttonId: b.buttonId,
               text: b.text.trim(),
               nextStepId: b.nextStepId.trim() || null,
+              notifyOnSelect: b.notifyOnSelect === true,
             })),
           },
           humanKeywords: [],
@@ -1198,6 +1205,18 @@ export default function Automation() {
                                 </SelectContent>
                               </Select>
                             </div>
+
+                            <label className="flex items-center gap-2 cursor-pointer pt-0.5">
+                              <input
+                                type="checkbox"
+                                checked={btn.notifyOnSelect === true}
+                                onChange={e => handleUpdateInteractiveButton(idx, "notifyOnSelect", e.target.checked)}
+                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="text-xs text-gray-600 dark:text-gray-300">
+                                {tx(lang, "إشعار عند اختيار هذا الزر", "Notify when this button is selected")}
+                              </span>
+                            </label>
                           </div>
                         </div>
                       ))}

@@ -168,6 +168,7 @@ const InteractiveButtonSchema = z.object({
   buttonId: z.string().trim().min(1).max(100),
   text: z.string().trim().min(1).max(20),
   nextStepId: z.string().trim().min(1).max(100).nullable().optional(),
+  notifyOnSelect: z.boolean().optional().default(false),
 });
 
 export const InteractiveMenuConfigSchema = z.object({

@@ -5,7 +5,14 @@ import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
-import { notifyNewMessage, notifyAiHandoffNeeded } from "@/lib/notifications";
+import { notifyNewMessage, notifyAiHandoffNeeded, notifyInteractiveButtonSelected } from "@/lib/notifications";
+import {
+  processInteractiveButtonClick,
+  supersedeWaitingInteractions,
+  findEnabledAutomationStep,
+  isHopLimitExceeded,
+  INTERACTIVE_MENU_MAX_HOPS,
+} from "@/lib/interactive-menu";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { downloadFromMetaAndUpload } from "@/lib/cloudinary";
 import { normalizePhone } from "@/lib/phone";
@@ -591,74 +598,43 @@ export async function POST(req: NextRequest) {
 
       if (buttonId && payload !== "CONFIRM_ORDER" && payload !== "CANCEL_ORDER" && !smartFollowUpHandled) {
         try {
-          const activeInteraction = await prisma.automationInteraction.findFirst({
-            where: {
+          const { handled } = await processInteractiveButtonClick(
+            {
               contactId,
               userId,
-              state: "WAITING",
+              phoneNumberId: accountOwner.phoneNumberId,
+              buttonId,
+              eventId: msg.id,
+              from,
             },
-            orderBy: { createdAt: "desc" },
-          });
-
-          if (activeInteraction) {
-            if (activeInteraction.processedEventId === msg.id) {
-              console.log(`[INTERACTIVE-MENU] Duplicate event ${msg.id} ignored for interaction ${activeInteraction.id}`);
-              interactiveMenuHandled = true;
-            } else {
-              const snapshot = activeInteraction.buttonSnapshot as Array<{ buttonId: string; text: string; nextStepId?: string | null }>;
-              const matchedButton = Array.isArray(snapshot)
-                ? snapshot.find((b: any) => b.buttonId === buttonId)
-                : null;
-
-              if (!matchedButton) {
-                console.log(`[INTERACTIVE-MENU] Stale interactive button interaction — buttonId: ${buttonId} not in snapshot for interaction ${activeInteraction.id}`);
-                await prisma.automationInteraction.update({
-                  where: { id: activeInteraction.id },
-                  data: {
-                    state: "STALE",
-                    selectedButtonId: buttonId,
-                    processedEventId: msg.id,
-                    completedAt: new Date(),
-                  },
-                });
-                interactiveMenuHandled = true;
-              } else {
-                console.log(`[INTERACTIVE-MENU] Customer selected button "${matchedButton.text}" (${buttonId}) for interaction ${activeInteraction.id}`);
-                await prisma.automationInteraction.update({
-                  where: { id: activeInteraction.id },
-                  data: {
-                    state: "COMPLETED",
-                    selectedButtonId: buttonId,
-                    processedEventId: msg.id,
-                    completedAt: new Date(),
-                  },
-                });
-
-                interactiveMenuHandled = true;
-
-                if (matchedButton.nextStepId) {
-                  const targetNextStepId = matchedButton.nextStepId;
-                  after(async () => {
-                    try {
-                      await executeAutomationStep({
-                        userId,
-                        from,
-                        contactId,
-                        accountOwner,
-                        stepId: targetNextStepId,
-                        hops: 1,
-                      });
-                    } catch (stepErr) {
-                      console.error(`[INTERACTIVE-MENU] Error executing next step ${targetNextStepId}:`, stepErr);
-                    }
+            {
+              executeNextStep: async (stepId) => {
+                try {
+                  await executeAutomationStep({
+                    userId,
+                    from,
+                    contactId,
+                    accountOwner,
+                    stepId,
+                    hops: 1,
                   });
+                  return { ok: true };
+                } catch (stepErr) {
+                  return { ok: false, error: stepErr instanceof Error ? stepErr.message : String(stepErr) };
                 }
-              }
-            }
-          } else {
-            console.log(`[INTERACTIVE-MENU] Stale interactive button interaction — buttonId: ${buttonId} (no active WAITING interaction) for ${from}`);
-            interactiveMenuHandled = true;
-          }
+              },
+              notifyButtonSelected: async (ctx) => {
+                await notifyInteractiveButtonSelected(
+                  userId,
+                  ctx.contactName,
+                  ctx.contactId,
+                  ctx.button.text,
+                  ctx.automationName,
+                );
+              },
+            },
+          );
+          if (handled) interactiveMenuHandled = true;
         } catch (interactiveErr) {
           console.error("[INTERACTIVE-MENU] Button handling error:", interactiveErr);
         }
@@ -778,10 +754,7 @@ async function handleAutomation(ctx: {
   });
 
   if (contactRecord?.id) {
-    await prisma.automationInteraction.updateMany({
-      where: { contactId: contactRecord.id, userId, state: "WAITING" },
-      data: { state: "SUPERSEDED" },
-    }).catch((e) => console.error("[INTERACTIVE-MENU] Failed to supersede WAITING interactions:", e));
+    await supersedeWaitingInteractions(contactRecord.id, userId);
   }
 
   if (contactRecord?.voiceAgentEnabled) {
@@ -1519,32 +1492,21 @@ async function executeAutomationStep(ctx: {
   accountOwner: { id?: string; accessToken: string; phoneNumberId: string };
   stepId: string;
   hops?: number;
-}) {
+}): Promise<void> {
   const { userId, from, contactId, accountOwner, stepId, hops = 1 } = ctx;
 
-  const MAX_HOPS = 10;
-  if (hops > MAX_HOPS) {
-    console.warn(`[AUTOMATION] Max hops limit (${MAX_HOPS}) reached for ${from}. Stopping execution to prevent circular loops.`);
+  if (isHopLimitExceeded(hops)) {
+    console.warn(
+      `[AUTOMATION] Max hops limit (${INTERACTIVE_MENU_MAX_HOPS}) reached for ${from}. Stopping execution to prevent circular loops.`,
+    );
     return;
   }
 
-  // Multi-tenant check: الخطوة يجب أن تكون موجودة ومفعلة وتتبع نفس اليوزر
-  const rule = await prisma.automationRule.findFirst({
-    where: { id: stepId, userId, isEnabled: true },
-    select: {
-      id: true,
-      name: true,
-      replyType: true,
-      replyContent: true,
-      replyMediaUrl: true,
-      templateId: true,
-      interactiveConfig: true,
-    },
-  });
+  const rule = await findEnabledAutomationStep(userId, stepId);
 
   if (!rule) {
     console.log(`[AUTOMATION] Step ${stepId} not found, disabled, or unauthorized for user ${userId}. Safe finish.`);
-    return;
+    throw new Error(`Step ${stepId} not found or disabled`);
   }
 
   console.log(`[AUTOMATION] Executing step "${rule.name}" (type: ${rule.replyType}, hop: ${hops}) for ${from}`);

@@ -286,6 +286,26 @@ export async function notifySubscriptionSuccess(userId: string, planName: string
   });
 }
 
+export async function notifyInteractiveButtonSelected(
+  userId: string,
+  contactName: string,
+  contactId: string,
+  buttonText: string,
+  automationName: string,
+) {
+  await createNotification({
+    userId,
+    type: NotificationType.NEW_MESSAGE,
+    title: bi("🔘 اختار العميل زراً", "🔘 Customer selected a button"),
+    body: bi(
+      `العميل ${contactName} اختار "${buttonText}" من Automation "${automationName}".`,
+      `Customer ${contactName} selected "${buttonText}" from Automation "${automationName}".`,
+    ),
+    link: `/dashboard?section=chat&contactId=${contactId}`,
+    meta: { contactId, buttonText, automationName, source: "interactive_menu_button" },
+  });
+}
+
 export async function notifyAiHandoffNeeded(
   userId: string,
   contactName: string,
