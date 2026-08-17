@@ -17,6 +17,7 @@ import {
   Headset,
   Lock,
   Play,
+  Bot,
 } from "lucide-react";
 import React from "react";
 
@@ -54,6 +55,17 @@ type StrategyDef = {
 };
 
 const STRATEGIES: StrategyDef[] = [
+  {
+    slug: "ai-agent",
+    icon: Bot,
+    accent: "#a78bfa",
+    glow: "rgba(167,139,250,0.32)",
+    name: { ar: "وكيل واني الذكي", en: "Wani's AI Agent" },
+    line: {
+      ar: "بيسمع، بيفهم، وبيرد — نص أو صوت، على مدار الساعة",
+      en: "Listens, understands, and replies — in text or voice, around the clock.",
+    },
+  },
   {
     slug: "abandoned-cart",
     icon: ShoppingCart,
