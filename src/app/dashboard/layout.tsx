@@ -24,7 +24,7 @@ import {
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3, Copy, Eye, EyeOff,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Handshake,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Handshake, Sparkles,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
@@ -778,6 +778,15 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
               <button
                 type="button"
+                onClick={() => { setAccountPanelOpen(false); router.push("/strategies"); }}
+                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-500" />
+                <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/wani-partner"); }}
                 className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
@@ -908,6 +917,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 >
                   <BarChart3 className="w-4 h-4" />
                   <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { router.push("/strategies"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
                 </button>
                 <button
                   type="button"
