@@ -20,7 +20,7 @@ export const t = {
 
   // ── Hero ────────────────────────────────────────────────────────────────────
   hero: {
-    badge: { ar: "وني AIشريك ميتا الرسمي", en: "AI WANI Official MetaPartner" },
+    badge: { ar: "وني AI — شريك Meta الرسمي", en: "WANI AI — Official Meta Partner" },
     h1a: { ar: "بيع أكتر بـ", en: "Sell More with" },
     h1highlight: { ar: "AI يبيع عنك", en: "AI That Sells For You" },
     h1b: { ar: "على الواتساب — ٢٤/٧", en: "on WhatsApp — 24/7" },
@@ -43,11 +43,11 @@ export const t = {
   // ── Features ────────────────────────────────────────────────────────────────
   features: {
     badge: { ar: "كل ما تحتاجه في مكان واحد", en: "Everything You Need" },
-    h2a: { ar: "مش بس أداة إرسال —", en: "Not just a messaging tool —" },
+    h2a: { ar: "مش بس أداة إرسال واتساب —", en: "Not just a WhatsApp messaging tool —" },
     h2b: { ar: "منصة مبيعات ذكية كاملة", en: "A Complete AI Sales Platform" },
     subtitle: {
-      ar: "من الرسائل الجماعية للـ AI اللي بيبيع — كل ميزة اتبنت عشان تزود مبيعاتك على الواتساب",
-      en: "From bulk messaging to AI that sells — every feature built to grow your WhatsApp sales.",
+      ar: "من حملات واتساب الجماعية لمساعد AI يبيع عنك — كل ميزة اتبنت عشان تزود مبيعاتك وتأتمت تواصلك مع العملاء",
+      en: "From bulk WhatsApp campaigns to an AI sales assistant — every feature built to grow your sales and automate customer communication.",
     },
     stat1: { ar: "نسبة التسليم", en: "Delivery Rate" },
     stat2: { ar: "وقت الإعداد", en: "Setup Time" },
@@ -454,7 +454,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   footer: {
-    desc: { ar: "منصتك المتكاملة لإدارة وإرسال رسائل الواتساب. نساعدك على التواصل مع عملائك بكفاءة واحترافية.", en: "Your all-in-one platform to manage and send WhatsApp messages. We help you reach customers efficiently and professionally." },
+    desc: { ar: "منصة واتساب للأعمال متكاملة: CRM، حملات تسويقية، أتمتة الردود، مساعد مبيعات AI، وصندوق وارد موحد للفريق.", en: "All-in-one WhatsApp Business platform: CRM, marketing campaigns, automated replies, AI sales assistant, and unified team inbox." },
     copyright: { ar: "© 2025 وني. جميع الحقوق محفوظة.", en: "© 2025 WANI. All rights reserved." },
     col1: { ar: "المنتج", en: "Product" },
     col2: { ar: "الشركة", en: "Company" },
@@ -464,19 +464,19 @@ If a customer asks directly — we recommend transparency, and there's a setting
       { ar: "المميزات", en: "Features", href: "#features" },
       { ar: "كيف يعمل", en: "How It Works", href: "#how-it-works" },
       { ar: "الأسعار", en: "Pricing", href: "#pricing" },
-      { ar: "API", en: "API", href: "#" },
+      { ar: "API للمطورين", en: "Developer API", href: "/developers/docs" },
     ],
     company: [
-      { ar: "من نحن", en: "About Us", href: "#" },
-      { ar: "فريق العمل", en: "Team", href: "#" },
-      { ar: "الوظائف", en: "Careers", href: "#" },
-      { ar: "اتصل بنا", en: "Contact", href: "#" },
+      { ar: "استراتيجيات التسويق", en: "Marketing Strategies", href: "/strategies" },
+      { ar: "بورتال المطورين", en: "Developer Portal", href: "/developers" },
+      { ar: "سياسة الخصوصية", en: "Privacy Policy", href: "/privacy" },
+      { ar: "شروط الاستخدام", en: "Terms of Use", href: "/terms" },
     ],
     resources: [
-      { ar: "مركز المساعدة", en: "Help Center", href: "#" },
-      { ar: "المدونة", en: "Blog", href: "/articles" },
-      { ar: "الشروحات", en: "Tutorials", href: "#how-it-works" },
+      { ar: "المقالات", en: "Blog", href: "/articles" },
       { ar: "الأسئلة الشائعة", en: "FAQ", href: "#faq" },
+      { ar: "كيف يعمل", en: "How It Works", href: "#how-it-works" },
+      { ar: "توثيق API", en: "API Docs", href: "/developers/docs" },
     ],
     legal: [
       { ar: "شروط الاستخدام", en: "Terms of Service", href: "/terms" },

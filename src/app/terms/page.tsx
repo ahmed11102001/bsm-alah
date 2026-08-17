@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "Terms of Use | Wani",
   description:
     "Wani's terms of use for our WhatsApp marketing campaign platform — شروط الاستخدام لمنصة Wani لإدارة حملات واتساب التسويقية",
+  alternates: {
+    canonical: "https://aiwni.com/terms",
+  },
 };
 
 export default function TermsPage() {

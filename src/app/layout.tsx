@@ -21,40 +21,113 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// ── SEO: Root Metadata ────────────────────────────────────────────────────────
 export const metadata: Metadata = {
+  metadataBase: new URL("https://aiwni.com"),
   title: {
-    default: "WANI - وني",
-    template: "%s | WANI",
+    default:
+      "Wani — وني | منصة واتساب للأعمال، CRM، أتمتة وحملات تسويقية",
+    template: "%s | Wani — وني",
   },
-  description: "المنصة الرائدة لإرسال رسائل واتساب جماعية وحملات تسويقية ذكية وموثوقة.",
+  description:
+    "وني هي منصة واتساب للأعمال (WhatsApp Business) متكاملة تشمل CRM، حملات تسويقية جماعية، أتمتة الردود، مساعد مبيعات بالذكاء الاصطناعي، صندوق وارد موحد للفريق، وربط مباشر مع المتاجر الإلكترونية. ابدأ مجاناً.",
+  keywords: [
+    "واتساب للأعمال",
+    "WhatsApp Business",
+    "WhatsApp CRM",
+    "واتساب CRM",
+    "حملات واتساب",
+    "WhatsApp campaigns",
+    "أتمتة واتساب",
+    "WhatsApp automation",
+    "WhatsApp Business API",
+    "واتساب شات بوت",
+    "WhatsApp chatbot",
+    "رسائل واتساب جماعية",
+    "WhatsApp marketing",
+    "تسويق واتساب",
+    "صندوق وارد واتساب",
+    "WhatsApp team inbox",
+    "وني",
+    "Wani",
+  ],
+  alternates: {
+    canonical: "https://aiwni.com",
+  },
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: ["/favicon.svg"],
     apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
   },
   openGraph: {
-    title: "WANI - وني",
-    description: "أرسل آلاف الرسائل لعملائك بنقرة واحدة مع تقارير مفصلة وأتمتة كاملة.",
+    title: "Wani — وني | منصة واتساب للأعمال وأتمتة التسويق",
+    description:
+      "أرسل آلاف الرسائل لعملائك بنقرة واحدة، تابع المحادثات من صندوق وارد موحد، وخلّي الـ AI يبيع عنك ٢٤/٧ على واتساب.",
     url: "https://aiwni.com",
-    siteName: "WANI",
+    siteName: "Wani",
     locale: "ar_EG",
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: "/favicon.jpg",
         width: 1200,
-        height: 630,
-        alt: "WANI Dashboard Preview",
+        height: 1200,
+        alt: "Wani — منصة واتساب للأعمال",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WANI - وني",
-    description: "نظام إرسال رسائل واتساب جماعية احترافي",
-    images: ["/og-image.png"],
+    title: "Wani — وني | منصة واتساب للأعمال",
+    description:
+      "CRM واتساب متكامل: حملات جماعية، أتمتة، AI مبيعات، صندوق وارد للفريق — ابدأ مجاناً.",
+    images: ["/favicon.jpg"],
   },
 };
+
+// ── SEO: JSON-LD Structured Data ──────────────────────────────────────────────
+const jsonLd = [
+  // Organization — real data only
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Wani",
+    alternateName: "وني",
+    url: "https://aiwni.com",
+    logo: "https://aiwni.com/favicon.svg",
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+20-1281657907",
+      contactType: "customer support",
+      email: "support@aiwni.com",
+      availableLanguage: ["Arabic", "English"],
+    },
+    sameAs: [
+      "https://www.facebook.com/share/14a5gcBMsdg/",
+      "https://www.instagram.com/r0.0_h?igsh=MWJ2NGo3bGlmY2dscQ==",
+    ],
+  },
+  // WebSite — no SearchAction (no public search feature)
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Wani",
+    alternateName: "وني",
+    url: "https://aiwni.com",
+    inLanguage: ["ar", "en"],
+  },
+  // SoftwareApplication — factual only, no fake ratings/prices/reviews
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Wani",
+    alternateName: "وني",
+    url: "https://aiwni.com",
+    applicationCategory: "BusinessApplication",
+    description:
+      "منصة واتساب للأعمال متكاملة تشمل CRM، حملات تسويقية، أتمتة الردود، مساعد مبيعات AI، وصندوق وارد موحد للفريق.",
+  },
+];
 
 export default async function RootLayout({
   children,
@@ -73,6 +146,14 @@ export default async function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#25D366" />
+        {/* SEO: JSON-LD Structured Data */}
+        {jsonLd.map((schema, i) => (
+          <script
+            key={i}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
       </head>
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
         <MetaPixel nonce={nonce} />

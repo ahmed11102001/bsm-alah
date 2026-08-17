@@ -6,8 +6,20 @@ export const revalidate = 60;
 
 export async function generateMetadata() {
   return {
-    title: "المقالات",
-    description: "مقالات ونصائح حول أتمتة واتساب وإدارة المتجر",
+    title: "مقالات ونصائح واتساب للأعمال والتسويق الإلكتروني",
+    description:
+      "مقالات ودلائل عملية حول التسويق عبر واتساب، أتمتة المبيعات، واستراتيجيات التجارة الإلكترونية — من فريق وني.",
+    alternates: {
+      canonical: "https://aiwni.com/articles",
+    },
+    openGraph: {
+      title: "مقالات واتساب للأعمال | Wani",
+      description:
+        "نصائح عملية ودلائل شاملة لتنمية أعمالك عبر واتساب: حملات، أتمتة، واستراتيجيات مبيعات.",
+      url: "https://aiwni.com/articles",
+      locale: "ar_EG",
+      type: "website",
+    },
   };
 }
 

@@ -10,13 +10,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const article = await prisma.article.findFirst({
     where: { slug, published: true },
-    select: { title: true, excerpt: true, coverImage: true },
+    select: { title: true, excerpt: true, coverImage: true, publishedAt: true },
   });
   if (!article) return { title: "مقال غير موجود" };
   return {
     title: article.title,
     description: article.excerpt,
-    openGraph: { images: article.coverImage ? [article.coverImage] : [] },
+    alternates: {
+      canonical: `https://aiwni.com/articles/${slug}`,
+    },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt ?? undefined,
+      url: `https://aiwni.com/articles/${slug}`,
+      locale: "ar_EG",
+      type: "article",
+      ...(article.publishedAt && {
+        publishedTime: new Date(article.publishedAt).toISOString(),
+      }),
+      images: article.coverImage ? [article.coverImage] : [],
+    },
   };
 }
 
@@ -34,8 +47,45 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     })
     : "";
 
+  // ── SEO: JSON-LD structured data ──────────────────────────────────────────────
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    ...(article.excerpt && { description: article.excerpt }),
+    ...(article.coverImage && { image: article.coverImage }),
+    ...(article.publishedAt && {
+      datePublished: new Date(article.publishedAt).toISOString(),
+    }),
+    ...(article.updatedAt && {
+      dateModified: new Date(article.updatedAt).toISOString(),
+    }),
+    url: `https://aiwni.com/articles/${slug}`,
+    publisher: {
+      "@type": "Organization",
+      name: "Wani",
+      url: "https://aiwni.com",
+      logo: "https://aiwni.com/favicon.svg",
+    },
+    mainEntityOfPage: `https://aiwni.com/articles/${slug}`,
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "الرئيسية", item: "https://aiwni.com" },
+      { "@type": "ListItem", position: 2, name: "المقالات", item: "https://aiwni.com/articles" },
+      { "@type": "ListItem", position: 3, name: article.title, item: `https://aiwni.com/articles/${slug}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-white" dir="rtl">
+      {/* SEO: JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+
       {/* Back */}
       <div className="border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur z-10">
         <div className="max-w-3xl mx-auto px-4 py-3">

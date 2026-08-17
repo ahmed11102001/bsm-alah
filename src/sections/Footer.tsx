@@ -31,8 +31,8 @@ export default function Footer({ lang }: FooterProps) {
 
   const cols = [
     { title: tr(f.col1, lang), links: f.product   },
+    { title: tr(f.col2, lang), links: f.company   },
     { title: tr(f.col3, lang), links: f.resources },
-    { title: tr(f.col4, lang), links: f.legal     },
   ];
 
   const fadeUp = (delay: number): React.CSSProperties => ({
