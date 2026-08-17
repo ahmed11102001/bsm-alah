@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Calendar, ArrowRight } from "lucide-react";
 
+import ArticleMarkdown from "@/components/ArticleMarkdown";
+
 export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -132,16 +134,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         <hr className="border-gray-100 mb-8" />
 
         {/* Content */}
-        <div
-          className="prose prose-lg max-w-none text-gray-700 leading-relaxed
-            prose-headings:font-bold prose-headings:text-gray-900
-            prose-a:text-[#25D366] prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-gray-900
-            prose-li:my-1
-            whitespace-pre-wrap"
-        >
-          {article.content}
-        </div>
+        <ArticleMarkdown content={article.content} />
       </article>
 
       {/* CTA */}

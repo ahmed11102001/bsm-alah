@@ -16,6 +16,7 @@ import {
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
+import ArticleMarkdown from "@/components/ArticleMarkdown";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const PLANS = ["free", "starter", "pro", "enterprise"] as const;
@@ -1146,6 +1147,16 @@ export default function AdminPage() {
                       <textarea value={articleForm.content} placeholder={adm.articles.fields.contentPh} rows={16}
                         onChange={e => setArticleForm(f => ({ ...f, content: e.target.value }))}
                         className={inp + " resize-y leading-relaxed font-mono"} />
+                      <div className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/40 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700/60 leading-relaxed">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">💡 يدعم المحتوى تنسيق Markdown والروابط الداخلية:</span>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          <span>رابط داخلي: <code className="text-[#25D366] font-mono">[استراتيجيات التسويق](/strategies)</code></span>
+                          <span>رابط خارجي: <code className="text-[#25D366] font-mono">[Meta](https://meta.com)</code></span>
+                          <span>عناوين: <code className="font-mono"># H1</code> | <code className="font-mono">## H2</code></span>
+                          <span>خط عريض: <code className="font-mono">**نص عريض**</code></span>
+                          <span>قوائم: <code className="font-mono">- عنصر</code></span>
+                        </div>
+                      </div>
                     </div>
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-2">
@@ -1179,8 +1190,12 @@ export default function AdminPage() {
                         <p className="text-gray-500 dark:text-gray-400 mb-4 border-r-4 border-[#25D366] pr-3 text-sm leading-relaxed">{articleForm.excerpt}</p>
                       )}
                       <hr className="border-gray-200 dark:border-gray-700 mb-4" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-loose whitespace-pre-wrap">
-                        {articleForm.content || <span className="text-gray-300 dark:text-gray-600">{adm.articles.fields.contentPreviewPh}</span>}
+                      <div>
+                        {articleForm.content ? (
+                          <ArticleMarkdown content={articleForm.content} />
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">{adm.articles.fields.contentPreviewPh}</span>
+                        )}
                       </div>
                     </div>
                   )}
