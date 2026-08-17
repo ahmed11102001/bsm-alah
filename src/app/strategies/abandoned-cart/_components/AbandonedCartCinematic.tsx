@@ -126,6 +126,64 @@ function KpiRow({ icon: Icon, name, desc, index, isActive, reducedMotion }: {
     );
 }
 
+// ─── Word-by-word reveal (زي كابشن فيديو) — بيتفكك النص لكلمات وكل كلمة
+// بتظهر بتتابع بسيط (fade + rise + blur)، مع دعم تظليل كلمة أو أكتر
+// بخط تحتها بيترسم بعد ما الكلمة تظهر، بالظبط زي هايلايت الكابشنز.
+function WordReveal({
+    text, isActive, reducedMotion, highlight = [], baseDelay = 0, step = 90,
+    style,
+}: {
+    text: string; isActive: boolean; reducedMotion: boolean;
+    highlight?: string[]; baseDelay?: number; step?: number;
+    style?: React.CSSProperties;
+}) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (isActive && !reducedMotion) {
+            const timer = setTimeout(() => setVisible(true), 60);
+            return () => clearTimeout(timer);
+        } else if (isActive && reducedMotion) setVisible(true);
+        else setVisible(false);
+    }, [isActive, reducedMotion]);
+
+    const words = text.split(" ");
+    const norm = (w: string) => w.replace(/[.,،؛!؟"'\u201c\u201d—-]/g, "");
+
+    return (
+        <span style={{ ...style }}>
+            {words.map((word, i) => {
+                const isHi = highlight.some((h) => norm(word).toLowerCase() === norm(h).toLowerCase());
+                const delay = baseDelay + i * step;
+                return (
+                    <span
+                        key={i}
+                        style={{
+                            display: "inline-block",
+                            opacity: visible || reducedMotion ? 1 : 0,
+                            filter: visible || reducedMotion ? "blur(0px)" : "blur(4px)",
+                            transform: visible || reducedMotion ? "translateY(0)" : "translateY(8px)",
+                            transition: reducedMotion ? "none" : `opacity .5s cubic-bezier(0.16,1,0.3,1) ${delay}ms, filter .5s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform .5s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+                            marginInlineEnd: "0.28em",
+                            color: isHi ? ACCENT : undefined,
+                            fontWeight: isHi ? 800 : undefined,
+                            backgroundImage: isHi ? `linear-gradient(${ACCENT}, ${ACCENT})` : undefined,
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "0 92%",
+                            backgroundSize: isHi && (visible || reducedMotion) ? "100% 3px" : "0% 3px",
+                            transitionProperty: reducedMotion ? "none" : "opacity, filter, transform, background-size",
+                            transitionDuration: reducedMotion ? "0s" : ".5s, .5s, .5s, .45s",
+                            transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)",
+                            transitionDelay: reducedMotion ? "0s" : `${delay}ms, ${delay}ms, ${delay}ms, ${delay + 260}ms`,
+                        }}
+                    >
+                        {word}
+                    </span>
+                );
+            })}
+        </span>
+    );
+}
+
 export default function AbandonedCartCinematic() {
     const { locale } = useLanguage();
     const isAr = locale === "ar";
@@ -285,10 +343,24 @@ export default function AbandonedCartCinematic() {
                     {/* Scene 1: Headline */}
                     <div style={{ position: "absolute", left: `${SCENES[1].camera.x * 100}%`, top: `${SCENES[1].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(1), transition: "opacity .6s", textAlign: "center", width: "min(90%, 560px)" }}>
                         <h1 style={{ fontSize: "clamp(26px, 4vw, 42px)", fontWeight: 800, lineHeight: 1.25, letterSpacing: isAr ? "0" : "-1px", color: "#f0f0f0" }}>
-                            {t("Abandoned Cart Recovery", "استرجاع السلة المتروكة")}
+                            <WordReveal
+                                text={t("Abandoned Cart Recovery", "استرجاع السلة المتروكة")}
+                                isActive={active === 1}
+                                reducedMotion={reducedMotion}
+                                highlight={[t("Recovery", "المتروكة")]}
+                                baseDelay={80}
+                                step={110}
+                            />
                         </h1>
                         <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginTop: "12px", lineHeight: 1.7 }}>
-                            {t("A moment nearly lost — noticed right on time.", "لحظة كادت تضيع، والنظام لاحظها في الوقت المناسب.")}
+                            <WordReveal
+                                text={t("A moment nearly lost — noticed right on time.", "لحظة كادت تضيع، والنظام لاحظها في الوقت المناسب.")}
+                                isActive={active === 1}
+                                reducedMotion={reducedMotion}
+                                highlight={[t("noticed", "لاحظها")]}
+                                baseDelay={480}
+                                step={85}
+                            />
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "18px", alignItems: "center" }}>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "rgba(255,255,255,0.55)" }}>
@@ -380,7 +452,14 @@ export default function AbandonedCartCinematic() {
                     {/* Scene 10: CTA */}
                     <div style={{ position: "absolute", left: `${SCENES[10].camera.x * 100}%`, top: `${SCENES[10].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(10), transition: "opacity .6s", textAlign: "center", width: "min(85%, 380px)" }}>
                         <div style={{ fontSize: "22px", fontWeight: 800, color: "#f0f0f0", lineHeight: 1.3, marginBottom: "8px", letterSpacing: isAr ? "0" : "-0.5px" }}>
-                            {t("Ready to activate the strategy?", "جاهز نفعّل الاستراتيجية؟")}
+                            <WordReveal
+                                text={t("Ready to activate the strategy?", "جاهز نفعّل الاستراتيجية؟")}
+                                isActive={active === 10}
+                                reducedMotion={reducedMotion}
+                                highlight={[t("activate", "نفعّل")]}
+                                baseDelay={80}
+                                step={110}
+                            />
                         </div>
                         <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", lineHeight: 1.6, marginBottom: "20px" }}>
                             {t("Turn it on right from the dashboard — no code, no setup steps.", "فعّلها من الداشبورد مباشرة — من غير أي كود أو خطوات إعداد.")}
