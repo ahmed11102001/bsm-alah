@@ -66,7 +66,7 @@ const STRATEGIES: StrategyDef[] = [
     },
   },
   {
-    slug: null,
+    slug: "order-confirmation",
     icon: PackageCheck,
     accent: "#bcd2ff",
     glow: "rgba(188,210,255,0.30)",
