@@ -18,6 +18,7 @@ import {
   Lock,
   Play,
   Bot,
+  Megaphone,
 } from "lucide-react";
 import React from "react";
 
@@ -64,6 +65,17 @@ const STRATEGIES: StrategyDef[] = [
     line: {
       ar: "بيسمع، بيفهم، وبيرد — نص أو صوت، على مدار الساعة",
       en: "Listens, understands, and replies — in text or voice, around the clock.",
+    },
+  },
+  {
+    slug: "campaigns",
+    icon: Megaphone,
+    accent: "#22d3ee",
+    glow: "rgba(34,211,238,0.32)",
+    name: { ar: "الحملات الذكية", en: "Smart Campaigns" },
+    line: {
+      ar: "صوت واحد بيوصل لألف باب، في نفس اللحظة",
+      en: "One voice reaching a thousand doors, all at once.",
     },
   },
   {
