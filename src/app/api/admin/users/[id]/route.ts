@@ -75,7 +75,7 @@ export async function PATCH(
   return NextResponse.json({ success: true });
 }
 
-// ─── DELETE /api/admin/users/[id] — soft delete (مش hard delete) ─────────────
+// ─── DELETE /api/admin/users/[id] — حذف المستخدم نهائياً من قاعدة البيانات ───
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -92,24 +92,20 @@ export async function DELETE(
 
   const target = await prisma.user.findUnique({
     where:  { id },
-    select: { isSuper: true, deletedAt: true },
+    select: { isSuper: true },
   });
   if (!target)
     return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
   if (target.isSuper)
     return NextResponse.json({ error: "لا يمكن حذف super admin" }, { status: 400 });
-  if (target.deletedAt)
-    return NextResponse.json({ error: "المستخدم محذوف بالفعل" }, { status: 409 });
 
-  await prisma.user.update({
-    where: { id },
-    data: {
-      deletedAt: new Date(),
-      deletedBy: session.user.id,
-    },
-  });
+  await prisma.$transaction([
+    prisma.passwordResetToken.deleteMany({ where: { userId: id } }),
+    prisma.user.updateMany({ where: { parentId: id }, data: { parentId: null } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, id });
 }
 
 // ─── PUT /api/admin/users/[id] — restore يوزر محذوف ──────────────────────────

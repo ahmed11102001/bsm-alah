@@ -8,7 +8,7 @@ import {
   ExternalLink, FileText, Check, X, Loader2, User as UserIcon,
   Phone, Calendar, DollarSign, AlertCircle, Info, Send, Eye,
   HelpCircle, Sparkles, MessageSquare, Layers, CheckSquare,
-  Upload, Edit3, ChevronDown, ChevronUp
+  Upload, Edit3, ChevronDown, ChevronUp, Trash2
 } from "lucide-react";
 import type {
   EvidenceSnapshot,
@@ -593,6 +593,44 @@ export default function ProtectionClaimsTab({
     }
   };
 
+  const [deletingClaimId, setDeletingClaimId] = useState<string | null>(null);
+
+  const handleDeleteClaim = async (claimId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const confirmMsg = isAr
+      ? "هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء."
+      : "Are you sure you want to permanently delete this protection claim from the database? This action cannot be undone.";
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeletingClaimId(claimId);
+    try {
+      const res = await fetch(`/api/admin/protection-claims/${claimId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setClaims((prev) => prev.filter((c) => c.id !== claimId));
+        setTotalCount((prev) => Math.max(0, prev - 1));
+        const target = claims.find((c) => c.id === claimId);
+        if (target?.status === "NEEDS_REVIEW" && onNeedsReviewCountChange) {
+          const remainingNeedsReview = claims.filter((c) => c.id !== claimId && c.status === "NEEDS_REVIEW").length;
+          onNeedsReviewCountChange(remainingNeedsReview);
+        }
+        if (selectedClaimId === claimId) {
+          setSelectedClaimId(null);
+          setSelectedClaim(null);
+        }
+      } else {
+        const d = await res.json();
+        alert(d.error || (isAr ? "فشل حذف الطلب" : "Failed to delete claim"));
+      }
+    } catch (err) {
+      console.error("Failed to delete claim:", err);
+      alert(isAr ? "خطأ في الاتصال بالخادم" : "Server error");
+    } finally {
+      setDeletingClaimId(null);
+    }
+  };
+
   const inp =
     "w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#25D366] bg-white transition";
   const btn =
@@ -736,6 +774,19 @@ export default function ProtectionClaimsTab({
             >
               <RefreshCw className={`w-4 h-4 ${runningAudit ? "animate-spin" : ""}`} />
               {runningAudit ? (isAr ? "جاري الفحص..." : "Running Audit...") : (isAr ? "إعادة تشغيل Protection Audit" : "Run Protection Audit")}
+            </button>
+            <button
+              onClick={() => handleDeleteClaim(selectedClaim.id)}
+              disabled={deletingClaimId === selectedClaim.id}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-800 transition disabled:opacity-50"
+              title={isAr ? "حذف الطلب نهائياً" : "Delete Claim"}
+            >
+              {deletingClaimId === selectedClaim.id ? (
+                <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {isAr ? "حذف الطلب" : "Delete Claim"}
             </button>
           </div>
         </div>
@@ -1927,15 +1978,29 @@ export default function ProtectionClaimsTab({
                         {claim.reviewer?.name || claim.reviewer?.email || "-"}
                       </td>
                       <td className="px-4 py-3 text-end">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            fetchClaimDetails(claim.id);
-                          }}
-                          className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 rounded-lg text-xs font-semibold transition"
-                        >
-                          {isAr ? "مراجعة وفحص" : "Review"}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fetchClaimDetails(claim.id);
+                            }}
+                            className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 rounded-lg text-xs font-semibold transition"
+                          >
+                            {isAr ? "مراجعة وفحص" : "Review"}
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteClaim(claim.id, e)}
+                            disabled={deletingClaimId === claim.id}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
+                            title={isAr ? "حذف الطلب نهائياً" : "Delete claim"}
+                          >
+                            {deletingClaimId === claim.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

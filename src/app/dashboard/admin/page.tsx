@@ -155,6 +155,7 @@ export default function AdminPage() {
   const [leadStatus,    setLeadStatus]    = useState<"all"|"NEW"|"CONTACTED"|"CONVERTED"|"LOST">("all");
   const [leadTotal,     setLeadTotal]     = useState(0);
   const [updatingLead,  setUpdatingLead]  = useState<string | null>(null);
+  const [deletingLead,  setDeletingLead]  = useState<string | null>(null);
 
   // wani partner
   const [waniCards,      setWaniCards]      = useState<WaniPartnerCardRow[]>([]);
@@ -403,10 +404,17 @@ export default function AdminPage() {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
   const handleDelete = async (userId: string, email: string) => {
-    if (!confirm(`حذف ناعم للمستخدم: ${email}\nهيتحذف من الـ dashboard لكن بياناته هتفضل في الـ DB.\nممكن تسترجعه لاحقاً.`)) return;
+    const confirmMsg = locale === "ar"
+      ? `هل أنت متأكد من حذف المستخدم "${email}" نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
+      : `Are you sure you want to permanently delete user "${email}" from the database? This action cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
     setDeleting(userId);
-    await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+    const r = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
     setDeleting(null);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      alert(d.error || (locale === "ar" ? "فشل حذف المستخدم" : "Failed to delete user"));
+    }
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
 
@@ -528,6 +536,30 @@ export default function AdminPage() {
     });
     setUpdatingLead(null);
     fetchLeads(leadStatus);
+  };
+
+  const handleDeleteLead = async (id: string, name: string) => {
+    const confirmMsg = locale === "ar"
+      ? `هل أنت متأكد من حذف الـ Lead "${name}" نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
+      : `Are you sure you want to permanently delete lead "${name}" from the database? This action cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    setDeletingLead(id);
+    try {
+      const r = await fetch(`/api/leads?id=${id}`, { method: "DELETE" });
+      if (r.ok) {
+        setLeads(prev => prev.filter(l => l.id !== id));
+        setLeadTotal(prev => Math.max(0, prev - 1));
+      } else {
+        const d = await r.json().catch(() => ({}));
+        alert(d.error || (locale === "ar" ? "فشل حذف الـ Lead" : "Failed to delete lead"));
+      }
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
+      alert(locale === "ar" ? "خطأ في الاتصال بالخادم" : "Server error");
+    } finally {
+      setDeletingLead(null);
+    }
   };
 
   const handleLeadExport = () => {
@@ -1440,20 +1472,34 @@ export default function AdminPage() {
                           </td>
                           {/* Status change actions */}
                           <td className="py-3 px-3">
-                            {updatingLead === lead.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                            ) : (
-                              <select
-                                value={lead.status}
-                                onChange={e => handleLeadStatusUpdate(lead.id, e.target.value as Lead["status"])}
-                                className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366] cursor-pointer"
+                            <div className="flex items-center gap-1.5 justify-end">
+                              {updatingLead === lead.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                              ) : (
+                                <select
+                                  value={lead.status}
+                                  onChange={e => handleLeadStatusUpdate(lead.id, e.target.value as Lead["status"])}
+                                  className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#25D366] cursor-pointer"
+                                >
+                                  <option value="NEW">{adm.leads.statusNew}</option>
+                                  <option value="CONTACTED">{adm.leads.statusContacted}</option>
+                                  <option value="CONVERTED">{adm.leads.statusConverted}</option>
+                                  <option value="LOST">{adm.leads.statusLost}</option>
+                                </select>
+                              )}
+                              <button
+                                onClick={() => handleDeleteLead(lead.id, lead.name)}
+                                disabled={deletingLead === lead.id}
+                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
+                                title={locale === "ar" ? "حذف نهائياً" : "Delete"}
                               >
-                                <option value="NEW">{adm.leads.statusNew}</option>
-                                <option value="CONTACTED">{adm.leads.statusContacted}</option>
-                                <option value="CONVERTED">{adm.leads.statusConverted}</option>
-                                <option value="LOST">{adm.leads.statusLost}</option>
-                              </select>
-                            )}
+                                {deletingLead === lead.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

@@ -137,3 +137,33 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true, lead: updated });
 }
+
+// ── DELETE /api/leads — حذف الـ lead نهائياً (admin only) ────────────────────
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.isSuper) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  let id = searchParams.get("id");
+
+  if (!id) {
+    const body = await req.json().catch(() => ({}));
+    id = body.id;
+  }
+
+  if (!id) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  const existing = await prisma.lead.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: "lead not found" }, { status: 404 });
+  }
+
+  await prisma.lead.delete({ where: { id } });
+
+  return NextResponse.json({ ok: true, id });
+}
+

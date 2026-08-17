@@ -340,3 +340,32 @@ export async function PATCH(
 
   return NextResponse.json(updatedClaim);
 }
+
+// ─── DELETE /api/admin/protection-claims/[id] ─────────────────────────────────
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await requireSuper();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id: claimId } = await params;
+
+  const existingClaim = await prisma.protectionClaim.findUnique({
+    where: { id: claimId },
+  });
+
+  if (!existingClaim) {
+    return NextResponse.json({ error: "Claim not found" }, { status: 404 });
+  }
+
+  // Delete claim (audit logs will be deleted via cascading relation)
+  await prisma.protectionClaim.delete({
+    where: { id: claimId },
+  });
+
+  return NextResponse.json({ success: true, id: claimId });
+}
+
