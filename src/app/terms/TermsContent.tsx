@@ -184,7 +184,7 @@ The refund covers the unused remaining portion of the paid monthly subscription 
 — خطة مجانية: 100 جهة اتصال، 3 حملات، مستخدم واحد
 — خطة Starter: 249 جنيه/شهر — 2,000 جهة اتصال، 50 حملة
 — خطة Professional: 599 جنيه/شهر — 15,000 جهة اتصال، حملات غير محدودة
-— خطة Enterprise: 1199جنيه/شهر جهات اتصال غير محدودة
+— خطة Enterprise: 1199 جنيه/شهر — جهات اتصال غير محدودة، حملات غير محدودة
 
 قد تختلف الحدود والمزايا التفصيلية، وتخضع بشكل نهائي للحدود الموضحة فعليًا داخل لوحة تحكم Wani وقت الاشتراك.
 
@@ -199,7 +199,7 @@ The refund covers the unused remaining portion of the paid monthly subscription 
 — Free plan: 100 contacts, 3 campaigns, 1 user
 — Starter plan: 249 EGP/month — 2,000 contacts, 50 campaigns
 — Professional plan: 599 EGP/month — 15,000 contacts, unlimited campaigns
-— Enterprise plan: custom pricing based on your needs
+— Enterprise plan: 1199 EGP/month — unlimited contacts, unlimited campaigns
 
 Detailed limits and features may vary and are ultimately governed by the limits shown to you inside the Wani dashboard at the time of subscription.
 
@@ -539,27 +539,25 @@ export default function TermsContent() {
             <div
               key={section.id}
               id={section.id}
-              className={`bg-white rounded-2xl border shadow-sm p-8 scroll-mt-6 ${
-                section.id === "meta-compliance"
+              className={`bg-white rounded-2xl border shadow-sm p-8 scroll-mt-6 ${section.id === "meta-compliance"
                   ? "border-amber-200 bg-amber-50/30"
                   : section.id === "prohibited"
-                  ? "border-red-100 bg-red-50/20"
-                  : section.id === "protection-guarantee"
-                  ? "border-[#25D366]/30 bg-[#f0fdf4] ring-1 ring-[#25D366]/20"
-                  : "border-gray-100"
-              }`}
+                    ? "border-red-100 bg-red-50/20"
+                    : section.id === "protection-guarantee"
+                      ? "border-[#25D366]/30 bg-[#f0fdf4] ring-1 ring-[#25D366]/20"
+                      : "border-gray-100"
+                }`}
             >
               <div className="flex items-start gap-4 mb-5">
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    section.id === "meta-compliance"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${section.id === "meta-compliance"
                       ? "bg-amber-100"
                       : section.id === "prohibited"
-                      ? "bg-red-100"
-                      : section.id === "protection-guarantee"
-                      ? "bg-[#25D366]"
-                      : "bg-[#f0fdf4]"
-                  }`}
+                        ? "bg-red-100"
+                        : section.id === "protection-guarantee"
+                          ? "bg-[#25D366]"
+                          : "bg-[#f0fdf4]"
+                    }`}
                 >
                   {section.id === "protection-guarantee" ? (
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -567,13 +565,12 @@ export default function TermsContent() {
                     </svg>
                   ) : (
                     <span
-                      className={`font-bold text-sm ${
-                        section.id === "meta-compliance"
+                      className={`font-bold text-sm ${section.id === "meta-compliance"
                           ? "text-amber-600"
                           : section.id === "prohibited"
-                          ? "text-red-500"
-                          : "text-[#25D366]"
-                      }`}
+                            ? "text-red-500"
+                            : "text-[#25D366]"
+                        }`}
                     >
                       {i + 1}
                     </span>
