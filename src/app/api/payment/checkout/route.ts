@@ -90,9 +90,60 @@ export async function POST(req: NextRequest) {
             ? "monthly"
             : (BILLING_CYCLES[cycle] ? cycle : "monthly");
         const cycleInfo = BILLING_CYCLES[billingCycle];
-        cartTotal = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
-        itemName = `اشتراك ${plan.name} — ${cycleInfo.label}`;
-        payLoadObj = { type: "subscription", planSlug, cycle: billingCycle, userId: ownerId };
+        const baseCartTotal = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
+
+        // ── تطبيق رصيد الإحالات إن وُجد ───────────────────────────────────────
+        let creditApplied = 0;
+        const { getAvailableReferralCredit, applyReferralCreditToInvoice } = await import("@/lib/referral/service");
+        const availableCredit = await getAvailableReferralCredit(ownerId);
+
+        if (body.useReferralCredit !== false && availableCredit > 0) {
+            creditApplied = Math.min(availableCredit, baseCartTotal);
+        }
+
+        cartTotal = Math.max(0, baseCartTotal - creditApplied);
+        itemName = `اشتراك ${plan.name} — ${cycleInfo.label}${creditApplied > 0 ? ` (تم خصم ${creditApplied} ج.م رصيد إحالات)` : ""}`;
+        payLoadObj = { type: "subscription", planSlug, cycle: billingCycle, userId: ownerId, creditApplied };
+
+        // ── إذا كان الرصيد يغطي الفاتورة بالكامل (Amount Due = 0) ─────────────
+        if (cartTotal === 0) {
+            await applyReferralCreditToInvoice({
+                userId: ownerId,
+                amountToDeduct: creditApplied,
+                description: `تغطية اشتراك ${plan.name} بالكامل من رصيد الإحالات`,
+            });
+
+            const now = new Date();
+            const periodEnd = new Date(now);
+            periodEnd.setMonth(periodEnd.getMonth() + cycleInfo.months);
+
+            await prisma.subscription.upsert({
+                where: { userId: ownerId },
+                update: {
+                    plan: planSlug,
+                    status: "active",
+                    currentPeriodStart: now,
+                    currentPeriodEnd: periodEnd,
+                    campaignsUsedThisMonth: 0,
+                    mcpCommandsUsedThisMonth: 0,
+                    aiTokensUsedThisMonth: 0,
+                    periodResetAt: now,
+                },
+                create: {
+                    userId: ownerId,
+                    plan: planSlug,
+                    status: "active",
+                    currentPeriodStart: now,
+                    currentPeriodEnd: periodEnd,
+                },
+            });
+
+            return NextResponse.json({
+                success: true,
+                coveredByCredit: true,
+                checkoutUrl: "/payment/success",
+            });
+        }
 
     } else if (type === "ai_credits") {
         if (!sub || sub.plan !== "enterprise")

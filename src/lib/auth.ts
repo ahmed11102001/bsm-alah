@@ -102,6 +102,19 @@ export const authOptions: NextAuthOptions = {
           currentPeriodEnd:   null, // free plan — لا ينتهي
         },
       });
+
+      // ── ربط الإحالة لمستخدم Google الجديد ─────────────────────────────────
+      try {
+        const { cookies } = await import("next/headers");
+        const cookieStore = await cookies();
+        const refCode = cookieStore.get("wani_ref")?.value;
+        if (refCode) {
+          const { trackReferralSignup } = await import("@/lib/referral/service");
+          await trackReferralSignup({ referredUserId: user.id, refCode });
+        }
+      } catch (refErr) {
+        console.error("[auth] Failed to track referral for Google user:", refErr);
+      }
     },
   },
 

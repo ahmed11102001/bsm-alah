@@ -27,8 +27,22 @@ function CheckoutContent() {
   const [couponState, setCouponState] = useState<{ code: string; type: string; value: number } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const [referralCredit, setReferralCredit] = useState(0);
+  const [useReferralCredit, setUseReferralCredit] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [showFeatures, setShowFeatures] = useState(false);
+
+  // جلب رصيد الإحالات المتاح للمستخدم
+  useState(() => {
+    fetch("/api/referral/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data.isEligible && data.creditBalance > 0) {
+          setReferralCredit(data.creditBalance);
+        }
+      })
+      .catch(() => {});
+  });
 
   const planSlug = (params.get("plan") || "pro") as PlanSlug;
   const plan = SUBSCRIPTION_PLANS[planSlug] || SUBSCRIPTION_PLANS.pro;
@@ -40,7 +54,11 @@ function CheckoutContent() {
   const discount = couponState
     ? couponState.type === "percent" ? Math.round(originalPrice * couponState.value / 100) : Math.min(couponState.value, originalPrice)
     : 0;
-  const finalPrice = Math.max(0, originalPrice - discount);
+  
+  const priceAfterCoupon = Math.max(0, originalPrice - discount);
+  const appliedCredit = (useReferralCredit && referralCredit > 0) ? Math.min(referralCredit, priceAfterCoupon) : 0;
+  const finalPrice = Math.max(0, priceAfterCoupon - appliedCredit);
+  const remainingCredit = referralCredit - appliedCredit;
 
   const productName = plan.name;
   const whatsappMessage = useMemo(() => [
@@ -48,12 +66,13 @@ function CheckoutContent() {
     `أتممت دفع اشتراك ${productName}.`,
     `الباقة: ${productName}`,
     `السعر الأصلي: ${originalPrice} EGP`,
-    `الخصم: ${discount} EGP`,
-    `الإجمالي المدفوع: ${finalPrice} EGP`,
+    discount > 0 ? `خصم الكوبون: ${discount} EGP` : "",
+    appliedCredit > 0 ? `رصيد الإحالات المستخدم: ${appliedCredit} EGP` : "",
+    `الإجمالي المطلوب دفعه: ${finalPrice} EGP`,
     `طريقة الدفع: ${paymentMethod === "instapay" ? "InstaPay" : "Etisalat Cash"}`,
     couponState ? `الكوبون: ${couponState.code}` : "الكوبون: لا يوجد",
     "سأرسل Screenshot لإيصال الدفع في هذه المحادثة.",
-  ].join("\n"), [productName, originalPrice, discount, finalPrice, paymentMethod, couponState]);
+  ].filter(Boolean).join("\n"), [productName, originalPrice, discount, appliedCredit, finalPrice, paymentMethod, couponState]);
 
   async function applyCoupon() {
     const code = coupon.trim().toUpperCase();
@@ -91,10 +110,37 @@ function CheckoutContent() {
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <p className="mb-4 text-xs font-bold text-gray-400">ملخص الباقة</p>
             <div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-black">{productName}</h2><p className="mt-1 text-xs text-gray-500">{plan.tagline}</p></div><CreditCard className="h-7 w-7 text-[#25D366]" /></div>
-            <div className="space-y-2 rounded-xl bg-gray-50 p-3 text-sm"><div className="flex justify-between"><span className="text-gray-500">السعر الأصلي</span><b>{originalPrice.toLocaleString("ar-EG")} EGP</b></div>{discount > 0 && <div className="flex justify-between text-[#1a9e50]"><span>الخصم</span><b>- {discount.toLocaleString("ar-EG")} EGP</b></div>}<div className="flex justify-between border-t border-gray-200 pt-2 font-black"><span>الإجمالي</span><b>{finalPrice.toLocaleString("ar-EG")} EGP</b></div></div>
-            <button onClick={() => setShowFeatures(v => !v)} className="mt-4 flex w-full items-center justify-between text-xs text-gray-500"><span>أهم مميزات الباقة</span>{showFeatures ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>
+            <div className="space-y-2 rounded-xl bg-gray-50 p-3 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">السعر الأصلي</span><b>{originalPrice.toLocaleString("ar-EG")} EGP</b></div>
+              {discount > 0 && <div className="flex justify-between text-[#1a9e50]"><span>خصم الكوبون</span><b>- {discount.toLocaleString("ar-EG")} EGP</b></div>}
+              {appliedCredit > 0 && <div className="flex justify-between text-purple-600"><span>رصيد الإحالات</span><b>- {appliedCredit.toLocaleString("ar-EG")} EGP</b></div>}
+              <div className="flex justify-between border-t border-gray-200 pt-2 font-black"><span>الإجمالي المطلوب</span><b>{finalPrice.toLocaleString("ar-EG")} EGP</b></div>
+            </div>
             {showFeatures && <ul className="mt-3 space-y-2">{plan.features.map((feature, i) => <li key={i} className="flex gap-2 text-xs text-gray-600"><Check className="h-3.5 w-3.5 shrink-0 text-[#25D366]" />{feature}</li>)}</ul>}
+            <button onClick={() => setShowFeatures(v => !v)} className="mt-4 flex w-full items-center justify-between text-xs text-gray-500"><span>أهم مميزات الباقة</span>{showFeatures ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>
           </div>
+          {referralCredit > 0 && (
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-purple-900">🎁 رصيد الإحالات المتاح</p>
+                  <p className="text-sm font-black text-purple-700 mt-0.5">{referralCredit.toLocaleString("ar-EG")} EGP</p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useReferralCredit}
+                    onChange={e => setUseReferralCredit(e.target.checked)}
+                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-xs font-semibold text-purple-800">تطبيق الخصم</span>
+                </label>
+              </div>
+              {appliedCredit > 0 && remainingCredit > 0 && (
+                <p className="text-[11px] text-purple-600 mt-2">سيبقى {remainingCredit.toLocaleString("ar-EG")} EGP في رصيدك للفاتورة التالية.</p>
+              )}
+            </div>
+          )}
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><div className="mb-3 flex items-center gap-2 text-xs font-bold text-gray-500"><Tag className="h-4 w-4" /> لديك كوبون خصم؟</div><div className="flex gap-2"><input value={coupon} onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponError(""); setCouponState(null); }} placeholder="WAN10" className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono outline-none focus:border-[#25D366]" /><button onClick={applyCoupon} disabled={!coupon.trim() || couponLoading} className="rounded-xl bg-gray-900 px-4 text-sm font-bold text-white disabled:opacity-40">{couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "تطبيق"}</button></div>{couponError && <p className="mt-2 text-xs text-red-500">{couponError}</p>}{couponState && <div className="mt-2 flex items-center justify-between text-xs text-[#1a9e50]"><span>تم تطبيق الكوبون {couponState.code}</span><button onClick={() => setCouponState(null)}><X className="h-3.5 w-3.5" /></button></div>}</div>
         </section>
 

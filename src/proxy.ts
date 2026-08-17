@@ -77,17 +77,36 @@ function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
   
   return applyHeaders(
     NextResponse.next({ request: { headers: requestHeaders } }),
-    nonce
+    nonce,
+    req
   );
 }
 
-// ─── Helper: apply security headers ──────────────────────────────────────────
-function applyHeaders(response: NextResponse, nonce: string): NextResponse {
+// ─── Helper: apply security headers & referral cookie ────────────────────────
+function applyHeaders(response: NextResponse, nonce: string, req?: NextRequest): NextResponse {
   response.headers.set("Content-Security-Policy", buildCsp(nonce));
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  // First-touch referral cookie attribution (30 days)
+  if (req) {
+    const refParam = req.nextUrl.searchParams.get("ref");
+    if (refParam && !req.cookies.has("wani_ref")) {
+      const cleanCode = refParam.trim().toUpperCase();
+      if (cleanCode.length >= 3 && cleanCode.length <= 32) {
+        response.cookies.set("wani_ref", cleanCode, {
+          path: "/",
+          maxAge: 30 * 24 * 60 * 60, // 30 days
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        });
+      }
+    }
+  }
+
   return response;
 }
 
@@ -129,14 +148,14 @@ export async function proxy(req: NextRequest) {
     if (!devSession) {
       const url = new URL("/developers/signin", req.url);
       url.searchParams.set("callbackUrl", pathname);
-      return applyHeaders(NextResponse.redirect(url), nonce);
+      return applyHeaders(NextResponse.redirect(url), nonce, req);
     }
 
     // SUSPENDED → منع الدخول
     if (devSession.status === "SUSPENDED") {
       const url = new URL("/developers/signin", req.url);
       url.searchParams.set("error", "suspended");
-      return applyHeaders(NextResponse.redirect(url), nonce);
+      return applyHeaders(NextResponse.redirect(url), nonce, req);
     }
 
     // PENDING_META → يروح يربط Meta أول
@@ -146,7 +165,8 @@ export async function proxy(req: NextRequest) {
     ) {
       return applyHeaders(
         NextResponse.redirect(new URL("/developers/connect-meta", req.url)),
-        nonce
+        nonce,
+        req
       );
     }
 
@@ -157,7 +177,8 @@ export async function proxy(req: NextRequest) {
     ) {
       return applyHeaders(
         NextResponse.redirect(new URL("/developers/portal", req.url)),
-        nonce
+        nonce,
+        req
       );
     }
 
@@ -176,27 +197,27 @@ export async function proxy(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     if (!token && isDashboard) {
-      return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce);
+      return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce, req);
     }
 
     if (!token && isCheckout) {
       const url = new URL("/", req.url);
       url.searchParams.set("openLogin", "1");
       url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
-      return applyHeaders(NextResponse.redirect(url), nonce);
+      return applyHeaders(NextResponse.redirect(url), nonce, req);
     }
 
     if (token) {
       if (isDashboard && token.needsOnboarding) {
-        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce);
+        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce, req);
       }
       if (isOnboarding && !token.needsOnboarding) {
-        return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce);
+        return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req);
       }
     }
 
     if (pathname.startsWith("/dashboard/admin") && token && !token.isSuper) {
-      return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce);
+      return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce, req);
     }
   }
 

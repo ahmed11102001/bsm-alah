@@ -1,4 +1,4 @@
-﻿// src/app/api/register/route.ts
+// src/app/api/register/route.ts
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
@@ -85,6 +85,19 @@ export async function POST(req: Request) {
     } catch (emailError) {
       await prisma.emailVerificationToken.delete({ where: { token: verificationToken } });
       console.error("[register] verification email delivery failed", emailError instanceof Error ? emailError.name : "unknown");
+    }
+
+    // ── ربط الإحالة (Referral Attribution) إذا كان المستخدم قادمًا من رابط إحالة ──
+    try {
+      const cookieHeader = req.headers.get("cookie") || "";
+      const match = cookieHeader.match(/(?:^|;\s*)wani_ref=([^;]+)/);
+      const refCode = match ? decodeURIComponent(match[1]) : null;
+      if (refCode) {
+        const { trackReferralSignup } = await import("@/lib/referral/service");
+        await trackReferralSignup({ referredUserId: user.id, refCode });
+      }
+    } catch (refErr) {
+      console.error("[register] failed to link referral:", refErr);
     }
 
     return NextResponse.json(

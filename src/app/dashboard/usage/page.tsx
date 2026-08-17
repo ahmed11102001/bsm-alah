@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   Bot, Sparkles, Loader2, BarChart3, Star, RefreshCw, ArrowUpRight,
 } from "lucide-react";
+import ReferralProgramCard from "@/components/dashboard/ReferralProgramCard";
 
 // ─── PlanCard Component ──────────────────────────────────────────────────────
 function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
@@ -361,6 +362,9 @@ export default function UsagePage() {
 
       {/* ── Plan Card ── */}
       <PlanCard plan={dashData.plan} />
+
+      {/* ── Referral Program Card (🎁 ادعُ أصدقاءك واربح خصمًا) ── */}
+      <ReferralProgramCard isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"} locale={locale} />
 
       {/* ── WANI AI Token Card ── */}
       {isEnterprise ? (

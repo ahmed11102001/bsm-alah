@@ -24,6 +24,8 @@ import { notifySubscriptionSuccess } from "@/lib/notifications";
 import {
     TOKEN_PACKAGES,
     BILLING_CYCLES,
+    SUBSCRIPTION_PLANS,
+    computePrice,
     type BillingCycle,
 } from "@/lib/pricing";
 import type { PlanTier } from "@/lib/plans";
@@ -100,7 +102,7 @@ async function handlePaidWebhook(payload: FawaterakWebhookPayload) {
             const periodEnd = new Date(now);
             periodEnd.setMonth(periodEnd.getMonth() + cycleInfo.months);
 
-            await prisma.subscription.upsert({
+            const sub = await prisma.subscription.upsert({
                 where: { userId },
                 update: {
                     plan: tier,
@@ -123,6 +125,22 @@ async function handlePaidWebhook(payload: FawaterakWebhookPayload) {
 
             console.info(`[Webhook] ✅ Subscription — user=${userId} plan=${tier} cycle=${cycle}`);
             await notifySubscriptionSuccess(userId, tier);
+
+            // ── معالجة مكافأة الإحالة (Referral Reward) ──────────────────────────
+            try {
+                const invoiceRef = payload.invoice_id ? String(payload.invoice_id) : (payload.invoice_key ? String(payload.invoice_key) : undefined);
+                const paidAmount = Number((payload as any).order_amount || (payload as any).cartTotal) || (computePrice(SUBSCRIPTION_PLANS[meta.planSlug as keyof typeof SUBSCRIPTION_PLANS]?.monthly ?? 0, cycle) * cycleInfo.months);
+
+                const { processConversionReward } = await import("@/lib/referral/service");
+                await processConversionReward({
+                    referredUserId: userId,
+                    subscriptionId: sub.id,
+                    paymentInvoiceId: invoiceRef,
+                    amountPaid: paidAmount,
+                });
+            } catch (refErr) {
+                console.error("[Webhook] Failed to process referral reward:", refErr);
+            }
 
         } else if (type === "ai_credits") {
             const pkg = TOKEN_PACKAGES.find(p => p.id === meta.packageId);
