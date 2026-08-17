@@ -60,7 +60,8 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
       rawFilter === "today" ||
       rawFilter === "archived" ||
       rawFilter === "ai_replied" ||
-      rawFilter === "automation"
+      rawFilter === "automation" ||
+      rawFilter === "within24h"
       ? rawFilter
       : "all";
   const search = sp.get("search") ?? "";
@@ -92,6 +93,18 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
   if (filter === "today") {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     where.lastMessageAt = { gte: today };
+  }
+
+  // نافذة 24 ساعة — المحادثات اللي العميل بعت فيها رسالة inbound خلال آخر 24 ساعة
+  if (filter === "within24h") {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    where.messages = {
+      some: {
+        direction: MessageDirection.inbound,
+        deletedAt: null,
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    };
   }
 
   const contacts = await prisma.contact.findMany({

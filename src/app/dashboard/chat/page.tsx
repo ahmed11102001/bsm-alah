@@ -304,7 +304,7 @@ export default function ChatPage() {
 
   const openForward = (msg: Message) => {
     setForwarding(msg); setForwardTarget(null); setForwardSearch("");
-    fetch("/api/chat?type=conversations&filter=all").then(r => r.json()).then(d => setForwardTargets(d.conversations ?? [])).catch(() => setForwardTargets([]));
+    fetch("/api/chat?type=conversations&filter=within24h").then(r => r.json()).then(d => setForwardTargets(d.conversations ?? [])).catch(() => setForwardTargets([]));
   };
 
   const submitForward = async () => {
@@ -1070,13 +1070,24 @@ export default function ChatPage() {
               <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
             </div>
             <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
+            {/* توضيح نافذة 24 ساعة */}
+            <div className={`rounded-lg px-3 py-2 mb-2 text-xs flex items-center gap-2 ${dark ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`}>
+              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{lang === "ar" ? "المحادثات داخل نافذة 24 ساعة فقط" : "Only conversations within the 24h window"}</span>
+            </div>
             <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
             <div className="max-h-56 overflow-y-auto space-y-1">
-              {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
-                <button key={c.contact.id} onClick={() => setForwardTarget(c)} className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3]" : hoverRow}`}>
-                  <span className={textMain}>{c.contact.name || c.contact.phone}</span><span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
-                </button>
-              ))}
+              {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).length === 0 ? (
+                <div className={`text-center py-6 text-sm ${textSub}`}>
+                  {lang === "ar" ? "لا توجد محادثات نشطة داخل نافذة 24 ساعة" : "No active conversations within the 24h window"}
+                </div>
+              ) : (
+                forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
+                  <button key={c.contact.id} onClick={() => setForwardTarget(c)} className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3]" : hoverRow}`}>
+                    <span className={textMain}>{c.contact.name || c.contact.phone}</span><span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
+                  </button>
+                ))
+              )}
             </div>
             <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-[#25d366] text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}</button>
           </div>
