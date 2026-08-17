@@ -8,23 +8,40 @@ import ArticleMarkdown from "@/components/ArticleMarkdown";
 
 export const revalidate = 60;
 
+function getPossibleSlugs(rawSlug: string): string[] {
+  const list = new Set<string>();
+  list.add(rawSlug);
+  try {
+    const decoded = decodeURIComponent(rawSlug);
+    list.add(decoded);
+    list.add(decoded.trim());
+  } catch {}
+  try {
+    const encoded = encodeURIComponent(rawSlug);
+    list.add(encoded);
+  } catch {}
+  return Array.from(list);
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const possibleSlugs = getPossibleSlugs(rawSlug);
   const article = await prisma.article.findFirst({
-    where: { slug, published: true },
-    select: { title: true, excerpt: true, coverImage: true, publishedAt: true },
+    where: { slug: { in: possibleSlugs }, published: true },
+    select: { title: true, excerpt: true, coverImage: true, publishedAt: true, slug: true },
   });
   if (!article) return { title: "مقال غير موجود" };
+  const canonicalSlug = encodeURI(article.slug);
   return {
     title: article.title,
     description: article.excerpt,
     alternates: {
-      canonical: `https://aiwni.com/articles/${slug}`,
+      canonical: `https://aiwni.com/articles/${canonicalSlug}`,
     },
     openGraph: {
       title: article.title,
       description: article.excerpt ?? undefined,
-      url: `https://aiwni.com/articles/${slug}`,
+      url: `https://aiwni.com/articles/${canonicalSlug}`,
       locale: "ar_EG",
       type: "article",
       ...(article.publishedAt && {
@@ -36,9 +53,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const possibleSlugs = getPossibleSlugs(rawSlug);
   const article = await prisma.article.findFirst({
-    where: { slug, published: true },
+    where: { slug: { in: possibleSlugs }, published: true },
   });
 
   if (!article) notFound();
@@ -62,14 +80,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     ...(article.updatedAt && {
       dateModified: new Date(article.updatedAt).toISOString(),
     }),
-    url: `https://aiwni.com/articles/${slug}`,
+    url: `https://aiwni.com/articles/${encodeURI(article.slug)}`,
     publisher: {
       "@type": "Organization",
       name: "Wani",
       url: "https://aiwni.com",
       logo: "https://aiwni.com/favicon.svg",
     },
-    mainEntityOfPage: `https://aiwni.com/articles/${slug}`,
+    mainEntityOfPage: `https://aiwni.com/articles/${encodeURI(article.slug)}`,
   };
 
   const breadcrumbLd = {
@@ -78,7 +96,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "الرئيسية", item: "https://aiwni.com" },
       { "@type": "ListItem", position: 2, name: "المقالات", item: "https://aiwni.com/articles" },
-      { "@type": "ListItem", position: 3, name: article.title, item: `https://aiwni.com/articles/${slug}` },
+      { "@type": "ListItem", position: 3, name: article.title, item: `https://aiwni.com/articles/${encodeURI(article.slug)}` },
     ],
   };
 

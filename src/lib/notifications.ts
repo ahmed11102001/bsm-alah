@@ -37,17 +37,17 @@ function safeParseBi(title: string, body: string) {
 
 type CreateNotificationParams = {
   userId: string;
-  type:   NotificationType;
-  title:  string;
-  body:   string;
-  link?:  string;
-  meta?:  Record<string, any>;
+  type: NotificationType;
+  title: string;
+  body: string;
+  link?: string;
+  meta?: Record<string, any>;
 };
 
 export async function createNotification(params: CreateNotificationParams) {
   try {
     await prisma.notification.create({ data: params });
-    
+
     if (PUSH_ENABLED_TYPES.has(params.type)) {
       const parsed = safeParseBi(params.title, params.body);
       await sendPushToUser(params.userId, {
@@ -66,9 +66,9 @@ export async function createNotification(params: CreateNotificationParams) {
 export async function notifyCampaignSuccess(userId: string, campaignName: string, campaignId: string, sentCount: number) {
   await createNotification({
     userId,
-    type:  NotificationType.CAMPAIGN_SUCCESS,
+    type: NotificationType.CAMPAIGN_SUCCESS,
     title: bi("✅ تم إرسال الحملة بنجاح", "✅ Campaign sent successfully"),
-    body:  bi(
+    body: bi(
       `حملة "${campaignName}" — تم إرسال ${sentCount.toLocaleString("ar-EG")} رسالة بنجاح`,
       `Campaign "${campaignName}" — ${sentCount.toLocaleString()} messages sent successfully`,
     ),
@@ -80,9 +80,9 @@ export async function notifyCampaignSuccess(userId: string, campaignName: string
 export async function notifyCampaignFailed(userId: string, campaignName: string, campaignId: string, failedCount: number) {
   await createNotification({
     userId,
-    type:  NotificationType.CAMPAIGN_FAILED,
+    type: NotificationType.CAMPAIGN_FAILED,
     title: bi("❌ فشل إرسال الحملة", "❌ Campaign failed"),
-    body:  bi(
+    body: bi(
       `حملة "${campaignName}" — فشل إرسال ${failedCount.toLocaleString("ar-EG")} رسالة`,
       `Campaign "${campaignName}" — ${failedCount.toLocaleString()} messages failed`,
     ),
@@ -94,9 +94,9 @@ export async function notifyCampaignFailed(userId: string, campaignName: string,
 export async function notifyCampaignPartial(userId: string, campaignName: string, campaignId: string, sentCount: number, failedCount: number) {
   await createNotification({
     userId,
-    type:  NotificationType.CAMPAIGN_PARTIAL,
+    type: NotificationType.CAMPAIGN_PARTIAL,
     title: bi("⚠️ الحملة اكتملت جزئياً", "⚠️ Campaign partially completed"),
-    body:  bi(
+    body: bi(
       `حملة "${campaignName}" — ${sentCount.toLocaleString("ar-EG")} ناجحة، ${failedCount.toLocaleString("ar-EG")} فاشلة`,
       `Campaign "${campaignName}" — ${sentCount.toLocaleString()} sent, ${failedCount.toLocaleString()} failed`,
     ),
@@ -107,20 +107,20 @@ export async function notifyCampaignPartial(userId: string, campaignName: string
 
 export async function notifyPlanLimitReached(userId: string, limitType: string) {
   const labelsAr: Record<string, string> = {
-    contacts:          "جهات الاتصال",
+    contacts: "جهات الاتصال",
     campaignsPerMonth: "الحملات الشهرية",
-    teamMembers:       "أعضاء الفريق",
+    teamMembers: "أعضاء الفريق",
   };
   const labelsEn: Record<string, string> = {
-    contacts:          "contacts",
+    contacts: "contacts",
     campaignsPerMonth: "monthly campaigns",
-    teamMembers:       "team members",
+    teamMembers: "team members",
   };
   await createNotification({
     userId,
-    type:  NotificationType.PLAN_LIMIT_REACHED,
+    type: NotificationType.PLAN_LIMIT_REACHED,
     title: bi("🚨 وصلت لحد الباقة", "🚨 Plan limit reached"),
-    body:  bi(
+    body: bi(
       `وصلت للحد الأقصى لـ ${labelsAr[limitType] ?? limitType} في باقتك الحالية`,
       `You've reached the limit for ${labelsEn[limitType] ?? limitType} in your current plan`,
     ),
@@ -132,9 +132,9 @@ export async function notifyPlanLimitReached(userId: string, limitType: string) 
 export async function notifyNewMessage(userId: string, fromPhone: string) {
   await createNotification({
     userId,
-    type:  NotificationType.NEW_MESSAGE,
+    type: NotificationType.NEW_MESSAGE,
     title: bi("💬 رسالة واردة جديدة", "💬 New incoming message"),
-    body:  bi(
+    body: bi(
       `رسالة جديدة من ${fromPhone}`,
       `New message from ${fromPhone}`,
     ),
@@ -156,7 +156,7 @@ export async function notifyStoreAutoSent(
   const store = storeLabels[storeSource] ?? storeSource;
   await createNotification({
     userId,
-    type:  NotificationType.STORE_AUTO_SENT,
+    type: NotificationType.STORE_AUTO_SENT,
     title: bi(
       `🛒 تم إرسال قالب ${autoAr[automationType] ?? automationType}`,
       `🛒 ${autoEn[automationType] ?? automationType} template sent`,
@@ -177,7 +177,7 @@ export async function notifyStoreAutoFailed(
   const store = storeLabels[storeSource] ?? storeSource;
   await createNotification({
     userId,
-    type:  NotificationType.STORE_AUTO_FAILED,
+    type: NotificationType.STORE_AUTO_FAILED,
     title: bi(
       `❌ فشل إرسال قالب ${autoAr[automationType] ?? automationType}`,
       `❌ ${autoEn[automationType] ?? automationType} template failed`,
@@ -188,6 +188,26 @@ export async function notifyStoreAutoFailed(
     ),
     link: `/dashboard?section=store`,
     meta: { automationType, storeSource, customerPhone, templateName, reason },
+  });
+}
+
+export async function notifyShopifyOrderSyncFailed(
+  userId: string,
+  orderNumber: string,
+  action: "confirm" | "cancel",
+  reason: string,
+) {
+  const actionLabel = action === "confirm" ? bi("تأكيد", "confirm") : bi("إلغاء", "cancel");
+  await createNotification({
+    userId,
+    type: NotificationType.STORE_AUTO_FAILED,
+    title: bi("❌ فشل تحديث الأوردر في شوبيفاي", "❌ Failed to update order in Shopify"),
+    body: bi(
+      `فشلت محاولة ${actionLabel} الأوردر #${orderNumber} في شوبيفاي مباشرة — ${reason}. الأوردر اتحدث في واني بس محتاج تحدّثه يدوي في شوبيفاي.`,
+      `Failed to ${action} order #${orderNumber} directly in Shopify — ${reason}. The order was updated in Wani but needs manual update in Shopify.`,
+    ),
+    link: `/dashboard?section=store`,
+    meta: { orderNumber, action, reason, source: "shopify" },
   });
 }
 
@@ -388,13 +408,13 @@ export async function notifySmartFollowUpAlert(
   details: { customerPhone: string; orderNumber?: string; rating?: number; reason?: string; error?: string },
 ) {
   const titles: Record<typeof kind, { ar: string; en: string }> = {
-    low_rating:             { ar: "🔴 تقييم منخفض من عميل",       en: "🔴 Low customer rating" },
-    cart_not_interested:    { ar: "📭 عميل غير مهتم بالسلة",      en: "📭 Customer not interested in cart" },
-    shipping_send_failed:   { ar: "❌ فشل إرسال متابعة الشحن",    en: "❌ Shipping follow-up send failed" },
+    low_rating: { ar: "🔴 تقييم منخفض من عميل", en: "🔴 Low customer rating" },
+    cart_not_interested: { ar: "📭 عميل غير مهتم بالسلة", en: "📭 Customer not interested in cart" },
+    shipping_send_failed: { ar: "❌ فشل إرسال متابعة الشحن", en: "❌ Shipping follow-up send failed" },
     shipping_not_delivered: { ar: "⚠️ عميل قال: لم يستلم الشحنة", en: "⚠️ Customer reported not delivered" },
-    cart_send_failed:       { ar: "❌ فشل إرسال متابعة السلة",     en: "❌ Cart follow-up send failed" },
-    order_cancelled_with_reason: { ar: "❌ إلغاء طلب مع سبب",      en: "❌ Order cancelled with reason" },
-    campaign_send_failed:   { ar: "❌ فشل إرسال متابعة الحملة",    en: "❌ Campaign follow-up send failed" },
+    cart_send_failed: { ar: "❌ فشل إرسال متابعة السلة", en: "❌ Cart follow-up send failed" },
+    order_cancelled_with_reason: { ar: "❌ إلغاء طلب مع سبب", en: "❌ Order cancelled with reason" },
+    campaign_send_failed: { ar: "❌ فشل إرسال متابعة الحملة", en: "❌ Campaign follow-up send failed" },
   };
 
   const bodies: Record<typeof kind, (d: typeof details) => { ar: string; en: string }> = {
@@ -433,11 +453,11 @@ export async function notifySmartFollowUpAlert(
 
   await createNotification({
     userId,
-    type:  NotificationType.SMART_FOLLOWUP_ALERT,
+    type: NotificationType.SMART_FOLLOWUP_ALERT,
     title: bi(t.ar, t.en),
-    body:  bi(b.ar, b.en),
-    link:  "/dashboard?section=store",
-    meta:  { kind, ...details },
+    body: bi(b.ar, b.en),
+    link: "/dashboard?section=store",
+    meta: { kind, ...details },
   });
 }
 

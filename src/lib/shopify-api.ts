@@ -82,6 +82,124 @@ export async function getShopifyProductImageUrl(
     }
 }
 
+// ─── تأكيد الأوردر في شوبيفاي عن طريق إضافة Tag (شوبيفاي معندهاش "confirmed" status جاهزة) ──
+interface ShopifyOrderTagsResponse {
+    order?: { id: number; tags: string };
+}
+
+const WANI_CONFIRMED_TAG = "مؤكد واتساب";
+
+export async function tagShopifyOrderConfirmed(
+    shop: string,
+    accessToken: string,
+    shopifyOrderId: string | number,
+): Promise<{ ok: boolean; error?: string }> {
+    try {
+        const getRes = await fetch(
+            `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}.json?fields=id,tags`,
+            {
+                headers: { "X-Shopify-Access-Token": accessToken },
+                signal: AbortSignal.timeout(8_000),
+            },
+        );
+        if (!getRes.ok) {
+            return { ok: false, error: `fetch order failed: HTTP ${getRes.status}` };
+        }
+        const data = (await getRes.json()) as ShopifyOrderTagsResponse;
+        const existingTags = (data.order?.tags ?? "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+
+        if (existingTags.includes(WANI_CONFIRMED_TAG)) {
+            return { ok: true }; // متحطتش قبل كده، مفيش داعي نبعت تاني
+        }
+
+        const newTags = [...existingTags, WANI_CONFIRMED_TAG].join(", ");
+        const putRes = await fetch(
+            `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}.json`,
+            {
+                method: "PUT",
+                headers: {
+                    "X-Shopify-Access-Token": accessToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ order: { id: Number(shopifyOrderId), tags: newTags } }),
+                signal: AbortSignal.timeout(8_000),
+            },
+        );
+        if (!putRes.ok) {
+            const errBody = await putRes.text().catch(() => "");
+            return { ok: false, error: `update tags failed: HTTP ${putRes.status} ${errBody.slice(0, 200)}` };
+        }
+        return { ok: true };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[ShopifyAPI] tagShopifyOrderConfirmed error:", message);
+        return { ok: false, error: message };
+    }
+}
+
+// ─── إلغاء الأوردر فعليًا في شوبيفاي (restock تلقائي حسب إعدادات شوبيفاي الافتراضية) ──
+export async function cancelShopifyOrder(
+    shop: string,
+    accessToken: string,
+    shopifyOrderId: string | number,
+): Promise<{ ok: boolean; error?: string }> {
+    try {
+        const res = await fetch(
+            `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/orders/${shopifyOrderId}/cancel.json`,
+            {
+                method: "POST",
+                headers: {
+                    "X-Shopify-Access-Token": accessToken,
+                    "Content-Type": "application/json",
+                },
+                // من غير `restock` صراحةً: شوبيفاي بيستخدم الإعداد الافتراضي بتاع المتجر (restock تلقائي)
+                body: JSON.stringify({ reason: "customer" }),
+                signal: AbortSignal.timeout(8_000),
+            },
+        );
+        if (!res.ok) {
+            if (res.status === 404) {
+                // الأوردر ممكن يكون اتلغى بالفعل من شوبيفاي نفسها — مش فشل حقيقي
+                return { ok: true };
+            }
+            const errBody = await res.text().catch(() => "");
+            return { ok: false, error: `cancel failed: HTTP ${res.status} ${errBody.slice(0, 200)}` };
+        }
+        return { ok: true };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[ShopifyAPI] cancelShopifyOrder error:", message);
+        return { ok: false, error: message };
+    }
+}
+
+// ─── التحقق من وجود صلاحية write_orders في شوبيفاي ────────────────────────────
+export async function verifyShopifyOrderScope(
+    shop: string,
+    accessToken: string,
+): Promise<{ hasOrderScope: boolean; currentScopes: string[]; error?: string }> {
+    try {
+        const res = await fetch(
+            `https://${shop}/admin/oauth/access_scopes.json`,
+            {
+                headers: { "X-Shopify-Access-Token": accessToken },
+                signal: AbortSignal.timeout(8_000),
+            },
+        );
+        if (!res.ok) {
+            return { hasOrderScope: false, currentScopes: [], error: `HTTP ${res.status}` };
+        }
+        const data = await res.json();
+        const scopes: string[] = (data.access_scopes ?? []).map((s: { handle: string }) => s.handle);
+        return { hasOrderScope: scopes.includes("write_orders"), currentScopes: scopes };
+    } catch (err: any) {
+        return { hasOrderScope: false, currentScopes: [], error: err.message };
+    }
+}
+
 // ─── التحقق من وجود صلاحية read_products في Shopify ──────────────────────────
 export async function verifyShopifyProductScope(
     shop: string,

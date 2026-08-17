@@ -28,10 +28,25 @@ function toSlug(title: string) {
 const ArticlePatchSchema = AdminCreateArticleSchema.partial().extend({ id: z.string().min(1) });
 const ArticleDeleteSchema = z.object({ id: z.string().min(1) });
 
-// GET — جيب كل المقالات
+// GET — جيب كل المقالات أو مقال محدد بالـ id
 export async function GET(req: NextRequest) {
   const session = await requireSuper();
   if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const id = req.nextUrl.searchParams.get("id");
+  const slug = req.nextUrl.searchParams.get("slug");
+
+  if (id) {
+    const article = await prisma.article.findUnique({ where: { id } });
+    if (!article) return NextResponse.json({ error: "المقال غير موجود" }, { status: 404 });
+    return NextResponse.json(article);
+  }
+
+  if (slug) {
+    const article = await prisma.article.findUnique({ where: { slug } });
+    if (!article) return NextResponse.json({ error: "المقال غير موجود" }, { status: 404 });
+    return NextResponse.json(article);
+  }
 
   const articles = await prisma.article.findMany({
     orderBy: { createdAt: "desc" },

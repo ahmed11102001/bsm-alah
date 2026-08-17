@@ -241,9 +241,12 @@ export async function POST(req: NextRequest) {
 
       if (payload === "CONFIRM_ORDER" || payload === "CANCEL_ORDER") {
         const newStatus = payload === "CONFIRM_ORDER" ? "confirmed" : "cancelled";
-        
-        let order = contextId 
-          ? await prisma.storeOrder.findFirst({ where: { userId, confirmationMessageId: contextId } })
+
+        let order = contextId
+          ? await prisma.storeOrder.findFirst({
+            where: { userId, confirmationMessageId: contextId },
+            include: { shopifyStore: { select: { shop: true, accessToken: true } } },
+          })
           : null;
 
         // TODO: fallback لحد ما نتأكد إن كل الرسائل القديمة اتبعتت بعد التعديل ده
@@ -251,12 +254,13 @@ export async function POST(req: NextRequest) {
           order = await prisma.storeOrder.findFirst({
             where: { userId, customerPhone: from, status: "awaiting_confirmation" },
             orderBy: { orderedAt: "desc" },
+            include: { shopifyStore: { select: { shop: true, accessToken: true } } },
           });
         }
 
         if (order) {
           await prisma.storeOrder.update({ where: { id: order.id }, data: { status: newStatus } });
-          
+
           if (payload === "CONFIRM_ORDER") {
             const { notifyOrderConfirmed } = await import("@/lib/notifications");
             await notifyOrderConfirmed(userId, order.orderNumber || order.externalId, order.customerPhone);
@@ -264,7 +268,46 @@ export async function POST(req: NextRequest) {
             const { notifyOrderCancelled } = await import("@/lib/notifications");
             await notifyOrderCancelled(userId, order.orderNumber || order.externalId, order.customerPhone);
           }
-          // TODO (مرحلة تانية): استدعاء API المتجر للإلغاء الفعلي عند CANCEL_ORDER
+
+          // ── تحديث الحالة فعليًا في متجر شوبيفاي (لو الأوردر مصدره شوبيفاي) ──
+          if (order.source === "shopify" && order.shopifyStore && order.shopifyStore.accessToken) {
+            try {
+              const shopifyToken = isEncrypted(order.shopifyStore.accessToken)
+                ? decryptToken(order.shopifyStore.accessToken)
+                : order.shopifyStore.accessToken;
+
+              const { tagShopifyOrderConfirmed, cancelShopifyOrder } = await import("@/lib/shopify-api");
+              const result = payload === "CONFIRM_ORDER"
+                ? await tagShopifyOrderConfirmed(order.shopifyStore.shop, shopifyToken, order.externalId)
+                : await cancelShopifyOrder(order.shopifyStore.shop, shopifyToken, order.externalId);
+
+              if (!result.ok) {
+                console.error(
+                  `[SHOPIFY-ORDER-SYNC] Failed to ${payload === "CONFIRM_ORDER" ? "confirm" : "cancel"} order ${order.externalId} in Shopify:`,
+                  result.error,
+                );
+                const { notifyShopifyOrderSyncFailed } = await import("@/lib/notifications");
+                await notifyShopifyOrderSyncFailed(
+                  userId,
+                  order.orderNumber || order.externalId,
+                  payload === "CONFIRM_ORDER" ? "confirm" : "cancel",
+                  result.error ?? "unknown error",
+                );
+              } else {
+                console.log(`[SHOPIFY-ORDER-SYNC] Order ${order.externalId} ${payload === "CONFIRM_ORDER" ? "tagged confirmed" : "cancelled"} in Shopify`);
+              }
+            } catch (shopifyErr) {
+              // لا نكسر فلو تأكيد الطلب للعميل حتى لو فشل التحديث الخارجي في شوبيفاي
+              console.error("[SHOPIFY-ORDER-SYNC] Unexpected error:", shopifyErr);
+              const { notifyShopifyOrderSyncFailed } = await import("@/lib/notifications");
+              await notifyShopifyOrderSyncFailed(
+                userId,
+                order.orderNumber || order.externalId,
+                payload === "CONFIRM_ORDER" ? "confirm" : "cancel",
+                shopifyErr instanceof Error ? shopifyErr.message : String(shopifyErr),
+              );
+            }
+          }
 
           // ── متابعة تأكيد الأوردر — أول رد فوري (يحترم replyDelayMinutes) ──
           try {
@@ -319,7 +362,7 @@ export async function POST(req: NextRequest) {
         const ctx = await resolveActiveFollowUpContext({ userId, phone: from, contextId });
 
         if (ctx?.kind === "shipping" && ctx.order) {
-          await closeExpiredStageIfNeeded("shipping", ctx.order).catch(() => {});
+          await closeExpiredStageIfNeeded("shipping", ctx.order).catch(() => { });
 
           const { getSmartFollowUpSetting } = await import("@/lib/smart-followup");
           const setting = await getSmartFollowUpSetting(ctx.order.userId, "shipping");
@@ -360,7 +403,7 @@ export async function POST(req: NextRequest) {
           }
           smartFollowUpHandled = true;
         } else if (ctx?.kind === "cart" && ctx.cart) {
-          await closeExpiredStageIfNeeded("cart", ctx.cart).catch(() => {});
+          await closeExpiredStageIfNeeded("cart", ctx.cart).catch(() => { });
 
           const { getSmartFollowUpSetting } = await import("@/lib/smart-followup");
           const setting = await getSmartFollowUpSetting(ctx.cart.userId, "cart");
@@ -1367,7 +1410,7 @@ async function sendReply(ctx: {
   const metaData = await metaRes.json();
   const whatsappMsgId = metaData?.messages?.[0]?.id as string | undefined;
   const sentAt = new Date(); // ← نفس القيمة بتتحط في message.sentAt وفي contact.lastAiRepliedAt
-                              //   عشان الـ caller يقدر يستخدمها كـ "بصمة" دقيقة للـ nudge scheduling
+  //   عشان الـ caller يقدر يستخدمها كـ "بصمة" دقيقة للـ nudge scheduling
 
   await prisma.$transaction([
     prisma.message.create({
@@ -1477,7 +1520,7 @@ async function sendInteractiveMenuReply(ctx: {
   await prisma.automationInteraction.updateMany({
     where: { contactId, userId, state: "WAITING" },
     data: { state: "SUPERSEDED" },
-  }).catch(() => {});
+  }).catch(() => { });
 
   // حفظ التفاعل الجديد مع نسخة snapshot من الأزرار
   if (waAccountId) {
