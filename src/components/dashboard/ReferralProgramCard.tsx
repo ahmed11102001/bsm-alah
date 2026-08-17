@@ -336,8 +336,8 @@ export default function ReferralProgramCard({ isFreePlan, userPlan = "pro", loca
                   ? "تم نسخ الرابط ✓"
                   : "Copied ✓"
                 : locale === "ar"
-                ? "نسخ الرابط"
-                : "Copy Link"}
+                  ? "نسخ الرابط"
+                  : "Copy Link"}
             </Button>
           </div>
         )}
@@ -551,8 +551,8 @@ export default function ReferralProgramCard({ isFreePlan, userPlan = "pro", loca
                                     ? "مكافأة مكتسبة"
                                     : "Reward Earned"
                                   : locale === "ar"
-                                  ? "اشترك"
-                                  : "Subscribed"}
+                                    ? "اشترك"
+                                    : "Subscribed"}
                               </span>
                             ) : item.status === "PENDING" ? (
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800">
