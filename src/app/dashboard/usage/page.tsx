@@ -363,8 +363,12 @@ export default function UsagePage() {
       {/* ── Plan Card ── */}
       <PlanCard plan={dashData.plan} />
 
-      {/* ── Referral Program Card (🎁 ادعُ أصدقاءك واربح خصمًا) ── */}
-      <ReferralProgramCard isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"} locale={locale} />
+      {/* ── Referral Program Card (🎁 ادعُ أصدقاءك واربح رصيدًا) ── */}
+      <ReferralProgramCard
+        isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"}
+        userPlan={dashData.plan.plan}
+        locale={locale}
+      />
 
       {/* ── WANI AI Token Card ── */}
       {isEnterprise ? (
