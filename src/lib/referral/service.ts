@@ -155,7 +155,9 @@ export async function getAffiliateStatus(userId: string): Promise<ReferralStatus
   );
   const bonusRate = Math.min(qualifiedCount * 0.03, 0.50 - 0.10);
   const creditBalance = ledgerLastEntry ? Number(ledgerLastEntry.balanceAfter) : 0;
-  const totalEarned = totalEarnedAgg._sum.rewardAmount ? Number(totalEarnedAgg._sum.rewardAmount) : 0;
+  const totalEarned = totalEarnedAgg._sum.rewardAmount
+    ? Number(totalEarnedAgg._sum.rewardAmount)
+    : 0;
 
   return {
     isEligible: true,
@@ -208,6 +210,11 @@ export async function getAffiliateHistory(userId: string): Promise<ReferralHisto
         select: {
           name: true,
           email: true,
+          subscription: {
+            select: {
+              plan: true,
+            },
+          },
         },
       },
       rewards: {
@@ -220,26 +227,57 @@ export async function getAffiliateHistory(userId: string): Promise<ReferralHisto
   return referrals.map((ref) => {
     // إخفاء الاسم والبريد لحماية الخصوصية (مثلاً: أحمد م. أو عميل جديد)
     let maskedName = "عميل جديد";
+
     if (ref.referredUser?.name) {
       const parts = ref.referredUser.name.trim().split(" ");
-      maskedName = parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
+      maskedName =
+        parts.length > 1
+          ? `${parts[0]} ${parts[1][0]}.`
+          : parts[0];
     }
 
     const reward = ref.rewards[0];
+
+    if (!reward) {
+      return {
+        id: ref.id,
+        referredName: maskedName,
+        status: ref.status,
+        signedUpAt: ref.signedUpAt.toISOString(),
+        qualifiedAt: ref.qualifiedAt
+          ? ref.qualifiedAt.toISOString()
+          : null,
+        reward: null,
+      };
+    }
+
+    // الـ baseRate يعتمد على باقة العميل المُحال.
+    // لا نقرأ reward.baseRate لأن Prisma Client الحالي لا يحتوي
+    // هذا الحقل في النوع المستخدم أثناء الـbuild.
+    const referredPlan = (
+      ref.referredUser?.subscription?.plan ?? "free"
+    ).toLowerCase();
+
+    const rateInfo = getReferralRate({
+      referredPlan,
+      previousQualifiedReferrals: 0,
+    });
 
     return {
       id: ref.id,
       referredName: maskedName,
       status: ref.status,
       signedUpAt: ref.signedUpAt.toISOString(),
-      qualifiedAt: ref.qualifiedAt ? ref.qualifiedAt.toISOString() : null,
-      reward: reward ? {
-        baseRate: Number(reward.baseRate),
+      qualifiedAt: ref.qualifiedAt
+        ? ref.qualifiedAt.toISOString()
+        : null,
+      reward: {
+        baseRate: rateInfo.baseRate,
         appliedRate: Number(reward.appliedRate),
         baseAmount: Number(reward.baseAmount),
         rewardAmount: Number(reward.rewardAmount),
         status: reward.status,
-      } : null,
+      },
     };
   });
 }
@@ -294,10 +332,16 @@ export async function trackReferralSignup({
       },
     });
 
-    console.info(`[Referral] Linked user ${referredUserId} to affiliate ${affiliate.code} (${affiliate.id})`);
+    console.info(
+      `[Referral] Linked user ${referredUserId} to affiliate ${affiliate.code} (${affiliate.id})`,
+    );
+
     return referral;
   } catch (err: any) {
-    console.error("[Referral] Error creating referral attribution:", err?.message ?? err);
+    console.error(
+      "[Referral] Error creating referral attribution:",
+      err?.message ?? err,
+    );
     return null;
   }
 }
@@ -346,7 +390,9 @@ export async function processConversionReward({
 
   // في المرحلة الأولى: المكافأة تُحتسب لأول اشتراك مدفوع ناجح فقط
   if (referral.status === "QUALIFIED") {
-    console.info(`[Referral] User ${referredUserId} referral is already qualified, skipping duplicate reward.`);
+    console.info(
+      `[Referral] User ${referredUserId} referral is already qualified, skipping duplicate reward.`,
+    );
     return null;
   }
 
@@ -355,8 +401,11 @@ export async function processConversionReward({
     const existingReward = await prisma.referralReward.findUnique({
       where: { paymentInvoiceId: String(paymentInvoiceId) },
     });
+
     if (existingReward) {
-      console.info(`[Referral] Reward already exists for invoice ${paymentInvoiceId}`);
+      console.info(
+        `[Referral] Reward already exists for invoice ${paymentInvoiceId}`,
+      );
       return existingReward;
     }
   }
@@ -367,15 +416,21 @@ export async function processConversionReward({
   const ownerPlan = (ownerSub?.plan ?? "free").toLowerCase();
 
   if (ownerPlan === "free" || ownerSub?.status !== "active") {
-    console.info(`[Referral] Affiliate owner ${affiliate.userId} is not on active paid plan (${ownerPlan}), skipping reward.`);
+    console.info(
+      `[Referral] Affiliate owner ${affiliate.userId} is not on active paid plan (${ownerPlan}), skipping reward.`,
+    );
     return null;
   }
 
   // 4. الباقة مصدرها اشتراك العميل المُحال نفسه، وليس اشتراك الـ Affiliate.
-  const referredPlan = (referral.referredUser?.subscription?.plan ?? "free").toLowerCase();
+  const referredPlan = (
+    referral.referredUser?.subscription?.plan ?? "free"
+  ).toLowerCase();
 
   if (referredPlan === "free") {
-    console.info(`[Referral] Referred user ${referredUserId} has no paid plan, skipping reward.`);
+    console.info(
+      `[Referral] Referred user ${referredUserId} has no paid plan, skipping reward.`,
+    );
     return null;
   }
 
@@ -383,86 +438,99 @@ export async function processConversionReward({
   // الـ transaction حتى لا نعتمد على قيمة يرسلها الـ frontend أو الـ webhook.
   return await prisma.$transaction(
     async (tx: Prisma.TransactionClient) => {
-    const qualifiedCountBefore = await tx.referral.count({
-      where: { affiliateId: affiliate.id, status: "QUALIFIED" },
-    });
+      const qualifiedCountBefore = await tx.referral.count({
+        where: {
+          affiliateId: affiliate.id,
+          status: "QUALIFIED",
+        },
+      });
 
-    const rateInfo = getReferralRate({
-      referredPlan,
-      previousQualifiedReferrals: qualifiedCountBefore,
-    });
+      const rateInfo = getReferralRate({
+        referredPlan,
+        previousQualifiedReferrals: qualifiedCountBefore,
+      });
 
-    if (!rateInfo.eligible || rateInfo.finalRate <= 0) {
-      return null;
-    }
+      if (!rateInfo.eligible || rateInfo.finalRate <= 0) {
+        return null;
+      }
 
-    const { rate, baseAmount, rewardAmount } = computeRewardAmount(
-      amountPaid,
-      rateInfo.finalRate,
-    );
+      const { rate, baseAmount, rewardAmount } = computeRewardAmount(
+        amountPaid,
+        rateInfo.finalRate,
+      );
 
-    if (rewardAmount <= 0) return null;
+      if (rewardAmount <= 0) return null;
 
-    // تحديث الحالة أولًا. لو كان webhook آخر قد سبق وحوّل هذا الـ referral،
-    // لن نُنشئ Reward ثانية.
-    const updatedReferral = await tx.referral.updateMany({
-      where: {
-        id: referral.id,
-        status: "PENDING",
-      },
-      data: {
-        status: "QUALIFIED",
-        qualifiedAt: new Date(),
-      },
-    });
+      // تحديث الحالة أولًا. لو كان webhook آخر قد سبق وحوّل هذا الـ referral،
+      // لن نُنشئ Reward ثانية.
+      const updatedReferral = await tx.referral.updateMany({
+        where: {
+          id: referral.id,
+          status: "PENDING",
+        },
+        data: {
+          status: "QUALIFIED",
+          qualifiedAt: new Date(),
+        },
+      });
 
-    if (updatedReferral.count !== 1) {
-      return null;
-    }
+      if (updatedReferral.count !== 1) {
+        return null;
+      }
 
-    // rate = appliedRate المحفوظ وقت التحويل.
-    // baseRate منفصل حتى تظل النسبة الأصلية قابلة للتدقيق لاحقًا.
-    const reward = await tx.referralReward.create({
-      data: {
-        affiliateId: affiliate.id,
-        referralId: referral.id,
-        referredUserId,
-        subscriptionId: subscriptionId ?? null,
-        paymentInvoiceId: paymentInvoiceId ? String(paymentInvoiceId) : null,
-        baseRate: new Prisma.Decimal(rateInfo.baseRate),
-        appliedRate: new Prisma.Decimal(rate),
-        baseAmount: new Prisma.Decimal(baseAmount),
-        rewardAmount: new Prisma.Decimal(rewardAmount),
-        status: "APPROVED",
-      },
-    });
+      // rate = appliedRate المحفوظ وقت التحويل.
+      // baseRate منفصل حتى تظل النسبة الأصلية قابلة للتدقيق لاحقًا.
+      const reward = await tx.referralReward.create({
+        data: {
+          affiliateId: affiliate.id,
+          referralId: referral.id,
+          referredUserId,
+          subscriptionId: subscriptionId ?? null,
+          paymentInvoiceId: paymentInvoiceId
+            ? String(paymentInvoiceId)
+            : null,
+          baseRate: new Prisma.Decimal(rateInfo.baseRate),
+          appliedRate: new Prisma.Decimal(rate),
+          baseAmount: new Prisma.Decimal(baseAmount),
+          rewardAmount: new Prisma.Decimal(rewardAmount),
+          status: "APPROVED",
+        },
+      });
 
-    // حساب الرصيد الجديد في الـ Ledger
-    const lastLedger = await tx.referralLedgerEntry.findFirst({
-      where: { affiliateId: affiliate.id },
-      orderBy: { createdAt: "desc" },
-      select: { balanceAfter: true },
-    });
+      // حساب الرصيد الجديد في الـ Ledger
+      const lastLedger = await tx.referralLedgerEntry.findFirst({
+        where: { affiliateId: affiliate.id },
+        orderBy: { createdAt: "desc" },
+        select: { balanceAfter: true },
+      });
 
-    const previousBalance = lastLedger ? Number(lastLedger.balanceAfter) : 0;
-    const newBalance = Math.round((previousBalance + rewardAmount) * 100) / 100;
+      const previousBalance = lastLedger
+        ? Number(lastLedger.balanceAfter)
+        : 0;
 
-    await tx.referralLedgerEntry.create({
-      data: {
-        affiliateId: affiliate.id,
-        type: "EARNED",
-        amount: new Prisma.Decimal(rewardAmount),
-        balanceAfter: new Prisma.Decimal(newBalance),
-        referenceId: reward.id,
-        description: `مكافأة إحالة عميل جديد (${(rate * 100).toFixed(0)}% من ${baseAmount} ج.م)`,
-      },
-    });
+      const newBalance =
+        Math.round((previousBalance + rewardAmount) * 100) / 100;
 
-    console.info(`[Referral] ✅ Conversion Reward Created: affiliate=${affiliate.code}, amount=${rewardAmount} EGP, rate=${(rate * 100).toFixed(0)}%, newBalance=${newBalance} EGP`);
+      await tx.referralLedgerEntry.create({
+        data: {
+          affiliateId: affiliate.id,
+          type: "EARNED",
+          amount: new Prisma.Decimal(rewardAmount),
+          balanceAfter: new Prisma.Decimal(newBalance),
+          referenceId: reward.id,
+          description: `مكافأة إحالة عميل جديد (${(rate * 100).toFixed(0)}% من ${baseAmount} ج.م)`,
+        },
+      });
+
+      console.info(
+        `[Referral] ✅ Conversion Reward Created: affiliate=${affiliate.code}, amount=${rewardAmount} EGP, rate=${(rate * 100).toFixed(0)}%, newBalance=${newBalance} EGP`,
+      );
 
       return reward;
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    },
   );
 }
 
@@ -511,8 +579,14 @@ export async function reverseConversionReward({
       select: { balanceAfter: true },
     });
 
-    const previousBalance = lastLedger ? Number(lastLedger.balanceAfter) : 0;
-    const newBalance = Math.max(0, Math.round((previousBalance - rewardAmount) * 100) / 100);
+    const previousBalance = lastLedger
+      ? Number(lastLedger.balanceAfter)
+      : 0;
+
+    const newBalance = Math.max(
+      0,
+      Math.round((previousBalance - rewardAmount) * 100) / 100,
+    );
 
     await tx.referralLedgerEntry.create({
       data: {
@@ -525,7 +599,10 @@ export async function reverseConversionReward({
       },
     });
 
-    console.info(`[Referral] ↩️ Reward Reversed: rewardId=${reward.id}, amount=-${rewardAmount} EGP, newBalance=${newBalance} EGP`);
+    console.info(
+      `[Referral] ↩️ Reward Reversed: rewardId=${reward.id}, amount=-${rewardAmount} EGP, newBalance=${newBalance} EGP`,
+    );
+
     return reward;
   });
 }
@@ -533,7 +610,9 @@ export async function reverseConversionReward({
 /**
  * جلب رصيد الكريديت المتاح للاستخدام في الاشتراك
  */
-export async function getAvailableReferralCredit(userId: string): Promise<number> {
+export async function getAvailableReferralCredit(
+  userId: string,
+): Promise<number> {
   const affiliate = await prisma.affiliate.findUnique({
     where: { userId },
     select: { id: true },
@@ -547,7 +626,9 @@ export async function getAvailableReferralCredit(userId: string): Promise<number
     select: { balanceAfter: true },
   });
 
-  return lastLedger ? Math.max(0, Number(lastLedger.balanceAfter)) : 0;
+  return lastLedger
+    ? Math.max(0, Number(lastLedger.balanceAfter))
+    : 0;
 }
 
 /**
@@ -565,7 +646,12 @@ export async function applyReferralCreditToInvoice({
   description?: string;
 }) {
   if (amountToDeduct <= 0) {
-    return { success: false, appliedAmount: 0, previousBalance: 0, remainingBalance: 0 };
+    return {
+      success: false,
+      appliedAmount: 0,
+      previousBalance: 0,
+      remainingBalance: 0,
+    };
   }
 
   const affiliate = await prisma.affiliate.findUnique({
@@ -574,42 +660,64 @@ export async function applyReferralCreditToInvoice({
   });
 
   if (!affiliate) {
-    return { success: false, appliedAmount: 0, previousBalance: 0, remainingBalance: 0 };
+    return {
+      success: false,
+      appliedAmount: 0,
+      previousBalance: 0,
+      remainingBalance: 0,
+    };
   }
 
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const lastLedger = await tx.referralLedgerEntry.findFirst({
-      where: { affiliateId: affiliate.id },
-      orderBy: { createdAt: "desc" },
-      select: { balanceAfter: true },
-    });
+  return await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      const lastLedger = await tx.referralLedgerEntry.findFirst({
+        where: { affiliateId: affiliate.id },
+        orderBy: { createdAt: "desc" },
+        select: { balanceAfter: true },
+      });
 
-    const currentBalance = lastLedger ? Number(lastLedger.balanceAfter) : 0;
-    if (currentBalance <= 0) {
-      return { success: false, appliedAmount: 0, previousBalance: 0, remainingBalance: 0 };
-    }
+      const currentBalance = lastLedger
+        ? Number(lastLedger.balanceAfter)
+        : 0;
 
-    const appliedAmount = Math.min(currentBalance, amountToDeduct);
-    const newBalance = Math.round((currentBalance - appliedAmount) * 100) / 100;
+      if (currentBalance <= 0) {
+        return {
+          success: false,
+          appliedAmount: 0,
+          previousBalance: 0,
+          remainingBalance: 0,
+        };
+      }
 
-    await tx.referralLedgerEntry.create({
-      data: {
-        affiliateId: affiliate.id,
-        type: "APPLIED_TO_INVOICE",
-        amount: new Prisma.Decimal(-appliedAmount),
-        balanceAfter: new Prisma.Decimal(newBalance),
-        referenceId: invoiceId ?? null,
-        description: `${description} (-${appliedAmount} ج.م)`,
-      },
-    });
+      const appliedAmount = Math.min(
+        currentBalance,
+        amountToDeduct,
+      );
 
-    console.info(`[Referral] Credit applied for user ${userId}: -${appliedAmount} EGP, remaining balance: ${newBalance} EGP`);
+      const newBalance =
+        Math.round((currentBalance - appliedAmount) * 100) / 100;
 
-    return {
-      success: true,
-      appliedAmount,
-      previousBalance: currentBalance,
-      remainingBalance: newBalance,
-    };
-  });
+      await tx.referralLedgerEntry.create({
+        data: {
+          affiliateId: affiliate.id,
+          type: "APPLIED_TO_INVOICE",
+          amount: new Prisma.Decimal(-appliedAmount),
+          balanceAfter: new Prisma.Decimal(newBalance),
+          referenceId: invoiceId ?? null,
+          description: `${description} (-${appliedAmount} ج.م)`,
+        },
+      });
+
+      console.info(
+        `[Referral] Credit applied for user ${userId}: -${appliedAmount} EGP, remaining balance: ${newBalance} EGP`,
+      );
+
+      return {
+        success: true,
+        appliedAmount,
+        previousBalance: currentBalance,
+        remainingBalance: newBalance,
+      };
+    },
+  );
 }
