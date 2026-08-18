@@ -5,6 +5,7 @@ import { PrismaAdapter }   from "@auth/prisma-adapter";
 import prisma              from "@/lib/prisma";
 import bcrypt              from "bcryptjs";
 import { rateLimit }       from "@/lib/rate-limit";
+import { needsGoogleOnboarding } from "@/lib/onboarding";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -43,7 +44,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         // رسالة موحدة — مش بنكشف هل الإيميل موجود أو لأ
-        if (!user || !user.password) {
+        if (!user || !user.password || (user as any).deletedAt) {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
@@ -61,6 +62,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
+        // needsOnboarding الحقيقية بتتحسب في jwt callback من signupMethod —
+        // Credentials هي MANUAL أو TEAM_INVITE دايمًا، يعني أبدًا مش محتاجة
+        // Google Onboarding. القيمة هنا مجرد placeholder بيتجاهله jwt callback.
         return {
           id:       user.id,
           name:     user.name,
@@ -68,7 +72,7 @@ export const authOptions: NextAuthOptions = {
           role:     user.role,
           parentId: user.parentId,
           isSuper:  (user as any).isSuper ?? false,
-          needsOnboarding: !user.phone,
+          needsOnboarding: false,
         };
       },
     }),
@@ -89,6 +93,14 @@ export const authOptions: NextAuthOptions = {
     //    Subscription خالص، وأي مكان بيعتمد على وجود الـ record (مش بس على
     //    fallback القيمة) كان ممكن يطلع نتيجة غير متوقعة.
     async createUser({ user }) {
+      // اليوزر ده اتعمله row بس من الـ PrismaAdapter وقت أول Google OAuth —
+      // يبقى signupMethod بتاعه GOOGLE دايمًا (مفيش أي Provider تاني بيعدي من هنا،
+      // الـ Credentials provider بيتعمله User مباشرة في /api/register مش هنا).
+      await prisma.user.update({
+        where: { id: user.id },
+        data:  { signupMethod: "GOOGLE" },
+      });
+
       await prisma.subscription.upsert({
         where:  { userId: user.id },
         update: {},   // لو موجودة بالفعل لأي سبب — متلمسهاش
@@ -149,23 +161,22 @@ export const authOptions: NextAuthOptions = {
       if (user && account) {
         const dbUser = await prisma.user.findUnique({
           where:  { id: user.id },
-          select: { role: true, parentId: true, isSuper: true, phone: true, inviteCode: true },
+          select: {
+            role: true, parentId: true, isSuper: true, inviteCode: true,
+            signupMethod: true, onboardingCompleted: true,
+          },
         });
 
         token.id                = user.id;
         token.role              = dbUser?.role     ?? "OWNER";
         token.parentId          = dbUser?.parentId ?? null;
         token.isSuper           = (dbUser as any)?.isSuper ?? false;
+        token.signupMethod      = dbUser?.signupMethod ?? "MANUAL";
         token.isSuperVerifiedAt = Date.now();
 
-        // ── Google فقط: هل محتاج Onboarding? (رقم الواتساب ناقص) ─────────────
-        // اليوزر الجديد من جوجل مش عنده phone → نبعته لـ /onboarding
-        // اليوزر القديم اللي ربط Google بحسابه عنده phone → Dashboard مباشرة
-        if (account.provider === "google") {
-          token.needsOnboarding = !dbUser?.phone;
-        } else {
-          token.needsOnboarding = false;
-        }
+        // ── مين محتاج Onboarding؟ Google signup بس، ومش Team Member،
+        //    ومش خلّص onboarding قبل كده. Manual وTeam Member أبدًا. ──────────
+        token.needsOnboarding = needsGoogleOnboarding(dbUser);
 
         return token;
       }
@@ -177,7 +188,7 @@ export const authOptions: NextAuthOptions = {
       if (Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
           where:  { id: token.id as string },
-          select: { isSuper: true, role: true, phone: true },
+          select: { isSuper: true, role: true, parentId: true, signupMethod: true, onboardingCompleted: true },
         });
 
         if (!freshUser) {
@@ -186,9 +197,11 @@ export const authOptions: NextAuthOptions = {
         } else {
           token.isSuper = freshUser.isSuper;
           token.role    = freshUser.role;
+          token.parentId = freshUser.parentId;
+          token.signupMethod = freshUser.signupMethod;
         }
 
-        token.needsOnboarding = !freshUser?.phone;
+        token.needsOnboarding = needsGoogleOnboarding(freshUser);
         token.isSuperVerifiedAt = Date.now();
       }
 
@@ -203,6 +216,7 @@ export const authOptions: NextAuthOptions = {
         session.user.parentId       = token.parentId as string | null;
         session.user.isSuper        = token.isSuper  as boolean;
         session.user.needsOnboarding = (token.needsOnboarding as boolean | undefined) ?? false;
+        session.user.signupMethod   = (token.signupMethod as "MANUAL" | "GOOGLE" | "TEAM_INVITE" | undefined) ?? "MANUAL";
       }
       return session;
     },

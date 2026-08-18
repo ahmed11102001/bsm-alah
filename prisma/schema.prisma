@@ -20,6 +20,11 @@ model User {
   updatedAt                DateTime                  @updatedAt
   apiKey                   String?                   @unique
   role                     UserRole                  @default(OWNER)
+  // مصدر إنشاء الحساب — بيحدد هل اليوزر لازم يمر على Google Onboarding ولا لأ.
+  // MANUAL = سجل بإيميل وباسورد بنفسه (البيانات كلها اتاخدت وقت التسجيل)
+  // GOOGLE = سجل بـ Continue with Google (ممكن يحتاج يكمل بيانات زي رقم الواتساب)
+  // TEAM_INVITE = انضم كـ Team Member عن طريق دعوة — لا يمر على أي Onboarding إطلاقًا
+  signupMethod             SignupMethod              @default(MANUAL)
   inviteCode               String?                   @unique
   parentId                 String?
   workspaceId              String?
@@ -1101,6 +1106,12 @@ enum UserRole {
   OWNER
   FULL_ACCESS
   CHAT_ONLY
+}
+
+enum SignupMethod {
+  MANUAL
+  GOOGLE
+  TEAM_INVITE
 }
 
 enum PlanTier {

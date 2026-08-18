@@ -106,6 +106,9 @@ export async function POST(req: Request) {
             deletedAt: null,
             password: hashedPassword,
             name: existingUser.name || memberName,
+            // Team Member — لا Onboarding نهائيًا، بغض النظر عن الحساب السابق.
+            signupMethod: "TEAM_INVITE",
+            onboardingCompleted: true,
           },
         });
         joinedUserId = updated.id;
@@ -119,6 +122,7 @@ export async function POST(req: Request) {
             role: invitation.role,
             parentId: invitation.inviterId,
             emailVerified: new Date(),
+            signupMethod: "TEAM_INVITE",
             onboardingCompleted: true,
           },
         });

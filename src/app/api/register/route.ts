@@ -53,6 +53,9 @@ export async function POST(req: Request) {
           phone: normalizedPhone,
           password: hashedPassword,
           role: "OWNER",
+          signupMethod: "MANUAL",
+          // إدخل يدويًا وأدخل كل بياناته وقت التسجيل — مفيش Google Onboarding بعد كده.
+          onboardingCompleted: true,
         },
       });
 

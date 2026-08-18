@@ -1,6 +1,7 @@
 import { getToken }                from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { hasPermission, type Permission, type UserRole } from "@/lib/permissions-core";
 
 // ─── buildCsp: ينشئ CSP header مع nonce لكل request ─────────────────────────
 function buildCsp(nonce: string): string {
@@ -124,6 +125,21 @@ function isPublicDevRoute(pathname: string): boolean {
   );
 }
 
+// ─── Route ↔ Permission map (مطابق لـ SIDEBAR_IDS في dashboard/_shared.tsx) ──
+// أي role (خصوصًا CHAT_ONLY) مالوش الصلاحية دي، ميقدرش يدخل الـ route حتى لو
+// كتب الـ URL يدويًا — مش بس إخفاء الرابط من الـ Sidebar.
+const ROUTE_PERMISSIONS: Record<string, Permission> = {
+  chat: "CHAT_VIEW",
+  contacts: "CONTACTS_VIEW",
+  campaigns: "CAMPAIGNS_VIEW",
+  templates: "TEMPLATES_VIEW",
+  automation: "AUTOMATION_VIEW",
+  store: "STORE_INTEGRATIONS_MANAGE",
+  reports: "REPORTS_VIEW",
+  team: "TEAM_VIEW",
+  api: "API_KEYS_MANAGE",
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROXY — الـ export المطلوب من Next.js 16
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -213,6 +229,22 @@ export async function proxy(req: NextRequest) {
       }
       if (isOnboarding && !token.needsOnboarding) {
         return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req);
+      }
+
+      // ── Role/Permission guard جوه /dashboard/{section} ──────────────────
+      // مثلاً CHAT_ONLY مايقدرش يدخل /dashboard/campaigns حتى لو كتب الرابط
+      // يدويًا — بيترد لمساحته الطبيعية (الشات) بدل ما ياخد 404/500.
+      if (isDashboard) {
+        const section = pathname.split("/")[2]; // "/dashboard/campaigns" → "campaigns"
+        const requiredPermission = ROUTE_PERMISSIONS[section];
+        const role = token.role as UserRole | undefined;
+
+        if (requiredPermission && !hasPermission(role, requiredPermission)) {
+          const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";
+          if (pathname !== fallback) {
+            return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req);
+          }
+        }
       }
     }
 

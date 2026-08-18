@@ -13,6 +13,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   }
 
+  // ── Server-side guard: الـ endpoint ده مخصوص لـ Google Onboarding بس ──────
+  // session.user.needsOnboarding محسوبة بنفس القاعدة في auth.ts (jwt callback):
+  // Google + مش Team Member + onboarding لسه مكملش. Manual وTeam Member
+  // ممنوعين تمامًا حتى لو وصلوا للـ route ده بأي طريقة غير الـ UI.
+  if (!session.user.needsOnboarding) {
+    return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+  }
+
   const parsed = parseInput(OnboardingSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
@@ -31,7 +39,7 @@ export async function POST(req: Request) {
 
   await prisma.user.updateMany({
     where: { id: session.user.id },
-    data:  { phone: cleaned },
+    data:  { phone: cleaned, onboardingCompleted: true },
   });
 
   return NextResponse.json({ ok: true });

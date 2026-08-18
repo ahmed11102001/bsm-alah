@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { SubscriptionProvider, useSubscription, type DashboardData } from "@/lib/dashboard-context";
 import {
-  SIDEBAR_IDS, adminItem, PLAN_COLORS, sidebarHref,
+  visibleSidebarIds, adminItem, PLAN_COLORS, sidebarHref,
 } from "@/app/dashboard/_shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -549,6 +549,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     setAccountPanelOpen(false);
   }, [pathname]);
 
+  // ── CHAT_ONLY مالوش Dashboard home — يدخل على الشات مباشرة دايمًا ──────────
+  // (فيه كمان guard مطابق على مستوى الـ server في middleware.ts)
+  useEffect(() => {
+    if (session?.user?.role === "CHAT_ONLY" && pathname === "/dashboard") {
+      router.replace("/dashboard/chat");
+    }
+  }, [session?.user?.role, pathname, router]);
+
   // Desktop: close the floating Account menu when clicking outside it or pressing Escape.
   useEffect(() => {
     if (!accountPanelOpen) return;
@@ -645,7 +653,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Build sidebar items from translations
-  const sidebarItems = SIDEBAR_IDS.map(item => ({
+  const sidebarItems = visibleSidebarIds(session?.user?.role).map(item => ({
     ...item,
     label: t.sidebar[item.id as keyof typeof t.sidebar],
   }));

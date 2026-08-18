@@ -25,8 +25,10 @@ declare module "next-auth" {
       parentId: string | null;
       /** صلاحية السوبر أدمن */
       isSuper:  boolean;
-      /** هل المستخدم محتاج يكمل onboarding */
+      /** هل المستخدم محتاج يكمل onboarding (Google signup فقط) */
       needsOnboarding: boolean;
+      /** مصدر إنشاء الحساب: MANUAL / GOOGLE / TEAM_INVITE */
+      signupMethod: "MANUAL" | "GOOGLE" | "TEAM_INVITE";
     };
   }
 
@@ -35,6 +37,7 @@ declare module "next-auth" {
     parentId: string | null;
     isSuper:  boolean;
     needsOnboarding?: boolean;
+    signupMethod?: "MANUAL" | "GOOGLE" | "TEAM_INVITE";
   }
 }
 
@@ -45,6 +48,7 @@ declare module "next-auth/jwt" {
     parentId:           string | null;
     isSuper:            boolean;
     needsOnboarding?:   boolean;
+    signupMethod?:      "MANUAL" | "GOOGLE" | "TEAM_INVITE";
     /** آخر مرة تحققنا من isSuper من الـ DB (timestamp) */
     isSuperVerifiedAt?: number;
   }
