@@ -1,166 +1,72 @@
 import type { Metadata } from "next";
-import { Cairo, Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
-import "./globals.css";
-import ClientProvider from "@/components/ClientProvider";
-import MetaPixel      from "@/components/metapixel";
 
-const cairo = Cairo({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cairo",
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-// ── SEO: Root Metadata ────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  metadataBase: new URL("https://aiwni.com"),
-  title: {
-    default:
-      "Wani — وني | منصة واتساب للأعمال، CRM، أتمتة وحملات تسويقية",
-    template: "%s | Wani — وني",
-  },
+  title: "استراتيجيات التسويق عبر واتساب — استراتيجية الحملات واستراتيجية الذكاء الاصطناعي | وني",
   description:
-    "وني هي منصة واتساب للأعمال (WhatsApp Business) متكاملة تشمل CRM، حملات تسويقية جماعية، أتمتة الردود، مساعد مبيعات بالذكاء الاصطناعي، صندوق وارد موحد للفريق، وربط مباشر مع المتاجر الإلكترونية. ابدأ مجاناً.",
+    "اكتشف استراتيجيات تسويق واتساب فعّالة: استراتيجية الحملات لبث جماعي مستهدف وشخصنة تلقائية، استراتيجية الذكاء الاصطناعي لوكيل يرد على عملائك 24 ساعة، استرجاع السلات المتروكة، تأكيد الطلبات تلقائيًا وتقليل نسبة الرفض عند الاستلام، ومتابعة العملاء لمضاعفة مبيعات متجرك الإلكتروني.",
   keywords: [
-    "واتساب للأعمال",
-    "WhatsApp Business",
-    "WhatsApp CRM",
-    "واتساب CRM",
-    "حملات واتساب",
-    "WhatsApp campaigns",
-    "أتمتة واتساب",
-    "WhatsApp automation",
-    "WhatsApp Business API",
-    "واتساب شات بوت",
-    "WhatsApp chatbot",
-    "رسائل واتساب جماعية",
-    "WhatsApp marketing",
-    "تسويق واتساب",
-    "صندوق وارد واتساب",
-    "WhatsApp team inbox",
-    "وني",
-    "Wani",
+    "استراتيجيات تسويق واتساب",
+    "استراتيجية الحملات",
+    "استراتيجية الذكاء الاصطناعي",
+    "حملات واتساب جماعية",
+    "وكيل ذكاء اصطناعي واتساب",
+    "استرجاع السلة المتروكة",
+    "تأكيد الطلبات عبر واتساب",
+    "تأكيد الأوردرات تلقائي",
+    "تقليل نسبة الرفض عند الاستلام",
+    "أتمتة واتساب للمتاجر الإلكترونية",
+    "متابعة العملاء تلقائيًا",
+    "صندوق محادثات موحّد",
+    "تعيين محادثات لفريق العمل",
+    "WhatsApp Marketing Automation",
+    "Order Confirmation Automation",
+    "WhatsApp Team Inbox",
   ],
   alternates: {
-    canonical: "https://aiwni.com",
-  },
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: ["/favicon.svg"],
-    apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
+    canonical: "https://aiwni.com/strategies",
   },
   openGraph: {
-    title: "Wani — وني | منصة واتساب للأعمال وأتمتة التسويق",
+    title: "استراتيجيات التسويق عبر واتساب — استراتيجية الحملات واستراتيجية الذكاء الاصطناعي | Wani",
     description:
-      "أرسل آلاف الرسائل لعملائك بنقرة واحدة، تابع المحادثات من صندوق وارد موحد، وخلّي الـ AI يبيع عنك ٢٤/٧ على واتساب.",
-    url: "https://aiwni.com",
-    siteName: "Wani",
+      "استراتيجيات عملية لزيادة المبيعات عبر واتساب: استراتيجية الحملات الذكية، استراتيجية الذكاء الاصطناعي، استرجاع السلات المتروكة، تأكيد الطلبات وتقليل الرفض عند الاستلام، وأتمتة المتابعة.",
+    url: "https://aiwni.com/strategies",
     locale: "ar_EG",
     type: "website",
-    images: [
-      {
-        url: "/favicon.jpg",
-        width: 1200,
-        height: 1200,
-        alt: "Wani — منصة واتساب للأعمال",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Wani — وني | منصة واتساب للأعمال",
-    description:
-      "CRM واتساب متكامل: حملات جماعية، أتمتة، AI مبيعات، صندوق وارد للفريق — ابدأ مجاناً.",
-    images: ["/favicon.jpg"],
   },
 };
 
-// ── SEO: JSON-LD Structured Data ──────────────────────────────────────────────
-const jsonLd = [
-  // Organization — real data only
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "Wani",
-    alternateName: "وني",
-    url: "https://aiwni.com",
-    logo: "https://aiwni.com/favicon.svg",
-    contactPoint: {
-      "@type": "ContactPoint",
-      telephone: "+20-1281657907",
-      contactType: "customer support",
-      email: "support@aiwni.com",
-      availableLanguage: ["Arabic", "English"],
+// JSON-LD: BreadcrumbList
+const breadcrumbLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "الرئيسية",
+      item: "https://aiwni.com",
     },
-    sameAs: [
-      "https://www.facebook.com/share/14a5gcBMsdg/",
-      "https://www.instagram.com/r0.0_h?igsh=MWJ2NGo3bGlmY2dscQ==",
-    ],
-  },
-  // WebSite — no SearchAction (no public search feature)
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "Wani",
-    alternateName: "وني",
-    url: "https://aiwni.com",
-    inLanguage: ["ar", "en"],
-  },
-  // SoftwareApplication — factual only, no fake ratings/prices/reviews
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Wani",
-    alternateName: "وني",
-    url: "https://aiwni.com",
-    applicationCategory: "BusinessApplication",
-    description:
-      "منصة واتساب للأعمال متكاملة تشمل CRM، حملات تسويقية، أتمتة الردود، مساعد مبيعات AI، وصندوق وارد موحد للفريق.",
-  },
-];
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "استراتيجيات التسويق",
+      item: "https://aiwni.com/strategies",
+    },
+  ],
+};
 
-export default async function RootLayout({
+export default function StrategiesLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  // ── اقرأ الـ nonce اللي الـ middleware ولّده لهذا الـ request ──────────────
-  // بنمرره للـ MetaPixel عشان الـ inline script بتاعها تشتغل مع الـ CSP
-  const nonce = (await headers()).get("x-nonce") ?? "";
-
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="ar"
-      dir="rtl"
-      className={`${cairo.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
-      suppressHydrationWarning
-    >
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#25D366" />
-        {/* SEO: JSON-LD Structured Data */}
-        {jsonLd.map((schema, i) => (
-          <script
-            key={i}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-          />
-        ))}
-      </head>
-      <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
-        <MetaPixel nonce={nonce} />
-        <ClientProvider>
-          {children}
-        </ClientProvider>
-      </body>
-    </html>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      {children}
+    </>
   );
 }
