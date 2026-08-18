@@ -1,5 +1,6 @@
 // src/app/api/reports/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -252,16 +253,48 @@ async function team(ownerId: string) {
 
   const memberIds = members.map((m: { id: string }) => m.id);
 
-  const [sentPerUser, repliedPerUser, assignedPerUser, unassignedCount] = await Promise.all([
+  const [sentPerUser, receivedPerMember, ownerReceived, assignedPerUser, unassignedCount] = await Promise.all([
+    // الرسائل البشرية الخارجة تُنسب للعضو الذي ضغط إرسال، وليس لمالك الـworkspace.
     prisma.message.groupBy({
-      by: ["userId"],
-      where: { userId: { in: memberIds }, direction: MessageDirection.outbound },
+      by: ["senderUserId"],
+      where: {
+        senderUserId: { in: memberIds },
+        direction: MessageDirection.outbound,
+        senderType: "human",
+        deletedAt: null,
+      },
       _count: { id: true },
     }),
-    prisma.message.groupBy({
-      by: ["userId"],
-      where: { userId: { in: memberIds }, direction: MessageDirection.inbound },
-      _count: { id: true },
+    // الرسائل الواردة لا تملك senderUserId؛ ننسبها للعضو المسؤول عن المحادثة.
+    prisma.$queryRaw<{ userId: string; count: bigint }[]>`
+      SELECT c."assignedToUserId" AS "userId", COUNT(m."id")::bigint AS "count"
+      FROM "Message" m
+      INNER JOIN "Contact" c ON c."id" = m."contactId"
+      WHERE m."userId" = ${ownerId}
+        AND m."direction" = 'inbound'
+        AND m."deletedAt" IS NULL
+        AND c."userId" = ${ownerId}
+        AND c."deletedAt" IS NULL
+        AND c."assignedToUserId" IS NOT NULL
+        AND c."assignedToUserId" IN (${Prisma.join(memberIds)})
+      GROUP BY c."assignedToUserId"
+    `,
+    // الوارد يُنسب للـOwner فقط لو المحادثة باسمه أو غير مُعيّنة؛
+    // رسائل محادثات الأعضاء لا تتكرر عند الـOwner.
+    prisma.message.count({
+      where: {
+        userId: ownerId,
+        direction: MessageDirection.inbound,
+        deletedAt: null,
+        contact: {
+          userId: ownerId,
+          deletedAt: null,
+          OR: [
+            { assignedToUserId: null },
+            { assignedToUserId: ownerId },
+          ],
+        },
+      },
     }),
     // ── عدد المحادثات المعيّنة حاليًا لكل عضو (من محادثات الشات الفعلية) ──
     prisma.contact.groupBy({
@@ -287,8 +320,11 @@ async function team(ownerId: string) {
     }),
   ]);
 
-  const sentMap = new Map(sentPerUser.map((r: { userId: string; _count: { id: number } }) => [r.userId, r._count.id]));
-  const repliedMap = new Map(repliedPerUser.map((r: { userId: string; _count: { id: number } }) => [r.userId, r._count.id]));
+  const sentMap = new Map(sentPerUser.map((r: { senderUserId: string | null; _count: { id: number } }) => [r.senderUserId, r._count.id]));
+  const repliedMap = new Map<string, number>([
+    [ownerId, ownerReceived],
+    ...receivedPerMember.map((r: { userId: string; count: bigint }) => [r.userId, Number(r.count)] as [string, number]),
+  ]);
   const assignedMap = new Map(assignedPerUser.map((r: { assignedToUserId: string | null; _count: { id: number } }) => [r.assignedToUserId, r._count.id]));
 
   const result = members.map((m: { id: string; name: string | null; email: string; role: string }) => ({

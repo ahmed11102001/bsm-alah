@@ -48,6 +48,7 @@ model User {
   easyOrdersStore          EasyOrdersStore?
   wooCommerceStore         WooCommerceStore?
   messages                 Message[]
+  sentMessages              Message[]                 @relation("MessageSender")
   messageQueues            MessageQueue[]
   notifications            Notification[]
   shopifyStore             ShopifyStore?
@@ -387,6 +388,7 @@ model Message {
   id          String            @id @default(cuid())
   content     String?
   userId      String
+  senderUserId String?
   campaignId  String?
   contactId   String
   whatsappId  String?           @unique
@@ -408,11 +410,13 @@ model Message {
   campaign    Campaign?         @relation(fields: [campaignId], references: [id])
   contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senderUser  User?             @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
   replyTo      Message?         @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
   replies      Message[]        @relation("MessageReply")
   automationRule AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([senderUserId])
   @@index([contactId])
   @@index([campaignId])
   @@index([automationRuleId])
@@ -1757,8 +1761,7 @@ model ReferralReward {
   referredUserId   String
   subscriptionId   String?
   paymentInvoiceId String?      @unique
-  baseRate         Decimal      @db.Decimal(5, 4)
-  appliedRate      Decimal      @db.Decimal(5, 4)
+  rate             Decimal      @db.Decimal(5, 4)
   baseAmount       Decimal      @db.Decimal(10, 2)
   rewardAmount     Decimal      @db.Decimal(10, 2)
   status           RewardStatus @default(APPROVED)

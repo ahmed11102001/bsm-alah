@@ -62,9 +62,9 @@ export async function GET() {
       : Promise.resolve([]),
     shouldLoadStats && memberIds.length > 0
       ? prisma.message.groupBy({
-          by: ["userId"],
+          by: ["senderUserId"],
           where: {
-            userId: { in: memberIds },
+            senderUserId: { in: memberIds },
             direction: "outbound",
             senderType: "human",
             deletedAt: null,
@@ -99,7 +99,7 @@ export async function GET() {
     assignedCounts.map((row) => [row.assignedToUserId, row._count.id])
   );
   const repliesMap = new Map(
-    replyCounts.map((row) => [row.userId, row._count.id])
+    replyCounts.map((row) => [row.senderUserId, row._count.id])
   );
 
   const responseMembers = members.map((member) => {

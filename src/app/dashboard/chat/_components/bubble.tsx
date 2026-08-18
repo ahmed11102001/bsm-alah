@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, CheckCheck, Clock, Copy, FileText, Forward, Image as ImageIcon, Loader2, Paperclip, Reply, X } from "lucide-react";
+import { Check, CheckCheck, Clock, Copy, FileText, Forward, Image as ImageIcon, Loader2, MoreVertical, Paperclip, Reply, X } from "lucide-react";
 import { t, type Lang } from "./i18n";
 import type { Message } from "./types";
 import { mediaSrc, linkify, timeStr } from "./utils";
@@ -29,6 +29,7 @@ export function Bubble({
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
   const [showReactions, setShowReactions] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const resolvedMediaSrc = msg.mediaUrl ? mediaSrc(msg.mediaUrl) : null;
@@ -89,11 +90,37 @@ export function Bubble({
         )}
 
         {(onReply || onCopy || onForward) && (
-          <div className={`pointer-events-auto absolute -top-9 z-30 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity ${isMe ? "right-0" : "left-0"} ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}>
-            {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={e => { e.stopPropagation(); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
-            {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={e => { e.stopPropagation(); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
-            {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={e => { e.stopPropagation(); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
-          </div>
+          <>
+            <button
+              type="button"
+              aria-label={lang === "ar" ? "المزيد" : "More"}
+              title={lang === "ar" ? "المزيد" : "More"}
+              onClick={e => {
+                e.stopPropagation();
+                setShowActions(p => !p);
+                setShowReactions(false);
+              }}
+              className={`absolute top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-full border shadow-sm transition-opacity ${
+                isMe ? "left-0 -translate-x-[calc(100%+6px)]" : "right-0 translate-x-[calc(100%+6px)]"
+              } ${
+                showActions ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+              } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef] hover:bg-[#2d3d45]" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {showActions && (
+              <div
+                className={`absolute top-full mt-1 z-40 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg ${
+                  isMe ? "right-0" : "left-0"
+                } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}
+                onClick={e => e.stopPropagation()}
+              >
+                {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={() => { setShowActions(false); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
+                {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={() => { setShowActions(false); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
+                {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={() => { setShowActions(false); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
+              </div>
+            )}
+          </>
         )}
         <div
           onClick={() => onReact && setShowReactions(p => !p)}
