@@ -19,6 +19,8 @@ interface TeamMember {
   role: "FULL_ACCESS" | "CHAT_ONLY" | "OWNER";
   image?: string | null;
   createdAt: string;
+  conversationCount?: number;
+  repliesCount?: number;
 }
 
 interface TeamInvitation {
@@ -75,11 +77,15 @@ function MemberCard({
   canDelete: boolean;
   onDelete: (id: string) => void;
 }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const tm = t.team;
   const cfg = ROLE_CFG[member.role] ?? ROLE_CFG.CHAT_ONLY;
   const Icon = cfg.icon;
   const roleLabel = tm.roles[member.role] ?? member.role;
+  const joinDate = new Date(member.createdAt);
+  const formattedDate = locale === "ar"
+    ? `${joinDate.toLocaleDateString('ar-EG')}`
+    : `${joinDate.toLocaleDateString('en-US')}`;
 
   return (
     <div className="group bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 flex flex-col gap-3.5 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200">
@@ -116,6 +122,30 @@ function MemberCard({
           {tm.activeStatus || "نشط"}
         </span>
       </div>
+
+      {/* عرض التفاصيل فقط للعضو نفسه */}
+      {isSelf && (
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-50 dark:border-gray-700/50">
+          <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium text-center">
+              {locale === "ar" ? "المحادثات المسندة" : "Assigned Chats"}
+            </p>
+            <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{member.conversationCount ?? 0}</p>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium text-center">
+              {locale === "ar" ? "الردود" : "Replies"}
+            </p>
+            <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{member.repliesCount ?? 0}</p>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium text-center">
+              {locale === "ar" ? "تاريخ الانضمام" : "Joined"}
+            </p>
+            <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 text-center">{formattedDate}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

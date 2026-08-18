@@ -918,30 +918,34 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   <Settings className="w-4 h-4" />
                   <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { router.push("/dashboard/usage"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { router.push("/strategies"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { router.push("/dashboard/wani-partner"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                >
-                  <Handshake className="w-4 h-4 text-emerald-500" />
-                  <span>WANI Partner</span>
-                </button>
+                {session?.user?.role !== "CHAT_ONLY" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { router.push("/dashboard/usage"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { router.push("/strategies"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { router.push("/dashboard/wani-partner"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                    >
+                      <Handshake className="w-4 h-4 text-emerald-500" />
+                      <span>WANI Partner</span>
+                    </button>
+                  </>
+                )}
                 <LanguageToggle />
                 <ThemeToggle />
                 <button
@@ -960,8 +964,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Main ── */}
       <main className={`flex-1 min-w-0 transition-all duration-300 ${dir === "rtl"
-          ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
-          : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
+        ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
+        : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
         }`}>
         {/* Header */}
         <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
