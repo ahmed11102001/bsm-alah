@@ -218,7 +218,10 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   };
 
   if (!data) return null;
-  const isOwner = !((data.user as any).parentId);
+  // DashboardData exposes the authoritative role; parentId is intentionally
+  // not part of the client dashboard payload. Only the real OWNER gets
+  // access to the WhatsApp connection tab/details.
+  const isOwner = data.user.role === "OWNER";
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -775,32 +778,36 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/usage"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <BarChart3 className="w-4 h-4 flex-shrink-0" />
-                <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
-              </button>
+              {session?.user?.role !== "CHAT_ONLY" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/usage"); }}
+                    className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                    <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/strategies"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-500" />
-                <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAccountPanelOpen(false); router.push("/strategies"); }}
+                    className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-500" />
+                    <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/wani-partner"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Handshake className="w-4 h-4 flex-shrink-0 text-emerald-500" />
-                <span>WANI Partner</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/wani-partner"); }}
+                    className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <Handshake className="w-4 h-4 flex-shrink-0 text-emerald-500" />
+                    <span>WANI Partner</span>
+                  </button>
+                </>
+              )}
 
               <LanguageToggle />
               <ThemeToggle />

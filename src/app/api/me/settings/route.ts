@@ -54,7 +54,12 @@ export async function GET() {
     hasPassword: !!user.password,
   } : null;
 
-  return NextResponse.json({ user: userResponse, whatsapp, brand });
+  return NextResponse.json({
+    user: userResponse,
+    // تفاصيل ربط واتساب لا تُرسل لأي Team Member.
+    whatsapp: session.user.role === "OWNER" ? whatsapp : null,
+    brand,
+  });
 }
 
 // PATCH /api/me/settings
@@ -129,7 +134,7 @@ export async function PATCH(req: NextRequest) {
 
   // WhatsApp
   if (body.type === "whatsapp") {
-    if ((session.user as any).parentId)
+    if (session.user.role !== "OWNER")
       return NextResponse.json({ error: "فقط المالك يمكنه تعديل إعدادات واتساب" }, { status: 403 });
 
     const { accessToken, phoneNumberId, wabaId } = body;

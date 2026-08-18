@@ -25,7 +25,12 @@ export const SIDEBAR_IDS = [
 // ─── العناصر اللي مسموح للـ role يشوفها في الـ Sidebar ────────────────────
 // OWNER بياخد كل حاجة تلقائي (hasPermission بترجع true ليه في أي permission).
 export function visibleSidebarIds(role: UserRole | undefined | null) {
-    return SIDEBAR_IDS.filter(item => item.permission === null || hasPermission(role, item.permission));
+    return SIDEBAR_IDS.filter(item => {
+        // CHAT_ONLY مساحته محدودة عمدًا: المحادثات + الفريق فقط.
+        // الـhome العام ليس صفحة مسموحة له، حتى لا يظهر في الـSidebar.
+        if (role === "CHAT_ONLY" && item.id === "home") return false;
+        return item.permission === null || hasPermission(role, item.permission);
+    });
 }
 
 // id "home" بيروح لـ "/dashboard" نفسها، الباقي "/dashboard/{id}"

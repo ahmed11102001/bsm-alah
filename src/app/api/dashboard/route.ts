@@ -126,7 +126,8 @@ export async function GET(_req: NextRequest) {
         onboardingCompleted: userRecord?.onboardingCompleted ?? false,
         hasTestimonial: testimonialCount > 0,
       },
-      whatsapp: whatsappAccount,
+      // CHAT_ONLY لا يحتاج أي تفاصيل عن ربط واتساب؛ لا نرسلها للمتصفح أصلًا.
+      whatsapp: session.user.role === "CHAT_ONLY" ? null : whatsappAccount,
       stats: {
         totalSent,
         totalDelivered,

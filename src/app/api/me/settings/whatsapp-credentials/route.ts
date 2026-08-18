@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   }
+  if (session.user.role !== "OWNER") {
+    return NextResponse.json({ error: "فقط المالك يمكنه عرض بيانات ربط واتساب" }, { status: 403 });
+  }
 
   const userId = session.user.id as string;
   const ownerId = ((session.user as any).parentId as string | null) ?? userId;

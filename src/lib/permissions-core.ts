@@ -72,7 +72,6 @@ const ROLE_PERMISSIONS: Record<Exclude<UserRole, "OWNER">, Permission[]> = {
   CHAT_ONLY: [
     "CHAT_VIEW",
     "CHAT_SEND",
-    "CONTACTS_VIEW",
     "TEAM_VIEW",
   ],
 };

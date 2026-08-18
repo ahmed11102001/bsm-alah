@@ -14,7 +14,10 @@ export async function GET() {
   const denied = requirePermission(session, "TEAM_VIEW");
   if (denied) return denied;
 
-  const ownerId = session!.user.id;
+  // Team members always operate inside their owner's workspace.
+  // For CHAT_ONLY, parentId is the workspace owner; for OWNER it is null.
+  const ownerId = session!.user.parentId ?? session!.user.id;
+  const isChatOnly = session!.user.role === "CHAT_ONLY";
 
   // Auto-expire old pending invitations
   await prisma.teamInvitation.updateMany({
@@ -26,7 +29,7 @@ export async function GET() {
     data: { status: "EXPIRED" },
   });
 
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, selfStats] = await Promise.all([
     prisma.user.findMany({
       where: { parentId: ownerId, deletedAt: null },
       select: {
@@ -35,32 +38,73 @@ export async function GET() {
         email: true,
         role: true,
         image: true,
+        // For CHAT_ONLY, the join date is only returned for the current user.
+        // Other members still appear in the list, but their private card details
+        // are not exposed by this endpoint.
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.teamInvitation.findMany({
-      where: {
-        inviterId: ownerId,
-        status: "PENDING",
-        expiresAt: { gt: new Date() },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        expiresAt: true,
-        lastSentAt: true,
-        sendCount: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    }),
+    isChatOnly
+      ? Promise.resolve([])
+      : prisma.teamInvitation.findMany({
+          where: {
+            inviterId: ownerId,
+            status: "PENDING",
+            expiresAt: { gt: new Date() },
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            status: true,
+            expiresAt: true,
+            lastSentAt: true,
+            sendCount: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+    isChatOnly
+      ? Promise.all([
+          prisma.contact.count({
+            where: {
+              userId: ownerId,
+              assignedToUserId: session!.user.id,
+              deletedAt: null,
+              isArchived: false,
+              messages: { some: { deletedAt: null } },
+            },
+          }),
+          prisma.message.count({
+            where: {
+              userId: session!.user.id,
+              direction: "outbound",
+              senderType: "human",
+              deletedAt: null,
+            },
+          }),
+        ]).then(([conversationCount, repliesCount]) => ({ conversationCount, repliesCount }))
+      : Promise.resolve(null),
   ]);
 
-  return NextResponse.json({ members, invitations });
+  const responseMembers = members.map((member) => {
+    const isSelf = member.id === session!.user.id;
+
+    if (isChatOnly) {
+      return {
+        ...member,
+        // Only the current CHAT_ONLY member receives private card details.
+        createdAt: isSelf ? member.createdAt : undefined,
+        ...(isSelf && selfStats ? selfStats : {}),
+      };
+    }
+
+    return member;
+  });
+
+  return NextResponse.json({ members: responseMembers, invitations, selfStats });
 }
 
 export async function POST(req: Request) {

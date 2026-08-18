@@ -231,13 +231,24 @@ export async function proxy(req: NextRequest) {
         return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req);
       }
 
-      // ── Role/Permission guard جوه /dashboard/{section} ──────────────────
-      // مثلاً CHAT_ONLY مايقدرش يدخل /dashboard/campaigns حتى لو كتب الرابط
-      // يدويًا — بيترد لمساحته الطبيعية (الشات) بدل ما ياخد 404/500.
+      // ── CHAT_ONLY isolation ───────────────────────────────────────────────
+      // الموظف بصلاحية الرد له مساحة تشغيل محددة فقط: المحادثات + الفريق.
+      // أي Dashboard page أخرى، بما فيها /dashboard نفسها و /usage و /wani-partner
+      // وأي sub-route، تُمنع server-side حتى لو كتب الـURL يدويًا.
       if (isDashboard) {
+        const role = token.role as UserRole | undefined;
+
+        if (role === "CHAT_ONLY") {
+          const allowed = pathname === "/dashboard/chat" || pathname === "/dashboard/team";
+          if (!allowed) {
+            return applyHeaders(NextResponse.redirect(new URL("/dashboard/chat", req.url)), nonce, req);
+          }
+        }
+
+        // ── Role/Permission guard جوه /dashboard/{section} ────────────────
+        // باقي الأدوار تفضل ماشية بنفس الـpermission matrix الحالية.
         const section = pathname.split("/")[2]; // "/dashboard/campaigns" → "campaigns"
         const requiredPermission = ROUTE_PERMISSIONS[section];
-        const role = token.role as UserRole | undefined;
 
         if (requiredPermission && !hasPermission(role, requiredPermission)) {
           const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";
