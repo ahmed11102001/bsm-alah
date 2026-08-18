@@ -16,8 +16,11 @@ export const metadata: Metadata = {
     "تقليل نسبة الرفض عند الاستلام",
     "أتمتة واتساب للمتاجر الإلكترونية",
     "متابعة العملاء تلقائيًا",
+    "صندوق محادثات موحّد",
+    "تعيين محادثات لفريق العمل",
     "WhatsApp Marketing Automation",
     "Order Confirmation Automation",
+    "WhatsApp Team Inbox",
   ],
   alternates: {
     canonical: "https://aiwni.com/strategies",

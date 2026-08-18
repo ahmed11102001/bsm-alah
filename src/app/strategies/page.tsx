@@ -10,15 +10,11 @@ import {
   Sparkles,
   ShoppingCart,
   PackageCheck,
-  Star,
-  RefreshCcw,
-  Undo2,
-  Filter,
-  Headset,
-  Lock,
   Play,
+  Lock,
   Bot,
   Megaphone,
+  MessagesSquare,
 } from "lucide-react";
 import React from "react";
 
@@ -101,58 +97,14 @@ const STRATEGIES: StrategyDef[] = [
     },
   },
   {
-    slug: null,
-    icon: Star,
-    accent: "#e3c98a",
-    glow: "rgba(227,201,138,0.30)",
-    name: { ar: "طلب التقييم", en: "Review Requests" },
+    slug: "customer-conversations",
+    icon: MessagesSquare,
+    accent: "#34d399",
+    glow: "rgba(52,211,153,0.32)",
+    name: { ar: "محادثات ما بعد الحملة", en: "Post-Campaign Conversations" },
     line: {
-      ar: "دعوة هادئة للرأي، من غير إلحاح",
-      en: "A quiet invitation to speak, without pressure.",
-    },
-  },
-  {
-    slug: null,
-    icon: RefreshCcw,
-    accent: "#7fa0c9",
-    glow: "rgba(127,160,201,0.30)",
-    name: { ar: "إعادة تفعيل العملاء", en: "Customer Re-engagement" },
-    line: {
-      ar: "ضوء خافت من زمان، يتذكره النظام قبل ما يتذكره هو",
-      en: "A light that dimmed a while ago — remembered before it's forgotten.",
-    },
-  },
-  {
-    slug: null,
-    icon: Undo2,
-    accent: "#ff7a68",
-    glow: "rgba(255,122,104,0.32)",
-    name: { ar: "استعادة العملاء الغائبين", en: "Win-back Campaigns" },
-    line: {
-      ar: "أبعد نقطة في المجال، والوحيدة اللي رجوعها احتفال",
-      en: "The farthest point in the field — the only return worth celebrating.",
-    },
-  },
-  {
-    slug: null,
-    icon: Filter,
-    accent: "#b48ee0",
-    glow: "rgba(180,142,224,0.30)",
-    name: { ar: "تأهيل العملاء المحتملين", en: "Lead Qualification" },
-    line: {
-      ar: "مش كل ضوء جديد يستاهل نفس الاهتمام",
-      en: "Not every new light deserves the same attention.",
-    },
-  },
-  {
-    slug: null,
-    icon: Headset,
-    accent: "#5fd0c9",
-    glow: "rgba(95,208,201,0.30)",
-    name: { ar: "أتمتة الدعم الفني", en: "Customer Support Automation" },
-    line: {
-      ar: "توتر مفاجئ، يتهدى بسرعة مش بانفجار",
-      en: "A sudden flare — settled quickly, not explosively.",
+      ar: "الحملة بتخلص… بس المحادثة لسه بادئة",
+      en: "The campaign ends... the conversation has just begun.",
     },
   },
 ];
