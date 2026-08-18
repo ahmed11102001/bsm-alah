@@ -590,7 +590,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const { contactId } = await prisma.$transaction(async (tx) => {
+      const { contactId, assignedToUserId } = await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
           where: { phone_userId: { phone: from, userId } },
           // deletedAt: null ???? ?? ???????? ???? ?????? ???? ???? ??? ???? ????? ?????
@@ -617,11 +617,12 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return { contactId: contact.id };
+        return { contactId: contact.id, assignedToUserId: contact.assignedToUserId };
       });
 
-      // ????? ????? ????? ?????
-      await notifyNewMessage(userId, from);
+      // إشعار الرسالة الجديدة: الـOwner يستلمه دائمًا، وعضو الفريق يستلمه
+      // فقط إذا كانت المحادثة معيّنة له.
+      await notifyNewMessage(userId, from, assignedToUserId);
 
       // ─── Conversation Nudge: العميل بعت رسالة جديدة → ألغي أي nudge مجدول ───
       // (لو مفيش nudge مجدول أصلاً، الـ cancel ده مجرد no-op — رخيص وآمن)
@@ -809,7 +810,7 @@ async function handleAutomation(ctx: {
   // ── 0: Supersede any WAITING Interactive Menu interaction for this contact when customer sends a message ──
   const contactRecord = await prisma.contact.findFirst({
     where: { phone: from, userId },
-    select: { id: true, name: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
+    select: { id: true, name: true, assignedToUserId: true, voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true },
   });
 
   if (contactRecord?.id) {
@@ -1063,7 +1064,7 @@ async function handleAutomation(ctx: {
     })
   );
   if (humanTriggered) {
-    await notifyNewMessage(userId, from);
+    await notifyNewMessage(userId, from, contactRecord?.assignedToUserId);
     console.log(`[BOT] Human takeover triggered for ${from}`);
     return;
   }

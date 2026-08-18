@@ -130,18 +130,62 @@ export async function notifyPlanLimitReached(userId: string, limitType: string) 
   });
 }
 
-export async function notifyNewMessage(userId: string, fromPhone: string) {
-  await createNotification({
-    userId,
-    type: NotificationType.NEW_MESSAGE,
-    title: bi("💬 رسالة واردة جديدة", "💬 New incoming message"),
-    body: bi(
-      `رسالة جديدة من ${fromPhone}`,
-      `New message from ${fromPhone}`,
-    ),
-    link: `/dashboard?section=chat`,
-    meta: { fromPhone },
+export async function notifyNewMessage(
+  userId: string,
+  fromPhone: string,
+  assignedToUserId?: string | null,
+) {
+  // OWNER + FULL_ACCESS (Admin) retain workspace-wide new-message notifications.
+  // CHAT_ONLY agents are intentionally scoped to conversations assigned to them.
+  //
+  // Do not infer notification scope from "not owner" here: FULL_ACCESS is an
+  // administrative role with campaign/automation/reporting capabilities and must
+  // not be treated like a reply-only agent.
+  const fullAccessMembers = await prisma.user.findMany({
+    where: {
+      parentId: userId,
+      deletedAt: null,
+      role: "FULL_ACCESS",
+    },
+    select: { id: true },
   });
+
+  const recipientIds = new Set<string>([
+    userId,
+    ...fullAccessMembers.map((member) => member.id),
+  ]);
+
+  // Only the assigned CHAT_ONLY member gets the message notification.
+  // If the assigned user is FULL_ACCESS, they are already included above.
+  if (assignedToUserId && assignedToUserId !== userId) {
+    const assignedMember = await prisma.user.findFirst({
+      where: {
+        id: assignedToUserId,
+        parentId: userId,
+        deletedAt: null,
+        role: "CHAT_ONLY",
+      },
+      select: { id: true },
+    });
+
+    if (assignedMember) recipientIds.add(assignedMember.id);
+  }
+
+  await Promise.all(
+    Array.from(recipientIds).map((recipientId) =>
+      createNotification({
+        userId: recipientId,
+        type: NotificationType.NEW_MESSAGE,
+        title: bi("💬 رسالة واردة جديدة", "💬 New incoming message"),
+        body: bi(
+          `رسالة جديدة من ${fromPhone}`,
+          `New message from ${fromPhone}`,
+        ),
+        link: `/dashboard?section=chat`,
+        meta: { fromPhone, assignedToUserId: assignedToUserId ?? null },
+      })
+    )
+  );
 }
 
 // ─── أتمتة المتجر ─────────────────────────────────────────────────────────────
