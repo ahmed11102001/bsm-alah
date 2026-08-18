@@ -54,6 +54,29 @@ export interface AssistantRule {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const ASSISTANT_RULES: AssistantRule[] = [
 
+  // ── 🟡 WARNING: محادثات خرجت من نافذة الـ24 ساعة ────────────────────────
+  {
+    id:            "expired_chats_24h",
+    pages:         ["*"],
+    severity:      "warning",
+    displayAs:     "card",
+    cooldownHours: 0,
+    condition:     ctx => ctx.expiredChats > 0,
+    title:   {
+      ar: (ctx: RuleContext) => `💬 عندك ${ctx.expiredChats} محادثة عدى عليها 24 ساعة`,
+      en: (ctx: RuleContext) => `💬 ${ctx.expiredChats} conversation${ctx.expiredChats === 1 ? "" : "s"} passed 24 hours`,
+    },
+    message: {
+      ar: "المحادثات دي خرجت من نافذة خدمة العملاء. لو هتبدأ محادثة جديدة، استخدم قالب WhatsApp معتمد.",
+      en: "These conversations are outside the customer-service window. Use an approved WhatsApp template to start a new message.",
+    },
+    tip: {
+      ar: "راجع المحادثات القديمة من صندوق المحادثات وحدد اللي محتاج متابعة.",
+      en: "Review the older conversations in the inbox and follow up where needed.",
+    },
+    action: { label: { ar: "فتح المحادثات", en: "Open Conversations" }, target: "chat", type: "navigate" },
+  },
+
   // ── 🔴 CRITICAL: واتساب مش متوصل ─────────────────────────────────────────
   {
     id:            "whatsapp_not_connected",

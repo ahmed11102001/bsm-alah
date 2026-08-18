@@ -68,10 +68,12 @@ const ROLE_PERMISSIONS: Record<Exclude<UserRole, "OWNER">, Permission[]> = {
     "REPORTS_VIEW",
     "AI_AGENT_MANAGE",
     "STORE_INTEGRATIONS_MANAGE",
+    "TEAM_VIEW",
   ],
   CHAT_ONLY: [
     "CHAT_VIEW",
     "CHAT_SEND",
+    "CONTACTS_VIEW",
     "TEAM_VIEW",
   ],
 };

@@ -9,41 +9,53 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
   const userId = session.user.id;
+  const ownerId = session.user.parentId ?? userId;
+  const isChatOnly = session.user.role === "CHAT_ONLY";
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 ساعة فاتت
 
-  const [expiredChats, automationCount, lastCampaign] = await Promise.all([
-
-    // المحادثات اللي آخر رسالة من العميل عدت عليها 24 ساعة
-    // بنشوف contacts اللي lastMessageAt < cutoff  وآخر رسالة كانت inbound
-    prisma.contact.count({
-      where: {
-        userId,
-        deletedAt:   null,
-        isArchived:  false,
-        lastMessageAt: { lt: cutoff, not: null },
-        messages: {
-          some: {
-            direction: "inbound",
-            createdAt: { lt: cutoff },
-          },
+  // Team members don't own the WhatsApp workspace. Their assistant is intentionally
+  // limited to the 24h conversation warning, so never evaluate/return owner-level
+  // setup, campaign, automation, or WhatsApp-connection advice for them.
+  const expiredChats = await prisma.contact.count({
+    where: {
+      userId: ownerId,
+      deletedAt: null,
+      isArchived: false,
+      lastMessageAt: { lt: cutoff, not: null },
+      messages: {
+        some: {
+          direction: "inbound",
+          createdAt: { lt: cutoff },
         },
       },
-    }),
+    },
+  });
 
-    // عدد الـ automation rules
-    prisma.automationRule.count({ where: { userId } }),
+  if (isChatOnly) {
+    return NextResponse.json({
+      role: "CHAT_ONLY",
+      expiredChats,
+    });
+  }
 
-    // آخر campaign
+  const [automationCount, lastCampaign, whatsappAccount] = await Promise.all([
+    // كل بيانات الـ assistant للـ Owner / Full Access تُقرأ من Workspace Owner.
+    prisma.automationRule.count({ where: { userId: ownerId } }),
     prisma.campaign.findFirst({
-      where:   { userId },
+      where: { userId: ownerId },
       orderBy: { createdAt: "desc" },
-      select:  {
-        status:        true,
-        sentCount:     true,
-        deliveredCount:true,
-        failedCount:   true,
+      select: {
+        status: true,
+        sentCount: true,
+        deliveredCount: true,
+        failedCount: true,
       },
+    }),
+    prisma.whatsAppAccount.findUnique({
+      where: { userId: ownerId },
+      select: { phoneNumberId: true, wabaId: true },
     }),
   ]);
 
@@ -53,9 +65,11 @@ export async function GET() {
       : undefined;
 
   return NextResponse.json({
+    role: session.user.role,
+    whatsappConnected: !!whatsappAccount?.phoneNumberId && !!whatsappAccount?.wabaId,
     expiredChats,
     automationCount,
-    lastCampaignStatus:   lastCampaign?.status ?? null,
+    lastCampaignStatus: lastCampaign?.status ?? null,
     lastCampaignDelivery: lastCampaignDelivery ?? null,
   });
 }

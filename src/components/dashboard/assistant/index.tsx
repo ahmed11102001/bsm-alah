@@ -13,6 +13,7 @@ import {
 
 interface Props {
   userId:        string;
+  role:          "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
   locale:        "ar" | "en";
   activeSection: string;
   // بيانات من الداشبورد — بتتمرر من parent
@@ -31,7 +32,7 @@ interface Props {
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
 
 export default function DashboardAssistant({
-  userId, locale, activeSection,
+  userId, role, locale, activeSection,
   whatsappConnected, totalContacts, deliveryRate, planStatus, planName,
   onNavigate, helperMountId, helperOpen, onHelperOpenChange,
   onboardingCompleted,
@@ -45,6 +46,14 @@ export default function DashboardAssistant({
 
   // ── تحميل الـ dismissed state من localStorage ────────────────────────────
   useEffect(() => {
+    // CHAT_ONLY gets only the operational 24h conversation advice.
+    // No onboarding/welcome/tour or workspace-level assistant prompts.
+    if (role === "CHAT_ONLY") {
+      setShowWelcome(false);
+      setShowTour(false);
+      return;
+    }
+
     try {
       const raw = localStorage.getItem(DISMISSED_KEY(userId));
       if (raw) setDismissed(JSON.parse(raw));
@@ -56,7 +65,7 @@ export default function DashboardAssistant({
     } else if (onboardingCompleted === true) {
       setShowWelcome(false);
     }
-  }, [userId, onboardingCompleted]);
+  }, [userId, onboardingCompleted, role]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -96,7 +105,10 @@ export default function DashboardAssistant({
   // ── تقييم الـ rules لما يتغير context أو صفحة ──────────────────────────
   useEffect(() => {
     const page    = activeSection as PageId;
-    const active  = evaluateRules(ASSISTANT_RULES, ctx, page, dismissed);
+    const availableRules = role === "CHAT_ONLY"
+      ? ASSISTANT_RULES.filter(rule => rule.id === "expired_chats_24h")
+      : ASSISTANT_RULES;
+    const active  = evaluateRules(availableRules, ctx, page, dismissed);
     // critical أول، بعدين warning، بعدين info
     active.sort((a, b) => {
       const order = { critical: 0, warning: 1, info: 2 };
@@ -104,7 +116,7 @@ export default function DashboardAssistant({
     });
     setActiveRules(active);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, dismissed, assistCtx, whatsappConnected, totalContacts, deliveryRate]);
+  }, [activeSection, dismissed, assistCtx, whatsappConnected, totalContacts, deliveryRate, role]);
 
   // ── Dismiss rule ────────────────────────────────────────────────────────
   const handleDismiss = useCallback((id: string) => {

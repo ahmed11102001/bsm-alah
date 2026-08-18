@@ -71,11 +71,13 @@ function MemberCard({
   isSelf,
   canDelete,
   onDelete,
+  showDetails = false,
 }: {
   member: TeamMember;
   isSelf: boolean;
   canDelete: boolean;
   onDelete: (id: string) => void;
+  showDetails?: boolean;
 }) {
   const { t, locale } = useLanguage();
   const tm = t.team;
@@ -124,8 +126,8 @@ function MemberCard({
         </span>
       </div>
 
-      {/* التفاصيل الخاصة بالعضو الحالي فقط — الـAPI لا يعيد الإحصائيات لغيره */}
-      {isSelf && member.conversationCount !== undefined && member.repliesCount !== undefined && (
+      {/* التفاصيل تظهر للعضو نفسه، وللـOwner / Team Admin على كل بطاقات الفريق */}
+      {showDetails && member.conversationCount !== undefined && member.repliesCount !== undefined && (
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-50 dark:border-gray-700/50">
           <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
             <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium text-center">
@@ -244,7 +246,9 @@ export default function TeamPage() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const isOwner = session?.user?.role !== "CHAT_ONLY";
+  const currentRole = session?.user?.role;
+  const isOwner = currentRole === "OWNER";
+  const canViewMemberDetails = currentRole === "OWNER" || currentRole === "FULL_ACCESS";
 
   function showLimitToast() {
     toast.custom(() => (
@@ -534,8 +538,9 @@ export default function TeamPage() {
                     key={m.id}
                     member={m}
                     isSelf={m.id === (session?.user as any)?.id}
-                    canDelete={m.role !== "OWNER" && m.id !== (session?.user as any)?.id}
+                    canDelete={isOwner && m.role !== "OWNER" && m.id !== (session?.user as any)?.id}
                     onDelete={deleteMember}
+                    showDetails={canViewMemberDetails || m.id === (session?.user as any)?.id}
                   />
                 ))}
               </div>
