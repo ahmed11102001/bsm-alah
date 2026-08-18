@@ -77,7 +77,7 @@ export async function sendTeamInviteEmail({
   joinCode: string;
   expiresHours?: number;
 }) {
-  const loginUrl = `${getBaseUrl()}/?login=join&email=${encodeURIComponent(to)}`;
+  const loginUrl = `${getBaseUrl()}/?login=join&email=${encodeURIComponent(to)}&code=${encodeURIComponent(joinCode)}`;
   const roleLabel = role === "FULL_ACCESS" ? "مسؤول — تحكم كامل (Admin)" : "وكيل — رد على المحادثات (Chat Only)";
   const teamLabel = workspaceName || inviterName || "Wani";
   const recipientName = name ? name.trim() : "";
@@ -115,22 +115,29 @@ export async function sendTeamInviteEmail({
       <strong style="color:#0f172a;margin-right:6px">${roleLabel}</strong>
     </div>
 
-    <!-- Join Code Box -->
+    <!-- Join Code Box with Copy & Auto-fill -->
     <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:16px;padding:24px 16px;text-align:center;margin:0 0 24px">
       <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 8px">
-        كود الانضمام الخاص بك
+        كود الانضمام الخاص بك (اضغط لتحديده أو نسخه)
       </p>
-      <div style="display:inline-block;background:#ffffff;border:1px solid #bbf7d0;padding:12px 24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
-        <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d">
+      <div style="display:inline-block;background:#ffffff;border:1px solid #bbf7d0;padding:12px 24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:12px">
+        <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d;user-select:all;-webkit-user-select:all;-moz-user-select:all;display:inline-block">
           ${joinCode}
         </code>
       </div>
+      
+      <div style="margin-top:6px;margin-bottom:8px">
+        <a href="${loginUrl}" style="display:inline-block;background:#dcfce7;color:#166534;border:1px solid #86efac;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700">
+          📋 نسخ الكود والانتقال لصفحة الانضمام تلقائيًا
+        </a>
+      </div>
+
       <p style="font-size:12px;color:#16a34a;margin:10px 0 0">
         هذا الكود مخصص لك فقط، صالح لمدة ${expiresHours} ساعة
       </p>
     </div>
 
-    <!-- CTA Button -->
+    <!-- Main CTA Button -->
     <div style="text-align:center;margin:0 0 24px">
       <a href="${loginUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3)">
         الانضمام إلى الفريق الآن ←
@@ -138,7 +145,7 @@ export async function sendTeamInviteEmail({
     </div>
 
     <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0 0 16px;text-align:center">
-      يمكنك أيضًا الدخول مباشرة إلى صفحة تسجيل الدخول وإدخال بريدك الإلكتروني مع كود الانضمام الموضح أعلاه.
+      عند الضغط على الزر، سيتم فتح صفحة الانضمام وملء بريدك وكود الانضمام مباشرة وبشكل آمن.
     </p>
 
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 20px" />

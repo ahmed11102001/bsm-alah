@@ -170,6 +170,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
         setJoinEmail(emailParam);
         setLoginEmail(emailParam);
       }
+      const codeParam = sp.get("code") || sp.get("inviteCode") || sp.get("joinCode");
+      if (codeParam) {
+        setJoinCode(codeParam.toUpperCase().trim());
+      }
     } catch {}
 
     return () => {
