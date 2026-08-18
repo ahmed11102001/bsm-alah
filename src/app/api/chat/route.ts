@@ -243,6 +243,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requirePermission(session, "CHAT_SEND");
   if (denied) return denied;
+  // requirePermission() returns a Response on failure but does not narrow
+  // NextAuth's Session | null type for TypeScript. Keep the runtime guard
+  // explicit so all code below can safely use session.user.
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  }
   const userId = uid(session);
 
   const ct = req.headers.get("content-type") ?? "";
@@ -260,7 +266,7 @@ export async function POST(req: NextRequest) {
     if (!contactId || !(await prisma.contact.findFirst({ where: contactScope(session, contactId), select: { id: true } }))) {
       return NextResponse.json({ error: "المحادثة غير متاحة" }, { status: 404 });
     }
-    return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId }, session.user.id);
+    return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId });
   }
 
   if (action === "forward") return forwardMessage(userId, body.sourceMessageId, body.targetContactId, session);
@@ -426,8 +432,7 @@ async function sendMessage(
   userId: string,
   {
     contactId, content, type = "text", templateName, replyToMessageId,
-  }: { contactId: string; content?: string; type?: string; templateName?: string; replyToMessageId?: string },
-  senderUserId: string = userId,
+  }: { contactId: string; content?: string; type?: string; templateName?: string; replyToMessageId?: string }
 ) {
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
   if (type === "text" && !content?.trim())
@@ -455,9 +460,7 @@ async function sendMessage(
   const result = await prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({
       data: {
-        userId,
-        senderUserId,
-        contactId,
+        userId, contactId,
         content: msgContent,
         type: msgType,
         direction: MessageDirection.outbound,
@@ -524,13 +527,13 @@ async function forwardMessage(userId: string, sourceMessageId?: string, targetCo
   if (source.type === MessageType.template || source.type === MessageType.sticker) {
     return NextResponse.json({ error: "لا يمكن إعادة توجيه هذا النوع من الرسائل" }, { status: 400 });
   }
-  if (source.type === MessageType.text) return sendMessage(userId, { contactId: target.id, content: source.content ?? "", type: "text" }, session?.user.id ?? userId);
+  if (source.type === MessageType.text) return sendMessage(userId, { contactId: target.id, content: source.content ?? "", type: "text" });
   const queue = await prisma.messageQueue.findFirst({
     where: { userId, existingMessageId: source.id, messageType: "media", status: { in: ["pending", "sent"] } },
     orderBy: { createdAt: "desc" }, select: { content: true },
   });
   if (!queue?.content) return NextResponse.json({ error: "معرّف الوسائط غير متاح لإعادة التوجيه" }, { status: 400 });
-  return sendMessage(userId, { contactId: target.id, content: queue.content, type: "media" }, session?.user.id ?? userId);
+  return sendMessage(userId, { contactId: target.id, content: queue.content, type: "media" });
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
@@ -619,9 +622,7 @@ async function sendMedia(userId: string, req: NextRequest, session: any) {
     const result = await prisma.$transaction(async (tx) => {
       const msg = await tx.message.create({
         data: {
-          userId,
-          senderUserId: session.user.id,
-          contactId,
+          userId, contactId,
           content: file.name,
           type: msgType,
           direction: MessageDirection.outbound,
