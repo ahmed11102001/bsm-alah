@@ -115,24 +115,32 @@ export async function sendTeamInviteEmail({
       <strong style="color:#0f172a;margin-right:6px">${roleLabel}</strong>
     </div>
 
-    <!-- Join Code Box with Copy & Auto-fill -->
+    <!-- Join Code Box with Dedicated Copy Icon Button -->
     <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:16px;padding:24px 16px;text-align:center;margin:0 0 24px">
-      <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 8px">
-        كود الانضمام الخاص بك (اضغط لتحديده أو نسخه)
+      <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 12px">
+        كود الانضمام الخاص بك
       </p>
-      <div style="display:inline-block;background:#ffffff;border:1px solid #bbf7d0;padding:12px 24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:12px">
-        <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d;user-select:all;-webkit-user-select:all;-moz-user-select:all;display:inline-block">
-          ${joinCode}
-        </code>
-      </div>
-      
-      <div style="margin-top:6px;margin-bottom:8px">
-        <a href="${loginUrl}" style="display:inline-block;background:#dcfce7;color:#166534;border:1px solid #86efac;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700">
-          📋 نسخ الكود والانتقال لصفحة الانضمام تلقائيًا
-        </a>
-      </div>
 
-      <p style="font-size:12px;color:#16a34a;margin:10px 0 0">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 10px;background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);direction:ltr">
+        <tr>
+          <td style="padding:10px 18px;vertical-align:middle">
+            <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d;user-select:all;-webkit-user-select:all;-moz-user-select:all;display:inline-block">
+              ${joinCode}
+            </code>
+          </td>
+          <td style="padding:6px 12px 6px 0;vertical-align:middle">
+            <div style="display:inline-flex;align-items:center;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 10px;color:#15803d;font-size:12px;font-weight:bold;cursor:pointer;user-select:all;-webkit-user-select:all" title="نسخ الكود">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>نسخ</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size:11px;color:#16a34a;margin:6px 0 0">
         هذا الكود مخصص لك فقط، صالح لمدة ${expiresHours} ساعة
       </p>
     </div>
@@ -145,7 +153,7 @@ export async function sendTeamInviteEmail({
     </div>
 
     <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0 0 16px;text-align:center">
-      عند الضغط على الزر، سيتم فتح صفحة الانضمام وملء بريدك وكود الانضمام مباشرة وبشكل آمن.
+      عند الضغط على زر الانضمام، سيتم فتح صفحة الفريق مع تعبئة بريدك وكود الانضمام تلقائيًا.
     </p>
 
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 20px" />
