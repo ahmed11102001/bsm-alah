@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2, Smartphone, Bot } from "lucide-react";
+import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2, Smartphone, Bot, UserCheck } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 
 interface Notification {
@@ -33,6 +33,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   SMART_FOLLOWUP_ALERT: <AlertTriangle className="w-4 h-4 text-orange-500" />,
   AUTOMATION_FAILED: <XCircle className="w-4 h-4 text-red-500" />,
   AUTOMATION_LOOP_STOPPED: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
+  TEAM_MEMBER_JOINED: <UserCheck className="w-4 h-4 text-emerald-600" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -54,6 +55,7 @@ const TYPE_BG: Record<NotificationType, string> = {
   SMART_FOLLOWUP_ALERT: "bg-orange-50",
   AUTOMATION_FAILED: "bg-red-50",
   AUTOMATION_LOOP_STOPPED: "bg-yellow-50",
+  TEAM_MEMBER_JOINED: "bg-emerald-50",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {

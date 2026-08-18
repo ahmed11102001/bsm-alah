@@ -69,11 +69,15 @@ describe("Schemas Module", () => {
 
   describe("JoinTeamSchema", () => {
     it("Valid input يعدي", () => {
-      expect(JoinTeamSchema.safeParse({ inviteCode: "code123", password: "password123", name: "User" }).success).toBe(true);
+      expect(JoinTeamSchema.safeParse({ email: "user@example.com", inviteCode: "WANI-1234-5678", password: "password123", name: "User" }).success).toBe(true);
     });
 
     it("inviteCode فاضي يترفض", () => {
-      expect(JoinTeamSchema.safeParse({ inviteCode: "", password: "password123" }).success).toBe(false);
+      expect(JoinTeamSchema.safeParse({ email: "user@example.com", inviteCode: "", password: "password123" }).success).toBe(false);
+    });
+
+    it("email غير صالح يترفض", () => {
+      expect(JoinTeamSchema.safeParse({ email: "invalid-email", inviteCode: "WANI-1234-5678", password: "password123" }).success).toBe(false);
     });
   });
 

@@ -17,6 +17,7 @@ const PUSH_ENABLED_TYPES = new Set<NotificationType>([
   "STORE_AUTO_FAILED",
   "SUBSCRIPTION_SUCCESS",
   "SMART_FOLLOWUP_ALERT",
+  "TEAM_MEMBER_JOINED",
 ]);
 
 // ─── Bilingual text helper ────────────────────────────────────────────────────
@@ -471,5 +472,20 @@ export async function notifyOrderCancelled(userId: string, orderNumber: string, 
       `Customer (${customerPhone}) cancelled order #${orderNumber}.`
     ),
     link: "/dashboard?section=store",
+  });
+}
+
+export async function notifyTeamMemberJoined(userId: string, memberName: string | null | undefined, memberEmail: string) {
+  const displayName = memberName?.trim() || memberEmail;
+  await createNotification({
+    userId,
+    type: NotificationType.TEAM_MEMBER_JOINED,
+    title: bi("🔔 انضم عضو جديد إلى فريقك", "🔔 New team member joined"),
+    body: bi(
+      `${displayName} انضم بنجاح إلى فريقك.`,
+      `${displayName} has successfully joined your team.`
+    ),
+    link: "/dashboard/team",
+    meta: { memberName, memberEmail },
   });
 }

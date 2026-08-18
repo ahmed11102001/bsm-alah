@@ -159,6 +159,19 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("login") === "join" || sp.get("tab") === "join") {
+        setView("join");
+      }
+      const emailParam = sp.get("email");
+      if (emailParam) {
+        setJoinEmail(emailParam);
+        setLoginEmail(emailParam);
+      }
+    } catch {}
+
     return () => {
       document.body.style.overflow = originalOverflow;
     };
@@ -238,12 +251,27 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
       const r = await fetch("/api/auth/join-team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: joinEmail.toLowerCase(), inviteCode: joinCode, password: joinPass }),
+        body: JSON.stringify({ email: joinEmail.toLowerCase().trim(), inviteCode: joinCode.trim().toUpperCase(), password: joinPass }),
       });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error); return; }
-      toast.success("تم تفعيل حسابك!");
-      setLoginEmail(joinEmail); go("login");
+      if (!r.ok) { setErr(d.error || "فشل الانضمام للفريق"); return; }
+
+      toast.success("🎉 تم الانضمام إلى الفريق بنجاح! جاري تحويلك...");
+
+      // Auto sign-in with credentials
+      const res = await signIn("credentials", {
+        email: joinEmail.toLowerCase().trim(),
+        password: joinPass,
+        redirect: false,
+      });
+
+      if (res?.ok) {
+        onClose();
+        router.push(callbackUrl || "/dashboard");
+      } else {
+        setLoginEmail(joinEmail.toLowerCase().trim());
+        go("login");
+      }
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };
@@ -487,7 +515,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
                     <Label className="text-sm font-medium text-gray-700">كود الانضمام</Label>
                     <Input required value={joinCode}
                       onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                      placeholder="WP-XXXX"
+                      placeholder="WANI-XXXX-XXXX"
                       className="rounded-xl h-12 text-sm font-mono text-center tracking-widest border-green-200" />
                   </div>
 

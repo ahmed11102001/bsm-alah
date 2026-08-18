@@ -102,8 +102,17 @@ export const NotificationType = {
   SMART_FOLLOWUP_ALERT: "SMART_FOLLOWUP_ALERT",
   AUTOMATION_FAILED: "AUTOMATION_FAILED",
   AUTOMATION_LOOP_STOPPED: "AUTOMATION_LOOP_STOPPED",
+  TEAM_MEMBER_JOINED: "TEAM_MEMBER_JOINED",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
+export const TeamInvitationStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  EXPIRED: "EXPIRED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type TeamInvitationStatus = (typeof TeamInvitationStatus)[keyof typeof TeamInvitationStatus];
 
 export const ConversationStatus = {
   AUTO: "AUTO",

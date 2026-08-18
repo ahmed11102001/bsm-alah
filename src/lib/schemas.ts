@@ -74,6 +74,7 @@ export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
 /** POST /api/auth/join-team */
 export const JoinTeamSchema = z.object({
+  email: emailField,
   inviteCode: nonEmptyStr,
   password: passwordField,
   name: nonEmptyStr.max(100).optional(),
@@ -154,10 +155,22 @@ export type SettingsPatchInput = z.infer<typeof SettingsPatchSchema>;
 /** POST /api/team */
 export const TeamInviteSchema = z.object({
   email: emailField,
-  name: z.string().trim().max(100).optional(),
+  name: z.string().trim().max(100).optional().nullable(),
   role: z.enum([UserRole.FULL_ACCESS, UserRole.CHAT_ONLY]),
 });
 export type TeamInviteInput = z.infer<typeof TeamInviteSchema>;
+
+/** POST /api/team/resend */
+export const TeamResendInviteSchema = z.object({
+  invitationId: nonEmptyStr,
+});
+export type TeamResendInviteInput = z.infer<typeof TeamResendInviteSchema>;
+
+/** POST /api/team/cancel */
+export const TeamCancelInviteSchema = z.object({
+  invitationId: nonEmptyStr,
+});
+export type TeamCancelInviteInput = z.infer<typeof TeamCancelInviteSchema>;
 
 // ─── Automation ──────────────────────────────────────────────────────────────
 

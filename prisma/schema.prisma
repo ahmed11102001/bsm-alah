@@ -77,6 +77,7 @@ model User {
   affiliate                Affiliate?                @relation("UserAffiliate")
   referral                 Referral?                 @relation("UserReferral")
   receivedRewards          ReferralReward[]          @relation("UserReferralRewards")
+  teamInvitations          TeamInvitation[]          @relation("UserTeamInvitations")
 
   @@index([email])
   @@index([workspaceId])
@@ -1142,6 +1143,7 @@ enum NotificationType {
   AI_HANDOFF_NEEDED
   AUTOMATION_FAILED
   AUTOMATION_LOOP_STOPPED
+  TEAM_MEMBER_JOINED
 }
 
 enum ConversationStatus {
@@ -1776,5 +1778,38 @@ model ReferralLedgerEntry {
 
   @@index([affiliateId, createdAt])
 }
+
+// ─── Team Invitations ─────────────────────────────────────────────────────────
+
+enum TeamInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model TeamInvitation {
+  id          String               @id @default(cuid())
+  inviterId   String
+  email       String
+  name        String?
+  role        UserRole             @default(CHAT_ONLY)
+  codeHash    String
+  status      TeamInvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  lastSentAt  DateTime             @default(now())
+  sendCount   Int                  @default(1)
+  acceptedAt  DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  inviter     User                 @relation("UserTeamInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId, status])
+  @@index([email, status])
+  @@index([expiresAt])
+}
+
 
 

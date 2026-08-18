@@ -59,3 +59,98 @@ export async function sendDeveloperResetEmail(to: string, firstName: string, tok
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.6"><h2>مرحبًا ${firstName}</h2><p>تم طلب إعادة تعيين كلمة المرور لحسابك في بوابة المطورين.</p><p>الرابط صالح لمدة ساعة واحدة:</p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#20d378;color:#060810;text-decoration:none;border-radius:5px;font-weight:bold">تغيير كلمة المرور</a><p>إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة.</p><p style="color:#777">Wani · support@aiwni.com</p></div>`,
   });
 }
+
+export async function sendTeamInviteEmail({
+  to,
+  name,
+  inviterName,
+  workspaceName,
+  role,
+  joinCode,
+  expiresHours = 48,
+}: {
+  to: string;
+  name?: string | null;
+  inviterName?: string | null;
+  workspaceName?: string | null;
+  role: "FULL_ACCESS" | "CHAT_ONLY" | string;
+  joinCode: string;
+  expiresHours?: number;
+}) {
+  const loginUrl = `${getBaseUrl()}/?login=join&email=${encodeURIComponent(to)}`;
+  const roleLabel = role === "FULL_ACCESS" ? "مسؤول — تحكم كامل (Admin)" : "وكيل — رد على المحادثات (Chat Only)";
+  const teamLabel = workspaceName || inviterName || "Wani";
+  const recipientName = name ? name.trim() : "";
+
+  await sendEmail({
+    to,
+    subject: `دعوة للانضمام إلى فريق ${teamLabel} — واني`,
+    html: `
+<div dir="rtl" style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f4f5f7;padding:32px 16px;color:#1e293b">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:20px;padding:36px 28px;border:1px solid #e2e8f0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05)">
+    
+    <!-- Logo Header -->
+    <div style="text-align:center;margin-bottom:28px">
+      <span style="display:inline-block;background:linear-gradient(135deg,#25D366,#128C7E);color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:1px;border-radius:14px;padding:10px 24px">
+        WANI · واني
+      </span>
+    </div>
+
+    <!-- Title -->
+    <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px;text-align:center">
+      دعوة للانضمام إلى الفريق 🎉
+    </h2>
+
+    <p style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 12px">
+      مرحبًا ${recipientName ? `<strong>${recipientName}</strong> 👋` : "بك 👋"}
+    </p>
+
+    <p style="font-size:14px;line-height:1.7;color:#475569;margin:0 0 20px">
+      تمت دعوتك من قبل <strong>${inviterName || "مدير الفريق"}</strong> للانضمام إلى فريق عمل <strong>${teamLabel}</strong> على منصة واني.
+    </p>
+
+    <!-- Role Card -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#334155">
+      <span style="color:#64748b">الصلاحية الممنوحة:</span>
+      <strong style="color:#0f172a;margin-right:6px">${roleLabel}</strong>
+    </div>
+
+    <!-- Join Code Box -->
+    <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:16px;padding:24px 16px;text-align:center;margin:0 0 24px">
+      <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 8px">
+        كود الانضمام الخاص بك
+      </p>
+      <div style="display:inline-block;background:#ffffff;border:1px solid #bbf7d0;padding:12px 24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d">
+          ${joinCode}
+        </code>
+      </div>
+      <p style="font-size:12px;color:#16a34a;margin:10px 0 0">
+        هذا الكود مخصص لك فقط، صالح لمدة ${expiresHours} ساعة
+      </p>
+    </div>
+
+    <!-- CTA Button -->
+    <div style="text-align:center;margin:0 0 24px">
+      <a href="${loginUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3)">
+        الانضمام إلى الفريق الآن ←
+      </a>
+    </div>
+
+    <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0 0 16px;text-align:center">
+      يمكنك أيضًا الدخول مباشرة إلى صفحة تسجيل الدخول وإدخال بريدك الإلكتروني مع كود الانضمام الموضح أعلاه.
+    </p>
+
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 20px" />
+
+    <!-- Footer -->
+    <p style="color:#94a3b8;font-size:11px;text-align:center;margin:0">
+      منصة واني لأتمتة وخدمة عملاء واتساب · الدعم: <a href="mailto:support@aiwni.com" style="color:#25D366;text-decoration:none">support@aiwni.com</a>
+    </p>
+
+  </div>
+</div>
+    `,
+  });
+}
+

@@ -290,14 +290,20 @@ export async function checkTeamLimit(ownerId: string): Promise<GuardResult> {
 
   if (isUnlimited(limit)) return { allowed: true };
 
-  const currentMembers = await prisma.user.count({
-    where: { parentId: ownerId, deletedAt: null },
-  });
+  const [currentMembers, pendingInvites] = await Promise.all([
+    prisma.user.count({
+      where: { parentId: ownerId, deletedAt: null },
+    }),
+    prisma.teamInvitation.count({
+      where: { inviterId: ownerId, status: "PENDING", expiresAt: { gt: new Date() } },
+    }),
+  ]);
 
+  const totalTeamSlots = currentMembers + pendingInvites;
   // الـ limit يشمل المالك نفسه — لذلك نقارن بـ (limit - 1)
   const membersLimit = limit - 1;
 
-  if (currentMembers >= membersLimit) {
+  if (totalTeamSlots >= membersLimit) {
     return {
       allowed: false,
       code: "LIMIT_REACHED",
@@ -305,7 +311,7 @@ export async function checkTeamLimit(ownerId: string): Promise<GuardResult> {
       plan,
       requiredPlan: nextPlan(plan),
       limit,
-      used: currentMembers + 1, // +1 للمالك
+      used: totalTeamSlots + 1, // +1 للمالك
     };
   }
 
@@ -388,11 +394,14 @@ export async function getPlanStatus(ownerId: string) {
     if (reset !== null) campaignsUsed = 0;
   }
 
-  const [totalContacts, teamCount] = await Promise.all([
+  const [totalContacts, teamCount, pendingInvites] = await Promise.all([
     prisma.contact.count({
       where: { userId: ownerId, deletedAt: null },
     }),
     prisma.user.count({ where: { parentId: ownerId, deletedAt: null } }),
+    prisma.teamInvitation.count({
+      where: { inviterId: ownerId, status: "PENDING", expiresAt: { gt: new Date() } },
+    }),
   ]);
 
   // هل الاشتراك منتهي؟ (status أو currentPeriodEnd)
@@ -412,7 +421,7 @@ export async function getPlanStatus(ownerId: string) {
     limits,
     usage: {
       contacts: totalContacts,
-      teamMembers: teamCount + 1,
+      teamMembers: teamCount + pendingInvites + 1,
       campaignsThisMonth: campaignsUsed,
     },
   };
