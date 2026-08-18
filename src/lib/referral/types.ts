@@ -7,30 +7,16 @@ import type { PlanTier } from "@/lib/plans";
 
 export type { AffiliateStatus, ReferralStatus, RewardStatus, ReferralLedgerType } from "@prisma/client";
 
-export interface TierRate {
-  tierLevel: number;
-  minQualified: number;
-  maxQualified: number; // inclusive or Infinity
-  rate: number; // e.g. 0.05 = 5%
-  labelAr: string;
-  labelEn: string;
+export interface ReferralRateView {
+  baseRate: number;
+  bonusRate: number;
+  finalRate: number;
 }
 
-export interface CommissionTierInfo {
-  eligible: boolean;
-  ownerPlan: PlanTier;
-  qualifiedCount: number;
-  currentRate: number; // e.g. 0.10
-  currentTierLevel: number;
-  currentTierLabel: string;
-  nextTier: {
-    tierLevel: number;
-    rate: number;
-    minQualified: number;
-    labelAr: string;
-  } | null;
-  referralsNeededForNextTier: number;
-  progressPercent: number; // 0 to 100 towards next tier
+export interface ReferralRatesByPlan {
+  starter: ReferralRateView;
+  pro: ReferralRateView;
+  enterprise: ReferralRateView;
 }
 
 export interface ReferralStatusResponse {
@@ -39,17 +25,16 @@ export interface ReferralStatusResponse {
   referralLink: string | null;
   qualifiedCount: number;
   pendingCount: number;
+
+  // currentRate is the maximum current rate across paid referred plans.
+  // The exact rate is plan-specific, so consumers should use ratesByPlan.
   currentRate: number;
-  currentTier: string;
+  minCurrentRate: number;
+  maxCurrentRate: number;
+  bonusRate: number;
+  ratesByPlan: ReferralRatesByPlan;
+
   creditBalance: number;
-  nextTier: {
-    tierLevel: number;
-    rate: number;
-    minQualified: number;
-    label: string;
-  } | null;
-  referralsNeededForNextTier: number;
-  progressPercent: number;
   totalEarned: number;
 }
 
@@ -60,7 +45,8 @@ export interface ReferralHistoryItem {
   signedUpAt: string;
   qualifiedAt: string | null;
   reward: {
-    rate: number;
+    baseRate: number;
+    appliedRate: number;
     baseAmount: number;
     rewardAmount: number;
     status: "PENDING" | "APPROVED" | "REVERSED";

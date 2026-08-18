@@ -1757,7 +1757,8 @@ model ReferralReward {
   referredUserId   String
   subscriptionId   String?
   paymentInvoiceId String?      @unique
-  rate             Decimal      @db.Decimal(5, 4)
+  baseRate         Decimal      @db.Decimal(5, 4)
+  appliedRate      Decimal      @db.Decimal(5, 4)
   baseAmount       Decimal      @db.Decimal(10, 2)
   rewardAmount     Decimal      @db.Decimal(10, 2)
   status           RewardStatus @default(APPROVED)

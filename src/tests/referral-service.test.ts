@@ -33,12 +33,14 @@ vi.mock("@/lib/prisma", () => {
       count: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     referralReward: {
       findUnique: vi.fn(),
       create: vi.fn(),
       aggregate: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     referralLedgerEntry: {
       findFirst: vi.fn(),
@@ -198,15 +200,22 @@ describe("Referral Service Lifecycle & Security", () => {
           },
         },
       },
+      referredUser: {
+        subscription: {
+          plan: "pro",
+          status: "active",
+        },
+      },
     } as any);
 
     vi.mocked(prisma.referralReward.findUnique).mockResolvedValue(null);
-    vi.mocked(prisma.referral.count).mockResolvedValue(0); // First conversion -> rate = 7%
+    vi.mocked(prisma.referral.count).mockResolvedValue(0); // First conversion -> base rate depends on referred plan
+    vi.mocked(prisma.referral.updateMany).mockResolvedValue({ count: 1 });
     vi.mocked(prisma.referralLedgerEntry.findFirst).mockResolvedValue(null); // balance 0
     vi.mocked(prisma.referral.update).mockResolvedValue({} as any);
     vi.mocked(prisma.referralReward.create).mockResolvedValue({
       id: "reward-1",
-      rewardAmount: new Prisma.Decimal(41.93), // 599 * 0.07 = 41.93
+      rewardAmount: new Prisma.Decimal(149.75), // 599 * 0.25 = 149.75
     } as any);
 
     const reward = await processConversionReward({
@@ -216,17 +225,25 @@ describe("Referral Service Lifecycle & Security", () => {
     });
 
     expect(reward).not.toBeNull();
-    expect(prisma.referral.update).toHaveBeenCalledWith(
+    expect(prisma.referral.updateMany).toHaveBeenCalledWith({
+      where: { id: "ref-1", status: "PENDING" },
+      data: expect.objectContaining({ status: "QUALIFIED" }),
+    });
+    expect(prisma.referralReward.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "ref-1" },
-        data: expect.objectContaining({ status: "QUALIFIED" }),
+        data: expect.objectContaining({
+          baseRate: new Prisma.Decimal(0.25),
+          appliedRate: new Prisma.Decimal(0.25),
+          baseAmount: new Prisma.Decimal(599),
+          rewardAmount: new Prisma.Decimal(149.75),
+        }),
       })
     );
     expect(prisma.referralLedgerEntry.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           type: "EARNED",
-          balanceAfter: new Prisma.Decimal(41.93),
+          balanceAfter: new Prisma.Decimal(149.75),
         }),
       })
     );

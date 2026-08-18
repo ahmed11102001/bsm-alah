@@ -5,7 +5,7 @@
 
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { calculateCommissionTier, computeRewardAmount } from "./commission";
+import { getReferralRate, getReferralRatesForAllPlans, computeRewardAmount } from "./commission";
 import type { ReferralStatusResponse, ReferralHistoryItem } from "./types";
 import crypto from "crypto";
 
@@ -107,11 +107,15 @@ export async function getAffiliateStatus(userId: string): Promise<ReferralStatus
       qualifiedCount: 0,
       pendingCount: 0,
       currentRate: 0,
-      currentTier: "غير مؤهل",
+      minCurrentRate: 0,
+      maxCurrentRate: 0,
+      bonusRate: 0,
+      ratesByPlan: {
+        starter: { baseRate: 0, bonusRate: 0, finalRate: 0 },
+        pro: { baseRate: 0, bonusRate: 0, finalRate: 0 },
+        enterprise: { baseRate: 0, bonusRate: 0, finalRate: 0 },
+      },
       creditBalance: 0,
-      nextTier: null,
-      referralsNeededForNextTier: 0,
-      progressPercent: 0,
       totalEarned: 0,
     };
   }
@@ -137,13 +141,19 @@ export async function getAffiliateStatus(userId: string): Promise<ReferralStatus
     }),
   ]);
 
-  // جلب باقة المالك الحالية
-  const sub = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { plan: true },
-  });
-
-  const tierInfo = calculateCommissionTier(sub?.plan ?? "pro", qualifiedCount);
+  // لا توجد "باقة للمالك" تحدد النسبة. النسبة تتحدد فقط بباقة العميل المُحال.
+  const rates = getReferralRatesForAllPlans(qualifiedCount);
+  const minCurrentRate = Math.min(
+    rates.starter.finalRate,
+    rates.pro.finalRate,
+    rates.enterprise.finalRate,
+  );
+  const maxCurrentRate = Math.max(
+    rates.starter.finalRate,
+    rates.pro.finalRate,
+    rates.enterprise.finalRate,
+  );
+  const bonusRate = Math.min(qualifiedCount * 0.03, 0.50 - 0.10);
   const creditBalance = ledgerLastEntry ? Number(ledgerLastEntry.balanceAfter) : 0;
   const totalEarned = totalEarnedAgg._sum.rewardAmount ? Number(totalEarnedAgg._sum.rewardAmount) : 0;
 
@@ -153,17 +163,28 @@ export async function getAffiliateStatus(userId: string): Promise<ReferralStatus
     referralLink: `${APP_URL}/?ref=${affiliate.code}`,
     qualifiedCount,
     pendingCount,
-    currentRate: tierInfo.currentRate,
-    currentTier: tierInfo.currentTierLabel,
+    currentRate: maxCurrentRate,
+    minCurrentRate,
+    maxCurrentRate,
+    bonusRate,
+    ratesByPlan: {
+      starter: {
+        baseRate: rates.starter.baseRate,
+        bonusRate: rates.starter.bonusRate,
+        finalRate: rates.starter.finalRate,
+      },
+      pro: {
+        baseRate: rates.pro.baseRate,
+        bonusRate: rates.pro.bonusRate,
+        finalRate: rates.pro.finalRate,
+      },
+      enterprise: {
+        baseRate: rates.enterprise.baseRate,
+        bonusRate: rates.enterprise.bonusRate,
+        finalRate: rates.enterprise.finalRate,
+      },
+    },
     creditBalance,
-    nextTier: tierInfo.nextTier ? {
-      tierLevel: tierInfo.nextTier.tierLevel,
-      rate: tierInfo.nextTier.rate,
-      minQualified: tierInfo.nextTier.minQualified,
-      label: tierInfo.nextTier.labelAr,
-    } : null,
-    referralsNeededForNextTier: tierInfo.referralsNeededForNextTier,
-    progressPercent: tierInfo.progressPercent,
     totalEarned,
   };
 }
@@ -213,7 +234,8 @@ export async function getAffiliateHistory(userId: string): Promise<ReferralHisto
       signedUpAt: ref.signedUpAt.toISOString(),
       qualifiedAt: ref.qualifiedAt ? ref.qualifiedAt.toISOString() : null,
       reward: reward ? {
-        rate: Number(reward.rate),
+        baseRate: Number(reward.baseRate),
+        appliedRate: Number(reward.appliedRate),
         baseAmount: Number(reward.baseAmount),
         rewardAmount: Number(reward.rewardAmount),
         status: reward.status,
@@ -310,6 +332,11 @@ export async function processConversionReward({
           },
         },
       },
+      referredUser: {
+        include: {
+          subscription: true,
+        },
+      },
     },
   });
 
@@ -344,32 +371,57 @@ export async function processConversionReward({
     return null;
   }
 
-  // 4. حساب عدد الإحالات المؤهلة السابقة لتحديد نسبة العمولة
-  const qualifiedCountBefore = await prisma.referral.count({
-    where: { affiliateId: affiliate.id, status: "QUALIFIED" },
-  });
+  // 4. الباقة مصدرها اشتراك العميل المُحال نفسه، وليس اشتراك الـ Affiliate.
+  const referredPlan = (referral.referredUser?.subscription?.plan ?? "free").toLowerCase();
 
-  // النسبة تعتمد على الباقة وعدد الإحالات المؤهلة (مع إضافة التحويل الحالي)
-  const tierInfo = calculateCommissionTier(ownerPlan, qualifiedCountBefore + 1);
-  if (!tierInfo.eligible || tierInfo.currentRate <= 0) {
+  if (referredPlan === "free") {
+    console.info(`[Referral] Referred user ${referredUserId} has no paid plan, skipping reward.`);
     return null;
   }
 
-  const { rate, baseAmount, rewardAmount } = computeRewardAmount(amountPaid, tierInfo.currentRate);
-  if (rewardAmount <= 0) return null;
+  // 5. تنفيذ الحساب والتحديث داخل Transaction. العد السابق يتم داخل نفس
+  // الـ transaction حتى لا نعتمد على قيمة يرسلها الـ frontend أو الـ webhook.
+  return await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+    const qualifiedCountBefore = await tx.referral.count({
+      where: { affiliateId: affiliate.id, status: "QUALIFIED" },
+    });
 
-  // 5. تنفيذ العملية داخل Transaction لضمان الذرية وعدم حدوث race condition
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // تحديث حالة الـ Referral إلى QUALIFIED
-    await tx.referral.update({
-      where: { id: referral.id },
+    const rateInfo = getReferralRate({
+      referredPlan,
+      previousQualifiedReferrals: qualifiedCountBefore,
+    });
+
+    if (!rateInfo.eligible || rateInfo.finalRate <= 0) {
+      return null;
+    }
+
+    const { rate, baseAmount, rewardAmount } = computeRewardAmount(
+      amountPaid,
+      rateInfo.finalRate,
+    );
+
+    if (rewardAmount <= 0) return null;
+
+    // تحديث الحالة أولًا. لو كان webhook آخر قد سبق وحوّل هذا الـ referral،
+    // لن نُنشئ Reward ثانية.
+    const updatedReferral = await tx.referral.updateMany({
+      where: {
+        id: referral.id,
+        status: "PENDING",
+      },
       data: {
         status: "QUALIFIED",
         qualifiedAt: new Date(),
       },
     });
 
-    // إنشاء الـ ReferralReward
+    if (updatedReferral.count !== 1) {
+      return null;
+    }
+
+    // rate = appliedRate المحفوظ وقت التحويل.
+    // baseRate منفصل حتى تظل النسبة الأصلية قابلة للتدقيق لاحقًا.
     const reward = await tx.referralReward.create({
       data: {
         affiliateId: affiliate.id,
@@ -377,7 +429,8 @@ export async function processConversionReward({
         referredUserId,
         subscriptionId: subscriptionId ?? null,
         paymentInvoiceId: paymentInvoiceId ? String(paymentInvoiceId) : null,
-        rate: new Prisma.Decimal(rate),
+        baseRate: new Prisma.Decimal(rateInfo.baseRate),
+        appliedRate: new Prisma.Decimal(rate),
         baseAmount: new Prisma.Decimal(baseAmount),
         rewardAmount: new Prisma.Decimal(rewardAmount),
         status: "APPROVED",
@@ -407,8 +460,10 @@ export async function processConversionReward({
 
     console.info(`[Referral] ✅ Conversion Reward Created: affiliate=${affiliate.code}, amount=${rewardAmount} EGP, rate=${(rate * 100).toFixed(0)}%, newBalance=${newBalance} EGP`);
 
-    return reward;
-  });
+      return reward;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 }
 
 /**
