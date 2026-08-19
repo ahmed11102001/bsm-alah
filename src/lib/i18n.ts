@@ -32,9 +32,9 @@ export const translations = {
       newCampaign: "حملة جديدة",
 
       kpi: {
-        totalSent: "إجمالي المرسل",
-        delivered: "تم التوصيل",
-        totalReplies: "إجمالي الردود",
+        totalSent: "الرسائل المرسلة",
+        delivered: "إجمالي الرسائل",
+        totalReplies: "الرسائل المستلمة",
         campaigns: "الحملات",
         deliveryRate: (rate: number) => `نسبة وصول ${rate}%`,
         deliveredOf: (rate: number) => `${rate}% من المرسل`,
@@ -671,9 +671,9 @@ export const translations = {
       newCampaign: "New Campaign",
 
       kpi: {
-        totalSent: "Total Sent",
-        delivered: "Delivered",
-        totalReplies: "Total Replies",
+        totalSent: "Messages Sent",
+        delivered: "Total Messages",
+        totalReplies: "Messages Received",
         campaigns: "Campaigns",
         deliveryRate: (rate: number) => `${rate}% delivery rate`,
         deliveredOf: (rate: number) => `${rate}% of sent`,

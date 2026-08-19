@@ -34,8 +34,9 @@ export async function GET(_req: NextRequest) {
       testimonialCount,
     ] = await Promise.all([
       prisma.message.count({ where: { userId: ownerId, direction: MessageDirection.outbound } }),
-      prisma.message.count({ where: { userId: ownerId, status: { in: [MessageStatus.delivered, MessageStatus.read] } } }),
-      prisma.message.count({ where: { userId: ownerId, status: MessageStatus.read } }),
+      // لازم direction: outbound هنا كمان عشان منعدش رسائل واردة ضمن "تم التوصيل" (كانت بتخلي النسبة تتعدى 100%)
+      prisma.message.count({ where: { userId: ownerId, direction: MessageDirection.outbound, status: { in: [MessageStatus.delivered, MessageStatus.read] } } }),
+      prisma.message.count({ where: { userId: ownerId, direction: MessageDirection.outbound, status: MessageStatus.read } }),
       prisma.message.count({ where: { userId: ownerId, direction: MessageDirection.inbound } }),
       prisma.campaign.count({ where: { userId: ownerId } }),
       prisma.contact.count({ where: { userId: ownerId, deletedAt: null } }),

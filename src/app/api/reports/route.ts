@@ -86,16 +86,18 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
         createdAt: range,
       },
     }),
-    // delivered = delivered + read (اللي اتقرأ اتوصّل بالتأكيد)
+    // delivered = delivered + read (اللي اتقرأ اتوصّل بالتأكيد) — لازم direction: outbound
+    // عشان منعدش رسائل واردة ضمن عدد "التوصيل" (كانت هي سبب تجاوز النسبة 100%)
     prisma.message.count({
       where: {
         userId,
+        direction: MessageDirection.outbound,
         status: { in: [MessageStatus.delivered, MessageStatus.read] },
         createdAt: range,
       },
     }),
     prisma.message.count({
-      where: { userId, status: MessageStatus.read, createdAt: range },
+      where: { userId, direction: MessageDirection.outbound, status: MessageStatus.read, createdAt: range },
     }),
     prisma.message.count({
       where: { userId, status: MessageStatus.failed, createdAt: range },
