@@ -60,8 +60,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const [dashData, setDashData] = useState<DashboardData | null>(null);
     const [loadingDash, setLoadingDash] = useState(true);
 
-    const refreshDash = useCallback(async () => {
-        setLoadingDash(true);
+    const refreshDash = useCallback(async (silent = false) => {
+        if (!silent) setLoadingDash(true);
         try {
             const r = await fetch("/api/dashboard");
             if (r.ok) {
@@ -70,11 +70,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
                 signOut({ callbackUrl: "/" });
             }
         } finally {
-            setLoadingDash(false);
+            if (!silent) setLoadingDash(false);
         }
     }, []);
 
     useEffect(() => { refreshDash(); }, [refreshDash]);
+
+    // تحديث دوري صامت في الخلفية كل 20 ثانية، من غير ما يبيّن أي loading spinner
+    // عشان الأرقام (رسائل مستلمة، إلخ) تتحدث لوحدها من غير ما اليوزر يعمل ريفريش
+    useEffect(() => {
+        const id = setInterval(() => { refreshDash(true); }, 20000);
+        return () => clearInterval(id);
+    }, [refreshDash]);
+
+    // تحديث فوري لما التاب يرجع يبقى مفتوح/ظاهر (بعد ما كان في تاب تاني مثلاً)
+    useEffect(() => {
+        const onVisible = () => { if (document.visibilityState === "visible") refreshDash(true); };
+        document.addEventListener("visibilitychange", onVisible);
+        return () => document.removeEventListener("visibilitychange", onVisible);
+    }, [refreshDash]);
 
     // نفس الحدث القديم "refresh-dash" اللي صفحات تانية بتطلقه بعد تعديل بيانات
     useEffect(() => {

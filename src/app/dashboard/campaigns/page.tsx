@@ -474,7 +474,7 @@ export default function Campaigns() {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{total} {tr("totalCampaignsSubtitle", lang)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadCampaigns}
+          <button onClick={() => loadCampaigns()}
             className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
