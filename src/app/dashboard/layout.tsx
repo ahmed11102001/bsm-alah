@@ -831,6 +831,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         <div className="p-4 lg:p-6">
           <DashboardAssistant
             userId={session?.user?.id ?? ""}
+            role={session?.user?.role ?? "OWNER"}
             locale={locale as "ar" | "en"}
             activeSection={activeSection}
             whatsappConnected={hasMetaConnection}
