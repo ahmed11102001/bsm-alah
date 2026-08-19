@@ -10,14 +10,10 @@ import { z } from "zod";
 import {
   TriggerType, ReplyType, UserRole, PlanTier,
 } from "@/types/enums";
+import { normalizePhone } from "@/lib/phone";
 
 // ─── Utility helper ──────────────────────────────────────────────────────────
 
-/**
- * يعمل safeParse ويرجع:
- *   { ok: true,  data }   — لو النتيجة صحيحة
- *   { ok: false, error }  — لو فيه validation error (جاهز يتبعت كـ 400)
- */
 export function parseInput<T>(
   schema: z.ZodSchema<T>,
   input: unknown,
@@ -25,7 +21,6 @@ export function parseInput<T>(
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
 
-  // نجمّع أول خطأ بشكل مقروء — Zod v4 يستخدم .issues
   const issues = (result.error as any).issues ?? [];
   const first = issues[0] ?? { path: [], message: result.error.message };
   const field = first.path?.length ? first.path.join(".") : null;
@@ -50,7 +45,6 @@ const phoneField = z
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-/** POST /api/register */
 export const RegisterSchema = z.object({
   email: emailField,
   password: passwordField,
@@ -59,20 +53,17 @@ export const RegisterSchema = z.object({
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 
-/** POST /api/auth/forgot-password */
 export const ForgotPasswordSchema = z.object({
   email: emailField,
 });
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 
-/** POST /api/auth/reset-password */
 export const ResetPasswordSchema = z.object({
   token: nonEmptyStr,
   password: passwordField,
 });
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
-/** POST /api/auth/join-team */
 export const JoinTeamSchema = z.object({
   email: emailField,
   inviteCode: nonEmptyStr,
@@ -83,20 +74,35 @@ export type JoinTeamInput = z.infer<typeof JoinTeamSchema>;
 
 // ─── Onboarding ──────────────────────────────────────────────────────────────
 
-/** POST /api/onboarding */
+/**
+ * POST /api/onboarding
+ *
+ * Normalize and validate through the shared libphonenumber-js helper.
+ * This supports valid international numbers, while still accepting
+ * Egyptian local numbers such as 01012345678.
+ */
 export const OnboardingSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^2\d{11}$/, "رقم هاتف غير صحيح (يجب أن يبدأ بـ 2 ويكون 12 رقماً)"),
+    .min(1, "رقم الهاتف مطلوب")
+    .superRefine((value, ctx) => {
+      if (!normalizePhone(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "رقم هاتف غير صحيح",
+        });
+      }
+    })
+    .transform((value) => normalizePhone(value)!),
 });
+
 export type OnboardingInput = z.infer<typeof OnboardingSchema>;
 
 // ─── Me / Settings ───────────────────────────────────────────────────────────
 
 const VALID_TONES = ["friendly", "formal", "egyptian"] as const;
 
-/** PATCH /api/me/settings — type: "profile" */
 export const SettingsProfileSchema = z.object({
   type: z.literal("profile"),
   name: nonEmptyStr.max(100, "الاسم طويل جداً"),
@@ -104,7 +110,6 @@ export const SettingsProfileSchema = z.object({
 });
 export type SettingsProfileInput = z.infer<typeof SettingsProfileSchema>;
 
-/** PATCH /api/me/settings — type: "password" */
 export const SettingsPasswordSchema = z.object({
   type: z.literal("password"),
   currentPassword: nonEmptyStr,
@@ -112,14 +117,12 @@ export const SettingsPasswordSchema = z.object({
 });
 export type SettingsPasswordInput = z.infer<typeof SettingsPasswordSchema>;
 
-/** PATCH /api/me/settings — type: "create_password" */
 export const SettingsCreatePasswordSchema = z.object({
   type: z.literal("create_password"),
   newPassword: passwordField,
 });
 export type SettingsCreatePasswordInput = z.infer<typeof SettingsCreatePasswordSchema>;
 
-/** PATCH /api/me/settings — type: "whatsapp" */
 export const SettingsWhatsAppSchema = z.object({
   type: z.literal("whatsapp"),
   accessToken: nonEmptyStr,
@@ -128,7 +131,6 @@ export const SettingsWhatsAppSchema = z.object({
 });
 export type SettingsWhatsAppInput = z.infer<typeof SettingsWhatsAppSchema>;
 
-/** PATCH /api/me/settings — type: "brand" */
 export const SettingsBrandSchema = z.object({
   type: z.literal("brand"),
   brandName: z.string().trim().max(100).optional(),
@@ -140,7 +142,6 @@ export const SettingsBrandSchema = z.object({
 });
 export type SettingsBrandInput = z.infer<typeof SettingsBrandSchema>;
 
-/** PATCH /api/me/settings — discriminated union */
 export const SettingsPatchSchema = z.discriminatedUnion("type", [
   SettingsProfileSchema,
   SettingsPasswordSchema,
@@ -152,7 +153,6 @@ export type SettingsPatchInput = z.infer<typeof SettingsPatchSchema>;
 
 // ─── Team ────────────────────────────────────────────────────────────────────
 
-/** POST /api/team */
 export const TeamInviteSchema = z.object({
   email: emailField,
   name: z.string().trim().max(100).optional().nullable(),
@@ -160,13 +160,11 @@ export const TeamInviteSchema = z.object({
 });
 export type TeamInviteInput = z.infer<typeof TeamInviteSchema>;
 
-/** POST /api/team/resend */
 export const TeamResendInviteSchema = z.object({
   invitationId: nonEmptyStr,
 });
 export type TeamResendInviteInput = z.infer<typeof TeamResendInviteSchema>;
 
-/** POST /api/team/cancel */
 export const TeamCancelInviteSchema = z.object({
   invitationId: nonEmptyStr,
 });
@@ -191,11 +189,14 @@ export const InteractiveMenuConfigSchema = z.object({
 }).superRefine((data, ctx) => {
   const ids = data.buttons.map(button => button.buttonId);
   if (new Set(ids).size !== ids.length) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["buttons"], message: "buttonId values must be unique" });
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["buttons"],
+      message: "buttonId values must be unique"
+    });
   }
 });
 
-/** POST /api/automation */
 export const AutomationCreateSchema = z
   .object({
     name: nonEmptyStr.max(200),
@@ -233,22 +234,23 @@ export const AutomationCreateSchema = z
       });
     }
     if (data.replyType === ReplyType.INTERACTIVE_MENU && !data.interactiveConfig) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["interactiveConfig"], message: "Interactive menu configuration is required" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["interactiveConfig"],
+        message: "Interactive menu configuration is required"
+      });
     }
   });
 export type AutomationCreateInput = z.infer<typeof AutomationCreateSchema>;
 
-/** PATCH /api/automation */
 export const AutomationPatchSchema = z.object({
   id: nonEmptyStr,
-}).passthrough(); // باقي الفيلدز اختياري في التعديل الجزئي
+}).passthrough();
 
-/** DELETE /api/automation */
 export const AutomationDeleteSchema = z.object({ id: nonEmptyStr });
 
 // ─── Admin — Users ───────────────────────────────────────────────────────────
 
-/** POST /api/admin/users */
 export const AdminCreateUserSchema = z.object({
   name: z.string().trim().max(100).optional(),
   email: emailField,
@@ -259,7 +261,6 @@ export type AdminCreateUserInput = z.infer<typeof AdminCreateUserSchema>;
 
 // ─── Admin — Coupons ─────────────────────────────────────────────────────────
 
-/** POST /api/admin/coupons */
 export const AdminCreateCouponSchema = z
   .object({
     prefix: z.string().trim().toUpperCase().max(8).optional().default("SAVE"),
@@ -277,7 +278,6 @@ export type AdminCreateCouponInput = z.infer<typeof AdminCreateCouponSchema>;
 
 // ─── Admin — Articles ────────────────────────────────────────────────────────
 
-/** POST /api/admin/articles */
 export const AdminCreateArticleSchema = z.object({
   title: nonEmptyStr.max(300),
   content: nonEmptyStr,
@@ -290,7 +290,6 @@ export type AdminCreateArticleInput = z.infer<typeof AdminCreateArticleSchema>;
 
 // ─── Admin — Testimonials ────────────────────────────────────────────────────
 
-/** PATCH /api/admin/testimonials */
 export const AdminTestimonialPatchSchema = z.object({
   id: nonEmptyStr,
   action: z.enum(["approve", "reject"]),
@@ -299,7 +298,6 @@ export type AdminTestimonialPatchInput = z.infer<typeof AdminTestimonialPatchSch
 
 // ─── WANI Partner Card ────────────────────────────────────────────────────────
 
-/** محتوى الكارت اللي اليوزر بيصمّمه من /dashboard/wani-partner */
 const LegacyUserWaniPartnerCardSchema = z.object({
   id: z.string().trim().min(1).optional(),
   template: z.number().int().min(1).max(5).optional().default(1),
@@ -317,13 +315,10 @@ export const UserWaniPartnerCardSchema = LegacyUserWaniPartnerCardSchema.extend(
 });
 export type UserWaniPartnerCardInput = z.infer<typeof UserWaniPartnerCardSchema>;
 
-/** PATCH /api/wani-partner/mine — تشغيل/إيقاف من غير إعادة مراجعة */
 export const UserWaniPartnerActiveSchema = z.object({ active: z.boolean() });
 
-/** POST /api/admin/wani-partner — كارت رسمي بيضيفه الأدمن مباشرة (بيتعتمد أوتوماتيك) */
 export const AdminCreateWaniPartnerCardSchema = UserWaniPartnerCardSchema;
 
-/** PATCH /api/admin/wani-partner — قبول/رفض + أي تعديل إداري (ترتيب، تفعيل...) */
 export const AdminWaniPartnerCardPatchSchema = z.object({
   id: nonEmptyStr,
   status: z.enum(["pending", "approved", "rejected"]).optional(),
@@ -340,12 +335,10 @@ export const AdminWaniPartnerCardPatchSchema = z.object({
 });
 export type AdminWaniPartnerCardPatchInput = z.infer<typeof AdminWaniPartnerCardPatchSchema>;
 
-/** DELETE /api/admin/wani-partner و /api/wani-partner/mine */
 export const AdminWaniPartnerCardDeleteSchema = z.object({ id: nonEmptyStr });
 
 // ─── AI Guardrails & Agent ───────────────────────────────────────────────────
 
-/** PUT /api/ai-agent/guardrails */
 export const AIGuardrailSchema = z.object({
   noInventPrices: z.boolean().optional().default(true),
   noInventProducts: z.boolean().optional().default(true),
@@ -358,7 +351,6 @@ export const AIGuardrailSchema = z.object({
 });
 export type AIGuardrailInput = z.infer<typeof AIGuardrailSchema>;
 
-/** Output JSON schema for AI agent response */
 export const AIAgentResponseSchema = z.object({
   reply: z.string().optional().nullable(),
   action: z.enum(["handoff"]).optional().nullable(),
@@ -366,14 +358,12 @@ export const AIAgentResponseSchema = z.object({
   priority: z.enum(["high", "normal"]).optional().nullable(),
   offTopic: z.boolean().optional(),
   product_ids: z.array(z.string()).optional(),
-  // ← جديد: هل الرد ده بيستنى تفاعل من العميل؟ (لنظام Conversation Nudge)
   expectsReply: z.boolean().optional(),
 });
 export type AIAgentResponseOutput = z.infer<typeof AIAgentResponseSchema>;
 
 // ─── Protection Claims & Guarantee Audit ──────────────────────────────────────
 
-/** POST /api/admin/protection-claims — إنشاء Claim جديد */
 export const AdminCreateProtectionClaimSchema = z.object({
   whatsappAccountId: nonEmptyStr,
   banDetectedAt: z.string().datetime().or(z.string().min(1)),
@@ -383,7 +373,6 @@ export const AdminCreateProtectionClaimSchema = z.object({
 });
 export type AdminCreateProtectionClaimInput = z.infer<typeof AdminCreateProtectionClaimSchema>;
 
-/** PATCH /api/admin/protection-claims/[id] — قرار المشرف الإداري */
 export const AdminProtectionClaimDecisionSchema = z.object({
   status: z.enum(["NEEDS_REVIEW", "ELIGIBLE", "NOT_ELIGIBLE", "PENDING_EVIDENCE"]),
   decisionReason: z.string().trim().max(2000).optional(),
@@ -394,7 +383,6 @@ export const AdminProtectionClaimDecisionSchema = z.object({
   confirmOverride: z.boolean().optional(),
 }).refine(
   data => {
-    // سبب القرار إجباري عند الرفض (NOT_ELIGIBLE)
     if (data.status === "NOT_ELIGIBLE" && (!data.decisionReason || data.decisionReason.trim().length === 0)) {
       return false;
     }
@@ -407,20 +395,17 @@ export const AdminProtectionClaimDecisionSchema = z.object({
 );
 export type AdminProtectionClaimDecisionInput = z.infer<typeof AdminProtectionClaimDecisionSchema>;
 
-/** PATCH /api/admin/protection-claims/[id] — Override Refund Amount */
 export const AdminRefundOverrideSchema = z.object({
   overrideRefund: z.number().nonnegative(),
   overrideReason: nonEmptyStr,
 });
 export type AdminRefundOverrideInput = z.infer<typeof AdminRefundOverrideSchema>;
 
-/** PATCH /api/admin/protection-claims/[id] — Update Ban Status */
 export const AdminBanStatusUpdateSchema = z.object({
   banStatus: z.enum(["CUSTOMER_REPORTED", "EVIDENCE_PROVIDED", "VERIFIED", "NOT_VERIFIED"]),
 });
 export type AdminBanStatusUpdateInput = z.infer<typeof AdminBanStatusUpdateSchema>;
 
-/** POST /api/admin/protection-claims/[id]/evidence — Add evidence entry */
 export const AdminAddEvidenceSchema = z.object({
   type: z.enum(["BAN_SCREENSHOT", "META_RESTRICTION", "OPT_IN_PROOF", "NO_EXTERNAL_PROVIDER_DECLARATION", "OTHER"]),
   url: z.string().url().optional(),

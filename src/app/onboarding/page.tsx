@@ -1,37 +1,39 @@
+// src/app/onboarding/page.tsx
+// Google onboarding: accepts valid international WhatsApp numbers.
+
 "use client";
 
-// src/app/onboarding/page.tsx
-// بتظهر بس لليوزر الجديد اللي سجل بـ Google وناقصه رقم الواتساب
-
 import { useState, useEffect, Suspense } from "react";
-import { useSession }  from "next-auth/react";
-import { useRouter, useSearchParams }   from "next/navigation";
-import { motion }      from "framer-motion";
-import { Button }      from "@/components/ui/button";
-import { Input }       from "@/components/ui/input";
-import { Label }       from "@/components/ui/label";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, Phone, MessageCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { normalizePhone } from "@/lib/phone";
 
 function OnboardingInner() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const params = useSearchParams();
 
-  // ── الصفحة اللي اليوزر كان قاصدها قبل ما يدخل onboarding (مثلاً
-  //    /checkout?plan=pro) — بنحترمها بعد ما يخلص بدل ما نوديه /dashboard
-  //    دايمًا ونضيع نية الدفع بتاعته. ────────────────────────────────────────
   const next = params.get("next");
 
   const [phone, setPhone] = useState("");
-  const [busy,  setBusy]  = useState(false);
-  const [err,   setErr]   = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
-  // لو مش محتاج onboarding → روح الوجهة المطلوبة (أو dashboard)
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) { router.replace("/"); return; }
-    if (!session.user.needsOnboarding) router.replace(next || "/dashboard");
+    if (!session) {
+      router.replace("/");
+      return;
+    }
+    if (!session.user.needsOnboarding) {
+      router.replace(next || "/dashboard");
+    }
   }, [session, status, router, next]);
 
   if (status === "loading" || !session?.user.needsOnboarding) {
@@ -45,22 +47,32 @@ function OnboardingInner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
-    const cleaned = phone.replace(/\s|-/g, "");
-    if (!/^2\d{11}$/.test(cleaned)) {
-      setErr("أدخل رقم صحيح بالصيغة الدولية — مثال: 201234567890");
+
+    // Use the project's shared libphonenumber-js normalizer.
+    // This accepts Egyptian local numbers as well as valid international
+    // numbers written with +, 00, or an explicit country code.
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      setErr("أدخل رقم واتساب صحيح بالصيغة الدولية — مثال: +201234567890 أو +966501234567");
       return;
     }
+
     setBusy(true);
     try {
       const r = await fetch("/api/onboarding", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ phone: cleaned }),
+        body: JSON.stringify({ phone: normalizedPhone }),
       });
-      const d = await r.json();
-      if (!r.ok) { setErr(d.error ?? "حدث خطأ"); return; }
 
-      // حدّث الـ session عشان needsOnboarding يبقى false
+      const d = await r.json();
+
+      if (!r.ok) {
+        setErr(d.error ?? "حدث خطأ");
+        return;
+      }
+
       await update({ needsOnboarding: false });
       toast.success("مرحباً بك في وني 🎉");
       router.replace(next || "/dashboard");
@@ -72,59 +84,59 @@ function OnboardingInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4" dir="rtl">
+    <div
+      className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4"
+      dir="rtl"
+    >
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
       >
-        {/* Top bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366]" />
 
         <div className="px-8 py-8">
-          {/* Icon */}
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 rounded-2xl bg-[#25D366] flex items-center justify-center shadow-lg shadow-green-200">
               <MessageCircle className="w-9 h-9 text-white" />
             </div>
           </div>
 
-          {/* Title */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               أهلاً، {session.user.name?.split(" ")[0]} 👋
             </h1>
             <p className="text-sm text-gray-500 leading-relaxed">
-              خطوة أخيرة — أدخل رقم واتساب  الخاص بك
+              خطوة أخيرة — أدخل رقم واتساب الخاص بك
               <br />
               عشان تبدأ ترسل وتستقبل الرسائل
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                رقم الواتساب 
+                رقم الواتساب
               </Label>
+
               <div className="relative">
                 <Phone className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
                 <Input
                   required
                   type="tel"
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="201234567890"
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+201234567890"
                   className="rounded-xl pr-10 h-12 text-sm font-mono"
                   dir="ltr"
                 />
               </div>
+
               <p className="text-xs text-gray-400">
-                الصيغة الدولية بدون + — مثال: 201234567890
+                اكتب الرقم بصيغة دولية، مثال: +201234567890 أو +966501234567
               </p>
             </div>
 
-            {/* Steps indicator */}
             <div className="bg-green-50 rounded-2xl p-4 space-y-2.5">
               {[
                 "إنشاء الحساب ✓",
@@ -132,20 +144,34 @@ function OnboardingInner() {
                 "ربط الواتساب Business API",
               ].map((step, i) => (
                 <div key={i} className="flex items-center gap-2.5 text-sm">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    i === 0 ? "bg-green-500" :
-                    i === 1 ? "bg-[#25D366]" :
-                    "bg-gray-200"
-                  }`}>
-                    {i === 0 && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                    {i === 1 && <span className="w-2 h-2 bg-white rounded-full" />}
-                    {i === 2 && <span className="text-xs text-gray-400 font-bold">3</span>}
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${i === 0
+                        ? "bg-green-500"
+                        : i === 1
+                          ? "bg-[#25D366]"
+                          : "bg-gray-200"
+                      }`}
+                  >
+                    {i === 0 && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                    )}
+                    {i === 1 && (
+                      <span className="w-2 h-2 bg-white rounded-full" />
+                    )}
+                    {i === 2 && (
+                      <span className="text-xs text-gray-400 font-bold">3</span>
+                    )}
                   </div>
-                  <span className={
-                    i === 0 ? "text-green-700 font-medium" :
-                    i === 1 ? "text-[#25D366] font-semibold" :
-                    "text-gray-400"
-                  }>
+
+                  <span
+                    className={
+                      i === 0
+                        ? "text-green-700 font-medium"
+                        : i === 1
+                          ? "text-[#25D366] font-semibold"
+                          : "text-gray-400"
+                    }
+                  >
                     {step}
                   </span>
                 </div>
@@ -163,10 +189,13 @@ function OnboardingInner() {
               disabled={busy}
               className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm gap-2"
             >
-              {busy
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <><ArrowLeft className="w-4 h-4" /> ابدأ الاستخدام</>
-              }
+              {busy ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <ArrowLeft className="w-4 h-4" /> ابدأ الاستخدام
+                </>
+              )}
             </Button>
           </form>
         </div>
@@ -177,11 +206,13 @@ function OnboardingInner() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+        </div>
+      }
+    >
       <OnboardingInner />
     </Suspense>
   );
