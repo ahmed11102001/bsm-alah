@@ -279,8 +279,7 @@ async function team(ownerId: string) {
         AND c."assignedToUserId" IN (${Prisma.join(memberIds)})
       GROUP BY c."assignedToUserId"
     `,
-    // الوارد يُنسب للـOwner فقط لو المحادثة باسمه أو غير مُعيّنة؛
-    // رسائل محادثات الأعضاء لا تتكرر عند الـOwner.
+    // الوارد يُنسب للـOwner دايمًا بغضّ النظر عن التعيين — الأونر شريك في كل الردود.
     prisma.message.count({
       where: {
         userId: ownerId,
@@ -289,10 +288,6 @@ async function team(ownerId: string) {
         contact: {
           userId: ownerId,
           deletedAt: null,
-          OR: [
-            { assignedToUserId: null },
-            { assignedToUserId: ownerId },
-          ],
         },
       },
     }),
