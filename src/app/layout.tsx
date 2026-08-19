@@ -56,8 +56,13 @@ export const metadata: Metadata = {
     canonical: "https://aiwni.com",
   },
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: ["/favicon.svg"],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: ["/favicon.ico"],
     apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
   },
   openGraph: {
@@ -95,7 +100,7 @@ const jsonLd = [
     name: "Wani",
     alternateName: "وني",
     url: "https://aiwni.com",
-    logo: "https://aiwni.com/favicon.svg",
+    logo: "https://aiwni.com/icon-512.png",
     contactPoint: {
       "@type": "ContactPoint",
       telephone: "+20-1281657907",
