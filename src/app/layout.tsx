@@ -3,7 +3,8 @@ import { Cairo, Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
-import MetaPixel      from "@/components/metapixel";
+import MetaPixel from "@/components/metapixel";
+import { Analytics } from "@vercel/analytics/next";
 
 const cairo = Cairo({
   subsets: ["arabic"],
@@ -157,6 +158,7 @@ export default async function RootLayout({
       </head>
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
         <MetaPixel nonce={nonce} />
+        <Analytics />
         <ClientProvider>
           {children}
         </ClientProvider>
