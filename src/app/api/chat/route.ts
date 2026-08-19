@@ -9,6 +9,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { decryptToken } from "@/lib/crypto";
 import { requirePermission } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -276,6 +277,23 @@ export async function POST(req: NextRequest) {
 
 // ─── PATCH /api/chat ───────────────────────────────────────────────────────────
 //   { action: "archive" | "unarchive" | "delete" | "addToAudience", contactId, audienceId? }
+//
+// كل action هنا له تأثير مختلف على الحساب، فمينفعش نتحقق من صلاحية واحدة
+// عامة زي "فيه Session بس". عضو CHAT_ONLY (رد المحادثات فقط) لازم يقدر يرد
+// وينظم شات بتاعه بس (archive/unarchive/react/resumeAi)، ومينفعش يوصل لأي
+// حاجة بتأثر على بيانات العميل (delete/addToAudience) أو خدمات مدفوعة
+// (toggleVoiceAgent/toggleTextAi) من غير الصلاحية الصريحة الخاصة بيها.
+const PATCH_ACTION_PERMISSIONS: Record<string, Permission> = {
+  archive: "CHAT_SEND",
+  unarchive: "CHAT_SEND",
+  react: "CHAT_SEND",
+  resumeAi: "CHAT_SEND",
+  delete: "CONTACTS_MANAGE",
+  addToAudience: "CONTACTS_MANAGE",
+  toggleVoiceAgent: "AI_AGENT_MANAGE",
+  toggleTextAi: "AI_AGENT_MANAGE",
+};
+
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
@@ -283,6 +301,11 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json();
   const { action, contactId, audienceId, messageId, emoji } = body;
+
+  const requiredPermission = PATCH_ACTION_PERMISSIONS[action];
+  if (!requiredPermission) return NextResponse.json({ error: "action غير معروف" }, { status: 400 });
+  const denied = requirePermission(session, requiredPermission);
+  if (denied) return denied;
 
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
 

@@ -12,6 +12,7 @@ import {
   ArrowLeft, ChevronLeft, Bot,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 import { useLanguage } from "@/lib/language-context";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -30,9 +31,15 @@ import { TimelineView } from "./_components/timelineview";
 
 export default function ChatPage() {
   const { resolvedTheme } = useTheme();
+  const { data: authSession } = useSession();
   const { locale, dir } = useLanguage();
   const dark = resolvedTheme === "dark";
   const lang: Lang = locale === "en" ? "en" : "ar";
+
+  // عضو CHAT_ONLY (رد المحادثات فقط) — الـBackend بيمنعه من delete/addToAudience/
+  // toggleVoiceAgent/toggleTextAi (PATCH /api/chat)، فمينفعش الـUI يعرضله
+  // أزرار هيضغط عليها وتفشل. نفس الحدود بالظبط بتاعة PATCH_ACTION_PERMISSIONS.
+  const isChatOnly = authSession?.user?.role === "CHAT_ONLY";
 
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -726,26 +733,30 @@ export default function ChatPage() {
               </div>
 
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => toggleTextAi(selected.contact.id, !selected.textAiEnabled)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
-                    ${selected.textAiEnabled !== false
-                      ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]"
-                      : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
-                >
-                  <Bot className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{selected.textAiEnabled !== false ? t[lang].aiOn : t[lang].ai}</span>
-                </button>
-                <button
-                  onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
-                    ${selected.voiceAgentEnabled
-                      ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
-                      : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
-                >
-                  <Mic2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}</span>
-                </button>
+                {!isChatOnly && (
+                  <>
+                    <button
+                      onClick={() => toggleTextAi(selected.contact.id, !selected.textAiEnabled)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
+                        ${selected.textAiEnabled !== false
+                          ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]"
+                          : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{selected.textAiEnabled !== false ? t[lang].aiOn : t[lang].ai}</span>
+                    </button>
+                    <button
+                      onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
+                        ${selected.voiceAgentEnabled
+                          ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                          : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                    >
+                      <Mic2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}</span>
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => { setSelected(null); setMessages([]); setMobileShowChat(false); }}
                   className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
@@ -759,30 +770,36 @@ export default function ChatPage() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger className="gap-2 text-sm">
-                        <Plus className="w-4 h-4" /> {t[lang].addToList}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-48">
-                        {audiences.length === 0
-                          ? <div className="text-xs text-gray-400 px-3 py-2">{t[lang].noAudiences}</div>
-                          : audiences.map(a => (
-                            <DropdownMenuItem key={a.id} className="text-sm gap-2 cursor-pointer"
-                              onClick={() => addToAudience(selected.contact.id, a.id)}>
-                              <Users className="w-3.5 h-3.5" /> {a.name}
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuSeparator />
+                    {!isChatOnly && (
+                      <>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="gap-2 text-sm">
+                            <Plus className="w-4 h-4" /> {t[lang].addToList}
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-48">
+                            {audiences.length === 0
+                              ? <div className="text-xs text-gray-400 px-3 py-2">{t[lang].noAudiences}</div>
+                              : audiences.map(a => (
+                                <DropdownMenuItem key={a.id} className="text-sm gap-2 cursor-pointer"
+                                  onClick={() => addToAudience(selected.contact.id, a.id)}>
+                                  <Users className="w-3.5 h-3.5" /> {a.name}
+                                </DropdownMenuItem>
+                              ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem className="gap-2 text-sm cursor-pointer"
                       onClick={() => setConversationArchived(selected.contact.id, !selected.isArchived)}>
                       <Archive className="w-4 h-4" /> {selected.isArchived ? t[lang].unarchiveConv : t[lang].archiveConv}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
-                      onClick={() => deleteConversation(selected.contact.id)}>
-                      <Trash2 className="w-4 h-4" /> {t[lang].deleteConv}
-                    </DropdownMenuItem>
+                    {!isChatOnly && (
+                      <DropdownMenuItem className="gap-2 text-sm text-red-600 cursor-pointer focus:text-red-600"
+                        onClick={() => deleteConversation(selected.contact.id)}>
+                        <Trash2 className="w-4 h-4" /> {t[lang].deleteConv}
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -812,8 +829,8 @@ export default function ChatPage() {
                       {lang === "ar" ? "محادثة عدا عليها 24 ساعة بدون رد" : "Conversation expired (24h+ with no reply)"}
                     </p>
                     <p className="opacity-90 mt-0.5">
-                      {lang === "ar" 
-                        ? "لو بعت رسالة عادية دلوقتي الواتساب هيحظرك. ابعت قالب من علامة الدبوس (📎) ف الشات، اختار قوالب، وابعت القالب المناسب." 
+                      {lang === "ar"
+                        ? "لو بعت رسالة عادية دلوقتي الواتساب هيحظرك. ابعت قالب من علامة الدبوس (📎) ف الشات، اختار قوالب، وابعت القالب المناسب."
                         : "Sending a regular message will get you blocked. Tap the attachment icon (📎), choose templates, and send an approved template."}
                     </p>
                   </div>
@@ -1062,37 +1079,37 @@ export default function ChatPage() {
             </div>
           </div>
         )}
-      {forwarding && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setForwarding(null)}>
-          <div className={`${sidebarBg} rounded-2xl shadow-2xl w-full max-w-md p-4`} onClick={e => e.stopPropagation()} dir={dir}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
-              <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
+        {forwarding && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setForwarding(null)}>
+            <div className={`${sidebarBg} rounded-2xl shadow-2xl w-full max-w-md p-4`} onClick={e => e.stopPropagation()} dir={dir}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
+                <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
+              </div>
+              <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
+              {/* توضيح نافذة 24 ساعة */}
+              <div className={`rounded-lg px-3 py-2 mb-2 text-xs flex items-center gap-2 ${dark ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`}>
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{lang === "ar" ? "المحادثات داخل نافذة 24 ساعة فقط" : "Only conversations within the 24h window"}</span>
+              </div>
+              <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
+              <div className="max-h-56 overflow-y-auto space-y-1">
+                {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).length === 0 ? (
+                  <div className={`text-center py-6 text-sm ${textSub}`}>
+                    {lang === "ar" ? "لا توجد محادثات نشطة داخل نافذة 24 ساعة" : "No active conversations within the 24h window"}
+                  </div>
+                ) : (
+                  forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
+                    <button key={c.contact.id} onClick={() => setForwardTarget(c)} className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3]" : hoverRow}`}>
+                      <span className={textMain}>{c.contact.name || c.contact.phone}</span><span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+              <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-[#25d366] text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}</button>
             </div>
-            <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
-            {/* توضيح نافذة 24 ساعة */}
-            <div className={`rounded-lg px-3 py-2 mb-2 text-xs flex items-center gap-2 ${dark ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`}>
-              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{lang === "ar" ? "المحادثات داخل نافذة 24 ساعة فقط" : "Only conversations within the 24h window"}</span>
-            </div>
-            <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
-            <div className="max-h-56 overflow-y-auto space-y-1">
-              {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).length === 0 ? (
-                <div className={`text-center py-6 text-sm ${textSub}`}>
-                  {lang === "ar" ? "لا توجد محادثات نشطة داخل نافذة 24 ساعة" : "No active conversations within the 24h window"}
-                </div>
-              ) : (
-                forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
-                  <button key={c.contact.id} onClick={() => setForwardTarget(c)} className={`w-full text-left rounded-lg px-3 py-2 flex items-center justify-between ${forwardTarget?.contact.id === c.contact.id ? "bg-[#d9fdd3]" : hoverRow}`}>
-                    <span className={textMain}>{c.contact.name || c.contact.phone}</span><span className={`text-xs ${textSub}`}>{c.contact.phone}</span>
-                  </button>
-                ))
-              )}
-            </div>
-            <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-[#25d366] text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}</button>
           </div>
-        </div>
-      )}
+        )}
       </main>
     </div>
   );

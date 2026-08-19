@@ -15,4 +15,17 @@ describe("CHAT_ONLY access boundary", () => {
     expect(hasPermission("CHAT_ONLY", "API_KEYS_MANAGE")).toBe(false);
     expect(hasPermission("CHAT_ONLY", "WHATSAPP_SETTINGS")).toBe(false);
   });
+
+  // PATCH /api/chat destructive/paid actions must stay blocked for CHAT_ONLY —
+  // regression test for the "Reply Only" agent being able to delete a
+  // conversation, add it to a marketing audience, or toggle the paid AI
+  // agents via PATCH /api/chat despite the role's name.
+  it("does not allow the destructive/paid PATCH /api/chat actions", () => {
+    expect(hasPermission("CHAT_ONLY", "CONTACTS_MANAGE")).toBe(false); // delete, addToAudience
+    expect(hasPermission("CHAT_ONLY", "AI_AGENT_MANAGE")).toBe(false); // toggleVoiceAgent, toggleTextAi
+  });
+
+  it("allows the day-to-day conversation actions (archive/unarchive/react/resumeAi)", () => {
+    expect(hasPermission("CHAT_ONLY", "CHAT_SEND")).toBe(true);
+  });
 });
