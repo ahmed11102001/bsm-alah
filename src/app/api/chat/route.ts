@@ -266,7 +266,7 @@ export async function POST(req: NextRequest) {
     if (!contactId || !(await prisma.contact.findFirst({ where: contactScope(session, contactId), select: { id: true } }))) {
       return NextResponse.json({ error: "المحادثة غير متاحة" }, { status: 404 });
     }
-    return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId });
+    return sendMessage(userId, { contactId, content, type, templateName, replyToMessageId }, session.user.id);
   }
 
   if (action === "forward") return forwardMessage(userId, body.sourceMessageId, body.targetContactId, session);
@@ -432,7 +432,8 @@ async function sendMessage(
   userId: string,
   {
     contactId, content, type = "text", templateName, replyToMessageId,
-  }: { contactId: string; content?: string; type?: string; templateName?: string; replyToMessageId?: string }
+  }: { contactId: string; content?: string; type?: string; templateName?: string; replyToMessageId?: string },
+  senderUserId?: string
 ) {
   if (!contactId) return NextResponse.json({ error: "contactId مطلوب" }, { status: 400 });
   if (type === "text" && !content?.trim())
@@ -453,7 +454,7 @@ async function sendMessage(
   const mediaKind = isMedia ? content!.split(":", 1)[0] : "";
   const msgType: MessageType = isTemplate ? MessageType.template
     : isMedia && Object.values(MessageType).includes(mediaKind as MessageType) ? mediaKind as MessageType
-    : MessageType.text;
+      : MessageType.text;
   const msgContent = content ?? `[قالب] ${templateName}`;
 
   // ── احفظ الرسالة pending + ضيفها في الـ Queue في transaction واحدة ──────
@@ -465,6 +466,7 @@ async function sendMessage(
         type: msgType,
         direction: MessageDirection.outbound,
         status: MessageStatus.pending,
+        senderUserId: senderUserId ?? userId,
         ...(replyTo ? { replyToMessageId: replyTo.id } : {}),
       },
     });
@@ -517,23 +519,25 @@ async function sendMessage(
 async function forwardMessage(userId: string, sourceMessageId?: string, targetContactId?: string, session?: any) {
   if (!sourceMessageId || !targetContactId) return NextResponse.json({ error: "sourceMessageId و targetContactId مطلوبان" }, { status: 400 });
   const [source, target] = await Promise.all([
-    prisma.message.findFirst({ where: {
-      id: sourceMessageId, userId, deletedAt: null,
-      ...(session?.user.role === "CHAT_ONLY" ? { contact: { assignedToUserId: session.user.id, userId } } : {}),
-    } }),
+    prisma.message.findFirst({
+      where: {
+        id: sourceMessageId, userId, deletedAt: null,
+        ...(session?.user.role === "CHAT_ONLY" ? { contact: { assignedToUserId: session.user.id, userId } } : {}),
+      }
+    }),
     prisma.contact.findFirst({ where: session ? contactScope(session, targetContactId!) : { id: targetContactId, userId, deletedAt: null } }),
   ]);
   if (!source || !target) return NextResponse.json({ error: "الرسالة أو جهة الاتصال غير موجودة" }, { status: 404 });
   if (source.type === MessageType.template || source.type === MessageType.sticker) {
     return NextResponse.json({ error: "لا يمكن إعادة توجيه هذا النوع من الرسائل" }, { status: 400 });
   }
-  if (source.type === MessageType.text) return sendMessage(userId, { contactId: target.id, content: source.content ?? "", type: "text" });
+  if (source.type === MessageType.text) return sendMessage(userId, { contactId: target.id, content: source.content ?? "", type: "text" }, session?.user.id);
   const queue = await prisma.messageQueue.findFirst({
     where: { userId, existingMessageId: source.id, messageType: "media", status: { in: ["pending", "sent"] } },
     orderBy: { createdAt: "desc" }, select: { content: true },
   });
   if (!queue?.content) return NextResponse.json({ error: "معرّف الوسائط غير متاح لإعادة التوجيه" }, { status: 400 });
-  return sendMessage(userId, { contactId: target.id, content: queue.content, type: "media" });
+  return sendMessage(userId, { contactId: target.id, content: queue.content, type: "media" }, session?.user.id);
 }
 
 // ─── Send media (file upload) ─────────────────────────────────────────────────
@@ -627,6 +631,7 @@ async function sendMedia(userId: string, req: NextRequest, session: any) {
           type: msgType,
           direction: MessageDirection.outbound,
           status: MessageStatus.pending,
+          senderUserId: session?.user?.id ?? userId,
           // لو الـ Cloudinary upload نجح → حفظ الـ URL، غيره → حفظ الـ Meta ID كـ fallback
           mediaUrl: cloudinaryUrl ?? mediaId,
         },
