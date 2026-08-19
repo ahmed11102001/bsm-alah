@@ -712,4 +712,4 @@ export default function TeamPage() {
       )}
     </div>
   );
-}
+} 
