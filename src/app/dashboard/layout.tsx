@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/tabs";
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
-  Lock, Wifi, Sun, Moon, Monitor, Languages, BarChart3, Copy, Eye, EyeOff,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Handshake, Sparkles,
+  Lock, Sun, Moon, Monitor, Languages,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
@@ -102,14 +102,6 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   useEffect(() => {
     setHasPassword(data?.user.hasPassword ?? false);
   }, [data?.user.hasPassword]);
-  const [wAccessToken, setWAccessToken] = useState("");
-  const [wPhoneNumberId, setWPhoneNumberId] = useState("");
-  const [wWabaId, setWWabaId] = useState("");
-  const [credentialsUnlocked, setCredentialsUnlocked] = useState(false);
-  const [credentialPassword, setCredentialPassword] = useState("");
-  const [showCredentialPassword, setShowCredentialPassword] = useState(false);
-  const [revealingCredentials, setRevealingCredentials] = useState(false);
-  const [credentialCopyRequested, setCredentialCopyRequested] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -118,63 +110,8 @@ function SettingsModal({ open, onClose, data, onSaved }: {
     if (data) {
       setName(data.user.name ?? "");
       setPhone(data.user.phone ?? "");
-      setWAccessToken("");
-      setWPhoneNumberId(data.whatsapp?.phoneNumberId ?? "");
-      setWWabaId(data.whatsapp?.wabaId ?? "");
-      setCredentialsUnlocked(false);
-      setCredentialPassword("");
-      setCredentialCopyRequested(false);
     }
   }, [data]);
-
-  useEffect(() => {
-    if (!open) {
-      setWAccessToken("");
-      setCredentialsUnlocked(false);
-      setCredentialPassword("");
-      setShowCredentialPassword(false);
-      setCredentialCopyRequested(false);
-    }
-  }, [open]);
-
-  const revealWhatsappCredentials = async () => {
-    if (!credentialPassword || revealingCredentials) return;
-    setRevealingCredentials(true);
-    try {
-      const r = await fetch("/api/me/settings/whatsapp-credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: credentialPassword }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setWAccessToken(d.accessToken ?? "");
-      setWPhoneNumberId(d.phoneNumberId ?? "");
-      setWWabaId(d.wabaId ?? "");
-      setCredentialsUnlocked(true);
-      setCredentialPassword("");
-      setShowCredentialPassword(false);
-      if (credentialCopyRequested && d.accessToken) {
-        await navigator.clipboard.writeText(d.accessToken);
-        toast.success(locale === "ar" ? "تم نسخ Access Token" : "Access Token copied");
-      }
-      setCredentialCopyRequested(false);
-    } catch (error: any) {
-      toast.error(error.message ?? (locale === "ar" ? "فشل التحقق" : "Verification failed"));
-    } finally {
-      setRevealingCredentials(false);
-    }
-  };
-
-  const copyWhatsappValue = async (value: string, label: string, secret = false) => {
-    if (secret && !credentialsUnlocked) {
-      setCredentialCopyRequested(true);
-      setShowCredentialPassword(true);
-      return;
-    }
-    await navigator.clipboard.writeText(value);
-    toast.success(locale === "ar" ? `تم نسخ ${label}` : `${label} copied`);
-  };
 
   const save = async (type: string, payload: object) => {
     setSaving(true);
@@ -218,7 +155,6 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   };
 
   if (!data) return null;
-  const isOwner = !((data.user as any).parentId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -234,7 +170,6 @@ function SettingsModal({ open, onClose, data, onSaved }: {
           <TabsList className="w-full mb-4 h-auto min-h-10 gap-1 overflow-x-auto justify-start">
             <TabsTrigger value="profile" className="flex-1 min-w-[7rem] text-xs">{s.tabs.profile}</TabsTrigger>
             <TabsTrigger value="password" className="flex-1 min-w-[7rem] text-xs">{s.tabs.password}</TabsTrigger>
-            {isOwner && <TabsTrigger value="whatsapp" className="flex-1 min-w-[7rem] text-xs">{s.tabs.whatsapp}</TabsTrigger>}
           </TabsList>
 
           {/* ── Profile ── */}
@@ -365,75 +300,6 @@ function SettingsModal({ open, onClose, data, onSaved }: {
             </Button>
           </TabsContent>
 
-          {/* ── WhatsApp ── */}
-          {isOwner && (
-            <TabsContent value="whatsapp" className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300">
-                <Wifi className="w-4 h-4 inline ml-1" />
-                {s.whatsapp.hint}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">{s.whatsapp.accessToken}</Label>
-                <div className="flex gap-2">
-                  <Input dir="ltr" type={credentialsUnlocked ? "text" : "password"}
-                    value={credentialsUnlocked ? wAccessToken : "••••••••••••••••••••"}
-                    readOnly placeholder="EAAxxxxxx..." className="text-sm rounded-xl font-mono flex-1" />
-                  <Button type="button" variant="outline" size="icon" title={credentialsUnlocked ? "إخفاء التوكن" : "عرض التوكن"}
-                    onClick={() => {
-                      if (credentialsUnlocked) { setCredentialsUnlocked(false); setWAccessToken(""); }
-                      else setShowCredentialPassword(true);
-                    }}>
-                    {credentialsUnlocked ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                  <Button type="button" variant="outline" size="icon" title="نسخ Access Token"
-                    onClick={() => copyWhatsappValue(wAccessToken, "Access Token", true)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                {showCredentialPassword && !credentialsUnlocked && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-3 space-y-2">
-                    <p className="text-xs text-amber-700 dark:text-amber-300">أدخل كلمة المرور لعرض أو نسخ Access Token.</p>
-                    <div className="flex gap-2">
-                      <Input type="password" value={credentialPassword} autoFocus
-                        onChange={e => setCredentialPassword(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") revealWhatsappCredentials(); }}
-                        placeholder="كلمة المرور" className="text-sm rounded-xl flex-1" />
-                      <Button type="button" onClick={revealWhatsappCredentials}
-                        disabled={revealingCredentials || !credentialPassword}
-                        className="bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
-                        {revealingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">{s.whatsapp.phoneNumberId}</Label>
-                <div className="flex gap-2">
-                  <Input dir="ltr" value={wPhoneNumberId} readOnly disabled
-                    placeholder="يظهر تلقائيًا بعد الربط" className="text-sm rounded-xl font-mono flex-1" />
-                  <Button type="button" variant="outline" size="icon" title="نسخ Phone Number ID"
-                    disabled={!wPhoneNumberId} onClick={() => copyWhatsappValue(wPhoneNumberId, "Phone Number ID")}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">{s.whatsapp.wabaId}</Label>
-                <div className="flex gap-2">
-                  <Input dir="ltr" value={wWabaId} readOnly disabled
-                    placeholder="يظهر تلقائيًا بعد الربط" className="text-sm rounded-xl font-mono flex-1" />
-                  <Button type="button" variant="outline" size="icon" title="نسخ WABA ID"
-                    disabled={!wWabaId} onClick={() => copyWhatsappValue(wWabaId, "WABA ID")}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-3 text-xs text-gray-500 dark:text-gray-400">
-                بيانات الربط تتم قراءتها تلقائيًا من Meta ولا يمكن تعديلها من هنا.
-              </div>
-            </TabsContent>
-          )}
         </Tabs>
       </DialogContent>
     </Dialog>
@@ -775,33 +641,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/usage"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <BarChart3 className="w-4 h-4 flex-shrink-0" />
-                <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/strategies"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Sparkles className="w-4 h-4 flex-shrink-0 text-amber-500" />
-                <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setAccountPanelOpen(false); router.push("/dashboard/wani-partner"); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Handshake className="w-4 h-4 flex-shrink-0 text-emerald-500" />
-                <span>WANI Partner</span>
-              </button>
-
               <LanguageToggle />
               <ThemeToggle />
 
@@ -918,34 +757,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   <Settings className="w-4 h-4" />
                   <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
                 </button>
-                {session?.user?.role !== "CHAT_ONLY" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { router.push("/dashboard/usage"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>{locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { router.push("/strategies"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                    >
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>{locale === "ar" ? "الاستراتيجيات" : "Strategies"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { router.push("/dashboard/wani-partner"); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-                    >
-                      <Handshake className="w-4 h-4 text-emerald-500" />
-                      <span>WANI Partner</span>
-                    </button>
-                  </>
-                )}
                 <LanguageToggle />
                 <ThemeToggle />
                 <button
@@ -1020,7 +831,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         <div className="p-4 lg:p-6">
           <DashboardAssistant
             userId={session?.user?.id ?? ""}
-            role={session?.user?.role ?? "OWNER"}
             locale={locale as "ar" | "en"}
             activeSection={activeSection}
             whatsappConnected={hasMetaConnection}

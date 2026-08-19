@@ -4,16 +4,13 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { decryptToken } from "@/lib/crypto";
+import { requirePermission } from "@/lib/permissions";
 
 /** Reveal WhatsApp credentials only after re-authenticating with the account password. */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  }
-  if (session.user.role !== "OWNER") {
-    return NextResponse.json({ error: "فقط المالك يمكنه عرض بيانات ربط واتساب" }, { status: 403 });
-  }
+  const denied = requirePermission(session, "WHATSAPP_SETTINGS");
+  if (denied) return denied;
 
   const userId = session.user.id as string;
   const ownerId = ((session.user as any).parentId as string | null) ?? userId;

@@ -16,16 +16,19 @@ export async function GET() {
 
   const userId  = session.user.id as string;
   const ownerId = (session.user as any).parentId ?? userId;
+  const isOwner = !(session.user as any).parentId;
 
   const [user, whatsapp, agent] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
       select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true },
     }),
-    prisma.whatsAppAccount.findUnique({
-      where:  { userId: ownerId },
-      select: { phoneNumberId: true, wabaId: true },
-    }),
+    isOwner
+      ? prisma.whatsAppAccount.findUnique({
+          where:  { userId: ownerId },
+          select: { phoneNumberId: true, wabaId: true },
+        })
+      : Promise.resolve(null),
     prisma.aIAgent.findUnique({
       where:  { userId: ownerId },
       select: {
@@ -54,12 +57,7 @@ export async function GET() {
     hasPassword: !!user.password,
   } : null;
 
-  return NextResponse.json({
-    user: userResponse,
-    // تفاصيل ربط واتساب لا تُرسل لأي Team Member.
-    whatsapp: session.user.role === "OWNER" ? whatsapp : null,
-    brand,
-  });
+  return NextResponse.json({ user: userResponse, whatsapp, brand });
 }
 
 // PATCH /api/me/settings
@@ -70,6 +68,7 @@ export async function PATCH(req: NextRequest) {
 
   const userId  = session.user.id as string;
   const ownerId = (session.user as any).parentId ?? userId;
+  const isOwner = !(session.user as any).parentId;
 
   const parsed = parseInput(SettingsPatchSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -134,7 +133,7 @@ export async function PATCH(req: NextRequest) {
 
   // WhatsApp
   if (body.type === "whatsapp") {
-    if (session.user.role !== "OWNER")
+    if ((session.user as any).parentId)
       return NextResponse.json({ error: "فقط المالك يمكنه تعديل إعدادات واتساب" }, { status: 403 });
 
     const { accessToken, phoneNumberId, wabaId } = body;
