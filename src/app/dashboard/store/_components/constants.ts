@@ -82,6 +82,12 @@ export const TX = {
     noStore: { ar: "لم يتم ربط أي متجر بعد", en: "No store connected yet" },
     noStoreSub: { ar: "اذهب إلى صفحة التكاملات لربط متجر Shopify أو EasyOrders أو WooCommerce", en: "Go to Integrations page to connect Shopify, EasyOrders, or WooCommerce" },
     connected: { ar: "متصل", en: "Connected" },
+    disconnected: { ar: "غير متصل", en: "Disconnected" },
+    disconnectBtn: { ar: "فصل الاتصال", en: "Disconnect" },
+    disconnecting: { ar: "جاري فصل الاتصال...", en: "Disconnecting..." },
+    disconnectConfirm: { ar: "هيتوقف سحب الطلبات والأتمتة المرتبطة بالمتجر ده، متأكد إنك عايز تفصل الاتصال؟", en: "This will stop order syncing and automations for this store. Disconnect anyway?" },
+    disconnectSuccess: { ar: "تم فصل الاتصال بالمتجر", en: "Store disconnected" },
+    disconnectError: { ar: "فشل فصل الاتصال", en: "Failed to disconnect" },
     storeFallback: { ar: "المتجر", en: "Store" },
 };
 

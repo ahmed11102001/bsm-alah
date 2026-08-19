@@ -15,6 +15,8 @@ import {
   XCircle,
   Clock,
   MailCheck,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
@@ -97,12 +99,20 @@ function MemberCard({
   canDelete,
   onDelete,
   showDetails,
+  canPromote,
+  canDemote,
+  changingRole,
+  onChangeRole,
 }: {
   member: TeamMember;
   isSelf: boolean;
   canDelete: boolean;
   onDelete: (id: string) => void;
   showDetails: boolean;
+  canPromote: boolean;
+  canDemote: boolean;
+  changingRole: boolean;
+  onChangeRole: (id: string, newRole: "FULL_ACCESS" | "CHAT_ONLY") => void;
 }) {
   const { t, locale } = useLanguage();
   const tm = t.team;
@@ -174,6 +184,28 @@ function MemberCard({
           </span>
         )}
       </div>
+
+      {(canPromote || canDemote) && (
+        <button
+          onClick={() => onChangeRole(member.id, canPromote ? "FULL_ACCESS" : "CHAT_ONLY")}
+          disabled={changingRole}
+          title={canPromote ? tm.promoteTitle : tm.demoteTitle}
+          className={`w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            canPromote
+              ? "text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300"
+              : "text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300"
+          }`}
+        >
+          {changingRole ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : canPromote ? (
+            <ArrowUpCircle className="w-3.5 h-3.5" />
+          ) : (
+            <ArrowDownCircle className="w-3.5 h-3.5" />
+          )}
+          {canPromote ? tm.promoteBtn : tm.demoteBtn}
+        </button>
+      )}
 
       {showDetails &&
         member.conversationCount !== undefined &&
@@ -317,6 +349,7 @@ export default function TeamPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
 
   const currentRole = session?.user?.role;
   const isOwner = currentRole === "OWNER";
@@ -501,6 +534,38 @@ export default function TeamPage() {
     }
   };
 
+  const changeMemberRole = async (id: string, newRole: "FULL_ACCESS" | "CHAT_ONLY") => {
+    const isPromote = newRole === "FULL_ACCESS";
+    const confirmMsg = isPromote ? tm.promoteConfirm : tm.demoteConfirm;
+    if (!confirm(confirmMsg)) return;
+
+    setChangingRoleId(id);
+
+    try {
+      const res = await fetch("/api/team", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, role: newRole }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || (isPromote ? tm.promoteError : tm.demoteError));
+        return;
+      }
+
+      setMembers((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, role: newRole } : m))
+      );
+      toast.success(isPromote ? tm.promoteSuccess : tm.demoteSuccess);
+    } catch {
+      toast.error(isPromote ? tm.promoteError : tm.demoteError);
+    } finally {
+      setChangingRoleId(null);
+    }
+  };
+
   const deleteMember = async (id: string) => {
     if (!confirm(tm.deleteConfirm)) return;
 
@@ -668,24 +733,37 @@ export default function TeamPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {members.map((member) => (
-                  <MemberCard
-                    key={member.id}
-                    member={member}
-                    isSelf={member.id === session?.user?.id}
-                    canDelete={
-                      isOwner &&
-                      member.role !== "OWNER" &&
-                      member.id !== session?.user?.id
-                    }
-                    onDelete={deleteMember}
-                    showDetails={
-                      currentRole === "OWNER" ||
-                      currentRole === "FULL_ACCESS" ||
-                      member.id === session?.user?.id
-                    }
-                  />
-                ))}
+                {members.map((member) => {
+                  const isMemberSelf = member.id === session?.user?.id;
+                  // Any Owner or Admin can promote a Chat-only agent to Admin.
+                  const canPromote =
+                    member.role === "CHAT_ONLY" &&
+                    (isOwner || currentRole === "FULL_ACCESS") &&
+                    !isMemberSelf;
+                  // Only the Owner can demote an Admin back to Chat-only —
+                  // an Admin can never demote another Admin (or themselves).
+                  const canDemote =
+                    member.role === "FULL_ACCESS" && isOwner && !isMemberSelf;
+
+                  return (
+                    <MemberCard
+                      key={member.id}
+                      member={member}
+                      isSelf={isMemberSelf}
+                      canDelete={isOwner && member.role !== "OWNER" && !isMemberSelf}
+                      onDelete={deleteMember}
+                      showDetails={
+                        currentRole === "OWNER" ||
+                        currentRole === "FULL_ACCESS" ||
+                        isMemberSelf
+                      }
+                      canPromote={canPromote}
+                      canDemote={canDemote}
+                      changingRole={changingRoleId === member.id}
+                      onChangeRole={changeMemberRole}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

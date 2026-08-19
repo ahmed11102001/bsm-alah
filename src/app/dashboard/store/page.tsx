@@ -4,7 +4,7 @@
 // ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
 
 import { useCallback, useEffect, useState } from "react";
-import { ShoppingBag, Zap, Globe, Loader2 } from "lucide-react";
+import { ShoppingBag, Zap, Globe, Loader2, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
@@ -19,12 +19,19 @@ interface StoreProps {
   onOpenChat?: (phone: string) => void;
 }
 
+const DISCONNECT_ENDPOINT: Record<"shopify" | "easyorders" | "woocommerce", string> = {
+  shopify: "/api/shopify/install",
+  easyorders: "/api/easy-orders/sync",
+  woocommerce: "/api/woocommerce/connect",
+};
+
 export default function Store({ onOpenChat }: StoreProps) {
   const { locale } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
   const [storeData, setStoreData] = useState<StoreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const loadStore = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -54,6 +61,33 @@ export default function Store({ onOpenChat }: StoreProps) {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [loadStore]);
+
+  const handleDisconnect = async (source: "shopify" | "easyorders" | "woocommerce") => {
+    if (!confirm(tr("disconnectConfirm", lang))) return;
+
+    setDisconnecting(true);
+    try {
+      const res = await fetch(DISCONNECT_ENDPOINT[source], { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(data.error || tr("disconnectError", lang));
+        return;
+      }
+
+      toast.success(tr("disconnectSuccess", lang));
+      setStoreData((prev) => (prev ? { ...prev, [source]: null } : prev));
+
+      const remainingTab = (["shopify", "easyorders", "woocommerce"] as const).find(
+        (s) => s !== source && storeData?.[s]
+      );
+      if (remainingTab) setActiveTab(remainingTab);
+    } catch {
+      toast.error(tr("disconnectError", lang));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
@@ -95,10 +129,17 @@ export default function Store({ onOpenChat }: StoreProps) {
             {activeStore?.storeName ?? tr("storeFallback", lang)}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              {tr("connected", lang)}
-            </span>
+            {activeStore?.isActive === false ? (
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                {tr("disconnected", lang)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                {tr("connected", lang)}
+              </span>
+            )}
             <span className="text-xs text-gray-400">
               {activeStore?.source === "shopify" ? "Shopify"
                 : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
@@ -106,6 +147,21 @@ export default function Store({ onOpenChat }: StoreProps) {
             </span>
           </div>
         </div>
+
+        {activeStore && (
+          <button
+            onClick={() => handleDisconnect(activeStore.source)}
+            disabled={disconnecting}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {disconnecting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Unplug className="w-3.5 h-3.5" />
+            )}
+            {disconnecting ? tr("disconnecting", lang) : tr("disconnectBtn", lang)}
+          </button>
+        )}
       </div>
 
       {/* ── Tabs (لو في متجرين) ────────────────────────────────────────────── */}

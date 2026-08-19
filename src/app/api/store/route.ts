@@ -24,7 +24,7 @@ export async function GET(): Promise<NextResponse> {
       id: true,
       shopifyStore: {
         select: {
-          id: true, shop: true, storeName: true, createdAt: true,
+          id: true, shop: true, storeName: true, isActive: true, createdAt: true,
           _count: { select: { orders: true } },
         },
       },
@@ -107,6 +107,7 @@ export async function GET(): Promise<NextResponse> {
           id:              sh.id,
           storeName:       sh.storeName || sh.shop,
           source:          "shopify" as const,
+          isActive:        sh.isActive,
           totalOrders:     sh._count.orders,
           totalCustomers:  shCustomers,
           campaignRevenue: shRevenue,

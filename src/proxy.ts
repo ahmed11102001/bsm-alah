@@ -61,7 +61,13 @@ function isPublicDevRoute(pathname: string): boolean {
   return PUBLIC_DEV_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
+// Single source of truth for which permission a /dashboard/<section> route
+// requires. `__root__` covers the /dashboard overview page itself (it has
+// no sub-segment), so every dashboard route — including the index — is
+// resolved through the same dynamic ROLE_PERMISSIONS matrix. Do not add a
+// parallel hardcoded allowlist elsewhere; extend this map instead.
 const ROUTE_PERMISSIONS: Record<string, Permission> = {
+  __root__: "REPORTS_VIEW",
   chat: "CHAT_VIEW",
   contacts: "CONTACTS_VIEW",
   campaigns: "CAMPAIGNS_VIEW",
@@ -138,14 +144,11 @@ export async function proxy(req: NextRequest) {
       }
 
       if (isDashboard) {
-        if (role === "CHAT_ONLY") {
-          const allowed = pathname === "/dashboard/chat" || pathname === "/dashboard/team";
-          if (!allowed) {
-            return applyHeaders(NextResponse.redirect(new URL("/dashboard/chat", req.url)), nonce, req);
-          }
-        }
-
-        const section = pathname.split("/")[2];
+        // Every /dashboard route — including the index page — is resolved
+        // through ROUTE_PERMISSIONS + the dynamic ROLE_PERMISSIONS matrix.
+        // There is intentionally no separate hardcoded allowlist here: if a
+        // role's permissions change, this check reflects it automatically.
+        const section = pathname.split("/")[2] || "__root__";
         const requiredPermission = ROUTE_PERMISSIONS[section];
         if (requiredPermission && !hasPermission(role, requiredPermission)) {
           const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";

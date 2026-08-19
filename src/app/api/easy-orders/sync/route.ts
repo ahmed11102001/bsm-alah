@@ -301,3 +301,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     totalSynced: updated.totalSynced,
   });
 }
+
+// ─── DELETE — فك ربط المتجر ───────────────────────────────────────────────────
+export async function DELETE(): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+  if (denied) return denied;
+
+  const dbUser = await prisma.user.findUnique({
+    where:  { email: session!.user.email },
+    select: { id: true, parentId: true },
+  });
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const userId = dbUser.parentId ?? dbUser.id;
+
+  try {
+    await prisma.easyOrdersStore.deleteMany({ where: { userId } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[EasyOrders Delete] Error:", error);
+    return NextResponse.json({ error: "حدث خطأ" }, { status: 500 });
+  }
+}

@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { checkTeamLimit, guardResponse } from "@/lib/plan-guard";
-import { TeamInviteSchema, parseInput } from "@/lib/schemas";
+import { TeamInviteSchema, TeamRoleUpdateSchema, parseInput } from "@/lib/schemas";
 import { requirePermission } from "@/lib/permissions";
 import { generateJoinCode, hashJoinCode, INVITATION_EXPIRY_HOURS } from "@/lib/team-invitations";
 import { sendTeamInviteEmail } from "@/lib/email";
@@ -244,6 +244,71 @@ export async function POST(req: Request) {
     success: true,
     message: "تم إرسال دعوة الانضمام بنجاح",
     invitation,
+  });
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  const denied = requirePermission(session, "TEAM_MANAGE");
+  if (denied) return denied;
+
+  const parsed = parseInput(TeamRoleUpdateSchema, await req.json());
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
+  const { id: memberId, role: newRole } = parsed.data;
+  const actingUserId = session!.user.id;
+  const actingRole = session!.user.role;
+  const ownerId = session!.user.parentId ?? actingUserId;
+
+  if (memberId === actingUserId) {
+    return NextResponse.json({ error: "لا يمكنك تغيير دورك الخاص" }, { status: 400 });
+  }
+
+  const member = await prisma.user.findFirst({
+    where: { id: memberId, parentId: ownerId, deletedAt: null },
+  });
+
+  if (!member) {
+    return NextResponse.json({ error: "العضو غير موجود" }, { status: 404 });
+  }
+
+  // OWNER role can never be assigned or changed through this endpoint.
+  if (member.role === "OWNER") {
+    return NextResponse.json({ error: "لا يمكن تغيير دور المالك" }, { status: 400 });
+  }
+
+  if (member.role === newRole) {
+    return NextResponse.json({ error: "العضو لديه هذا الدور بالفعل" }, { status: 400 });
+  }
+
+  // Downgrading an Admin (FULL_ACCESS) to Agent (CHAT_ONLY) is restricted to
+  // the workspace Owner — an Admin can promote agents, but cannot demote
+  // fellow admins (or themselves).
+  const isDowngrade = member.role === "FULL_ACCESS" && newRole === "CHAT_ONLY";
+  if (isDowngrade && actingRole !== "OWNER") {
+    return NextResponse.json(
+      { error: "فقط مالك المساحة يقدر ينزّل صلاحية عضو الأدمن" },
+      { status: 403 }
+    );
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: memberId },
+    data: { role: newRole },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      image: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    message: "تم تحديث دور العضو بنجاح",
+    member: updated,
   });
 }
 

@@ -160,6 +160,12 @@ export const TeamInviteSchema = z.object({
 });
 export type TeamInviteInput = z.infer<typeof TeamInviteSchema>;
 
+export const TeamRoleUpdateSchema = z.object({
+  id: z.string().min(1),
+  role: z.enum([UserRole.FULL_ACCESS, UserRole.CHAT_ONLY]),
+});
+export type TeamRoleUpdateInput = z.infer<typeof TeamRoleUpdateSchema>;
+
 export const TeamResendInviteSchema = z.object({
   invitationId: nonEmptyStr,
 });
