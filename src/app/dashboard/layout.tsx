@@ -24,7 +24,8 @@ import {
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Sun, Moon, Monitor, Languages, CreditCard, Sparkles, Handshake,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, type LucideIcon,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
+  Eye, EyeOff, Copy, type LucideIcon,
 } from "lucide-react";
 import { hasPermission, type Permission } from "@/lib/permissions-core";
 import NotificationBell from "@/components/dashboard/NotificationBell";
@@ -107,6 +108,15 @@ function SettingsModal({ open, onClose, data, onSaved }: {
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // WhatsApp credentials are owner-only. The token is never returned by the
+  // normal settings GET endpoint; it is revealed only after password re-auth.
+  const isOwner = data?.user.role === "OWNER";
+  const [whatsappToken, setWhatsappToken] = useState("");
+  const [showWhatsappToken, setShowWhatsappToken] = useState(false);
+  const [revealWhatsapp, setRevealWhatsapp] = useState(false);
+  const [whatsappRevealPassword, setWhatsappRevealPassword] = useState("");
+  const [revealingWhatsapp, setRevealingWhatsapp] = useState(false);
+
   useEffect(() => {
     if (data) {
       setName(data.user.name ?? "");
@@ -134,6 +144,44 @@ function SettingsModal({ open, onClose, data, onSaved }: {
       }
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
+  };
+
+  const revealWhatsAppCredentials = async () => {
+    if (!whatsappRevealPassword) {
+      toast.error(locale === "ar" ? "أدخل كلمة المرور أولاً" : "Enter your password first");
+      return;
+    }
+
+    setRevealingWhatsapp(true);
+    try {
+      const r = await fetch("/api/me/settings/whatsapp-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: whatsappRevealPassword }),
+      });
+      const d = await r.json();
+
+      if (!r.ok) throw new Error(d.error || (locale === "ar" ? "تعذر إظهار البيانات" : "Unable to reveal credentials"));
+
+      setWhatsappToken(d.accessToken ?? "");
+      setShowWhatsappToken(true);
+      setRevealWhatsapp(false);
+      setWhatsappRevealPassword("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRevealingWhatsapp(false);
+    }
+  };
+
+  const copyText = async (value: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(locale === "ar" ? "تم النسخ" : "Copied");
+    } catch {
+      toast.error(locale === "ar" ? "تعذر النسخ" : "Copy failed");
+    }
   };
 
   const deleteAccount = async () => {
@@ -171,6 +219,11 @@ function SettingsModal({ open, onClose, data, onSaved }: {
           <TabsList className="w-full mb-4 h-auto min-h-10 gap-1 overflow-x-auto justify-start">
             <TabsTrigger value="profile" className="flex-1 min-w-[7rem] text-xs">{s.tabs.profile}</TabsTrigger>
             <TabsTrigger value="password" className="flex-1 min-w-[7rem] text-xs">{s.tabs.password}</TabsTrigger>
+            {isOwner && (
+              <TabsTrigger value="whatsapp" className="flex-1 min-w-[7rem] text-xs">
+                {locale === "ar" ? "حساب الواتساب" : "WhatsApp Account"}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* ── Profile ── */}
@@ -300,6 +353,178 @@ function SettingsModal({ open, onClose, data, onSaved }: {
               {hasPassword ? s.password.changeBtn : (locale === "ar" ? "إنشاء كلمة المرور" : "Create Password")}
             </Button>
           </TabsContent>
+
+          {/* ── WhatsApp Account — OWNER ONLY ── */}
+          {isOwner && (
+            <TabsContent value="whatsapp" className="space-y-4">
+              <div className="rounded-xl border border-[#25D366]/20 bg-[#25D366]/5 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {locale === "ar" ? "حساب واتساب المرتبط" : "Connected WhatsApp account"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {locale === "ar"
+                        ? "بيانات الربط الخاصة بحسابك على WhatsApp Business."
+                        : "Connection details for your WhatsApp Business account."}
+                    </p>
+                  </div>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${data.whatsapp
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                    }`}>
+                    {data.whatsapp
+                      ? (locale === "ar" ? "متصل" : "Connected")
+                      : (locale === "ar" ? "غير متصل" : "Not connected")}
+                  </span>
+                </div>
+              </div>
+
+              {data.whatsapp ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Phone Number ID</Label>
+                    <div className="flex gap-2" dir="ltr">
+                      <Input
+                        value={data.whatsapp.phoneNumberId}
+                        readOnly
+                        className="text-sm rounded-xl bg-gray-50 dark:bg-gray-800"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => copyText(data.whatsapp!.phoneNumberId)}
+                        className="w-11 flex-shrink-0 rounded-xl px-0"
+                        title={locale === "ar" ? "نسخ" : "Copy"}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">WABA ID</Label>
+                    <div className="flex gap-2" dir="ltr">
+                      <Input
+                        value={data.whatsapp.wabaId}
+                        readOnly
+                        className="text-sm rounded-xl bg-gray-50 dark:bg-gray-800"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => copyText(data.whatsapp!.wabaId)}
+                        className="w-11 flex-shrink-0 rounded-xl px-0"
+                        title={locale === "ar" ? "نسخ" : "Copy"}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Access Token</Label>
+                    <div className="flex gap-2" dir="ltr">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showWhatsappToken ? "text" : "password"}
+                          value={whatsappToken || "••••••••••••••••••••••••••••••••"}
+                          readOnly
+                          className="text-sm rounded-xl pr-11"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (whatsappToken) {
+                              setShowWhatsappToken(prev => !prev);
+                            } else {
+                              setRevealWhatsapp(true);
+                            }
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          title={showWhatsappToken ? "Hide token" : "Reveal token"}
+                        >
+                          {showWhatsappToken
+                            ? <EyeOff className="w-4 h-4" />
+                            : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!whatsappToken}
+                        onClick={() => copyText(whatsappToken)}
+                        className="w-11 flex-shrink-0 rounded-xl px-0"
+                        title={locale === "ar" ? "نسخ" : "Copy"}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {revealWhatsapp && (
+                    <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/10 p-4 space-y-3">
+                      <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                        {locale === "ar"
+                          ? "لأمان حسابك، أدخل كلمة مرور حساب WANI لإظهار Access Token."
+                          : "For security, enter your WANI account password to reveal the Access Token."}
+                      </p>
+                      <Input
+                        type="password"
+                        value={whatsappRevealPassword}
+                        onChange={e => setWhatsappRevealPassword(e.target.value)}
+                        placeholder={locale === "ar" ? "كلمة المرور" : "Account password"}
+                        className="text-sm rounded-xl bg-white dark:bg-gray-900"
+                        onKeyDown={e => {
+                          if (e.key === "Enter") revealWhatsAppCredentials();
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setRevealWhatsapp(false);
+                            setWhatsappRevealPassword("");
+                          }}
+                          className="flex-1 rounded-xl"
+                        >
+                          {locale === "ar" ? "إلغاء" : "Cancel"}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={revealWhatsAppCredentials}
+                          disabled={revealingWhatsapp || !whatsappRevealPassword}
+                          className="flex-1 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white"
+                        >
+                          {revealingWhatsapp && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
+                          {locale === "ar" ? "إظهار" : "Reveal"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    {locale === "ar"
+                      ? "هذه البيانات متاحة للمالك فقط. الـ Access Token لا يتم إرساله للواجهة إلا بعد التحقق من كلمة المرور."
+                      : "These credentials are available to the owner only. The Access Token is never sent to the browser until the account password is verified."}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-5 text-center">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    {locale === "ar" ? "لا يوجد حساب واتساب مرتبط" : "No WhatsApp account connected"}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {locale === "ar"
+                      ? "قم بربط WhatsApp Business من إعدادات التكامل."
+                      : "Connect WhatsApp Business from the integrations settings."}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          )}
 
         </Tabs>
       </DialogContent>
