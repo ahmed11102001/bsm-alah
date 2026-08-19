@@ -46,6 +46,12 @@ export const PERMISSIONS = {
   ACCOUNT_SETTINGS: "ACCOUNT_SETTINGS",
 
   API_KEYS_MANAGE: "API_KEYS_MANAGE",
+
+  // Owner-scoped dashboard capabilities. OWNER receives these automatically;
+  // FULL_ACCESS receives only STRATEGIES_VIEW.
+  USAGE_VIEW: "USAGE_VIEW",
+  STRATEGIES_VIEW: "STRATEGIES_VIEW",
+  WANI_PARTNER_MANAGE: "WANI_PARTNER_MANAGE",
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -70,6 +76,7 @@ const ROLE_PERMISSIONS: Record<Exclude<UserRole, "OWNER">, Permission[]> = {
     "STORE_INTEGRATIONS_MANAGE",
     "TEAM_VIEW",
     "TEAM_MANAGE",
+    "STRATEGIES_VIEW",
   ],
   CHAT_ONLY: [
     "CHAT_VIEW",
@@ -86,4 +93,13 @@ export function hasPermission(role: UserRole | undefined | null, permission: Per
   if (!role) return false;
   if (role === "OWNER") return true;
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+/** Explicit role helpers: Owner is a role, not a synonym for Full Control. */
+export function isOwner(role: UserRole | undefined | null): boolean {
+  return role === "OWNER";
+}
+
+export function isFullAccess(role: UserRole | undefined | null): boolean {
+  return role === "FULL_ACCESS";
 }

@@ -7,34 +7,45 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkEnterpriseAccess } from "@/lib/plan-guard";
+import { requirePermission } from "@/lib/permissions";
 import {
   UserWaniPartnerCardSchema, UserWaniPartnerActiveSchema, parseInput,
 } from "@/lib/schemas";
 
 const MAX_CARDS_PER_USER = 10;
 
-async function requireEnterprise(session: any) {
-  const ownerId = session.user.parentId ?? session.user.id;
-  return checkEnterpriseAccess(ownerId);
+async function requireOwnerEnterprise(session: any) {
+  const denied = requirePermission(session, "WANI_PARTNER_MANAGE");
+  if (denied) return { denied };
+
+  // WANI Partner is an owner-scoped account feature. Do not resolve ownership
+  // from parentId here: role OWNER is the explicit source of truth.
+  const ownerId = session.user.id as string;
+  const access = await checkEnterpriseAccess(ownerId);
+  return { ownerId, access };
 }
 
-// GET — كروت اليوزر الحالي
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  const access = await requireEnterprise(session);
-  if (!access.allowed) return NextResponse.json({ error: access.message, code: access.code, requiredPlan: access.requiredPlan }, { status: 403 });
+  const result = await requireOwnerEnterprise(session);
+  if (result.denied) return result.denied;
+  if (!result.access?.allowed) {
+    return NextResponse.json({ error: result.access?.message ?? "غير مصرح", code: result.access?.code, requiredPlan: result.access?.requiredPlan }, { status: 403 });
+  }
 
   const cards = await prisma.waniPartnerCard.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: "asc" } });
   return NextResponse.json(cards);
 }
 
-// PUT — إنشاء كارت جديد أو تعديل كارت موجود (بيرجّعه pending)
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  const access = await requireEnterprise(session);
-  if (!access.allowed) return NextResponse.json({ error: access.message, code: access.code, requiredPlan: access.requiredPlan }, { status: 403 });
+  const result = await requireOwnerEnterprise(session);
+  if (result.denied) return result.denied;
+  if (!result.access?.allowed) {
+    return NextResponse.json({ error: result.access?.message ?? "غير مصرح", code: result.access?.code, requiredPlan: result.access?.requiredPlan }, { status: 403 });
+  }
 
   const parsed = parseInput(UserWaniPartnerCardSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -54,12 +65,14 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json(card);
 }
 
-// PATCH — تشغيل/إيقاف الكارت بس (من غير ما يرجع لمراجعة الأدمن)
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  const access = await requireEnterprise(session);
-  if (!access.allowed) return NextResponse.json({ error: access.message, code: access.code, requiredPlan: access.requiredPlan }, { status: 403 });
+  const result = await requireOwnerEnterprise(session);
+  if (result.denied) return result.denied;
+  if (!result.access?.allowed) {
+    return NextResponse.json({ error: result.access?.message ?? "غير مصرح", code: result.access?.code, requiredPlan: result.access?.requiredPlan }, { status: 403 });
+  }
 
   const parsed = parseInput(UserWaniPartnerActiveSchema, await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -68,20 +81,18 @@ export async function PATCH(req: NextRequest) {
   const existing = id ? await prisma.waniPartnerCard.findFirst({ where: { id, userId: session.user.id } }) : null;
   if (!existing) return NextResponse.json({ error: "لسه معملتش كارت" }, { status: 404 });
 
-  const card = await prisma.waniPartnerCard.update({
-    where: { id: existing.id },
-    data: { active: parsed.data.active },
-  });
-
+  const card = await prisma.waniPartnerCard.update({ where: { id: existing.id }, data: { active: parsed.data.active } });
   return NextResponse.json(card);
 }
 
-// DELETE — مسح كارت اليوزر نفسه
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
-  const access = await requireEnterprise(session);
-  if (!access.allowed) return NextResponse.json({ error: access.message, code: access.code, requiredPlan: access.requiredPlan }, { status: 403 });
+  const result = await requireOwnerEnterprise(session);
+  if (result.denied) return result.denied;
+  if (!result.access?.allowed) {
+    return NextResponse.json({ error: result.access?.message ?? "غير مصرح", code: result.access?.code, requiredPlan: result.access?.requiredPlan }, { status: 403 });
+  }
 
   const id = new URL(req.url).searchParams.get("id");
   const existing = id ? await prisma.waniPartnerCard.findFirst({ where: { id, userId: session.user.id } }) : null;
