@@ -56,30 +56,30 @@ export default function ReportsOverviewPage() {
   const [loadingTeam, setLT] = useState(false);
 
   // ── Fetchers ─────────────────────────────────────────────────────
-  const fetchOverview = useCallback(async () => {
-    setLO(true);
+  const fetchOverview = useCallback(async (silent = false) => {
+    if (!silent) setLO(true);
     try {
       const r = await fetch(`/api/reports?type=overview&from=${from}&to=${to}`);
       setOverview(await r.json());
-    } finally { setLO(false); }
+    } finally { if (!silent) setLO(false); }
   }, [from, to]);
 
-  const fetchCustomers = useCallback(async (seg = custSegment) => {
-    setLC(true);
+  const fetchCustomers = useCallback(async (seg = custSegment, silent = false) => {
+    if (!silent) setLC(true);
     try {
       const r = await fetch(`/api/reports?type=customers&segment=${seg}&from=${from}&to=${to}`);
       setCustomers(await r.json());
-    } finally { setLC(false); }
+    } finally { if (!silent) setLC(false); }
   }, [custSegment, from, to]);
 
-  const fetchTeam = useCallback(async () => {
-    setLT(true);
+  const fetchTeam = useCallback(async (silent = false) => {
+    if (!silent) setLT(true);
     try {
       const r = await fetch("/api/reports?type=team");
       const data = await r.json();
       setTeam(data.members ?? []);
       setUnassignedCount(data.unassigned ?? 0);
-    } finally { setLT(false); }
+    } finally { if (!silent) setLT(false); }
   }, []);
 
   // Initial load per sub-tab
@@ -89,6 +89,31 @@ export default function ReportsOverviewPage() {
     if (tab === "team") fetchTeam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // تحديث دوري صامت في الخلفية كل 20 ثانية للتاب المفتوح حاليًا فقط،
+  // من غير أي loading spinner يبان — عشان الأرقام تتحدث لوحدها
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (tab === "overview") fetchOverview(true);
+      if (tab === "customers") fetchCustomers(custSegment, true);
+      if (tab === "team") fetchTeam(true);
+    }, 20000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, fetchOverview, fetchCustomers, fetchTeam]);
+
+  // تحديث فوري لما اليوزر يرجع للتاب بعد ما يكون سايبه مفتوح في الخلفية
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (tab === "overview") fetchOverview(true);
+      if (tab === "customers") fetchCustomers(custSegment, true);
+      if (tab === "team") fetchTeam(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, fetchOverview, fetchCustomers, fetchTeam]);
 
   // ── Chart colors ─────────────────────────────────────────────────
   const hourlyData = useMemo(() => {

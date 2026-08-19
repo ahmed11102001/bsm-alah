@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -354,7 +354,7 @@ export default function TeamPage() {
     );
   }
 
-  const fetchTeam = async () => {
+  const fetchTeam = useCallback(async (silent = false) => {
     try {
       const res = await fetch("/api/team");
       const data = await res.json();
@@ -367,19 +367,31 @@ export default function TeamPage() {
           setMembers(data.members || []);
           setInvitations(data.invitations || []);
         }
-      } else {
+      } else if (!silent) {
         toast.error(data.error || tm.fetchError);
       }
     } catch {
-      toast.error(tm.fetchError);
+      if (!silent) toast.error(tm.fetchError);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [tm.fetchError]);
 
   useEffect(() => {
     fetchTeam();
   }, []);
+
+  // تحديث دوري صامت كل 20 ثانية عشان حالة الدعوات والأعضاء تتحدث لوحدها
+  useEffect(() => {
+    const id = setInterval(() => fetchTeam(true), 20_000);
+    return () => clearInterval(id);
+  }, [fetchTeam]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") fetchTeam(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [fetchTeam]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

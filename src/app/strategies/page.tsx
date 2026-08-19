@@ -15,6 +15,7 @@ import {
   Bot,
   Megaphone,
   MessagesSquare,
+  Target,
 } from "lucide-react";
 import React from "react";
 
@@ -105,6 +106,17 @@ const STRATEGIES: StrategyDef[] = [
     line: {
       ar: "الحملة بتخلص… بس المحادثة لسه بادئة",
       en: "The campaign ends... the conversation has just begun.",
+    },
+  },
+  {
+    slug: "retargeting",
+    icon: Target,
+    accent: "#fb7185",
+    glow: "rgba(251,113,133,0.32)",
+    name: { ar: "الريتاجت", en: "Retargeting" },
+    line: {
+      ar: "افرز الكويسين من الوحشين، وكلّم كل واحد بلغته",
+      en: "Split the good ones from the at-risk ones, and speak to each in their own language.",
     },
   },
 ];

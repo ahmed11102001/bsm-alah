@@ -72,9 +72,9 @@ export default function Campaigns() {
   const hasRunning = campaigns.some(c => c.status === "running");
   const campaignLimitActive = whatsappConnected && atLimit;
 
-  const loadCampaigns = useCallback(async () => {
+  const loadCampaigns = useCallback(async (silent = false) => {
     try {
-      setLoadingList(true);
+      if (!silent) setLoadingList(true);
       const params = new URLSearchParams({ limit: "50" });
       if (filterStatus !== "all") params.set("status", filterStatus);
       const res = await fetch(`/api/campaigns?${params}`);
@@ -104,8 +104,8 @@ export default function Campaigns() {
 
       setCampaigns(list);
       setTotal(data.total ?? list.length);
-    } catch { toast.error(tr("errLoadCampaigns", lang)); }
-    finally { setLoadingList(false); }
+    } catch { if (!silent) toast.error(tr("errLoadCampaigns", lang)); }
+    finally { if (!silent) setLoadingList(false); }
   }, [filterStatus]);
 
   const loadTemplates = useCallback(async () => {
@@ -134,9 +134,22 @@ export default function Campaigns() {
   useEffect(() => { loadTemplates(); loadAudiences(); }, [loadTemplates, loadAudiences]);
   useEffect(() => {
     if (!hasRunning) return;
-    const id = setInterval(() => loadCampaigns(), 8_000);
+    const id = setInterval(() => loadCampaigns(true), 8_000);
     return () => clearInterval(id);
   }, [hasRunning, loadCampaigns]);
+
+  // تحديث دوري صامت كل 20 ثانية حتى لو مفيش حملة شغالة دلوقتي
+  // (عشان أرقام delivered/read تتحدث لوحدها من غير ريفريش يدوي)
+  useEffect(() => {
+    const id = setInterval(() => loadCampaigns(true), 20_000);
+    return () => clearInterval(id);
+  }, [loadCampaigns]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") loadCampaigns(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadCampaigns]);
 
   const resetDialog = () => {
     setStep(1); setNumbers([]); setSelectedAudienceId("");

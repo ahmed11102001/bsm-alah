@@ -58,8 +58,8 @@ export default function Contacts() {
   const [custInput,  setCustInput]  = useState("");
   const [custSaving, setCustSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const r = await fetch("/api/audiences");
       const d = await r.json();
@@ -69,10 +69,22 @@ export default function Contacts() {
       setEngaged(list.find(a => a.type === "engaged") ?? null);
       setNoResp(list.find(a => a.type === "no-response") ?? null);
       setUniqueCount(d.uniqueContactCount ?? 0);
-    } finally { setLoading(false); }
+    } finally { if (!silent) setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // تحديث دوري صامت كل 20 ثانية عشان عدد العملاء وشرائح الجمهور تتحدث لوحدها
+  useEffect(() => {
+    const id = setInterval(() => load(true), 20_000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") load(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [load]);
 
   const loadGoogleConnection = useCallback(async () => {
     try {

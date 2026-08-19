@@ -3,7 +3,7 @@
 // src/app/dashboard/store/page.tsx
 // ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShoppingBag, Zap, Globe, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,17 +26,34 @@ export default function Store({ onOpenChat }: StoreProps) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"shopify" | "easyorders" | "woocommerce">("shopify");
 
-  useEffect(() => {
+  const loadStore = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     fetch("/api/store")
       .then((r) => r.json())
       .then((d: StoreData) => {
         setStoreData(d);
-        if (!d.shopify && d.easyorders) setActiveTab("easyorders");
-        else if (!d.shopify && !d.easyorders && d.woocommerce) setActiveTab("woocommerce");
+        if (!silent) {
+          if (!d.shopify && d.easyorders) setActiveTab("easyorders");
+          else if (!d.shopify && !d.easyorders && d.woocommerce) setActiveTab("woocommerce");
+        }
       })
-      .catch(() => toast.error(tr("storeLoadErr", lang)))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!silent) toast.error(tr("storeLoadErr", lang)); })
+      .finally(() => { if (!silent) setLoading(false); });
   }, [lang]);
+
+  useEffect(() => { loadStore(); }, [loadStore]);
+
+  // تحديث دوري صامت كل 20 ثانية عشان حالة ربط المتجر تتحدث لوحدها
+  useEffect(() => {
+    const id = setInterval(() => loadStore(true), 20_000);
+    return () => clearInterval(id);
+  }, [loadStore]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") loadStore(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadStore]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {

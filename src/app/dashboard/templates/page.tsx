@@ -45,9 +45,9 @@ export default function TemplatesPage() {
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
   const [form, setForm] = useState<FormState>(defaultForm);
 
-  const fetchTemplates = useCallback(async () => {
+  const fetchTemplates = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch("/api/templates");
       if (!res.ok) throw new Error("Failed to fetch templates");
       const data = await res.json();
@@ -57,14 +57,26 @@ export default function TemplatesPage() {
       }));
       setTemplates(mapped);
     } catch (err: any) {
-      toast.error(lang === "ar" ? "فشل تحميل القوالب" : "Failed to load templates");
+      if (!silent) toast.error(lang === "ar" ? "فشل تحميل القوالب" : "Failed to load templates");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [lang]);
 
   useEffect(() => {
     fetchTemplates();
+  }, [fetchTemplates]);
+
+  // تحديث دوري صامت كل 20 ثانية عشان حالة اعتماد القوالب من Meta تتحدث لوحدها
+  useEffect(() => {
+    const id = setInterval(() => fetchTemplates(true), 20_000);
+    return () => clearInterval(id);
+  }, [fetchTemplates]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") fetchTemplates(true); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fetchTemplates]);
 
   const stats = {
