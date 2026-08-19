@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/tabs";
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
-  Lock, Sun, Moon, Monitor, Languages,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
+  Lock, Sun, Moon, Monitor, Languages, CreditCard, Sparkles, Handshake,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, type LucideIcon,
 } from "lucide-react";
+import { hasPermission, type Permission } from "@/lib/permissions-core";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
 import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
@@ -529,6 +530,66 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const planName = dashData?.plan.planName ?? "—";
   const planColor = PLAN_COLORS[dashData?.plan.plan ?? "free"];
 
+  // Account popup links are permission-driven. They intentionally do NOT belong
+  // to the sidebar: Usage, Strategies and Wani Partner live under Account.
+  type AccountLink = {
+    id: string;
+    href: string;
+    permission: Permission;
+    icon: LucideIcon;
+    labelAr: string;
+    labelEn: string;
+  };
+
+  const accountLinks: AccountLink[] = [
+    {
+      id: "usage",
+      href: "/dashboard/usage",
+      permission: "USAGE_VIEW",
+      icon: CreditCard,
+      labelAr: "الاستهلاك",
+      labelEn: "Usage",
+    },
+    {
+      id: "strategies",
+      href: "/strategies",
+      permission: "STRATEGIES_VIEW",
+      icon: Sparkles,
+      labelAr: "الاستراتيجيات",
+      labelEn: "Strategies",
+    },
+    {
+      id: "wani-partner",
+      href: "/dashboard/wani-partner",
+      permission: "WANI_PARTNER_MANAGE",
+      icon: Handshake,
+      labelAr: "Wani Partner",
+      labelEn: "Wani Partner",
+    },
+  ].filter((item) => hasPermission(session?.user?.role, item.permission));
+
+  const accountQuickLinks = (closeMobile = false) => (
+    <>
+      {accountLinks.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.id}
+            href={item.href}
+            onClick={() => {
+              setAccountPanelOpen(false);
+              if (closeMobile) setMobileMenuOpen(false);
+            }}
+            className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Icon className="w-4 h-4 flex-shrink-0" />
+            <span>{locale === "ar" ? item.labelAr : item.labelEn}</span>
+          </Link>
+        );
+      })}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
 
@@ -631,6 +692,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
               </div>
+
+              {accountQuickLinks()}
+
+              {accountLinks.length > 0 && (
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
+              )}
 
               <button
                 type="button"
@@ -749,6 +816,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
             {accountPanelOpen && (
               <div className="mt-3 space-y-2 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                {accountQuickLinks(true)}
+
+                {accountLinks.length > 0 && (
+                  <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
+                )}
+
                 <button
                   type="button"
                   onClick={() => { openSettings(); setAccountPanelOpen(false); setMobileMenuOpen(false); }}

@@ -6,9 +6,8 @@ import { hasPermission, type UserRole, type Permission } from "@/lib/permissions
 
 // ─── Sidebar items (built at render time from translations) ──────────────────
 // كل item مربوط بـ permission — لو الـ role مش عنده الصلاحية دي، العنصر
-// مبيتعرضش خالص (مش بس UI hidden، فيه كمان server-side guard في middleware.ts).
-// "home" مالوش permission خاص بيه — كل الأدوار بتاخده (بيتحدد فعليًا هو
-// نفسه فين بيوديه حسب الـ role جوه dashboard/layout.tsx).
+// مبيتعرضش خالص (وموجود له server-side guard في proxy.ts).
+// "home" مالوش permission خاص بيه — كل الأدوار بتاخده.
 export const SIDEBAR_IDS = [
     { icon: Home, id: "home", permission: null },
     { icon: MessageSquare, id: "chat", permission: "CHAT_VIEW" },
@@ -20,6 +19,7 @@ export const SIDEBAR_IDS = [
     { icon: BarChart3, id: "reports", permission: "REPORTS_VIEW" },
     { icon: UserCheck, id: "team", permission: "TEAM_VIEW" },
     { icon: Code, id: "api", permission: "API_KEYS_MANAGE" },
+
 ] as const satisfies ReadonlyArray<{ icon: any; id: string; permission: Permission | null }>;
 
 // ─── العناصر اللي مسموح للـ role يشوفها في الـ Sidebar ────────────────────
@@ -32,9 +32,10 @@ export function visibleSidebarIds(role: UserRole | undefined | null) {
     return SIDEBAR_IDS.filter(item => item.permission === null || hasPermission(role, item.permission));
 }
 
-// id "home" بيروح لـ "/dashboard" نفسها، الباقي "/dashboard/{id}"
+// id "home" بيروح لـ "/dashboard"، والباقي "/dashboard/{id}".
 export function sidebarHref(id: string) {
-    return id === "home" ? "/dashboard" : `/dashboard/${id}`;
+    if (id === "home") return "/dashboard";
+    return `/dashboard/${id}`;
 }
 
 export const adminItem = { icon: Shield, id: "admin" };
