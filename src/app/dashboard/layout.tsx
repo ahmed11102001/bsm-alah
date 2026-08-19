@@ -541,7 +541,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     labelEn: string;
   };
 
-  const accountLinks: AccountLink[] = [
+  const allAccountLinks: AccountLink[] = [
     {
       id: "usage",
       href: "/dashboard/usage",
@@ -566,7 +566,11 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       labelAr: "Wani Partner",
       labelEn: "Wani Partner",
     },
-  ].filter((item) => hasPermission(session?.user?.role, item.permission));
+  ];
+
+  const accountLinks = allAccountLinks.filter((item) =>
+    hasPermission(session?.user?.role, item.permission)
+  );
 
   const accountQuickLinks = (closeMobile = false) => (
     <>
