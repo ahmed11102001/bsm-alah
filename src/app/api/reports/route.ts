@@ -20,6 +20,7 @@ function dateRange(from?: string | null, to?: string | null) {
   lte.setHours(23, 59, 59, 999);
   return { gte, lte };
 }
+
 // ─── GET /api/reports?type=overview|customers|team|logs ───────────────────────
 export async function GET(req: NextRequest) {
   try {
@@ -44,10 +45,14 @@ export async function GET(req: NextRequest) {
     const range = dateRange(from, to);
 
     switch (type) {
-      case "overview": return overview(userId, range);
-      case "customers": return customers(userId, range, searchParams);
-      case "team": return team(userId);
-      case "logs": return logs(userId, range, searchParams);
+      case "overview":
+        return overview(userId, range);
+      case "customers":
+        return customers(userId, range, searchParams);
+      case "team":
+        return team(userId);
+      case "logs":
+        return logs(userId, range, searchParams);
       default:
         return NextResponse.json(
           { error: "نوع غير معروف" },
@@ -63,19 +68,45 @@ export async function GET(req: NextRequest) {
 // ─── Overview ─────────────────────────────────────────────────────────────────
 async function overview(userId: string, range: { gte: Date; lte: Date }) {
   const [
-    totalSent, totalDelivered, totalRead, totalFailed,
-    inbound, uniqueContacts,
+    totalSent,
+    totalDelivered,
+    totalRead,
+    totalFailed,
+    inbound,
+    uniqueContacts,
     campaigns,
     dailyRaw,
     hourlyRaw,
   ] = await Promise.all([
     // totals
-    prisma.message.count({ where: { userId, direction: MessageDirection.outbound, createdAt: range } }),
+    prisma.message.count({
+      where: {
+        userId,
+        direction: MessageDirection.outbound,
+        createdAt: range,
+      },
+    }),
     // delivered = delivered + read (اللي اتقرأ اتوصّل بالتأكيد)
-    prisma.message.count({ where: { userId, status: { in: [MessageStatus.delivered, MessageStatus.read] }, createdAt: range } }),
-    prisma.message.count({ where: { userId, status: MessageStatus.read, createdAt: range } }),
-    prisma.message.count({ where: { userId, status: MessageStatus.failed, createdAt: range } }),
-    prisma.message.count({ where: { userId, direction: MessageDirection.inbound, createdAt: range } }),
+    prisma.message.count({
+      where: {
+        userId,
+        status: { in: [MessageStatus.delivered, MessageStatus.read] },
+        createdAt: range,
+      },
+    }),
+    prisma.message.count({
+      where: { userId, status: MessageStatus.read, createdAt: range },
+    }),
+    prisma.message.count({
+      where: { userId, status: MessageStatus.failed, createdAt: range },
+    }),
+    prisma.message.count({
+      where: {
+        userId,
+        direction: MessageDirection.inbound,
+        createdAt: range,
+      },
+    }),
     prisma.contact.count({ where: { userId, createdAt: range } }),
 
     // best campaigns (top 5 by readCount)
@@ -83,16 +114,24 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
       where: { userId, completedAt: { not: null } },
       orderBy: { readCount: "desc" },
       take: 5,
-      select: { name: true, sentCount: true, deliveredCount: true, readCount: true, failedCount: true },
+      select: {
+        name: true,
+        sentCount: true,
+        deliveredCount: true,
+        readCount: true,
+        failedCount: true,
+      },
     }),
 
     // daily messages for chart — raw messages grouped by date
-    prisma.$queryRaw<{ day: string; sent: bigint; delivered: bigint; received: bigint }[]>`
+    prisma.$queryRaw<
+      { day: string; sent: bigint; delivered: bigint; received: bigint }[]
+    >`
       SELECT
         TO_CHAR("createdAt", 'YYYY-MM-DD') AS day,
         COUNT(*) FILTER (WHERE direction = 'outbound') AS sent,
         COUNT(*) FILTER (WHERE direction = 'outbound' AND status IN ('delivered', 'read')) AS delivered,
-        COUNT(*) FILTER (WHERE direction = 'inbound')  AS received
+        COUNT(*) FILTER (WHERE direction = 'inbound') AS received
       FROM "Message"
       WHERE "userId" = ${userId}
         AND "createdAt" >= ${range.gte}
@@ -116,9 +155,12 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
     `,
   ]);
 
-  const deliveryRate = totalSent > 0 ? +((totalDelivered / totalSent) * 100).toFixed(1) : 0;
-  const readRate = totalSent > 0 ? +((totalRead / totalSent) * 100).toFixed(1) : 0;
-  const replyRate = totalSent > 0 ? +((inbound / totalSent) * 100).toFixed(1) : 0;
+  const deliveryRate =
+    totalSent > 0 ? +((totalDelivered / totalSent) * 100).toFixed(1) : 0;
+  const readRate =
+    totalSent > 0 ? +((totalRead / totalSent) * 100).toFixed(1) : 0;
+  const replyRate =
+    totalSent > 0 ? +((inbound / totalSent) * 100).toFixed(1) : 0;
 
   const daily = dailyRaw.map((r) => ({
     day: r.day,
@@ -134,16 +176,24 @@ async function overview(userId: string, range: { gte: Date; lte: Date }) {
 
   return NextResponse.json({
     totals: {
-      sent: totalSent, delivered: totalDelivered,
-      read: totalRead, failed: totalFailed,
-      inbound, uniqueContacts,
-      deliveryRate, readRate, replyRate,
+      sent: totalSent,
+      delivered: totalDelivered,
+      read: totalRead,
+      failed: totalFailed,
+      inbound,
+      uniqueContacts,
+      deliveryRate,
+      readRate,
+      replyRate,
     },
     daily,
     hourly,
     bestCampaigns: campaigns.map((c) => ({
       ...c,
-      rate: c.sentCount > 0 ? +((c.readCount / c.sentCount) * 100).toFixed(1) : 0,
+      rate:
+        c.sentCount > 0
+          ? +((c.readCount / c.sentCount) * 100).toFixed(1)
+          : 0,
     })),
   });
 }
@@ -166,35 +216,54 @@ async function customers(
         _count: { select: { messages: true } },
       },
     });
-    return NextResponse.json(rows.map((r) => ({
-      id: r.id, phone: r.phone, name: r.name,
-      lastMessageAt: r.lastMessageAt,
-      totalMessages: r._count.messages,
-      unreadCount: r.unreadCount,
-    })));
+
+    return NextResponse.json(
+      rows.map((r) => ({
+        id: r.id,
+        phone: r.phone,
+        name: r.name,
+        lastMessageAt: r.lastMessageAt,
+        totalMessages: r._count.messages,
+        unreadCount: r.unreadCount,
+      }))
+    );
   }
 
   if (segment === "no-response") {
     // أرسلنا إليهم لكن لم يردوا
     const sentContactIds = await prisma.message.findMany({
-      where: { userId, direction: MessageDirection.outbound, createdAt: range },
+      where: {
+        userId,
+        direction: MessageDirection.outbound,
+        createdAt: range,
+      },
       select: { contactId: true },
       distinct: ["contactId"],
     });
+
     const ids = sentContactIds.map((m) => m.contactId);
 
     const repliedIds = await prisma.message.findMany({
-      where: { userId, direction: MessageDirection.inbound, contactId: { in: ids } },
+      where: {
+        userId,
+        direction: MessageDirection.inbound,
+        contactId: { in: ids },
+      },
       select: { contactId: true },
       distinct: ["contactId"],
     });
+
     const repliedSet = new Set(repliedIds.map((m) => m.contactId));
     const noReplyIds = ids.filter((id) => !repliedSet.has(id));
 
     const contacts = await prisma.contact.findMany({
-      where: { id: { in: noReplyIds.slice(0, 50) }, deletedAt: null },
+      where: {
+        id: { in: noReplyIds.slice(0, 50) },
+        deletedAt: null,
+      },
       select: { id: true, phone: true, name: true, lastMessageAt: true },
     });
+
     return NextResponse.json(contacts);
   }
 
@@ -203,8 +272,15 @@ async function customers(
       where: { userId, createdAt: range, deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { id: true, phone: true, name: true, createdAt: true, lastMessageAt: true },
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        createdAt: true,
+        lastMessageAt: true,
+      },
     });
+
     return NextResponse.json(contacts);
   }
 
@@ -213,14 +289,22 @@ async function customers(
       where: { userId, isArchived: true },
       orderBy: { updatedAt: "desc" },
       take: 50,
-      select: { id: true, phone: true, name: true, lastMessageAt: true, updatedAt: true },
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        lastMessageAt: true,
+        updatedAt: true,
+      },
     });
+
     return NextResponse.json(contacts);
   }
 
   if (segment === "followup") {
     // لم يتواصل معهم منذ أكثر من 7 أيام + آخر رسالة كانت واردة
     const cutoff = new Date(Date.now() - 7 * 86400_000);
+
     const contacts = await prisma.contact.findMany({
       where: {
         userId,
@@ -230,8 +314,14 @@ async function customers(
       },
       orderBy: { lastMessageAt: "asc" },
       take: 50,
-      select: { id: true, phone: true, name: true, lastMessageAt: true },
+      select: {
+        id: true,
+        phone: true,
+        name: true,
+        lastMessageAt: true,
+      },
     });
+
     return NextResponse.json(contacts);
   }
 
@@ -243,17 +333,20 @@ async function team(ownerId: string) {
   // جلب الـ owner + كل أعضاء الفريق
   const members = await prisma.user.findMany({
     where: {
-      OR: [
-        { id: ownerId },
-        { parentId: ownerId },
-      ],
+      OR: [{ id: ownerId }, { parentId: ownerId }],
     },
     select: { id: true, name: true, email: true, role: true },
   });
 
   const memberIds = members.map((m: { id: string }) => m.id);
 
-  const [sentPerUser, receivedPerMember, ownerReceived, assignedPerUser, unassignedCount] = await Promise.all([
+  const [
+    sentPerUser,
+    receivedPerMember,
+    ownerReceived,
+    assignedPerUser,
+    unassignedCount,
+  ] = await Promise.all([
     // الرسائل البشرية الخارجة تُنسب للعضو الذي ضغط إرسال، وليس لمالك الـworkspace.
     prisma.message.groupBy({
       by: ["senderUserId"],
@@ -265,6 +358,7 @@ async function team(ownerId: string) {
       },
       _count: { id: true },
     }),
+
     // الرسائل الواردة لا تملك senderUserId؛ ننسبها للعضو المسؤول عن المحادثة.
     prisma.$queryRaw<{ userId: string; count: bigint }[]>`
       SELECT c."assignedToUserId" AS "userId", COUNT(m."id")::bigint AS "count"
@@ -279,6 +373,7 @@ async function team(ownerId: string) {
         AND c."assignedToUserId" IN (${Prisma.join(memberIds)})
       GROUP BY c."assignedToUserId"
     `,
+
     // الوارد يُنسب للـOwner دايمًا بغضّ النظر عن التعيين — الأونر شريك في كل الردود.
     prisma.message.count({
       where: {
@@ -291,6 +386,7 @@ async function team(ownerId: string) {
         },
       },
     }),
+
     // ── عدد المحادثات المعيّنة حاليًا لكل عضو (من محادثات الشات الفعلية) ──
     prisma.contact.groupBy({
       by: ["assignedToUserId"],
@@ -303,6 +399,7 @@ async function team(ownerId: string) {
       },
       _count: { id: true },
     }),
+
     // ── عدد المحادثات اللي لسه من غير مسؤول (من محادثات الشات الفعلية) ──
     prisma.contact.count({
       where: {
@@ -315,23 +412,69 @@ async function team(ownerId: string) {
     }),
   ]);
 
-  const sentMap = new Map(sentPerUser.map((r: { senderUserId: string | null; _count: { id: number } }) => [r.senderUserId, r._count.id]));
+  const sentMap = new Map(
+    sentPerUser.map(
+      (r: { senderUserId: string | null; _count: { id: number } }) => [
+        r.senderUserId,
+        r._count.id,
+      ]
+    )
+  );
+
   const repliedMap = new Map<string, number>([
     [ownerId, ownerReceived],
-    ...receivedPerMember.map((r: { userId: string; count: bigint }) => [r.userId, Number(r.count)] as [string, number]),
+    ...receivedPerMember.map(
+      (r: { userId: string; count: bigint }) =>
+        [r.userId, Number(r.count)] as [string, number]
+    ),
   ]);
-  const assignedMap = new Map(assignedPerUser.map((r: { assignedToUserId: string | null; _count: { id: number } }) => [r.assignedToUserId, r._count.id]));
 
-  const result = members.map((m: { id: string; name: string | null; email: string; role: string }) => ({
-    id: m.id,
-    name: m.name ?? m.email,
-    role: m.role,
-    sent: sentMap.get(m.id) ?? 0,
-    replied: repliedMap.get(m.id) ?? 0,
-    assigned: assignedMap.get(m.id) ?? 0,
-  }));
+  const assignedMap = new Map(
+    assignedPerUser.map(
+      (r: { assignedToUserId: string | null; _count: { id: number } }) => [
+        r.assignedToUserId,
+        r._count.id,
+      ]
+    )
+  );
 
-  return NextResponse.json({ members: result, unassigned: unassignedCount });
+  const result = members.map(
+    (m: {
+      id: string;
+      name: string | null;
+      email: string;
+      role: string;
+    }) => {
+      const isOwnerLike = m.role === "OWNER" || m.role === "FULL_ACCESS";
+
+      return {
+        id: m.id,
+        name: m.name ?? m.email,
+        role: m.role,
+
+        // Owner + Admin are workspace-wide senders in team analytics.
+        // Their sent count remains based on messages they actually sent.
+        sent: sentMap.get(m.id) ?? 0,
+
+        // Owner + Admin get the same inbound/reply scope.
+        replied: isOwnerLike
+          ? ownerReceived
+          : repliedMap.get(m.id) ?? 0,
+
+        // Owner + Admin are not treated as assignment-limited agents.
+        // The UI can represent this as "—", exactly like the Owner.
+        // The reports UI treats Owner as not assignment-limited.
+        // FULL_ACCESS keeps a numeric payload for the existing TeamRow type;
+        // the actual owner-like scope is represented by the reply metric above.
+        assigned: isOwnerLike ? 0 : assignedMap.get(m.id) ?? 0,
+      };
+    }
+  );
+
+  return NextResponse.json({
+    members: result,
+    unassigned: unassignedCount,
+  });
 }
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────
@@ -350,6 +493,7 @@ async function logs(
     userId,
     createdAt: range,
   };
+
   if (status) where.status = status;
   if (msgType) where.type = msgType;
   if (search) where.contact = { phone: { contains: search } };
