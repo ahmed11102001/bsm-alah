@@ -7,7 +7,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
 import { RegisterSchema, parseInput } from "@/lib/schemas";
 import crypto from "crypto";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
@@ -31,8 +31,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
       select: { id: true },
     });
 
@@ -48,13 +50,12 @@ export async function POST(req: Request) {
     const { user, verificationToken } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newUser = await tx.user.create({
         data: {
-          email: email.toLowerCase().trim(),
+          email: normalizedEmail,
           name: name.trim(),
           phone: normalizedPhone,
           password: hashedPassword,
           role: "OWNER",
           signupMethod: "MANUAL",
-          // إدخل يدويًا وأدخل كل بياناته وقت التسجيل — مفيش Google Onboarding بعد كده.
           onboardingCompleted: true,
         },
       });
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
           campaignsUsedThisMonth: 0,
           periodResetAt: new Date(),
           currentPeriodStart: new Date(),
-          currentPeriodEnd:   null,  // free plan — لا ينتهي
+          currentPeriodEnd: null,
         },
       });
 
@@ -83,11 +84,32 @@ export async function POST(req: Request) {
       return { user: newUser, verificationToken };
     });
 
+    // Verification email is mandatory for the activation flow.
+    // If delivery fails, remove the token so the user can safely request a new one.
     try {
       await sendVerificationEmail(user.email, verificationToken);
     } catch (emailError) {
-      await prisma.emailVerificationToken.delete({ where: { token: verificationToken } });
-      console.error("[register] verification email delivery failed", emailError instanceof Error ? emailError.name : "unknown");
+      await prisma.emailVerificationToken.delete({ where: { token: verificationToken } }).catch(() => undefined);
+      console.error(
+        "[register] verification email delivery failed",
+        emailError instanceof Error ? emailError.message : emailError
+      );
+
+      return NextResponse.json(
+        { error: "تم إنشاء الحساب، لكن تعذر إرسال رسالة تأكيد البريد الإلكتروني. حاول إعادة إرسال رسالة التأكيد." },
+        { status: 503 }
+      );
+    }
+
+    // Welcome email is best-effort: signup and verification must not fail because
+    // the optional welcome message could not be delivered.
+    try {
+      await sendWelcomeEmail(user.email, user.name);
+    } catch (welcomeError) {
+      console.error(
+        "[register] welcome email delivery failed",
+        welcomeError instanceof Error ? welcomeError.message : welcomeError
+      );
     }
 
     // ── ربط الإحالة (Referral Attribution) إذا كان المستخدم قادمًا من رابط إحالة ──
@@ -104,7 +126,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { message: "تم إنشاء الحساب بنجاح. راجع بريدك الإلكتروني لتأكيد الحساب.", userId: user.id },
+      {
+        message: "تم إنشاء الحساب بنجاح. راجع بريدك الإلكتروني لتأكيد الحساب.",
+        userId: user.id,
+      },
       { status: 201 }
     );
   } catch (error) {
