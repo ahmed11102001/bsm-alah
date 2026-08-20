@@ -6,21 +6,18 @@ import prisma              from "@/lib/prisma";
 import bcrypt              from "bcryptjs";
 import { rateLimit }       from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
 
   providers: [
-
-    // ── Google ─────────────────────────────────────────────────────────────────
     GoogleProvider({
       clientId:     process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // يسمح بربط حساب Google بحساب إيميل موجود بنفس العنوان
       allowDangerousEmailAccountLinking: true,
     }),
 
-    // ── Email / Password ───────────────────────────────────────────────────────
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -32,7 +29,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
         }
 
-        // ── Rate Limit: 10 محاولات كل 15 دقيقة لنفس الإيميل ──────────────────
         const key    = `login:${credentials.email.toLowerCase()}`;
         const result = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
         if (!result.success) {
@@ -43,7 +39,6 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email.toLowerCase() },
         });
 
-        // رسالة موحدة — مش بنكشف هل الإيميل موجود أو لأ
         if (!user || !user.password || (user as any).deletedAt) {
           throw new Error("بيانات الدخول غير صحيحة");
         }
@@ -52,7 +47,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("يرجى تأكيد بريدك الإلكتروني أولًا");
         }
 
-        // حماية: منع دخول الموظف قبل تفعيل حسابه
         if (user.role !== "OWNER" && user.inviteCode) {
           throw new Error("يرجى تفعيل حسابك أولاً باستخدام كود الانضمام");
         }
@@ -62,9 +56,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
-        // needsOnboarding الحقيقية بتتحسب في jwt callback من signupMethod —
-        // Credentials هي MANUAL أو TEAM_INVITE دايمًا، يعني أبدًا مش محتاجة
-        // Google Onboarding. القيمة هنا مجرد placeholder بيتجاهله jwt callback.
         return {
           id:       user.id,
           name:     user.name,
@@ -80,22 +71,11 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 يوم
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   events: {
-    // ── createUser: بيتنفذ مرة واحدة بس من الـ PrismaAdapter وقت إنشاء
-    //    يوزر جديد (يعني أول تسجيل دخول بـ Google OAuth) ──────────────────────
-    //    يوزر الـ credentials provider مش بيعدي من هنا لأنه بيتعمل في
-    //    /api/register مباشرة (وعنده subscription "free" خلاص هناك).
-    //
-    //    بدون الـ hook ده، يوزر Google الجديد كان بيتعمله User بس من غير
-    //    Subscription خالص، وأي مكان بيعتمد على وجود الـ record (مش بس على
-    //    fallback القيمة) كان ممكن يطلع نتيجة غير متوقعة.
     async createUser({ user }) {
-      // اليوزر ده اتعمله row بس من الـ PrismaAdapter وقت أول Google OAuth —
-      // يبقى signupMethod بتاعه GOOGLE دايمًا (مفيش أي Provider تاني بيعدي من هنا،
-      // الـ Credentials provider بيتعمله User مباشرة في /api/register مش هنا).
       await prisma.user.update({
         where: { id: user.id },
         data:  { signupMethod: "GOOGLE" },
@@ -103,7 +83,7 @@ export const authOptions: NextAuthOptions = {
 
       await prisma.subscription.upsert({
         where:  { userId: user.id },
-        update: {},   // لو موجودة بالفعل لأي سبب — متلمسهاش
+        update: {},
         create: {
           userId:             user.id,
           plan:               "free",
@@ -111,11 +91,22 @@ export const authOptions: NextAuthOptions = {
           campaignsUsedThisMonth: 0,
           periodResetAt:      new Date(),
           currentPeriodStart: new Date(),
-          currentPeriodEnd:   null, // free plan — لا ينتهي
+          currentPeriodEnd:   null,
         },
       });
 
-      // ── ربط الإحالة لمستخدم Google الجديد ─────────────────────────────────
+      // Google signup does not use the manual email-verification flow.
+      // Send the welcome email immediately after the Google user is created.
+      // This is best-effort so SMTP/email delivery issues never break signup.
+      try {
+        await sendWelcomeEmail(user.email!, user.name);
+      } catch (welcomeError) {
+        console.error(
+          "[auth] Google welcome email delivery failed",
+          welcomeError instanceof Error ? welcomeError.message : welcomeError
+        );
+      }
+
       try {
         const { cookies } = await import("next/headers");
         const cookieStore = await cookies();
@@ -131,13 +122,9 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-
-    // ── signIn: تحقق قبل ما نكمل ────────────────────────────────────────────────
     async signIn({ user, account }) {
-      // Credentials — التحقق بيتم بالكامل في authorize فوق
       if (account?.provider === "credentials") return true;
 
-      // Google — تأكد إن اليوزر مش محذوف
       if (account?.provider === "google" && user.email) {
         const existing = await prisma.user.findUnique({
           where:  { email: user.email },
@@ -149,7 +136,6 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    // ── jwt ──────────────────────────────────────────────────────────────────────
     async jwt({ token, user, account, trigger, session }) {
       if (trigger === "update" && session) {
         if (session.needsOnboarding !== undefined) {
@@ -157,7 +143,6 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // ── أول مرة: وقت الـ login ─────────────────────────────────────────────
       if (user && account) {
         const dbUser = await prisma.user.findUnique({
           where:  { id: user.id },
@@ -173,15 +158,11 @@ export const authOptions: NextAuthOptions = {
         token.isSuper           = (dbUser as any)?.isSuper ?? false;
         token.signupMethod      = dbUser?.signupMethod ?? "MANUAL";
         token.isSuperVerifiedAt = Date.now();
-
-        // ── مين محتاج Onboarding؟ Google signup بس، ومش Team Member،
-        //    ومش خلّص onboarding قبل كده. Manual وTeam Member أبدًا. ──────────
         token.needsOnboarding = needsGoogleOnboarding(dbUser);
 
         return token;
       }
 
-      // ── كل request بعد كده: تحقق من isSuper كل 5 دقائق ───────────────────
       const FIVE_MINUTES = 5 * 60 * 1000;
       const lastVerified  = (token.isSuperVerifiedAt as number) ?? 0;
 
@@ -208,7 +189,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
-    // ── session ──────────────────────────────────────────────────────────────────
     async session({ session, token }) {
       if (session.user) {
         session.user.id             = token.id       as string;
