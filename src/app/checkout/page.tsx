@@ -4,6 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, Check, ChevronDown, ChevronUp, Copy, CreditCard, Loader2, MessageCircle, Shield, Tag, X } from "lucide-react";
+import { toast } from "sonner";
 import { BILLING_CYCLES, canUseBillingCycle, computePrice, SUBSCRIPTION_PLANS, TOKEN_PACKAGES, MCP_ADDON_PACKAGES, type BillingCycle, type PlanSlug } from "@/lib/pricing";
 
 const SALES_WHATSAPP = process.env.NEXT_PUBLIC_SALES_WHATSAPP || "201281657907";
@@ -31,6 +32,8 @@ function CheckoutContent() {
   const [useReferralCredit, setUseReferralCredit] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // جلب رصيد الإحالات المتاح للمستخدم
   useState(() => {
@@ -53,6 +56,11 @@ function CheckoutContent() {
     ? MCP_ADDON_PACKAGES.find(p => p.id === packageId) ?? TOKEN_PACKAGES.find(p => p.id === packageId)
     : null;
   const isAddonPurchase = !!packageId;
+  const manualPaymentType: "subscription" | "token_package" | "mcp_addon" = !isAddonPurchase
+    ? "subscription"
+    : MCP_ADDON_PACKAGES.some(p => p.id === packageId)
+      ? "mcp_addon"
+      : "token_package";
 
   const planSlug = (params.get("plan") || "pro") as PlanSlug;
   const plan = SUBSCRIPTION_PLANS[planSlug] || SUBSCRIPTION_PLANS.pro;
@@ -111,9 +119,36 @@ function CheckoutContent() {
     </main>;
   }
 
-  function openWhatsApp() {
-    if (!paymentMethod) return;
-    window.open(`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+  async function openWhatsApp() {
+    if (!paymentMethod || submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const res = await fetch("/api/payment/manual/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: manualPaymentType,
+          planSlug: isAddonPurchase ? null : plan.slug,
+          cycle: isAddonPurchase ? null : cycleKey,
+          packageId: isAddonPurchase ? packageId : null,
+          paymentMethod,
+          useReferralCredit,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitError(data.error || "تعذر تسجيل طلب الدفع، حاول مرة أخرى");
+        toast.error(data.error || "تعذر تسجيل طلب الدفع، حاول مرة أخرى");
+        return;
+      }
+      window.open(`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+    } catch {
+      setSubmitError("تعذر تسجيل طلب الدفع، تحقق من الاتصال وحاول مرة أخرى");
+      toast.error("تعذر تسجيل طلب الدفع، تحقق من الاتصال وحاول مرة أخرى");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return <main dir="rtl" className="min-h-screen bg-[#f7faf8] text-gray-900">
@@ -172,8 +207,12 @@ function CheckoutContent() {
           </div></div>
           {paymentMethod && <div className="rounded-2xl border border-[#25D366]/20 bg-[#effcf4] p-5"><h2 className="mb-3 text-sm font-black">طريقة الدفع: {paymentMethod === "instapay" ? "InstaPay" : "Etisalat Cash"}</h2><ol className="space-y-2 text-sm text-gray-600"><li>1. حوّل مبلغ <b className="text-gray-900">{finalPrice.toLocaleString("ar-EG")} EGP</b>.</li><li>2. استخدم رقم الحساب الموضح في الكارت.</li><li>3. بعد التحويل اضغط زر WhatsApp بالأسفل.</li><li>4. أرسل Screenshot لإيصال الدفع داخل المحادثة.</li></ol></div>}
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><p className="mb-3 text-xs font-bold text-gray-400">بيانات الحساب</p><p className="text-sm text-gray-600">{session?.user?.name || "المستخدم"}</p><p className="mt-1 text-xs text-gray-400">{session?.user?.email || ""}</p></div>
-          <button onClick={openWhatsApp} disabled={!paymentMethod} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-base font-black text-white shadow-lg shadow-green-200 transition hover:bg-[#1fb85a] disabled:cursor-not-allowed disabled:opacity-40"><MessageCircle className="h-5 w-5" /> إرسال إثبات الدفع عبر WhatsApp</button>
+          <button onClick={openWhatsApp} disabled={!paymentMethod || submitting} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-base font-black text-white shadow-lg shadow-green-200 transition hover:bg-[#1fb85a] disabled:cursor-not-allowed disabled:opacity-40">
+            {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <MessageCircle className="h-5 w-5" />}
+            {submitting ? "جاري تسجيل الطلب..." : "إرسال إثبات الدفع عبر WhatsApp"}
+          </button>
           {!paymentMethod && <p className="text-center text-xs text-amber-600">اختر طريقة الدفع أولًا</p>}
+          {submitError && <p className="text-center text-xs text-red-500">{submitError}</p>}
           <p className="text-center text-xs text-gray-400">بعد إرسال الإيصال، تتم مراجعة الدفع وتفعيل الباقة يدويًا من فريق WANI.</p>
         </section>
       </div>

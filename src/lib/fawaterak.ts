@@ -1,5 +1,11 @@
 // src/lib/fawaterak.ts
 // ══════════════════════════════════════════════════════════════════════════════
+//  ⚠️ DISABLED / FUTURE PAYMENT PROVIDER
+//  Fawaterak مش جزء من مسار الدفع النشط حاليًا. نظام الدفع الرسمي هو الدفع
+//  اليدوي (src/lib/payment-requests.ts). الملف ده اتسيب موجود بالكامل بدون
+//  حذف كمرجع جاهز لو Fawaterak اتفعّل مستقبلًا — راجع الـflag
+//  FAWATERAK_ENABLED في src/app/api/payment/checkout/route.ts.
+// ══════════════════════════════════════════════════════════════════════════════
 //  فواتيرك — Payment Gateway Integration
 //  API Docs: https://fawaterak-api.readme.io/reference/overview
 //

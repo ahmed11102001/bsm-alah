@@ -1,5 +1,12 @@
 // src/app/api/payment/webhook_json/route.ts
 // ══════════════════════════════════════════════════════════════════════════════
+//  ⚠️ DISABLED / FUTURE PAYMENT PROVIDER — Fawaterak
+//  هذا الـwebhook جزء من مسار Fawaterak المُعطّل حاليًا (راجع
+//  src/app/api/payment/checkout/route.ts). بما إن إنشاء الفواتير معطّل هناك،
+//  الـendpoint ده عمليًا مش هيستقبل أي أحداث حقيقية. اتسيب شغّال بدون حذف فقط
+//  عشان يكون جاهز لو Fawaterak اتفعّل تاني. نظام الدفع الرسمي الحالي هو الدفع
+//  اليدوي — راجع src/lib/payment-requests.ts.
+// ══════════════════════════════════════════════════════════════════════════════
 //  POST /api/payment/webhook_json
 //
 //  الدوكيومنتيشن بتقول:

@@ -84,6 +84,8 @@ model User {
   referral                 Referral?                 @relation("UserReferral")
   receivedRewards          ReferralReward[]          @relation("UserReferralRewards")
   teamInvitations          TeamInvitation[]          @relation("UserTeamInvitations")
+  paymentRequests          PaymentRequest[]          @relation("UserPaymentRequests")
+  reviewedPaymentRequests  PaymentRequest[]          @relation("PaymentRequestReviewer")
 
   @@index([email])
   @@index([workspaceId])
@@ -1824,6 +1826,51 @@ model TeamInvitation {
   @@index([inviterId, status])
   @@index([email, status])
   @@index([expiresAt])
+}
+
+// ─── Manual Payment System ───────────────────────────────────────────────────
+// النظام الرسمي الحالي للدفع (InstaPay / Etisalat Cash + مراجعة إدارية).
+// Fawaterak (src/lib/fawaterak.ts وما يستخدمه) مُعزول ومُعطّل — راجع التعليقات
+// هناك. لا تُنشئ أي منطق دفع جديد يعتمد عليه.
+enum PaymentRequestType {
+  subscription
+  token_package
+  mcp_addon
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentRequest {
+  id              String                @id @default(cuid())
+  userId          String
+  type            PaymentRequestType
+  // subscription: planSlug + cycle مطلوبين. token_package/mcp_addon: packageId مطلوب.
+  planSlug        String?
+  cycle           String?
+  packageId       String?
+  productName     String
+  amount          Int
+  currency        String                @default("EGP")
+  paymentMethod   String?
+  status          PaymentRequestStatus  @default(PENDING)
+  requestedAt     DateTime              @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  user            User                  @relation("UserPaymentRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy      User?                 @relation("PaymentRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([createdAt])
 }
 
 

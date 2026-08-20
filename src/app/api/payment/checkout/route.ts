@@ -1,5 +1,16 @@
 // src/app/api/payment/checkout/route.ts
 // ══════════════════════════════════════════════════════════════════════════════
+//  ⚠️ DISABLED / FUTURE PAYMENT PROVIDER — Fawaterak
+//  ─────────────────────────────────────────────────────────────────────────
+//  هذا الـendpoint ليس جزءًا من الـflow النشط للدفع حاليًا. نظام الدفع الرسمي
+//  هو الدفع اليدوي (Manual Payment):
+//    - إنشاء الطلب:  POST /api/payment/manual/request  (src/lib/payment-requests.ts)
+//    - مراجعة الأدمن: تبويب "المدفوعات" في /dashboard/admin
+//  الكود هنا (وفي src/lib/fawaterak.ts وwebhook_json/route.ts) اتسيب موجود
+//  عمدًا كمرجع لتفعيل Fawaterak مستقبلًا، لكنه مُعطّل الآن: أي محاولة استدعاء
+//  بترجع 503. لا تربطه بأي Frontend flow جديد من غير ما تشيل الـguard ده.
+// ══════════════════════════════════════════════════════════════════════════════
+//
 //  POST /api/payment/checkout
 //  ينشئ فاتورة على فواتيرك ويرجع { checkoutUrl } للـ client
 //
@@ -32,11 +43,25 @@ import {
 } from "@/lib/fawaterak";
 import { requirePermission } from "@/lib/permissions";
 
+// اقلبه true فقط لو قررتم تفعيل Fawaterak فعليًا كوسيلة دفع بديلة/إضافية.
+const FAWATERAK_ENABLED = false;
+
 function resolveOwnerId(session: any): string {
     return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
 
 export async function POST(req: NextRequest) {
+    // ── DISABLED — راجع تعليق أعلى الملف ────────────────────────────────────────
+    if (!FAWATERAK_ENABLED) {
+        return NextResponse.json(
+            {
+                error:
+                    "بوابة الدفع الإلكتروني غير مفعّلة حاليًا. استخدم الدفع اليدوي عبر صفحة /checkout.",
+            },
+            { status: 503 }
+        );
+    }
+
     // ── Auth ──────────────────────────────────────────────────────────────────
     const session = await getServerSession(authOptions);
     const denied = requirePermission(session, "BILLING_MANAGE");

@@ -8,7 +8,7 @@ import {
   Star, Ticket, MessageSquareQuote, FileText,
   Eye, EyeOff, ExternalLink, ImageIcon, AlignLeft,
   Target, Download, Phone, Bot, Send, Power, PowerOff, Sparkles,
-  Handshake, Clock, CheckCircle2, XCircle, ArrowUp, ArrowDown,
+  Handshake, Clock, CheckCircle2, XCircle, ArrowUp, ArrowDown, Wallet,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
+import PaymentsTab from "./_components/PaymentsTab";
 import ArticleMarkdown from "@/components/ArticleMarkdown";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ interface WaniPartnerCardRow extends PartnerCardContent {
   user: { id: string; name: string | null; email: string; brandName: string | null };
 }
 
-type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads" | "wani-partner" | "protection-claims";
+type Tab = "users" | "testimonials" | "coupons" | "articles" | "leads" | "wani-partner" | "protection-claims" | "payments";
 
 const blankArticle = {
   title: "", slug: "", excerpt: "", content: "", coverImage: "", published: false,
@@ -101,6 +102,7 @@ export default function AdminPage() {
   // protection claims
   const [needsReviewClaimsCount, setNeedsReviewClaimsCount] = useState(0);
   const [openProtectionClaimModal, setOpenProtectionClaimModal] = useState(false);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
   // users
   const [users,      setUsers]      = useState<User[]>([]);
@@ -242,6 +244,17 @@ export default function AdminPage() {
     } catch {}
   };
 
+  // ── المدفوعات: عدد طلبات الدفع اللي لسه محتاجة مراجعة (PENDING) ────────────
+  const fetchPendingPaymentsCount = async () => {
+    try {
+      const r = await fetch("/api/admin/payments?status=PENDING");
+      if (r.ok) {
+        const d = await r.json();
+        setPendingPaymentsCount(d.counts?.PENDING ?? 0);
+      }
+    } catch {}
+  };
+
   // ── WANI Partner: مراجعة كروت اليوزرز ──────────────────────────────────────
   const fetchWaniCards = async () => {
     setLoadingWani(true);
@@ -365,6 +378,7 @@ export default function AdminPage() {
   useEffect(() => {
     fetchWaniCards();
     fetchProtectionClaimsCount();
+    fetchPendingPaymentsCount();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
@@ -374,6 +388,7 @@ export default function AdminPage() {
     if (activeTab === "leads")              { fetchLeads(leadStatus); fetchBotConfig(); }
     if (activeTab === "wani-partner")       fetchWaniCards();
     if (activeTab === "protection-claims")  fetchProtectionClaimsCount();
+    if (activeTab === "payments")           fetchPendingPaymentsCount();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
@@ -617,6 +632,7 @@ export default function AdminPage() {
             { id: "leads",             label: adm.leads.tab,         icon: Target             },
             { id: "wani-partner",      label: locale === "ar" ? "شركاء واني" : "WANI Partner", icon: Handshake },
             { id: "protection-claims", label: "Protection Claims",   icon: ShieldCheck        },
+            { id: "payments",          label: locale === "ar" ? "المدفوعات" : "Payments", icon: Wallet },
           ] as { id: Tab; label: string; icon: any }[]).map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowArticleF(false); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -633,6 +649,11 @@ export default function AdminPage() {
               {tab.id === "protection-claims" && needsReviewClaimsCount > 0 && (
                 <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-4 h-4 flex items-center justify-center ${activeTab === tab.id ? "bg-white/25 text-white" : "bg-amber-500 text-white"}`}>
                   {needsReviewClaimsCount}
+                </span>
+              )}
+              {tab.id === "payments" && pendingPaymentsCount > 0 && (
+                <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-4 h-4 flex items-center justify-center ${activeTab === tab.id ? "bg-white/25 text-white" : "bg-amber-500 text-white"}`}>
+                  {pendingPaymentsCount}
                 </span>
               )}
             </button>
@@ -1649,6 +1670,15 @@ export default function AdminPage() {
             onNeedsReviewCountChange={setNeedsReviewClaimsCount}
             openCreateRequested={openProtectionClaimModal}
             onResetCreateRequest={() => setOpenProtectionClaimModal(false)}
+          />
+        )}
+
+        {/* ══ المدفوعات ══ */}
+        {activeTab === "payments" && (
+          <PaymentsTab
+            locale={locale}
+            dir={dir}
+            onPendingCountChange={setPendingPaymentsCount}
           />
         )}
 
