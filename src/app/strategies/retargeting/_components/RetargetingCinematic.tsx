@@ -2,21 +2,31 @@
 
 // ── RetargetingCinematic ────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-// نمط بصري مختلف عن باقي أفلام الاستراتيجيات عمدًا: قلب الفيلم مشهد "فرز"
-// (SplitDiagram) — دايراميت بسيط بيوضح إزاي مصدر واحد (بيانات صفحة التقارير)
-// بينقسم لمسارين: الكويسين (أخضر) والوحشين (أحمر)، كل واحد بخط متحرك ليه.
-// باقي المشاهد بتستخدم نفس فكرة الكروت الموجودة في باقي الأفلام لكن بألوان
-// دلالية (tone: good/bad) بدل اللون الموحّد، عشان التمييز البصري بين الفئتين
-// يفضل واضح لحد آخر الفيلم. المحرك تحت (الكاميرا الافتراضية + الـ world)
-// هو نفسه المستخدم في باقي الاستراتيجيات — الاختلاف كله في شكل وحركة المحتوى.
+// الفيلم ده أوسع من مجرد "فرز عملاء": هو جولة في صفحة التقارير كلها —
+// البيانات، التكلفة، أداء الحملات — وبعدين بيوصل لفكرة الريتاجت (الفرز
+// وإعادة الاستهداف) كخطوة طبيعية جاية من نفس البيانات دي. المشهد المميز
+// (SplitDiagram) بيوضح إزاي مصدر واحد بينقسم لمسارين: عملاء الـ VIP
+// (أخضر) والعملاء غير النشطين (أحمر) — وقبله مشهد مماثل بنفس المنطق لكن
+// على الحملات نفسها (الأفضل أداءً مقابل الأضعف)، عشان يبان إن الفكرة
+// واحدة وبتتكرر على مستويات مختلفة من التقرير.
+//
+// ملحوظة مصطلحات: العناوين الظاهرة للمستخدم بتستخدم تسميات مهنية —
+// "عملاء الـ VIP" و"العملاء غير النشطين" — بدل أي تعبير عامي، ومتماشية مع
+// المصطلحات المعتمدة في خريطة الكلمات المفتاحية (SEO_KEYWORD_MAP.md):
+// "تصنيف وتقسيم العملاء وقوائم الـ VIP" و"استعادة العملاء غير النشطين
+// (Win-back Campaigns)".
 // ═══════════════════════════════════════════════════════════════════════════
-// المحتوى هنا مبني على الآلية الحقيقية لصفحة التقارير في المشروع:
+// المحتوى هنا مبني على الآلية الحقيقية للمشروع:
 //   1) /dashboard/reports (تبويب "العملاء"): فرز جاهز فعليًا لخمس فئات —
 //      engaged / no-response / new / archived / followup — عبر
 //      /api/reports?type=customers&segment=... (route.ts).
-//   2) /dashboard/reports/store: أعلى العملاء إنفاقًا (topCustomers) من
+//   2) /dashboard/reports (نظرة عامة): ترتيب الحملات حسب معدل القراءة
+//      (bestCampaigns في route.ts) — نفس القائمة بتوضح الأعلى والأقل أداءً.
+//   3) /dashboard/reports/cost: تكلفة تقديرية لكل حملة وقالب بناءً على
+//      أسعار Meta لمصر (رسائل تسويقية/خدمية/تحقق).
+//   4) /dashboard/reports/store: أعلى العملاء إنفاقًا (topCustomers) من
 //      بيانات المتجر المربوط (Shopify / WooCommerce / EasyOrders).
-//   3) القوائم دي بتتحول لجمهور حملة فعلي من /dashboard/campaigns
+//   5) القوائم دي بتتحول لجمهور حملة فعلي من /dashboard/campaigns
 //      (audiences عبر /api/audiences) وترسل رسالة واتساب مستهدفة.
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -24,7 +34,7 @@ import Link from "next/link";
 import {
     Database, Filter, Users, Trophy, AlertTriangle, Rocket,
     RefreshCw, Repeat, MessageSquare, Target, CheckCircle2, Timer,
-    Play, Pause, ArrowLeft, ArrowRight,
+    Play, Pause, ArrowLeft, ArrowRight, DollarSign, TrendingUp, PieChart,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -32,27 +42,29 @@ import { useLanguage } from "@/lib/language-context";
 const WORLD_SCALE = 3;
 const CAMERA_MS = 1100;
 const ACCENT = "#fb7185"; // لون هوية استراتيجية "الريتاجت" في صفحة /strategies
-const GOOD = "#34d399";   // لون دلالي لفئة "الكويسين"
-const BAD = "#f87171";    // لون دلالي لفئة "الوحشين"
+const GOOD = "#34d399";   // لون دلالي للفئة عالية القيمة (عملاء الـ VIP / أفضل حملة)
+const BAD = "#f87171";    // لون دلالي للفئة الأضعف (العملاء غير النشطين / أضعف حملة)
 
 interface CameraTarget { x: number; y: number; scale: number; }
 type SceneId =
     | "badge" | "headline" | "requirements"
-    | "node0" | "node1" | "node2" | "node3" | "node4"
+    | "node0" | "node1" | "node2" | "node3" | "node4" | "node5" | "node6"
     | "kpis" | "practices" | "cta";
 interface Scene { id: SceneId; duration: number; camera: CameraTarget; }
 
 const SCENES: Scene[] = [
-    { id: "badge", duration: 2400, camera: { x: 0.50, y: 0.09, scale: 2.6 } },
-    { id: "headline", duration: 4600, camera: { x: 0.50, y: 0.25, scale: 1.15 } },
-    { id: "requirements", duration: 3000, camera: { x: 0.50, y: 0.40, scale: 1.30 } },
-    { id: "node0", duration: 2800, camera: { x: 0.12, y: 0.60, scale: 1.55 } },
-    { id: "node1", duration: 4600, camera: { x: 0.34, y: 0.60, scale: 1.32 } },
-    { id: "node2", duration: 3600, camera: { x: 0.56, y: 0.60, scale: 1.55 } },
-    { id: "node3", duration: 3600, camera: { x: 0.75, y: 0.60, scale: 1.55 } },
-    { id: "node4", duration: 3400, camera: { x: 0.94, y: 0.60, scale: 1.55 } },
-    { id: "kpis", duration: 5200, camera: { x: 0.16, y: 0.85, scale: 1.05 } },
-    { id: "practices", duration: 5200, camera: { x: 0.84, y: 0.85, scale: 1.05 } },
+    { id: "badge", duration: 2400, camera: { x: 0.50, y: 0.08, scale: 2.6 } },
+    { id: "headline", duration: 4800, camera: { x: 0.50, y: 0.23, scale: 1.12 } },
+    { id: "requirements", duration: 3000, camera: { x: 0.50, y: 0.38, scale: 1.28 } },
+    { id: "node0", duration: 2800, camera: { x: 0.08, y: 0.60, scale: 1.55 } },
+    { id: "node1", duration: 3200, camera: { x: 0.22, y: 0.60, scale: 1.42 } },
+    { id: "node2", duration: 4200, camera: { x: 0.37, y: 0.60, scale: 1.32 } },
+    { id: "node3", duration: 4600, camera: { x: 0.51, y: 0.60, scale: 1.32 } },
+    { id: "node4", duration: 3600, camera: { x: 0.65, y: 0.60, scale: 1.55 } },
+    { id: "node5", duration: 3600, camera: { x: 0.80, y: 0.60, scale: 1.55 } },
+    { id: "node6", duration: 3400, camera: { x: 0.94, y: 0.60, scale: 1.55 } },
+    { id: "kpis", duration: 5800, camera: { x: 0.16, y: 0.86, scale: 1.05 } },
+    { id: "practices", duration: 5800, camera: { x: 0.84, y: 0.86, scale: 1.05 } },
     { id: "cta", duration: 4400, camera: { x: 0.50, y: 0.98, scale: 1.30 } },
 ];
 
@@ -120,7 +132,7 @@ function KpiRow({ icon: Icon, name, desc, index, isActive, reducedMotion }: {
     const [visible, setVisible] = useState(false);
     useEffect(() => {
         if (isActive && !reducedMotion) {
-            const timer = setTimeout(() => setVisible(true), 280 + index * 320);
+            const timer = setTimeout(() => setVisible(true), 280 + index * 300);
             return () => clearTimeout(timer);
         } else if (isActive && reducedMotion) setVisible(true);
         else setVisible(false);
@@ -141,12 +153,75 @@ function KpiRow({ icon: Icon, name, desc, index, isActive, reducedMotion }: {
     );
 }
 
+// ─── Campaign compare (مشهد الحملة الناجحة مقابل الفاشلة) ──────────────────────
+// نفس منطق الفرز اللي هيتطبق بعدين على العملاء، لكن هنا على الحملات نفسها:
+// أفضل حملة (بمعدل قراءة عالي) مقابل أضعف حملة، زي ما بالظبط بتظهر مرتبة في
+// نظرة عامة صفحة التقارير. الأطوال هنا توضيحية فقط لشرح الفكرة، مش أرقام
+// حقيقية مضمونة — الأرقام الفعلية بتتغيّر حسب حساب كل عميل.
+function CampaignCompare({ isActive, reducedMotion, t, stepNumber }: {
+    isActive: boolean; reducedMotion: boolean; t: (en: string, ar: string) => string; stepNumber: number;
+}) {
+    const [showBest, setShowBest] = useState(false);
+    const [showWorst, setShowWorst] = useState(false);
+
+    useEffect(() => {
+        if (isActive && !reducedMotion) {
+            const t1 = setTimeout(() => setShowBest(true), 450);
+            const t2 = setTimeout(() => setShowWorst(true), 900);
+            return () => { clearTimeout(t1); clearTimeout(t2); };
+        } else if (isActive && reducedMotion) {
+            setShowBest(true); setShowWorst(true);
+        } else {
+            setShowBest(false); setShowWorst(false);
+        }
+    }, [isActive, reducedMotion]);
+
+    return (
+        <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: `${ACCENT}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <TrendingUp size={14} color={ACCENT} />
+                </div>
+                <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", fontFamily: "'JetBrains Mono',monospace" }}>0{stepNumber}</span>
+            </div>
+            <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#f0f0f0", marginBottom: "4px" }}>{t("Winners & Losers", "الناجحة والفاشلة")}</h3>
+            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginBottom: "14px" }}>{t("Same logic, applied to your campaigns first", "نفس المنطق… لكن على حملاتك الأول")}</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ opacity: showBest ? 1 : 0, transform: showBest ? "translateY(0)" : "translateY(6px)", transition: reducedMotion ? "none" : "opacity .4s, transform .4s" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 700, color: GOOD }}>
+                            <CheckCircle2 size={12} color={GOOD} /> {t("Top performer", "الأعلى أداءً")}
+                        </span>
+                    </div>
+                    <div style={{ height: "6px", borderRadius: "3px", background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: showBest ? "88%" : "0%", background: GOOD, borderRadius: "3px", transition: reducedMotion ? "none" : "width .8s cubic-bezier(0.16,1,0.3,1)" }} />
+                    </div>
+                    <div style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.3)", marginTop: "3px" }}>{t("Highest read rate · Reports overview", "الأعلى في معدل القراءة · نظرة عامة التقارير")}</div>
+                </div>
+
+                <div style={{ opacity: showWorst ? 1 : 0, transform: showWorst ? "translateY(0)" : "translateY(6px)", transition: reducedMotion ? "none" : "opacity .4s, transform .4s" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 700, color: BAD }}>
+                            <AlertTriangle size={12} color={BAD} /> {t("Weakest performer", "الأقل أداءً")}
+                        </span>
+                    </div>
+                    <div style={{ height: "6px", borderRadius: "3px", background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: showWorst ? "15%" : "0%", background: BAD, borderRadius: "3px", transition: reducedMotion ? "none" : "width .8s cubic-bezier(0.16,1,0.3,1)" }} />
+                    </div>
+                    <div style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.3)", marginTop: "3px" }}>{t("Needs a different message or timing", "محتاجة رسالة أو توقيت مختلف")}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Split diagram (مشهد الفرز الذكي) ──────────────────────────────────────────
 // مصدر واحد ("كل العملاء") بينقسم لمسارين برسمة SVG بسيطة: مسار أخضر
-// للكويسين ومسار أحمر للوحشين، كل واحد بخط متحرك (dash flow) بيوحي بحركة
-// البيانات وهي بتتفرز لحظة بلحظة.
-function SplitDiagram({ isActive, reducedMotion, t }: {
-    isActive: boolean; reducedMotion: boolean; t: (en: string, ar: string) => string;
+// لعملاء الـ VIP ومسار أحمر للعملاء غير النشطين، كل واحد بخط متحرك (dash
+// flow) بيوحي بحركة البيانات وهي بتتفرز لحظة بلحظة.
+function SplitDiagram({ isActive, reducedMotion, t, stepNumber }: {
+    isActive: boolean; reducedMotion: boolean; t: (en: string, ar: string) => string; stepNumber: number;
 }) {
     const [showGood, setShowGood] = useState(false);
     const [showBad, setShowBad] = useState(false);
@@ -178,10 +253,10 @@ function SplitDiagram({ isActive, reducedMotion, t }: {
                 <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: `${ACCENT}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Filter size={14} color={ACCENT} />
                 </div>
-                <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", fontFamily: "'JetBrains Mono',monospace" }}>02</span>
+                <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", fontFamily: "'JetBrains Mono',monospace" }}>0{stepNumber}</span>
             </div>
             <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#f0f0f0", marginBottom: "4px" }}>{t("Smart Split", "الفرز الذكي")}</h3>
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginBottom: "12px" }}>{t("Every customer takes a different path", "كل عميل بياخد مسار مختلف")}</p>
+            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginBottom: "12px" }}>{t("Same idea — now applied to your customers", "نفس الفكرة… بس على عملاءك")}</p>
 
             <div style={{ position: "relative", width: "100%", aspectRatio: "250 / 140" }}>
                 <svg viewBox="0 0 250 140" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
@@ -197,7 +272,7 @@ function SplitDiagram({ isActive, reducedMotion, t }: {
                     <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>{t("All customers", "كل العملاء")}</span>
                 </div>
 
-                {/* المسار الأخضر: الكويسين */}
+                {/* المسار الأخضر: عملاء الـ VIP */}
                 <div style={{
                     position: "absolute", left: "28%", top: "96px", transform: `translateX(-50%) translateY(${showGood ? 0 : 6}px)`,
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
@@ -205,10 +280,10 @@ function SplitDiagram({ isActive, reducedMotion, t }: {
                     transition: reducedMotion ? "none" : "opacity .4s, transform .4s",
                 }}>
                     <Trophy size={13} color={GOOD} />
-                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: GOOD, whiteSpace: "nowrap" }}>{t("Good ones", "الكويسين")}</span>
+                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: GOOD, whiteSpace: "nowrap" }}>{t("VIP", "VIP")}</span>
                 </div>
 
-                {/* المسار الأحمر: الوحشين */}
+                {/* المسار الأحمر: العملاء غير النشطين */}
                 <div style={{
                     position: "absolute", left: "72%", top: "96px", transform: `translateX(-50%) translateY(${showBad ? 0 : 6}px)`,
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
@@ -216,7 +291,7 @@ function SplitDiagram({ isActive, reducedMotion, t }: {
                     transition: reducedMotion ? "none" : "opacity .4s, transform .4s",
                 }}>
                     <AlertTriangle size={13} color={BAD} />
-                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: BAD, whiteSpace: "nowrap" }}>{t("At-risk ones", "الوحشين")}</span>
+                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: BAD, whiteSpace: "nowrap" }}>{t("Inactive", "غير نشطين")}</span>
                 </div>
             </div>
         </div>
@@ -225,8 +300,8 @@ function SplitDiagram({ isActive, reducedMotion, t }: {
 
 // ─── Word-by-word reveal (زي كابشن فيديو) — بيتفكك النص لكلمات وكل كلمة
 // بتظهر بتتابع بسيط (fade + rise + blur)، مع دعم تظليل كلمة أو أكتر بلون
-// موحّد أو بلون مخصص لكل كلمة (highlightMap) — عشان نلوّن "الكويسين" أخضر
-// و"الوحشين" أحمر جوه نفس الجملة.
+// موحّد أو بلون مخصص لكل كلمة (highlightMap) — عشان نلوّن "المميزين" أخضر
+// و"الخاملين" أحمر جوه نفس الجملة.
 function WordReveal({
     text, isActive, reducedMotion, highlight = [], highlightMap = [], baseDelay = 0, step = 90,
     style,
@@ -286,12 +361,13 @@ function WordReveal({
     );
 }
 
-// ─── Node data type — الخطوة التقليدية (كارت أيقونة + شيبس) أو المشهد
-// المخصص (custom: true) اللي بيترسم بيه SplitDiagram بدل الكارت العادي.
+// ─── Node data type — الخطوة التقليدية (كارت أيقونة + شيبس) أو مشهد
+// مخصص (custom) بيترسم بيه SplitDiagram أو CampaignCompare بدل الكارت العادي.
 type NodeData =
-    | { custom: true }
+    | { custom: "split" }
+    | { custom: "compare" }
     | {
-        custom: false;
+        custom?: undefined;
         icon: React.ElementType;
         title: string;
         desc: string;
@@ -354,55 +430,63 @@ export default function RetargetingCinematic() {
         return `translate(${tx}px, ${ty}px) scale(${scale})`;
     }
 
-    // ─── محتوى حقيقي (مبني على /dashboard/reports و /dashboard/campaigns) ─────
+    // ─── محتوى حقيقي (مبني على /dashboard/reports بكل تبويباته و /dashboard/campaigns) ─
     const NODES: NodeData[] = [
         {
-            custom: false,
             icon: Database,
             title: t("Reading the Data", "قراءة البيانات"),
-            desc: t("Wani reads every customer's report as it happens", "واني بتقرا تقرير كل عميل أول بأول"),
+            desc: t("Wani reads your whole Reports page as it happens", "واني بتقرا صفحة التقارير كلها أول بأول"),
             chips: [
                 t("Messages & replies", "الرسائل والردود") + " · Reports API",
-                t("Last interaction", "آخر تفاعل") + " · lastMessageAt",
+                t("Campaign cost", "التكلفة والإنفاق") + " · /reports/cost",
                 t("Orders & spend", "الطلبات وقيمة الإنفاق") + " · StoreOrder",
             ],
             tag: "DataSync",
         },
-        { custom: true },
         {
-            custom: false,
+            icon: DollarSign,
+            title: t("Cost & Spend", "التكلفة والإنفاق"),
+            desc: t("How much you're actually spending", "قد إيه بتصرف فعليًا على كل رسالة"),
+            chips: [
+                t("Estimated cost per campaign", "تكلفة تقديرية لكل حملة"),
+                t("Cost by template & message category", "التكلفة حسب القالب وكاتيجوري الرسالة"),
+                t("Average cost + priciest campaign", "متوسط تكلفة الحملة + أغلى حملة"),
+            ],
+            tag: "CostReport",
+        },
+        { custom: "compare" },
+        { custom: "split" },
+        {
             icon: Trophy,
-            title: t("The Good Ones", "الكويسين"),
+            title: t("VIP Customers", "عملاء الـ VIP"),
             desc: t("Most active, highest spending", "الأنشط وأعلى إنفاقًا") + " · VIP_SEGMENT",
             tone: "good",
             chips: [
                 t("Reply within hours", "بيردوا خلال ساعات"),
-                t("Repeat VIP purchases", "شراء متكرر من عملاء VIP"),
+                t("Repeat high-value purchases", "شراء متكرر وقيمة إنفاق عالية"),
                 t("High open & read rate", "معدل فتح وقراءة عالي"),
             ],
             note: t("Message: reward + exclusive offer", "الرسالة: مكافأة + عرض حصري"),
         },
         {
-            custom: false,
             icon: AlertTriangle,
-            title: t("The At-Risk Ones", "الوحشين"),
-            desc: t("Least engaged, most likely to churn", "الأقل تفاعلًا والأكتر عرضة للفقد") + " · AT_RISK_SEGMENT",
+            title: t("Inactive Customers", "العملاء غير النشطين"),
+            desc: t("Least engaged, most likely to churn", "الأقل تفاعلًا والأكتر عرضة للفقد") + " · INACTIVE_SEGMENT",
             tone: "bad",
             chips: [
                 t("No reply in 14+ days", "محدش رد من أكتر من 14 يوم"),
                 t("Left the cart without finishing", "سابوا السلة من غير إتمام"),
                 t("Archived the conversation", "أرشفوا المحادثة"),
             ],
-            note: t("Message: we miss you + a reason to return", "الرسالة: افتقدناك + سبب للرجوع"),
+            note: t("Message: a win-back offer + a reason to return", "الرسالة: عرض استرجاع (Win-back) + سبب للرجوع"),
         },
         {
-            custom: false,
             icon: Rocket,
             title: t("Launch", "الإطلاق"),
             desc: t("Two separate campaigns, one click", "حملتين منفصلتين بضغطة واحدة"),
             chips: [
-                t("Good-ones campaign → exclusive VIP offer", "حملة الكويسين → عرض حصري VIP"),
-                t("At-risk campaign → win-back coupon", "حملة الوحشين → كوبون استرجاع"),
+                t("VIP campaign → exclusive offer", "حملة عملاء الـ VIP → عرض حصري"),
+                t("Win-back campaign → recovery coupon", "حملة استرجاع (Win-back) → كوبون رجوع"),
                 t("Sent from the same campaigns screen", "الإرسال من نفس شاشة الحملات"),
             ],
             tag: "ReadyToSend",
@@ -410,16 +494,18 @@ export default function RetargetingCinematic() {
     ];
 
     const KPIS = [
-        { icon: RefreshCw, name: t("Reactivation Rate", "معدل إعادة التفعيل"), desc: t("At-risk customers who engaged again ÷ those targeted", "الوحشين اللي رجعوا يتفاعلوا ÷ اللي استهدفناهم") },
-        { icon: Repeat, name: t("VIP Repeat Purchase", "تكرار الشراء عند الكويسين"), desc: t("New orders from the same VIP customers", "طلبات جديدة من نفس عملاء الـ VIP") },
-        { icon: MessageSquare, name: t("Win-back Reply Rate", "معدل الرد على رسائل الاسترجاع"), desc: t("Replies to the at-risk campaign ÷ messages sent", "ردود حملة الوحشين ÷ الرسائل المُرسلة") },
+        { icon: RefreshCw, name: t("Reactivation Rate", "معدل إعادة التفعيل"), desc: t("Inactive customers who engaged again ÷ those targeted", "العملاء غير النشطين اللي رجعوا يتفاعلوا ÷ اللي استهدفناهم") },
+        { icon: Repeat, name: t("VIP Repeat Purchase", "تكرار الشراء عند عملاء الـ VIP"), desc: t("New orders from the same VIP customers", "طلبات جديدة من نفس عملاء الـ VIP") },
+        { icon: MessageSquare, name: t("Win-back Reply Rate", "معدل الرد على حملة الاسترجاع"), desc: t("Replies to the win-back campaign ÷ messages sent", "ردود حملة الاسترجاع (Win-back) ÷ الرسائل المُرسلة") },
+        { icon: DollarSign, name: t("Cost per Reactivated Customer", "تكلفة كل عميل تم استرجاعه"), desc: t("Win-back campaign cost ÷ customers who came back", "تكلفة حملة الاسترجاع ÷ عدد العملاء اللي رجعوا") },
     ];
 
     const PRACTICES = [
         t("Re-run the split every couple of weeks — behavior changes fast", "أعد الفرز كل أسبوعين — سلوك العملاء بيتغيّر بسرعة"),
         t("Connect your store so spend, not just replies, shapes the split", "اربط متجرك عشان قيمة الإنفاق تدخل في الفرز مش الردود بس"),
-        t("Make the at-risk message a question, not a pitch — it lifts replies", "خلّي رسالة الوحشين سؤال مش بيع مباشر — بترفع نسبة الرد"),
-        t("Never send the same message to both segments — each has a different motive", "متبعتش نفس الرسالة للفئتين — كل فئة عندها دافع مختلف"),
+        t("Check the cost tab before launching a big win-back campaign", "راجع تبويب التكلفة قبل ما تطلق حملة استرجاع كبيرة"),
+        t("Make the inactive-customer message a question, not a pitch", "خلّي رسالة العملاء غير النشطين سؤال مش بيع مباشر — بترفع نسبة الرد"),
+        t("Never send the same message to VIP and inactive customers", "متبعتش نفس الرسالة لعملاء الـ VIP والعملاء غير النشطين — كل فئة عندها دافع مختلف"),
     ];
 
     const dim = (i: number) => (active === i ? 1 : 0.08);
@@ -476,14 +562,14 @@ export default function RetargetingCinematic() {
                         <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", marginTop: "12px", lineHeight: 1.7 }}>
                             <WordReveal
                                 text={t(
-                                    "Not all customers are alike — split the good ones from the at-risk ones, and speak to each in their own language.",
-                                    "مش كل العملاء زي بعض — افرز الكويسين من الوحشين، وكلّم كل واحد بلغته."
+                                    "Not all customers are alike — split the valued ones from the inactive ones, and speak to each in their own language.",
+                                    "مش كل عملاءك زي بعض — افرز المميزين من الخاملين، وكلّم كل فئة بلغتها."
                                 )}
                                 isActive={active === 1}
                                 reducedMotion={reducedMotion}
                                 highlightMap={[
-                                    { word: t("good", "الكويسين"), color: GOOD },
-                                    { word: t("at-risk", "الوحشين"), color: BAD },
+                                    { word: t("valued", "المميزين"), color: GOOD },
+                                    { word: t("inactive", "الخاملين"), color: BAD },
                                 ]}
                                 baseDelay={480}
                                 step={75}
@@ -492,6 +578,9 @@ export default function RetargetingCinematic() {
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "18px", alignItems: "center" }}>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "rgba(255,255,255,0.55)" }}>
                                 <Target size={14} color={ACCENT} /> {t("From report data… to precise targeting", "من بيانات التقارير… لاستهداف دقيق")}
+                            </div>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "rgba(255,255,255,0.55)" }}>
+                                <PieChart size={14} color={ACCENT} /> {t("Cost, campaigns, and customers — one report", "التكلفة والحملات والعملاء… تقرير واحد")}
                             </div>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "rgba(255,255,255,0.55)" }}>
                                 <CheckCircle2 size={14} color={ACCENT} /> {t("Without opening a single spreadsheet", "من غير ما تفتح ملف إكسيل واحد")}
@@ -516,11 +605,12 @@ export default function RetargetingCinematic() {
                         </div>
                     </div>
 
-                    {/* Scenes 3-7: Mechanism nodes (×5 — الفرز في النص) */}
+                    {/* Scenes 3-9: Mechanism nodes (×7 — من قراءة البيانات لحد إطلاق الحملة) */}
                     {NODES.map((node, i) => {
                         const sceneIdx = 3 + i;
                         const cam = SCENES[sceneIdx].camera;
-                        const borderColor = node.custom ? ACCENT : (node.tone === "good" ? GOOD : node.tone === "bad" ? BAD : ACCENT);
+                        const isCustom = !!node.custom;
+                        const borderColor = isCustom ? ACCENT : (node.tone === "good" ? GOOD : node.tone === "bad" ? BAD : ACCENT);
                         return (
                             <div
                                 key={i}
@@ -531,12 +621,14 @@ export default function RetargetingCinematic() {
                                     transform: `translate(-50%,-50%) ${dimTransform(sceneIdx)}`,
                                     opacity: dim(sceneIdx),
                                     transition: "opacity .6s, transform .6s",
-                                    width: node.custom ? "min(90%, 280px)" : "min(84%, 250px)",
+                                    width: isCustom ? "min(90%, 280px)" : "min(84%, 250px)",
                                 }}
                             >
                                 <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${borderColor}30`, background: "rgba(255,255,255,0.02)" }}>
-                                    {node.custom ? (
-                                        <SplitDiagram isActive={active === sceneIdx} reducedMotion={reducedMotion} t={t} />
+                                    {node.custom === "compare" ? (
+                                        <CampaignCompare isActive={active === sceneIdx} reducedMotion={reducedMotion} t={t} stepNumber={i + 1} />
+                                    ) : node.custom === "split" ? (
+                                        <SplitDiagram isActive={active === sceneIdx} reducedMotion={reducedMotion} t={t} stepNumber={i + 1} />
                                     ) : (
                                         <>
                                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
@@ -569,36 +661,36 @@ export default function RetargetingCinematic() {
                         );
                     })}
 
-                    {/* Scene 8: KPIs — staggered entry */}
-                    <div style={{ position: "absolute", left: `${SCENES[8].camera.x * 100}%`, top: `${SCENES[8].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(8), transition: "opacity .6s", width: "min(88%, 360px)" }}>
+                    {/* Scene 10: KPIs — staggered entry */}
+                    <div style={{ position: "absolute", left: `${SCENES[10].camera.x * 100}%`, top: `${SCENES[10].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(10), transition: "opacity .6s", width: "min(88%, 360px)" }}>
                         <p style={{ fontSize: "11px", letterSpacing: "2px", color: ACCENT, fontFamily: "'JetBrains Mono',monospace", marginBottom: "16px" }}>
                             {t("SUCCESS METRICS", "مؤشرات النجاح")}
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                             {KPIS.map((k, i) => (
-                                <KpiRow key={k.name} icon={k.icon} name={k.name} desc={k.desc} index={i} isActive={active === 8} reducedMotion={reducedMotion} />
+                                <KpiRow key={k.name} icon={k.icon} name={k.name} desc={k.desc} index={i} isActive={active === 10} reducedMotion={reducedMotion} />
                             ))}
                         </div>
                     </div>
 
-                    {/* Scene 9: Best practices — numbered, staggered */}
-                    <div style={{ position: "absolute", left: `${SCENES[9].camera.x * 100}%`, top: `${SCENES[9].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(9), transition: "opacity .6s", width: "min(88%, 360px)" }}>
+                    {/* Scene 11: Best practices — numbered, staggered */}
+                    <div style={{ position: "absolute", left: `${SCENES[11].camera.x * 100}%`, top: `${SCENES[11].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(11), transition: "opacity .6s", width: "min(88%, 360px)" }}>
                         <p style={{ fontSize: "11px", letterSpacing: "2px", color: ACCENT, fontFamily: "'JetBrains Mono',monospace", marginBottom: "16px" }}>
                             {t("BEST PRACTICES", "أفضل الممارسات")}
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             {PRACTICES.map((p, i) => (
-                                <TipRow key={i} n={i + 1} text={p} index={i} isActive={active === 9} reducedMotion={reducedMotion} />
+                                <TipRow key={i} n={i + 1} text={p} index={i} isActive={active === 11} reducedMotion={reducedMotion} />
                             ))}
                         </div>
                     </div>
 
-                    {/* Scene 10: CTA */}
-                    <div style={{ position: "absolute", left: `${SCENES[10].camera.x * 100}%`, top: `${SCENES[10].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(10), transition: "opacity .6s", textAlign: "center", width: "min(85%, 380px)" }}>
+                    {/* Scene 12: CTA */}
+                    <div style={{ position: "absolute", left: `${SCENES[12].camera.x * 100}%`, top: `${SCENES[12].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(12), transition: "opacity .6s", textAlign: "center", width: "min(85%, 380px)" }}>
                         <div style={{ fontSize: "22px", fontWeight: 800, color: "#f0f0f0", lineHeight: 1.3, marginBottom: "8px", letterSpacing: isAr ? "0" : "-0.5px" }}>
                             <WordReveal
                                 text={t("Ready to retarget your customers?", "جاهز تستهدف عملاءك من جديد؟")}
-                                isActive={active === 10}
+                                isActive={active === 12}
                                 reducedMotion={reducedMotion}
                                 highlight={[t("retarget", "تستهدف")]}
                                 baseDelay={80}
@@ -606,7 +698,7 @@ export default function RetargetingCinematic() {
                             />
                         </div>
                         <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", lineHeight: 1.6, marginBottom: "20px" }}>
-                            {t("Start from the Reports page — the split is ready in minutes.", "ابدأ من صفحة التقارير — الفرز هيبقى جاهز في دقايق.")}
+                            {t("Start from the Reports page — cost, campaigns, and customer segmentation, all in one place.", "ابدأ من صفحة التقارير — التكلفة والحملات وفرز العملاء كلهم في مكان واحد.")}
                         </p>
                         <Link
                             href="/dashboard/reports?tab=customers"
@@ -638,7 +730,7 @@ export default function RetargetingCinematic() {
                     >
                         {playing ? <Pause size={11} color="#fff" /> : <Play size={11} color="#fff" />}
                     </button>
-                    <div style={{ display: "flex", gap: "5px", padding: "6px 10px", borderRadius: "100px", background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ display: "flex", gap: "5px", padding: "6px 10px", borderRadius: "100px", background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.06)", flexWrap: "wrap", maxWidth: "min(88vw, 420px)", justifyContent: "center" }}>
                         {SCENES.map((s, i) => (
                             <button
                                 key={s.id}

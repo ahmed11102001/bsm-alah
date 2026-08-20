@@ -35,6 +35,7 @@ Wani (وني) is an all-in-one **WhatsApp Business Platform** specifically tailo
 | `/` | **Homepage** | **واتساب للأعمال** | WhatsApp Business, WhatsApp CRM, أتمتة واتساب, WhatsApp Marketing, حملات واتساب, WhatsApp Business API, WhatsApp Chatbot, صندوق وارد واتساب للفريق | Commercial / Transactional | Main Product Pillar Page | `/strategies`, `/developers`, `/articles`, `/#pricing` |
 | `/strategies` | **Marketing Strategies Hub** | **التسويق عبر واتساب** | تسويق واتساب, WhatsApp Marketing, حملات واتساب, التسويق عبر WhatsApp Business, أتمتة التسويق عبر واتساب | Commercial / Informational | Marketing Strategy Hub | `/strategies/abandoned-cart`, `/`, `/dashboard` |
 | `/strategies/abandoned-cart` | **Abandoned Cart Strategy** | **استرجاع السلات المتروكة عبر واتساب** | استرجاع السلة المتروكة, WhatsApp abandoned cart, abandoned cart recovery, رسائل السلات المتروكة, استرجاع عربات التسوق | Commercial / Educational | eCommerce Feature Pillar | `/strategies`, `/`, `/#pricing` |
+| `/strategies/retargeting` | **Retargeting Strategy** | **إعادة استهداف العملاء عبر واتساب** | تصنيف وتقسيم عملاء واتساب, قوائم عملاء الـ VIP على واتساب, استعادة العملاء غير النشطين, Win-back Campaigns WhatsApp, تحليل تقارير واتساب, WhatsApp Customer Segmentation | Commercial / Educational | CRM & Analytics Feature Pillar | `/strategies`, `/`, `/dashboard/reports` |
 | `/developers` | **Developer Portal** | **WhatsApp API** | WhatsApp Business API, WhatsApp Cloud API, WhatsApp OTP API, WhatsApp API Egypt, WhatsApp API platform | Commercial / Developer | API Product Landing Page | `/developers/docs`, `/developers/signin`, `/developers/signup`, `/` |
 | `/developers/docs` | **API Documentation** | **WhatsApp API Documentation** | WhatsApp API Docs, WhatsApp Cloud API Documentation, WhatsApp OTP API Documentation, WhatsApp Business API Documentation | Developer / Navigational | Technical Reference | `/developers`, `/developers/signup` |
 | `/articles` | **Articles Index** | **مقالات واتساب للأعمال** | نصائح واتساب للأعمال, WhatsApp Business Tips, WhatsApp Marketing Guide, WhatsApp CRM, WhatsApp Automation | Informational | Content Hub / Blog Index | Individual Article Pages (`/articles/[slug]`), `/` |
@@ -94,6 +95,7 @@ The following visual diagram defines the internal link equity flow across the Wa
 | **Abandoned Cart** | `/strategies/abandoned-cart`<br>*(Primary: استرجاع السلات المتروكة عبر واتساب)* | Article 6: `إزاي تسترجع السلات المتروكة باستخدام واتساب؟`<br>*(Primary: استرجاع السلات المتروكة واتساب)* | The `/strategies/abandoned-cart` page is an interactive showcase of the automated mechanism. Article 6 is a step-by-step tutorial with copy templates and conversion optimization tips. |
 | **WhatsApp API vs Business** | `/developers`<br>*(Primary: WhatsApp API)* | Article 1: `واتساب بزنس vs WhatsApp Business API: إيه الفرق؟`<br>Article 10: `WhatsApp API vs WhatsApp Business` | `/developers` is a developer product portal. Article 1 is for non-technical business owners outgrowing the mobile app. Article 10 is for technical architects comparing Cloud API features. |
 | **Shopify / WooCommerce** | `/` (Homepage integrations section) | Article 11 (Shopify) & Article 12 (WooCommerce) | Homepage mentions integrations as part of the feature list. Articles 11 & 12 are detailed, platform-specific setup guides. |
+| **Customer Segmentation / Win-back** | `/strategies/retargeting`<br>*(Primary: إعادة استهداف العملاء عبر واتساب)* | Future Article (Cluster B/D): `أتمتة استعادة العملاء غير النشطين (Win-back Campaigns)` | `/strategies/retargeting` is an interactive commercial showcase of the segmentation mechanism (Reports data → VIP vs inactive split → targeted campaign). The future article would be a tactical, step-by-step guide to writing win-back message copy, timing, and discount ladders — linking back to `/strategies/retargeting` as its pillar. |
 
 ---
 
@@ -361,6 +363,7 @@ Cluster B: WhatsApp CRM (إدارة علاقات العملاء)
   * WhatsApp CRM: يعني إيه وإمتى شركتك تحتاجه؟ (Article 02)
   * إدارة صندوق وارد واتساب الموحد لفرق المبيعات والدعم
   * كيفية تصنيف وتقسيم العملاء وقوائم الـ VIP على واتساب
+    → Now a dedicated commercial page: /strategies/retargeting
   * تقييم أداء موظفي خدمة العملاء على واتساب
 
 ===================================================================================
@@ -386,6 +389,7 @@ Cluster D: WhatsApp Automation (أتمتة واتساب)
   * أتمتة إشعارات تأكيد وشحن الطلبات للعملاء
   * إعداد رسائل المتابعة والتقييم التلقائي بعد الشراء
   * أتمتة استعادة العملاء غير النشطين (Win-back Campaigns)
+    → Now a dedicated commercial page: /strategies/retargeting
 
 ===================================================================================
 Cluster E: WhatsApp AI / Chatbot (الذكاء الاصطناعي والشات بوت)

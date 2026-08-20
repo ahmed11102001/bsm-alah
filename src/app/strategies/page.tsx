@@ -115,8 +115,8 @@ const STRATEGIES: StrategyDef[] = [
     glow: "rgba(251,113,133,0.32)",
     name: { ar: "الريتاجت", en: "Retargeting" },
     line: {
-      ar: "افرز الكويسين من الوحشين، وكلّم كل واحد بلغته",
-      en: "Split the good ones from the at-risk ones, and speak to each in their own language.",
+      ar: "افرز عملاء الـ VIP من العملاء غير النشطين، وكلّم كل فئة بلغتها",
+      en: "Split your VIP customers from inactive ones, and speak to each in their own language.",
     },
   },
 ];
