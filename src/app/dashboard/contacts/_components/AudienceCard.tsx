@@ -47,12 +47,12 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
   return (
     <div className={`${cfg.bg} ${cfg.border} border rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <div className={`w-10 h-10 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-10 h-10 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>
             {cfg.icon}
           </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{audience.name}</p>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight truncate">{audience.name}</p>
             {cfg.badge && (
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${cfg.badgeColor}`}>{cfg.badge}</span>
             )}
@@ -91,18 +91,24 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
         <span className="text-sm font-normal text-gray-400 dark:text-gray-500">{c.contact}</span>
       </div>
 
-      <div className="flex flex-wrap gap-1">
-        {audience.contacts.slice(0, 3).map(ct => (
-          <span key={ct.id}
-            className="text-[11px] bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600
-            px-2 py-0.5 rounded-lg text-gray-600 dark:text-gray-400 font-mono">
-            {ct.phone}
-          </span>
+      <div className="space-y-1.5">
+        {audience.contacts.slice(0, 3).map((ct) => (
+          <div key={ct.id} className="flex items-center gap-2 rounded-xl bg-white/70 px-2.5 py-1.5 dark:bg-gray-700/50">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold text-gray-500 dark:bg-gray-600 dark:text-gray-300">
+              {(ct.name ?? ct.phone).slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
+                {ct.name || "بدون اسم"}
+              </p>
+              <p className="truncate font-mono text-[10px] text-gray-400">{ct.phone}</p>
+            </div>
+          </div>
         ))}
         {audience.contactCount > 3 && (
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
-            +{numFmt(audience.contactCount - 3)}
-          </span>
+          <p className="px-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+            +{numFmt(audience.contactCount - 3)} عميل آخر
+          </p>
         )}
       </div>
 
