@@ -298,45 +298,49 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
                 <Metric icon={<Pin className="h-4 w-4" />} label="مثبّت" value={stats.pinned} />
               </div>
 
-              <div className="flex flex-col gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-800 lg:flex-row lg:items-center">
-                <div className="relative w-full lg:w-[280px] lg:shrink-0">
+              <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                <div className="relative w-full">
                   <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     value={search}
                     onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                     placeholder="ابحث بالاسم أو رقم الهاتف..."
-                    className="pr-9 dark:bg-gray-800 dark:border-gray-700"
+                    className="h-10 pr-9 dark:bg-gray-800 dark:border-gray-700"
                   />
                 </div>
 
-                <div
-                  dir="ltr"
-                  className="min-w-0 flex-1 overflow-x-scroll overflow-y-hidden pb-2 [scrollbar-color:#9ca3af_#f3f4f6] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100"
-                  style={{ WebkitOverflowScrolling: "touch" }}
-                >
-                  <div dir={dir} className="flex w-max min-w-full gap-2 px-0.5">
-                    <FilterButton active={filter === "all"} onClick={() => { setPage(1); setFilter("all"); }}>الكل</FilterButton>
-                  <FilterButton active={filter === "active"} onClick={() => { setPage(1); setFilter("active"); }}>نشط</FilterButton>
-                  <FilterButton active={filter === "unread"} onClick={() => { setPage(1); setFilter("unread"); }}>عليه متابعة</FilterButton>
-                  <FilterButton active={filter === "ai"} onClick={() => { setPage(1); setFilter("ai"); }}>AI</FilterButton>
-                  <FilterButton active={filter === "handoff"} onClick={() => { setPage(1); setFilter("handoff"); }}>تدخل بشري</FilterButton>
-                  <FilterButton active={filter === "pinned"} onClick={() => { setPage(1); setFilter("pinned"); }}>مثبّت</FilterButton>
-                    <FilterButton active={filter === "archived"} onClick={() => { setPage(1); setFilter("archived"); }}>مؤرشف</FilterButton>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-gray-400" />
+                    <select
+                      value={sort}
+                      onChange={(e) => { setPage(1); setSort(e.target.value); }}
+                      className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="lastActivity">آخر نشاط</option>
+                      <option value="messages">الأكثر رسائل</option>
+                      <option value="name">الاسم</option>
+                      <option value="oldest">الأقدم نشاطًا</option>
+                    </select>
                   </div>
+
+                  <span className="text-[11px] text-gray-400">الفلاتر</span>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <SlidersHorizontal className="h-4 w-4 shrink-0 text-gray-400" />
-                  <select
-                    value={sort}
-                    onChange={(e) => { setPage(1); setSort(e.target.value); }}
-                    className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="lastActivity">آخر نشاط</option>
-                    <option value="messages">الأكثر رسائل</option>
-                    <option value="name">الاسم</option>
-                    <option value="oldest">الأقدم نشاطًا</option>
-                  </select>
+                <div
+                  dir="rtl"
+                  className="mt-2 w-full overflow-x-auto overflow-y-hidden pb-2 [scrollbar-color:#9ca3af_#f3f4f6] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100"
+                  style={{ WebkitOverflowScrolling: "touch" }}
+                >
+                  <div dir="rtl" className="flex w-max min-w-full flex-nowrap items-center justify-start gap-2 px-0.5">
+                    <FilterButton active={filter === "all"} onClick={() => { setPage(1); setFilter("all"); }}>الكل</FilterButton>
+                    <FilterButton active={filter === "active"} onClick={() => { setPage(1); setFilter("active"); }}>نشط</FilterButton>
+                    <FilterButton active={filter === "unread"} onClick={() => { setPage(1); setFilter("unread"); }}>عليه متابعة</FilterButton>
+                    <FilterButton active={filter === "ai"} onClick={() => { setPage(1); setFilter("ai"); }}>AI</FilterButton>
+                    <FilterButton active={filter === "handoff"} onClick={() => { setPage(1); setFilter("handoff"); }}>تدخل بشري</FilterButton>
+                    <FilterButton active={filter === "pinned"} onClick={() => { setPage(1); setFilter("pinned"); }}>مثبّت</FilterButton>
+                    <FilterButton active={filter === "archived"} onClick={() => { setPage(1); setFilter("archived"); }}>مؤرشف</FilterButton>
+                  </div>
                 </div>
               </div>
 
