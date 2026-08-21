@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users, Maximize2, Minimize2,
+  Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users, ArrowRight,
   MessageCircle, Bot, AlertCircle, Pin, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
@@ -61,17 +60,17 @@ function relativeDate(value: string | null, locale: string) {
   return formatDate(value, locale);
 }
 
-export function AudienceDetailModal({ audience, open, onClose, onSave }: {
-  audience: Audience | null; open: boolean; onClose: () => void; onSave: (a: Audience) => void;
-}) {
+export default function AudienceDetailsPage() {
   const { dir, locale } = useLanguage();
+  const params = useParams<{ audienceId: string }>();
+  const audienceId = params?.audienceId;
+  const [audience, setAudience] = useState<Audience | null>(null);
   const [rows, setRows] = useState<AudienceContact[]>([]);
   const [stats, setStats] = useState<Stats>({ active: 0, unread: 0, ai: 0, handoff: 0, pinned: 0 });
   const [loading, setLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("lastActivity");
@@ -85,20 +84,38 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
   const isReadOnly = !audience || ["vip", "engaged", "no-response"].includes(audience.type);
 
   useEffect(() => {
-    if (!open || !audience) return;
-    setSearch("");
-    setFilter("all");
-    setSort("lastActivity");
-    setPage(1);
-    setEditMode(false);
-    setIsMaximized(false);
-    setEditContacts([]);
-    setAddPhone("");
-    setAddName("");
-  }, [open, audience]);
+    if (!audienceId) return;
+    let cancelled = false;
+
+    const loadAudience = async () => {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/audiences?audienceId=${encodeURIComponent(audienceId)}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "الجمهور غير موجود");
+        if (cancelled) return;
+        setAudience(data);
+        setSearch("");
+        setFilter("all");
+        setSort("lastActivity");
+        setPage(1);
+        setEditMode(false);
+        setEditContacts([]);
+        setAddPhone("");
+        setAddName("");
+      } catch (e: any) {
+        if (!cancelled) toast.error(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadAudience();
+    return () => { cancelled = true; };
+  }, [audienceId]);
 
   useEffect(() => {
-    if (!open || !audience || editMode) return;
+    if (!audience || editMode) return;
 
     let cancelled = false;
     setLoading(true);
@@ -128,7 +145,7 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
       .finally(() => !cancelled && setLoading(false));
 
     return () => { cancelled = true; };
-  }, [open, audience, editMode, page, search, filter, sort]);
+  }, [audience, editMode, page, search, filter, sort]);
 
   const startEdit = async () => {
     if (!audience || isReadOnly) return;
@@ -176,7 +193,7 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
       });
       if (!r.ok) throw new Error((await r.json()).error || "تعذر حفظ التعديلات");
       toast.success("تم حفظ الجمهور");
-      onSave({ ...audience, contacts: editContacts, contactCount: editContacts.length });
+      setAudience({ ...audience, contacts: editContacts, contactCount: editContacts.length });
       setEditMode(false);
       setPage(1);
     } catch (e: any) {
@@ -192,40 +209,35 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
 
   const shownEditContacts = editContacts;
 
-  if (!audience) return null;
+  if (!audience) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] p-4 lg:p-8" dir={dir}>
+        <div className="mx-auto flex min-h-[60vh] max-w-[1600px] items-center justify-center text-gray-400">
+          {loading ? <Loader2 className="h-7 w-7 animate-spin" /> : <p>تعذر تحميل الجمهور</p>}
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent
-        className={
-          isMaximized
-            ? "w-screen max-w-none h-screen max-h-screen rounded-none overflow-hidden dark:bg-gray-900 dark:border-gray-700 p-0"
-            : "w-[calc(100vw-24px)] max-w-6xl max-h-[92vh] overflow-hidden dark:bg-gray-900 dark:border-gray-700 p-0"
-        }
-        dir={dir}
-      >
-        <div className={isMaximized ? "flex h-screen max-h-screen flex-col" : "flex max-h-[92vh] flex-col"}>
-          <DialogHeader className="border-b border-gray-100 dark:border-gray-800 px-6 py-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <main className="min-h-[calc(100vh-80px)] bg-white dark:bg-gray-950" dir={dir}>
+      <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-[1600px] flex-col">
+        <header className="border-b border-gray-100 px-4 py-5 sm:px-6 lg:px-8 dark:border-gray-800">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link href="/dashboard/contacts" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white" aria-label="العودة للجمهور">
+                <ArrowRight className="h-4 w-4" />
+              </Link>
               <div className="min-w-0">
-                <DialogTitle className="text-xl font-bold dark:text-white truncate">{audience.name}</DialogTitle>
-                <DialogDescription className="mt-1 dark:text-gray-400">
+                <h1 className="truncate text-xl font-bold text-gray-900 dark:text-white">{audience.name}</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {total.toLocaleString(locale === "ar" ? "ar-EG" : "en-US")} عميل • إدارة وتحليل الجمهور
-                </DialogDescription>
+                </p>
               </div>
+            </div>
 
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setIsMaximized((prev) => !prev)}
-                  title={isMaximized ? "تصغير" : "تكبير"}
-                  aria-label={isMaximized ? "تصغير النافذة" : "تكبير النافذة"}
-                  className="h-8 w-8 p-0"
-                >
-                  {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                </Button>
-                {!isReadOnly && (
+            <div className="flex items-center gap-2">
+              {!isReadOnly && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -237,14 +249,11 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
                     تعديل الأرقام
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={onClose}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
-          </DialogHeader>
+          </div>
+        </header>
 
-          {editMode ? (
+        {editMode ? (
             <div className="flex min-h-0 flex-1 flex-col p-6">
               <div className="mb-4 rounded-2xl bg-gray-50 p-4 dark:bg-gray-800">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold dark:text-white">
@@ -436,9 +445,8 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
               </div>
             </>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </main>
   );
 }
 

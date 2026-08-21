@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/lib/language-context";
+import { useRouter } from "next/navigation";
 import type { Audience } from "./types";
 
 function getTypeConfig(t: ReturnType<typeof useLanguage>["t"]) {
@@ -36,13 +37,15 @@ function getTypeConfig(t: ReturnType<typeof useLanguage>["t"]) {
   };
 }
 
-export function AudienceCard({ audience, onView, onEdit, onDelete }: {
+export function AudienceCard({ audience, onEdit, onDelete }: {
   audience: Audience; onView: () => void; onEdit: () => void; onDelete: () => void;
 }) {
   const { t, locale } = useLanguage();
+  const router = useRouter();
   const c = t.contacts.card;
   const cfg = getTypeConfig(t)[audience.type as "no-response" | "custom" | "excel" | "google_sheets"] ?? getTypeConfig(t).excel;
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
+  const viewDetails = () => router.push(`/dashboard/contacts/audience/${encodeURIComponent(audience.id)}`);
 
   return (
     <div className={`${cfg.bg} ${cfg.border} border rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow`}>
@@ -67,7 +70,7 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onView}>
+              <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={viewDetails}>
                 <Eye className="w-4 h-4" /> {c.viewDetails}
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-2 text-sm cursor-pointer" onClick={onEdit}>
@@ -80,7 +83,7 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <button onClick={onView} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-400">
+          <button onClick={viewDetails} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-400">
             <Eye className="w-4 h-4" />
           </button>
         )}
@@ -112,7 +115,7 @@ export function AudienceCard({ audience, onView, onEdit, onDelete }: {
         )}
       </div>
 
-      <button onClick={onView}
+      <button onClick={viewDetails}
         className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
         flex items-center gap-1 mt-auto">
         {c.viewDetails} <ChevronRight className="w-3 h-3" />
