@@ -21,6 +21,7 @@ import {
 import {
   timeBasedCron,
   monthlyPlanReset,
+  expireSubscriptionsDaily,
   subscriptionExpiryWarning,
   ownerPlanRenewalCheck,
   whatsappTokenExpiryCheck,
@@ -70,6 +71,7 @@ const inngestHandler = serve({
     productSyncOnDemand,
     websiteCrawlOnDemand,
     // ── Plan Reset ──
+    expireSubscriptionsDaily,
     monthlyPlanReset,
     // ── Smart Follow-Up ──
     scheduleShippingFollowUpFn,

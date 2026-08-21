@@ -27,7 +27,7 @@ export type GuardResult =
 // ─── Helper: جلب اشتراك المالك ───────────────────────────────────────────────
 // ownerId = parentId لو sub-account, وإلا userId نفسه
 async function getSubscription(ownerId: string) {
-  return prisma.subscription.findUnique({
+  const sub = await prisma.subscription.findUnique({
     where: { userId: ownerId },
     select: {
       plan: true,
@@ -38,6 +38,33 @@ async function getSubscription(ownerId: string) {
       currentPeriodEnd: true,  // ← لازم نتشيك عليه لمعرفة انتهاء الاشتراك
     },
   });
+
+  // ── Self-healing downgrade ──────────────────────────────────────────────
+  // getEffectivePlan() بيمنع استخدام أي ميزة مدفوعة فورًا لحظة ما currentPeriodEnd
+  // يعدّي (بغض النظر عن قيمة plan/status المخزّنة)، لكن لو سبنا الـDB على حالها
+  // لحد ما يشتغل الـcron الشهري (monthlyPlanReset)، الواجهات اللي بتقرا sub.plan
+  // مباشرة (لوحة التحكم، صفحة الفوترة، لوحة الأدمن) هتفضل عارضة باقة قديمة غير
+  // صحيحة لحد شهر كامل. هنا بنصفّر القيمة فعليًا في الـDB أول تحقق صلاحيات بعد
+  // الانتهاء، فيبقى مفيش فرق بين الصلاحية الفعلية والمعروضة أبدًا — الـcron يفضل
+  // شغال كـshelf-net إضافي بس مش المصدر الوحيد.
+  if (
+    sub &&
+    sub.status === "active" &&
+    sub.plan !== "free" &&
+    sub.currentPeriodEnd &&
+    sub.currentPeriodEnd < new Date()
+  ) {
+    await prisma.subscription
+      .update({
+        where: { userId: ownerId },
+        data: { plan: "free", status: "expired" },
+      })
+      .catch((err: unknown) => console.error("[PlanGuard] فشل التصفير الفوري للباقة المنتهية:", err));
+    sub.plan = "free";
+    sub.status = "expired";
+  }
+
+  return sub;
 }
 
 /** لو مفيش subscription نرجع free كـ fallback */

@@ -226,6 +226,48 @@ export const timeBasedCron = inngest.createFunction(
   }
 );
 // ═══════════════════════════════════════════════════════════════════════════════
+// expire-subscriptions-daily: تصفير الباقات المنتهية → free (يوميًا)
+// ═══════════════════════════════════════════════════════════════════════════════
+// ملاحظة: صلاحيات الميزات فعليًا بتتقفل فورًا لحظة انتهاء currentPeriodEnd عن
+// طريق getEffectivePlan()/getSubscription() في src/lib/plan-guard.ts (self-healing
+// عند أول تحقق صلاحيات)، فمفيش فجوة أمنية هنا حتى لو الـcron ده اتأخر. الغرض من
+// الـcron ده إنه يلحق بالمستخدمين اللي مش بيعملوا أي طلب محتاج تحقق صلاحيات (يعني
+// مش هيتلاقى fallback في plan-guard.ts) عشان الـDB وواجهات الأدمن تفضل متزامنة بسرعة
+// معقولة (خلال ٢٤ ساعة كحد أقصى) بدل ما تستنى أول الشهر الجاي.
+export const expireSubscriptionsDaily = inngest.createFunction(
+  {
+    id: "expire-subscriptions-daily",
+    name: "Expire Subscriptions Daily",
+    triggers: [{ cron: "0 1 * * *" }], // كل يوم الساعة 1 صباحًا (بعد التذكيرات بساعة)
+  },
+  async ({ step }) => {
+    const now = new Date();
+
+    const downgradeResult = await step.run("downgrade-expired-subscriptions", async () => {
+      const updated = await prisma.subscription.updateMany({
+        where: {
+          // الاشتراك عنده تاريخ انتهاء وعدى
+          currentPeriodEnd: { lt: now },
+          // بس اللي لسه active — مش اللي اتعالجوا قبل كده
+          status: "active",
+          // مش باقة free (free مفيهاش currentPeriodEnd)
+          plan: { not: "free" },
+        },
+        data: {
+          plan: "free",
+          status: "expired",
+        },
+      });
+      return { downgradedCount: updated.count };
+    });
+
+    console.log(`[EXPIRE-DAILY] Downgraded ${downgradeResult.downgradedCount} expired subscriptions → free`);
+
+    return { downgradedCount: downgradeResult.downgradedCount };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // monthly-reset: تصفير عدادات الباقات — كل أول الشهر الساعة 00:00
 // ═══════════════════════════════════════════════════════════════════════════════
 export const monthlyPlanReset = inngest.createFunction(
@@ -237,16 +279,14 @@ export const monthlyPlanReset = inngest.createFunction(
   async ({ step }) => {
     const now = new Date();
 
-    // ── Step 1: Downgrade المشتركين اللي خلص اشتراكهم → free ─────────────────
-    // لازم يتعمل الأول عشان العدادات الجديدة تبدأ على الباقة الصح
+    // ── Step 1: Downgrade أي اشتراكات لسه متأخرة عن الـcron اليومي (احتياطي) ──
+    // المصدر الأساسي لتنزيل الباقات المنتهية بقى expireSubscriptionsDaily فوق،
+    // وكمان self-healing في src/lib/plan-guard.ts. الخطوة دي مجرد شبكة أمان إضافية.
     const downgradeResult = await step.run("downgrade-expired-subscriptions", async () => {
       const updated = await prisma.subscription.updateMany({
         where: {
-          // الاشتراك عنده تاريخ انتهاء وعدى
           currentPeriodEnd: { lt: now },
-          // بس اللي لسه active — مش اللي اتعالجوا قبل كده
           status: "active",
-          // مش باقة free (free مفيهاش currentPeriodEnd)
           plan: { not: "free" },
         },
         data: {
