@@ -6,6 +6,7 @@ import { normalizePhone } from "@/lib/phone";
 import prisma from "@/lib/prisma";
 import { getContactsLimitStatus } from "@/lib/plan-guard";
 import { requirePermission } from "@/lib/permissions";
+import { requireGoogleSheetsAccess } from "@/lib/google-sheets-access";
 
 function rangeFor(sheetName: string, endRow: number): string {
   const safeName = sheetName.replace(/'/g, "''");
@@ -18,6 +19,8 @@ export async function GET(req: NextRequest) {
   const denied = requirePermission(session, "CONTACTS_MANAGE");
 
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
   const params = new URL(req.url).searchParams;
   const spreadsheetId = params.get("spreadsheetId");
   const sheetName = params.get("sheetName");
@@ -62,7 +65,6 @@ export async function GET(req: NextRequest) {
       sheetName,
       headers: headers.map((value, index) => ({ index, value: String(value ?? "") })),
       rows: rows.slice(1, 11).map((row) => headers.map((_, index) => String(row[index] ?? ""))),
-      // عدد العملاء الفعليين، وليس عدد الصفوف الافتراضية في Google grid.
       rowCount: validRowCount,
       limitInfo: {
         currentContacts: limitStatus.used,

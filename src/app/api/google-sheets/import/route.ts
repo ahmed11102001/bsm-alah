@@ -4,13 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { ownedConnection } from "@/lib/google-sheets";
 import { GoogleContactsLimitError, importGoogleSheet } from "@/lib/google-sheets-sync";
 import { requirePermission } from "@/lib/permissions";
+import { requireGoogleSheetsAccess } from "@/lib/google-sheets-access";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
   const denied = requirePermission(session, "CONTACTS_MANAGE");
-
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
+
   try {
     const body = await req.json();
     if (!body.connectionId || !body.spreadsheetId || !body.sheetName) return NextResponse.json({ error: "بيانات Google Sheets ناقصة" }, { status: 400 });

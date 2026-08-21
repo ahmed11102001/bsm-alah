@@ -3,13 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { requireGoogleSheetsAccess } from "@/lib/google-sheets-access";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
   const denied = requirePermission(session, "CONTACTS_MANAGE");
-
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
+
   const connection = await prisma.googleSheetsConnection.findFirst({
     where: { userId: session!.user.id, id: new URL(req.url).searchParams.get("connectionId") ?? undefined },
     orderBy: { createdAt: "desc" },
@@ -25,10 +27,11 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
   const denied = requirePermission(session, "CONTACTS_MANAGE");
-
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
+
   const body = await req.json();
   if (!body.connectionId || !["off", "hourly", "6hours", "daily"].includes(body.syncInterval)) return NextResponse.json({ error: "إعداد المزامنة غير صحيح" }, { status: 400 });
   const updated = await prisma.googleSheetsConnection.updateMany({

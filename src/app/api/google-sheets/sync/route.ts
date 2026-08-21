@@ -4,13 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { ownedConnection } from "@/lib/google-sheets";
 import { syncGoogleSheet } from "@/lib/google-sheets-sync";
 import { requirePermission } from "@/lib/permissions";
+import { requireGoogleSheetsAccess } from "@/lib/google-sheets-access";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
   const denied = requirePermission(session, "CONTACTS_MANAGE");
-
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
+
   try {
     const body = await req.json().catch(() => ({}));
     const connection = await ownedConnection(session!.user.id, body.connectionId);

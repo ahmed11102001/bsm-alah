@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getGoogleSheetsClient, ownedConnection } from "@/lib/google-sheets";
 import { requirePermission } from "@/lib/permissions";
+import { requireGoogleSheetsAccess } from "@/lib/google-sheets-access";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
   const denied = requirePermission(session, "CONTACTS_MANAGE");
-
   if (denied) return denied;
+  const locked = await requireGoogleSheetsAccess(session!.user.id);
+  if (locked) return locked;
   const params = new URL(req.url).searchParams;
   const spreadsheetId = params.get("spreadsheetId");
   if (!spreadsheetId) return NextResponse.json({ error: "spreadsheetId مطلوب" }, { status: 400 });
