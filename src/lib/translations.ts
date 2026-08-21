@@ -33,7 +33,7 @@ export const t = {
     stat3: { ar: "ربط متجرك فوراً", en: "Connect Your Store" },
     cta: { ar: "جرّب مجاناً — بدون بطاقة", en: "Try Free — No Card Needed" },
     ctaWatch: { ar: "شاهد كيف يعمل", en: "See How It Works" },
-    
+
     // trust strip
     trust1: { ar: "تكاملات متعددة", en: "Multiple integrations" },
     trust2: { ar: "تحديثات مستمرة", en: "Continuous updates" },
@@ -184,7 +184,8 @@ export const t = {
           { ar: "١٠٠ جهة اتصال", en: "100 contacts", ok: true },
           { ar: "١ مستخدم", en: "1 user", ok: true },
           { ar: "٣ حملات فقط", en: "3 campaigns only", ok: true },
-          { ar: "نص فقط", en: "Text only", ok: true },
+          { ar: " رسائل نصية فقط", en: "Text messages only", ok: true },
+          { ar: "   شات بوت", en: "chatbot", ok: true },
           { ar: "تقارير عامة", en: "Basic reports", ok: true },
         ],
       },
@@ -200,8 +201,8 @@ export const t = {
           { ar: "٥٠ حملة شهرياً", en: "50 campaigns/month", ok: true },
           { ar: "نص + صور + ملفات", en: "Text + images + files", ok: true },
           { ar: "تقارير أساسية", en: "Basic reports", ok: true },
-          { ar: "Chatbot بردود ثابتة", en: "Chatbot (fixed replies)", ok: true },
-          { ar: "جماهير مخصصة", en: "Custom audiences", ok: true },
+          { ar: "شات بوت + اتمتة تفاعليه ", en: "Chatbot + Interactive Automation", ok: true },
+          { ar: " جوجل شيت", en: "Google Sheets ", ok: true },
         ],
       },
       {
@@ -218,11 +219,11 @@ export const t = {
           { ar: "كل أنواع الميديا", en: "All media types", ok: true },
           { ar: "تقارير متقدمة + Export", en: "Advanced reports + Export", ok: true },
           { ar: "اتمتة كاملة", en: "Full automation", ok: true },
-           { ar: "التكامل مع eleven labs", en: "Eleven Labs Integration", ok: true },
+          { ar: "التكامل مع eleven labs", en: "Eleven Labs Integration", ok: true },
           { ar: "ربط المتجر", en: "Store integration", ok: true },
           { ar: "كلود AI المساعد", en: "Claude AI Assistant", ok: true },
-          
-      
+
+
         ],
       },
       {
@@ -237,7 +238,7 @@ export const t = {
           { ar: "حتى ١٠ مستخدمين", en: "Up to 10 users", ok: true },
           { ar: "مساعد مبيعات AI ذكي", en: "Smart AI Sales Assistant", ok: true },
           { ar: "API كامل", en: "Full API access", ok: true },
-         { ar: "كارت شركاء وني", en: "WANI Partner Card", ok: true },
+          { ar: "كارت شركاء وني", en: "WANI Partner Card", ok: true },
           { ar: "دعم VIP ٢٤/٧", en: "24/7 VIP support", ok: true },
         ],
       },
