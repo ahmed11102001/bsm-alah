@@ -156,7 +156,7 @@ function CheckoutContent() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
         <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"><ArrowRight className="h-4 w-4" /> رجوع</button>
         <div className="font-black"><span className="text-[#25D366]">WANI</span></div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-400"><Shield className="h-4 w-4 text-[#25D366]" /> دفع يدوي آمن</div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-400"><Shield className="h-4 w-4 text-[#25D366]" /> دفع آمن</div>
       </div>
     </header>
 
@@ -213,7 +213,7 @@ function CheckoutContent() {
           </button>
           {!paymentMethod && <p className="text-center text-xs text-amber-600">اختر طريقة الدفع أولًا</p>}
           {submitError && <p className="text-center text-xs text-red-500">{submitError}</p>}
-          <p className="text-center text-xs text-gray-400">بعد إرسال الإيصال، تتم مراجعة الدفع وتفعيل الباقة يدويًا من فريق WANI.</p>
+          <p className="text-center text-xs text-gray-400">بعد إرسال الإيصال، تتم مراجعة الدفع وتفعيل الباقةا من فريق WANI.</p>
         </section>
       </div>
     </div>
