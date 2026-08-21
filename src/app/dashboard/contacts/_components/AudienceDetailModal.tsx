@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users,
+  Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users, Maximize2, Minimize2,
   MessageCircle, Bot, AlertCircle, Pin, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
@@ -71,6 +71,7 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
   const [editLoading, setEditLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("lastActivity");
@@ -90,6 +91,7 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
     setSort("lastActivity");
     setPage(1);
     setEditMode(false);
+    setIsMaximized(false);
     setEditContacts([]);
     setAddPhone("");
     setAddName("");
@@ -195,10 +197,14 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent
-        className="w-[calc(100vw-24px)] max-w-6xl max-h-[92vh] overflow-hidden dark:bg-gray-900 dark:border-gray-700 p-0"
+        className={
+          isMaximized
+            ? "w-screen max-w-none h-screen max-h-screen rounded-none overflow-hidden dark:bg-gray-900 dark:border-gray-700 p-0"
+            : "w-[calc(100vw-24px)] max-w-6xl max-h-[92vh] overflow-hidden dark:bg-gray-900 dark:border-gray-700 p-0"
+        }
         dir={dir}
       >
-        <div className="flex max-h-[92vh] flex-col">
+        <div className={isMaximized ? "flex h-screen max-h-screen flex-col" : "flex max-h-[92vh] flex-col"}>
           <DialogHeader className="border-b border-gray-100 dark:border-gray-800 px-6 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
@@ -208,7 +214,17 @@ export function AudienceDetailModal({ audience, open, onClose, onSave }: {
                 </DialogDescription>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsMaximized((prev) => !prev)}
+                  title={isMaximized ? "تصغير" : "تكبير"}
+                  aria-label={isMaximized ? "تصغير النافذة" : "تكبير النافذة"}
+                  className="h-8 w-8 p-0"
+                >
+                  {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
                 {!isReadOnly && (
                   <Button
                     size="sm"
