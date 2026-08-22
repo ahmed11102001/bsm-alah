@@ -28,6 +28,7 @@ import {
     type FawaterakCancelWebhookPayload,
 } from "@/lib/fawaterak";
 import { notifySubscriptionSuccess } from "@/lib/notifications";
+import { addAITokensBonus } from "@/lib/plan-guard";
 import {
     TOKEN_PACKAGES,
     BILLING_CYCLES,
@@ -153,10 +154,8 @@ async function handlePaidWebhook(payload: FawaterakWebhookPayload) {
             const pkg = TOKEN_PACKAGES.find(p => p.id === meta.packageId);
             if (!pkg) throw new Error(`packageId غير معروف: ${meta.packageId}`);
 
-            await prisma.subscription.update({
-                where: { userId },
-                data: { aiTokensBonusBalance: { increment: pkg.tokens } },
-            });
+            // برصيد صلاحيته 30 يوم من تاريخ الشراء (نفس منطق addAITokensBonus)
+            await addAITokensBonus(userId, pkg.tokens);
 
             console.info(`[Webhook] ✅ AI Credits — user=${userId} +${pkg.tokens} tokens`);
 

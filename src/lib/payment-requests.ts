@@ -263,9 +263,28 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
+      // ─── رصيد التوكنز الإضافي (bonus) صلاحيته 30 يوم من تاريخ الشراء ───────
+      // نفس منطق addAITokensBonus في src/lib/plan-guard.ts، بس هنا لازم نستخدم
+      // نفس الـtx عشان يبقى جزء من نفس الـTransaction الذرّية بتاعة claimPending.
+      // لو فيه رصيد صالح (منتهاش) لسه، منمدّش صلاحيته — بس لو الرصيد صفر أو
+      // منتهي فعلاً، بنبدأ دورة 30 يوم جديدة من دلوقتي.
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const existing = await tx.subscription.findUnique({
+        where: { userId: request.userId },
+        select: { aiTokensBonusBalance: true, aiTokensBonusExpiresAt: true },
+      });
+      const hasActiveBalance =
+        !!existing &&
+        existing.aiTokensBonusBalance > 0 &&
+        !!existing.aiTokensBonusExpiresAt &&
+        existing.aiTokensBonusExpiresAt > now;
+
       await tx.subscription.update({
         where: { userId: request.userId },
-        data: { aiTokensBonusBalance: { increment: pkg.tokens } },
+        data: {
+          aiTokensBonusBalance: { increment: pkg.tokens },
+          ...(hasActiveBalance ? {} : { aiTokensBonusExpiresAt: thirtyDaysFromNow }),
+        },
       });
     });
   } else if (request.type === "mcp_addon") {

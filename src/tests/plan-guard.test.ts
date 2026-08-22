@@ -36,6 +36,7 @@ const {
   incrementCampaignUsage,
   getPlanStatus,
   guardResponse,
+  checkAITokensLimit,
 } = await import("@/lib/plan-guard");
 
 // ─── Helper: اعمل subscription stub ──────────────────────────────────────────
@@ -169,14 +170,13 @@ describe("checkCampaignsLimit", () => {
     expect(result.allowed).toBe(true);
   });
 
-  it("شهر جديد → العداد بيتصفر تلقائياً", async () => {
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
+  it("عدّت 30 يوم من آخر تصفير → العداد بيتصفر تلقائياً (دورة اليوزر مش الشهر الميلادي)", async () => {
+    const overThirtyDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
 
     mockPrisma.subscription.findUnique.mockResolvedValue(
       makeSub("free", {
-        campaignsUsedThisMonth: 3, // كان وصل الحد
-        periodResetAt: lastMonth,  // لكن في الشهر اللي فات
+        campaignsUsedThisMonth: 3,       // كان وصل الحد
+        periodResetAt: overThirtyDaysAgo, // لكن عدت عليه 30+ يوم
       })
     );
     mockPrisma.subscription.update.mockResolvedValue({});
@@ -190,6 +190,24 @@ describe("checkCampaignsLimit", () => {
         data: expect.objectContaining({ campaignsUsedThisMonth: 0 }),
       })
     );
+  });
+
+  it("عدّى الشهر الميلادي بس لسه ماعداش 30 يوم فعلية → مفيش تصفير (fix: مش مربوط بالشهر الميلادي)", async () => {
+    // مثال: اشترك يوم 25 من الشهر، ودلوقتي يوم 2 من الشهر الجاي (7 أيام بس
+    // عدّت، لكن الشهر الميلادي اتغيّر). قبل الإصلاح كان هيتصفر غلط.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("free", {
+        campaignsUsedThisMonth: 3, // وصل الحد بالظبط
+        periodResetAt: sevenDaysAgo,
+      })
+    );
+
+    const result = await checkCampaignsLimit("user_1");
+    // لسه ماعداش 30 يوم → العداد ثابت على 3 → يتبلوك
+    expect(result.allowed).toBe(false);
+    expect(mockPrisma.subscription.update).not.toHaveBeenCalled();
   });
 
   it("starter plan — 50 حملة/شهر", async () => {
@@ -383,6 +401,52 @@ describe("guardResponse", () => {
     });
     expect(res).not.toBeNull();
     expect(res?.status).toBe(403);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("checkAITokensLimit — رصيد التوكنز الإضافي (bonus) بينتهي بعد 30 يوم", () => {
+  it("رصيد bonus لسه منتهاش (اشتري قبل 10 أيام) → بيتحسب عادي", async () => {
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    const expiresIn20Days = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
+
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("enterprise", {
+        aiTokensUsedThisMonth: 1_000_000, // استهلك كل الحصة الشهرية
+        aiTokensBonusBalance: 5000,
+        aiTokensBonusExpiresAt: expiresIn20Days,
+        periodResetAt: tenDaysAgo,
+      })
+    );
+
+    const result = await checkAITokensLimit("user_1", 1000);
+    expect(result.allowed).toBe(true);
+    // مش المفروض يتصفر الرصيد لأنه لسه صالح
+    expect(mockPrisma.subscription.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ aiTokensBonusBalance: 0 }) })
+    );
+  });
+
+  it("رصيد bonus عدّى عليه 30 يوم → بيتصفر تلقائياً ومايتحسبش", async () => {
+    const expiredYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("enterprise", {
+        aiTokensUsedThisMonth: 1_000_000, // استهلك كل الحصة الشهرية
+        aiTokensBonusBalance: 5000,
+        aiTokensBonusExpiresAt: expiredYesterday, // منتهي
+      })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    const result = await checkAITokensLimit("user_1", 1000);
+    // الرصيد اتصفر فمفيش توكنز كفاية
+    expect(result.allowed).toBe(false);
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ aiTokensBonusBalance: 0, aiTokensBonusExpiresAt: null }),
+      })
+    );
   });
 });
 

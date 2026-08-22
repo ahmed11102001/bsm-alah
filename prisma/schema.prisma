@@ -126,6 +126,7 @@ model Subscription {
   periodResetAt            DateTime           @default(now())
   aiTokensUsedThisMonth    Int                @default(0)
   aiTokensBonusBalance     Int                @default(0)
+  aiTokensBonusExpiresAt   DateTime?
   currentPeriodStart       DateTime           @default(now())
   currentPeriodEnd         DateTime?
   createdAt                DateTime           @default(now())

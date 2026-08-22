@@ -268,41 +268,39 @@ export const expireSubscriptionsDaily = inngest.createFunction(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// monthly-reset: تصفير عدادات الباقات — كل أول الشهر الساعة 00:00
+// usage-counters-reset: تصفير عدادات الاستهلاك — كل يوزر له دورة 30 يوم مستقلة
 // ═══════════════════════════════════════════════════════════════════════════════
-export const monthlyPlanReset = inngest.createFunction(
+// ⚠️ ملحوظة مهمة: ده كان قبل كده بيشتغل مرة واحدة أول كل شهر ميلادي ويصفّر
+// عدادات كل المشتركين النشطين مع بعض دفعة واحدة (`0 0 1 * *`) — بغض النظر عن
+// تاريخ اشتراك كل واحد فيهم الفعلي. ده كان معناه لو حد اشترك يوم 20 من الشهر،
+// عداده هيتصفر بعد 10 أيام بس (أول الشهر الجاي)، مش بعد 30 يوم من اشتراكه.
+//
+// دلوقتي بقى الـcron ده بيشتغل **يوميًا** ويدور بس على المشتركين اللي عدت
+// عليهم 30 يوم فعلية من آخر تصفير خاص بيهم (`periodResetAt`) — كل واحد له
+// دورته الخاصة المرتبطة بتاريخ اشتراكه/آخر استخدام، مش متزامنة مع الشهر
+// الميلادي. المصدر الأساسي لتصفير العداد فعليًا هو الـSelf-healing في
+// resetMonthlyCounterIfNeeded (src/lib/plan-guard.ts) عند أول تحقق صلاحيات
+// بعد انتهاء الـ30 يوم — الـcron ده مجرد شبكة أمان زي expireSubscriptionsDaily
+// فوق، عشان يلحق باليوزرز اللي مش بيعملوا أي طلب يفعّل الـSelf-healing.
+const USAGE_CYCLE_MS = 30 * 24 * 60 * 60 * 1000;
+
+export const usageCountersResetDaily = inngest.createFunction(
   {
-    id: "monthly-plan-reset",
-    name: "Monthly Plan Reset",
-    triggers: [{ cron: "0 0 1 * *" }], // أول يوم كل شهر الساعة 12 منتصف الليل
+    id: "usage-counters-reset-daily",
+    name: "Usage Counters Reset (30-day per-user cycle)",
+    triggers: [{ cron: "0 2 * * *" }], // يوميًا الساعة 2 صباحًا (بعد expire-subscriptions-daily)
   },
   async ({ step }) => {
     const now = new Date();
+    const cutoff = new Date(now.getTime() - USAGE_CYCLE_MS);
 
-    // ── Step 1: Downgrade أي اشتراكات لسه متأخرة عن الـcron اليومي (احتياطي) ──
-    // المصدر الأساسي لتنزيل الباقات المنتهية بقى expireSubscriptionsDaily فوق،
-    // وكمان self-healing في src/lib/plan-guard.ts. الخطوة دي مجرد شبكة أمان إضافية.
-    const downgradeResult = await step.run("downgrade-expired-subscriptions", async () => {
+    // بس المشتركين اللي عدت عليهم 30 يوم من آخر تصفير — كل واحد بتاريخه الخاص
+    const resetResult = await step.run("reset-usage-counters-per-user", async () => {
       const updated = await prisma.subscription.updateMany({
         where: {
-          currentPeriodEnd: { lt: now },
           status: "active",
-          plan: { not: "free" },
+          periodResetAt: { lte: cutoff },
         },
-        data: {
-          plan: "free",
-          status: "expired",
-        },
-      });
-      return { downgradedCount: updated.count };
-    });
-
-    console.log(`[MONTHLY-RESET] Downgraded ${downgradeResult.downgradedCount} expired subscriptions → free`);
-
-    // ── Step 2: تصفير عدادات الشهر لكل المشتركين النشطين ────────────────────
-    const resetResult = await step.run("reset-campaigns-counter", async () => {
-      const updated = await prisma.subscription.updateMany({
-        where: { status: "active" }, // بس النشطين — المنتهيين اتعملوا downgrade فوق
         data: {
           campaignsUsedThisMonth: 0,
           mcpCommandsUsedThisMonth: 0,
@@ -313,12 +311,32 @@ export const monthlyPlanReset = inngest.createFunction(
       return { updatedSubscriptions: updated.count };
     });
 
+    // ── شبكة أمان إضافية: تصفير رصيد التوكنز الإضافي (bonus) اللي عدّت
+    // عليه 30 يوم من تاريخ شراؤه (aiTokensBonusExpiresAt) — نفس فكرة
+    // expireBonusTokensIfNeeded في src/lib/plan-guard.ts بس هنا بتشمل حتى
+    // اليوزرز اللي مش بيعملوا أي طلب AI يفعّل الـSelf-healing.
+    const bonusExpiryResult = await step.run("expire-bonus-tokens", async () => {
+      const updated = await prisma.subscription.updateMany({
+        where: {
+          aiTokensBonusBalance: { gt: 0 },
+          aiTokensBonusExpiresAt: { lt: now },
+        },
+        data: {
+          aiTokensBonusBalance: 0,
+          aiTokensBonusExpiresAt: null,
+        },
+      });
+      return { expiredCount: updated.count };
+    });
+
     // الـ contacts مش بنمسحهم — checkContactsLimit بتعد من الـ DB مباشرة
-    console.log(`[MONTHLY-RESET] Done — reset ${resetResult.updatedSubscriptions} active subscriptions`);
+    console.log(
+      `[USAGE-RESET] Reset ${resetResult.updatedSubscriptions} subscriptions (30-day cycle), expired bonus tokens for ${bonusExpiryResult.expiredCount} subscriptions`
+    );
 
     return {
-      downgradedCount: downgradeResult.downgradedCount,
       updatedSubscriptions: resetResult.updatedSubscriptions,
+      expiredBonusCount: bonusExpiryResult.expiredCount,
     };
   }
 );

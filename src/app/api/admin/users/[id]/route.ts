@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { addAITokensBonus } from "@/lib/plan-guard";
 
 async function guardSuper() {
   const session = await getServerSession(authOptions);
@@ -34,17 +35,10 @@ export async function PATCH(
     return NextResponse.json({ success: true });
   }
 
-  // إضافة bonus tokens للـ AI
+  // إضافة bonus tokens للـ AI — بتاخد صلاحية 30 يوم زي أي رصيد توكنز مشترى
+  // (نفس منطق addAITokensBonus في src/lib/plan-guard.ts)
   if (typeof body.aiTokensBonus === "number" && body.aiTokensBonus > 0) {
-    await prisma.subscription.upsert({
-      where:  { userId: id },
-      update: { aiTokensBonusBalance: { increment: body.aiTokensBonus } },
-      create: {
-        userId: id, plan: "enterprise", status: "active",
-        periodResetAt: new Date(), campaignsUsedThisMonth: 0,
-        aiTokensUsedThisMonth: 0, aiTokensBonusBalance: body.aiTokensBonus,
-      },
-    });
+    await addAITokensBonus(id, body.aiTokensBonus);
     return NextResponse.json({ success: true });
   }
 
@@ -52,7 +46,7 @@ export async function PATCH(
   if (body.resetAiBonus === true) {
     await prisma.subscription.update({
       where: { userId: id },
-      data:  { aiTokensBonusBalance: 0 },
+      data:  { aiTokensBonusBalance: 0, aiTokensBonusExpiresAt: null },
     });
     return NextResponse.json({ success: true });
   }

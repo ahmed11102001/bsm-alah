@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { AI_CREDIT_PACKAGES, type AiCreditPackageId } from "@/lib/plans";
+import { addAITokensBonus } from "@/lib/plan-guard";
 
 function resolveOwnerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -41,11 +42,8 @@ export async function POST(req: NextRequest) {
   // const checkoutUrl = await createStripeCheckout(pkg, ownerId);
   // return NextResponse.json({ checkoutUrl });
 
-  // Sandbox: نضيف مباشرة
-  await prisma.subscription.update({
-    where: { userId: ownerId },
-    data:  { aiTokensBonusBalance: { increment: pkg.tokens } },
-  });
+  // Sandbox: نضيف مباشرة — برصيد صلاحيته 30 يوم من تاريخ الشراء
+  await addAITokensBonus(ownerId, pkg.tokens);
 
   return NextResponse.json({
     success: true,

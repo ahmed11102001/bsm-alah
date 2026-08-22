@@ -20,7 +20,7 @@ import {
 } from "@/inngest/woocommerce-functions";
 import {
   timeBasedCron,
-  monthlyPlanReset,
+  usageCountersResetDaily,
   expireSubscriptionsDaily,
   subscriptionExpiryWarning,
   ownerPlanRenewalCheck,
@@ -72,7 +72,7 @@ const inngestHandler = serve({
     websiteCrawlOnDemand,
     // ── Plan Reset ──
     expireSubscriptionsDaily,
-    monthlyPlanReset,
+    usageCountersResetDaily,
     // ── Smart Follow-Up ──
     scheduleShippingFollowUpFn,
     scheduleCartFollowUpFn,

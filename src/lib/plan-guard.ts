@@ -42,11 +42,11 @@ async function getSubscription(ownerId: string) {
   // ── Self-healing downgrade ──────────────────────────────────────────────
   // getEffectivePlan() بيمنع استخدام أي ميزة مدفوعة فورًا لحظة ما currentPeriodEnd
   // يعدّي (بغض النظر عن قيمة plan/status المخزّنة)، لكن لو سبنا الـDB على حالها
-  // لحد ما يشتغل الـcron الشهري (monthlyPlanReset)، الواجهات اللي بتقرا sub.plan
-  // مباشرة (لوحة التحكم، صفحة الفوترة، لوحة الأدمن) هتفضل عارضة باقة قديمة غير
-  // صحيحة لحد شهر كامل. هنا بنصفّر القيمة فعليًا في الـDB أول تحقق صلاحيات بعد
-  // الانتهاء، فيبقى مفيش فرق بين الصلاحية الفعلية والمعروضة أبدًا — الـcron يفضل
-  // شغال كـshelf-net إضافي بس مش المصدر الوحيد.
+  // لحد ما يشتغل الـcron اليومي (expireSubscriptionsDaily)، الواجهات اللي بتقرا
+  // sub.plan مباشرة (لوحة التحكم، صفحة الفوترة، لوحة الأدمن) هتفضل عارضة باقة
+  // قديمة غير صحيحة لحد 24 ساعة. هنا بنصفّر القيمة فعليًا في الـDB أول تحقق
+  // صلاحيات بعد الانتهاء، فيبقى مفيش فرق بين الصلاحية الفعلية والمعروضة أبدًا —
+  // الـcron يفضل شغال كـshelf-net إضافي بس مش المصدر الوحيد.
   if (
     sub &&
     sub.status === "active" &&
@@ -96,22 +96,26 @@ function getEffectivePlan(
   return sub.plan as PlanTier;
 }
 
-// ─── Helper: تصفير العداد الشهري لو بدأ شهر جديد ──────────────────────────
+// ─── دورة الاستهلاك الشهري = 30 يوم بالظبط ─────────────────────────────────
+const USAGE_CYCLE_MS = 30 * 24 * 60 * 60 * 1000;
+
+// ─── Helper: تصفير العداد الشهري لو عدّت 30 يوم من آخر تصفير ────────────────
+// ملحوظة مهمة: التصفير هنا بقى مبني على "30 يوم فعلية من تاريخ آخر تصفير
+// لليوزر ده تحديدًا" (periodResetAt + 30 يوم) — مش على تغيّر الشهر الميلادي.
+// كده كل يوزر بقى ليه دورة استهلاك خاصة بيه تبدأ من تاريخ اشتراكه/آخر تصفير،
+// مش متزامنة مع أول كل شهر ميلادي لكل المستخدمين مع بعض.
 async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date) {
   const now = new Date();
   const resetDate = new Date(periodResetAt);
 
-  // لو الشهر اختلف → صفّر العداد
-  if (
-    now.getFullYear() !== resetDate.getFullYear() ||
-    now.getMonth() !== resetDate.getMonth()
-  ) {
+  // لو عدّى 30 يوم بالظبط من آخر تصفير → صفّر العداد وابدأ دورة جديدة من دلوقتي
+  if (now.getTime() - resetDate.getTime() >= USAGE_CYCLE_MS) {
     await prisma.subscription.update({
       where: { userId: ownerId },
       data: {
         campaignsUsedThisMonth: 0,
-        aiTokensUsedThisMonth: 0,        // ← reset شهري للتوكن
-        mcpCommandsUsedThisMonth: 0,     // ← reset شهري لأوامر MCP (كان ناقص، وده كان بيخلي
+        aiTokensUsedThisMonth: 0,        // ← reset كل 30 يوم للتوكن
+        mcpCommandsUsedThisMonth: 0,     // ← reset كل 30 يوم لأوامر MCP (كان ناقص، وده كان بيخلي
         //   checkFeature يتعامل مع القيمة كـ "متصفّرة" محليًا
         //   من غير ما تتصفّر فعليًا في الداتابيز)
         periodResetAt: now,
@@ -120,6 +124,27 @@ async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date)
     return 0;
   }
   return null; // لم يتم التصفير
+}
+
+// ─── Helper: تصفير رصيد التوكنز الإضافي (bonus) لو عدّت 30 يوم على شرائه ────
+// اليوزر لما يشتري باقة توكنز، بيتحدد لها تاريخ انتهاء = تاريخ الشراء + 30 يوم
+// (aiTokensBonusExpiresAt). هنا بنتأكد إنه لو التاريخ ده عدى ولسه فيه رصيد،
+// بنصفّره فورًا — نفس فكرة الـSelf-healing المستخدمة مع انتهاء الباقة نفسها.
+async function expireBonusTokensIfNeeded(
+  ownerId: string,
+  bonusBalance: number,
+  bonusExpiresAt: Date | null
+): Promise<number> {
+  if (bonusBalance > 0 && bonusExpiresAt && bonusExpiresAt < new Date()) {
+    await prisma.subscription
+      .update({
+        where: { userId: ownerId },
+        data: { aiTokensBonusBalance: 0, aiTokensBonusExpiresAt: null },
+      })
+      .catch((err: unknown) => console.error("[PlanGuard] فشل تصفير رصيد التوكنز المنتهي:", err));
+    return 0;
+  }
+  return bonusBalance;
 }
 
 // ─── Helper: هل اليوزر ده superadmin أو beta user؟ ───────────────────────────
@@ -572,7 +597,12 @@ export async function checkAITokensLimit(
 
   const fullSub = await prisma.subscription.findUnique({
     where: { userId: ownerId },
-    select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true, periodResetAt: true },
+    select: {
+      aiTokensUsedThisMonth: true,
+      aiTokensBonusBalance: true,
+      aiTokensBonusExpiresAt: true,
+      periodResetAt: true,
+    },
   });
 
   let usedThisMonth = fullSub?.aiTokensUsedThisMonth ?? 0;
@@ -581,7 +611,11 @@ export async function checkAITokensLimit(
     if (reset !== null) usedThisMonth = 0;
   }
 
-  const bonusBalance = fullSub?.aiTokensBonusBalance ?? 0;
+  const bonusBalance = await expireBonusTokensIfNeeded(
+    ownerId,
+    fullSub?.aiTokensBonusBalance ?? 0,
+    fullSub?.aiTokensBonusExpiresAt ?? null
+  );
   if (isUnlimited(monthlyLimit)) return { allowed: true };
 
   const monthlyRemaining = Math.max(0, monthlyLimit - usedThisMonth);
@@ -612,11 +646,19 @@ export async function incrementAITokens(ownerId: string, tokens: number): Promis
 
   const fullSub = await prisma.subscription.findUnique({
     where: { userId: ownerId },
-    select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true },
+    select: {
+      aiTokensUsedThisMonth: true,
+      aiTokensBonusBalance: true,
+      aiTokensBonusExpiresAt: true,
+    },
   });
 
   const usedThisMonth = fullSub?.aiTokensUsedThisMonth ?? 0;
-  const bonusBalance = fullSub?.aiTokensBonusBalance ?? 0;
+  const bonusBalance = await expireBonusTokensIfNeeded(
+    ownerId,
+    fullSub?.aiTokensBonusBalance ?? 0,
+    fullSub?.aiTokensBonusExpiresAt ?? null
+  );
 
   if (isUnlimited(monthlyLimit)) {
     await prisma.subscription.update({
@@ -644,14 +686,40 @@ export async function incrementAITokens(ownerId: string, tokens: number): Promis
   }
 }
 
+// ─── إضافة رصيد توكنز إضافي (bonus) عند شراء باقة توكنز ─────────────────────
+// كل رصيد bonus له تاريخ انتهاء = 30 يوم من تاريخ إضافته (aiTokensBonusExpiresAt).
+// لو اليوزر عنده رصيد قديم لسه صالح (متجاوزش الـ30 يوم بتاعته)، بنسيب تاريخ
+// الانتهاء زي ما هو (منضيفش مدة إضافية للرصيد القديم) ونزود عليه الكمية الجديدة
+// بس — عشان محدش يقدر يمدد صلاحية توكنز قديمة لمجرد إنه اشترى كمية صغيرة جديدة.
+// لو الرصيد كان صفر أو منتهي فعلاً، بنبدأ دورة 30 يوم جديدة من دلوقتي.
 export async function addAITokensBonus(ownerId: string, tokens: number): Promise<void> {
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const existing = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: { aiTokensBonusBalance: true, aiTokensBonusExpiresAt: true },
+  });
+
+  const hasActiveBalance =
+    !!existing &&
+    existing.aiTokensBonusBalance > 0 &&
+    !!existing.aiTokensBonusExpiresAt &&
+    existing.aiTokensBonusExpiresAt > now;
+
   await prisma.subscription.upsert({
     where: { userId: ownerId },
-    update: { aiTokensBonusBalance: { increment: tokens } },
+    update: {
+      aiTokensBonusBalance: { increment: tokens },
+      // لو مفيش رصيد صالح حاليًا، ابدأ دورة 30 يوم جديدة. لو فيه رصيد صالح، سيبه
+      // زي ما هو (منمدوش الصلاحية).
+      ...(hasActiveBalance ? {} : { aiTokensBonusExpiresAt: thirtyDaysFromNow }),
+    },
     create: {
       userId: ownerId, plan: "enterprise", status: "active",
-      periodResetAt: new Date(), campaignsUsedThisMonth: 0,
+      periodResetAt: now, campaignsUsedThisMonth: 0,
       aiTokensUsedThisMonth: 0, aiTokensBonusBalance: tokens,
+      aiTokensBonusExpiresAt: thirtyDaysFromNow,
     },
   });
 }

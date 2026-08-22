@@ -108,8 +108,12 @@ export async function GET(_req: NextRequest) {
           monthlyLimit: planStatus.limits.aiTokensPerMonth,
           usedThisMonth: (await prisma.subscription.findUnique({
             where: { userId: ownerId },
-            select: { aiTokensUsedThisMonth: true, aiTokensBonusBalance: true },
-          })) ?? { aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0 },
+            select: {
+              aiTokensUsedThisMonth: true,
+              aiTokensBonusBalance: true,
+              aiTokensBonusExpiresAt: true, // ← تنتهي بعد 30 يوم من الشراء
+            },
+          })) ?? { aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0, aiTokensBonusExpiresAt: null },
         },
       },
       recentCampaigns: recentCampaigns.map(c => ({
