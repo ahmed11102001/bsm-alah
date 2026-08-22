@@ -110,7 +110,10 @@ async function resetMonthlyCounterIfNeeded(ownerId: string, periodResetAt: Date)
       where: { userId: ownerId },
       data: {
         campaignsUsedThisMonth: 0,
-        aiTokensUsedThisMonth: 0,   // ← reset شهري للتوكن
+        aiTokensUsedThisMonth: 0,        // ← reset شهري للتوكن
+        mcpCommandsUsedThisMonth: 0,     // ← reset شهري لأوامر MCP (كان ناقص، وده كان بيخلي
+        //   checkFeature يتعامل مع القيمة كـ "متصفّرة" محليًا
+        //   من غير ما تتصفّر فعليًا في الداتابيز)
         periodResetAt: now,
       },
     });

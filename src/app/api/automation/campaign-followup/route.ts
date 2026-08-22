@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 
 function resolveOwnerId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -11,9 +12,8 @@ function resolveOwnerId(session: any): string {
 // ─── GET ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requirePermission(session, "AUTOMATION_VIEW");
+  if (denied) return denied;
 
   const ownerId = resolveOwnerId(session);
   const { searchParams } = new URL(req.url);
@@ -46,12 +46,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // ─── PUT ───────────────────────────────────────────────────────────────────────
 export async function PUT(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requirePermission(session, "AUTOMATION_MANAGE");
+  if (denied) return denied;
 
   const ownerId = resolveOwnerId(session);
-  
+
   let body: {
     campaignId?: string;
     isEnabled?: boolean;

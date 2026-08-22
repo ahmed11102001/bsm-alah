@@ -11,6 +11,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import {
   SUBSCRIPTION_PLANS,
   TOKEN_PACKAGES,
@@ -65,8 +66,8 @@ async function resolvePurchase(
       planSlug === "starter"
         ? "monthly"
         : BILLING_CYCLES[input.cycle as BillingCycle]
-        ? (input.cycle as BillingCycle)
-        : "monthly";
+          ? (input.cycle as BillingCycle)
+          : "monthly";
     const cycleInfo = BILLING_CYCLES[billingCycle];
     const baseAmount = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
 
@@ -173,6 +174,14 @@ export async function createManualPaymentRequest(
 }
 
 // ─── تأكيد الدفع: يفعّل الباقة/الإضافة فعليًا في الـDB ───────────────────────
+//
+// ملاحظة عن الذرّية: بدل ما نعتمد بس على قراءة status ثم تحديثه لاحقًا (وده
+// بيسمح بـRace Condition لو الأدمن ضغط "تأكيد" مرتين بسرعة، أو حصل ريتراي —
+// الطلبين ممكن يعدّوا فحص "لسه PENDING" قبل ما أي حد يحدّث الحالة فعليًا)،
+// كل تفعيل (Subscription/Token/Addon) بيحصل جوه Transaction تفاعلية واحدة،
+// وأول خطوة جواها هي "claim" ذرّي عبر updateMany بشرط status = PENDING.
+// لو الـclaim رجّع count = 0 (يعني حد تاني سبقنا بالفعل)، بنرمي Error فورًا
+// وبنـrollback الـTransaction كلها — فمفيش أي تفعيل مضاعف ممكن يحصل.
 export async function approvePaymentRequest(requestId: string, adminId: string) {
   const request = await prisma.paymentRequest.findUnique({ where: { id: requestId } });
   if (!request) throw new ManualPaymentError("الطلب غير موجود", 404);
@@ -181,6 +190,17 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
   }
 
   const now = new Date();
+
+  // ─── Helper: claim ذرّي — لازم يكون أول Statement جوه أي Transaction ───────
+  async function claimPending(tx: Prisma.TransactionClient) {
+    const claimed = await tx.paymentRequest.updateMany({
+      where: { id: requestId, status: "PENDING" },
+      data: { status: "APPROVED", reviewedAt: now, reviewedById: adminId },
+    });
+    if (claimed.count === 0) {
+      throw new ManualPaymentError("تمت مراجعة هذا الطلب بالفعل", 400);
+    }
+  }
 
   if (request.type === "subscription") {
     const planSlug = request.planSlug as PlanSlug | null;
@@ -201,12 +221,10 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     const baseAmount = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
     const creditApplied = Math.max(0, baseAmount - request.amount);
 
-    await prisma.$transaction([
-      prisma.paymentRequest.update({
-        where: { id: requestId },
-        data: { status: "APPROVED", reviewedAt: now, reviewedById: adminId },
-      }),
-      prisma.subscription.upsert({
+    await prisma.$transaction(async (tx) => {
+      await claimPending(tx);
+
+      await tx.subscription.upsert({
         where: { userId: request.userId },
         update: {
           plan: planSlug,
@@ -225,8 +243,8 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
         },
-      }),
-    ]);
+      });
+    });
 
     if (creditApplied > 0) {
       const { applyReferralCreditToInvoice } = await import("@/lib/referral/service");
@@ -237,44 +255,43 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       }).catch((err) => console.error("[ManualPayment] فشل خصم رصيد الإحالات:", err));
     }
 
-    await notifySubscriptionSuccess(request.userId, plan.name).catch(() => {});
+    await notifySubscriptionSuccess(request.userId, plan.name).catch(() => { });
   } else if (request.type === "token_package") {
     const pkg = TOKEN_PACKAGES.find((p) => p.id === request.packageId);
     if (!pkg) throw new ManualPaymentError("بيانات الحزمة غير صالحة في الطلب", 400);
 
-    await prisma.$transaction([
-      prisma.paymentRequest.update({
-        where: { id: requestId },
-        data: { status: "APPROVED", reviewedAt: now, reviewedById: adminId },
-      }),
-      prisma.subscription.update({
+    await prisma.$transaction(async (tx) => {
+      await claimPending(tx);
+
+      await tx.subscription.update({
         where: { userId: request.userId },
         data: { aiTokensBonusBalance: { increment: pkg.tokens } },
-      }),
-    ]);
+      });
+    });
   } else if (request.type === "mcp_addon") {
     const pkg = MCP_ADDON_PACKAGES.find((p) => p.id === request.packageId);
     if (!pkg) throw new ManualPaymentError("بيانات الحزمة غير صالحة في الطلب", 400);
 
-    await prisma.$transaction([
-      prisma.paymentRequest.update({
-        where: { id: requestId },
-        data: { status: "APPROVED", reviewedAt: now, reviewedById: adminId },
-      }),
+    await prisma.$transaction(async (tx) => {
+      await claimPending(tx);
+
       // نفس الحيلة المستخدمة في addMCPCommandsBonus (src/lib/plan-guard.ts)
       // وفي webhook فواتيرك القديم: تنقيص العداد بعدد كبير جدًا يخلي أوامر
       // MCP فعليًا غير محدودة لحد ما يتصفّر العداد آخر الشهر (periodResetAt).
-      prisma.subscription.update({
+      await tx.subscription.update({
         where: { userId: request.userId },
         data: { mcpCommandsUsedThisMonth: { decrement: 999_999 } },
-      }),
-    ]);
+      });
+    });
   }
 
   return prisma.paymentRequest.findUnique({ where: { id: requestId } });
 }
 
 // ─── رفض الدفع: لا يتم تفعيل أي شيء ──────────────────────────────────────────
+// نفس مبدأ الذرّية: نستخدم updateMany بشرط status = PENDING بدل الاعتماد على
+// فحص سابق منفصل، عشان لو حد وافق على نفس الطلب في نفس اللحظة يترفض هنا
+// بدل ما يترفض طلب اتوافق عليه بالفعل.
 export async function rejectPaymentRequest(
   requestId: string,
   adminId: string,
@@ -286,8 +303,8 @@ export async function rejectPaymentRequest(
     throw new ManualPaymentError("تمت مراجعة هذا الطلب بالفعل", 400);
   }
 
-  return prisma.paymentRequest.update({
-    where: { id: requestId },
+  const claimed = await prisma.paymentRequest.updateMany({
+    where: { id: requestId, status: "PENDING" },
     data: {
       status: "REJECTED",
       reviewedAt: new Date(),
@@ -295,4 +312,10 @@ export async function rejectPaymentRequest(
       rejectionReason: reason ?? null,
     },
   });
+
+  if (claimed.count === 0) {
+    throw new ManualPaymentError("تمت مراجعة هذا الطلب بالفعل", 400);
+  }
+
+  return prisma.paymentRequest.findUnique({ where: { id: requestId } });
 }
