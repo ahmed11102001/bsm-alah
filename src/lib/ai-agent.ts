@@ -163,8 +163,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
     ctx.languageMode === "ar"
       ? "ردّ دائمًا بالعربية، بغض النظر عن لغة رسالة العميل."
       : ctx.languageMode === "en"
-      ? "Reply only in English, regardless of the customer's message language."
-      : "ردّ بنفس لغة آخر رسالة من العميل (عربي أو إنجليزي) — حتى لو باقي الإعدادات هنا مكتوبة عربي.";
+        ? "Reply only in English, regardless of the customer's message language."
+        : "ردّ بنفس لغة آخر رسالة من العميل (عربي أو إنجليزي) — حتى لو باقي الإعدادات هنا مكتوبة عربي.";
 
   lines.push(`── اللغة ──`, languageInstruction, "");
 
@@ -242,7 +242,8 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `  "reason": null,`,
     `  "priority": null,`,
     `  "product_ids": [],`,
-    `  "expectsReply": true`,
+    `  "expectsReply": true,`,
+    `  "offTopic": false`,
     `}`,
     "",
     `قيم action المتاحة:`,
@@ -254,6 +255,12 @@ function buildSystemPrompt(ctx: AgentContext): string {
     `  "priority": "high" لو عاجل (شكوى/غضب واضح)، أو "normal" غير كده`,
     "",
     `لو ردك بيتكلم عن منتج معين أو أكتر من قائمة "المنتجات المتاحة حالياً" أعلاه، حط الـ IDs بتاعتها في قائمة "product_ids" (بحد أقصى 3 منتجات). استخدم الـ ID الحقيقي المكتوب في القائمة فقط!`,
+    "",
+    "── offTopic ──",
+    "خلي offTopic = true لما رسالة العميل مالهاش أي علاقة إطلاقًا بالبيزنس أو المنتجات أو الخدمة (مثلاً كلام عام، اختبار الرقم، رسالة سبام، سؤال في موضوع تاني تمامًا زي السياسة أو الرياضة). في الحالة دي:",
+    "- سيب \"reply\" فاضي أو null — مش هيتبعت للعميل خالص.",
+    "- خلي action = null و expectsReply = false.",
+    "لو الرسالة فيها أي علاقة ولو بسيطة بالبيزنس أو استفسار عادي (حتى لو مش موجود في الكتالوج)، offTopic لازم تفضل false — استخدم القواعد اللي فوق (عدم اختراع معلومات) بدل ما تسيب الرد فاضي. كن متحفظ: لو مش متأكد إن الرسالة خارج الموضوع تمامًا، خلي offTopic = false ورد عادي (أحسن ما نفوّت رد نتجاهله لازم من ما نتجاهل عميل حقيقي).",
     "",
     "── expectsReply ──",
     "بالإضافة للرد، لازم ترجع expectsReply (true/false) بيوضح هل ردك محتاج تفاعل تاني من العميل:",
@@ -279,12 +286,35 @@ function buildSystemPrompt(ctx: AgentContext): string {
 
 // ─── Gemini ───────────────────────────────────────────────────────────────────
 
+// ─── Helper: نزّل صورة من رابط وحوّلها لـ base64 عشان Gemini يقدر "يشوفها" ────
+// Gemini REST API (inlineData) مش بياخد روابط مباشرة زي OpenAI (image_url) —
+// لازم البيانات الفعلية (base64) + الـ MIME type. لو التحميل فشل (رابط منتهي،
+// شبكة، إلخ)، بنرجع null ونكمل بالنص بس بدل ما نوقف الرد كله.
+async function fetchImageAsInlineData(
+  url: string
+): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`[AI-AGENT/GEMINI] Image fetch failed (${res.status}): ${url}`);
+      return null;
+    }
+    const mimeType = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+    if (!mimeType.startsWith("image/")) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return { inlineData: { mimeType, data: buffer.toString("base64") } };
+  } catch (err) {
+    console.error("[AI-AGENT/GEMINI] Failed to download image for inline data:", err);
+    return null;
+  }
+}
+
 async function callGemini(
   messages: ConversationMessage[],
   ctx: AgentContext,
 ): Promise<AgentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing" , expectsReply: false };
+  if (!apiKey) return { ok: false, error: "GEMINI_API_KEY is missing", expectsReply: false };
 
   const systemPrompt = buildSystemPrompt(ctx);
   const configuredModel = process.env.GEMINI_MODEL?.trim();
@@ -295,11 +325,24 @@ async function callGemini(
     "gemini-1.5-flash-latest",
   ].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
 
-  // Gemini بيستخدم "model" مش "assistant"
-  const contents = messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+  // Gemini بيستخدم "model" مش "assistant". لو الرسالة فيها صورة (imageUrl)،
+  // ننزّلها ونحطها كـ inlineData part جنب النص — نفس فكرة Vision في OpenAI
+  // بالظبط، بس بصيغة Gemini (base64 مش رابط مباشر).
+  const contents = await Promise.all(
+    messages.map(async (m) => {
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: m.content || (m.imageUrl ? "حلل الصورة دي ورد على العميل" : "") },
+      ];
+      if (m.imageUrl && m.role === "user") {
+        const imagePart = await fetchImageAsInlineData(m.imageUrl);
+        if (imagePart) parts.push(imagePart);
+      }
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts,
+      };
+    })
+  );
 
   try {
     for (const model of modelsToTry) {
@@ -330,12 +373,12 @@ async function callGemini(
         const err = await res.text();
         console.error("[AI-AGENT/GEMINI] Error:", res.status, { model, err });
         if (res.status === 404) continue;
-        return { ok: false, error: `Gemini error ${res.status}` , expectsReply: false };
+        return { ok: false, error: `Gemini error ${res.status}`, expectsReply: false };
       }
 
       const data = await res.json();
       const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      if (!raw.trim()) return { ok: false, error: "Empty response from Gemini" , expectsReply: false };
+      if (!raw.trim()) return { ok: false, error: "Empty response from Gemini", expectsReply: false };
       const tokensUsed: number =
         (data?.usageMetadata?.promptTokenCount ?? 0) +
         (data?.usageMetadata?.candidatesTokenCount ?? 0);
@@ -343,14 +386,14 @@ async function callGemini(
       return { ...parsed, tokensUsed };
     }
 
-    return { ok: false, error: "No supported Gemini model found" , expectsReply: false };
+    return { ok: false, error: "No supported Gemini model found", expectsReply: false };
   } catch (err: any) {
     Sentry.captureException(err, {
       tags: { component: "ai-agent" },
       extra: { userId: ctx.userId ?? null, provider: "gemini" },
     });
     console.error("[AI-AGENT/GEMINI] Network error:", err);
-    return { ok: false, error: err.message ?? "Network error" , expectsReply: false };
+    return { ok: false, error: err.message ?? "Network error", expectsReply: false };
   }
 }
 
@@ -361,7 +404,7 @@ async function callOpenAI(
   ctx: AgentContext,
 ): Promise<AgentResult> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { ok: false, error: "OPENAI_API_KEY is missing" , expectsReply: false };
+  if (!apiKey) return { ok: false, error: "OPENAI_API_KEY is missing", expectsReply: false };
 
   const systemPrompt = buildSystemPrompt(ctx);
 
@@ -400,12 +443,12 @@ async function callOpenAI(
     if (!res.ok) {
       const err = await res.text();
       console.error("[AI-AGENT/OPENAI] Error:", res.status, err);
-      return { ok: false, error: `OpenAI error ${res.status}` , expectsReply: false };
+      return { ok: false, error: `OpenAI error ${res.status}`, expectsReply: false };
     }
 
     const data = await res.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? "";
-    if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI" , expectsReply: false };
+    if (!raw.trim()) return { ok: false, error: "Empty response from OpenAI", expectsReply: false };
     const tokensUsed: number = data?.usage?.total_tokens ?? 0;
     const parsed = parseAgentJSON(raw);
     return { ...parsed, tokensUsed };
@@ -415,7 +458,7 @@ async function callOpenAI(
       extra: { userId: ctx.userId ?? null, provider: "openai" },
     });
     console.error("[AI-AGENT/OPENAI] Network error:", err);
-    return { ok: false, error: err.message ?? "Network error" , expectsReply: false };
+    return { ok: false, error: err.message ?? "Network error", expectsReply: false };
   }
 }
 
