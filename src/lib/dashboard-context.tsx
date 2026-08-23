@@ -19,6 +19,7 @@ export interface DashboardData {
     };
     plan: {
         plan: string; planName: string; status: string;
+        currentPeriodEnd: string | null;
         limits: {
             contacts: number; teamMembers: number; campaignsPerMonth: number;
             aiTokensPerMonth: number;

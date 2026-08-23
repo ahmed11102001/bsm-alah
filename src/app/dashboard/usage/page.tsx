@@ -1,22 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "@/lib/dashboard-context";
-import { SUBSCRIPTION_PLANS } from "@/lib/pricing";
+import { SUBSCRIPTION_PLANS, type PlanSlug } from "@/lib/pricing";
 import { PLAN_COLORS, limitLabel, usagePct } from "@/app/dashboard/_shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Bot, Sparkles, Loader2, BarChart3, Star, RefreshCw, ArrowUpRight,
+  Calendar, Receipt, Gift,
 } from "lucide-react";
 import ReferralProgramCard from "@/components/dashboard/ReferralProgramCard";
+import InvoicesTab from "./_components/InvoicesTab";
+
+// ─── ترتيب الباقات عشان نحدد "الباقة اللي بعدها" لزر الترقية ────────────────
+// ملحوظة: "free" مش موجودة في SUBSCRIPTION_PLANS (مش باقة قابلة للشراء)،
+// فبنتعامل مع ترتيب الباقات كـstrings عادية هنا، مش PlanSlug مباشرة.
+const PLAN_ORDER = ["free", "starter", "pro", "enterprise"] as const;
+function nextPlanSlug(current: string): PlanSlug {
+  const idx = PLAN_ORDER.indexOf(current as (typeof PLAN_ORDER)[number]);
+  if (idx === -1 || idx >= PLAN_ORDER.length - 1) return "pro";
+  return PLAN_ORDER[idx + 1] as PlanSlug;
+}
 
 // ─── PlanCard Component ──────────────────────────────────────────────────────
 function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const router = useRouter();
   const p = t.home.plan;
   const contactsPct = usagePct(plan.usage.contacts, plan.limits.contacts);
   const campaignsPct = usagePct(plan.usage.campaignsThisMonth, plan.limits.campaignsPerMonth);
@@ -39,17 +53,30 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
               </span>
               <span className="text-xs text-gray-400">{plan.status === "active" ? p.active : p.expired}</span>
             </div>
+            {plan.plan !== "free" && plan.currentPeriodEnd && (
+              <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-1.5">
+                <Calendar className="w-3 h-3" />
+                {plan.status === "active"
+                  ? (locale === "ar" ? "ينتهي في " : "Renews on ")
+                  : (locale === "ar" ? "انتهى في " : "Expired on ")}
+                <span className="font-semibold text-gray-500 dark:text-gray-300">
+                  {new Date(plan.currentPeriodEnd).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+                    timeZone: "Africa/Cairo", day: "2-digit", month: "short", year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
           </div>
           {!isEnterprise && (
             <div className="flex gap-2 flex-shrink-0">
               <Button size="sm" variant="outline"
                 className="text-xs h-8 gap-1 hover:border-[#25D366] hover:text-[#25D366] hidden sm:flex"
-                onClick={() => toast.info("قريباً — نظام الدفع")}>
+                onClick={() => router.push("/checkout")}>
                 <RefreshCw className="w-3 h-3" /> {p.changePlan}
               </Button>
               <Button size="sm"
                 className="text-xs h-8 gap-1 bg-[#25D366] hover:bg-[#20bb5a] text-white"
-                onClick={() => toast.info("قريباً — نظام الدفع")}>
+                onClick={() => router.push(`/checkout?plan=${nextPlanSlug(plan.plan)}`)}>
                 <ArrowUpRight className="w-3 h-3" /> {p.upgrade}
               </Button>
             </div>
@@ -360,30 +387,57 @@ export default function UsagePage() {
         </div>
       </div>
 
-      {/* ── Plan Card ── */}
-      <PlanCard plan={dashData.plan} />
+      <Tabs defaultValue="usage" dir={dir} className="min-w-0">
+        <TabsList className="w-full mb-2 h-auto min-h-10 gap-1 overflow-x-auto justify-start">
+          <TabsTrigger value="usage" className="flex-1 min-w-[7rem] text-xs gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5" />
+            {locale === "ar" ? "الاستهلاك" : "Usage"}
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="flex-1 min-w-[7rem] text-xs gap-1.5">
+            <Receipt className="w-3.5 h-3.5" />
+            {locale === "ar" ? "الفواتير" : "Invoices"}
+          </TabsTrigger>
+          <TabsTrigger value="referral" className="flex-1 min-w-[7rem] text-xs gap-1.5">
+            <Gift className="w-3.5 h-3.5" />
+            {locale === "ar" ? "برنامج الإحالة" : "Referral Program"}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ── Referral Program Card (🎁 ادعُ أصدقاءك واربح رصيدًا) ── */}
-      <ReferralProgramCard
-        isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"}
-        userPlan={dashData.plan.plan}
-        locale={locale}
-      />
+        {/* ── تاب الاستهلاك ── */}
+        <TabsContent value="usage" className="space-y-6">
+          <PlanCard plan={dashData.plan} />
 
-      {/* ── WANI AI Token Card ── */}
-      {isEnterprise ? (
-        <EnterpriseTokenCard data={dashData} />
-      ) : (
-        <WaniAiUpgradeCard locale={locale} />
-      )}
+          {isEnterprise ? (
+            <EnterpriseTokenCard data={dashData} />
+          ) : (
+            <WaniAiUpgradeCard locale={locale} />
+          )}
 
-      {/* ── Claude MCP Card ── */}
-      {canClaude ? (
-        <ClaudeMcpUsageCard data={dashData} />
-      ) : (
-        <ClaudeUpgradeCard locale={locale} />
-      )}
+          {canClaude ? (
+            <ClaudeMcpUsageCard data={dashData} />
+          ) : (
+            <ClaudeUpgradeCard locale={locale} />
+          )}
+        </TabsContent>
+
+        {/* ── تاب الفواتير ── */}
+        <TabsContent value="invoices">
+          <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+            <CardContent className="p-4 sm:p-6">
+              <InvoicesTab locale={locale} dir={dir} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── تاب برنامج الإحالة ── */}
+        <TabsContent value="referral">
+          <ReferralProgramCard
+            isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"}
+            userPlan={dashData.plan.plan}
+            locale={locale}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-
