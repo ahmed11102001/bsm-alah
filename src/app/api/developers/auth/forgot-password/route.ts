@@ -3,6 +3,7 @@ import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { sendDeveloperResetEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 const GENERIC_MESSAGE = "إذا كان الحساب موجودًا، تم إرسال رابط الاستعادة إلى بريدك الإلكتروني.";
 
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
   if (!limited.success) return NextResponse.json({ success: true, message: GENERIC_MESSAGE });
 
   try {
+    const locale = getRequestLocale(req);
     const body = await req.json();
     const email = typeof body?.email === "string" ? body.email.toLowerCase().trim() : "";
     if (!email) return NextResponse.json({ error: "الإيميل مطلوب" }, { status: 400 });
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
     await prisma.developerPasswordResetToken.create({ data: { token, developerId: developer.id, expires } });
 
     try {
-      await sendDeveloperResetEmail(developer.email, developer.firstName, token);
+      await sendDeveloperResetEmail(developer.email, developer.firstName, token, locale);
     } catch (error) {
       await prisma.developerPasswordResetToken.deleteMany({ where: { token } });
       console.error("[developer-forgot-password] email delivery failed", error instanceof Error ? error.name : "unknown");

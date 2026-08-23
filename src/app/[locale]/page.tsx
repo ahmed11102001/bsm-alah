@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       languages: {
         ar: "https://aiwni.com/ar",
         en: "https://aiwni.com/en",
-        "x-default": "https://aiwni.com/en",
+        "x-default": "https://aiwni.com/",
       },
     },
     openGraph: {

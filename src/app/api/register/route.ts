@@ -8,6 +8,7 @@ import { normalizePhone } from "@/lib/phone";
 import { RegisterSchema, parseInput } from "@/lib/schemas";
 import crypto from "crypto";
 import { sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
@@ -84,10 +85,12 @@ export async function POST(req: Request) {
       return { user: newUser, verificationToken };
     });
 
+    const locale = getRequestLocale(req);
+
     // Verification email is mandatory for the activation flow.
     // If delivery fails, remove the token so the user can safely request a new one.
     try {
-      await sendVerificationEmail(user.email, verificationToken);
+      await sendVerificationEmail(user.email, verificationToken, locale);
     } catch (emailError) {
       await prisma.emailVerificationToken.delete({ where: { token: verificationToken } }).catch(() => undefined);
       console.error(
@@ -104,7 +107,7 @@ export async function POST(req: Request) {
     // Welcome email is best-effort: signup and verification must not fail because
     // the optional welcome message could not be delivered.
     try {
-      await sendWelcomeEmail(user.email, user.name);
+      await sendWelcomeEmail(user.email, user.name, locale);
     } catch (welcomeError) {
       console.error(
         "[register] welcome email delivery failed",

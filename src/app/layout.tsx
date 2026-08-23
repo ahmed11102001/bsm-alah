@@ -149,8 +149,13 @@ export default async function RootLayout({
   // ── اقرأ الـ nonce والـ locale والـ dir اللي الـ middleware/proxy ولّدهم ──────
   const headerList = await headers();
   const nonce = headerList.get("x-nonce") ?? "";
-  const locale = headerList.get("x-locale") ?? "ar";
-  const dir = headerList.get("x-dir") ?? (locale === "en" ? "ltr" : "rtl");
+  const pathname = headerList.get("x-pathname") || "";
+  let locale = headerList.get("x-locale");
+  if (!locale) {
+    if (pathname.startsWith("/en")) locale = "en";
+    else locale = "ar";
+  }
+  const dir = headerList.get("x-dir") || (locale === "en" ? "ltr" : "rtl");
 
   return (
     <html

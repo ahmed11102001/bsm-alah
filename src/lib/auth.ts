@@ -99,7 +99,15 @@ export const authOptions: NextAuthOptions = {
       // Send the welcome email immediately after the Google user is created.
       // This is best-effort so SMTP/email delivery issues never break signup.
       try {
-        await sendWelcomeEmail(user.email!, user.name);
+        const { cookies, headers } = await import("next/headers");
+        const cookieStore = await cookies();
+        const headerStore = await headers();
+        const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
+        const acceptLanguage = headerStore.get("accept-language");
+        const { resolveLocale } = await import("@/lib/locale-resolver");
+        const locale = resolveLocale({ cookieLocale, acceptLanguage });
+
+        await sendWelcomeEmail(user.email!, user.name, locale);
       } catch (welcomeError) {
         console.error(
           "[auth] Google welcome email delivery failed",

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { sendVerificationEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 const GENERIC_MESSAGE = "إذا كان الحساب يحتاج إلى تأكيد، سيتم إرسال رابط جديد إلى بريدك الإلكتروني.";
 
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
   if (!limited.success) return NextResponse.json({ success: true, message: GENERIC_MESSAGE });
 
   try {
+    const locale = getRequestLocale(req);
     const body = await req.json();
     const email = typeof body?.email === "string" ? body.email.toLowerCase().trim() : "";
     if (!email) return NextResponse.json({ error: "البريد الإلكتروني مطلوب" }, { status: 400 });
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
     });
 
     try {
-      await sendVerificationEmail(user.email, token);
+      await sendVerificationEmail(user.email, token, locale);
     } catch (error) {
       await prisma.emailVerificationToken.delete({ where: { token } });
       console.error("[resend-verification] email delivery failed", error instanceof Error ? error.name : "unknown");

@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { requirePermission } from "@/lib/permissions";
 import { generateJoinCode, hashJoinCode, INVITATION_EXPIRY_HOURS } from "@/lib/team-invitations";
 import { sendTeamInviteEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 import { parseInput, TeamResendInviteSchema } from "@/lib/schemas";
 
 const RESEND_COOLDOWN_SECONDS = 60; // 1 minute cooldown between resends
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
   });
 
   // Send Email
+  const locale = getRequestLocale(req);
   try {
     const inviter = await prisma.user.findUnique({
       where: { id: ownerId },
@@ -88,6 +90,7 @@ export async function POST(req: Request) {
       role: invitation.role,
       joinCode: newJoinCode,
       expiresHours: INVITATION_EXPIRY_HOURS,
+      locale,
     });
   } catch (err) {
     console.error("[TEAM_RESEND_EMAIL_ERROR]", err);

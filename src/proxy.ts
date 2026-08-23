@@ -2,6 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { hasPermission, type Permission, type UserRole } from "@/lib/permissions-core";
+import { resolveLocale } from "@/lib/locale-resolver";
 
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === "development";
@@ -28,31 +29,12 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function detectLocale(req: NextRequest): "ar" | "en" {
-  const savedLocale = req.cookies.get("NEXT_LOCALE")?.value;
-  if (savedLocale === "ar" || savedLocale === "en") {
-    return savedLocale;
-  }
-
-  const acceptLang = req.headers.get("accept-language") || "";
-  if (acceptLang) {
-    const isArabic = acceptLang
-      .split(",")
-      .map((part) => part.trim().toLowerCase())
-      .some((part) => part.startsWith("ar"));
-    if (isArabic) {
-      return "ar";
-    }
-  }
-
-  return "en";
-}
-
 function nextWithNonce(req: NextRequest, nonce: string, locale: "ar" | "en" = "ar"): NextResponse {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-locale", locale);
   requestHeaders.set("x-dir", locale === "en" ? "ltr" : "rtl");
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
   requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
   return applyHeaders(NextResponse.next({ request: { headers: requestHeaders } }), nonce, req, locale);
 }
@@ -104,11 +86,6 @@ function isPublicDevRoute(pathname: string): boolean {
   return PUBLIC_DEV_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
-// Single source of truth for which permission a /dashboard/<section> route
-// requires. `__root__` covers the /dashboard overview page itself (it has
-// no sub-segment), so every dashboard route — including the index — is
-// resolved through the same dynamic ROLE_PERMISSIONS matrix. Do not add a
-// parallel hardcoded allowlist elsewhere; extend this map instead.
 const ROUTE_PERMISSIONS: Record<string, Permission> = {
   __root__: "REPORTS_VIEW",
   chat: "CHAT_VIEW",
@@ -130,7 +107,9 @@ export async function proxy(req: NextRequest) {
 
   // ── 1. Root Landing Page auto-redirection ──
   if (pathname === "/") {
-    const targetLocale = detectLocale(req);
+    const cookieLocale = req.cookies.get("NEXT_LOCALE")?.value;
+    const acceptLanguage = req.headers.get("accept-language");
+    const targetLocale = resolveLocale({ cookieLocale, acceptLanguage });
     const redirectUrl = new URL(`/${targetLocale}${req.nextUrl.search}`, req.url);
     const redirectRes = NextResponse.redirect(redirectUrl);
     return applyHeaders(redirectRes, nonce, req, targetLocale);
@@ -145,7 +124,10 @@ export async function proxy(req: NextRequest) {
     return nextWithNonce(req, nonce, "en");
   }
 
-  const currentLocale = req.cookies.get("NEXT_LOCALE")?.value === "en" ? "en" : "ar";
+  const currentLocale = resolveLocale({
+    cookieLocale: req.cookies.get("NEXT_LOCALE")?.value,
+    acceptLanguage: req.headers.get("accept-language"),
+  });
 
   if (pathname.startsWith("/developers")) {
     if (isPublicDevRoute(pathname)) return nextWithNonce(req, nonce, currentLocale);
@@ -206,8 +188,6 @@ export async function proxy(req: NextRequest) {
       }
 
       if (isDashboard) {
-        // Every /dashboard route — including the index page — is resolved
-        // through ROUTE_PERMISSIONS + the dynamic ROLE_PERMISSIONS matrix.
         const section = pathname.split("/")[2] || "__root__";
         const requiredPermission = ROUTE_PERMISSIONS[section];
         if (requiredPermission && !hasPermission(role, requiredPermission)) {

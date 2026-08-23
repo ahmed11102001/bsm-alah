@@ -8,6 +8,7 @@ import { TeamInviteSchema, TeamRoleUpdateSchema, parseInput } from "@/lib/schema
 import { requirePermission } from "@/lib/permissions";
 import { generateJoinCode, hashJoinCode, INVITATION_EXPIRY_HOURS } from "@/lib/team-invitations";
 import { sendTeamInviteEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -220,6 +221,7 @@ export async function POST(req: Request) {
   });
 
   // 5. Send invitation email
+  const locale = getRequestLocale(req);
   try {
     const inviter = await prisma.user.findUnique({
       where: { id: ownerId },
@@ -234,6 +236,7 @@ export async function POST(req: Request) {
       role,
       joinCode,
       expiresHours: INVITATION_EXPIRY_HOURS,
+      locale,
     });
   } catch (emailErr) {
     console.error("[TEAM_INVITE_EMAIL_ERROR]", emailErr);

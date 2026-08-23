@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { ForgotPasswordSchema, parseInput } from "@/lib/schemas";
 import { sendResetEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 const GENERIC_RESPONSE = {
   success: true,
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const locale = getRequestLocale(req);
     const parsed = parseInput(ForgotPasswordSchema, await req.json());
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
     await prisma.passwordResetToken.create({ data: { token, userId: user.id, expires } });
 
     try {
-      await sendResetEmail(user.email, token);
+      await sendResetEmail(user.email, token, locale);
     } catch (error) {
       await prisma.passwordResetToken.deleteMany({ where: { token } });
       console.error("[forgot-password] email delivery failed", error instanceof Error ? error.name : "unknown");
