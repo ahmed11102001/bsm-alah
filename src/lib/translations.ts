@@ -456,7 +456,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
   // ── Footer ───────────────────────────────────────────────────────────────────
   footer: {
     desc: { ar: "منصة واتساب للأعمال متكاملة: CRM، حملات تسويقية، أتمتة الردود، مساعد مبيعات AI، وصندوق وارد موحد للفريق.", en: "All-in-one WhatsApp Business platform: CRM, marketing campaigns, automated replies, AI sales assistant, and unified team inbox." },
-    copyright: { ar: "© 2025 وني. جميع الحقوق محفوظة.", en: "© 2025 WANI. All rights reserved." },
+    copyright: { ar: "© 2026 وني — مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل. جميع الحقوق محفوظة.", en: "© 2026 WANI — Owned and operated by Ahmed Adel Abdel Fattah Ismail. All rights reserved." },
     col1: { ar: "المنتج", en: "Product" },
     col2: { ar: "الشركة", en: "Company" },
     col3: { ar: "الموارد", en: "Resources" },
@@ -468,6 +468,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
       { ar: "API للمطورين", en: "Developer API", href: "/developers/docs" },
     ],
     company: [
+      { ar: "من نحن", en: "About Us", href: "/about" },
       { ar: "استراتيجيات التسويق", en: "Marketing Strategies", href: "/strategies" },
       { ar: "بورتال المطورين", en: "Developer Portal", href: "/developers" },
       { ar: "سياسة الخصوصية", en: "Privacy Policy", href: "/privacy" },

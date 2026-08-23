@@ -8,12 +8,16 @@ type Bi = { ar: string; en: string };
 const sections: { id: string; title: Bi; content: Bi }[] = [
   {
     id: "acceptance",
-    title: { ar: "القبول والموافقة", en: "Acceptance & Agreement" },
+    title: { ar: "القبول والموافقة والبيانات القانونية", en: "Acceptance & Legal Information" },
     content: {
-      ar: `بتسجيلك في بورتال المطورين (Wani for Developers) أو استخدامك للـ API الخاص به بأي شكل، فإنك تقر بأنك قرأت هذه الشروط وفهمتها ووافقت عليها بالكامل، بالإضافة إلى شروط الاستخدام العامة لمنصة Wani حيثما انطبقت.
+      ar: `بورتال المطورين (Wani for Developers) ومنصة Wani هي خدمات برمجية مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل.
+
+بتسجيلك في بورتال المطورين أو استخدامك للـ API الخاص به بأي شكل، فإنك تقر بأنك قرأت هذه الشروط وفهمتها ووافقت عليها بالكامل، بالإضافة إلى شروط الاستخدام العامة لمنصة Wani حيثما انطبقت.
 
 إذا كنت تستخدم البورتال نيابةً عن شركة، فإنك تؤكد أن لديك الصلاحية القانونية للموافقة على هذه الشروط باسمها.`,
-      en: `By registering for the Developer Portal (Wani for Developers) or using its API in any way, you confirm that you have read, understood, and fully agreed to these terms, in addition to Wani's general Terms of Use where applicable.
+      en: `The Developer Portal (Wani for Developers) and the Wani platform are software services owned and operated by Ahmed Adel Abdel Fattah Ismail.
+
+By registering for the Developer Portal (Wani for Developers) or using its API in any way, you confirm that you have read, understood, and fully agreed to these terms, in addition to Wani's general Terms of Use where applicable.
 
 If you are using the portal on behalf of a company, you confirm that you have the legal authority to accept these terms on its behalf.`,
     },
@@ -174,14 +178,20 @@ Meta reserves the right to suspend or disable any non-compliant number or develo
   },
   {
     id: "contact",
-    title: { ar: "تواصل معنا", en: "Contact Us" },
+    title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
-      ar: `لأي استفسارات حول هذه الشروط أو الـ API:
+      ar: `بورتال ومنصة Wani مملوكة ومدارة بواسطة:
+أحمد عادل عبد الفتاح إسماعيل
 
-البريد الإلكتروني: support@aiwni.com`,
-      en: `For any questions about these terms or the API:
+لأي استفسارات حول هذه الشروط أو الـ API:
+البريد الإلكتروني: support@aiwni.com
+الموقع: الإسكندرية، مصر`,
+      en: `Wani and Developer Portal is owned and operated by:
+Ahmed Adel Abdel Fattah Ismail
 
-Email: support@aiwni.com`,
+For any questions about these terms or the API:
+Email: support@aiwni.com
+Location: Alexandria, Egypt`,
     },
   },
 ];

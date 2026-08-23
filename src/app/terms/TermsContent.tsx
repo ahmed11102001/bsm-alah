@@ -8,16 +8,20 @@ type Bi = { ar: string; en: string };
 const sections: { id: string; title: Bi; content: Bi }[] = [
   {
     id: "acceptance",
-    title: { ar: "القبول والموافقة", en: "Acceptance & Agreement" },
+    title: { ar: "القبول والموافقة والبيانات القانونية", en: "Acceptance & Legal Information" },
     content: {
-      ar: `يُعد تسجيلك في Wani أو استخدامك للمنصة بأي شكل موافقةً صريحة منك على هذه الشروط وعلى سياسة الخصوصية المرتبطة بها.
+      ar: `منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بالكامل بواسطة أحمد عادل عبد الفتاح إسماعيل.
+
+يُعد تسجيلك في Wani أو استخدامك للمنصة بأي شكل موافقةً صريحة منك على هذه الشروط وعلى سياسة الخصوصية المرتبطة بها.
 
 إذا كنت تسجّل أو تستخدم Wani نيابةً عن شركة أو مؤسسة، فإنك تُقرّ بأنك تملك الصلاحية القانونية الكاملة للموافقة على هذه الشروط نيابةً عنها، وأن الكيان نفسه يصبح ملزمًا بها.
 
-تحتفظ Wani بحقها في تعديل هذه الشروط من وقت لآخر. في حال إجراء تغييرات جوهرية، سيتم إخطارك قبل سريانها بمدة لا تقل عن 7 أيام، ما لم يستدعِ الأمر تغييرًا فوريًا لأسباب قانونية أو أمنية.
+تحتفظ إدارة Wani بحقها في تعديل هذه الشروط من وقت لآخر. في حال إجراء تغييرات جوهرية، سيتم إخطارك قبل سريانها بمدة لا تقل عن 7 أيام، ما لم يستدعِ الأمر تغييرًا فوريًا لأسباب قانونية أو أمنية.
 
 استمرار استخدامك للمنصة بعد سريان أي تعديل يُعد قبولًا منك للشروط المُحدَّثة.`,
-      en: `By registering for or using the Wani platform in any way, you confirm your explicit agreement to these terms and to the associated Privacy Policy.
+      en: `Wani is a SaaS (Software as a Service) platform owned and operated by Ahmed Adel Abdel Fattah Ismail.
+
+By registering for or using the Wani platform in any way, you confirm your explicit agreement to these terms and to the associated Privacy Policy.
 
 If you are registering or using Wani on behalf of a company or organization, you confirm that you have full legal authority to accept these terms on its behalf, and that entity becomes bound by them.
 
@@ -370,15 +374,21 @@ Should any dispute arise, the courts of Cairo shall have jurisdiction, without p
   },
   {
     id: "contact",
-    title: { ar: "تواصل معنا", en: "Contact Us" },
+    title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
-      ar: `لأي استفسارات حول هذه الشروط:
+      ar: `منصة Wani مملوكة ومدارة بواسطة:
+أحمد عادل عبد الفتاح إسماعيل
 
+لأي استفسارات قانونية أو أسئلة حول هذه الشروط:
 البريد الإلكتروني: support@aiwni.com
+الموقع: الإسكندرية، مصر
 سيتم الرد خلال 72 ساعة من أيام العمل.`,
-      en: `For any questions about these terms:
+      en: `Wani platform is owned and operated by:
+Ahmed Adel Abdel Fattah Ismail
 
+For any legal inquiries or questions regarding these terms:
 Email: support@aiwni.com
+Location: Alexandria, Egypt
 We aim to respond within 72 business hours.`,
     },
   },

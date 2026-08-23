@@ -104,6 +104,11 @@ const jsonLd = [
     alternateName: "وني",
     url: "https://aiwni.com",
     logo: "https://aiwni.com/icon-512.png",
+    founder: {
+      "@type": "Person",
+      name: "أحمد عادل عبد الفتاح إسماعيل",
+      alternateName: "Ahmed Adel Abdel Fattah Ismail",
+    },
     contactPoint: {
       "@type": "ContactPoint",
       telephone: "+20-1281657907",

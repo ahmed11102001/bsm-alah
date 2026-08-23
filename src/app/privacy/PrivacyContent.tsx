@@ -8,12 +8,12 @@ type Bi = { ar: string; en: string };
 const sections: { id: string; title: Bi; content: Bi }[] = [
   {
     id: "intro",
-    title: { ar: "مقدمة", en: "Introduction" },
+    title: { ar: "مقدمة والبيانات القانونية", en: "Introduction & Legal Information" },
     content: {
-      ar: `مرحباً بك في Wani (وني). نحن نأخذ خصوصيتك بجدية تامة. توضح هذه السياسة كيف نجمع ونستخدم ونحمي المعلومات التي تقدمها عند استخدام منصتنا لإدارة حملات واتساب التسويقية عبر WhatsApp Business API.
+      ar: `مرحباً بك في Wani (وني). منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل، وهو الجهة المسؤولة عن معالجة وحماية بياناتك وفقاً لهذه السياسة. نحن نأخذ خصوصيتك بجدية تامة، وتوضح هذه السياسة كيف نجمع ونستخدم ونحمي المعلومات التي تقدمها عند استخدام منصتنا لإدارة حملات واتساب التسويقية عبر WhatsApp Business API.
 
 بالتسجيل في المنصة أو استخدامها، فإنك توافق على الشروط الواردة في هذه السياسة. إذا كنت لا توافق، يُرجى عدم استخدام الخدمة.`,
-      en: `Welcome to Wani. We take your privacy seriously. This policy explains how we collect, use, and protect the information you provide when using our platform to manage WhatsApp marketing campaigns through the WhatsApp Business API.
+      en: `Welcome to Wani. The Wani SaaS platform is owned and operated by Ahmed Adel Abdel Fattah Ismail, who is responsible for data processing and protection under this policy. We take your privacy seriously. This policy explains how we collect, use, and protect the information you provide when using our platform to manage WhatsApp marketing campaigns through the WhatsApp Business API.
 
 By registering for or using the platform, you agree to the terms in this policy. If you don't agree, please don't use the service.`,
     },
@@ -264,15 +264,21 @@ We do not use tracking or advertising cookies.`,
   },
   {
     id: "contact",
-    title: { ar: "تواصل معنا", en: "Contact Us" },
+    title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
-      ar: `إذا كانت لديك أي استفسارات حول سياسة الخصوصية، تواصل معنا:
+      ar: `منصة Wani مملوكة ومدارة بواسطة:
+أحمد عادل عبد الفتاح إسماعيل
 
+إذا كانت لديك أي استفسارات حول سياسة الخصوصية أو معالجة البيانات، تواصل معنا:
 البريد الإلكتروني: support@aiwni.com
+الموقع: الإسكندرية، مصر
 سيتم الرد خلال 72 ساعة من أيام العمل.`,
-      en: `If you have any questions about this privacy policy, contact us:
+      en: `Wani platform is owned and operated by:
+Ahmed Adel Abdel Fattah Ismail
 
+If you have any questions about this privacy policy or data processing, contact us:
 Email: support@aiwni.com
+Location: Alexandria, Egypt
 We aim to respond within 72 business hours.`,
     },
   },
