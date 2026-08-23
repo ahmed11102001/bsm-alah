@@ -39,9 +39,11 @@ import {
   Lock, Wifi, Sun, Moon, Monitor, Languages, Bell,
   PanelLeftClose, PanelLeftOpen, CheckCircle, XCircle, AlertTriangle,
   ShoppingBag, Clock, Sparkles, CheckCircle2, Bot, MessageSquare, CheckCheck, X,
+  Laptop, SlidersHorizontal,
 } from "lucide-react";
 import DemoModeBanner from "./_components/DemoModeBanner";
 import { DEMO_NOTIFICATIONS, type DemoNotification } from "./_lib/demo-data";
+import DeviceNotificationModal, { ALL_NOTIFICATION_TYPES_LIST } from "@/components/dashboard/DeviceNotificationModal";
 
 // ─── Theme Toggle (نفس الأصلي بالظبط، مفيش فيه أي fetch) ─────────────────────
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
@@ -155,10 +157,22 @@ function DemoNotificationBell() {
   const lang: "ar" | "en" = locale === "en" ? "en" : "ar";
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<DemoNotification[]>(DEMO_NOTIFICATIONS);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState(ALL_NOTIFICATION_TYPES_LIST);
   const unread = notifs.filter(n => !n.isRead).length;
 
   const markAsRead = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+
+  const handleTogglePush = () => {
+    setPushEnabled(p => !p);
+    toast.success(
+      lang === "ar"
+        ? !pushEnabled ? "تم تفعيل إشعارات الجهاز بنجاح! ✅ (وضع الديمو)" : "تم تعطيل إشعارات الجهاز"
+        : !pushEnabled ? "Device notifications enabled! ✅ (Demo Mode)" : "Device notifications disabled"
+    );
+  };
 
   return (
     <div className="relative">
@@ -173,34 +187,34 @@ function DemoNotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-[22rem] max-w-[calc(100vw-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-[24rem] max-w-[calc(100vw-1rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[32rem]`}>
+            <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
                 {unread > 0 && (
-                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
                     {unread} {lang === "ar" ? "جديد" : "New"}
                   </span>
                 )}
               </div>
-              <div className="flex flex-shrink-0 items-center gap-1">
+              <div className="flex flex-shrink-0 items-center gap-1.5">
                 {unread > 0 && (
-                  <button onClick={markAllRead} className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1">
+                  <button onClick={markAllRead} className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1 font-medium">
                     <CheckCheck className="w-3.5 h-3.5" />
                     {lang === "ar" ? "الكل مقروء" : "Mark all read"}
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 mr-1">
+                <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="overflow-y-auto max-h-96">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/40">
               {notifs.map(notif => (
                 <div key={notif.id} onClick={() => markAsRead(notif.id)}
-                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition border-b border-gray-50 dark:border-gray-800 last:border-0 ${!notif.isRead ? "bg-blue-50/40 dark:bg-blue-900/10" : ""}`}>
+                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 transition ${!notif.isRead ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-gray-900"}`}>
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${NOTIF_BG[notif.type]}`}>
                     {NOTIF_ICON[notif.type]}
                   </div>
@@ -215,7 +229,53 @@ function DemoNotificationBell() {
                 </div>
               ))}
             </div>
+
+            {/* Footer — Device Notifications button & toggle */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/95 dark:bg-gray-800/90 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPrefModalOpen(true)}
+                className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:text-[#128C7E] dark:hover:text-[#25D366] transition-colors group cursor-pointer text-start"
+                title={lang === "ar" ? "اضغط لتخصيص إشعارات الجهاز" : "Click to customize device notifications"}
+              >
+                <div className="p-1.5 rounded-xl bg-gray-200/70 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-green-100 dark:group-hover:bg-green-950/60 group-hover:text-[#128C7E] dark:group-hover:text-[#25D366] transition-colors flex items-center justify-center">
+                  <Laptop className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold underline decoration-dotted underline-offset-2">
+                      {lang === "ar" ? "إشعارات الجهاز" : "Device Notifications"}
+                    </span>
+                    <SlidersHorizontal className="w-3 h-3 text-gray-400 group-hover:text-[#128C7E] dark:group-hover:text-[#25D366] transition-colors" />
+                  </div>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-400 font-normal">
+                    {lang === "ar" ? `مخصص (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})` : `Selected (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTogglePush}
+                title={pushEnabled ? (lang === "ar" ? "تعطيل إشعارات الجهاز" : "Disable device notifications") : (lang === "ar" ? "تفعيل إشعارات الجهاز" : "Enable device notifications")}
+                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${pushEnabled ? 'bg-[#25D366]' : 'bg-gray-300 dark:bg-gray-600'} cursor-pointer`}
+              >
+                <div
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${pushEnabled ? (lang === "ar" ? 'left-0.5' : 'right-0.5') : (lang === "ar" ? 'right-0.5' : 'left-0.5')}`}
+                />
+              </button>
+            </div>
           </div>
+
+          <DeviceNotificationModal
+            isOpen={isPrefModalOpen}
+            onClose={() => setIsPrefModalOpen(false)}
+            lang={lang}
+            selectedTypes={selectedTypes}
+            onSave={(types) => setSelectedTypes(types)}
+            pushEnabled={pushEnabled}
+            onTogglePush={handleTogglePush}
+          />
         </>
       )}
     </div>

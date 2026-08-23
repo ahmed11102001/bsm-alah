@@ -1,16 +1,40 @@
+// src/components/dashboard/NotificationBell.tsx
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Check, CheckCheck, MessageSquare, Send, AlertTriangle, XCircle, CheckCircle, ShoppingBag, Clock, Wifi, Sparkles, CheckCircle2, Smartphone, Bot, UserCheck } from "lucide-react";
+import {
+  Bell,
+  X,
+  Check,
+  CheckCheck,
+  MessageSquare,
+  Send,
+  AlertTriangle,
+  XCircle,
+  CheckCircle,
+  ShoppingBag,
+  Clock,
+  Wifi,
+  Sparkles,
+  CheckCircle2,
+  Smartphone,
+  Bot,
+  UserCheck,
+  Laptop,
+  SlidersHorizontal,
+} from "lucide-react";
 import { NotificationType } from "@/types/enums";
+import DeviceNotificationModal, {
+  ALL_NOTIFICATION_TYPES_LIST,
+} from "./DeviceNotificationModal";
 
 interface Notification {
-  id:        string;
-  type:      NotificationType;
-  title:     string;
-  body:      string;
-  isRead:    boolean;
-  link:      string | null;
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  isRead: boolean;
+  link: string | null;
   createdAt: string;
 }
 
@@ -37,38 +61,38 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
-  CAMPAIGN_SUCCESS: "bg-green-50",
-  CAMPAIGN_FAILED: "bg-red-50",
-  CAMPAIGN_PARTIAL: "bg-yellow-50",
-  PLAN_LIMIT_REACHED: "bg-orange-50",
-  NEW_MESSAGE: "bg-blue-50",
-  STORE_AUTO_SENT: "bg-emerald-50",
-  STORE_AUTO_FAILED: "bg-red-50",
-  SUBSCRIPTION_EXPIRING: "bg-amber-50",
-  PAYMENT_FAILED: "bg-red-50",
-  WHATSAPP_TOKEN_EXPIRING: "bg-orange-50",
-  AI_TOKENS_LOW: "bg-yellow-50",
-  SUBSCRIPTION_SUCCESS: "bg-green-50",
-  ORDER_CONFIRMED: "bg-green-50",
-  ORDER_CANCELLED: "bg-red-50",
-  AI_HANDOFF_NEEDED: "bg-purple-50",
-  SMART_FOLLOWUP_ALERT: "bg-orange-50",
-  AUTOMATION_FAILED: "bg-red-50",
-  AUTOMATION_LOOP_STOPPED: "bg-yellow-50",
-  TEAM_MEMBER_JOINED: "bg-emerald-50",
+  CAMPAIGN_SUCCESS: "bg-green-50 dark:bg-green-950/40",
+  CAMPAIGN_FAILED: "bg-red-50 dark:bg-red-950/40",
+  CAMPAIGN_PARTIAL: "bg-yellow-50 dark:bg-yellow-950/40",
+  PLAN_LIMIT_REACHED: "bg-orange-50 dark:bg-orange-950/40",
+  NEW_MESSAGE: "bg-blue-50 dark:bg-blue-950/40",
+  STORE_AUTO_SENT: "bg-emerald-50 dark:bg-emerald-950/40",
+  STORE_AUTO_FAILED: "bg-red-50 dark:bg-red-950/40",
+  SUBSCRIPTION_EXPIRING: "bg-amber-50 dark:bg-amber-950/40",
+  PAYMENT_FAILED: "bg-red-50 dark:bg-red-950/40",
+  WHATSAPP_TOKEN_EXPIRING: "bg-orange-50 dark:bg-orange-950/40",
+  AI_TOKENS_LOW: "bg-yellow-50 dark:bg-yellow-950/40",
+  SUBSCRIPTION_SUCCESS: "bg-green-50 dark:bg-green-950/40",
+  ORDER_CONFIRMED: "bg-green-50 dark:bg-green-950/40",
+  ORDER_CANCELLED: "bg-red-50 dark:bg-red-950/40",
+  AI_HANDOFF_NEEDED: "bg-purple-50 dark:bg-purple-950/40",
+  SMART_FOLLOWUP_ALERT: "bg-orange-50 dark:bg-orange-950/40",
+  AUTOMATION_FAILED: "bg-red-50 dark:bg-red-950/40",
+  AUTOMATION_LOOP_STOPPED: "bg-yellow-50 dark:bg-yellow-950/40",
+  TEAM_MEMBER_JOINED: "bg-emerald-50 dark:bg-emerald-950/40",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
   if (lang === "en") {
-    if (m < 1)  return "Just now";
+    if (m < 1) return "Just now";
     if (m < 60) return `${m} mins ago`;
     const h = Math.floor(m / 60);
     if (h < 24) return `${h} hours ago`;
     return `${Math.floor(h / 24)} days ago`;
   }
-  if (m < 1)  return "الآن";
+  if (m < 1) return "الآن";
   if (m < 60) return `منذ ${m} دقيقة`;
   const h = Math.floor(m / 60);
   if (h < 24) return `منذ ${h} ساعة`;
@@ -89,7 +113,9 @@ function t(raw: string, lang: "ar" | "en"): string {
     if (parsed && typeof parsed === "object" && (parsed.ar || parsed.en)) {
       return parsed[lang] ?? parsed.ar ?? raw;
     }
-  } catch { /* plain string, use as-is */ }
+  } catch {
+    /* plain string, use as-is */
+  }
   return raw;
 }
 
@@ -106,22 +132,42 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOpenChange }: Props) {
+export default function NotificationBell({
+  onNavigate,
+  lang = "ar",
+  isOpen,
+  onOpenChange,
+}: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
-  const [notifs,      setNotifs]      = useState<Notification[]>([]);
-  const [unread,      setUnread]      = useState(0);
-  const [loading,     setLoading]     = useState(false);
+  const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushSupported, setPushSupported] = useState(true);
-  const ref        = useRef<HTMLDivElement>(null);
-  const prevUnread = useRef<number>(-1);   // -1 = أول تحميل، مش بنعزف فيه
+  const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
+
+  const [selectedTypes, setSelectedTypes] = useState<NotificationType[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("wani_push_pref_types");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return ALL_NOTIFICATION_TYPES_LIST;
+  });
+
+  const ref = useRef<HTMLDivElement>(null);
+  const prevUnread = useRef<number>(-1); // -1 = أول تحميل، مش بنعزف فيه
 
   const playNotifSound = useCallback(() => {
     try {
-      const ctx  = new AudioContext();
+      const ctx = new AudioContext();
       const gain = ctx.createGain();
       gain.connect(ctx.destination);
 
@@ -129,15 +175,20 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
       [0, 0.15].forEach((delay, i) => {
         const osc = ctx.createOscillator();
         osc.connect(gain);
-        osc.type            = "sine";
+        osc.type = "sine";
         osc.frequency.value = i === 0 ? 784 : 1047; // G5 → C6
         gain.gain.setValueAtTime(0, ctx.currentTime + delay);
         gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + delay + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          ctx.currentTime + delay + 0.25
+        );
         osc.start(ctx.currentTime + delay);
         osc.stop(ctx.currentTime + delay + 0.25);
       });
-    } catch { /* المتصفح منع AudioContext */ }
+    } catch {
+      /* المتصفح منع AudioContext */
+    }
   }, []);
 
   const fetchNotifs = useCallback(async () => {
@@ -154,8 +205,10 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
         }
         prevUnread.current = d.unreadCount;
       }
-    } finally { setLoading(false); }
-  }, []);
+    } finally {
+      setLoading(false);
+    }
+  }, [playNotifSound]);
 
   // جلب أول مرة + كل 30 ثانية
   useEffect(() => {
@@ -171,17 +224,21 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [setOpen]);
 
   // Check Push Notification Status
   useEffect(() => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
       setPushSupported(false);
       return;
     }
     if (Notification.permission === "granted") {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.pushManager.getSubscription().then(sub => {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.pushManager.getSubscription().then((sub) => {
           setPushEnabled(!!sub);
         });
       });
@@ -190,7 +247,7 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
 
   const togglePush = async () => {
     if (!pushSupported || !VAPID_KEY) return;
-    
+
     setPushLoading(true);
     try {
       const reg = await navigator.serviceWorker.register("/sw.js");
@@ -233,27 +290,41 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
     }
   };
 
+  const handleSavePreferences = (types: NotificationType[]) => {
+    setSelectedTypes(types);
+    try {
+      localStorage.setItem("wani_push_pref_types", JSON.stringify(types));
+    } catch {}
+  };
+
   const markAsRead = async (id: string) => {
     await fetch("/api/notifications", {
-      method:  "PATCH",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ id }),
+      body: JSON.stringify({ id }),
     });
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    setUnread(prev => Math.max(0, prev - 1));
+    setNotifs((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+    setUnread((prev) => Math.max(0, prev - 1));
   };
 
   const markAllRead = async () => {
     await fetch("/api/notifications/read-all", { method: "POST" });
-    setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+    setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnread(0);
   };
 
   const handleClick = (notif: Notification) => {
     if (!notif.isRead) markAsRead(notif.id);
     if (notif.link && onNavigate) {
-      const section = new URL(notif.link, "http://x").searchParams.get("section");
-      if (section) { onNavigate(section); setOpen(false); }
+      const section = new URL(notif.link, "http://x").searchParams.get(
+        "section"
+      );
+      if (section) {
+        onNavigate(section);
+        setOpen(false);
+      }
     }
   };
 
@@ -262,7 +333,8 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
       {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition"
+        className="relative p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+        title={lang === "ar" ? "الإشعارات" : "Notifications"}
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
@@ -272,69 +344,96 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown Panel — Works on Desktop & Mobile */}
       {open && (
-        <div className={`fixed inset-x-4 top-16 w-auto bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-[calc(100vh-5rem)] overflow-y-auto md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-[min(24rem,calc(100vw-1rem))] md:max-w-[calc(100vw-1rem)] md:max-h-96 md:overflow-hidden ${lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"}`}>
+        <div
+          className={`fixed inset-x-4 top-16 w-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 z-50 flex flex-col max-h-[calc(100vh-5rem)] md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-96 md:max-h-[32rem] overflow-hidden ${
+            lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"
+          }`}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-semibold text-gray-900">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
+              <Bell className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {lang === "ar" ? "الإشعارات" : "Notifications"}
+              </span>
               {unread > 0 && (
-                <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
                   {unread} {lang === "ar" ? "جديد" : "New"}
                 </span>
               )}
             </div>
-            <div className="flex flex-shrink-0 items-center gap-1">
+            <div className="flex flex-shrink-0 items-center gap-1.5">
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1"
+                  className="whitespace-nowrap text-xs text-[#25D366] hover:underline flex items-center gap-1 font-medium"
                   title={lang === "ar" ? "تحديد الكل كمقروء" : "Mark all as read"}
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
                   {lang === "ar" ? "الكل مقروء" : "Mark all read"}
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 mr-1">
+              <button
+                onClick={() => setOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* List */}
-          <div className="overflow-y-auto max-h-96">
+          {/* List Container */}
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/40">
             {loading && notifs.length === 0 ? (
-              <div className="flex justify-center py-10">
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-[#25D366] rounded-full animate-spin" />
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-gray-200 dark:border-gray-700 border-t-[#25D366] rounded-full animate-spin" />
               </div>
             ) : notifs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                <Bell className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-sm">{lang === "ar" ? "مفيش إشعارات" : "No notifications"}</p>
+              <div className="flex flex-col items-center justify-center py-14 text-gray-400 dark:text-gray-500">
+                <Bell className="w-9 h-9 mb-2 opacity-25" />
+                <p className="text-sm">
+                  {lang === "ar" ? "مفيش إشعارات" : "No notifications"}
+                </p>
               </div>
             ) : (
-              notifs.map(notif => (
+              notifs.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleClick(notif)}
-                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition border-b border-gray-50 last:border-0 ${
-                    !notif.isRead ? "bg-blue-50/40" : ""
+                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 transition ${
+                    !notif.isRead
+                      ? "bg-blue-50/40 dark:bg-blue-950/20"
+                      : "bg-white dark:bg-gray-900"
                   }`}
                 >
                   {/* Icon */}
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${TYPE_BG[notif.type]}`}>
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      TYPE_BG[notif.type]
+                    }`}
+                  >
                     {TYPE_ICON[notif.type]}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className={`break-words text-sm leading-snug ${!notif.isRead ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}>
+                    <p
+                      className={`break-words text-sm leading-snug ${
+                        !notif.isRead
+                          ? "font-semibold text-gray-900 dark:text-white"
+                          : "font-medium text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
                       {t(notif.title, lang)}
                     </p>
-                    <p className="break-words text-xs text-gray-500 mt-0.5 leading-snug">{t(notif.body, lang)}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(notif.createdAt, lang)}</p>
+                    <p className="break-words text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                      {t(notif.body, lang)}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {timeAgo(notif.createdAt, lang)}
+                    </p>
                   </div>
 
                   {/* Unread dot */}
@@ -346,26 +445,88 @@ export default function NotificationBell({ onNavigate, lang = "ar", isOpen, onOp
             )}
           </div>
 
-          {/* Footer (Push Settings) */}
-          {pushSupported && VAPID_KEY && (
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-gray-500" />
-                <span className="text-xs text-gray-700 font-medium">{lang === "ar" ? "إشعارات الجهاز" : "Device Notifications"}</span>
-              </div>
+          {/* Footer (Device Push Settings & Preferences Button) — Always visible on Desktop and Phone */}
+          {pushSupported && (
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/95 dark:bg-gray-800/90 flex items-center justify-between gap-3">
+              {/* Clickable Device Notifications Button */}
               <button
+                type="button"
+                onClick={() => setIsPrefModalOpen(true)}
+                className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:text-[#128C7E] dark:hover:text-[#25D366] transition-colors group cursor-pointer text-start"
+                title={
+                  lang === "ar"
+                    ? "اضغط لتخصيص إشعارات الجهاز"
+                    : "Click to customize device notifications"
+                }
+              >
+                <div className="p-1.5 rounded-xl bg-gray-200/70 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-green-100 dark:group-hover:bg-green-950/60 group-hover:text-[#128C7E] dark:group-hover:text-[#25D366] transition-colors flex items-center justify-center">
+                  <Laptop className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold underline decoration-dotted underline-offset-2">
+                      {lang === "ar" ? "إشعارات الجهاز" : "Device Notifications"}
+                    </span>
+                    <SlidersHorizontal className="w-3 h-3 text-gray-400 group-hover:text-[#128C7E] dark:group-hover:text-[#25D366] transition-colors" />
+                  </div>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-400 font-normal">
+                    {lang === "ar"
+                      ? `مخصص (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`
+                      : `Selected (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`}
+                  </span>
+                </div>
+              </button>
+
+              {/* Push On/Off Switch */}
+              <button
+                type="button"
                 onClick={togglePush}
                 disabled={pushLoading}
-                className={`relative w-9 h-5 rounded-full transition-colors ${pushEnabled ? 'bg-[#25D366]' : 'bg-gray-300'} ${pushLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                title={
+                  pushEnabled
+                    ? lang === "ar"
+                      ? "تعطيل إشعارات الجهاز"
+                      : "Disable device notifications"
+                    : lang === "ar"
+                    ? "تفعيل إشعارات الجهاز"
+                    : "Enable device notifications"
+                }
+                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+                  pushEnabled ? "bg-[#25D366]" : "bg-gray-300 dark:bg-gray-600"
+                } ${
+                  pushLoading
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
               >
-                <div 
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${pushEnabled ? (lang === "ar" ? 'left-0.5' : 'right-0.5') : (lang === "ar" ? 'right-0.5' : 'left-0.5')}`} 
+                <div
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${
+                    pushEnabled
+                      ? lang === "ar"
+                        ? "left-0.5"
+                        : "right-0.5"
+                      : lang === "ar"
+                      ? "right-0.5"
+                      : "left-0.5"
+                  }`}
                 />
               </button>
             </div>
           )}
         </div>
       )}
+
+      {/* Device Notifications Preferences Modal */}
+      <DeviceNotificationModal
+        isOpen={isPrefModalOpen}
+        onClose={() => setIsPrefModalOpen(false)}
+        lang={lang}
+        selectedTypes={selectedTypes}
+        onSave={handleSavePreferences}
+        pushEnabled={pushEnabled}
+        onTogglePush={togglePush}
+        pushLoading={pushLoading}
+      />
     </div>
   );
 }

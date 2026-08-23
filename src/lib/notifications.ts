@@ -5,20 +5,9 @@ import prisma from "@/lib/prisma";
 import { NotificationType } from "@/types/enums";
 import { sendPushToUser } from "./push";
 
-const PUSH_ENABLED_TYPES = new Set<NotificationType>([
-  "SUBSCRIPTION_EXPIRING",
-  "PAYMENT_FAILED",
-  "WHATSAPP_TOKEN_EXPIRING",
-  "AI_TOKENS_LOW",
-  "CAMPAIGN_SUCCESS",
-  "CAMPAIGN_FAILED",
-  "CAMPAIGN_PARTIAL",
-  "PLAN_LIMIT_REACHED",
-  "STORE_AUTO_FAILED",
-  "SUBSCRIPTION_SUCCESS",
-  "SMART_FOLLOWUP_ALERT",
-  "TEAM_MEMBER_JOINED",
-]);
+const PUSH_ENABLED_TYPES = new Set<NotificationType>(
+  Object.values(NotificationType)
+);
 
 // ─── Bilingual text helper ────────────────────────────────────────────────────
 const bi = (ar: string, en: string) => JSON.stringify({ ar, en });
