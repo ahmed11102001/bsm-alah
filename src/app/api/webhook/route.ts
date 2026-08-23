@@ -590,21 +590,21 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const { contactId, assignedToUserId } = await prisma.$transaction(async (tx) => {
+      const { contactId, assignedToUserId, inboundMessageId, inboundMessageCreatedAt } = await prisma.$transaction(async (tx) => {
         const contact = await tx.contact.upsert({
           where: { phone_userId: { phone: from, userId } },
-          // deletedAt: null ???? ?? ???????? ???? ?????? ???? ???? ??? ???? ????? ?????
+          // deletedAt: null لضمان أن الاتصالات السابقة تظهر مجدداً
           update: { lastMessageAt: new Date(), unreadCount: { increment: 1 }, deletedAt: null },
           create: { phone: from, userId, lastMessageAt: new Date(), unreadCount: 1 },
         });
 
-        // ?? ?? ????? ????? ????????? ?? ?????? — ?????? ???? ???????? ???? ???????
+        // لو كان فيه رسائل سابقة محذوفة للكونتاكت — استرجعها عشان تظهر في الشات
         await tx.message.updateMany({
           where: { contactId: contact.id, userId, deletedAt: { not: null } },
           data: { deletedAt: null },
         });
 
-        await tx.message.create({
+        const createdInboundMsg = await tx.message.create({
           data: {
             userId,
             contactId: contact.id,
@@ -617,18 +617,26 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return { contactId: contact.id, assignedToUserId: contact.assignedToUserId };
+        return {
+          contactId: contact.id,
+          assignedToUserId: contact.assignedToUserId,
+          inboundMessageId: createdInboundMsg.id,
+          inboundMessageCreatedAt: createdInboundMsg.createdAt.toISOString(),
+        };
       });
 
       // إشعار الرسالة الجديدة: الـOwner يستلمه دائمًا، وعضو الفريق يستلمه
       // فقط إذا كانت المحادثة معيّنة له.
       await notifyNewMessage(userId, from, assignedToUserId);
 
-      // ─── Conversation Nudge: العميل بعت رسالة جديدة → ألغي أي nudge مجدول ───
-      // (لو مفيش nudge مجدول أصلاً، الـ cancel ده مجرد no-op — رخيص وآمن)
-      // وصفّر العدّاد: الـ cap (nudge واحد) بتاع فترة السكوت اللي فاتت، مش
-      // بتاع المحادثة كلها — لو سكت تاني بعد كده يستاهل nudge جديد.
+      // ─── Cancel pending AI reply debounce + Conversation Nudge ─────────────
+      // العميل بعت رسالة جديدة → ألغي أي رد AI مؤجَّل وأي nudge مجدول لنفس الكونتاكت.
+      // (لو مفيش حاجة مجدولة أصلاً، الـ cancel ده مجرد no-op — رخيص وآمن)
       await Promise.all([
+        inngest.send({
+          name: "agent-conversation.ai-reply-cancel",
+          data: { contactId },
+        }),
         inngest.send({
           name: "agent-conversation.nudge-cancel",
           data: { contactId },
@@ -637,7 +645,7 @@ export async function POST(req: NextRequest) {
           where: { id: contactId },
           data: { nudgeCountInThread: 0 },
         }),
-      ]).catch((e) => console.error("[NUDGE] Failed to cancel/reset nudge state:", e));
+      ]).catch((e) => console.error("[DEBOUNCE/NUDGE] Failed to cancel/reset:", e));
 
       // ─── Interactive Menu Button Flow ───
       let interactiveMenuHandled = false;
@@ -719,6 +727,9 @@ export async function POST(req: NextRequest) {
               accountOwner,
               mediaUrl,
               mediaType: type, // text | image | audio
+              contactId,
+              inboundMessageId,
+              inboundMessageCreatedAt,
             });
           } catch (err) {
             console.error("[AUTOMATION] Unhandled error:", err);
@@ -751,8 +762,11 @@ async function handleAutomation(ctx: {
   accountOwner: { accessToken: string; phoneNumberId: string };
   mediaUrl?: string | null;
   mediaType?: MessageType;
+  contactId: string;
+  inboundMessageId: string;
+  inboundMessageCreatedAt: string;
 }) {
-  const { userId, from, accountOwner, mediaUrl, mediaType } = ctx;
+  const { userId, from, accountOwner, mediaUrl, mediaType, contactId: ctxContactId, inboundMessageId, inboundMessageCreatedAt } = ctx;
   let messageText = ctx.messageText;
   let imageUrl: string | undefined;
 
@@ -1098,37 +1112,38 @@ async function handleAutomation(ctx: {
   }
 
   // -- 2: AI Agent — لو مفيش keyword match ---------------------------------
+  // ── Pre-flight checks (فوري — قبل الجدولة) ────────────────────────────────
   const agent = await prisma.aIAgent.findUnique({
     where: { userId },
     select: {
-      isEnabled: true, provider: true,
-      brandName: true, businessDesc: true, productsInfo: true,
-      pricingInfo: true, workingHours: true, tone: true,
-      systemPrompt: true, pauseMinutes: true,
-      languageMode: true, websiteUrl: true, websiteButtonText: true,
+      isEnabled: true, pauseMinutes: true,
     },
   });
 
   if (!agent?.isEnabled) return;
 
   // -- 2a: Check if Text AI is specifically disabled for this contact --
-  if (contactRecord?.textAiEnabled === false) {
+  const contactForAI = await prisma.contact.findFirst({
+    where: { phone: from, userId },
+    select: { id: true, textAiEnabled: true, aiStatus: true },
+  });
+
+  if (contactForAI?.textAiEnabled === false) {
     console.log(`[AI-AGENT] Paused — text AI is disabled for ${from}`);
     return;
   }
 
-  if (contactRecord?.aiStatus && contactRecord.aiStatus !== "AUTO") {
-    console.log(`[AI-AGENT] Paused — conversation needs human (status: ${contactRecord.aiStatus})`);
+  if (contactForAI?.aiStatus && contactForAI.aiStatus !== "AUTO") {
+    console.log(`[AI-AGENT] Paused — conversation needs human (status: ${contactForAI.aiStatus})`);
     return;
   }
 
-  // ── Plan guard: AI Token Quota ──
+  // ── Plan guard: AI Token Quota (فحص أولي — هيتفحص تاني وقت التنفيذ الفعلي) ──
   const aiPlanGuard = await checkAITokensLimit(userId);
   if (!aiPlanGuard.allowed) {
     console.log(`[AI-AGENT] Blocked — token limit reached for ${userId}`);
     return;
   }
-
 
   // Pause check — لو الإنسان رد مؤخراً، أوقف AI مؤقت
   const lastManualOutbound = await prisma.messageQueue.findFirst({
@@ -1145,179 +1160,23 @@ async function handleAutomation(ctx: {
     }
   }
 
-  let aiMessages: ConversationMessage[] = [{ role: "user", content: messageText, imageUrl }];
-  if (contactRecord) {
-    const recentMsgs = await prisma.message.findMany({
-      where: { contactId: contactRecord.id, userId, type: MessageType.text },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: { content: true, direction: true },
-    });
-    const fromDb = recentMsgs
-      .reverse()
-      .filter(m => m.content?.trim())
-      .map(m => ({
-        role: m.direction === MessageDirection.inbound ? "user" as const : "assistant" as const,
-        content: m.content!.trim(),
-      }));
-    if (fromDb.length) {
-      aiMessages = fromDb;
-      // الرسالة الحالية (صوت متحوّل لنص أو صورة) مش متخزنة كـ type=text في الـ DB،
-      // فلازم نضيفها يدوي آخر حاجة في الـ history عشان الموديل ميتجاهلهاش
-      if (mediaType === MessageType.audio || mediaType === MessageType.image) {
-        aiMessages.push({ role: "user", content: messageText, imageUrl });
-      }
-    }
-  }
-
-  // ── NEW: Retrieve structured knowledge sources ──────────────────────────
-  const { getRelevantProducts, getSuggestedProducts } = await import("@/lib/product-search");
-
-  const relevantProducts = await getRelevantProducts(userId, messageText, 5);
-
-  // Policies + Guardrails — fetch all (small data, no retrieval needed)
-  const [policies, guardrails, salesSettings, websiteSettings] = await Promise.all([
-    prisma.brandPolicy.findMany({
-      where: { userId },
-      select: { type: true, title: true, content: true },
-    }),
-    prisma.aIGuardrail.findUnique({
-      where: { userId },
-      select: {
-        noInventPrices: true, noInventProducts: true,
-        noMentionCompetitors: true, noSharePersonal: true,
-        strictKnowledgeOnly: true, alwaysHandoffComplaints: true,
-        responseStyle: true, customRules: true,
-      },
-    }),
-    prisma.salesBehaviorSettings.findUnique({ where: { userId } }),
-    prisma.websiteCrawlSettings.findUnique({ where: { userId }, select: { isEnabled: true } }),
-  ]);
-
-  let suggestedProducts: import("@/lib/product-search").SuggestedProduct[] = [];
-  if (relevantProducts.length > 0 && salesSettings && (salesSettings.suggestAlternatives || salesSettings.suggestUpsell || salesSettings.suggestCrossSell)) {
-    const primary = relevantProducts[0];
-    const fullPrimary = await prisma.product.findUnique({
-      where: { id: primary.id },
-      select: { id: true, category: true, price: true, relatedProductIds: true },
-    });
-    if (fullPrimary) {
-      suggestedProducts = await getSuggestedProducts(userId, fullPrimary, salesSettings, Math.min(salesSettings.maxSuggestedProducts, 3));
-    }
-  }
-  const websiteKnowledge = websiteSettings?.isEnabled
-    ? await (await import("@/lib/website-search")).getRelevantWebsiteKnowledge(userId, messageText, 3)
-    : [];
-
-  const result = await getAIReply(
-    aiMessages,
-    {
-      brandName: agent.brandName,
-      businessDesc: agent.businessDesc,
-      productsInfo: agent.productsInfo,
-      pricingInfo: agent.pricingInfo,
-      workingHours: agent.workingHours,
-      tone: agent.tone,
-      systemPrompt: agent.systemPrompt,
-      languageMode: agent.languageMode,
-      websiteUrl: agent.websiteUrl,
-      websiteButtonText: agent.websiteButtonText,
-      // ── NEW structured knowledge ──
-      relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
-      suggestedProducts: suggestedProducts.length > 0 ? suggestedProducts : undefined,
-      salesBehavior: salesSettings ? { goal: salesSettings.goal, suggestDiscounts: salesSettings.suggestDiscounts } : undefined,
-      websiteKnowledge: websiteKnowledge.length > 0 ? websiteKnowledge : undefined,
-      policies: policies.length > 0 ? policies : undefined,
-      guardrails: guardrails ?? undefined,
-    },
-    agent.provider as "gemini" | "openai",
-  );
-
-  if (!result.ok) {
-    console.error(`[AI-AGENT] Error:`, result.error);
-    return;
-  }
-
-  if (result.offTopic) {
-    console.log(`[AI-AGENT] Off-topic — no reply sent for "${messageText}"`);
-    return;
-  }
-
-  if (!result.reply?.trim()) return;
-
-  if (result.action === "handoff" && contactRecord) {
-    await prisma.contact.update({
-      where: { id: contactRecord.id },
-      data: {
-        aiStatus: "NEEDS_HUMAN",
-        handoffReason: result.reason ?? "الـ AI طلب تحويل المحادثة لإنسان",
-        handoffAt: new Date(),
-      },
-    });
-    await notifyAiHandoffNeeded(
+  // ── كل الفحوصات عدّت — جدول رد AI مؤجَّل بدل التنفيذ الفوري ────────────────
+  // الـ cancel اتبعت فعلاً فوق (أول ما الرسالة وصلت)، والجدول الجديد هنا
+  // بيبدأ فترة انتظار 8 ثواني. لو جت رسالة تانية قبل ما الـ sleep يخلص،
+  // cancelOn بيلغي الـ function وبيتجدول واحدة جديدة بآخر triggerMessageId.
+  const resolvedContactId = contactForAI?.id ?? ctxContactId;
+  await inngest.send({
+    name: "agent-conversation.ai-reply-check",
+    data: {
+      contactId: resolvedContactId,
       userId,
-      contactRecord.name ?? from,
-      contactRecord.id,
-      result.reason ?? null,
-      result.priority ?? "normal",
-    );
-  }
+      from,
+      triggerMessageId: inboundMessageId,
+      triggerMessageAt: inboundMessageCreatedAt,
+    },
+  }).catch((e) => console.error("[AI-DEBOUNCE] Failed to schedule ai-reply-check:", e));
 
-  // ── سجّل استهلاك التوكن ──
-  if (result.tokensUsed) {
-    void incrementAITokens(userId, result.tokensUsed);
-  }
-
-  // ── NEW: Resolve product image for first valid product_id ──────────────
-  let productImageUrl: string | undefined;
-  if (result.productIds?.length && relevantProducts.length > 0) {
-    // Validate: only accept IDs from the retrieved context (security)
-    const retrievedIdSet = new Set([
-      ...relevantProducts.map(p => p.id),
-      ...suggestedProducts.map(p => p.id),
-    ]);
-    const validIds = result.productIds.filter(id => retrievedIdSet.has(id));
-
-    if (validIds.length > 0) {
-      // Fetch first product's image from DB (MVP: single image only)
-      const productWithImage = await prisma.product.findFirst({
-        where: { id: validIds[0], userId, isActive: true },
-        select: { images: true },
-      });
-      if (productWithImage?.images?.length) {
-        productImageUrl = productWithImage.images[0];
-      }
-    }
-  }
-
-  const sendResult = await sendReply({
-    userId, from,
-    replyText: result.reply,
-    replyMediaUrl: productImageUrl,
-    accountOwner,
-    ruleName: `AI/${agent.provider}`,
-    isAI: true,
-  });
-
-  // ─── Conversation Nudge: لو الرد لسه بيستنى تفاعل من العميل، جدول متابعة ───
-  // الـ AI نفسه حدد expectsReply وقت توليد الرد (شايف السياق كامل) — مش
-  // بمنطق خارجي بيدور على كلمات مفتاحية. لو المحادثة اتقفلت طبيعياً
-  // (شراء تم، استفسار اتحل) الـ AI بيرجع expectsReply=false ومفيش nudge.
-  //
-  // بنستخدم بالظبط نفس sentAt اللي اتكتب في contact.lastAiRepliedAt (رجعها
-  // sendReply) كـ "بصمة" — لو رد AI تاني حصل بعد كده، lastAiRepliedAt هيبقى
-  // مختلف عن القيمة دي وقت التحقق، والـ Inngest function هتلاحظ الفرق
-  // ومتبعتش nudge قديم على رد اتجاوز بالفعل.
-  if (result.expectsReply && sendResult?.contactId) {
-    await inngest.send({
-      name: "agent-conversation.nudge-check",
-      data: {
-        contactId: sendResult.contactId,
-        userId,
-        triggerMessageAt: sendResult.sentAt.toISOString(),
-      },
-    }).catch((e) => console.error("[NUDGE] Failed to schedule nudge-check event:", e));
-  }
+  console.log(`[AI-AGENT] Debounce scheduled for contact ${resolvedContactId} (msg: ${inboundMessageId})`);
 }
 
 // -----------------------------------------------------------------------------

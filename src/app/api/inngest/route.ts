@@ -43,11 +43,13 @@ import {
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
 import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
+import { aiReplyDebounceFn } from "@/inngest/ai-reply-debounce-functions";
 import { googleSheetsSyncCron } from "@/inngest/google-sheets-functions";
 
 const inngestHandler = serve({
   client: inngest,
   functions: [
+    aiReplyDebounceFn,
     processCampaign,
     sendDirectMessage,
     processQueueItem,
