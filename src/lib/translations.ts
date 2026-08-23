@@ -15,7 +15,7 @@ export const t = {
     testimonials: { ar: "آراء العملاء", en: "Testimonials" },
     faq: { ar: "الأسئلة الشائعة", en: "FAQ" },
     login: { ar: "تسجيل الدخول", en: "Login" },
-    langSwitch: { ar: "EN", en: "AR" },
+    langSwitch: { ar: "English", en: "العربية" },
   },
 
   // ── Hero ────────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -246,7 +246,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
                 style={{ animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 240ms both" }}
               >
                 <Languages className="w-4 h-4" />
-                {lang === "ar" ? "Switch to English" : "التبديل للعربية"}
+                {tr(t.nav.langSwitch, lang)}
               </button>
 
               <div style={{ animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 280ms both" }}>

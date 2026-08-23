@@ -146,14 +146,16 @@ const jsonLd = [
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // ── اقرأ الـ nonce اللي الـ middleware ولّده لهذا الـ request ──────────────
-  // بنمرره للـ MetaPixel عشان الـ inline script بتاعها تشتغل مع الـ CSP
-  const nonce = (await headers()).get("x-nonce") ?? "";
+  // ── اقرأ الـ nonce والـ locale والـ dir اللي الـ middleware/proxy ولّدهم ──────
+  const headerList = await headers();
+  const nonce = headerList.get("x-nonce") ?? "";
+  const locale = headerList.get("x-locale") ?? "ar";
+  const dir = headerList.get("x-dir") ?? (locale === "en" ? "ltr" : "rtl");
 
   return (
     <html
-      lang="ar"
-      dir="rtl"
+      lang={locale}
+      dir={dir}
       className={`${cairo.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
       suppressHydrationWarning
     >

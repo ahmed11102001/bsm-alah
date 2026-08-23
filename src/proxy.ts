@@ -28,27 +28,70 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function nextWithNonce(req: NextRequest, nonce: string): NextResponse {
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
-  return applyHeaders(NextResponse.next({ request: { headers: requestHeaders } }), nonce, req);
+function detectLocale(req: NextRequest): "ar" | "en" {
+  const savedLocale = req.cookies.get("NEXT_LOCALE")?.value;
+  if (savedLocale === "ar" || savedLocale === "en") {
+    return savedLocale;
+  }
+
+  const acceptLang = req.headers.get("accept-language") || "";
+  if (acceptLang) {
+    const isArabic = acceptLang
+      .split(",")
+      .map((part) => part.trim().toLowerCase())
+      .some((part) => part.startsWith("ar"));
+    if (isArabic) {
+      return "ar";
+    }
+  }
+
+  return "en";
 }
 
-function applyHeaders(response: NextResponse, nonce: string, req?: NextRequest): NextResponse {
+function nextWithNonce(req: NextRequest, nonce: string, locale: "ar" | "en" = "ar"): NextResponse {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-locale", locale);
+  requestHeaders.set("x-dir", locale === "en" ? "ltr" : "rtl");
+  requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
+  return applyHeaders(NextResponse.next({ request: { headers: requestHeaders } }), nonce, req, locale);
+}
+
+function applyHeaders(
+  response: NextResponse,
+  nonce: string,
+  req?: NextRequest,
+  locale?: "ar" | "en"
+): NextResponse {
   response.headers.set("Content-Security-Policy", buildCsp(nonce));
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  if (locale) {
+    const currentCookie = req?.cookies.get("NEXT_LOCALE")?.value;
+    if (currentCookie !== locale) {
+      response.cookies.set("NEXT_LOCALE", locale, {
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
+  }
+
   if (req) {
     const refParam = req.nextUrl.searchParams.get("ref");
     if (refParam && !req.cookies.has("wani_ref")) {
       const cleanCode = refParam.trim().toUpperCase();
       if (cleanCode.length >= 3 && cleanCode.length <= 32) {
         response.cookies.set("wani_ref", cleanCode, {
-          path: "/", maxAge: 30 * 24 * 60 * 60, httpOnly: true,
-          sameSite: "lax", secure: process.env.NODE_ENV === "production",
+          path: "/",
+          maxAge: 30 * 24 * 60 * 60,
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
         });
       }
     }
@@ -85,26 +128,45 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
+  // ── 1. Root Landing Page auto-redirection ──
+  if (pathname === "/") {
+    const targetLocale = detectLocale(req);
+    const redirectUrl = new URL(`/${targetLocale}${req.nextUrl.search}`, req.url);
+    const redirectRes = NextResponse.redirect(redirectUrl);
+    return applyHeaders(redirectRes, nonce, req, targetLocale);
+  }
+
+  // ── 2. Explicit /ar or /en landing routes ──
+  if (pathname === "/ar" || pathname.startsWith("/ar/")) {
+    return nextWithNonce(req, nonce, "ar");
+  }
+
+  if (pathname === "/en" || pathname.startsWith("/en/")) {
+    return nextWithNonce(req, nonce, "en");
+  }
+
+  const currentLocale = req.cookies.get("NEXT_LOCALE")?.value === "en" ? "en" : "ar";
+
   if (pathname.startsWith("/developers")) {
-    if (isPublicDevRoute(pathname)) return nextWithNonce(req, nonce);
+    if (isPublicDevRoute(pathname)) return nextWithNonce(req, nonce, currentLocale);
     const devSession = await getDevSessionFromRequest(req);
     if (!devSession) {
       const url = new URL("/developers/signin", req.url);
       url.searchParams.set("callbackUrl", pathname);
-      return applyHeaders(NextResponse.redirect(url), nonce, req);
+      return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
     if (devSession.status === "SUSPENDED") {
       const url = new URL("/developers/signin", req.url);
       url.searchParams.set("error", "suspended");
-      return applyHeaders(NextResponse.redirect(url), nonce, req);
+      return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
     if (devSession.status === "PENDING_META" && !pathname.startsWith("/developers/connect-meta")) {
-      return applyHeaders(NextResponse.redirect(new URL("/developers/connect-meta", req.url)), nonce, req);
+      return applyHeaders(NextResponse.redirect(new URL("/developers/connect-meta", req.url)), nonce, req, currentLocale);
     }
     if (devSession.status === "ACTIVE" && pathname.startsWith("/developers/connect-meta")) {
-      return applyHeaders(NextResponse.redirect(new URL("/developers/portal", req.url)), nonce, req);
+      return applyHeaders(NextResponse.redirect(new URL("/developers/portal", req.url)), nonce, req, currentLocale);
     }
-    return nextWithNonce(req, nonce);
+    return nextWithNonce(req, nonce, currentLocale);
   }
 
   const isDashboard = pathname.startsWith("/dashboard");
@@ -116,22 +178,22 @@ export async function proxy(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     if (!token && (isDashboard || isStrategies)) {
-      return applyHeaders(NextResponse.redirect(new URL("/", req.url)), nonce, req);
+      return applyHeaders(NextResponse.redirect(new URL(`/${currentLocale}`, req.url)), nonce, req, currentLocale);
     }
 
     if (!token && isCheckout) {
-      const url = new URL("/", req.url);
+      const url = new URL(`/${currentLocale}`, req.url);
       url.searchParams.set("openLogin", "1");
       url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
-      return applyHeaders(NextResponse.redirect(url), nonce, req);
+      return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
 
     if (token) {
       if ((isDashboard || isStrategies) && token.needsOnboarding) {
-        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce, req);
+        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce, req, currentLocale);
       }
       if (isOnboarding && !token.needsOnboarding) {
-        return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req);
+        return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req, currentLocale);
       }
 
       const role = token.role as UserRole | undefined;
@@ -139,32 +201,30 @@ export async function proxy(req: NextRequest) {
       if (isStrategies) {
         if (!hasPermission(role, "STRATEGIES_VIEW")) {
           const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";
-          return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req);
+          return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req, currentLocale);
         }
       }
 
       if (isDashboard) {
         // Every /dashboard route — including the index page — is resolved
         // through ROUTE_PERMISSIONS + the dynamic ROLE_PERMISSIONS matrix.
-        // There is intentionally no separate hardcoded allowlist here: if a
-        // role's permissions change, this check reflects it automatically.
         const section = pathname.split("/")[2] || "__root__";
         const requiredPermission = ROUTE_PERMISSIONS[section];
         if (requiredPermission && !hasPermission(role, requiredPermission)) {
           const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";
           if (pathname !== fallback) {
-            return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req);
+            return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req, currentLocale);
           }
         }
       }
     }
 
     if (pathname.startsWith("/dashboard/admin") && token && !token.isSuper) {
-      return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce, req);
+      return applyHeaders(NextResponse.rewrite(new URL("/not-found", req.url)), nonce, req, currentLocale);
     }
   }
 
-  return nextWithNonce(req, nonce);
+  return nextWithNonce(req, nonce, currentLocale);
 }
 
 export const config = {
