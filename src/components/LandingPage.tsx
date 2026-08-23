@@ -42,6 +42,10 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
     setLang(initialLang);
     document.documentElement.dir = initialLang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = initialLang;
+    document.cookie = `NEXT_LOCALE=${initialLang}; path=/; max-age=31536000; SameSite=Lax`;
+    try {
+      localStorage.setItem("locale", initialLang);
+    } catch {}
   }, [initialLang]);
 
   useEffect(() => {
@@ -53,6 +57,9 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
     document.documentElement.dir = newLang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = newLang;
     document.cookie = `NEXT_LOCALE=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
+    try {
+      localStorage.setItem("locale", newLang);
+    } catch {}
     const search = window.location.search || "";
     router.push(`/${newLang}${search}`);
   };

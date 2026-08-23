@@ -1,3 +1,4 @@
+// src/lib/language-context.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -10,6 +11,29 @@ interface LanguageContextValue {
   dir: "rtl" | "ltr";
 }
 
+function resolveInitialClientLocale(): Locale {
+  if (typeof document === "undefined") return "ar";
+
+  // 1. Check NEXT_LOCALE cookie (set by landing page /[locale] and proxy middleware)
+  const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+  if (match) {
+    const val = decodeURIComponent(match[1].trim()).toLowerCase();
+    if (val === "ar" || val === "en") return val as Locale;
+  }
+
+  // 2. Check localStorage
+  try {
+    const local = localStorage.getItem("locale");
+    if (local === "ar" || local === "en") return local as Locale;
+  } catch {}
+
+  // 3. Check HTML lang attribute
+  const docLang = document.documentElement.lang?.toLowerCase();
+  if (docLang === "ar" || docLang === "en") return docLang as Locale;
+
+  return "ar";
+}
+
 const LanguageContext = createContext<LanguageContextValue>({
   locale: "ar",
   setLocale: () => {},
@@ -18,17 +42,24 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("ar");
+  const [locale, setLocaleState] = useState<Locale>(() => resolveInitialClientLocale());
 
-  // Persist to localStorage
+  // On client mount, sync with cookies / storage / html lang
   useEffect(() => {
-    const saved = localStorage.getItem("locale") as Locale | null;
-    if (saved === "ar" || saved === "en") setLocaleState(saved);
+    const resolved = resolveInitialClientLocale();
+    setLocaleState(resolved);
+    document.documentElement.lang = resolved;
+    document.documentElement.dir = resolved === "ar" ? "rtl" : "ltr";
   }, []);
 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem("locale", l);
+    try {
+      localStorage.setItem("locale", l);
+      document.cookie = `NEXT_LOCALE=${l}; path=/; max-age=31536000; SameSite=Lax`;
+    } catch {}
+    document.documentElement.lang = l;
+    document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
   };
 
   const dir = locale === "ar" ? "rtl" : "ltr";
