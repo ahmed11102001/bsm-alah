@@ -4,6 +4,15 @@
 const ICON = "/favicon.jpg";
 const DEFAULT_URL = "/dashboard";
 
+// ── Install — فعّل نسخة الـSW الجديدة فورًا، من غير ما تستنى كل التابات تتقفل ──
+// افتراضيًا، لما تنزل نسخة جديدة من sw.js، المتصفح بيسيبها "waiting" لحد ما
+// كل التابات المفتوحة على الموقع تتقفل — ده معناه اليوزر ممكن يفضل شغال بمنطق
+// push/notificationclick قديم لأيام لو مقفلش المتصفح خالص. skipWaiting() هنا
+// بيخلي النسخة الجديدة تتفعّل على طول أول ما توصل.
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
 // ── Push Event Handler ──────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   let data = { title: "WANI", body: "لديك إشعار جديد", url: DEFAULT_URL };
@@ -68,7 +77,11 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ── Activate — تنظيف caches قديمة (مستقبلي) ────────────────────────────────
+// ── Activate — تفعيل فوري على كل التابات المفتوحة حاليًا ───────────────────
+// clients.claim() بيخلي الـSW الجديد ده يتحكم في أي تاب مفتوح بالفعل على طول
+// (مش بس التابات الجديدة اللي هتتفتح بعد كده) — مكمّل لـskipWaiting() فوق،
+// عشان أي تحديث في منطق push/notificationclick يوصل لكل الأجهزة بأسرع وقت
+// ممكن، من غير ما اليوزر يحتاج يقفل المتصفح أو يعمل uninstall/reinstall للـPWA.
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });

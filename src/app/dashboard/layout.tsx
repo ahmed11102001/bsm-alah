@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { signOutWithPushCleanup } from "@/lib/push-client";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
@@ -196,7 +197,9 @@ function SettingsModal({ open, onClose, data, onSaved }: {
       if (!r.ok) throw new Error(d.error);
       toast.success(locale === "ar" ? "تم حذف الحساب" : "Account deleted");
       onClose();
-      await signOut({ redirect: false });
+      // احذف الحساب فعليًا هيمسح الاشتراك من الداتابيز أصلاً (cascade)، لكن
+      // نلغي اشتراك الـPush من المتصفح كمان عشان الـendpoint يبقى منتهي تمامًا
+      await signOutWithPushCleanup(signOut, { redirect: false });
       router.replace("/");
       router.refresh();
     } catch (e: any) { toast.error(e.message); }
@@ -953,7 +956,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               <div className="border-t border-gray-100 dark:border-gray-700 pt-1.5 mt-1">
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => signOutWithPushCleanup(signOut, { callbackUrl: "/" })}
                   className="w-full flex items-center gap-3 text-sm text-red-500 px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                 >
                   <LogOut className="w-4 h-4 flex-shrink-0" />
@@ -1080,7 +1083,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 <ThemeToggle />
                 <button
                   type="button"
-                  onClick={() => { signOut({ callbackUrl: "/" }); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
+                  onClick={() => { signOutWithPushCleanup(signOut, { callbackUrl: "/" }); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
                 >
                   <LogOut className="w-4 h-4" />

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { planAtLeast, type PlanTier } from "@/lib/plans";
+import { signOutWithPushCleanup } from "@/lib/push-client";
 
 // ─── نفس شكل البيانات اللي كان DashboardInner بيجيبها من /api/dashboard ──────
 export interface DashboardData {
@@ -68,7 +69,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             if (r.ok) {
                 setDashData(await r.json());
             } else if (r.status === 401 || r.status === 404) {
-                signOut({ callbackUrl: "/" });
+                // الجلسة خلصت من عند السيرفر — لازم نلغي اشتراك الـPush بتاع
+                // الجهاز ده قبل الـsignOut عشان مايفضلش مربوط بحساب اليوزر ده
+                signOutWithPushCleanup(signOut, { callbackUrl: "/" });
             }
         } finally {
             if (!silent) setLoadingDash(false);

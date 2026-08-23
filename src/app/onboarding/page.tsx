@@ -6,6 +6,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signOutWithPushCleanup } from "@/lib/push-client";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +142,7 @@ function OnboardingInner() {
   const handleBack = async () => {
     setBackBusy(true);
     try {
-      await signOut({ callbackUrl: `/${locale}` });
+      await signOutWithPushCleanup(signOut, { callbackUrl: `/${locale}` });
     } catch {
       router.replace(`/${locale}`);
     } finally {
