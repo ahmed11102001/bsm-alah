@@ -6,7 +6,6 @@ import prisma              from "@/lib/prisma";
 import bcrypt              from "bcryptjs";
 import { rateLimit }       from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
-import { sendWelcomeEmail } from "@/lib/email";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -95,25 +94,7 @@ export const authOptions: NextAuthOptions = {
         },
       });
 
-      // Google signup does not use the manual email-verification flow.
-      // Send the welcome email immediately after the Google user is created.
-      // This is best-effort so SMTP/email delivery issues never break signup.
-      try {
-        const { cookies, headers } = await import("next/headers");
-        const cookieStore = await cookies();
-        const headerStore = await headers();
-        const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
-        const acceptLanguage = headerStore.get("accept-language");
-        const { resolveLocale } = await import("@/lib/locale-resolver");
-        const locale = resolveLocale({ cookieLocale, acceptLanguage });
 
-        await sendWelcomeEmail(user.email!, user.name, locale);
-      } catch (welcomeError) {
-        console.error(
-          "[auth] Google welcome email delivery failed",
-          welcomeError instanceof Error ? welcomeError.message : welcomeError
-        );
-      }
 
       try {
         const { cookies } = await import("next/headers");

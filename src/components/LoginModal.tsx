@@ -24,6 +24,7 @@ interface LoginModalProps {
   /** لو موجودة، بنوجّه اليوزر ليها بعد نجاح الدخول/التسجيل بدل /dashboard
    *  الثابتة — بتحافظ على نية اليوزر (مثلاً باقة مختارة في /checkout). */
   callbackUrl?: string;
+  lang?: "ar" | "en";
 }
 
 // ─── Animations ───────────────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ function OrDivider() {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: LoginModalProps) {
   const router = useRouter();
   const [view, setView] = useState<View>("login");
   const [busy, setBusy] = useState(false);
@@ -145,13 +146,24 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
   const [regConfirm, setRegConfirm] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  // forgot
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [sentToEmail, setSentToEmail] = useState("");
+
   // join team
   const [joinEmail, setJoinEmail] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [joinName, setJoinName] = useState("");
+  const [joinPhone, setJoinPhone] = useState("");
   const [joinPass, setJoinPass] = useState("");
 
-  // forgot
-  const [forgotEmail, setForgotEmail] = useState("");
+  // validation states
+  const emailFormatOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail);
+  const emailIcon = regEmail
+    ? emailFormatOk
+      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+      : <XCircle className="w-4 h-4 text-red-400" />
+    : null;
 
   const go = (v: View) => { setView(v); setErr(""); };
 
@@ -181,12 +193,6 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
     };
   }, [isOpen]);
 
-  const emailFormatOk = /\S+@\S+\.\S+/.test(regEmail);
-  const emailIcon = regEmail
-    ? emailFormatOk
-      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-      : <XCircle className="w-4 h-4 text-red-400" />
-    : null;
 
   // ── Google Login ──────────────────────────────────────────────────────────
   const handleGoogle = async () => {
@@ -196,12 +202,19 @@ export default function LoginModal({ isOpen, onClose, callbackUrl }: LoginModalP
       // لو عندنا callbackUrl (مثلاً جاي من /checkout) بنمررها كـ "next"
       // جوه الـ URL عشان /auth/callback يحترمها بعد ما يتأكد من الـ session
       // (بعد الـ onboarding لو محتاج، أو مباشرة لو لأ).
-      const authCallback = callbackUrl
-        ? `/auth/callback?next=${encodeURIComponent(callbackUrl)}`
-        : "/auth/callback";
+      const currentLang =
+        lang ||
+        (typeof document !== "undefined" &&
+        document.cookie.includes("NEXT_LOCALE=en")
+          ? "en"
+          : "ar");
+      const query = new URLSearchParams();
+      if (callbackUrl) query.set("next", callbackUrl);
+      if (currentLang) query.set("lang", currentLang);
+      const authCallback = `/auth/callback?${query.toString()}`;
       await signIn("google", { callbackUrl: authCallback });
     } catch {
-      setErr("حدث خطأ، حاول مرة أخرى");
+      setErr(lang === "en" ? "An error occurred, please try again" : "حدث خطأ، حاول مرة أخرى");
       setGBusy(false);
     }
   };

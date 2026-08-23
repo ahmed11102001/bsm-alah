@@ -18,18 +18,27 @@ function AuthCallbackInner() {
   //    (مثلاً /checkout?plan=pro&cycle=annual) — لو موجودة، الأولوية
   //    ليها بعد ما نتأكد إنه مش محتاج onboarding. ────────────────────────────
   const next = params.get("next");
+  const lang = params.get("lang") || params.get("locale");
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) { router.replace("/"); return; }
+    if (!session) {
+      const fallback = lang === "en" ? "/en" : "/ar";
+      router.replace(fallback);
+      return;
+    }
 
     if (session.user.needsOnboarding) {
-      // لازم يكمل الـ onboarding الأول — منمرر next معاه عشان يكمل بعده
-      router.replace(next ? `/onboarding?next=${encodeURIComponent(next)}` : "/onboarding");
+      // لازم يكمل الـ onboarding الأول — منمرر next وlang معاه
+      const query = new URLSearchParams();
+      if (next) query.set("next", next);
+      if (lang) query.set("lang", lang);
+      const qStr = query.toString();
+      router.replace(qStr ? `/onboarding?${qStr}` : "/onboarding");
     } else {
       router.replace(next || "/dashboard");
     }
-  }, [session, status, router, next]);
+  }, [session, status, router, next, lang]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

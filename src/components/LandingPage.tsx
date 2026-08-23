@@ -81,6 +81,7 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         callbackUrl={callbackUrl ?? undefined}
+        lang={lang}
       />
 
       {/* ── AI Assistant Widget ── */}
