@@ -24,7 +24,7 @@ import {
 import {
   User, Users, Settings, LogOut, Loader2, Shield, Phone, Mail,
   Lock, Sun, Moon, Monitor, Languages, CreditCard, Sparkles, Handshake,
-  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen,
+  ChevronLeft, ChevronRight, ChevronDown, PanelLeftClose, PanelLeftOpen,
   Eye, EyeOff, Copy, type LucideIcon,
 } from "lucide-react";
 import { hasPermission, type Permission } from "@/lib/permissions-core";
@@ -891,7 +891,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             <User className="w-[18px] h-[18px] flex-shrink-0" />
 
             {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1 text-left">
+              <div className="min-w-0 flex-1 text-left rtl:text-right">
                 <div className="flex items-center justify-between gap-2 min-w-0">
                   <p className="truncate">{accountLabel}</p>
                   {/* Each user's current subscription plan appears beside Account. */}
@@ -901,6 +901,16 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
               </div>
+            )}
+
+            {!sidebarCollapsed && (
+              <ChevronDown
+                className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${
+                  accountPanelOpen
+                    ? "rotate-180 text-[#25D366]"
+                    : "text-gray-400 dark:text-gray-500"
+                }`}
+              />
             )}
           </button>
 
@@ -1029,18 +1039,25 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setAccountPanelOpen((prev) => !prev)}
-              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition-all shadow-sm"
             >
               <User className="w-5 h-5 flex-shrink-0" />
-              <div className="min-w-0 flex-1 text-left">
+              <div className="min-w-0 flex-1 text-left rtl:text-right">
                 <div className="flex items-center justify-between gap-2">
-                  <span>{accountLabel}</span>
+                  <span className="font-semibold">{accountLabel}</span>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${planColor}`}>
                     {planName}
                   </span>
                 </div>
                 <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</span>
               </div>
+              <ChevronDown
+                className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                  accountPanelOpen
+                    ? "rotate-180 text-[#25D366]"
+                    : "text-gray-400 dark:text-gray-500"
+                }`}
+              />
             </button>
 
             {accountPanelOpen && (
