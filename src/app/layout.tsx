@@ -87,6 +87,11 @@ export const metadata: Metadata = {
       "CRM واتساب متكامل: حملات جماعية، أتمتة، AI مبيعات، صندوق وارد للفريق — ابدأ مجاناً.",
     images: ["/favicon.jpg"],
   },
+  verification: {
+    other: {
+      "facebook-domain-verification": "at1gad9aug3ozgb44vm97a2wzsjo7m",
+    },
+  },
 };
 
 // ── SEO: JSON-LD Structured Data ──────────────────────────────────────────────
