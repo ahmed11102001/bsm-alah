@@ -8,8 +8,18 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OgImage() {
-  const logoBase64 = readFileSync(join(process.cwd(), "public", "wani.jpg")).toString("base64");
-  const logoSrc = `data:image/jpeg;base64,${logoBase64}`;
+  let logoSrc = "";
+  try {
+    const logoBase64 = readFileSync(join(process.cwd(), "public", "faviconlink.png")).toString("base64");
+    logoSrc = `data:image/png;base64,${logoBase64}`;
+  } catch {
+    try {
+      const logoBase64 = readFileSync(join(process.cwd(), "public", "favicon.jpg")).toString("base64");
+      logoSrc = `data:image/jpeg;base64,${logoBase64}`;
+    } catch {
+      logoSrc = "";
+    }
+  }
 
   return new ImageResponse(
     (
