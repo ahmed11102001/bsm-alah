@@ -101,7 +101,7 @@ export default function ResetPasswordClient() {
       toast.success("تم تغيير كلمة المرور بنجاح");
 
       setTimeout(() => {
-        router.push("/login");
+        router.push("/");
       }, 2000);
     } catch {
       setErr("حدث خطأ في السيرفر");
@@ -147,7 +147,7 @@ export default function ResetPasswordClient() {
                 تم تغيير كلمة المرور
               </h2>
               <p className="text-sm text-gray-500">
-                جاري تحويلك لصفحة تسجيل الدخول...
+                جاري تحويلك للصفحة الرئيسية...
               </p>
             </motion.div>
           ) : (
