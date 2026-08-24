@@ -318,11 +318,17 @@ async function callGemini(
 
   const systemPrompt = buildSystemPrompt(ctx);
   const configuredModel = process.env.GEMINI_MODEL?.trim();
+  // ⚠️ تحديث أغسطس 2026: جوجل قفلت وصول الحسابات الجديدة لعائلة Gemini 2.5
+  // بالكامل (2.5-flash / 2.5-flash-lite بترجع 404 "no longer available to new
+  // users")، وعائلة Gemini 1.5 اتقفلت خالص لكل الحسابات (404 دايمًا). العائلة
+  // الحالية اللي شغالة فعليًا هي Gemini 3.x — رتّبنا الأسرع/الأرخص الأول
+  // (flash-lite) وبعدين الأقوى (flash) كـfallback، وسبنا 2.5-flash في الآخر
+  // كشبكة أمان بس للحسابات القديمة اللي لسه معاها وصول له.
   const modelsToTry = [
     configuredModel,
-    "gemini-2.5-flash-lite",   // ← الأسرع والأرخص (خلف 2.0 flash)
-    "gemini-2.5-flash",
-    "gemini-1.5-flash-latest",
+    "gemini-3.5-flash-lite",   // ← الأسرع والأرخص (بديل 2.5-flash-lite)
+    "gemini-3.6-flash",        // ← أقوى في الـreasoning (بديل 2.5-flash)
+    "gemini-2.5-flash",        // ← شبكة أمان للحسابات القديمة اللي لسه ليها وصول
   ].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
 
   // Gemini بيستخدم "model" مش "assistant". لو الرسالة فيها صورة (imageUrl)،
