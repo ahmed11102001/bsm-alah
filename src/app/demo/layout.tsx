@@ -612,7 +612,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             }`}>
             <div className="flex items-center gap-3 min-w-0 overflow-hidden">
               <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
-                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+                <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               {!sidebarCollapsed && (
                 <span className="text-lg font-bold truncate">
@@ -679,7 +679,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
-                  <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+                  <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
                 </div>
                 <span className="text-base font-bold">
                   {locale === "ar" ? "وني" : "WANI"}

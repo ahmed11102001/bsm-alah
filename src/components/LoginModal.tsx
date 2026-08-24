@@ -334,7 +334,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center gap-2.5 mb-4">
               <span className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-[#25D366]">
-                <img src="/ai-wani.svg" alt="Wani" className="w-full h-full object-cover" />
+                <img src="/faviconlink.svg" alt="Wani" className="w-full h-full object-cover" />
               </span>
               <span className="text-xl font-bold text-gray-900">
                 WANI

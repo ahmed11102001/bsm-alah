@@ -981,7 +981,7 @@ export default function Automation() {
               <LayoutGrid className="w-4 h-4" />
             ) : (
               <img
-                src="/ai-wani.svg"
+                src="/aiasstant.svg"
                 alt=""
                 aria-hidden="true"
                 className="w-5 h-5 rounded-full object-cover"

@@ -459,14 +459,13 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         .wp-glow-btn  { animation: wpGlow 2.5s ease-in-out infinite; }
       `}</style>
 
+
       {/* ── Proactive bubble ──────────────────────────────────────────── */}
       {proactive && !isOpen && !dismissed && (
         <button
           onClick={handleOpen}
           dir={dir}
-          className="fixed bottom-24 left-6 z-40 bg-white text-gray-800 text-sm font-medium
-                     px-4 py-2.5 rounded-2xl shadow-xl border border-gray-100 wp-fade-in
-                     hover:shadow-2xl transition-shadow max-w-[220px] text-right"
+          className="fixed bottom-24 left-6 z-40 bg-white text-gray-800 text-sm font-medium px-4 py-2.5 rounded-2xl shadow-xl border border-gray-100 wp-fade-in hover:shadow-2xl transition-shadow max-w-[220px] text-right"
           style={{ direction: dir }}
         >
           {f.proactive}
@@ -485,8 +484,8 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center flex-shrink-0">
-                <img src="/wani.svg" alt="WANI" className="rounded-sm object-cover" style={{ width: 18, height: 18 }} />
+              <div className="relative w-9 h-9 rounded-full bg-black border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                <img src="/aiasstant.svg" alt="WANI" className="rounded-full object-cover" style={{ width: 22, height: 22 }} />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-gray-900" />
               </div>
               <div>
@@ -522,9 +521,9 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
                 className={`flex wp-fade-in ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "bot" && (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E]
-                                  flex items-center justify-center flex-shrink-0 mt-1 mx-1.5">
-                    <img src="/wani.svg" alt="WANI" style={{ width: 12, height: 12 }} />
+                  <div className="w-6 h-6 rounded-full bg-black border border-amber-500/30
+                                  flex items-center justify-center flex-shrink-0 mt-1 mx-1.5 overflow-hidden">
+                    <img src="/aiasstant.svg" alt="WANI" style={{ width: 18, height: 18 }} />
                   </div>
                 )}
                 <div
@@ -542,9 +541,9 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
             {/* Typing indicator */}
             {isTyping && (
               <div className="flex items-start wp-fade-in">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E]
-                                flex items-center justify-center flex-shrink-0 mt-1 mx-1.5">
-                  <img src="/wani.svg" alt="WANI" style={{ width: 12, height: 12 }} />
+                <div className="w-6 h-6 rounded-full bg-black border border-amber-500/30
+                                flex items-center justify-center flex-shrink-0 mt-1 mx-1.5 overflow-hidden">
+                  <img src="/aiasstant.svg" alt="WANI" style={{ width: 18, height: 18 }} />
                 </div>
                 <div className="bg-gray-800 rounded-2xl rounded-bl-sm">
                   <TypingDots />
@@ -726,7 +725,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
         {isOpen ? (
           <ChevronDown className="w-6 h-6 text-white" />
         ) : (
-          <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
+          <img src="/aiasstant.svg" alt="WANI" className="w-8 h-8 rounded-full object-cover" />
         )}
         {/* Notification dot لو فيه proactive */}
         {proactive && !isOpen && (

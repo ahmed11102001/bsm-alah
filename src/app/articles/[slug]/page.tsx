@@ -85,7 +85,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       "@type": "Organization",
       name: "Wani",
       url: "https://aiwni.com",
-      logo: "https://aiwni.com/favicon.svg",
+      logo: "https://aiwni.com/faviconlink.svg",
     },
     mainEntityOfPage: `https://aiwni.com/articles/${encodeURI(article.slug)}`,
   };

@@ -332,7 +332,7 @@ export default function Testimonials({ lang, onLoginClick }: { lang: Lang; onLog
               className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center shadow-2xl ring-4 ring-white"
               style={{ animation: visible ? "pulse-glow 3s ease-in-out infinite" : "none" }}
             >
-              <img src="/favicon.svg" alt="Wani" className="w-14 h-14 rounded-full object-cover" />
+              <img src="/faviconlink.svg" alt="Wani" className="w-14 h-14 rounded-full object-cover" />
             </div>
           </div>
 

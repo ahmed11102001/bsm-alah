@@ -126,7 +126,7 @@ export default function ResetPasswordClient() {
           {/* Logo */}
           <div className="flex items-center justify-center gap-2.5 mb-8">
             <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden shadow-md shadow-green-600/20">
-              <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+              <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
             </div>
             <span className="text-2xl font-black tracking-tight text-gray-900">
               WANI

@@ -189,7 +189,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                       hover:bg-gray-100 dark:hover:bg-gray-700"
             style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
           >
-            <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
+            <img src="/aiasstant.svg" alt="WANI" className="w-6 h-6 rounded-full object-cover" />
             {totalCount > 0 && (
               <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
                                 text-white text-[9px] font-bold flex items-center justify-center
@@ -211,7 +211,7 @@ export default function FloatingHelper({ rules, ctx, locale, onDismiss, onAction
                         hover:bg-gray-100 dark:hover:bg-gray-700`}
             style={{ animation: criticalCount > 0 ? "wpAssistPulse 2.5s ease-in-out infinite" : "none" }}
           >
-            <img src="/wani.svg" alt="WANI" className="w-6 h-6 rounded-md object-cover" />
+            <img src="/aiasstant.svg" alt="WANI" className="w-6 h-6 rounded-full object-cover" />
             {totalCount > 0 && (
               <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white
                                 text-white text-[9px] font-bold flex items-center justify-center

@@ -289,12 +289,12 @@ export default function PortalTopBar({
           {/* 1. البراند — الرابط للقائمة العامة يظهر للمطور بس، مش للأونر */}
           {ownerOnly ? (
             <div className="ptopbar-brand" style={{ cursor: "default" }}>
-              <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
+              <img src="/landingpage-dev.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
               <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
             </div>
           ) : (
             <Link href="/developers/portal" className="ptopbar-brand">
-              <img src="/favicon.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
+              <img src="/landingpage-dev.svg" alt={t("Wani", "وني")} className="ptopbar-brand-icon" />
               <span className="ptopbar-brand-name">{t("Wani", "وني")}</span>
               <span className="ptopbar-brand-badge">{t("Developer Portal", "بوابة المطورين")}</span>
             </Link>

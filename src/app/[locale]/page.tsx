@@ -84,9 +84,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "website",
       images: [
         {
-          url: "/favicon.jpg",
-          width: 1200,
-          height: 1200,
+          url: "/faviconlink.png",
+          width: 1254,
+          height: 1254,
           alt: isAr ? "Wani — منصة واتساب للأعمال" : "WANI — WhatsApp Business Platform",
         },
       ],
@@ -97,7 +97,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: isAr
         ? "CRM واتساب متكامل: حملات جماعية، أتمتة، AI مبيعات، صندوق وارد للفريق — ابدأ مجاناً."
         : "All-in-one WhatsApp CRM: Bulk campaigns, automations, AI sales assistant, team inbox — start free.",
-      images: ["/favicon.jpg"],
+      images: ["/faviconlink.png"],
     },
   };
 }

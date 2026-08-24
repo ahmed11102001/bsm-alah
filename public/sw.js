@@ -1,7 +1,7 @@
 // Service Worker — WANI Push Notifications
 // يستقبل Push events ويعرض إشعارات النظام
 
-const ICON = "/favicon.jpg";
+const ICON = "/app.png";
 const DEFAULT_URL = "/dashboard";
 
 // ── Install — فعّل نسخة الـSW الجديدة فورًا، من غير ما تستنى كل التابات تتقفل ──

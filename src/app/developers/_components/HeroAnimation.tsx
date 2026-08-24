@@ -103,17 +103,17 @@ export default function HeroAnimation() {
               borderRadius: "36px", 
               overflow: "hidden",
               boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
-              background: "#0a0a0a",
+              background: "#ffffff",
             }}
           >
             <img 
-              src="/wani.svg" 
+              src="/landingpage-dev.svg" 
               alt="Wani Logo" 
               style={{ 
                 width: "100%", 
                 height: "100%", 
-                objectFit: "cover",
-                transform: "scale(1.02)" 
+                objectFit: "contain",
+                padding: "8px",
               }} 
             />
           </motion.div>

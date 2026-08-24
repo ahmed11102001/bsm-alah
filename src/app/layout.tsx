@@ -57,11 +57,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/wani.svg", type: "image/svg+xml" },
+      { url: "/faviconlink.svg", type: "image/svg+xml" },
+      { url: "/faviconlink.png", sizes: "any", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
     ],
-    shortcut: ["/wani.svg"],
-    apple: [{ url: "/favicon.jpg", sizes: "1200x1200", type: "image/jpeg" }],
+    shortcut: ["/faviconlink.svg"],
+    apple: [{ url: "/app.png", sizes: "1254x1254", type: "image/png" }],
   },
   openGraph: {
     title: "Wani — وني | منصة واتساب للأعمال وأتمتة التسويق",
@@ -73,9 +74,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/favicon.jpg",
-        width: 1200,
-        height: 1200,
+        url: "/faviconlink.png",
+        width: 1254,
+        height: 1254,
         alt: "Wani — منصة واتساب للأعمال",
       },
     ],
@@ -85,7 +86,7 @@ export const metadata: Metadata = {
     title: "Wani — وني | منصة واتساب للأعمال",
     description:
       "CRM واتساب متكامل: حملات جماعية، أتمتة، AI مبيعات، صندوق وارد للفريق — ابدأ مجاناً.",
-    images: ["/favicon.jpg"],
+    images: ["/faviconlink.png"],
   },
   verification: {
     other: {
@@ -103,7 +104,7 @@ const jsonLd = [
     name: "Wani",
     alternateName: "وني",
     url: "https://aiwni.com",
-    logo: "https://aiwni.com/icon-512.png",
+    logo: "https://aiwni.com/faviconlink.png",
     founder: {
       "@type": "Person",
       name: "أحمد عادل عبد الفتاح إسماعيل",

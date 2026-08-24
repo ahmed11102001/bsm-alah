@@ -595,8 +595,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       {/* ── Header: هوية وني + تفعيل + جرّب المساعد ── */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-900/10 via-emerald-800/5 to-teal-900/10 dark:from-emerald-950/40 dark:to-teal-950/30 p-6 rounded-3xl border border-emerald-500/20 shadow-sm">
         <div className="flex items-center gap-3">
-          <span className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img src="/ai-wani.svg" alt="Wani" className="w-full h-full object-cover" />
+          <span className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center overflow-hidden flex-shrink-0 border border-amber-500/20">
+            <img src="/aiasstant.svg" alt="Wani" className="w-full h-full object-cover" />
           </span>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">

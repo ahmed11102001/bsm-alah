@@ -66,7 +66,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
             {/* ── Logo ── */}
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden shadow-md shadow-green-200">
-                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+                <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span
                 className="text-xl font-black tracking-tight transition-colors duration-300"

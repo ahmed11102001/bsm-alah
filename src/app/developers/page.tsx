@@ -61,7 +61,7 @@ function PageContent() {
               }}
             >
               <img
-                src="/favicon.svg"
+                src="/landingpage-dev.svg"
                 alt="Wani API"
                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />

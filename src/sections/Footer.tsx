@@ -68,7 +68,7 @@ export default function Footer({ lang }: FooterProps) {
                 className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#25D366]/20 overflow-hidden"
                 style={{ background: "#25D366" }}
               >
-                <img src="/favicon.svg" alt="WANI" className="w-full h-full object-cover" />
+                <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span className="text-2xl font-bold tracking-tight">
                 {isAr ? "وني" : "WANI"}

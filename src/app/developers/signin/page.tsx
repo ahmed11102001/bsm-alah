@@ -354,7 +354,7 @@ function SignInContent() {
 
         <div className="auth-brand">
           <div className="brand-logo">
-            <div className="brand-logo-icon"><img src="/favicon.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
+            <div className="brand-logo-icon"><img src="/landingpage-dev.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div>
               <div className="brand-logo-text">{t("Wani", "وني")}</div>
               <div className="brand-logo-sub">Developer Portal</div>
@@ -382,7 +382,7 @@ function SignInContent() {
         <div className="auth-form-panel">
           <div className={`auth-card ${mounted ? "visible" : ""}`}>
             <div className="mobile-brand-logo">
-              <div className="mobile-brand-logo-icon"><img src="/favicon.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
+              <div className="mobile-brand-logo-icon"><img src="/landingpage-dev.svg" alt="Wani" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
               <div>
                 <div className="mobile-brand-name">{t("Wani", "وني")}</div>
                 <div className="mobile-brand-sub">Developer Portal</div>
