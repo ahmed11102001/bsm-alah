@@ -33,6 +33,10 @@ export const aiReplyDebounceFn = inngest.createFunction(
       triggerMessageAt?: string;
     };
 
+    console.log(
+      `[AI-DEBOUNCE] Started — contact=${contactId} message=${triggerMessageId}`
+    );
+
     // 1. انتظار تجميع أي رسائل متتالية إضافية
     await step.sleep("wait-for-more-messages", AI_REPLY_DEBOUNCE_DELAY);
 
