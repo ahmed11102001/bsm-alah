@@ -1,10 +1,10 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider       from "next-auth/providers/google";
-import { PrismaAdapter }   from "@auth/prisma-adapter";
-import prisma              from "@/lib/prisma";
-import bcrypt              from "bcryptjs";
-import { rateLimit }       from "@/lib/rate-limit";
+import GoogleProvider from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { rateLimit } from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
 
 export const authOptions: NextAuthOptions = {
@@ -12,15 +12,31 @@ export const authOptions: NextAuthOptions = {
 
   providers: [
     GoogleProvider({
-      clientId:     process.env.GOOGLE_CLIENT_ID!,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
+      // ⚠️ profile() الافتراضي بتاع next-auth (node_modules/next-auth/providers/google.js)
+      // بيتجاهل حقل emailVerified تمامًا — حتى لو جوجل رجّعته true. ده معناه أي يوزر
+      // يسجّل بجوجل، الـemailVerified بتاعه بيفضل null للأبد في الداتابيز رغم إن
+      // جوجل فعليًا أكدت الإيميل. المشكلة كانت بتظهر بس لما اليوزر يعمل "إنشاء كلمة
+      // مرور" من الداشبورد وبعدين يحاول يدخل بالإيميل والباسورد — الشرط
+      // emailVerified === null في authorize() كان بيوقفه غلط. هنا بنمرّر profile()
+      // خاص بينا بيحط emailVerified = تاريخ فعلي لو جوجل قالت إن الإيميل موثّق.
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          emailVerified: profile.email_verified ? new Date() : null,
+        } as any;
+      },
     }),
 
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email:    { label: "Email",    type: "text" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -28,7 +44,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
         }
 
-        const key    = `login:${credentials.email.toLowerCase()}`;
+        const key = `login:${credentials.email.toLowerCase()}`;
         const result = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
         if (!result.success) {
           throw new Error(`كثير من المحاولات. حاول بعد ${result.retryAfter} ثانية.`);
@@ -56,12 +72,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id:       user.id,
-          name:     user.name,
-          email:    user.email,
-          role:     user.role,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
           parentId: user.parentId,
-          isSuper:  (user as any).isSuper ?? false,
+          isSuper: (user as any).isSuper ?? false,
           needsOnboarding: false,
         };
       },
@@ -77,20 +93,20 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       await prisma.user.update({
         where: { id: user.id },
-        data:  { signupMethod: "GOOGLE" },
+        data: { signupMethod: "GOOGLE" },
       });
 
       await prisma.subscription.upsert({
-        where:  { userId: user.id },
+        where: { userId: user.id },
         update: {},
         create: {
-          userId:             user.id,
-          plan:               "free",
-          status:             "active",
+          userId: user.id,
+          plan: "free",
+          status: "active",
           campaignsUsedThisMonth: 0,
-          periodResetAt:      new Date(),
+          periodResetAt: new Date(),
           currentPeriodStart: new Date(),
-          currentPeriodEnd:   null,
+          currentPeriodEnd: null,
         },
       });
 
@@ -116,7 +132,7 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.provider === "google" && user.email) {
         const existing = await prisma.user.findUnique({
-          where:  { email: user.email },
+          where: { email: user.email },
           select: { deletedAt: true },
         });
         if ((existing as any)?.deletedAt) return false;
@@ -134,18 +150,18 @@ export const authOptions: NextAuthOptions = {
 
       if (user && account) {
         const dbUser = await prisma.user.findUnique({
-          where:  { id: user.id },
+          where: { id: user.id },
           select: {
             role: true, parentId: true, isSuper: true, inviteCode: true,
             signupMethod: true, onboardingCompleted: true,
           },
         });
 
-        token.id                = user.id;
-        token.role              = dbUser?.role     ?? "OWNER";
-        token.parentId          = dbUser?.parentId ?? null;
-        token.isSuper           = (dbUser as any)?.isSuper ?? false;
-        token.signupMethod      = dbUser?.signupMethod ?? "MANUAL";
+        token.id = user.id;
+        token.role = dbUser?.role ?? "OWNER";
+        token.parentId = dbUser?.parentId ?? null;
+        token.isSuper = (dbUser as any)?.isSuper ?? false;
+        token.signupMethod = dbUser?.signupMethod ?? "MANUAL";
         token.isSuperVerifiedAt = Date.now();
         token.needsOnboarding = needsGoogleOnboarding(dbUser);
 
@@ -153,20 +169,20 @@ export const authOptions: NextAuthOptions = {
       }
 
       const FIVE_MINUTES = 5 * 60 * 1000;
-      const lastVerified  = (token.isSuperVerifiedAt as number) ?? 0;
+      const lastVerified = (token.isSuperVerifiedAt as number) ?? 0;
 
       if (Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
-          where:  { id: token.id as string },
+          where: { id: token.id as string },
           select: { isSuper: true, role: true, parentId: true, signupMethod: true, onboardingCompleted: true },
         });
 
         if (!freshUser) {
           token.isSuper = false;
-          token.role    = "OWNER";
+          token.role = "OWNER";
         } else {
           token.isSuper = freshUser.isSuper;
-          token.role    = freshUser.role;
+          token.role = freshUser.role;
           token.parentId = freshUser.parentId;
           token.signupMethod = freshUser.signupMethod;
         }
@@ -180,12 +196,12 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id             = token.id       as string;
-        session.user.role           = token.role as "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
-        session.user.parentId       = token.parentId as string | null;
-        session.user.isSuper        = token.isSuper  as boolean;
+        session.user.id = token.id as string;
+        session.user.role = token.role as "OWNER" | "FULL_ACCESS" | "CHAT_ONLY";
+        session.user.parentId = token.parentId as string | null;
+        session.user.isSuper = token.isSuper as boolean;
         session.user.needsOnboarding = (token.needsOnboarding as boolean | undefined) ?? false;
-        session.user.signupMethod   = (token.signupMethod as "MANUAL" | "GOOGLE" | "TEAM_INVITE" | undefined) ?? "MANUAL";
+        session.user.signupMethod = (token.signupMethod as "MANUAL" | "GOOGLE" | "TEAM_INVITE" | undefined) ?? "MANUAL";
       }
       return session;
     },

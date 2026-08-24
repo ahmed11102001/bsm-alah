@@ -100,13 +100,31 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.type === "create_password") {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true, emailVerified: true, signupMethod: true },
+    });
     if (user?.password) {
       return NextResponse.json({ error: "لديك كلمة مرور بالفعل، استخدم تغيير كلمة المرور" }, { status: 400 });
     }
 
     const hashed = await bcrypt.hash(body.newPassword, 10);
-    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+
+    // ─── تصحيح ليوزرز جوجل القدامى (سجلوا قبل تصحيح GoogleProvider) ──────────
+    // اليوزر ده أصلاً مأكد من إيميله عن طريق جوجل (Google OAuth) — مفيش داعي
+    // يتحجب بعدين لما يحاول يدخل بالإيميل والباسورد بس لأن emailVerified
+    // فضلت null في الداتابيز بسبب باگ قديم في next-auth's GoogleProvider
+    // (شوف التعليق في src/lib/auth.ts). نصلّحها هنا تلقائيًا في نفس اللحظة.
+    const shouldBackfillVerification =
+      user?.signupMethod === "GOOGLE" && user?.emailVerified === null;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashed,
+        ...(shouldBackfillVerification ? { emailVerified: new Date() } : {}),
+      },
+    });
     return NextResponse.json({ success: true });
   }
 
