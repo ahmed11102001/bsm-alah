@@ -23,10 +23,25 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ─── نفس تصحيح يوزرز جوجل القدامى، هنا لمسار "نسيت كلمة المرور؟" ─────────
+    // اليوزر أثبت ملكيته للإيميل فعليًا (بالضغط على لينك وصله على بريده)، فده
+    // دليل توثيق أقوى حتى من Google OAuth نفسه. لو حسابه اتأثر بباگ
+    // GoogleProvider القديم (emailVerified فضلت null رغم إنه سجّل بجوجل)،
+    // بنصلّحها هنا تلقائيًا كمان.
+    const userForBackfill = await prisma.user.findUnique({
+      where: { id: record.userId },
+      select: { signupMethod: true, emailVerified: true },
+    });
+    const shouldBackfillVerification =
+      userForBackfill?.signupMethod === "GOOGLE" && userForBackfill?.emailVerified === null;
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: record.userId },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          ...(shouldBackfillVerification ? { emailVerified: new Date() } : {}),
+        },
       }),
 
       prisma.passwordResetToken.delete({
