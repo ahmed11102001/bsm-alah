@@ -10,7 +10,7 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
     id: "intro",
     title: { ar: "مقدمة والبيانات القانونية", en: "Introduction & Legal Information" },
     content: {
-      ar: `مرحباً بك في Wani (وني). منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل، وهو الجهة المسؤولة عن معالجة وحماية بياناتك وفقاً لهذه السياسة. نحن نأخذ خصوصيتك بجدية تامة، وتوضح هذه السياسة كيف نجمع ونستخدم ونحمي المعلومات التي تقدمها عند استخدام منصتنا لإدارة حملات واتساب التسويقية عبر WhatsApp Business API.
+      ar: `مرحباً بك في Wani (وني). منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بواسطة احمد عادل عبد الفتاح اسماعيل، وهو الجهة المسؤولة عن معالجة وحماية بياناتك وفقاً لهذه السياسة. نحن نأخذ خصوصيتك بجدية تامة، وتوضح هذه السياسة كيف نجمع ونستخدم ونحمي المعلومات التي تقدمها عند استخدام منصتنا لإدارة حملات واتساب التسويقية عبر WhatsApp Business API.
 
 بالتسجيل في المنصة أو استخدامها، فإنك توافق على الشروط الواردة في هذه السياسة. إذا كنت لا توافق، يُرجى عدم استخدام الخدمة.`,
       en: `Welcome to Wani. The Wani SaaS platform is owned and operated by Ahmed Adel Abdel Fattah Ismail, who is responsible for data processing and protection under this policy. We take your privacy seriously. This policy explains how we collect, use, and protect the information you provide when using our platform to manage WhatsApp marketing campaigns through the WhatsApp Business API.
@@ -267,7 +267,7 @@ We do not use tracking or advertising cookies.`,
     title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
       ar: `منصة Wani مملوكة ومدارة بواسطة:
-أحمد عادل عبد الفتاح إسماعيل
+احمد عادل عبد الفتاح اسماعيل
 
 إذا كانت لديك أي استفسارات حول سياسة الخصوصية أو معالجة البيانات، تواصل معنا:
 البريد الإلكتروني: support@aiwni.com

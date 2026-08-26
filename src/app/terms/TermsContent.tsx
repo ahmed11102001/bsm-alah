@@ -10,7 +10,7 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
     id: "acceptance",
     title: { ar: "القبول والموافقة والبيانات القانونية", en: "Acceptance & Legal Information" },
     content: {
-      ar: `منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بالكامل بواسطة أحمد عادل عبد الفتاح إسماعيل.
+      ar: `منصة Wani هي منصة برمجيات كخدمة (SaaS) مملوكة ومدارة بالكامل بواسطة احمد عادل عبد الفتاح اسماعيل.
 
 يُعد تسجيلك في Wani أو استخدامك للمنصة بأي شكل موافقةً صريحة منك على هذه الشروط وعلى سياسة الخصوصية المرتبطة بها.
 
@@ -377,7 +377,7 @@ Should any dispute arise, the courts of Cairo shall have jurisdiction, without p
     title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
       ar: `منصة Wani مملوكة ومدارة بواسطة:
-أحمد عادل عبد الفتاح إسماعيل
+احمد عادل عبد الفتاح اسماعيل
 
 لأي استفسارات قانونية أو أسئلة حول هذه الشروط:
 البريد الإلكتروني: support@aiwni.com

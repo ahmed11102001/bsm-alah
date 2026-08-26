@@ -10,7 +10,7 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
     id: "acceptance",
     title: { ar: "القبول والموافقة والبيانات القانونية", en: "Acceptance & Legal Information" },
     content: {
-      ar: `بورتال المطورين (Wani for Developers) ومنصة Wani هي خدمات برمجية مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل.
+      ar: `بورتال المطورين (Wani for Developers) ومنصة Wani هي خدمات برمجية مملوكة ومدارة بواسطة احمد عادل عبد الفتاح اسماعيل.
 
 بتسجيلك في بورتال المطورين أو استخدامك للـ API الخاص به بأي شكل، فإنك تقر بأنك قرأت هذه الشروط وفهمتها ووافقت عليها بالكامل، بالإضافة إلى شروط الاستخدام العامة لمنصة Wani حيثما انطبقت.
 
@@ -181,7 +181,7 @@ Meta reserves the right to suspend or disable any non-compliant number or develo
     title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
       ar: `بورتال ومنصة Wani مملوكة ومدارة بواسطة:
-أحمد عادل عبد الفتاح إسماعيل
+احمد عادل عبد الفتاح اسماعيل
 
 لأي استفسارات حول هذه الشروط أو الـ API:
 البريد الإلكتروني: support@aiwni.com

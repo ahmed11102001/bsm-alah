@@ -13,7 +13,7 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
       ar: `منصة ومنتج Wani (وني) هي منصة برمجيات كخدمة (SaaS) متخصصة في حلول واتساب للأعمال (WhatsApp Business Platform).
 
 Wani مملوكة ومدارة بالكامل بواسطة:
-**أحمد عادل عبد الفتاح إسماعيل**
+**احمد عادل عبد الفتاح اسماعيل**
 
 نقدم من خلال المنصة حلول إدارة علاقات العملاء (CRM)، أتمتة الردود والمتابعة، مساعد المبيعات بالذكاء الاصطناعي، وإدارة الحملات التسويقية المعتمدة من Meta لمساعدة أصحاب الأعمال والمتاجر الإلكترونية على مضاعفة مبيعاتهم وتطوير خدمة العملاء.`,
       en: `Wani is a Software-as-a-Service (SaaS) platform specializing in WhatsApp Business solutions.
@@ -58,7 +58,7 @@ Delivering advanced, intuitive tools built on official WhatsApp Business APIs th
     id: "contact",
     title: { ar: "بيانات التواصل والإدارة", en: "Contact & Management" },
     content: {
-      ar: `المالك والمشغل: أحمد عادل عبد الفتاح إسماعيل
+      ar: `المالك والمشغل: احمد عادل عبد الفتاح اسماعيل
 البريد الإلكتروني: support@aiwni.com
 الهاتف: 201281657907+
 الموقع: الإسكندرية، جمهورية مصر العربية
@@ -155,7 +155,7 @@ export default function AboutContent() {
           </h1>
           <p className="text-white/80 text-sm max-w-xl mx-auto">
             {isAr
-              ? "Wani مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل — المنصة الرائدة لحلول واتساب للأعمال و CRM الأتمتة."
+              ? "Wani مملوكة ومدارة بواسطة احمد عادل عبد الفتاح اسماعيل — المنصة الرائدة لحلول واتساب للأعمال و CRM الأتمتة."
               : "Wani is owned and operated by Ahmed Adel Abdel Fattah Ismail — The leading platform for WhatsApp Business CRM and automation."}
           </p>
         </div>

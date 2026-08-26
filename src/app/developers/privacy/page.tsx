@@ -10,7 +10,7 @@ const sections: { id: string; title: Bi; content: Bi }[] = [
     id: "intro",
     title: { ar: "مقدمة والبيانات القانونية", en: "Introduction & Legal Information" },
     content: {
-      ar: `مرحباً بك في Wani for Developers (بورتال المطورين). خدمات Wani for Developers ومنصة Wani مملوكة ومدارة بواسطة أحمد عادل عبد الفتاح إسماعيل. هذه السياسة تحدداً لبورتال المطورين، وتختلف عن سياسة الخصوصية الخاصة بمنصة Wani الرئيسية لإدارة الحملات، لأن طبيعة البيانات المُعالَجة هنا مختلفة: أنت هنا تستخدم API لإرسال رسائل OTP وواتساب برمجياً من تطبيقك الخاص، وليس عبر لوحة تحكم حملات.
+      ar: `مرحباً بك في Wani for Developers (بورتال المطورين). خدمات Wani for Developers ومنصة Wani مملوكة ومدارة بواسطة احمد عادل عبد الفتاح اسماعيل. هذه السياسة تحدداً لبورتال المطورين، وتختلف عن سياسة الخصوصية الخاصة بمنصة Wani الرئيسية لإدارة الحملات، لأن طبيعة البيانات المُعالَجة هنا مختلفة: أنت هنا تستخدم API لإرسال رسائل OTP وواتساب برمجياً من تطبيقك الخاص، وليس عبر لوحة تحكم حملات.
 
 باستخدامك لبورتال المطورين أو الـ API الخاص به، فإنك توافق على هذه السياسة.`,
       en: `Welcome to Wani for Developers (the Developer Portal). Wani for Developers and the Wani platform are owned and operated by Ahmed Adel Abdel Fattah Ismail. This policy is specific to the Developer Portal and differs from the privacy policy of the main Wani campaign platform, because the nature of the data processed here is different: here you're using an API to send OTP and WhatsApp messages programmatically from your own application, not through a campaign dashboard.
@@ -171,7 +171,7 @@ We are not responsible for any violation on your part in this regard.`,
     title: { ar: "تواصل معنا والبيانات القانونية", en: "Contact & Legal Information" },
     content: {
       ar: `بورتال ومنصة Wani مملوكة ومدارة بواسطة:
-أحمد عادل عبد الفتاح إسماعيل
+احمد عادل عبد الفتاح اسماعيل
 
 للاستفسارات المتعلقة ببورتال المطورين أو الـ API:
 البريد الإلكتروني: support@aiwni.com

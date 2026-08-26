@@ -107,7 +107,7 @@ const jsonLd = [
     logo: "https://aiwni.com/faviconlink.png",
     founder: {
       "@type": "Person",
-      name: "أحمد عادل عبد الفتاح إسماعيل",
+      name: "احمد عادل عبد الفتاح اسماعيل",
       alternateName: "Ahmed Adel Abdel Fattah Ismail",
     },
     contactPoint: {
