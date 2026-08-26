@@ -180,7 +180,7 @@ export async function runAIAgentReply(
     5
   );
 
-  const [policies, guardrails, salesSettings, websiteSettings] =
+  const [policies, guardrails, salesSettings, websiteSettings, customerServiceSettings, faqs, issues] =
     await Promise.all([
       prisma.brandPolicy.findMany({
         where: { userId },
@@ -203,6 +203,17 @@ export async function runAIAgentReply(
       prisma.websiteCrawlSettings.findUnique({
         where: { userId },
         select: { isEnabled: true },
+      }),
+      prisma.customerServiceSettings.findUnique({ where: { userId } }),
+      prisma.brandFAQ.findMany({
+        where: { userId },
+        select: { question: true, answer: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+      prisma.customerIssue.findMany({
+        where: { userId },
+        select: { problem: true, resolution: true },
+        orderBy: { sortOrder: "asc" },
       }),
     ]);
 
@@ -235,6 +246,13 @@ export async function runAIAgentReply(
       ).getRelevantWebsiteKnowledge(userId, combinedSearchText, 3)
     : [];
 
+  const hasCustomerServiceKnowledge =
+    !!customerServiceSettings?.generalSupportInfo?.trim() ||
+    !!customerServiceSettings?.supportProcess?.trim() ||
+    !!customerServiceSettings?.escalationInstructions?.trim() ||
+    faqs.length > 0 ||
+    issues.length > 0;
+
   // 8. استدعاء نموذج الذكاء الاصطناعي
   const result = await getAIReply(
     aiMessages,
@@ -262,6 +280,15 @@ export async function runAIAgentReply(
       websiteKnowledge:
         websiteKnowledge.length > 0 ? websiteKnowledge : undefined,
       policies: policies.length > 0 ? policies : undefined,
+      customerService: hasCustomerServiceKnowledge
+        ? {
+            generalSupportInfo: customerServiceSettings?.generalSupportInfo,
+            supportProcess: customerServiceSettings?.supportProcess,
+            escalationInstructions: customerServiceSettings?.escalationInstructions,
+            faqs: faqs.length > 0 ? faqs : undefined,
+            issues: issues.length > 0 ? issues : undefined,
+          }
+        : undefined,
       guardrails: guardrails ?? undefined,
     },
     agent.provider as "gemini" | "openai"

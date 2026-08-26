@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     // Retrieve Knowledge Sources
     const relevantProducts = await getRelevantProducts(userId, userMessage, 5);
 
-    const [policies, guardrails] = await Promise.all([
+    const [policies, guardrails, salesSettings, customerServiceSettings, faqs, issues] = await Promise.all([
       prisma.brandPolicy.findMany({
         where: { userId },
         select: { type: true, title: true, content: true },
@@ -71,7 +71,26 @@ export async function POST(req: NextRequest) {
           responseStyle: true, customRules: true,
         },
       }),
+      prisma.salesBehaviorSettings.findUnique({ where: { userId } }),
+      prisma.customerServiceSettings.findUnique({ where: { userId } }),
+      prisma.brandFAQ.findMany({
+        where: { userId },
+        select: { question: true, answer: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+      prisma.customerIssue.findMany({
+        where: { userId },
+        select: { problem: true, resolution: true },
+        orderBy: { sortOrder: "asc" },
+      }),
     ]);
+
+    const hasCustomerService =
+      !!customerServiceSettings?.generalSupportInfo?.trim() ||
+      !!customerServiceSettings?.supportProcess?.trim() ||
+      !!customerServiceSettings?.escalationInstructions?.trim() ||
+      faqs.length > 0 ||
+      issues.length > 0;
 
     const result = await getAIReply(
       conversation,
@@ -87,7 +106,22 @@ export async function POST(req: NextRequest) {
         websiteUrl: agent.websiteUrl,
         websiteButtonText: agent.websiteButtonText,
         relevantProducts: relevantProducts.length > 0 ? relevantProducts : undefined,
+        salesBehavior: salesSettings
+          ? {
+              goal: salesSettings.goal,
+              suggestDiscounts: salesSettings.suggestDiscounts,
+            }
+          : undefined,
         policies: policies.length > 0 ? policies : undefined,
+        customerService: hasCustomerService
+          ? {
+              generalSupportInfo: customerServiceSettings?.generalSupportInfo,
+              supportProcess: customerServiceSettings?.supportProcess,
+              escalationInstructions: customerServiceSettings?.escalationInstructions,
+              faqs: faqs.length > 0 ? faqs : undefined,
+              issues: issues.length > 0 ? issues : undefined,
+            }
+          : undefined,
         guardrails: guardrails ?? undefined,
       },
       agent.provider as "gemini" | "openai"
@@ -118,6 +152,7 @@ export async function POST(req: NextRequest) {
       knowledgeSources: [
         ...(agent.brandName || agent.businessDesc ? ["brand"] : []),
         ...(relevantProducts.length > 0 ? ["catalog"] : []),
+        ...(hasCustomerService ? ["customer_service"] : []),
         ...(policies.length > 0 ? ["policies"] : []),
         ...(guardrails ? ["behavior_rules"] : []),
       ],

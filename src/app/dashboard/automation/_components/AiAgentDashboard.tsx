@@ -18,7 +18,7 @@ import {
   Plus, Trash2, Edit3, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
   ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload,
-  MessageCircle, Globe, Users, ListChecks, Wand2,
+  MessageCircle, Globe, Users, ListChecks, Wand2, Headphones,
 } from "lucide-react";
 
 interface AiAgentSettings {
@@ -39,6 +39,26 @@ interface AiAgentSettings {
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
+}
+
+interface CustomerServiceData {
+  generalSupportInfo: string;
+  supportProcess: string;
+  escalationInstructions: string;
+}
+
+interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  sortOrder?: number;
+}
+
+interface CustomerIssueItem {
+  id: string;
+  problem: string;
+  resolution: string;
+  sortOrder?: number;
 }
 
 interface PolicyItem {
@@ -133,7 +153,7 @@ interface ChatMessage {
 // تابات الصفحة الرئيسية (نفس منطق تبويبات dashboard/reports — قسم دائم لكل موضوع)
 type MainTab = "overview" | "identity" | "knowledge" | "behavior";
 // تابات فرعية جوه "مصادر المعرفة"
-type KnowledgeTab = "catalog" | "policies" | "website";
+type KnowledgeTab = "catalog" | "customer_service" | "policies" | "website";
 
 export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const isAr = lang === "ar";
@@ -150,6 +170,18 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
     elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
   });
+  const [customerService, setCustomerService] = useState<CustomerServiceData>({
+    generalSupportInfo: "",
+    supportProcess: "",
+    escalationInstructions: "",
+  });
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [customerIssues, setCustomerIssues] = useState<CustomerIssueItem[]>([]);
+  const [savingCustomerService, setSavingCustomerService] = useState(false);
+  const [showFaqDrawer, setShowFaqDrawer] = useState(false);
+  const [faqForm, setFaqForm] = useState<{ id: string; question: string; answer: string }>({ id: "", question: "", answer: "" });
+  const [showIssueDrawer, setShowIssueDrawer] = useState(false);
+  const [issueForm, setIssueForm] = useState<{ id: string; problem: string; resolution: string }>({ id: "", problem: "", resolution: "" });
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
   const [guardrails, setGuardrails] = useState<GuardrailsData>({
     noInventPrices: true,
@@ -236,13 +268,14 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resAgent, resPolicies, resGuardrails, resProducts, resSales, resWebsite] = await Promise.all([
+      const [resAgent, resPolicies, resGuardrails, resProducts, resSales, resWebsite, resCustomerService] = await Promise.all([
         fetch("/api/ai-agent"),
         fetch("/api/ai-agent/policies"),
         fetch("/api/ai-agent/guardrails"),
         fetch("/api/ai-agent/products?pageSize=100"),
         fetch("/api/ai-agent/sales-behavior"),
         fetch("/api/ai-agent/website-knowledge"),
+        fetch("/api/ai-agent/customer-service"),
       ]);
 
       if (resAgent.ok) {
@@ -266,6 +299,18 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         setWebsiteKnowledge({ isEnabled: Boolean(data.settings?.isEnabled), rootUrl: data.settings?.rootUrl || "" });
         setWebsitePages(data.pages || []);
       }
+      if (resCustomerService.ok) {
+        const csData = await resCustomerService.json();
+        if (csData.settings) {
+          setCustomerService({
+            generalSupportInfo: csData.settings.generalSupportInfo || "",
+            supportProcess: csData.settings.supportProcess || "",
+            escalationInstructions: csData.settings.escalationInstructions || "",
+          });
+        }
+        if (Array.isArray(csData.faqs)) setFaqs(csData.faqs);
+        if (Array.isArray(csData.issues)) setCustomerIssues(csData.issues);
+      }
     } catch (e) {
       console.error("[AiAgentDashboard] Load error:", e);
       toast.error(isAr ? "حدث خطأ أثناء تحميل البيانات" : "Failed to load AI agent data");
@@ -279,10 +324,17 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   }, [loadAllData]);
 
   // ── Readiness Checklist (بدل رقم % لوحده — كل بند بيودّي مباشرة لمكانه) ──
+  const hasCustomerServiceKnowledge =
+    !!customerService.generalSupportInfo?.trim() ||
+    !!customerService.supportProcess?.trim() ||
+    !!customerService.escalationInstructions?.trim() ||
+    faqs.length > 0 ||
+    customerIssues.length > 0;
+
   const checklist: Array<{ id: string; label: string; done: boolean; weight: number; goto: MainTab; gotoSub?: KnowledgeTab }> = [
     { id: "brand", label: isAr ? "بيانات البراند" : "Brand info", done: !!agent.brandName?.trim() && !!agent.businessDesc?.trim(), weight: 20, goto: "identity" },
     { id: "personality", label: isAr ? "شخصية المساعد" : "AI personality", done: !!agent.tone && !!agent.languageMode, weight: 10, goto: "identity" },
-    { id: "knowledge", label: isAr ? "مصدر معرفة واحد على الأقل (كتالوج/موقع/سياسات)" : "At least one knowledge source", done: productStats.total > 0 || !!agent.productsInfo?.trim() || websitePages.length > 0 || policies.length > 0, weight: 30, goto: "knowledge", gotoSub: "catalog" },
+    { id: "knowledge", label: isAr ? "مصدر معرفة واحد على الأقل (منتجات/خدمات/خدمة العملاء/موقع/سياسات)" : "At least one knowledge source (Products/Services/Customer Service/Website/Policies)", done: productStats.total > 0 || !!agent.productsInfo?.trim() || websitePages.length > 0 || policies.length > 0 || hasCustomerServiceKnowledge, weight: 30, goto: "knowledge", gotoSub: "catalog" },
     { id: "policies", label: isAr ? "سياسات البراند" : "Brand policies", done: policies.length > 0, weight: 10, goto: "knowledge", gotoSub: "policies" },
     { id: "guardrails", label: isAr ? "القواعد والحدود" : "Guardrails", done: !!guardrails.customRules?.trim() || guardrails.noInventPrices, weight: 15, goto: "behavior" },
   ];
@@ -337,8 +389,108 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     try {
       const res = await fetch(`/api/ai-agent/policies?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success(isAr ? "تم المحذف" : "Deleted");
+        toast.success(isAr ? "تم الحذف" : "Deleted");
         setPolicies(prev => prev.filter(p => p.id !== id));
+      }
+    } catch (e) {
+      toast.error(isAr ? "خطأ في الحذف" : "Delete error");
+    }
+  };
+
+  const saveCustomerServiceSettings = async (updates?: Partial<CustomerServiceData>) => {
+    setSavingCustomerService(true);
+    const payload = { ...customerService, ...updates };
+    try {
+      const res = await fetch("/api/ai-agent/customer-service", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success(isAr ? "تم حفظ إعدادات خدمة العملاء" : "Customer service settings saved");
+        setCustomerService(payload);
+      } else {
+        toast.error(isAr ? "فشل حفظ إعدادات خدمة العملاء" : "Failed to save customer service settings");
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving customer service settings");
+    } finally {
+      setSavingCustomerService(false);
+    }
+  };
+
+  const saveFaq = async () => {
+    if (!faqForm.question.trim() || !faqForm.answer.trim()) return;
+    try {
+      const method = faqForm.id ? "PUT" : "POST";
+      const res = await fetch("/api/ai-agent/customer-service/faqs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(faqForm),
+      });
+      if (res.ok) {
+        const savedFaq = await res.json();
+        toast.success(isAr ? "تم حفظ السؤال الشائع" : "FAQ saved");
+        setShowFaqDrawer(false);
+        setFaqForm({ id: "", question: "", answer: "" });
+        if (faqForm.id) {
+          setFaqs(prev => prev.map(f => (f.id === savedFaq.id ? savedFaq : f)));
+        } else {
+          setFaqs(prev => [...prev, savedFaq]);
+        }
+      } else {
+        toast.error(isAr ? "فشل حفظ السؤال الشائع" : "Failed to save FAQ");
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ" : "Error saving FAQ");
+    }
+  };
+
+  const deleteFaq = async (id: string) => {
+    try {
+      const res = await fetch(`/api/ai-agent/customer-service/faqs?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(isAr ? "تم الحذف" : "Deleted");
+        setFaqs(prev => prev.filter(f => f.id !== id));
+      }
+    } catch (e) {
+      toast.error(isAr ? "خطأ في الحذف" : "Delete error");
+    }
+  };
+
+  const saveIssue = async () => {
+    if (!issueForm.problem.trim() || !issueForm.resolution.trim()) return;
+    try {
+      const method = issueForm.id ? "PUT" : "POST";
+      const res = await fetch("/api/ai-agent/customer-service/issues", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(issueForm),
+      });
+      if (res.ok) {
+        const savedIssue = await res.json();
+        toast.success(isAr ? "تم حفظ المشكلة والحل" : "Issue & resolution saved");
+        setShowIssueDrawer(false);
+        setIssueForm({ id: "", problem: "", resolution: "" });
+        if (issueForm.id) {
+          setCustomerIssues(prev => prev.map(i => (i.id === savedIssue.id ? savedIssue : i)));
+        } else {
+          setCustomerIssues(prev => [...prev, savedIssue]);
+        }
+      } else {
+        toast.error(isAr ? "فشل حفظ المشكلة والحل" : "Failed to save issue & resolution");
+      }
+    } catch (e) {
+      toast.error(isAr ? "حدث خطأ" : "Error saving issue");
+    }
+  };
+
+  const deleteIssue = async (id: string) => {
+    try {
+      const res = await fetch(`/api/ai-agent/customer-service/issues?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success(isAr ? "تم الحذف" : "Deleted");
+        setCustomerIssues(prev => prev.filter(i => i.id !== id));
       }
     } catch (e) {
       toast.error(isAr ? "خطأ في الحذف" : "Delete error");
@@ -803,232 +955,572 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       )}
 
       {/* ═══════════════ مصادر المعرفة ═══════════════ */}
-      {mainTab === "knowledge" && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
-            {([
-              ["catalog", isAr ? "الكتالوج" : "Catalog", ShoppingBag, productStats.total],
-              ["policies", isAr ? "السياسات" : "Policies", FileText, policies.length],
-              ["website", isAr ? "الموقع" : "Website", Globe, websitePages.length],
-            ] as const).map(([id, label, Icon, count]) => (
-              <button
-                key={id}
-                onClick={() => setKnowledgeTab(id)}
-                className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${knowledgeTab === id
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                  }`}
-              >
-                <Icon className="w-4 h-4" /> {label}
-                {count > 0 && <span className="text-[10px] bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">{count}</span>}
-              </button>
-            ))}
-          </div>
+      {mainTab === "knowledge" && (() => {
+        const customerServiceCount = faqs.length + customerIssues.length + (customerService.generalSupportInfo?.trim() ? 1 : 0);
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
+              {([
+                ["catalog", isAr ? "المنتجات والخدمات" : "Products & Services", ShoppingBag, productStats.total],
+                ["customer_service", isAr ? "خدمة العملاء" : "Customer Service", Headphones, customerServiceCount],
+                ["policies", isAr ? "السياسات" : "Policies", FileText, policies.length],
+                ["website", isAr ? "الموقع" : "Website", Globe, websitePages.length],
+              ] as const).map(([id, label, Icon, count]) => (
+                <button
+                  key={id}
+                  onClick={() => setKnowledgeTab(id)}
+                  className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${knowledgeTab === id
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    }`}
+                >
+                  <Icon className="w-4 h-4" /> {label}
+                  {count > 0 && <span className="text-[10px] bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">{count}</span>}
+                </button>
+              ))}
+            </div>
 
-          {/* ── الكتالوج (Placeholder مؤقت — التصميم الكامل جاي في مرحلة تانية) ── */}
-          {knowledgeTab === "catalog" && (() => {
-            const storeSources = (["shopify", "easyorders", "woocommerce"] as const)
-              .map(src => ({ src, count: products.filter(p => p.source === src).length }))
-              .filter(s => s.count > 0);
-            const manualCount = products.filter(p => p.source === "manual").length;
-            const hasAnyStore = storeSources.length > 0;
-            const totalKnown = products.length;
-            const SOURCE_LABEL: Record<string, string> = { shopify: "Shopify", easyorders: isAr ? "إيزي أوردرز" : "EasyOrders", woocommerce: "WooCommerce", manual: isAr ? "يدوي" : "Manual" };
-            const SOURCE_COLOR: Record<string, string> = {
-              shopify: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400",
-              easyorders: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-              woocommerce: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
-              manual: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-            };
+            {/* ── الكتالوج ── */}
+            {knowledgeTab === "catalog" && (() => {
+              const storeSources = (["shopify", "easyorders", "woocommerce"] as const)
+                .map(src => ({ src, count: products.filter(p => p.source === src).length }))
+                .filter(s => s.count > 0);
+              const manualCount = products.filter(p => p.source === "manual").length;
+              const hasAnyStore = storeSources.length > 0;
+              const totalKnown = products.length;
+              const SOURCE_LABEL: Record<string, string> = { shopify: "Shopify", easyorders: isAr ? "إيزي أوردرز" : "EasyOrders", woocommerce: "WooCommerce", manual: isAr ? "يدوي" : "Manual" };
+              const SOURCE_COLOR: Record<string, string> = {
+                shopify: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400",
+                easyorders: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
+                woocommerce: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
+                manual: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+              };
 
-            return (
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "الكتالوج" : "Catalog"}</h3>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isAr ? `إجمالي المنتجات: ${totalKnown}` : `Total products: ${totalKnown}`}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-4">{isAr ? "كل المنتجات في قائمة واحدة — منتجات المتجر مميزة باسم المنصة، والمنتجات اليدوية مميزة بوسم «يدوي»." : "One catalog for everything — store products show their platform, while manual products are marked Manual."}</p>
+              return (
+                <div className="space-y-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "المنتجات والخدمات" : "Products & Services"}</h3>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isAr ? `إجمالي المنتجات: ${totalKnown}` : `Total products: ${totalKnown}`}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-4">{isAr ? "كل المنتجات في قائمة واحدة — منتجات المتجر مميزة باسم المنصة، والمنتجات اليدوية مميزة بوسم «يدوي»." : "One catalog for everything — store products show their platform, while manual products are marked Manual."}</p>
 
-                  {/* مصادر المنتجات */}
-                  <div className="border border-gray-100 dark:border-gray-700 rounded-2xl divide-y divide-gray-100 dark:divide-gray-700 mb-4">
-                    {storeSources.map(({ src, count }) => (
-                      <div key={src} className="flex items-center justify-between p-3">
+                    {/* مصادر المنتجات */}
+                    <div className="border border-gray-100 dark:border-gray-700 rounded-2xl divide-y divide-gray-100 dark:divide-gray-700 mb-4">
+                      {storeSources.map(({ src, count }) => (
+                        <div key={src} className="flex items-center justify-between p-3">
+                          <span className="text-sm flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[src]}`}>{SOURCE_LABEL[src]}</span>
+                            <span className="text-gray-500 dark:text-gray-400">{count} {isAr ? "منتج" : "products"}</span>
+                          </span>
+                          <Button size="sm" variant="outline" onClick={() => triggerProductSync(src)} disabled={syncingProducts} className="rounded-xl text-xs gap-1.5">
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} /> {isAr ? "مزامنة" : "Sync"}
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between p-3">
                         <span className="text-sm flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[src]}`}>{SOURCE_LABEL[src]}</span>
-                          <span className="text-gray-500 dark:text-gray-400">{count} {isAr ? "منتج" : "products"}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR.manual}`}>{SOURCE_LABEL.manual}</span>
+                          <span className="text-gray-500 dark:text-gray-400">{manualCount} {isAr ? "منتج" : "products"}</span>
                         </span>
-                        <Button size="sm" variant="outline" onClick={() => triggerProductSync(src)} disabled={syncingProducts} className="rounded-xl text-xs gap-1.5">
-                          <RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} /> {isAr ? "مزامنة" : "Sync"}
+                        <Button size="sm" onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
+                          <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة منتج" : "Add product"}
                         </Button>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between p-3">
-                      <span className="text-sm flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR.manual}`}>{SOURCE_LABEL.manual}</span>
-                        <span className="text-gray-500 dark:text-gray-400">{manualCount} {isAr ? "منتج" : "products"}</span>
-                      </span>
-                      <Button size="sm" onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
-                        <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة منتج" : "Add product"}
-                      </Button>
                     </div>
-                  </div>
 
-                  {!hasAnyStore && (
-                    <div className="text-[11px] text-gray-400 mb-4 flex items-center gap-1">
-                      <Info className="w-3.5 h-3.5" />
-                      {isAr ? "مفيش متجر متصل؟" : "No store connected?"}
-                      <a href="/dashboard/store" className="text-emerald-600 hover:underline font-semibold">{isAr ? "اربط متجرك من هنا" : "Connect your store here"}</a>
-                    </div>
-                  )}
+                    {!hasAnyStore && (
+                      <div className="text-[11px] text-gray-400 mb-4 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5" />
+                        {isAr ? "مفيش متجر متصل؟" : "No store connected?"}
+                        <a href="/dashboard/store" className="text-emerald-600 hover:underline font-semibold">{isAr ? "اربط متجرك من هنا" : "Connect your store here"}</a>
+                      </div>
+                    )}
 
-                  {totalKnown === 0 ? (
-                    <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
-                      <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                      <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{isAr ? "لا يوجد متجر متصل" : "No store connected"}</p>
-                      <p className="text-xs text-gray-400 mt-1 mb-4">{isAr ? "يمكنك بناء كتالوج منتجاتك يدويًا وسيستخدمه وني في الإجابة عن الأسعار والمنتجات والتوافر." : "Build your product catalog manually — Wani will use it to answer questions about prices, products, and availability."}</p>
-                      <Button onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
-                        <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة أول منتج" : "Add your first product"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* فلاتر + بحث */}
-                      <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
-                          {([["all", isAr ? "كل المنتجات" : "All"], ["store", isAr ? "من المتجر" : "From store"], ["manual", isAr ? "يدوية" : "Manual"]] as const).map(([id, label]) => (
-                            <button key={id} onClick={() => setProductFilter(id)} className={`text-xs rounded-lg px-3 py-1.5 font-semibold transition-all ${productFilter === id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>{label}</button>
-                          ))}
+                    {totalKnown === 0 ? (
+                      <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+                        <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{isAr ? "لا يوجد متجر متصل" : "No store connected"}</p>
+                        <p className="text-xs text-gray-400 mt-1 mb-4">{isAr ? "يمكنك بناء كتالوج منتجاتك يدويًا وسيستخدمه وني في الإجابة عن الأسعار والمنتجات والتوافر." : "Build your product catalog manually — Wani will use it to answer questions about prices, products, and availability."}</p>
+                        <Button onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
+                          <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة أول منتج" : "Add your first product"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* فلاتر + بحث */}
+                        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
+                            {([["all", isAr ? "كل المنتجات" : "All"], ["store", isAr ? "من المتجر" : "From store"], ["manual", isAr ? "يدوية" : "Manual"]] as const).map(([id, label]) => (
+                              <button key={id} onClick={() => setProductFilter(id)} className={`text-xs rounded-lg px-3 py-1.5 font-semibold transition-all ${productFilter === id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>{label}</button>
+                            ))}
+                          </div>
+                          <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder={isAr ? "🔎 ابحث عن منتج..." : "🔎 Search products..."} className="text-xs rounded-xl flex-1" />
                         </div>
-                        <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder={isAr ? "🔎 ابحث عن منتج..." : "🔎 Search products..."} className="text-xs rounded-xl flex-1" />
+
+                        {/* الجدول الموحّد */}
+                        <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                          {productsLoading ? (
+                            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-emerald-500 animate-spin" /></div>
+                          ) : products.length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-8">{isAr ? "مفيش نتائج مطابقة" : "No matching products"}</p>
+                          ) : (
+                            <table className="w-full text-xs">
+                              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                                <tr>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المنتج" : "Product"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المصدر" : "Source"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "السعر" : "Price"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400" />
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {products.map(p => (
+                                  <tr key={p.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                                    <td className="py-2.5 px-3 font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[220px]">{p.name}</td>
+                                    <td className="py-2.5 px-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[p.source]}`}>{SOURCE_LABEL[p.source]}</span></td>
+                                    <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{p.price != null ? `${p.price} ${p.currency}` : "—"}</td>
+                                    <td className="py-2.5 px-3 text-left">
+                                      {p.source === "manual" ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <button onClick={() => handleEditCatalogItem(p)} className="text-gray-400 hover:text-emerald-600 p-1"><Edit3 className="w-3.5 h-3.5" /></button>
+                                          <button onClick={() => handleDeleteCatalogItem(p)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                      ) : (
+                                        <span className="text-[10px] text-gray-300">{isAr ? "من المتجر (قراءة فقط)" : "Read-only"}</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* بديل نصي يدوي */}
+                    {totalKnown === 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                        <p className="text-xs text-gray-500">{isAr ? "أو اكتب وصف نصي بديل مؤقت لحد ما تضيف منتجاتك:" : "Or add temporary fallback text until you add your products:"}</p>
+                        <Textarea value={agent.productsInfo || ""} onChange={e => setAgent(f => ({ ...f, productsInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب وصفًا مختصرًا للمنتجات أو الخدمات..." : "Describe your products or services..."} className="rounded-xl text-xs min-h-[60px]" />
+                        <Textarea value={agent.pricingInfo || ""} onChange={e => setAgent(f => ({ ...f, pricingInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب الأسعار أو قواعد التسعير..." : "Add prices or pricing rules..."} className="rounded-xl text-xs min-h-[50px]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── خدمة العملاء ── */}
+            {knowledgeTab === "customer_service" && (() => {
+              const hasAnyCsKnowledge =
+                !!customerService.generalSupportInfo?.trim() ||
+                !!customerService.supportProcess?.trim() ||
+                !!customerService.escalationInstructions?.trim() ||
+                faqs.length > 0 ||
+                customerIssues.length > 0;
+
+              return (
+                <div className="space-y-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          <Headphones className="w-5 h-5 text-emerald-500" />
+                          {isAr ? "معرفة خدمة العملاء والدعم" : "Customer Service & Support Knowledge"}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {isAr
+                            ? "مصدر معرفة مستقل ومتاح دائمًا لتعليم Wani كيفية دعم العملاء وحل مشاكلهم والإجابة عن استفساراتهم."
+                            : "Independent and always-available knowledge source to teach Wani how to support customers, resolve issues, and answer queries."}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => saveCustomerServiceSettings()}
+                        disabled={savingCustomerService}
+                        size="sm"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold gap-1.5 self-start sm:self-auto"
+                      >
+                        {savingCustomerService ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {isAr ? "حفظ نصوص الدعم" : "Save Support Texts"}
+                      </Button>
+                    </div>
+
+                    {/* Empty State Banner if completely empty */}
+                    {!hasAnyCsKnowledge && (
+                      <div className="text-center py-8 px-4 mb-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-800/30">
+                        <Headphones className="w-10 h-10 text-emerald-500/60 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                          {isAr ? "علّم Wani كيف يتعامل مع عملائك" : "Teach Wani how to serve your customers"}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 max-w-lg mx-auto leading-relaxed">
+                          {isAr
+                            ? "أضف معلومات عن خدمات الدعم، الأسئلة الشائعة، والمشكلات التي تواجه عملاءك، حتى يستطيع Wani مساعدتهم بدقة أكبر دون تخمين."
+                            : "Add support information, FAQs, and common customer issues so Wani can assist them accurately without guessing."}
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setFaqForm({ id: "", question: "", answer: "" });
+                              setShowFaqDrawer(true);
+                            }}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {isAr ? "إضافة سؤال شائع" : "Add FAQ"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setIssueForm({ id: "", problem: "", resolution: "" });
+                              setShowIssueDrawer(true);
+                            }}
+                            className="rounded-xl text-xs gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {isAr ? "إضافة مشكلة وحل" : "Add Issue & Solution"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-6">
+                      {/* أ) الخدمات والدعم الذي نقدمه */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                          <span>{isAr ? "أ) الخدمات والدعم الذي نقدمه" : "A) Services & Support We Provide"}</span>
+                        </Label>
+                        <p className="text-[11px] text-gray-500">
+                          {isAr
+                            ? "عرّف Wani بالخدمات أو أنواع الدعم التي تقدمها شركتك."
+                            : "Introduce Wani to the services and types of support your company provides."}
+                        </p>
+                        <Textarea
+                          value={customerService.generalSupportInfo}
+                          onChange={e => setCustomerService(cs => ({ ...cs, generalSupportInfo: e.target.value }))}
+                          onBlur={() => saveCustomerServiceSettings()}
+                          placeholder={
+                            isAr
+                              ? "مثال: نقدم دعمًا في ربط Shopify، إعداد المتاجر، مشاكل الطلبات، الدفع، الشحن، وإعدادات WhatsApp..."
+                              : "E.g. We provide support for Shopify integration, store setup, order issues, payments, shipping, and WhatsApp settings..."
+                          }
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                        />
                       </div>
 
-                      {/* الجدول الموحّد */}
-                      <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
-                        {productsLoading ? (
-                          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-emerald-500 animate-spin" /></div>
-                        ) : products.length === 0 ? (
-                          <p className="text-xs text-gray-400 text-center py-8">{isAr ? "مفيش نتائج مطابقة" : "No matching products"}</p>
+                      {/* ب) الأسئلة الشائعة */}
+                      <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                              <span>{isAr ? "ب) الأسئلة الشائعة (FAQ)" : "B) Frequently Asked Questions (FAQ)"}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                {faqs.length}
+                              </span>
+                            </Label>
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {isAr
+                                ? "الأسئلة المتكررة من عملائك وإجاباتها النموذجية."
+                                : "Common customer questions and their approved answers."}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setFaqForm({ id: "", question: "", answer: "" });
+                              setShowFaqDrawer(true);
+                            }}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {isAr ? "إضافة سؤال شائع" : "Add FAQ"}
+                          </Button>
+                        </div>
+
+                        {faqs.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50/30 dark:bg-gray-800/20 rounded-2xl">
+                            {isAr ? "لا توجد أسئلة شائعة مضافة حتى الآن." : "No FAQs added yet."}
+                          </p>
                         ) : (
-                          <table className="w-full text-xs">
-                            <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-                              <tr>
-                                <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المنتج" : "Product"}</th>
-                                <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المصدر" : "Source"}</th>
-                                <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "السعر" : "Price"}</th>
-                                <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400" />
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {products.map(p => (
-                                <tr key={p.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                                  <td className="py-2.5 px-3 font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[220px]">{p.name}</td>
-                                  <td className="py-2.5 px-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[p.source]}`}>{SOURCE_LABEL[p.source]}</span></td>
-                                  <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{p.price != null ? `${p.price} ${p.currency}` : "—"}</td>
-                                  <td className="py-2.5 px-3 text-left">
-                                    {p.source === "manual" ? (
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button onClick={() => handleEditCatalogItem(p)} className="text-gray-400 hover:text-emerald-600 p-1"><Edit3 className="w-3.5 h-3.5" /></button>
-                                        <button onClick={() => handleDeleteCatalogItem(p)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
-                                      </div>
-                                    ) : (
-                                      <span className="text-[10px] text-gray-300">{isAr ? "من المتجر (قراءة فقط)" : "Read-only"}</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {faqs.map(faq => (
+                              <div
+                                key={faq.id}
+                                className="p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 flex flex-col justify-between gap-2"
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-start gap-1.5">
+                                    <span className="text-emerald-600 font-black">س:</span>
+                                    <span>{faq.question}</span>
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-300 flex items-start gap-1.5 mt-1 leading-relaxed">
+                                    <span className="text-blue-500 font-black">ج:</span>
+                                    <span>{faq.answer}</span>
+                                  </p>
+                                </div>
+                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFaqForm({ id: faq.id, question: faq.question, answer: faq.answer });
+                                      setShowFaqDrawer(true);
+                                    }}
+                                    className="text-gray-400 hover:text-emerald-600 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteFaq(faq.id)}
+                                    className="text-gray-400 hover:text-red-500 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </>
-                  )}
 
-                  {/* بديل نصي يدوي — يظهر فقط لو مفيش أي منتج خالص (Progressive disclosure) */}
-                  {totalKnown === 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                      <p className="text-xs text-gray-500">{isAr ? "أو اكتب وصف نصي بديل مؤقت لحد ما تضيف منتجاتك:" : "Or add temporary fallback text until you add your products:"}</p>
-                      <Textarea value={agent.productsInfo || ""} onChange={e => setAgent(f => ({ ...f, productsInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب وصفًا مختصرًا للمنتجات أو الخدمات..." : "Describe your products or services..."} className="rounded-xl text-xs min-h-[60px]" />
-                      <Textarea value={agent.pricingInfo || ""} onChange={e => setAgent(f => ({ ...f, pricingInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب الأسعار أو قواعد التسعير..." : "Add prices or pricing rules..."} className="rounded-xl text-xs min-h-[50px]" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+                      {/* ج) مشاكل العملاء وحلولها */}
+                      <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                              <span>{isAr ? "ج) مشاكل العملاء وحلولها" : "C) Customer Issues & Resolutions"}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+                                {customerIssues.length}
+                              </span>
+                            </Label>
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {isAr
+                                ? "المشاكل التقنية أو الإجرائية الشائعة وخطوات حلها المعتمدة ليعرف وني كيفية التعامل معها فورًا."
+                                : "Common technical or process issues and their approved resolutions for Wani to use."}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setIssueForm({ id: "", problem: "", resolution: "" });
+                              setShowIssueDrawer(true);
+                            }}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {isAr ? "إضافة مشكلة وحل" : "Add Issue & Solution"}
+                          </Button>
+                        </div>
 
-          {/* ── السياسات (List + Drawer) ── */}
-          {knowledgeTab === "policies" && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{policies.length} {isAr ? "سياسة مضافة" : "policies added"}</h3>
-                <Button onClick={() => { setPolicyForm({ id: "", type: "return_policy", title: "", content: "" }); setShowPolicyDrawer(true); }} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
-                  <Plus className="w-3.5 h-3.5" /> {isAr ? "سياسة جديدة" : "New Policy"}
-                </Button>
-              </div>
-              {policies.length === 0 ? (
-                <p className="text-sm text-gray-400 italic text-center py-8">{isAr ? "أضف سياسات الشحن والاسترجاع والضمان ليعرفها وني." : "Add shipping, return, and warranty policies for Wani."}</p>
-              ) : (
-                <div className="space-y-2">
-                  {policies.map(p => (
-                    <div key={p.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{p.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{p.content}</p>
+                        {customerIssues.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50/30 dark:bg-gray-800/20 rounded-2xl">
+                            {isAr ? "لا توجد مشاكل وحلول مسجلة حتى الآن." : "No customer issues recorded yet."}
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {customerIssues.map(issue => (
+                              <div
+                                key={issue.id}
+                                className="p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 flex flex-col justify-between gap-2"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 shrink-0">
+                                      {isAr ? "المشكلة" : "Issue"}
+                                    </span>
+                                    <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{issue.problem}</p>
+                                  </div>
+                                  <div className="flex items-start gap-2 mt-2">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 shrink-0">
+                                      {isAr ? "طريقة الحل" : "Resolution"}
+                                    </span>
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{issue.resolution}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIssueForm({ id: issue.id, problem: issue.problem, resolution: issue.resolution });
+                                      setShowIssueDrawer(true);
+                                    }}
+                                    className="text-gray-400 hover:text-emerald-600 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteIssue(issue.id)}
+                                    className="text-gray-400 hover:text-red-500 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <button onClick={() => deletePolicy(p.id)} className="text-gray-400 hover:text-red-500 p-1 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* ── معرفة الموقع (Inline + Toggle) ── */}
-          {knowledgeTab === "website" && (
-            <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">🌐 {isAr ? "معرفة الموقع" : "Website Knowledge"}</h3>
-                  <p className="text-xs text-gray-500 mt-1">{isAr ? "استخرج معلومات مفيدة من صفحات محدودة لاستخدامها كمصدر معرفة لوني." : "Extract useful content from selected website pages as a Wani knowledge source."}</p>
+                      {/* د) إجراءات خدمة العملاء */}
+                      <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                          <span>{isAr ? "د) إجراءات وخطوات خدمة العملاء" : "D) Customer Service Procedures"}</span>
+                        </Label>
+                        <p className="text-[11px] text-gray-500">
+                          {isAr
+                            ? "كيف تريد من Wani التعامل مع مشاكل العملاء خطوة بخطوة؟"
+                            : "How should Wani handle customer issues step by step?"}
+                        </p>
+                        <Textarea
+                          value={customerService.supportProcess}
+                          onChange={e => setCustomerService(cs => ({ ...cs, supportProcess: e.target.value }))}
+                          onBlur={() => saveCustomerServiceSettings()}
+                          placeholder={
+                            isAr
+                              ? "مثال: ابدأ بفهم المشكلة، ثم اطلب المعلومات الناقصة، ثم قدم خطوات الحل. إذا لم تكن المعلومة موجودة في قاعدة المعرفة، لا تخمن وحول المحادثة لموظف."
+                              : "E.g. Start by understanding the issue, ask for missing details, then provide solution steps. If info is not in knowledge base, do not guess and handoff to human."
+                          }
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                        />
+                      </div>
+
+                      {/* هـ) متى يحول Wani لموظف؟ */}
+                      <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                          <span>{isAr ? "هـ) متى يحول Wani لموظف؟ (قواعد التصعيد)" : "E) When Should Wani Escalate to Human?"}</span>
+                        </Label>
+                        <p className="text-[11px] text-gray-500">
+                          {isAr
+                            ? "حدد الحالات الاستثنائية أو المتطلبات التي تستوجب تحويل المحادثة إلى موظف بشري فورًا."
+                            : "Specify situations that require immediate handoff to human staff."}
+                        </p>
+                        <Textarea
+                          value={customerService.escalationInstructions}
+                          onChange={e => setCustomerService(cs => ({ ...cs, escalationInstructions: e.target.value }))}
+                          onBlur={() => saveCustomerServiceSettings()}
+                          placeholder={
+                            isAr
+                              ? "مثال: إذا طلب العميل موظفًا، أو كانت المشكلة تتطلب وصولًا إلى حسابه، أو لم تكن الإجابة موجودة في قاعدة المعرفة."
+                              : "E.g. If customer asks for human, issue requires account access, or answer is not in knowledge base."
+                          }
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <Switch checked={websiteKnowledge.isEnabled} onCheckedChange={value => updateWebsiteKnowledge({ isEnabled: value })} />
+              );
+            })()}
+
+            {/* ── السياسات ── */}
+            {knowledgeTab === "policies" && (
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{policies.length} {isAr ? "سياسة مضافة" : "policies added"}</h3>
+                  <Button onClick={() => { setPolicyForm({ id: "", type: "return_policy", title: "", content: "" }); setShowPolicyDrawer(true); }} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
+                    <Plus className="w-3.5 h-3.5" /> {isAr ? "سياسة جديدة" : "New Policy"}
+                  </Button>
+                </div>
+                {policies.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic text-center py-8">{isAr ? "أضف سياسات الشحن والاسترجاع والضمان ليعرفها وني." : "Add shipping, return, and warranty policies for Wani."}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {policies.map(p => (
+                      <div key={p.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{p.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{p.content}</p>
+                        </div>
+                        <button onClick={() => deletePolicy(p.id)} className="text-gray-400 hover:text-red-500 p-1 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input value={websiteKnowledge.rootUrl} onChange={event => setWebsiteKnowledge(s => ({ ...s, rootUrl: event.target.value }))} placeholder={agent.websiteUrl || "https://example.com"} dir="ltr" className="text-xs rounded-xl" />
-                <Button onClick={syncWebsiteKnowledge} disabled={syncingWebsite || (!websiteKnowledge.rootUrl.trim() && !(agent.websiteUrl || "").trim())} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">
-                  {syncingWebsite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{syncingWebsite ? (isAr ? "بنقرأ موقعك..." : "Reading your site...") : (isAr ? "استخراج المعرفة الآن" : "Extract Knowledge Now")}
-                </Button>
+            )}
+
+            {/* ── معرفة الموقع ── */}
+            {knowledgeTab === "website" && (
+              <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">🌐 {isAr ? "معرفة الموقع" : "Website Knowledge"}</h3>
+                    <p className="text-xs text-gray-500 mt-1">{isAr ? "استخرج معلومات مفيدة من صفحات محدودة لاستخدامها كمصدر معرفة لوني." : "Extract useful content from selected website pages as a Wani knowledge source."}</p>
+                  </div>
+                  <Switch checked={websiteKnowledge.isEnabled} onCheckedChange={value => updateWebsiteKnowledge({ isEnabled: value })} />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={websiteKnowledge.rootUrl} onChange={event => setWebsiteKnowledge(s => ({ ...s, rootUrl: event.target.value }))} placeholder={agent.websiteUrl || "https://example.com"} dir="ltr" className="text-xs rounded-xl" />
+                  <Button onClick={syncWebsiteKnowledge} disabled={syncingWebsite || (!websiteKnowledge.rootUrl.trim() && !(agent.websiteUrl || "").trim())} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">
+                    {syncingWebsite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{syncingWebsite ? (isAr ? "بنقرأ موقعك..." : "Reading your site...") : (isAr ? "استخراج المعرفة الآن" : "Extract Knowledge Now")}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2">{isAr ? "العملية تعمل في الخلفية وقد تستغرق دقيقة. المواقع التي تعتمد على JavaScript بالكامل قد لا يظهر محتواها." : "Runs in the background and may take a minute. Fully JavaScript-rendered sites may not expose readable content."}</p>
+                {websitePages.length > 0 && <div className="mt-3 space-y-1.5 border-t border-gray-200 dark:border-gray-700 pt-3">
+                  {websitePages.map(page => <div key={page.id} className="flex items-center gap-2 text-[11px]">
+                    <div className="flex-1 min-w-0"><div className="font-semibold truncate text-gray-700 dark:text-gray-300">{page.title || page.url}</div><div className="text-gray-400 truncate">{page.url} · {page._count.chunks} chunks · {new Date(page.lastCrawledAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</div></div>
+                    <button type="button" onClick={() => deleteWebsitePage(page.id)} className="text-red-500 hover:underline">{isAr ? "حذف" : "Delete"}</button>
+                  </div>)}
+                </div>}
               </div>
-              <p className="text-[10px] text-gray-400 mt-2">{isAr ? "العملية تعمل في الخلفية وقد تستغرق دقيقة. المواقع التي تعتمد على JavaScript بالكامل قد لا يظهر محتواها." : "Runs in the background and may take a minute. Fully JavaScript-rendered sites may not expose readable content."}</p>
-              {websitePages.length > 0 && <div className="mt-3 space-y-1.5 border-t border-gray-200 dark:border-gray-700 pt-3">
-                {websitePages.map(page => <div key={page.id} className="flex items-center gap-2 text-[11px]">
-                  <div className="flex-1 min-w-0"><div className="font-semibold truncate text-gray-700 dark:text-gray-300">{page.title || page.url}</div><div className="text-gray-400 truncate">{page.url} · {page._count.chunks} chunks · {new Date(page.lastCrawledAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</div></div>
-                  <button type="button" onClick={() => deleteWebsitePage(page.id)} className="text-red-500 hover:underline">{isAr ? "حذف" : "Delete"}</button>
-                </div>)}
-              </div>}
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
 
       {/* ═══════════════ السلوك والحدود ═══════════════ */}
       {mainTab === "behavior" && (
         <div className="space-y-4">
-          {/* سلوك المبيعات */}
+          {/* هدف Wani */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "سلوك المبيعات" : "Sales Behavior"}</h3>
-                <p className="text-xs text-gray-500 mt-1">{isAr ? "حدد هدف وني وطريقة اقتراح المنتجات من الكتالوج." : "Choose Wani's goal and how it suggests catalog products."}</p>
+                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "هدف Wani" : "Wani's Goal"}</h3>
+                <p className="text-xs text-gray-500 mt-1">{isAr ? "ما الدور الأساسي الذي تريد من Wani القيام به؟" : "What is the primary role you want Wani to play?"}</p>
               </div>
               <Button onClick={saveSalesBehavior} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold"><Save className="w-3.5 h-3.5" />{isAr ? "حفظ" : "Save"}</Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-              {(["customer_service", "balanced", "sales_focused"] as const).map(goal => (
-                <label key={goal} className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2.5 text-xs cursor-pointer">
-                  <input type="radio" name="sales-goal" checked={salesBehavior.goal === goal} onChange={() => setSalesBehavior(s => ({ ...s, goal }))} />
-                  {goal === "customer_service" ? (isAr ? "خدمة العملاء" : "Customer service") : goal === "balanced" ? (isAr ? "متوازن (موصى به)" : "Balanced (recommended)") : (isAr ? "زيادة المبيعات" : "Sales focused")}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              {([
+                {
+                  id: "customer_service" as const,
+                  title: isAr ? "خدمة العملاء" : "Customer Service",
+                  desc: isAr ? "التركيز على مساعدة العملاء وحل استفساراتهم ومشكلاتهم." : "Focus on helping customers and resolving their queries and issues.",
+                },
+                {
+                  id: "balanced" as const,
+                  title: isAr ? "متوازن (موصى به)" : "Balanced (Recommended)",
+                  desc: isAr ? "خدمة العملاء مع اقتراح المنتجات والفرص المناسبة." : "Customer service while suggesting suitable products and opportunities.",
+                },
+                {
+                  id: "sales_focused" as const,
+                  title: isAr ? "زيادة المبيعات" : "Sales Focused",
+                  desc: isAr ? "التركيز على تحويل المحادثات إلى مبيعات مع الحفاظ على خدمة جيدة." : "Focus on converting chats into sales while maintaining good service.",
+                },
+              ]).map(item => (
+                <label
+                  key={item.id}
+                  className={`flex flex-col gap-1.5 rounded-2xl border p-3.5 text-xs cursor-pointer transition-all ${
+                    salesBehavior.goal === item.id
+                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm ring-1 ring-emerald-500"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="sales-goal"
+                      checked={salesBehavior.goal === item.id}
+                      onChange={() => setSalesBehavior(s => ({ ...s, goal: item.id }))}
+                      className="text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="font-bold text-gray-900 dark:text-gray-100">{item.title}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
                 </label>
               ))}
             </div>
@@ -1316,6 +1808,90 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             <Button onClick={handleAddManualProduct} disabled={addingManualProduct} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5">
               {addingManualProduct ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingProductId ? (isAr ? "حفظ التعديلات" : "Save changes") : (isAr ? "إضافة المنتج" : "Add product"))}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Drawer: إضافة/تعديل سؤال شائع (FAQ) ── */}
+      <Sheet open={showFaqDrawer} onOpenChange={setShowFaqDrawer}>
+        <SheetContent side={isAr ? "left" : "right"} className="w-full sm:max-w-md" dir={isAr ? "rtl" : "ltr"}>
+          <SheetHeader>
+            <SheetTitle>{faqForm.id ? (isAr ? "تعديل سؤال شائع" : "Edit FAQ") : (isAr ? "إضافة سؤال شائع" : "Add FAQ")}</SheetTitle>
+            <SheetDescription>
+              {isAr
+                ? "أضف أسئلة متكررة مع إجاباتها ليعتمد عليها Wani في الرد على العملاء."
+                : "Add frequently asked questions and approved answers for Wani to use."}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "السؤال" : "Question"} *</Label>
+              <Input
+                value={faqForm.question}
+                onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))}
+                placeholder={isAr ? "مثال: كيف أربط متجري بـ Shopify؟" : "E.g. How do I connect Shopify?"}
+                className="rounded-xl text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "الإجابة" : "Answer"} *</Label>
+              <Textarea
+                value={faqForm.answer}
+                onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))}
+                placeholder={isAr ? "اكتب الإجابة التفصيلية النموذجية..." : "Write the approved answer..."}
+                className="min-h-[120px] text-xs rounded-xl"
+              />
+            </div>
+            <Button
+              onClick={() => saveFaq()}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5"
+            >
+              {faqForm.id ? (isAr ? "حفظ التعديلات" : "Save Changes") : (isAr ? "إضافة السؤال" : "Add FAQ")}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Drawer: إضافة/تعديل مشكلة وحل (Issue) ── */}
+      <Sheet open={showIssueDrawer} onOpenChange={setShowIssueDrawer}>
+        <SheetContent side={isAr ? "left" : "right"} className="w-full sm:max-w-md" dir={isAr ? "rtl" : "ltr"}>
+          <SheetHeader>
+            <SheetTitle>{issueForm.id ? (isAr ? "تعديل المشكلة والحل" : "Edit Issue & Solution") : (isAr ? "إضافة مشكلة وحل" : "Add Issue & Solution")}</SheetTitle>
+            <SheetDescription>
+              {isAr
+                ? "أضف المشكلات التي قد تواجه العملاء وطريقة التعامل معها أو خطوات حلها."
+                : "Add common customer problems and their approved resolution steps."}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "المشكلة" : "Problem / Issue"} *</Label>
+              <Input
+                value={issueForm.problem}
+                onChange={e => setIssueForm(f => ({ ...f, problem: e.target.value }))}
+                placeholder={isAr ? "مثال: فشل ربط Shopify / كود الخطأ 401" : "E.g. Shopify connection failure / Error 401"}
+                className="rounded-xl text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "طريقة التعامل / الحل" : "Resolution / Handling Steps"} *</Label>
+              <Textarea
+                value={issueForm.resolution}
+                onChange={e => setIssueForm(f => ({ ...f, resolution: e.target.value }))}
+                placeholder={
+                  isAr
+                    ? "تأكد أولًا من صحة الـ API Key وإذا ظهرت رسالة ... اطلب من العميل ..."
+                    : "First verify API key, if error message appears ask customer to..."
+                }
+                className="min-h-[120px] text-xs rounded-xl"
+              />
+            </div>
+            <Button
+              onClick={() => saveIssue()}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs py-5"
+            >
+              {issueForm.id ? (isAr ? "حفظ التعديلات" : "Save Changes") : (isAr ? "إضافة المشكلة والحل" : "Add Issue")}
             </Button>
           </div>
         </SheetContent>

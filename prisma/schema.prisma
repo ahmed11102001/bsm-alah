@@ -69,6 +69,8 @@ model User {
   products                 Product[]
   brandFAQs                BrandFAQ[]
   brandPolicies            BrandPolicy[]
+  customerServiceSettings  CustomerServiceSettings?
+  customerIssues           CustomerIssue[]
   aiGuardrail              AIGuardrail?
   salesBehaviorSettings    SalesBehaviorSettings?
   websitePages             WebsitePage[]
@@ -720,6 +722,34 @@ model BrandPolicy {
   content   String     @db.Text
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ── Customer Service Settings (إعدادات ومعرفة خدمة العملاء) ─────────────────────
+model CustomerServiceSettings {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  generalSupportInfo     String?  @db.Text
+  supportProcess         String?  @db.Text
+  escalationInstructions String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Customer Issues & Solutions (مشاكل العملاء وحلولها) ─────────────────────────
+model CustomerIssue {
+  id         String   @id @default(cuid())
+  userId     String
+  problem    String   @db.Text
+  resolution String   @db.Text
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

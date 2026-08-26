@@ -37,6 +37,13 @@ export interface AgentContext {
   };
   faqs?: { question: string; answer: string }[];
   policies?: { type: string; title: string; content: string }[];
+  customerService?: {
+    generalSupportInfo?: string | null;
+    supportProcess?: string | null;
+    escalationInstructions?: string | null;
+    faqs?: { question: string; answer: string }[];
+    issues?: { problem: string; resolution: string }[];
+  };
   guardrails?: {
     noInventPrices?: boolean;
     noInventProducts?: boolean;
@@ -135,8 +142,39 @@ function buildSystemPrompt(ctx: AgentContext): string {
     lines.push("Use website knowledge only when directly relevant. If the answer is not present in the available sources, do not invent it.", "");
   }
 
-  // ── 2) FAQs ──
-  if (ctx.faqs && ctx.faqs.length > 0) {
+  // ── 2) Customer Service Knowledge (خدمة العملاء والدعم) ──
+  const cs = ctx.customerService;
+  const hasCsGeneral = !!cs?.generalSupportInfo?.trim();
+  const hasCsProcess = !!cs?.supportProcess?.trim();
+  const hasCsEscalation = !!cs?.escalationInstructions?.trim();
+  const csFaqs = (cs?.faqs && cs.faqs.length > 0) ? cs.faqs : (ctx.faqs && ctx.faqs.length > 0 ? ctx.faqs : []);
+  const csIssues = cs?.issues && cs.issues.length > 0 ? cs.issues : [];
+
+  if (hasCsGeneral || hasCsProcess || hasCsEscalation || csFaqs.length > 0 || csIssues.length > 0) {
+    lines.push("── معرفة وقواعد خدمة العملاء والدعم (Customer Service Knowledge) ──");
+    if (hasCsGeneral) {
+      lines.push(`معلومات وخدمات الدعم:\n${cs!.generalSupportInfo!.trim()}`);
+    }
+    if (csFaqs.length > 0) {
+      lines.push("الأسئلة الشائعة (Frequently Asked Questions):");
+      csFaqs.forEach((faq) => {
+        lines.push(`س: ${faq.question}\nج: ${faq.answer}`);
+      });
+    }
+    if (csIssues.length > 0) {
+      lines.push("مشاكل العملاء المتكررة وحلولها المعتمدة (Customer Issues & Resolutions):");
+      csIssues.forEach((issue, idx) => {
+        lines.push(`مشكلة ${idx + 1}: ${issue.problem}\nطريقة الحل: ${issue.resolution}`);
+      });
+    }
+    if (hasCsProcess) {
+      lines.push(`إجراءات وخطوات الدعم:\n${cs!.supportProcess!.trim()}`);
+    }
+    if (hasCsEscalation) {
+      lines.push(`تعليمات وتوجيهات تحويل المحادثة لموظف بشري (Human Handoff / Escalation):\n${cs!.escalationInstructions!.trim()}`);
+    }
+    lines.push("");
+  } else if (ctx.faqs && ctx.faqs.length > 0) {
     lines.push("── الأسئلة الشائعة والإجابات ──");
     ctx.faqs.forEach((faq) => {
       lines.push(`س: ${faq.question}\nج: ${faq.answer}`);
