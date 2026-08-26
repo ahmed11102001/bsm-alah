@@ -121,14 +121,17 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
   const { t, locale } = useLanguage();
   const ai = t.home.ai;
 
+  const isSuper = data.user.role === "SUPER_ADMIN";
+  const isBeta = (data.plan as any)?.isBetaUser;
   const aiData = (data.plan as any).aiTokens;
-  const used = aiData?.aiTokensUsedThisMonth ?? 0;
-  const bonus = aiData?.aiTokensBonusBalance ?? 0;
+  const used = aiData?.aiTokensUsedThisMonth ?? aiData?.usedThisMonth?.aiTokensUsedThisMonth ?? 0;
+  const bonus = aiData?.aiTokensBonusBalance ?? aiData?.usedThisMonth?.aiTokensBonusBalance ?? 0;
   const monthly = data.plan.limits.aiTokensPerMonth;
-  const pct = monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
+  const isUnlimitedQuota = isSuper || isBeta || monthly === -1;
+  const pct = !isUnlimitedQuota && monthly > 0 ? Math.min(100, Math.round((used / monthly) * 100)) : 0;
   const fmtK = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
-      : n >= 1_000 ? `${Math.round(n / 1000)}K`
+      : n >= 1_000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`
         : `${n}`;
 
   return (
@@ -143,20 +146,37 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
             <p className="text-[11px] text-gray-400 dark:text-gray-500">{ai.renews}</p>
           </div>
         </div>
-        {pct >= 80 && (
+        {isUnlimitedQuota ? (
+          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+            {locale === "ar" ? "غير محدود (Admin / Beta)" : "Unlimited (Admin / Beta)"}
+          </span>
+        ) : pct >= 80 ? (
           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pct >= 95 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
             {pct}%
           </span>
-        )}
+        ) : null}
       </CardHeader>
 
       <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
         <div>
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
             <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
-            <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(monthly)} {locale === "ar" ? "توكن/شهر" : "tokens/mo"}</span>
+            <span className="font-semibold text-gray-700 dark:text-gray-300">
+              {isUnlimitedQuota ? (locale === "ar" ? "غير محدود" : "Unlimited") : `${fmtK(monthly)} ${locale === "ar" ? "توكن/شهر" : "tokens/mo"}`}
+            </span>
           </div>
-          <Progress value={pct} className={`h-2.5 rounded-full ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`} />
+          <Progress
+            value={isUnlimitedQuota ? 100 : pct}
+            className={`h-2.5 rounded-full ${
+              isUnlimitedQuota
+                ? "[&>div]:bg-emerald-500"
+                : pct >= 90
+                ? "[&>div]:bg-red-500"
+                : pct >= 70
+                ? "[&>div]:bg-amber-500"
+                : "[&>div]:bg-purple-500"
+            }`}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -165,7 +185,9 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.usedThisMonth}</p>
           </div>
           <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
-            <p className="text-base font-bold text-green-600 dark:text-green-400">{fmtK(Math.max(0, monthly - used))}</p>
+            <p className="text-base font-bold text-green-600 dark:text-green-400">
+              {isUnlimitedQuota ? (locale === "ar" ? "غير محدود" : "Unlimited") : fmtK(Math.max(0, monthly - used))}
+            </p>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.remainingPlan}</p>
           </div>
           <div className={`rounded-xl p-3 text-center border ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" : "bg-white dark:bg-gray-800/60 border-gray-100 dark:border-gray-700"}`}>

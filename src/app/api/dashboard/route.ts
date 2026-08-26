@@ -104,17 +104,30 @@ export async function GET(_req: NextRequest) {
       },
       plan: {
         ...planStatus,
-        aiTokens: {
-          monthlyLimit: planStatus.limits.aiTokensPerMonth,
-          usedThisMonth: (await prisma.subscription.findUnique({
+        aiTokens: await (async () => {
+          const sub = await prisma.subscription.findUnique({
             where: { userId: ownerId },
             select: {
               aiTokensUsedThisMonth: true,
               aiTokensBonusBalance: true,
-              aiTokensBonusExpiresAt: true, // ← تنتهي بعد 30 يوم من الشراء
+              aiTokensBonusExpiresAt: true,
             },
-          })) ?? { aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0, aiTokensBonusExpiresAt: null },
-        },
+          });
+          const used = sub?.aiTokensUsedThisMonth ?? 0;
+          const bonus = sub?.aiTokensBonusBalance ?? 0;
+          const expiresAt = sub?.aiTokensBonusExpiresAt ?? null;
+          return {
+            monthlyLimit: planStatus.limits.aiTokensPerMonth,
+            aiTokensUsedThisMonth: used,
+            aiTokensBonusBalance: bonus,
+            aiTokensBonusExpiresAt: expiresAt,
+            usedThisMonth: {
+              aiTokensUsedThisMonth: used,
+              aiTokensBonusBalance: bonus,
+              aiTokensBonusExpiresAt: expiresAt,
+            },
+          };
+        })(),
       },
       recentCampaigns: recentCampaigns.map(c => ({
         ...c,

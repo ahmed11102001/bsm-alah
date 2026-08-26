@@ -13,6 +13,7 @@ const mockPrisma = {
   subscription: {
     findUnique: vi.fn(),
     update:     vi.fn(),
+    create:     vi.fn(),
   },
   user: {
     findUnique: vi.fn(),
@@ -20,6 +21,9 @@ const mockPrisma = {
   },
   contact: {
     count: vi.fn(),
+  },
+  teamInvitation: {
+    count: vi.fn().mockResolvedValue(0),
   },
 };
 
@@ -37,6 +41,7 @@ const {
   getPlanStatus,
   guardResponse,
   checkAITokensLimit,
+  incrementAITokens,
 } = await import("@/lib/plan-guard");
 
 // ─── Helper: اعمل subscription stub ──────────────────────────────────────────
@@ -474,5 +479,145 @@ describe("getPlanStatus", () => {
 
     const status = await getPlanStatus("user_1");
     expect(status.plan).toBe("free");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("incrementAITokens — فصل Usage Tracking عن Limit Enforcement", () => {
+  it("مستخدم Free: استهلاك AI = 10,000 → يتم تسجيله وزيادة aiTokensUsedThisMonth", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("free", { aiTokensUsedThisMonth: 5000, aiTokensBonusBalance: 0 })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    await incrementAITokens("free_user_1", 10_000);
+
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "free_user_1" },
+        data: expect.objectContaining({
+          aiTokensUsedThisMonth: { increment: 10_000 },
+        }),
+      })
+    );
+  });
+
+  it("مستخدم Paid: استهلاك AI = 10,000 → يتم تسجيله وزيادة aiTokensUsedThisMonth", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("enterprise", { aiTokensUsedThisMonth: 20_000, aiTokensBonusBalance: 0 })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    await incrementAITokens("paid_user_1", 10_000);
+
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "paid_user_1" },
+        data: expect.objectContaining({
+          aiTokensUsedThisMonth: { increment: 10_000 },
+        }),
+      })
+    );
+  });
+
+  it("مستخدم Super Admin: استهلاك AI = 10,000 → يتم تسجيل الاستهلاك ولا يتم منعه بسبب الـ limit", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ isSuper: true });
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("free", { aiTokensUsedThisMonth: 50_000 })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    // 1. Check limit: Super Admin must bypass limit check
+    const limitCheck = await checkAITokensLimit("admin_user_1", 100_000);
+    expect(limitCheck.allowed).toBe(true);
+
+    // 2. Increment tokens: Super Admin MUST have usage tracked in DB
+    await incrementAITokens("admin_user_1", 10_000);
+
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "admin_user_1" },
+        data: {
+          aiTokensUsedThisMonth: { increment: 10_000 },
+        },
+      })
+    );
+  });
+
+  it("مستخدم Beta User: استهلاك AI = 10,000 → يتم تسجيل الاستهلاك ولا يتم منعه بسبب الـ limit", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({ isSuper: false });
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("free", { isBetaUser: true, aiTokensUsedThisMonth: 80_000 })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    // 1. Check limit: Beta User must bypass limit check
+    const limitCheck = await checkAITokensLimit("beta_user_1", 100_000);
+    expect(limitCheck.allowed).toBe(true);
+
+    // 2. Increment tokens: Beta User MUST have usage tracked in DB
+    await incrementAITokens("beta_user_1", 10_000);
+
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "beta_user_1" },
+        data: {
+          aiTokensUsedThisMonth: { increment: 10_000 },
+        },
+      })
+    );
+  });
+
+  it("مستخدم بدون subscription أصلاً → يتم إنشاء Subscription وتسجيل الاستهلاك", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(null);
+    mockPrisma.subscription.create.mockResolvedValue(
+      makeSub("free", { aiTokensUsedThisMonth: 0 })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    await incrementAITokens("new_user_1", 2500);
+
+    expect(mockPrisma.subscription.create).toHaveBeenCalled();
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "new_user_1" },
+        data: expect.objectContaining({
+          aiTokensUsedThisMonth: { increment: 2500 },
+        }),
+      })
+    );
+  });
+
+  it("بداية دورة فوترة جديدة (عدت 30 يوم) → يتم تصفير العداد قبل الزيادة", async () => {
+    const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("enterprise", {
+        aiTokensUsedThisMonth: 900_000,
+        periodResetAt: thirtyOneDaysAgo,
+      })
+    );
+    mockPrisma.subscription.update.mockResolvedValue({});
+
+    await incrementAITokens("user_reset_1", 5000);
+
+    // Reset update occurred first
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_reset_1" },
+        data: expect.objectContaining({
+          aiTokensUsedThisMonth: 0,
+        }),
+      })
+    );
+
+    // Then increment occurred
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_reset_1" },
+        data: expect.objectContaining({
+          aiTokensUsedThisMonth: { increment: 5000 },
+        }),
+      })
+    );
   });
 });

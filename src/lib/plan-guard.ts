@@ -636,53 +636,91 @@ export async function checkAITokensLimit(
 }
 
 export async function incrementAITokens(ownerId: string, tokens: number): Promise<void> {
-  if (tokens <= 0) return;
-  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return;
+  if (!ownerId || tokens <= 0) return;
 
-  const sub = await getSubscription(ownerId);
-  const plan = getEffectivePlan(sub);
-  const monthlyLimit = PLANS[plan].aiTokensPerMonth;
-  if (monthlyLimit === 0) return;
+  try {
+    const isBypass = (await isSuperAdmin(ownerId)) || (await isBetaBypass(ownerId));
 
-  const fullSub = await prisma.subscription.findUnique({
-    where: { userId: ownerId },
-    select: {
-      aiTokensUsedThisMonth: true,
-      aiTokensBonusBalance: true,
-      aiTokensBonusExpiresAt: true,
-    },
-  });
-
-  const usedThisMonth = fullSub?.aiTokensUsedThisMonth ?? 0;
-  const bonusBalance = await expireBonusTokensIfNeeded(
-    ownerId,
-    fullSub?.aiTokensBonusBalance ?? 0,
-    fullSub?.aiTokensBonusExpiresAt ?? null
-  );
-
-  if (isUnlimited(monthlyLimit)) {
-    await prisma.subscription.update({
+    let fullSub = await prisma.subscription.findUnique({
       where: { userId: ownerId },
-      data: { aiTokensUsedThisMonth: { increment: tokens } },
-    });
-    return;
-  }
-
-  const monthlyRemaining = Math.max(0, monthlyLimit - usedThisMonth);
-  if (tokens <= monthlyRemaining) {
-    await prisma.subscription.update({
-      where: { userId: ownerId },
-      data: { aiTokensUsedThisMonth: { increment: tokens } },
-    });
-  } else {
-    const fromBonus = Math.min(tokens - monthlyRemaining, bonusBalance);
-    await prisma.subscription.update({
-      where: { userId: ownerId },
-      data: {
-        aiTokensUsedThisMonth: { increment: monthlyRemaining },
-        aiTokensBonusBalance: { decrement: fromBonus },
+      select: {
+        id: true,
+        plan: true,
+        aiTokensUsedThisMonth: true,
+        aiTokensBonusBalance: true,
+        aiTokensBonusExpiresAt: true,
+        periodResetAt: true,
       },
     });
+
+    if (!fullSub) {
+      fullSub = await prisma.subscription.create({
+        data: {
+          userId: ownerId,
+          plan: "free",
+          status: "active",
+          periodResetAt: new Date(),
+          aiTokensUsedThisMonth: 0,
+          aiTokensBonusBalance: 0,
+        },
+        select: {
+          id: true,
+          plan: true,
+          aiTokensUsedThisMonth: true,
+          aiTokensBonusBalance: true,
+          aiTokensBonusExpiresAt: true,
+          periodResetAt: true,
+        },
+      });
+    }
+
+    let usedThisMonth = fullSub.aiTokensUsedThisMonth ?? 0;
+    if (fullSub.periodResetAt) {
+      const reset = await resetMonthlyCounterIfNeeded(ownerId, fullSub.periodResetAt);
+      if (reset !== null) usedThisMonth = 0;
+    }
+
+    const sub = await getSubscription(ownerId);
+    const plan = getEffectivePlan(sub);
+    const monthlyLimit = PLANS[plan].aiTokensPerMonth;
+
+    if (isBypass || isUnlimited(monthlyLimit)) {
+      // Atomic increment for bypass/unlimited users - usage is tracked without deducting bonus or enforcing limits
+      await prisma.subscription.update({
+        where: { userId: ownerId },
+        data: { aiTokensUsedThisMonth: { increment: tokens } },
+      });
+      console.log(`[AI-TOKENS] userId=${ownerId} tokensUsed=${tokens} monthlyUsage=${usedThisMonth + tokens} bypassLimit=true`);
+      return;
+    }
+
+    const bonusBalance = await expireBonusTokensIfNeeded(
+      ownerId,
+      fullSub.aiTokensBonusBalance ?? 0,
+      fullSub.aiTokensBonusExpiresAt ?? null
+    );
+
+    const monthlyRemaining = Math.max(0, monthlyLimit - usedThisMonth);
+    if (tokens <= monthlyRemaining) {
+      await prisma.subscription.update({
+        where: { userId: ownerId },
+        data: { aiTokensUsedThisMonth: { increment: tokens } },
+      });
+    } else {
+      const overflow = tokens - monthlyRemaining;
+      const fromBonus = Math.min(overflow, bonusBalance);
+      await prisma.subscription.update({
+        where: { userId: ownerId },
+        data: {
+          aiTokensUsedThisMonth: { increment: tokens },
+          ...(fromBonus > 0 ? { aiTokensBonusBalance: { decrement: fromBonus } } : {}),
+        },
+      });
+    }
+
+    console.log(`[AI-TOKENS] userId=${ownerId} tokensUsed=${tokens} monthlyUsage=${usedThisMonth + tokens} bypassLimit=false`);
+  } catch (err) {
+    console.error(`[AI-TOKENS] Failed to record token usage for user ${ownerId}:`, err);
   }
 }
 
