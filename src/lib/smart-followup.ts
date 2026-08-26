@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { sendWhatsAppMessage, type SendMessageParams } from "@/lib/whatsapp-api";
 import { decryptToken } from "@/lib/crypto";
 import { notifyAiHandoffNeeded, notifySmartFollowUpAlert } from "@/lib/notifications";
+import { inngest } from "@/inngest/client";
 import {
   MessageDirection,
   MessageStatus,
@@ -821,12 +822,13 @@ export async function handleShippingFollowUpReply(
     );
 
     if (contact) {
+      const handoffAtDate = new Date();
       await prisma.contact.update({
         where: { id: contact.id },
         data: {
           aiStatus:      "NEEDS_HUMAN" as any,
           handoffReason: "مشكلة في الشحن — متابعة ذكية",
-          handoffAt:     new Date(),
+          handoffAt:     handoffAtDate,
         },
       });
       await notifyAiHandoffNeeded(
@@ -836,6 +838,25 @@ export async function handleShippingFollowUpReply(
         "مشكلة في الشحن — متابعة ذكية",
         "high"
       );
+
+      const agent = await prisma.aIAgent.findUnique({
+        where: { userId },
+        select: { handoffResumeMinutes: true },
+      });
+      if (agent?.handoffResumeMinutes != null && agent.handoffResumeMinutes > 0) {
+        await inngest
+          .send({
+            name: "ai-agent/handoff-resume-check",
+            data: {
+              userId,
+              contactId: contact.id,
+              handoffAt: handoffAtDate.toISOString(),
+            },
+          })
+          .catch((e) =>
+            console.error("[SmartFollowUp] Failed to schedule handoff-resume-check event:", e)
+          );
+      }
     }
     return;
   }
@@ -901,12 +922,13 @@ export async function handleCartFollowUpReply(
     );
 
     if (contact) {
+      const handoffAtDate = new Date();
       await prisma.contact.update({
         where: { id: contact.id },
         data: {
           aiStatus:      "NEEDS_HUMAN" as any,
           handoffReason: "استفسار على السلة المتروكة — متابعة ذكية",
-          handoffAt:     new Date(),
+          handoffAt:     handoffAtDate,
         },
       });
       await notifyAiHandoffNeeded(
@@ -916,6 +938,25 @@ export async function handleCartFollowUpReply(
         "استفسار على السلة المتروكة — متابعة ذكية",
         "normal"
       );
+
+      const agent = await prisma.aIAgent.findUnique({
+        where: { userId },
+        select: { handoffResumeMinutes: true },
+      });
+      if (agent?.handoffResumeMinutes != null && agent.handoffResumeMinutes > 0) {
+        await inngest
+          .send({
+            name: "ai-agent/handoff-resume-check",
+            data: {
+              userId,
+              contactId: contact.id,
+              handoffAt: handoffAtDate.toISOString(),
+            },
+          })
+          .catch((e) =>
+            console.error("[SmartFollowUp] Failed to schedule handoff-resume-check event for cart:", e)
+          );
+      }
     }
     return;
   }

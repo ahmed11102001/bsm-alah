@@ -35,6 +35,7 @@ interface AiAgentSettings {
   websiteUrl: string;
   websiteButtonText: string;
   pauseMinutes: number;
+  handoffResumeMinutes: number | null;
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
@@ -146,7 +147,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const [agent, setAgent] = useState<AiAgentSettings>({
     isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
     productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
-    systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
+    systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
     elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
   });
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
@@ -768,6 +769,34 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 <input type="range" min={1} max={120} value={agent.pauseMinutes} onChange={e => setAgent(f => ({ ...f, pauseMinutes: Number(e.target.value) }))} onMouseUp={() => saveAgentSettings()} onTouchEnd={() => saveAgentSettings()} className="flex-1 accent-emerald-500" />
                 <span className="w-12 text-center font-bold text-sm">{agent.pauseMinutes}</span>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">{isAr ? "العودة التلقائية بعد التحويل لموظف" : "Auto-resume after handoff to human"}</Label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-tight">
+                {isAr
+                  ? "إذا لم يرد أي موظف، يعود وني للمحادثة تلقائيًا بعد المدة المحددة."
+                  : "If no human agent replies, Wani automatically resumes the conversation after the selected time."}
+              </p>
+              <Select
+                value={agent.handoffResumeMinutes === null || agent.handoffResumeMinutes === undefined ? "never" : String(agent.handoffResumeMinutes)}
+                onValueChange={v => {
+                  const val = v === "never" ? null : Number(v);
+                  setAgent(f => ({ ...f, handoffResumeMinutes: val }));
+                  saveAgentSettings({ handoffResumeMinutes: val });
+                }}
+              >
+                <SelectTrigger className="rounded-xl text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">{isAr ? "دقيقة واحدة" : "1 minute"}</SelectItem>
+                  <SelectItem value="3">{isAr ? "3 دقائق (افتراضي)" : "3 minutes (Default)"}</SelectItem>
+                  <SelectItem value="5">{isAr ? "5 دقائق" : "5 minutes"}</SelectItem>
+                  <SelectItem value="10">{isAr ? "10 دقائق" : "10 minutes"}</SelectItem>
+                  <SelectItem value="15">{isAr ? "15 دقيقة" : "15 minutes"}</SelectItem>
+                  <SelectItem value="30">{isAr ? "30 دقيقة" : "30 minutes"}</SelectItem>
+                  <SelectItem value="60">{isAr ? "60 دقيقة (ساعة)" : "60 minutes (1 hour)"}</SelectItem>
+                  <SelectItem value="never">{isAr ? "أبدًا (تعطيل العودة التلقائية)" : "Never (Disabled)"}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -98,6 +98,7 @@ export async function runAIAgentReply(
       tone: true,
       systemPrompt: true,
       pauseMinutes: true,
+      handoffResumeMinutes: true,
       languageMode: true,
       websiteUrl: true,
       websiteButtonText: true,
@@ -284,14 +285,18 @@ export async function runAIAgentReply(
 
   // 9. التعامل مع طلب التحويل لموظف بشري (Handoff)
   if (result.action === "handoff") {
+    const handoffAtDate = new Date();
     await prisma.contact.update({
       where: { id: contact.id },
       data: {
         aiStatus: "NEEDS_HUMAN",
         handoffReason: result.reason ?? "الـ AI طلب تحويل المحادثة لإنسان",
-        handoffAt: new Date(),
+        handoffAt: handoffAtDate,
       },
     });
+    console.log(
+      `[AI-HANDOFF] Conversation handed off to human for contact=${contact.id} (reason: ${result.reason})`
+    );
     await notifyAiHandoffNeeded(
       userId,
       contact.name ?? from,
@@ -299,6 +304,25 @@ export async function runAIAgentReply(
       result.reason ?? null,
       result.priority ?? "normal"
     );
+
+    // جدولة Auto-Resume إذا كانت الميزة مفعّلة
+    if (agent.handoffResumeMinutes != null && agent.handoffResumeMinutes > 0) {
+      await inngest
+        .send({
+          name: "ai-agent/handoff-resume-check",
+          data: {
+            userId,
+            contactId: contact.id,
+            handoffAt: handoffAtDate.toISOString(),
+          },
+        })
+        .catch((e) =>
+          console.error(
+            "[AI-HANDOFF] Failed to schedule handoff-resume-check event:",
+            e
+          )
+        );
+    }
   }
 
   // 10. تسجيل استهلاك التوكنز

@@ -847,6 +847,7 @@ async function handleAutomation(ctx: {
         brandName: true, businessDesc: true, productsInfo: true,
         pricingInfo: true, workingHours: true, tone: true, systemPrompt: true,
         languageMode: true, websiteUrl: true, websiteButtonText: true,
+        handoffResumeMinutes: true,
       },
     });
 
@@ -905,14 +906,18 @@ async function handleAutomation(ctx: {
       }
 
       if (aiResult.action === "handoff" && contactRecord) {
+        const handoffAtDate = new Date();
         await prisma.contact.update({
           where: { id: contactRecord.id },
           data: {
             aiStatus: "NEEDS_HUMAN",
             handoffReason: aiResult.reason ?? "الـ AI طلب تحويل المحادثة لإنسان",
-            handoffAt: new Date(),
+            handoffAt: handoffAtDate,
           },
         });
+        console.log(
+          `[AI-HANDOFF] Voice conversation handed off to human for contact=${contactRecord.id} (reason: ${aiResult.reason})`
+        );
         await notifyAiHandoffNeeded(
           userId,
           contactRecord.name ?? from,
@@ -920,6 +925,21 @@ async function handleAutomation(ctx: {
           aiResult.reason ?? null,
           aiResult.priority ?? "normal",
         );
+
+        if (agentSettings.handoffResumeMinutes != null && agentSettings.handoffResumeMinutes > 0) {
+          await inngest
+            .send({
+              name: "ai-agent/handoff-resume-check",
+              data: {
+                userId,
+                contactId: contactRecord.id,
+                handoffAt: handoffAtDate.toISOString(),
+              },
+            })
+            .catch((e) =>
+              console.error("[AI-HANDOFF] Failed to schedule handoff-resume-check event from voice agent:", e)
+            );
+        }
       }
 
       // سجّل استهلاك التوكن

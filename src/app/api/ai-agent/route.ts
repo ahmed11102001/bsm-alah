@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     tone:         "friendly",
     systemPrompt: "",
     pauseMinutes: 10,
+    handoffResumeMinutes: 3,
     languageMode: "auto",
     websiteUrl: null,
     websiteButtonText: null,
@@ -88,6 +89,7 @@ export async function PUT(req: NextRequest) {
       websiteUrl,
       websiteButtonText,
       pauseMinutes,
+      handoffResumeMinutes,
       elevenLabsEnabled,
       elevenLabsApiKey,
       elevenLabsAgentId,
@@ -107,6 +109,15 @@ export async function PUT(req: NextRequest) {
       ? existing?.elevenLabsApiKey ?? null
       : apiKeyTrim ? encryptToken(apiKeyTrim) : null;
 
+    const parsedHandoffResume =
+      handoffResumeMinutes === null || handoffResumeMinutes === 0
+        ? null
+        : typeof handoffResumeMinutes === "number" && handoffResumeMinutes > 0
+        ? Math.max(1, Math.round(handoffResumeMinutes))
+        : handoffResumeMinutes === undefined
+        ? 3
+        : null;
+
     const payload = {
       isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
       provider:  providerEnum,
@@ -122,6 +133,7 @@ export async function PUT(req: NextRequest) {
       websiteButtonText: typeof websiteButtonText === "string" ? websiteButtonText.trim() || null : null,
       pauseMinutes:
         typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
+      handoffResumeMinutes: parsedHandoffResume,
       elevenLabsEnabled:
         typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : false,
       elevenLabsApiKey:  encryptedApiKey,

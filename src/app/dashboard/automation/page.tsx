@@ -68,7 +68,7 @@ interface AIAgent {
   isEnabled: boolean; provider: "gemini" | "openai";
   brandName: string; businessDesc: string; productsInfo: string;
   pricingInfo: string; workingHours: string; tone: string;
-  systemPrompt: string; languageMode: string; websiteUrl: string; websiteButtonText: string; pauseMinutes: number;
+  systemPrompt: string; languageMode: string; websiteUrl: string; websiteButtonText: string; pauseMinutes: number; handoffResumeMinutes: number | null;
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
@@ -78,7 +78,7 @@ const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
 const EMPTY_AGENT: AIAgent = {
   isEnabled: false, provider: "gemini", brandName: "", businessDesc: "",
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
-  systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10,
+  systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
 };
 type AutoSubTab = "keywords" | "welcome" | "interactive" | "smart_followup" | "timebased" | "ab";
@@ -343,6 +343,7 @@ export default function Automation() {
         websiteUrl: agentData.websiteUrl ?? "",
         websiteButtonText: agentData.websiteButtonText ?? "",
         pauseMinutes: agentData.pauseMinutes ?? 10,
+        handoffResumeMinutes: agentData.handoffResumeMinutes !== undefined ? agentData.handoffResumeMinutes : 3,
         elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
         elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
         elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
