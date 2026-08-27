@@ -230,23 +230,23 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
       )}
 
       {/* ── زر الربط التلقائي (Embedded Signup) ── */}
-      {!connected && onAutoConnectSuccess && (
-        <EmbeddedSignupButton
-          locale={locale}
-          onSuccess={({ phone_number_id, waba_id }) => {
-            onAutoConnectSuccess(phone_number_id, waba_id);
-          }}
-        />
-      )}
+      {onAutoConnectSuccess && (
+        <div className="space-y-3">
+          <EmbeddedSignupButton
+            locale={locale}
+            onSuccess={({ phone_number_id, waba_id }) => {
+              onAutoConnectSuccess(phone_number_id, waba_id);
+            }}
+          />
 
-      {/* ── أو أدخل البيانات يدوياً ── */}
-      {!connected && onAutoConnectSuccess && (
-        <div className="relative flex items-center">
-          <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
-          <span className="mx-3 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
-            {locale === "ar" ? "أو أدخل البيانات يدوياً" : "or enter credentials manually"}
-          </span>
-          <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
+          {/* ── أو أدخل البيانات يدوياً ── */}
+          <div className="relative flex items-center py-1">
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
+            <span className="mx-3 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+              {locale === "ar" ? "أو أدخل البيانات يدوياً" : "or enter credentials manually"}
+            </span>
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
+          </div>
         </div>
       )}
 
@@ -269,7 +269,7 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
         <Button disabled={loading} size="sm" className="w-full gap-2">
           {loading
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingBtn}</>
-            : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "ربط Meta" : "Connect Meta"}</>}
+            : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "ربط Meta يدوياً" : "Connect Meta manually"}</>}
         </Button>
       </form>
       {showForm && connected && (
@@ -1332,6 +1332,18 @@ export default function API() {
                   connected={waConnected}
                   onDisconnect={handleDisconnectWhatsApp}
                   locale={locale}
+                  onAutoConnectSuccess={(phone_number_id, waba_id) => {
+                    setWaConnected(true);
+                    setWaData({ phoneNumberId: phone_number_id, wabaId: waba_id });
+                    setWaJustConnected(true);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("refresh-dash"));
+                    }
+                    closeTimerRef.current = setTimeout(() => {
+                      setOpenCard(null);
+                      setWaJustConnected(false);
+                    }, 2000);
+                  }}
                 />
               )
             )}

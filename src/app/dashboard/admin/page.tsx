@@ -14,7 +14,6 @@ import { useLanguage } from "@/lib/language-context";
 import {
   PartnerCardTemplate, PARTNER_TEMPLATES, type PartnerCardContent,
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
-import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
 import PaymentsTab from "./_components/PaymentsTab";
 import ArticleMarkdown from "@/components/ArticleMarkdown";
@@ -607,18 +606,6 @@ export default function AdminPage() {
             {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
             {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
             {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "طلب حماية جديد" : "New Claim"}</button>}
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">{locale === "ar" ? "ربط Meta تلقائيًا" : "Connect Meta automatically"}</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{locale === "ar" ? "اربط حساب WhatsApp Business من خلال Meta Embedded Signup." : "Connect the WhatsApp Business account using Meta Embedded Signup."}</p>
-            </div>
-            <div className="sm:w-72">
-              <EmbeddedSignupButton locale={locale} onSuccess={() => window.location.reload()} />
-            </div>
           </div>
         </div>
 
