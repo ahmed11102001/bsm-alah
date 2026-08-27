@@ -253,17 +253,17 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label className="text-xs dark:text-gray-400">Access Token</Label>
-          <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..."
+          <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..." required
             className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
         </div>
         <div>
           <Label className="text-xs dark:text-gray-400">Phone Number ID</Label>
-          <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..."
+          <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..." required
             className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
         </div>
         <div>
           <Label className="text-xs dark:text-gray-400">WABA ID</Label>
-          <Input name="wabaId" defaultValue={initialData?.wabaId || ""} placeholder="987654321..."
+          <Input name="wabaId" defaultValue={initialData?.wabaId || ""} placeholder="987654321..." required
             className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
         </div>
         <Button disabled={loading} size="sm" className="w-full gap-2">
@@ -972,16 +972,27 @@ export default function API() {
   };
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); setWaLoading(true);
+    e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const phoneNumberId = fd.get("phoneNumberId") as string;
-    const wabaId = fd.get("wabaId") as string;
+    const accessToken = (fd.get("accessToken") as string)?.trim();
+    const phoneNumberId = (fd.get("phoneNumberId") as string)?.trim();
+    const wabaId = (fd.get("wabaId") as string)?.trim();
+
+    // ── Validation: امنع الإرسال أصلاً لو أي حقل فاضي ──────────────────────
+    // قبل كده كان ممكن تدوس "Connect Meta manually" من غير ما تحط أي قيمة
+    // وكان بيقولك "تم الربط بنجاح" وهو مش متربط فعليًا.
+    if (!accessToken || !phoneNumberId || !wabaId) {
+      toast.error(
+        locale === "ar"
+          ? "لازم تدخل Access Token و Phone Number ID و WABA ID الثلاثة الأول"
+          : "Please fill in Access Token, Phone Number ID, and WABA ID first",
+      );
+      return;
+    }
+
+    setWaLoading(true);
     try {
-      await saveWhatsAppSettings({
-        accessToken: fd.get("accessToken") as string,
-        phoneNumberId,
-        wabaId,
-      });
+      await saveWhatsAppSettings({ accessToken, phoneNumberId, wabaId });
       // Update connected state
       setWaConnected(true);
       setWaData({ phoneNumberId, wabaId });
@@ -995,7 +1006,9 @@ export default function API() {
         setOpenCard(null);
         setWaJustConnected(false);
       }, 2000);
-    } catch { toast.error(api.cards.whatsapp.saveErr); }
+    } catch (err: any) {
+      toast.error(err?.message || api.cards.whatsapp.saveErr);
+    }
     finally { setWaLoading(false); }
   };
 

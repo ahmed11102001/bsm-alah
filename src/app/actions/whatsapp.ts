@@ -17,21 +17,32 @@ export async function saveWhatsAppSettings(data: {
   if (!session?.user?.id) throw new Error("غير مصرح لك");
   const ownerId = (session.user.parentId as string | null) ?? session.user.id;
 
+  // ── Validation: ارفض أي محاولة حفظ ببيانات فاضية أو مساحات بس ──────────
+  // من غير الشرط ده، الفورم بيقدر يتبعت فاضي (زرار "Connect Meta manually"
+  // من غير ما تحط أي قيمة) والسيرفر كان بيحفظه عادي ويرجع success: true.
+  const accessToken = data.accessToken?.trim();
+  const phoneNumberId = data.phoneNumberId?.trim();
+  const wabaId = data.wabaId?.trim();
+
+  if (!accessToken || !phoneNumberId || !wabaId) {
+    throw new Error("لازم تدخل Access Token و Phone Number ID و WABA ID الثلاثة عشان تربط Meta");
+  }
+
   // تشفير الـ token قبل الحفظ في DB
-  const encryptedToken = encryptToken(data.accessToken);
+  const encryptedToken = encryptToken(accessToken);
 
   await prisma.whatsAppAccount.upsert({
     where: { userId: ownerId },
     update: {
       accessToken: encryptedToken,
-      phoneNumberId: data.phoneNumberId,
-      wabaId: data.wabaId,
+      phoneNumberId,
+      wabaId,
     },
     create: {
       userId: ownerId,
       accessToken: encryptedToken,
-      phoneNumberId: data.phoneNumberId,
-      wabaId: data.wabaId,
+      phoneNumberId,
+      wabaId,
     },
   });
 
