@@ -106,6 +106,24 @@ export default function EmbeddedSignupButton({
       if (data?.type === "WA_EMBEDDED_SIGNUP") {
         const payload = data?.data ?? {};
 
+        console.log("[EmbeddedSignup][WA_EVENT]", {
+          origin: event.origin,
+          event: data?.event,
+          type: data?.type,
+          current_step: payload?.current_step,
+          version: payload?.version,
+          has_waba_id: Boolean(payload?.waba_id),
+          has_phone_number_id: Boolean(payload?.phone_number_id),
+        });
+
+        if (data?.type === "WA_EMBEDDED_SIGNUP" && data?.event === "FINISH") {
+          console.log("[EmbeddedSignup][FINISH]", {
+            has_waba_id: Boolean(payload?.waba_id),
+            has_phone_number_id: Boolean(payload?.phone_number_id),
+            current_step: payload?.current_step,
+          });
+        }
+
         if (payload.phone_number_id) {
           messageDataRef.current.phone_number_id = payload.phone_number_id;
         }
@@ -115,13 +133,6 @@ export default function EmbeddedSignupButton({
         if (payload.current_step) {
           messageDataRef.current.current_step = payload.current_step;
         }
-
-        console.log("[EmbeddedSignup] postMessage event received:", {
-          event: data.event,
-          current_step: payload.current_step,
-          has_phone_number_id: !!payload.phone_number_id,
-          has_waba_id: !!payload.waba_id,
-        });
 
         setFlowStep((prev) => (prev === "waiting_for_meta" ? "received_signup_result" : prev));
       }
@@ -195,6 +206,13 @@ export default function EmbeddedSignupButton({
     const appId = process.env.NEXT_PUBLIC_META_APP_ID;
     const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
 
+    console.log("[EmbeddedSignup][LAUNCH]", {
+      config_id_present: Boolean(configId),
+      response_type: "code",
+      sessionInfoVersion: "3",
+      redirect_origin: typeof window !== "undefined" ? window.location.origin : "",
+    });
+
     if (!sdkReady || !window.FB) {
       const message = locale === "ar"
         ? "Facebook SDK لم يتحمل بعد — حاول مجدداً"
@@ -225,6 +243,14 @@ export default function EmbeddedSignupButton({
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setFlowStep("failed");
+
+      console.warn("[EmbeddedSignup][TIMEOUT]", {
+        elapsed_ms: 60000,
+        captured_waba_id: Boolean(messageDataRef.current.waba_id),
+        captured_phone_number_id: Boolean(messageDataRef.current.phone_number_id),
+        current_step: messageDataRef.current.current_step,
+      });
+
       const message = locale === "ar"
         ? "انتهت مهلة الانتظار أو حظر المتصفح النافذة المنبثقة. تأكد من السماح بالـ Popup والمحاولة مجدداً."
         : "Timeout reached or popup was blocked. Please allow popups and retry.";
@@ -236,6 +262,13 @@ export default function EmbeddedSignupButton({
     window.FB.login(
       (response: any) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        console.log("[EmbeddedSignup][FB_CALLBACK]", {
+          status: response?.status,
+          has_authResponse: Boolean(response?.authResponse),
+          has_code: Boolean(response?.authResponse?.code),
+          authResponse_is_null: response?.authResponse === null,
+        });
 
         const code: string | undefined = response?.authResponse?.code;
 
