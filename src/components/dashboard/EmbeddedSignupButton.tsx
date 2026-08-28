@@ -2,8 +2,12 @@
 // src/components/dashboard/EmbeddedSignupButton.tsx
 // ─── WhatsApp Embedded Signup Button ──────────────────────────────────────────
 //
-// Compliant with official Meta Embedded Signup v3/v4 specifications:
-// 1. Launches Facebook JS SDK FB.login with config_id, response_type: 'code', sessionInfoVersion: '3'
+// Compliant with official Meta Embedded Signup v4 specification (v2/v3 retire Oct 15, 2026):
+// 1. Launches Facebook JS SDK FB.login with config_id, response_type: 'code'
+//    NOTE: config_id must come from a "Facebook Login for Business" configuration
+//    (App Dashboard -> Facebook Login for Business -> Configurations) with the
+//    WhatsApp Embedded Signup login variation — the version is no longer picked
+//    via extras.sessionInfoVersion, it's determined by that configuration.
 // 2. Captures WA_EMBEDDED_SIGNUP postMessage events for metadata confirmation (waba_id, phone_number_id)
 // 3. Exchanges authorization code on backend (/api/meta/embedded-signup-complete) -> Meta token -> WABA -> Neon DB
 // 4. Maintains clear state machine: waiting_for_meta -> received_signup_result -> received_auth_code -> sending_to_backend -> connected
@@ -299,7 +303,6 @@ export default function EmbeddedSignupButton({
         override_default_response_type: true,
         extras: {
           setup: {},
-          sessionInfoVersion: "3",
         },
       },
     );
