@@ -826,6 +826,7 @@ export default function API() {
 
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
+    if (!canUseStoreIntegrations) return;
     try {
       // جيب الـ Webhook URL أول حاجة وحده عشان مش يأثرش على باقي الداتا لو فشل
       const shUrlRes = await fetch("/api/shopify/URL").catch(() => null);
@@ -864,7 +865,7 @@ export default function API() {
     } catch (e) {
       console.error("[loadShopifyStatus]", e);
     }
-  }, []);
+  }, [canUseStoreIntegrations]);
 
   // Check if WhatsApp/Meta is already connected
   useEffect(() => {
@@ -876,8 +877,12 @@ export default function API() {
 
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => { });
-    fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => { });
-    fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => { });
+    if (canUseStoreIntegrations) {
+      fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => { });
+    }
+    if (canUseClaude) {
+      fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => { });
+    }
     fetch("/api/ai-agent").then(r => r.ok ? r.json() : null).then(d => {
       if (!d) return;
       setElevenLabsAgentData(d);
@@ -888,7 +893,7 @@ export default function API() {
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
     return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
-  }, [loadShopifyStatus]);
+  }, [canUseClaude, canUseStoreIntegrations, loadShopifyStatus]);
 
   const loadEoWebhookUrl = useCallback(async () => {
     if (eoUrlLoaded) return;

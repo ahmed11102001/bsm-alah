@@ -994,15 +994,20 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
 // ─── Dashboard Shell (Sidebar + Topbar + Mobile Menu) ────────────────────────
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
+  const { canUseClaude } = useSubscription();
   const [claudeConnected, setClaudeConnected] = useState(false);
   const [activeTopPanel, setActiveTopPanel] = useState<"claude" | "assistant" | "notifications" | null>(null);
 
   useEffect(() => {
+    if (!canUseClaude) {
+      setClaudeConnected(false);
+      return;
+    }
     fetch("/api/me/api-key")
       .then(r => r.ok ? r.json() : { apiKey: "" })
       .then(d => setClaudeConnected(!!d.apiKey))
       .catch(() => { });
-  }, []);
+  }, [canUseClaude]);
 
   const { t, dir, locale } = useLanguage();
   const { dashData, loadingDash, refreshDash, hasMetaConnection, isSuper } = useSubscription();

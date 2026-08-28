@@ -15,7 +15,7 @@ function buildCsp(nonce: string): string {
   const styleSrc = ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"].filter(Boolean).join(" ");
   const connectSrc = [
     "'self'", "https://graph.facebook.com", "https://graph.instagram.com",
-    "https://www.facebook.com", "https://connect.facebook.net", "https://*.cloudinary.com",
+    "https://www.facebook.com", "https://web.facebook.com", "https://connect.facebook.net", "https://*.cloudinary.com",
     "https://api.inngest.com", "https://api.elevenlabs.io", "https://*.upstash.io",
     "https://api.anthropic.com", "https://o4511405530284032.ingest.us.sentry.io", "wss:",
     isDev ? "http://localhost:*" : "",

@@ -42,7 +42,7 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => resolveInitialClientLocale());
+  const [locale, setLocaleState] = useState<Locale>("ar");
 
   // On client mount, sync with cookies / storage / html lang
   useEffect(() => {
