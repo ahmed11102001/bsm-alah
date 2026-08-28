@@ -31,6 +31,16 @@ function WAPreview({ headerType, headerText, body, footer, category, addSecurity
 }) {
   const { language, t } = useLanguage();
 
+  // Computed on the client after mount only — calling new Date() directly
+  // during render made the server-rendered markup and the client's first
+  // hydration pass disagree (different minute), which threw React #418.
+  const [previewTime, setPreviewTime] = useState<string | null>(null);
+  useEffect(() => {
+    setPreviewTime(
+      new Date().toLocaleTimeString(language === "ar" ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })
+    );
+  }, [language]);
+
   // Render {{N}} as colored pills
   function renderText(text: string) {
     return text.split(/(\{\{\d+\}\})/g).map((part, i) =>
@@ -152,7 +162,7 @@ function WAPreview({ headerType, headerText, body, footer, category, addSecurity
             {/* Meta timestamp */}
             <div style={{ textAlign: language === 'ar' ? "left" : "right", marginTop: 4 }}>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
-                {new Date().toLocaleTimeString(language === 'ar' ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })} ✓✓
+                {previewTime ?? "--:--"} ✓✓
               </span>
             </div>
           </div>
