@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: profile.sub,
           name: profile.name,
-          email: profile.email,
+          email: profile.email ? profile.email.toLowerCase().trim() : profile.email,
           image: profile.picture,
           emailVerified: profile.email_verified ? new Date() : null,
         } as any;
