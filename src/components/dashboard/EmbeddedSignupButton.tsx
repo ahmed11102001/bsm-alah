@@ -213,7 +213,6 @@ export default function EmbeddedSignupButton({
     console.log("[EmbeddedSignup][LAUNCH]", {
       config_id_present: Boolean(configId),
       response_type: "code",
-      sessionInfoVersion: "3",
       redirect_origin: typeof window !== "undefined" ? window.location.origin : "",
     });
 
