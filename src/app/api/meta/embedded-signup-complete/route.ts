@@ -55,7 +55,19 @@ export async function POST(req: NextRequest) {
     waba_id?: string;
   };
 
+  console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Incoming request received:", {
+    ownerId,
+    hasCode: !!code,
+    hasRawRedirectUri: !!rawRedirectUri,
+    rawRedirectUri,
+    hasPhoneId: !!rawPhoneId,
+    rawPhoneId,
+    hasWabaId: !!rawWabaId,
+    rawWabaId,
+  });
+
   if (!code) {
+    console.warn("[EmbeddedSignup][BACKEND DIAGNOSTIC] Validation failed: code is missing");
     return NextResponse.json({ error: "code مطلوب" }, { status: 400 });
   }
 
@@ -64,18 +76,13 @@ export async function POST(req: NextRequest) {
   const appSecret = process.env.META_APP_SECRET;
 
   if (!appId || !appSecret) {
-    console.error("[EmbeddedSignup] Missing NEXT_PUBLIC_META_APP_ID or META_APP_SECRET");
+    console.error("[EmbeddedSignup][BACKEND DIAGNOSTIC] Missing NEXT_PUBLIC_META_APP_ID or META_APP_SECRET");
     return NextResponse.json(
       { error: "Server configuration error — Meta credentials missing" },
       { status: 500 },
     );
   }
 
-  // ── FIX: Build redirect_uri for the token exchange ────────────────────────
-  // Meta requires redirect_uri in the token exchange request and it must
-  // match exactly what was passed in FB.login extras.redirect_uri.
-  // We prefer the value sent from the frontend (window.location.origin),
-  // falling back to the request's own origin header.
   const redirectUri =
     (rawRedirectUri as string | undefined) ||
     req.headers.get("origin") ||
@@ -87,10 +94,11 @@ export async function POST(req: NextRequest) {
     client_secret: appSecret,
     code,
   });
-  // Only attach redirect_uri when we have one (avoids sending empty string)
   if (redirectUri) {
     tokenParams.set("redirect_uri", redirectUri);
   }
+
+  console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Initiating Meta token exchange with redirect_uri:", redirectUri);
 
   let tokenData: any;
   try {
@@ -105,18 +113,58 @@ export async function POST(req: NextRequest) {
 
     tokenData = await tokenRes.json();
 
+    console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Meta token exchange result:", {
+      status: tokenRes.status,
+      ok: tokenRes.ok,
+      hasAccessToken: !!tokenData?.access_token,
+      tokenType: tokenData?.token_type,
+      errorCode: tokenData?.error?.code,
+      errorSubcode: tokenData?.error?.error_subcode,
+      errorMessage: tokenData?.error?.message,
+    });
+
     if (!tokenRes.ok || tokenData.error || !tokenData.access_token) {
-      console.error("[EmbeddedSignup] Token exchange error:", tokenData);
-      return NextResponse.json(
-        {
-          error: tokenData.error?.message
-            ?? "فشل تبادل الـ code — تأكد من صلاحيته",
-        },
-        { status: 502 },
-      );
+      // Auto-fallback: If Meta rejected the exchange due to redirect_uri mismatch, retry without redirect_uri
+      if (redirectUri && (tokenData?.error?.code === 100 || tokenData?.error?.error_subcode === 36008 || tokenData?.error?.message?.toLowerCase().includes("redirect_uri"))) {
+        console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Retrying token exchange without redirect_uri parameter...");
+        const retryParams = new URLSearchParams({
+          client_id: appId,
+          client_secret: appSecret,
+          code,
+        });
+        const retryRes = await fetch(
+          `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: retryParams,
+          },
+        );
+        const retryData = await retryRes.json();
+        if (retryRes.ok && retryData.access_token) {
+          console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Token exchange retry succeeded!");
+          tokenData = retryData;
+        } else {
+          console.error("[EmbeddedSignup] Token exchange error after retry:", retryData?.error || tokenData?.error);
+          return NextResponse.json(
+            {
+              error: retryData.error?.message ?? tokenData.error?.message ?? "فشل تبادل الـ code — تأكد من صلاحيته",
+            },
+            { status: 502 },
+          );
+        }
+      } else {
+        console.error("[EmbeddedSignup] Token exchange error:", tokenData?.error || "No access token");
+        return NextResponse.json(
+          {
+            error: tokenData.error?.message ?? "فشل تبادل الـ code — تأكد من صلاحيته",
+          },
+          { status: 502 },
+        );
+      }
     }
-  } catch (err) {
-    console.error("[EmbeddedSignup] Token exchange network error:", err);
+  } catch (err: any) {
+    console.error("[EmbeddedSignup][BACKEND DIAGNOSTIC] Token exchange network error:", err?.message || err);
     return NextResponse.json(
       { error: "فشل الاتصال بـ Meta — حاول مرة أخرى" },
       { status: 502 },
@@ -129,15 +177,11 @@ export async function POST(req: NextRequest) {
   let phone_number_id = rawPhoneId as string | undefined;
   let waba_id = rawWabaId as string | undefined;
 
-  // Track the actual Graph API error reasons so a 502 here can be diagnosed
-  // from the logs instead of just "couldn't resolve WABA/Phone" with no context.
-  // The #1 real-world cause is that the Facebook Login Configuration (config_id)
-  // used in FB.login doesn't grant whatsapp_business_management / business_management,
-  // in which case Graph returns a permission error on both strategies below.
   let discoveryDebug: { strategyA?: any; strategyB?: any } = {};
 
   if (!phone_number_id || !waba_id) {
-    // ── Strategy A: /me/whatsapp_business_accounts (works for most flows) ──
+    console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] WABA/Phone not fully provided in payload, running discovery...");
+    // ── Strategy A: /me/whatsapp_business_accounts ──
     try {
       const meRes = await fetch(
         `https://graph.facebook.com/${GRAPH_VERSION}/me/whatsapp_business_accounts` +
@@ -146,21 +190,27 @@ export async function POST(req: NextRequest) {
       );
       const meData = await meRes.json();
 
+      console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy A discovery response:", {
+        status: meRes.status,
+        ok: meRes.ok,
+        wabaCount: meData?.data?.length ?? 0,
+        foundWabaId: meData?.data?.[0]?.id,
+        foundPhoneId: meData?.data?.[0]?.phone_numbers?.data?.[0]?.id,
+        error: meData?.error,
+      });
+
       if (meRes.ok && meData.data?.[0]) {
         waba_id = waba_id ?? meData.data[0].id;
         phone_number_id = phone_number_id ?? meData.data[0].phone_numbers?.data?.[0]?.id;
       } else if (!meRes.ok) {
         discoveryDebug.strategyA = meData?.error ?? meData;
-        console.warn("[EmbeddedSignup] Strategy A (WABA discovery) returned error:", meData?.error ?? meData);
       }
-    } catch (err) {
-      console.warn("[EmbeddedSignup] Strategy A (WABA discovery) failed:", err);
+    } catch (err: any) {
+      console.warn("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy A failed:", err?.message || err);
     }
   }
 
-  // ── FIX: Strategy B — try /me/businesses as fallback ─────────────────────
-  // Some token types (e.g. user tokens via Embedded Signup) return the WABA
-  // under the business account, not directly on /me/whatsapp_business_accounts.
+  // ── Strategy B: /me/businesses fallback ──
   if (!phone_number_id || !waba_id) {
     try {
       const bizRes = await fetch(
@@ -173,31 +223,38 @@ export async function POST(req: NextRequest) {
       const firstBiz = bizData.data?.[0];
       const firstWaba = firstBiz?.whatsapp_business_accounts?.data?.[0];
 
+      console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy B discovery response:", {
+        status: bizRes.status,
+        ok: bizRes.ok,
+        bizCount: bizData?.data?.length ?? 0,
+        foundWabaId: firstWaba?.id,
+        foundPhoneId: firstWaba?.phone_numbers?.data?.[0]?.id,
+        error: bizData?.error,
+      });
+
       if (firstWaba) {
         waba_id = waba_id ?? firstWaba.id;
         phone_number_id = phone_number_id ?? firstWaba.phone_numbers?.data?.[0]?.id;
       } else if (!bizRes.ok) {
         discoveryDebug.strategyB = bizData?.error ?? bizData;
-        console.warn("[EmbeddedSignup] Strategy B (businesses fallback) returned error:", bizData?.error ?? bizData);
       }
-    } catch (err) {
-      console.warn("[EmbeddedSignup] Strategy B (businesses fallback) failed:", err);
+    } catch (err: any) {
+      console.warn("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy B failed:", err?.message || err);
     }
   }
 
+  console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Discovery resolution result:", {
+    resolvedPhoneId: phone_number_id,
+    resolvedWabaId: waba_id,
+  });
+
   if (!phone_number_id || !waba_id) {
-    // Log full debug context — this is the single most useful line for diagnosing
-    // "the flow completes on Facebook's side but nothing gets saved" reports.
     console.error(
       "[EmbeddedSignup] Could not resolve WABA/Phone — rawPhoneId:", rawPhoneId,
       "rawWabaId:", rawWabaId,
-      "postMessage received:", !!(rawPhoneId || rawWabaId),
       "graphErrors:", JSON.stringify(discoveryDebug),
     );
 
-    // Surface the underlying Graph error code when it looks like a permissions
-    // issue, since that's actionable (fix the Facebook Login Configuration),
-    // vs. a generic retry message which hides the real cause.
     const permissionIssue =
       discoveryDebug.strategyA?.code === 10 || discoveryDebug.strategyB?.code === 10 ||
       discoveryDebug.strategyA?.type === "OAuthException" || discoveryDebug.strategyB?.type === "OAuthException";
@@ -225,18 +282,19 @@ export async function POST(req: NextRequest) {
     );
     const subData = await subRes.json();
     webhookSubscribed = subData.success === true;
-
-    if (!subRes.ok || subData.error) {
-      console.warn("[EmbeddedSignup] Webhook subscription warning:", subData);
-    }
-  } catch (err) {
-    console.warn("[EmbeddedSignup] Webhook subscription network error:", err);
+    console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Webhook subscription result:", {
+      success: webhookSubscribed,
+      error: subData?.error,
+    });
+  } catch (err: any) {
+    console.warn("[EmbeddedSignup][BACKEND DIAGNOSTIC] Webhook subscription network error:", err?.message || err);
   }
 
-  /* ── 6. Save encrypted token + IDs to DB ────────────────────────────────── */
+  /* ── 6. Save encrypted token + IDs to DB (Neon) ─────────────────────────── */
   const encryptedToken = encryptToken(businessToken);
 
   try {
+    console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Performing Neon DB upsert for user:", ownerId);
     await prisma.whatsAppAccount.upsert({
       where: { userId: ownerId },
       update: {
@@ -260,8 +318,9 @@ export async function POST(req: NextRequest) {
         wabaId: waba_id,
       },
     });
-  } catch (err) {
-    console.error("[EmbeddedSignup] DB upsert error:", err);
+    console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Neon DB upsert succeeded for user:", ownerId);
+  } catch (err: any) {
+    console.error("[EmbeddedSignup][BACKEND DIAGNOSTIC] DB upsert error:", err?.message || err);
     return NextResponse.json(
       { error: "فشل حفظ البيانات — حاول مرة أخرى" },
       { status: 500 },

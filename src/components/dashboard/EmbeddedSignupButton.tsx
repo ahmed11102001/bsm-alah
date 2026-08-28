@@ -2,12 +2,11 @@
 // src/components/dashboard/EmbeddedSignupButton.tsx
 // ─── WhatsApp Embedded Signup Button ──────────────────────────────────────────
 //
-// Loads Facebook JS SDK, launches the Embedded Signup popup, and sends the
-// short-lived code (+ optional phone_number_id & waba_id from postMessage)
-// to the backend for exchange.
-//
-// FIX: pass `redirect_uri` (current page origin) in both FB.login extras AND
-// the backend fetch — Meta requires it to match for the code exchange to work.
+// Compliant with official Meta Embedded Signup v3/v4 specifications:
+// 1. Launches Facebook JS SDK FB.login with config_id, response_type: 'code', sessionInfoVersion: '3'
+// 2. Captures WA_EMBEDDED_SIGNUP postMessage events for metadata confirmation (waba_id, phone_number_id)
+// 3. Exchanges authorization code on backend (/api/meta/embedded-signup-complete) -> Meta token -> WABA -> Neon DB
+// 4. Maintains clear state machine: waiting_for_meta -> received_signup_result -> received_auth_code -> sending_to_backend -> connected
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, Zap } from "lucide-react";
@@ -23,8 +22,18 @@ interface EmbeddedSignupButtonProps {
     display_phone_number?: string;
   }) => void;
   locale?: string;
-  endpoint?: string; // defaults to the main app's endpoint for backward compatibility
+  endpoint?: string;
 }
+
+/* ── Flow State Machine ─────────────────────────────────────────────────────── */
+export type SignupFlowStep =
+  | "idle"
+  | "waiting_for_meta"
+  | "received_signup_result"
+  | "received_auth_code"
+  | "sending_to_backend"
+  | "connected"
+  | "failed";
 
 /* ── FB SDK global types ────────────────────────────────────────────────────── */
 declare global {
@@ -41,20 +50,22 @@ export default function EmbeddedSignupButton({
   endpoint = "/api/meta/embedded-signup-complete",
 }: EmbeddedSignupButtonProps) {
   const [sdkReady, setSdkReady] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [flowStep, setFlowStep] = useState<SignupFlowStep>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const isLoading = flowStep === "waiting_for_meta" || flowStep === "received_signup_result" || flowStep === "received_auth_code" || flowStep === "sending_to_backend";
 
   // Store phone_number_id & waba_id received via postMessage from Meta popup
   const messageDataRef = useRef<{
     phone_number_id?: string;
     waba_id?: string;
+    current_step?: string;
   }>({});
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   /* ── Load Facebook SDK (once) ─────────────────────────────────────────────── */
   useEffect(() => {
-    // Already loaded
     if (document.getElementById("facebook-jssdk")) {
       if (window.FB) setSdkReady(true);
       return;
@@ -79,33 +90,43 @@ export default function EmbeddedSignupButton({
     document.body.appendChild(js);
   }, []);
 
-  /* ── Listen for Meta postMessage (phone_number_id + waba_id) ──────────── */
+  /* ── Listen for Meta postMessage (WA_EMBEDDED_SIGNUP metadata) ───────────── */
   const handleMessageEvent = useCallback((event: MessageEvent) => {
     // Only accept messages from Facebook domains
-    if (
-      typeof event.origin !== "string" ||
-      !event.origin.endsWith("facebook.com")
-    ) {
-      return;
-    }
+    const isFacebookOrigin = typeof event.origin === "string" && (
+      event.origin.endsWith("facebook.com") ||
+      event.origin.endsWith("fb.com")
+    );
+
+    if (!isFacebookOrigin) return;
 
     try {
-      const data =
-        typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
-      if (data?.type !== "WA_EMBEDDED_SIGNUP") return;
+      if (data?.type === "WA_EMBEDDED_SIGNUP") {
+        const payload = data?.data ?? {};
 
-      const payload = data?.data ?? {};
-      if (payload.phone_number_id) {
-        messageDataRef.current.phone_number_id = payload.phone_number_id;
+        if (payload.phone_number_id) {
+          messageDataRef.current.phone_number_id = payload.phone_number_id;
+        }
+        if (payload.waba_id) {
+          messageDataRef.current.waba_id = payload.waba_id;
+        }
+        if (payload.current_step) {
+          messageDataRef.current.current_step = payload.current_step;
+        }
+
+        console.log("[EmbeddedSignup] postMessage event received:", {
+          event: data.event,
+          current_step: payload.current_step,
+          has_phone_number_id: !!payload.phone_number_id,
+          has_waba_id: !!payload.waba_id,
+        });
+
+        setFlowStep((prev) => (prev === "waiting_for_meta" ? "received_signup_result" : prev));
       }
-      if (payload.waba_id) {
-        messageDataRef.current.waba_id = payload.waba_id;
-      }
-
-      console.log("[EmbeddedSignup] message event:", payload);
     } catch {
-      // Non-JSON message — safe to ignore
+      // Non-JSON message — ignore safely
     }
   }, []);
 
@@ -120,6 +141,54 @@ export default function EmbeddedSignupButton({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  /* ── Execute backend token exchange & Neon storage ───────────────────────── */
+  const completeSignupOnBackend = async (code: string, redirectUri: string) => {
+    setFlowStep("sending_to_backend");
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          redirect_uri: redirectUri,
+          phone_number_id: messageDataRef.current.phone_number_id,
+          waba_id: messageDataRef.current.waba_id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFlowStep("failed");
+        const errMsg = data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed");
+        setError(errMsg);
+        toast.error(errMsg);
+        return;
+      }
+
+      setFlowStep("connected");
+      setError(null);
+      toast.success(
+        locale === "ar"
+          ? "✅ تم ربط Meta بنجاح"
+          : "✅ Meta connected successfully",
+      );
+
+      onSuccess({
+        phone_number_id: data.phone_number_id,
+        waba_id: data.waba_id,
+        display_phone_number: data.display_phone_number,
+      });
+    } catch (fetchErr: any) {
+      console.error("[EmbeddedSignup] Backend exchange request failed:", fetchErr?.message || fetchErr);
+      setFlowStep("failed");
+      const netErrMsg = locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error";
+      setError(netErrMsg);
+      toast.error(netErrMsg);
+    }
+  };
 
   /* ── Launch the Embedded Signup popup ──────────────────────────────────── */
   const launchSignup = () => {
@@ -145,123 +214,59 @@ export default function EmbeddedSignupButton({
     }
 
     setError(null);
-    // Reset any previously captured data
     messageDataRef.current = {};
-    setLoading(true);
+    setFlowStep("waiting_for_meta");
 
-    // ── FIX: Build redirect_uri from current page origin ──────────────────
-    // Meta requires redirect_uri to be passed both in FB.login extras AND
-    // in the backend token-exchange request — they must match exactly.
     const redirectUri = typeof window !== "undefined"
       ? window.location.origin
       : "";
 
-    // Safety timeout: if popup is blocked and callback never fires
+    // 60-second safety timeout
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setLoading(false);
+      setFlowStep("failed");
       const message = locale === "ar"
-        ? "يبدو أن المتصفح حظر النافذة المنبثقة أو أن Meta لم تُرجع الرد. تأكد من السماح بالـ Popup وأن إعدادات Meta صحيحة."
-        : "The popup was blocked or Meta did not return a response. Allow popups and verify your Meta settings.";
+        ? "انتهت مهلة الانتظار أو حظر المتصفح النافذة المنبثقة. تأكد من السماح بالـ Popup والمحاولة مجدداً."
+        : "Timeout reached or popup was blocked. Please allow popups and retry.";
       setError(message);
       toast.error(message);
-    }, 60000); // 60 seconds
+    }, 60000);
 
+    // Official Meta Embedded Signup configuration
     window.FB.login(
       (response: any) => {
-        (async () => {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-          if (!response.authResponse) {
-            setLoading(false);
+        const code: string | undefined = response?.authResponse?.code;
 
-            // Always log the raw FB response — this is the only way to tell
-            // "user actually cancelled" apart from "browser blocked 3rd-party
-            // cookies" apart from "config_id/domain misconfigured" later.
-            console.warn("[EmbeddedSignup] FB.login returned without authResponse:", response);
+        if (!code) {
+          setFlowStep("failed");
+          console.warn("[EmbeddedSignup] FB.login callback returned without authorization code:", response);
 
-            // FIX: `status === "unknown"` does NOT reliably mean "the user just
-            // closed the popup". It's also what Meta returns when the *opener*
-            // page can't read the Facebook login/cookie state — most commonly
-            // because the browser blocks third-party cookies (Chrome/Edge/Brave
-            // with 3rd-party cookies disabled, Safari ITP, etc). In that case the
-            // signup can complete fully inside the popup and this callback still
-            // fires with status "unknown" and no authResponse. Previously this
-            // branch silently swallowed the error (setError(null), no toast, no
-            // request to the backend) which made the whole flow look like it
-            // "did nothing" with zero trace in the server logs.
-            const message = response.status === "unknown"
-              ? (locale === "ar"
-                ? "لم نتمكن من تأكيد الربط. ده غالبًا لأن المتصفح بيمنع third-party cookies (شائع في Chrome/Edge/Brave). جرّب تسمح بالـ cookies لموقع facebook.com، أو استخدم متصفح تاني، وحاول تاني."
-                : "We couldn't confirm the connection. This usually means your browser is blocking third-party cookies (common in Chrome/Edge/Brave). Try allowing cookies for facebook.com, or use a different browser, then retry.")
-              : (locale === "ar"
-                ? "Meta ألغت الربط أو لم تكتمل العملية. غالباً config_id أو صلاحيات الدومين غير صحيحة."
-                : "Meta canceled the flow or it did not complete. Most likely config_id or domain permissions are wrong.");
+          const message = response?.status === "unknown"
+            ? (locale === "ar"
+              ? "لم تتمكن المنصة من استلام Authorization Code من Meta. ده غالباً بسبب منع المتصفح لـ Third-Party Cookies (شائع في Chrome/Brave/Edge). اسمح بالـ Cookies أو جرّب من متصفح آخر."
+              : "Could not receive Authorization Code from Meta. This is usually caused by third-party cookie restrictions in your browser. Please allow cookies or try a different browser.")
+            : (locale === "ar"
+              ? "Meta ألغت الربط أو لم تكتمل العملية. تأكد من اكتمال الخطوات داخل نافذة Meta."
+              : "Meta cancelled or the flow was incomplete. Ensure all steps are completed in the Meta window.");
 
-            setError(message);
-            toast.error(message);
-            return;
-          }
+          setError(message);
+          toast.error(message);
+          return;
+        }
 
-          const code: string = response.authResponse.code;
-
-          try {
-            const res = await fetch(endpoint, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                code,
-                redirect_uri: redirectUri,           // ← FIX: required for token exchange
-                phone_number_id: messageDataRef.current.phone_number_id,
-                waba_id: messageDataRef.current.waba_id,
-              }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-              setError(data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed"));
-              toast.error(
-                data.error ??
-                (locale === "ar" ? "فشل الربط" : "Connection failed"),
-              );
-              return;
-            }
-
-            setError(null);
-            toast.success(
-              locale === "ar"
-                ? "✅ تم ربط Meta بنجاح"
-                : "✅ Meta connected successfully",
-            );
-
-            onSuccess({
-              phone_number_id: data.phone_number_id,
-              waba_id: data.waba_id,
-              display_phone_number: data.display_phone_number,
-            });
-          } catch {
-            setError(locale === "ar" ? "خطأ في الاتصال بالسيرفر" : "Server connection error");
-            toast.error(
-              locale === "ar"
-                ? "خطأ في الاتصال بالسيرفر"
-                : "Server connection error",
-            );
-          } finally {
-            setLoading(false);
-          }
-        })();
+        setFlowStep("received_auth_code");
+        // Proceed directly with authorization code to backend
+        completeSignupOnBackend(code, redirectUri);
       },
       {
-        config_id: process.env.NEXT_PUBLIC_META_CONFIG_ID!,
+        config_id: configId,
         response_type: "code",
         override_default_response_type: true,
         extras: {
           setup: {},
-          featureType: "",
-          sessionInfoVersion: "2",
-          // ── FIX: redirect_uri must be passed here too ──────────────────
-          redirect_uri: redirectUri,
+          sessionInfoVersion: "3",
         },
       },
     );
@@ -273,13 +278,15 @@ export default function EmbeddedSignupButton({
       <Button
         type="button"
         onClick={launchSignup}
-        disabled={!sdkReady || loading}
+        disabled={!sdkReady || isLoading}
         className="w-full gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold"
       >
-        {loading ? (
+        {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            {locale === "ar" ? "جاري الربط..." : "Connecting..."}
+            {flowStep === "sending_to_backend"
+              ? (locale === "ar" ? "جاري الحفظ والربط..." : "Saving and connecting...")
+              : (locale === "ar" ? "جاري الربط..." : "Connecting...")}
           </>
         ) : (
           <>
@@ -295,10 +302,10 @@ export default function EmbeddedSignupButton({
         </p>
       )}
 
-      {loading && (
+      {isLoading && (
         <button
           onClick={() => {
-            setLoading(false);
+            setFlowStep("idle");
             setError(null);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
           }}
