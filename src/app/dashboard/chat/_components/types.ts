@@ -21,7 +21,9 @@ export interface Conversation {
 }
 export interface Message {
   id: string; content: string | null; type: string;
-  direction: string; status: string; mediaUrl: string | null; createdAt: string;
+  direction: string; status: string; senderType?: "human" | "ai" | "bot" | "system";
+  contactId?: string;
+  mediaUrl: string | null; createdAt: string;
   reactions?: { emoji: string; senderId: string }[];
   replyToMessageId?: string | null;
   replyTo?: { id: string; content: string | null; type: string; mediaUrl: string | null; direction: string } | null;

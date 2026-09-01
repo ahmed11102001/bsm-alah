@@ -215,7 +215,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
     take: 200,
     select: {
       id: true, content: true, type: true,
-      direction: true, status: true,
+      direction: true, status: true, senderType: true,
       mediaUrl: true, createdAt: true,
       replyToMessageId: true,
       replyTo: { select: { id: true, content: true, type: true, mediaUrl: true, direction: true } },

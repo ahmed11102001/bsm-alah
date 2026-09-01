@@ -19,6 +19,7 @@ import {
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
   ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload,
   MessageCircle, Globe, Users, ListChecks, Wand2, Headphones,
+  GraduationCap, FlaskConical,
 } from "lucide-react";
 
 interface AiAgentSettings {
@@ -150,16 +151,29 @@ interface ChatMessage {
   reason?: string | null;
 }
 
+import { useSearchParams } from "next/navigation";
+import AgentTrainingTab from "./AgentTrainingTab";
+
 // تابات الصفحة الرئيسية (نفس منطق تبويبات dashboard/reports — قسم دائم لكل موضوع)
-type MainTab = "overview" | "identity" | "knowledge" | "behavior";
+type MainTab = "overview" | "identity" | "knowledge" | "behavior" | "training" | "test";
 // تابات فرعية جوه "مصادر المعرفة"
 type KnowledgeTab = "catalog" | "customer_service" | "policies" | "website";
 
 export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   const isAr = lang === "ar";
+  const searchParams = useSearchParams();
 
   // ── States ──
   const [mainTab, setMainTab] = useState<MainTab>("overview");
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "training" || searchParams.get("contactId") || searchParams.get("ruleId")) {
+      setMainTab("training");
+    } else if (tabParam === "test") {
+      setMainTab("test");
+    }
+  }, [searchParams]);
   const [knowledgeTab, setKnowledgeTab] = useState<KnowledgeTab>("catalog");
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -740,6 +754,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     { id: "identity", label: isAr ? "الهوية" : "Identity", icon: Wand2 },
     { id: "knowledge", label: isAr ? "مصادر المعرفة" : "Knowledge", icon: Layers },
     { id: "behavior", label: isAr ? "السلوك والحدود" : "Behavior & Limits", icon: Shield },
+    { id: "training", label: isAr ? "تدريب الإيجنت" : "Agent Training", icon: GraduationCap },
+    { id: "test", label: isAr ? "اختبار الإيجنت" : "Test Agent", icon: FlaskConical },
   ];
 
   return (
@@ -1630,6 +1646,150 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               <Label className="text-xs mb-1 block">{isAr ? "قواعد مخصصة (Custom Rules)" : "Custom Rules"}</Label>
               <Textarea value={guardrails.customRules || ""} onChange={e => setGuardrails(g => ({ ...g, customRules: e.target.value }))} placeholder={isAr ? "مثال: لو سألوا عن الشحن الدولي قول مش متاح حالياً." : "E.g. If asked about international shipping, reply not available."} className="min-h-[80px] text-xs resize-none rounded-xl" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ تدريب الإيجنت ═══════════════ */}
+      {mainTab === "training" && (
+        <AgentTrainingTab lang={lang} />
+      )}
+
+      {/* ═══════════════ اختبار الإيجنت ═══════════════ */}
+      {mainTab === "test" && (
+        <div className="bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/80 pb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <FlaskConical className="w-5 h-5 text-emerald-500" />
+                {isAr ? "اختبار وني المباشر (Agent Live Simulator)" : "Wani Live Simulator"}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {isAr
+                  ? "جرّب التحدث مع وني كأنك عميل، واختبر كيف يستخدم الكتالوج والسياسات وقواعد السلوك التي قمت بتدريبه عليها."
+                  : "Simulate live conversations to test how Wani uses knowledge sources and training rules."}
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setChatMessages([
+                  {
+                    id: "welcome",
+                    sender: "ai",
+                    text: isAr
+                      ? "أهلاً! أنا وني، مساعدك الذكي التجريبي. جرّب تسألني عن أي منتج أو سياسة لتجربة ردودي live ✨"
+                      : "Hey! I'm Wani, your test AI assistant. Try asking me about a product or policy to test my replies live ✨",
+                    time: new Date().toLocaleTimeString(isAr ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+                  },
+                ]);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-all"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              {isAr ? "إعادة ضبط المحادثة" : "Reset Chat"}
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-[420px] max-h-[550px] overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200/60 dark:border-gray-800">
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex flex-col max-w-[85%] ${
+                  msg.sender === "user" ? "mr-auto items-end" : "ml-auto items-start"
+                }`}
+              >
+                <div
+                  className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                    msg.sender === "user"
+                      ? "bg-emerald-600 text-white rounded-tl-none"
+                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tr-none"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                  {msg.matchedProducts && msg.matchedProducts.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2">
+                      <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        🛍️ {isAr ? "المنتج المقترح من الكتالوج:" : "Suggested Product:"}
+                      </p>
+                      {msg.matchedProducts.map((prod) => (
+                        <div
+                          key={prod.id}
+                          className="flex items-center gap-2 bg-emerald-50/50 dark:bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/20"
+                        >
+                          {prod.images?.[0] && (
+                            <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
+                          )}
+                          <div className="truncate text-[11px]">
+                            <p className="font-bold text-gray-900 dark:text-gray-100 truncate">{prod.name}</p>
+                            <p className="text-emerald-700 dark:text-emerald-300 font-semibold">
+                              {prod.price} {prod.currency || "EGP"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {msg.action === "handoff" && (
+                    <div className="mt-2 p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/20 flex items-center gap-1">
+                      ⚠️ {isAr ? "تم تحويل المحادثة لبشر" : "Handoff to human triggered"}: {msg.reason}
+                    </div>
+                  )}
+                  {msg.knowledgeSources && msg.knowledgeSources.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                      <p className="mb-1 text-[9px] font-semibold text-gray-400">
+                        {isAr ? "مصادر المعرفة المستخدمة في الرد:" : "Knowledge sources used in this reply:"}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {msg.knowledgeSources.map((source) => (
+                          <span
+                            key={source}
+                            className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 text-[9px] text-emerald-700 dark:text-emerald-300"
+                          >
+                            ✓{" "}
+                            {source === "brand"
+                              ? isAr
+                                ? "هوية البراند"
+                                : "Brand identity"
+                              : source === "catalog"
+                              ? isAr
+                                ? "الكتالوج"
+                                : "Catalog"
+                              : source === "policies"
+                              ? isAr
+                                ? "السياسات"
+                                : "Policies"
+                              : isAr
+                              ? "قواعد السلوك"
+                              : "Behavior rules"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendTestMessage();
+              }}
+              placeholder={isAr ? "اكتب رسالة تجريبية لتختبر رد الإيجنت..." : "Type a test message..."}
+              className="rounded-2xl text-xs py-5 bg-gray-50 dark:bg-gray-900/50"
+            />
+            <Button
+              onClick={sendTestMessage}
+              disabled={sendingTest || !inputMessage.trim()}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl px-5 py-5 flex-shrink-0 font-bold"
+            >
+              {sendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
           </div>
         </div>
       )}

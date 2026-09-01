@@ -419,3 +419,74 @@ export const AdminAddEvidenceSchema = z.object({
   note: z.string().trim().max(2000).optional(),
 });
 export type AdminAddEvidenceInput = z.infer<typeof AdminAddEvidenceSchema>;
+
+// ─── AI Agent Training ───────────────────────────────────────────────────────
+
+export const PolicyTypeEnum = z.enum([
+  "return_policy",
+  "shipping_policy",
+  "payment_policy",
+  "warranty_policy",
+  "privacy_policy",
+  "custom",
+]);
+
+export const TrainingRuleExtractionSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("faq"),
+    question: z.string().trim().min(3, "السؤال يجب أن يكون 3 أحرف على الأقل").max(300),
+    answer: z.string().trim().min(3, "الإجابة يجب أن تكون 3 أحرف على الأقل").max(2000),
+    confidence: z.number().min(0).max(1),
+    clarificationNeeded: z.string().trim().max(300).nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("customer_issue"),
+    problem: z.string().trim().min(3, "المشكلة يجب أن تكون 3 أحرف على الأقل").max(300),
+    resolution: z.string().trim().min(3, "الحل يجب أن يكون 3 أحرف على الأقل").max(2000),
+    confidence: z.number().min(0).max(1),
+    clarificationNeeded: z.string().trim().max(300).nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("policy"),
+    title: z.string().trim().min(2, "عنوان السياسة قصير جداً").max(200),
+    content: z.string().trim().min(3, "محتوى السياسة قصير جداً").max(2000),
+    policyType: PolicyTypeEnum,
+    existingPolicyId: z.string().nullable().optional(),
+    confidence: z.number().min(0).max(1),
+    clarificationNeeded: z.string().trim().max(300).nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("guardrail"),
+    content: z.string().trim().min(3, "القاعدة يجب أن تكون 3 أحرف على الأقل").max(1000),
+    confidence: z.number().min(0).max(1),
+    clarificationNeeded: z.string().trim().max(300).nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("sales_behavior"),
+    field: z.enum([
+      "suggestAlternatives",
+      "suggestUpsell",
+      "suggestCrossSell",
+      "suggestDiscounts",
+      "maxSuggestedProducts",
+      "goal",
+    ]),
+    value: z.union([z.boolean(), z.number(), z.string()]),
+    confidence: z.number().min(0).max(1),
+    clarificationNeeded: z.string().trim().max(300).nullable().optional(),
+  }),
+]);
+
+export type TrainingRuleExtractionOutput = z.infer<typeof TrainingRuleExtractionSchema>;
+
+export const TrainingExtractInputSchema = z.object({
+  feedback: z.string().trim().min(2, "يرجى كتابة تعليق أو توجيه للتدريب"),
+  contactId: z.string().optional().nullable(),
+  messageId: z.string().optional().nullable(),
+});
+export type TrainingExtractInput = z.infer<typeof TrainingExtractInputSchema>;
+
+export const TrainingApproveInputSchema = z.object({
+  overrides: z.record(z.string(), z.any()).optional(),
+});
+export type TrainingApproveInput = z.infer<typeof TrainingApproveInputSchema>;

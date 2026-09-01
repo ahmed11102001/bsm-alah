@@ -3,8 +3,9 @@
 // نُقل من chat/page.tsx
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, CheckCheck, Clock, Copy, FileText, Forward, Image as ImageIcon, Loader2, MoreVertical, Paperclip, Reply, X } from "lucide-react";
+import { Check, CheckCheck, Clock, Copy, FileText, Forward, Image as ImageIcon, Loader2, MoreVertical, Paperclip, Reply, X, GraduationCap, MessageSquareWarning } from "lucide-react";
 import { t, type Lang } from "./i18n";
 import type { Message } from "./types";
 import { mediaSrc, linkify, timeStr } from "./utils";
@@ -14,9 +15,10 @@ const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 export function Bubble({
-  msg, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark,
+  msg, contactId, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark,
 }: {
   msg: Message;
+  contactId?: string;
   onReact?: (msgId: string, emoji: string) => void;
   onReply?: (msg: Message) => void;
   onCopy?: (msg: Message) => void;
@@ -25,7 +27,9 @@ export function Bubble({
   lang: Lang;
   dark: boolean;
 }) {
+  const router = useRouter();
   const isMe = msg.direction === "outbound";
+  const isAiMessage = msg.senderType === "ai";
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
   const [showReactions, setShowReactions] = useState(false);
@@ -104,10 +108,10 @@ export function Bubble({
                 isMe ? "left-0 -translate-x-[calc(100%+6px)]" : "right-0 translate-x-[calc(100%+6px)]"
               } ${
                 showActions ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef] hover:bg-[#2d3d45]" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+              } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef] hover:bg-[#2d3d45]" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+            >
               <MoreVertical className="w-4 h-4" />
             </button>
-
             {showActions && (
               <div
                 className={`absolute top-full mt-1 z-40 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg ${
@@ -118,6 +122,23 @@ export function Bubble({
                 {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={() => { setShowActions(false); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
                 {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={() => { setShowActions(false); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
                 {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={() => { setShowActions(false); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
+                {isAiMessage && (
+                  <button
+                    type="button"
+                    aria-label={lang === "ar" ? "تدريب الإيجنت / تصحيح الرد" : "Train Agent / Correct Reply"}
+                    title={lang === "ar" ? "تدريب الإيجنت / تصحيح الرد" : "Train Agent / Correct Reply"}
+                    onClick={() => {
+                      setShowActions(false);
+                      const targetContactId = contactId || msg.contactId || "";
+                      router.push(
+                        `/dashboard/ai-agent?tab=training${targetContactId ? `&contactId=${targetContactId}` : ""}&messageId=${msg.id}`
+                      );
+                    }}
+                    className="p-1.5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded flex items-center gap-1 text-xs font-semibold"
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
           </>

@@ -1,11 +1,11 @@
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "binary"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -13,18 +13,13 @@ model User {
   email                    String                    @unique
   name                     String?
   phone                    String?
-  password                 String? // nullable — يوزر Google مش عنده password
+  password                 String?
   image                    String?
   emailVerified            DateTime?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   apiKey                   String?                   @unique
   role                     UserRole                  @default(OWNER)
-  // مصدر إنشاء الحساب — بيحدد هل اليوزر لازم يمر على Google Onboarding ولا لأ.
-  // MANUAL = سجل بإيميل وباسورد بنفسه (البيانات كلها اتاخدت وقت التسجيل)
-  // GOOGLE = سجل بـ Continue with Google (ممكن يحتاج يكمل بيانات زي رقم الواتساب)
-  // TEAM_INVITE = انضم كـ Team Member عن طريق دعوة — لا يمر على أي Onboarding إطلاقًا
-  signupMethod             SignupMethod              @default(MANUAL)
   inviteCode               String?                   @unique
   parentId                 String?
   workspaceId              String?
@@ -38,56 +33,58 @@ model User {
   workingHours             String?
   aiTone                   String                    @default("friendly")
   onboardingCompleted      Boolean                   @default(false)
-  accounts                 Account[]
+  signupMethod             SignupMethod              @default(MANUAL)
   aiAgent                  AIAgent?
+  aiGuardrail              AIGuardrail?
+  accounts                 Account[]
+  affiliate                Affiliate?                @relation("UserAffiliate")
   audiences                Audience[]
-  automationRules          AutomationRule[]
+  automationAnalytics      AutomationAnalytics[]
   automationInteractions   AutomationInteraction[]
+  automationRules          AutomationRule[]
+  brandFAQs                BrandFAQ[]
+  brandPolicies            BrandPolicy[]
+  customerIssues           CustomerIssue[]
+  customerServiceSettings  CustomerServiceSettings?
+  agentTrainingRules       AgentTrainingRule[]
   campaigns                Campaign[]
+  campaignFollowUpRecords  CampaignFollowUpRecord[]
+  campaignFollowUpSettings CampaignFollowUpSetting[]
+  assignedConversations    Contact[]                 @relation("AssignedConversations")
   contacts                 Contact[]
   easyOrdersStore          EasyOrdersStore?
-  wooCommerceStore         WooCommerceStore?
+  emailVerificationTokens  EmailVerificationToken[]
+  googleSheetsConnections  GoogleSheetsConnection[]
+  sentMessages             Message[]                 @relation("MessageSender")
   messages                 Message[]
-  sentMessages              Message[]                 @relation("MessageSender")
   messageQueues            MessageQueue[]
   notifications            Notification[]
+  reviewedPaymentRequests  PaymentRequest[]          @relation("PaymentRequestReviewer")
+  paymentRequests          PaymentRequest[]          @relation("UserPaymentRequests")
+  products                 Product[]
+  productSyncLogs          ProductSyncLog[]
+  protectionAuditLogs      ProtectionAuditLog[]
+  reviewedProtectionClaims ProtectionClaim[]         @relation("ReviewedProtectionClaims")
+  protectionClaims         ProtectionClaim[]
+  pushSubscriptions        PushSubscription[]
+  referral                 Referral?                 @relation("UserReferral")
+  receivedRewards          ReferralReward[]          @relation("UserReferralRewards")
+  salesBehaviorSettings    SalesBehaviorSettings?
   shopifyStore             ShopifyStore?
   smartFollowUpSettings    SmartFollowUpSetting[]
   storeAutomations         StoreAutomation[]
   storeOrders              StoreOrder[]
   subscription             Subscription?
+  teamInvitations          TeamInvitation[]          @relation("UserTeamInvitations")
   templates                Template[]
   trackedClicks            TrackedClick[]
   parent                   User?                     @relation("TeamHierarchy", fields: [parentId], references: [id])
   members                  User[]                    @relation("TeamHierarchy")
-  assignedConversations    Contact[]                 @relation("AssignedConversations")
-  whatsappAccount          WhatsAppAccount?
-  pushSubscriptions        PushSubscription[]
-  automationAnalytics      AutomationAnalytics[]
-  campaignFollowUpSettings CampaignFollowUpSetting[]
-  campaignFollowUpRecords  CampaignFollowUpRecord[]
-  products                 Product[]
-  brandFAQs                BrandFAQ[]
-  brandPolicies            BrandPolicy[]
-  customerServiceSettings  CustomerServiceSettings?
-  customerIssues           CustomerIssue[]
-  aiGuardrail              AIGuardrail?
-  salesBehaviorSettings    SalesBehaviorSettings?
-  websitePages             WebsitePage[]
-  websiteCrawlSettings     WebsiteCrawlSettings?
-  productSyncLogs          ProductSyncLog[]
   waniPartnerCards         WaniPartnerCard[]
-  googleSheetsConnections  GoogleSheetsConnection[]
-  emailVerificationTokens  EmailVerificationToken[]
-  protectionClaims         ProtectionClaim[]
-  reviewedProtectionClaims ProtectionClaim[]         @relation("ReviewedProtectionClaims")
-  protectionAuditLogs      ProtectionAuditLog[]
-  affiliate                Affiliate?                @relation("UserAffiliate")
-  referral                 Referral?                 @relation("UserReferral")
-  receivedRewards          ReferralReward[]          @relation("UserReferralRewards")
-  teamInvitations          TeamInvitation[]          @relation("UserTeamInvitations")
-  paymentRequests          PaymentRequest[]          @relation("UserPaymentRequests")
-  reviewedPaymentRequests  PaymentRequest[]          @relation("PaymentRequestReviewer")
+  websiteCrawlSettings     WebsiteCrawlSettings?
+  websitePages             WebsitePage[]
+  whatsappAccount          WhatsAppAccount?
+  wooCommerceStore         WooCommerceStore?
 
   @@index([email])
   @@index([workspaceId])
@@ -95,23 +92,20 @@ model User {
   @@index([deletedAt])
 }
 
-// ─── Account — مطلوب لـ NextAuth PrismaAdapter + Google OAuth ────────────────
-// بيخزن الـ access_token والـ refresh_token الخاصة بـ Google لكل يوزر
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -128,12 +122,12 @@ model Subscription {
   periodResetAt            DateTime           @default(now())
   aiTokensUsedThisMonth    Int                @default(0)
   aiTokensBonusBalance     Int                @default(0)
-  aiTokensBonusExpiresAt   DateTime?
   currentPeriodStart       DateTime           @default(now())
   currentPeriodEnd         DateTime?
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
   expiryWarningSentAt      DateTime?
+  aiTokensBonusExpiresAt   DateTime?
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -157,47 +151,38 @@ model EmailVerificationToken {
   userId    String
   expires   DateTime
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
 }
 
 model WhatsAppAccount {
-  id             String         @id @default(cuid())
-  userId         String         @unique
-  accessToken    String
-  phoneNumberId  String
-  wabaId         String         @unique
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  tokenStatus    WhatsAppTokenStatus @default(UNKNOWN)
-  tokenExpiresAt DateTime?
-  lastTokenCheckAt DateTime?
+  id                       String                  @id @default(cuid())
+  userId                   String                  @unique
+  accessToken              String
+  phoneNumberId            String
+  wabaId                   String                  @unique
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  backoffCount             Int                     @default(0)
+  backoffUntil             DateTime?
+  dailyResetAt             DateTime                @default(now())
+  dailySentCount           Int                     @default(0)
+  messagingTier            Int                     @default(1)
+  tokenStatus              WhatsAppTokenStatus     @default(UNKNOWN)
+  tokenExpiresAt           DateTime?
+  lastTokenCheckAt         DateTime?
   tokenDataAccessExpiresAt DateTime?
-  tokenWarning7SentAt DateTime?
-  tokenWarning3SentAt DateTime?
-  tokenWarning1SentAt DateTime?
-  tokenExpiredNotifiedAt DateTime?
-  tokenInvalidNotifiedAt DateTime?
-  backoffCount   Int            @default(0)
-  backoffUntil   DateTime?
-  dailyResetAt   DateTime       @default(now())
-  dailySentCount Int            @default(0)
-  messagingTier  Int            @default(1)
-  messageQueues  MessageQueue[]
-  automationInteractions AutomationInteraction[]
-  protectionClaims       ProtectionClaim[]
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-enum WhatsAppTokenStatus {
-  ACTIVE
-  EXPIRING_SOON
-  EXPIRED
-  INVALID
-  UNKNOWN
+  tokenWarning7SentAt      DateTime?
+  tokenWarning3SentAt      DateTime?
+  tokenWarning1SentAt      DateTime?
+  tokenExpiredNotifiedAt   DateTime?
+  tokenInvalidNotifiedAt   DateTime?
+  automationInteractions   AutomationInteraction[]
+  messageQueues            MessageQueue[]
+  protectionClaims         ProtectionClaim[]
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MessageQueue {
@@ -253,25 +238,25 @@ model Notification {
 }
 
 model Audience {
-  id        String    @id @default(cuid())
-  name      String
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  type      String    @default("excel")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contacts  Contact[]
+  id                     String                  @id @default(cuid())
+  name                   String
+  userId                 String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  type                   String                  @default("excel")
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts               Contact[]
   googleSheetsConnection GoogleSheetsConnection?
 
   @@index([userId])
 }
 
 model GoogleSheetsConnection {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
-  audienceId      String?  @unique
-  accessToken     String?  @db.Text
-  refreshToken    String?  @db.Text
+  audienceId      String?   @unique
+  accessToken     String?
+  refreshToken    String?
   tokenExpiresAt  DateTime?
   spreadsheetId   String?
   spreadsheetName String?
@@ -281,46 +266,44 @@ model GoogleSheetsConnection {
   phoneColumn     String?
   lastSyncAt      DateTime?
   syncInterval    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  audience        Audience? @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  audience        Audience? @relation(fields: [audienceId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, syncInterval, lastSyncAt])
 }
 
 model Contact {
-  id                String             @id @default(cuid())
-  phone             String
-  audienceId        String?
-  createdAt         DateTime           @default(now())
-  name              String?
-  userId            String
-  deletedAt         DateTime?
-  isArchived        Boolean            @default(false)
-  isPinned          Boolean            @default(false)
-  lastMessageAt     DateTime?
-  notes             String?
-  unreadCount       Int                @default(0)
-  updatedAt         DateTime           @updatedAt
-  voiceAgentEnabled Boolean            @default(false)
-  textAiEnabled     Boolean            @default(true)
-  aiStatus          ConversationStatus @default(AUTO)
-  handoffReason     String?
-  handoffAt         DateTime?
-  lastAiRepliedAt   DateTime?
-  // ── Conversation Nudge: عدد الـ nudges اللي اتبعتت في الجلسة الحالية ──
-  // بيتصفّر لما العميل يبعت رسالة جديدة. cap = 1 نُدج لكل فترة سكوت.
-  nudgeCountInThread Int               @default(0)
-  audience          Audience?          @relation(fields: [audienceId], references: [id])
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedToUserId  String?
-  assignedTo        User?              @relation("AssignedConversations", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  messages          Message[]
+  id                     String                  @id @default(cuid())
+  phone                  String
+  audienceId             String?
+  createdAt              DateTime                @default(now())
+  name                   String?
+  userId                 String
+  deletedAt              DateTime?
+  isArchived             Boolean                 @default(false)
+  isPinned               Boolean                 @default(false)
+  lastMessageAt          DateTime?
+  notes                  String?
+  unreadCount            Int                     @default(0)
+  updatedAt              DateTime                @updatedAt
+  voiceAgentEnabled      Boolean                 @default(false)
+  lastAiRepliedAt        DateTime?
+  textAiEnabled          Boolean                 @default(true)
+  aiStatus               ConversationStatus      @default(AUTO)
+  handoffAt              DateTime?
+  handoffReason          String?
+  nudgeCountInThread     Int                     @default(0)
+  assignedToUserId       String?
   automationInteractions AutomationInteraction[]
-  storeOrders       StoreOrder[]
+  assignedTo             User?                   @relation("AssignedConversations", fields: [assignedToUserId], references: [id])
+  audience               Audience?               @relation(fields: [audienceId], references: [id])
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages               Message[]
+  storeOrders            StoreOrder[]
+  agentTrainingRules     AgentTrainingRule[]
 
   @@unique([phone, userId])
   @@index([userId])
@@ -348,8 +331,8 @@ model Template {
   components               Json?
   automationRules          AutomationRule[]
   campaigns                Campaign[]
-  storeAutomations         StoreAutomation[]
   campaignFollowUpSettings CampaignFollowUpSetting[]
+  storeAutomations         StoreAutomation[]
   user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([metaId, userId])
@@ -390,35 +373,35 @@ model Campaign {
 }
 
 model Message {
-  id          String            @id @default(cuid())
-  content     String?
-  userId      String
-  senderUserId String?
-  campaignId  String?
-  contactId   String
-  whatsappId  String?           @unique
-  createdAt   DateTime          @default(now())
-  deletedAt   DateTime?
-  deliveredAt DateTime?
-  error       String?
-  mediaUrl    String?
-  readAt      DateTime?
-  sentAt      DateTime?
-  type        MessageType       @default(text)
-  updatedAt   DateTime          @updatedAt
-  status      MessageStatus     @default(pending)
-  direction   MessageDirection  @default(outbound)
-  senderType  MessageSenderType @default(human)
-  reactions   Json?             @default("[]")
+  id               String            @id @default(cuid())
+  content          String?
+  userId           String
+  campaignId       String?
+  contactId        String
+  whatsappId       String?           @unique
+  createdAt        DateTime          @default(now())
+  deletedAt        DateTime?
+  deliveredAt      DateTime?
+  error            String?
+  mediaUrl         String?
+  readAt           DateTime?
+  sentAt           DateTime?
+  type             MessageType       @default(text)
+  updatedAt        DateTime          @updatedAt
+  status           MessageStatus     @default(pending)
+  direction        MessageDirection  @default(outbound)
+  senderType       MessageSenderType @default(human)
+  reactions        Json?             @default("[]")
   replyToMessageId String?
   automationRuleId String?
-  campaign    Campaign?         @relation(fields: [campaignId], references: [id])
-  contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  senderUser  User?             @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
-  replyTo      Message?         @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
-  replies      Message[]        @relation("MessageReply")
-  automationRule AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
+  senderUserId     String?
+  automationRule   AutomationRule?   @relation(fields: [automationRuleId], references: [id])
+  campaign         Campaign?         @relation(fields: [campaignId], references: [id])
+  contact          Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  replyTo          Message?          @relation("MessageReply", fields: [replyToMessageId], references: [id])
+  replies          Message[]         @relation("MessageReply")
+  senderUser       User?             @relation("MessageSender", fields: [senderUserId], references: [id])
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([senderUserId])
@@ -480,45 +463,34 @@ model Coupon {
 /// تاب "WANI Partner" في /dashboard/admin (src/app/dashboard/page.tsx بيعرض
 /// المعتمد والمفعّل بس).
 model WaniPartnerCard {
-  id     String @id @default(cuid())
-  userId String // حتى 10 كروت لكل يوزر
-
+  id              String                @id @default(cuid())
   /// شكل/حركة الكارت — رقم من 1 لـ 5 (كل رقم تصميم وانيميشن مختلف)
-  template  Int    @default(1)
-  brandName String
-  title     String
-  tagline   String
-  ctaText   String
-  ctaLink   String
+  template        Int                   @default(1)
+  brandName       String
+  title           String
+  tagline         String
+  ctaText         String
+  ctaLink         String
   /// صورة الخلفية بس (Cloudinary) — من غير أي نص عليها، النص بيتحط بالكود فوقها
-  image     String
-
+  image           String
+  /// تشغيل/إيقاف — بيتحكم فيه اليوزر نفسه بعد الموافقة، من غير ما يحتاج مراجعة تانية
+  active          Boolean               @default(true)
+  /// ترتيب الظهور في الـ rotation — الأدمن بيظبطه بين الكروت المعتمدة
+  order           Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  userId          String
   /// حالة مراجعة الأدمن — أي تعديل في المحتوى بيرجّعها pending تاني
   status          WaniPartnerCardStatus @default(pending)
   rejectionReason String?
   reviewedAt      DateTime?
   reviewedBy      String?
-
-  /// تشغيل/إيقاف — بيتحكم فيه اليوزر نفسه بعد الموافقة، من غير ما يحتاج مراجعة تانية
-  active Boolean @default(true)
-  /// ترتيب الظهور في الـ rotation — الأدمن بيظبطه بين الكروت المعتمدة
-  order  Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([active])
   @@index([order])
   @@index([userId])
-}
-
-enum WaniPartnerCardStatus {
-  pending
-  approved
-  rejected
 }
 
 model ShopifyStore {
@@ -559,78 +531,68 @@ model WooCommerceStore {
   userId         String            @unique
   storeName      String
   storeUrl       String?
-  consumerKey    String?
-  consumerSecret String?
-  isConnected    Boolean           @default(false)
   isActive       Boolean           @default(true)
   totalSynced    Int               @default(0)
   lastSyncAt     DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders         StoreOrder[]
+  consumerKey    String?
+  consumerSecret String?
+  isConnected    Boolean           @default(false)
   automations    StoreAutomation[]
+  orders         StoreOrder[]
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model AutomationRule {
-  id                String                @id @default(cuid())
+  id                String                  @id @default(cuid())
   userId            String
   name              String
-  isEnabled         Boolean               @default(true)
+  isEnabled         Boolean                 @default(true)
   triggerType       TriggerType
   triggerValue      String?
   replyType         ReplyType
   replyContent      String?
-  replyMediaUrl     String? // صورة اختيارية ترسل مع الرد (Cloudinary URL)
+  replyMediaUrl     String?
   templateId        String?
   extraInstructions String?
   humanKeywords     String[]
-  pauseOnReply      Boolean               @default(true)
+  pauseOnReply      Boolean                 @default(true)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   interactiveConfig Json?
   analytics         AutomationAnalytics[]
   interactions      AutomationInteraction[]
+  template          Template?               @relation(fields: [templateId], references: [id])
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages          Message[]
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  template          Template?             @relation(fields: [templateId], references: [id])
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isEnabled])
   @@index([triggerType])
   @@index([userId, triggerType])
 }
 
-enum AutomationInteractionState {
-  WAITING
-  PROCESSING
-  SUPERSEDED
-  COMPLETED
-  STALE
-  FAILED
-}
-
 model AutomationInteraction {
-  id                 String                     @id @default(cuid())
-  userId             String
-  contactId          String
-  whatsappAccountId  String
-  phoneNumberId      String
-  automationRuleId   String
-  outboundMessageId  String?
-  buttonSnapshot     Json
-  state              AutomationInteractionState @default(WAITING)
-  selectedButtonId   String?
-  processedEventId   String?                    @unique
-  createdAt          DateTime                   @default(now())
-  updatedAt          DateTime                   @updatedAt
-  completedAt        DateTime?
-
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contact         Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
-  automationRule AutomationRule  @relation(fields: [automationRuleId], references: [id], onDelete: Cascade)
+  id                String                     @id @default(cuid())
+  userId            String
+  contactId         String
+  whatsappAccountId String
+  phoneNumberId     String
+  automationRuleId  String
+  outboundMessageId String?
+  buttonSnapshot    Json
+  state             AutomationInteractionState @default(WAITING)
+  selectedButtonId  String?
+  processedEventId  String?                    @unique
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  completedAt       DateTime?
+  automationRule    AutomationRule             @relation(fields: [automationRuleId], references: [id], onDelete: Cascade)
+  contact           Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount   WhatsAppAccount            @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
 
   @@index([userId, contactId, state])
   @@index([contactId, state, createdAt])
@@ -639,39 +601,38 @@ model AutomationInteraction {
 }
 
 model AIAgent {
-  id                String                @id @default(cuid())
-  userId            String                @unique
-  isEnabled         Boolean               @default(false)
-  provider          AIProvider            @default(gemini)
-  brandName         String?
-  businessDesc      String?
-  productsInfo      String?
-  pricingInfo       String?
-  workingHours      String?
-  tone              String                @default("friendly")
-  systemPrompt      String?
-  languageMode      String                @default("auto")
-  websiteUrl        String?
-  websiteButtonText String?
-  pauseMinutes      Int                   @default(10)
-  handoffResumeMinutes Int?               @default(3)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  elevenLabsEnabled Boolean               @default(false)
-  elevenLabsApiKey  String?
-  elevenLabsAgentId String?
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analytics         AutomationAnalytics[]
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  isEnabled            Boolean               @default(false)
+  provider             AIProvider            @default(gemini)
+  brandName            String?
+  businessDesc         String?
+  productsInfo         String?
+  pricingInfo          String?
+  workingHours         String?
+  tone                 String                @default("friendly")
+  systemPrompt         String?
+  pauseMinutes         Int                   @default(10)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  elevenLabsEnabled    Boolean               @default(false)
+  elevenLabsApiKey     String?
+  elevenLabsAgentId    String?
+  languageMode         String                @default("auto")
+  websiteButtonText    String?
+  websiteUrl           String?
+  handoffResumeMinutes Int?                  @default(3)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics            AutomationAnalytics[]
 }
 
-// ── Product Catalog ───────────────────────────────────────────────────────────
 model Product {
   id                  String        @id @default(cuid())
   userId              String
   source              ProductSource
   externalId          String
   name                String
-  description         String?       @db.Text
+  description         String?
   price               Float?
   compareAtPrice      Float?
   currency            String        @default("EGP")
@@ -681,82 +642,48 @@ model Product {
   url                 String?
   category            String?
   tags                String[]      @default([])
-  relatedProductIds   String[]      @default([])
-  aiNotes             String?       @db.Text
-  aiKeywords          String[]      @default([])
-  aiSalesInstructions String?       @db.Text
   isActive            Boolean       @default(true)
-  searchText          String        @db.Text
+  searchText          String
   lastSyncedAt        DateTime?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedProductIds   String[]      @default([])
+  aiNotes             String?
+  aiKeywords          String[]      @default([])
+  aiSalesInstructions String?
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([source, externalId, userId])
   @@index([userId, isActive])
   @@index([userId, source])
 }
 
-// ── FAQ (الأسئلة الشائعة) ─────────────────────────────────────────────────────
 model BrandFAQ {
   id        String   @id @default(cuid())
   userId    String
   question  String
-  answer    String   @db.Text
+  answer    String
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ── سياسات البراند ────────────────────────────────────────────────────────────
 model BrandPolicy {
   id        String     @id @default(cuid())
   userId    String
   type      PolicyType
   title     String
-  content   String     @db.Text
+  content   String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-// ── Customer Service Settings (إعدادات ومعرفة خدمة العملاء) ─────────────────────
-model CustomerServiceSettings {
-  id                     String   @id @default(cuid())
-  userId                 String   @unique
-  generalSupportInfo     String?  @db.Text
-  supportProcess         String?  @db.Text
-  escalationInstructions String?  @db.Text
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ── Customer Issues & Solutions (مشاكل العملاء وحلولها) ─────────────────────────
-model CustomerIssue {
-  id         String   @id @default(cuid())
-  userId     String
-  problem    String   @db.Text
-  resolution String   @db.Text
-  sortOrder  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ── Guardrails (قواعد وحدود المساعد) ──────────────────────────────────────────
 model AIGuardrail {
   id                      String   @id @default(cuid())
   userId                  String   @unique
@@ -766,15 +693,67 @@ model AIGuardrail {
   noSharePersonal         Boolean  @default(true)
   strictKnowledgeOnly     Boolean  @default(true)
   alwaysHandoffComplaints Boolean  @default(true)
-  responseStyle           String   @default("natural")
-  customRules             String?  @db.Text
+  customRules             String?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responseStyle           String   @default("natural")
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ── Product Sync Status & Log ────────────────────────────────────────────────
+model CustomerIssue {
+  id         String   @id @default(cuid())
+  userId     String
+  problem    String   @db.Text
+  resolution String   @db.Text
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CustomerServiceSettings {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  generalSupportInfo     String?  @db.Text
+  supportProcess         String?  @db.Text
+  escalationInstructions String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AgentTrainingRule {
+  id               String              @id @default(cuid())
+  userId           String
+  contactId        String?
+  messageId        String?
+  feedback         String              @db.Text
+  contextSnapshot  Json?
+  type             TrainingRuleType?
+  content          String?             @db.Text
+  extractedData    Json?
+  appliesTo        String?
+  status           TrainingRuleStatus  @default(pending)
+  confidence       Float?
+  extractionModel  String?
+  extractionError  String?
+  appliedTable     String?
+  appliedRecordId  String?
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([contactId])
+}
+
 model ProductSyncLog {
   id             String        @id @default(cuid())
   userId         String
@@ -785,8 +764,7 @@ model ProductSyncLog {
   errorMessage   String?
   startedAt      DateTime      @default(now())
   completedAt    DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, source])
   @@index([userId, startedAt])
@@ -809,10 +787,9 @@ model AutomationAnalytics {
   metadata         Json?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
-
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  automationRule AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
-  aiAgent        AIAgent?        @relation(fields: [aiAgentId], references: [id], onDelete: SetNull)
+  aiAgent          AIAgent?             @relation(fields: [aiAgentId], references: [id])
+  automationRule   AutomationRule?      @relation(fields: [automationRuleId], references: [id])
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, runAt])
   @@index([userId, source])
@@ -824,49 +801,42 @@ model AutomationAnalytics {
 }
 
 model StoreOrder {
-  id                    String      @id @default(cuid())
-  userId                String
-  externalId            String
-  orderNumber           String?
-  customerName          String?
-  customerPhone         String
-  currency              String      @default("EGP")
-  status                String      @default("pending")
-  confirmationMessageId String?
-  confirmationClaimedAt DateTime?
-  rawData               Json?
-  contactId             String?
-  createdAt             DateTime    @default(now())
-  easyOrdersStoreId     String?
-  orderedAt             DateTime    @default(now())
-  shopifyStoreId        String?
-  wooCommerceStoreId    String?
-  source                OrderSource
-  total                 Float       @default(0)
-
-  // ── idempotency لإرسال "تم الشحن" ─────────────────────────────────────────
-  shippedMessageId String?
-  shippedAt        DateTime?
-
-  // ── حالة أتمتة المتابعة الذكية للشحن ─────────────────────────────────────
+  id                     String                  @id @default(cuid())
+  userId                 String
+  externalId             String
+  orderNumber            String?
+  customerName           String?
+  customerPhone          String
+  currency               String                  @default("EGP")
+  status                 String                  @default("pending")
+  rawData                Json?
+  contactId              String?
+  createdAt              DateTime                @default(now())
+  easyOrdersStoreId      String?
+  orderedAt              DateTime                @default(now())
+  shopifyStoreId         String?
+  wooCommerceStoreId     String?
+  source                 OrderSource
+  total                  Float                   @default(0)
+  confirmationMessageId  String?
   followUpMessageId      String?
+  followUpRating         Int?
   followUpSentAt         DateTime?
   followUpStage          ShippingFollowUpStage?
   followUpStageExpiresAt DateTime?
-  followUpRating         Int?
-
-  // ── حالة أتمتة متابعة تأكيد الأوردر ─────────────────────────────────────
-  cancelReasonStage     OrderCancelReasonStage?
-  cancelReasonExpiresAt DateTime?
-  cancelReason          String?
-  cancelReasonMessageId String?
-
-  campaignOrder    CampaignOrder?
-  contact          Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  easyOrdersStore  EasyOrdersStore?  @relation(fields: [easyOrdersStoreId], references: [id])
-  wooCommerceStore WooCommerceStore? @relation(fields: [wooCommerceStoreId], references: [id], onDelete: SetNull)
-  shopifyStore     ShopifyStore?     @relation(fields: [shopifyStoreId], references: [id])
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shippedAt              DateTime?
+  shippedMessageId       String?
+  cancelReason           String?
+  cancelReasonExpiresAt  DateTime?
+  cancelReasonMessageId  String?
+  cancelReasonStage      OrderCancelReasonStage?
+  confirmationClaimedAt  DateTime?
+  campaignOrder          CampaignOrder?
+  contact                Contact?                @relation(fields: [contactId], references: [id])
+  easyOrdersStore        EasyOrdersStore?        @relation(fields: [easyOrdersStoreId], references: [id])
+  shopifyStore           ShopifyStore?           @relation(fields: [shopifyStoreId], references: [id])
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wooCommerceStore       WooCommerceStore?       @relation(fields: [wooCommerceStoreId], references: [id])
 
   @@unique([source, externalId, userId])
   @@index([userId])
@@ -919,7 +889,6 @@ model StoreAutomation {
   userId             String
   type               StoreAutomationType
   isEnabled          Boolean             @default(false)
-  delayMinutes       Int                 @default(0)
   templateId         String?
   sentCount          Int                 @default(0)
   failedCount        Int                 @default(0)
@@ -930,11 +899,12 @@ model StoreAutomation {
   templateVariables  Json?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  delayMinutes       Int                 @default(0)
   easyOrdersStore    EasyOrdersStore?    @relation(fields: [easyOrdersStoreId], references: [id], onDelete: Cascade)
   shopifyStore       ShopifyStore?       @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
-  wooCommerceStore   WooCommerceStore?   @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
   template           Template?           @relation(fields: [templateId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wooCommerceStore   WooCommerceStore?   @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
 
   @@unique([shopifyStoreId, type])
   @@unique([easyOrdersStoreId, type])
@@ -945,31 +915,28 @@ model StoreAutomation {
   @@index([wooCommerceStoreId])
 }
 
-// ── السلة المهجورة — Shopify فقط في المرحلة الأولى ──────────────────────────
 model AbandonedCart {
-  id                 String    @id @default(cuid())
-  userId             String
-  source             String // "shopify" | "woocommerce"
-  externalId         String // checkout token / id
-  customerPhone      String
-  customerName       String?
-  cartTotal          Float?
-  cartItems          Json? // [{ title, quantity, price }]
-  recoveryUrl        String? // رابط إكمال الشراء من Shopify
-  sentAt             DateTime? // وقت إرسال رسالة السلة
-  sendClaimedAt      DateTime? // claim ذري قبل إرسال رسالة السلة
-  recoveredAt        DateTime? // وقت الشراء الفعلي بعد الرسالة
-  shopifyStoreId     String?
-  wooCommerceStoreId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  // ── حالة أتمتة المتابعة الذكية للسلة ─────────────────────────────────────
+  id                     String             @id @default(cuid())
+  userId                 String
+  source                 String
+  externalId             String
+  customerPhone          String
+  customerName           String?
+  cartTotal              Float?
+  cartItems              Json?
+  recoveryUrl            String?
+  sentAt                 DateTime?
+  recoveredAt            DateTime?
+  shopifyStoreId         String?
+  wooCommerceStoreId     String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
   followUpMessageId      String?
+  followUpReason         String?
   followUpSentAt         DateTime?
   followUpStage          CartFollowUpStage?
   followUpStageExpiresAt DateTime?
-  followUpReason         String? // "cart_reason_price_high" | "cart_reason_changed_mind" | "cart_reason_other"
+  sendClaimedAt          DateTime?
 
   @@unique([source, externalId, userId])
   @@index([userId])
@@ -993,7 +960,6 @@ model Article {
   updatedAt   DateTime  @updatedAt
 }
 
-// ── Push Notification Subscriptions ───────────────────────────────────────────
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
@@ -1007,32 +973,6 @@ model PushSubscription {
   @@index([userId])
 }
 
-// ─── Smart Follow-Up ──────────────────────────────────────────────────────────
-
-enum SmartFollowUpType {
-  shipping
-  cart
-  order_confirm
-}
-
-enum OrderCancelReasonStage {
-  AWAITING_REASON
-  DONE
-}
-
-enum ShippingFollowUpStage {
-  SENT
-  AWAITING_RATING
-  AWAITING_PROBLEM_DETAILS
-  DONE
-}
-
-enum CartFollowUpStage {
-  SENT
-  AWAITING_REASON
-  DONE
-}
-
 model SmartFollowUpSetting {
   id                String            @id @default(cuid())
   userId            String
@@ -1040,7 +980,7 @@ model SmartFollowUpSetting {
   isEnabled         Boolean           @default(false)
   triggerDelayDays  Int               @default(3)
   replyDelayMinutes Float             @default(0)
-  texts             Json // shape حسب النوع
+  texts             Json
   sentCount         Int               @default(0)
   failedCount       Int               @default(0)
   lastSentAt        DateTime?
@@ -1051,8 +991,6 @@ model SmartFollowUpSetting {
   @@unique([userId, type])
   @@index([userId])
 }
-
-// ── Campaign Follow-Up ────────────────────────────────────────────────────────
 
 model CampaignFollowUpSetting {
   id                String    @id @default(cuid())
@@ -1068,8 +1006,8 @@ model CampaignFollowUpSetting {
   lastSentAt        DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   template          Template? @relation(fields: [templateId], references: [id])
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, campaignId])
   @@index([userId])
@@ -1095,12 +1033,496 @@ model CampaignFollowUpRecord {
   @@index([userId, followUpMessageId])
 }
 
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  business  String
+  goal      String
+  volume    String
+  lang      String     @default("ar")
+  source    String?
+  status    LeadStatus @default(NEW)
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LeadBotConfig {
+  id             String   @id @default(cuid())
+  ownerId        String   @unique
+  templateId     String?
+  templateName   String?
+  templateLang   String   @default("ar")
+  isActive       Boolean  @default(false)
+  sentCount      Int      @default(0)
+  lastSentLeadId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model DeveloperUser {
+  id                  String                        @id @default(cuid())
+  email               String                        @unique
+  firstName           String
+  lastName            String
+  phone               String
+  password            String
+  status              DeveloperStatus               @default(PENDING_META)
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  notifications       DeveloperNotification[]
+  passwordResetTokens DeveloperPasswordResetToken[]
+  projects            DeveloperProject[]
+  ownedProjects       DeveloperProject[]            @relation("ProjectOwner")
+  otpLogs             OtpLog[]
+
+  @@map("developer_users")
+}
+
+model DeveloperProject {
+  id                     String                   @id @default(cuid())
+  developerId            String
+  name                   String
+  description            String?
+  status                 ProjectStatus            @default(ACTIVE)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  transferredToUserId    String?
+  transferredAt          DateTime?
+  developerRemovedAt     DateTime?
+  ownerId                String?
+  plan                   DeveloperPlan            @default(TRIAL)
+  planRenewsAt           DateTime?
+  planStartedAt          DateTime?
+  trialEndsAt            DateTime?
+  trialMessagesUsed      Int                      @default(0)
+  trialStartedAt         DateTime?
+  trialWarningNotifiedAt DateTime?
+  ownerWelcomeSeenAt     DateTime?
+  planExpiredNotifiedAt  DateTime?
+  planExpiringNotifiedAt DateTime?
+  apiKeys                DeveloperApiKey[]
+  metaConnection         DeveloperMetaConnection?
+  otpTemplates           DeveloperOtpTemplate[]
+  invites                DeveloperProjectInvite[]
+  developer              DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  owner                  DeveloperUser?           @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  @@index([developerId])
+  @@index([ownerId])
+  @@map("developer_projects")
+}
+
+model DeveloperProjectInvite {
+  id          String           @id @default(cuid())
+  projectId   String
+  email       String
+  codeHash    String
+  role        String
+  status      String           @default("PENDING")
+  createdById String
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  project     DeveloperProject @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, status])
+  @@index([email, status])
+  @@map("developer_project_invites")
+}
+
+model DeveloperMetaConnection {
+  id            String           @id @default(cuid())
+  accessToken   String
+  phoneNumberId String
+  wabaId        String
+  displayPhone  String
+  isVerified    Boolean          @default(false)
+  connectedAt   DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  projectId     String           @unique
+  project       DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("developer_meta_connections")
+}
+
+model DeveloperOtpTemplate {
+  id             String                  @id @default(cuid())
+  metaTemplateId String?
+  name           String
+  language       String                  @default("ar")
+  category       TemplateCategory        @default(AUTHENTICATION)
+  status         DeveloperTemplateStatus @default(LOCAL_DRAFT)
+  headerType     String?
+  headerText     String?
+  body           String
+  bodyExample    String?
+  footer         String?
+  rejectedReason String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  projectId      String
+  project        DeveloperProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("developer_otp_templates")
+}
+
+model DeveloperApiKey {
+  id         String                @id @default(cuid())
+  keyHash    String                @unique
+  keyPrefix  String
+  name       String?
+  status     DeveloperApiKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?
+  createdAt  DateTime              @default(now())
+  revokedAt  DateTime?
+  projectId  String
+  project    DeveloperProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("developer_api_keys")
+}
+
+model OtpLog {
+  id            String        @id @default(cuid())
+  developerId   String
+  phone         String
+  token         String        @unique
+  code          String
+  status        OtpLogStatus  @default(PENDING)
+  metaMessageId String?
+  error         String?
+  sentAt        DateTime?
+  verifiedAt    DateTime?
+  expiredAt     DateTime?
+  failedAt      DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  projectId     String
+  developer     DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([token])
+  @@index([phone, developerId])
+  @@index([status])
+  @@map("otp_logs")
+}
+
+model DeveloperNotification {
+  id          String                    @id @default(cuid())
+  developerId String
+  type        DeveloperNotificationType
+  title       String
+  message     String
+  isRead      Boolean                   @default(false)
+  link        String?
+  createdAt   DateTime                  @default(now())
+  developer   DeveloperUser             @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([developerId, isRead, createdAt])
+  @@index([developerId, createdAt])
+  @@map("developer_notifications")
+}
+
+model DeveloperPasswordResetToken {
+  id          String        @id @default(cuid())
+  token       String        @unique
+  developerId String
+  expires     DateTime
+  createdAt   DateTime      @default(now())
+  developer   DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([developerId])
+  @@map("developer_password_reset_tokens")
+}
+
+model SalesBehaviorSettings {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  goal                 SalesGoal @default(balanced)
+  suggestAlternatives  Boolean   @default(true)
+  suggestUpsell        Boolean   @default(true)
+  suggestCrossSell     Boolean   @default(false)
+  suggestDiscounts     Boolean   @default(false)
+  maxSuggestedProducts Int       @default(1)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WebsitePage {
+  id            String                  @id @default(cuid())
+  userId        String
+  url           String
+  title         String?
+  contentHash   String
+  isActive      Boolean                 @default(true)
+  lastCrawledAt DateTime                @default(now())
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  chunks        WebsiteKnowledgeChunk[]
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, url])
+  @@index([userId])
+}
+
+model WebsiteKnowledgeChunk {
+  id         String      @id @default(cuid())
+  pageId     String
+  userId     String
+  content    String
+  searchText String
+  position   Int         @default(0)
+  createdAt  DateTime    @default(now())
+  page       WebsitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model WebsiteCrawlSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  isEnabled Boolean  @default(false)
+  rootUrl   String?
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProtectionClaim {
+  id                String                @id @default(cuid())
+  userId            String
+  whatsappAccountId String
+  phoneNumber       String
+  reportedAt        DateTime              @default(now())
+  banDetectedAt     DateTime
+  status            ProtectionClaimStatus @default(NEEDS_REVIEW)
+  refundAmount      Float?
+  currency          String                @default("EGP")
+  refundStatus      String                @default("NONE")
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  decisionReason    String?
+  adminNotes        String?
+  customerNotes     String?
+  evidenceSnapshot  Json?
+  evidenceFiles     Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  banStatus         BanStatus             @default(CUSTOMER_REPORTED)
+  calculatedRefund  Float?
+  overrideRefund    Float?
+  overrideReason    String?
+  auditLogs         ProtectionAuditLog[]
+  reviewer          User?                 @relation("ReviewedProtectionClaims", fields: [reviewedBy], references: [id])
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount   WhatsAppAccount       @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([whatsappAccountId])
+  @@index([phoneNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ProtectionAuditLog {
+  id          String          @id @default(cuid())
+  claimId     String
+  adminUserId String
+  action      String
+  result      String?
+  details     Json?
+  createdAt   DateTime        @default(now())
+  adminUser   User            @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  claim       ProtectionClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
+  @@index([adminUserId])
+  @@index([createdAt])
+}
+
+model Affiliate {
+  id            String                @id @default(cuid())
+  userId        String?               @unique
+  code          String                @unique
+  name          String?
+  status        AffiliateStatus       @default(ACTIVE)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  user          User?                 @relation("UserAffiliate", fields: [userId], references: [id])
+  referrals     Referral[]
+  ledgerEntries ReferralLedgerEntry[]
+  rewards       ReferralReward[]
+
+  @@index([code])
+  @@index([status])
+  @@index([userId])
+}
+
+model Referral {
+  id             String           @id @default(cuid())
+  affiliateId    String
+  referredUserId String           @unique
+  status         ReferralStatus   @default(PENDING)
+  clickedAt      DateTime?
+  signedUpAt     DateTime         @default(now())
+  qualifiedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  affiliate      Affiliate        @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  referredUser   User             @relation("UserReferral", fields: [referredUserId], references: [id], onDelete: Cascade)
+  rewards        ReferralReward[]
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+model ReferralReward {
+  id               String       @id @default(cuid())
+  affiliateId      String
+  referralId       String
+  referredUserId   String
+  subscriptionId   String?
+  paymentInvoiceId String?      @unique
+  baseAmount       Decimal      @db.Decimal(10, 2)
+  rewardAmount     Decimal      @db.Decimal(10, 2)
+  status           RewardStatus @default(APPROVED)
+  appliedAt        DateTime?
+  reversalReason   String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  rate             Decimal      @db.Decimal(5, 4)
+  affiliate        Affiliate    @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  referral         Referral     @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  referredUser     User         @relation("UserReferralRewards", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([referralId])
+  @@index([status])
+}
+
+model ReferralLedgerEntry {
+  id           String             @id @default(cuid())
+  affiliateId  String
+  type         ReferralLedgerType
+  amount       Decimal            @db.Decimal(10, 2)
+  balanceAfter Decimal            @db.Decimal(10, 2)
+  description  String?
+  referenceId  String?
+  createdAt    DateTime           @default(now())
+  affiliate    Affiliate          @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId, createdAt])
+}
+
+model TeamInvitation {
+  id          String               @id @default(cuid())
+  inviterId   String
+  email       String
+  name        String?
+  role        UserRole             @default(CHAT_ONLY)
+  codeHash    String
+  status      TeamInvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  lastSentAt  DateTime             @default(now())
+  sendCount   Int                  @default(1)
+  acceptedAt  DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  inviter     User                 @relation("UserTeamInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId, status])
+  @@index([email, status])
+  @@index([expiresAt])
+}
+
+model PaymentRequest {
+  id              String               @id @default(cuid())
+  userId          String
+  type            PaymentRequestType
+  planSlug        String?
+  cycle           String?
+  packageId       String?
+  productName     String
+  amount          Int
+  currency        String               @default("EGP")
+  paymentMethod   String?
+  status          PaymentRequestStatus @default(PENDING)
+  requestedAt     DateTime             @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  reviewedBy      User?                @relation("PaymentRequestReviewer", fields: [reviewedById], references: [id])
+  user            User                 @relation("UserPaymentRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+enum WhatsAppTokenStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  INVALID
+  UNKNOWN
+}
+
+enum WaniPartnerCardStatus {
+  pending
+  approved
+  rejected
+}
+
+enum AutomationInteractionState {
+  WAITING
+  SUPERSEDED
+  COMPLETED
+  STALE
+  FAILED
+  PROCESSING
+}
+
+enum SmartFollowUpType {
+  shipping
+  cart
+  order_confirm
+}
+
+enum OrderCancelReasonStage {
+  AWAITING_REASON
+  DONE
+}
+
+enum ShippingFollowUpStage {
+  SENT
+  AWAITING_RATING
+  AWAITING_PROBLEM_DETAILS
+  DONE
+}
+
+enum CartFollowUpStage {
+  SENT
+  AWAITING_REASON
+  DONE
+}
+
 enum CampaignFollowUpStage {
   SENT
   DONE
 }
-
-// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum MessageType {
   text
@@ -1181,7 +1603,6 @@ enum NotificationType {
   NEW_MESSAGE
   STORE_AUTO_SENT
   STORE_AUTO_FAILED
-  SMART_FOLLOWUP_ALERT
   SUBSCRIPTION_EXPIRING
   PAYMENT_FAILED
   WHATSAPP_TOKEN_EXPIRING
@@ -1190,6 +1611,7 @@ enum NotificationType {
   ORDER_CONFIRMED
   ORDER_CANCELLED
   AI_HANDOFF_NEEDED
+  SMART_FOLLOWUP_ALERT
   AUTOMATION_FAILED
   AUTOMATION_LOOP_STOPPED
   TEAM_MEMBER_JOINED
@@ -1291,228 +1713,16 @@ enum LeadStatus {
   LOST
 }
 
-// ── AI Assistant Widget Leads ─────────────────────────────────────────────────
-model Lead {
-  id        String     @id @default(cuid())
-  name      String
-  phone     String
-  business  String
-  goal      String
-  volume    String
-  lang      String     @default("ar")
-  source    String?
-  status    LeadStatus @default(NEW)
-  notes     String?
-  createdAt DateTime   @default(now())
-
-  @@index([status])
-  @@index([createdAt])
-}
-
-// ── Lead Bot Configuration ────────────────────────────────────────────────────
-model LeadBotConfig {
-  id             String   @id @default(cuid())
-  ownerId        String   @unique
-  templateId     String?
-  templateName   String?
-  templateLang   String   @default("ar")
-  isActive       Boolean  @default(false)
-  sentCount      Int      @default(0)
-  lastSentLeadId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([ownerId])
-}
-
-// ============================================================
-// DEVELOPER PORTAL
-// مستقل تماماً — مش بيلمس models التسويق فوق
-// ============================================================
-
-model DeveloperUser {
-  id        String          @id @default(cuid())
-  email     String          @unique
-  firstName String
-  lastName  String
-  phone     String
-  password  String
-  status    DeveloperStatus @default(PENDING_META)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  projects            DeveloperProject[]
-  ownedProjects       DeveloperProject[]            @relation("ProjectOwner")
-  otpLogs             OtpLog[]
-  notifications       DeveloperNotification[]
-  passwordResetTokens DeveloperPasswordResetToken[]
-
-  @@map("developer_users")
-}
-
-model DeveloperProject {
-  id          String        @id @default(cuid())
-  developerId String
-  name        String
-  description String?
-  status      ProjectStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  transferredToUserId String?
-  transferredAt       DateTime?
-
-  ownerId            String?
-  owner              DeveloperUser? @relation("ProjectOwner", fields: [ownerId], references: [id])
-  developerRemovedAt DateTime?
-
-  // ── Plan & Trial (Project-level) ───────────────────────────
-  plan                   DeveloperPlan @default(TRIAL)
-  planStartedAt          DateTime?
-  planRenewsAt           DateTime?
-  planExpiringNotifiedAt DateTime?
-  planExpiredNotifiedAt  DateTime?
-
-  trialStartedAt         DateTime?
-  trialEndsAt            DateTime?
-  trialMessagesUsed      Int       @default(0)
-  trialWarningNotifiedAt DateTime?
-  ownerWelcomeSeenAt     DateTime?
-
-  developer      DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
-  metaConnection DeveloperMetaConnection?
-  apiKeys        DeveloperApiKey[]
-  otpTemplates   DeveloperOtpTemplate[]
-  invites        DeveloperProjectInvite[]
-
-  @@index([developerId])
-  @@index([ownerId])
-  @@map("developer_projects")
-}
-
-model DeveloperProjectInvite {
-  id String @id @default(cuid())
-
-  projectId String
-  project   DeveloperProject @relation(fields: [projectId], references: [id])
-
-  email    String
-  codeHash String // hash للكود، مش plain text — زي الباسورد بالظبط
-  role     String // "OWNER" | "DEVELOPER"
-  status   String @default("PENDING") // PENDING | ACCEPTED | REVOKED | EXPIRED
-
-  createdById String // DeveloperUser.id اللي بعت الدعوة
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime // مثلًا createdAt + 7 أيام
-  acceptedAt  DateTime?
-
-  @@index([projectId, status])
-  @@index([email, status])
-  @@map("developer_project_invites")
-}
-
 enum ProjectStatus {
   ACTIVE
   TRANSFERRED
   ARCHIVED
 }
 
-model DeveloperMetaConnection {
-  id        String @id @default(cuid())
-  projectId String @unique
-
-  accessToken   String @db.Text
-  phoneNumberId String
-  wabaId        String
-  displayPhone  String
-
-  isVerified  Boolean  @default(false)
-  connectedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("developer_meta_connections")
-}
-
-model DeveloperOtpTemplate {
-  id        String @id @default(cuid())
-  projectId String
-
-  metaTemplateId String?
-  name           String
-  language       String                  @default("ar")
-  category       TemplateCategory        @default(AUTHENTICATION)
-  status         DeveloperTemplateStatus @default(LOCAL_DRAFT)
-
-  headerType     String?
-  headerText     String?
-  body           String  @db.Text
-  bodyExample    String? @db.Text
-  footer         String?
-  rejectedReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId])
-  @@map("developer_otp_templates")
-}
-
 enum TemplateCategory {
   AUTHENTICATION
   UTILITY
   MARKETING
-}
-
-model DeveloperApiKey {
-  id        String @id @default(cuid())
-  projectId String
-
-  keyHash   String  @unique
-  keyPrefix String
-  name      String?
-
-  status     DeveloperApiKeyStatus @default(ACTIVE)
-  lastUsedAt DateTime?
-  createdAt  DateTime              @default(now())
-  revokedAt  DateTime?
-
-  project DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId])
-  @@map("developer_api_keys")
-}
-
-model OtpLog {
-  id          String @id @default(cuid())
-  developerId String
-  projectId   String
-
-  phone         String
-  token         String       @unique
-  code          String
-  status        OtpLogStatus @default(PENDING)
-  metaMessageId String?
-  error         String?
-
-  sentAt     DateTime?
-  verifiedAt DateTime?
-  expiredAt  DateTime?
-  failedAt   DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
-
-  @@index([developerId, createdAt])
-  @@index([projectId, createdAt])
-  @@index([token])
-  @@index([phone, developerId])
-  @@index([status])
-  @@map("otp_logs")
 }
 
 enum DeveloperPlan {
@@ -1529,11 +1739,11 @@ enum DeveloperStatus {
 }
 
 enum DeveloperTemplateStatus {
-  LOCAL_DRAFT // محفوظ محليًا — لسه ما اتبعتش لـ Meta
-  PENDING // اتبعت لـ Meta وبتستنى الموافقة
-  APPROVED // Meta وافقت — جاهز للاستخدام
-  REJECTED // Meta رفضت — شوف السبب
-  DISABLED // متوقف
+  LOCAL_DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  DISABLED
 }
 
 enum DeveloperApiKeyStatus {
@@ -1549,47 +1759,14 @@ enum OtpLogStatus {
   FAILED
 }
 
-// ── Developer Notifications ───────────────────────────────────────────────────
-
 enum DeveloperNotificationType {
-  META_UPDATE // تحديثات Meta (قبول/رفض تمبلت، تغيير حالة WABA…)
-  BILLING // فواتير، رصيد، دفعات
-  TRIAL_WARNING // تحذير اقتراب انتهاء الباقة التجريبية
-  PLAN_EXPIRING_SOON // تذكير بموعد انتهاء الباقة قريباً
-  PLAN_EXPIRED // انتهت الباقة وتوقف الإرسال
-  SECURITY // تسجيل دخول، تغيير باسورد
-  SYSTEM // إشعارات عامة من النظام
-}
-
-model DeveloperNotification {
-  id          String                    @id @default(cuid())
-  developerId String
-  type        DeveloperNotificationType
-  title       String
-  message     String                    @db.Text
-  isRead      Boolean                   @default(false)
-  link        String?
-  createdAt   DateTime                  @default(now())
-
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
-
-  @@index([developerId, isRead, createdAt])
-  @@index([developerId, createdAt])
-  @@map("developer_notifications")
-}
-
-model DeveloperPasswordResetToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  developerId String
-  expires     DateTime
-  createdAt   DateTime @default(now())
-
-  developer DeveloperUser @relation(fields: [developerId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([developerId])
-  @@map("developer_password_reset_tokens")
+  META_UPDATE
+  BILLING
+  SECURITY
+  SYSTEM
+  TRIAL_WARNING
+  PLAN_EXPIRING_SOON
+  PLAN_EXPIRED
 }
 
 enum SalesGoal {
@@ -1597,62 +1774,6 @@ enum SalesGoal {
   balanced
   sales_focused
 }
-
-model SalesBehaviorSettings {
-  id                   String    @id @default(cuid())
-  userId               String    @unique
-  goal                 SalesGoal @default(balanced)
-  suggestAlternatives  Boolean   @default(true)
-  suggestUpsell        Boolean   @default(true)
-  suggestCrossSell     Boolean   @default(false)
-  suggestDiscounts     Boolean   @default(false)
-  maxSuggestedProducts Int       @default(1)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model WebsitePage {
-  id            String                  @id @default(cuid())
-  userId        String
-  url           String
-  title         String?
-  contentHash   String
-  isActive      Boolean                 @default(true)
-  lastCrawledAt DateTime                @default(now())
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
-  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chunks        WebsiteKnowledgeChunk[]
-
-  @@unique([userId, url])
-  @@index([userId])
-}
-
-model WebsiteKnowledgeChunk {
-  id         String      @id @default(cuid())
-  pageId     String
-  userId     String
-  content    String      @db.Text
-  searchText String      @db.Text
-  position   Int         @default(0)
-  createdAt  DateTime    @default(now())
-  page       WebsitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model WebsiteCrawlSettings {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  isEnabled Boolean  @default(false)
-  rootUrl   String?
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ─── Protection Claims & Guarantee Audit ──────────────────────────────────────
 
 enum ProtectionClaimStatus {
   NEEDS_REVIEW
@@ -1667,62 +1788,6 @@ enum BanStatus {
   VERIFIED
   NOT_VERIFIED
 }
-
-model ProtectionClaim {
-  id                String                @id @default(cuid())
-  userId            String
-  whatsappAccountId String
-  phoneNumber       String
-  reportedAt        DateTime              @default(now())
-  banDetectedAt     DateTime
-  banStatus         BanStatus             @default(CUSTOMER_REPORTED)
-  status            ProtectionClaimStatus @default(NEEDS_REVIEW)
-  calculatedRefund  Float?
-  overrideRefund    Float?
-  overrideReason    String?               @db.Text
-  refundAmount      Float?
-  currency          String                @default("EGP")
-  refundStatus      String                @default("NONE") // NONE, APPROVED_PENDING_PROCESSING, PROCESSED
-  reviewedBy        String?
-  reviewedAt        DateTime?
-  decisionReason    String?               @db.Text
-  adminNotes        String?               @db.Text
-  customerNotes     String?               @db.Text
-  evidenceSnapshot  Json?
-  evidenceFiles     Json?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  whatsappAccount   WhatsAppAccount       @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
-  reviewer          User?                 @relation("ReviewedProtectionClaims", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  auditLogs         ProtectionAuditLog[]
-
-  @@index([userId])
-  @@index([whatsappAccountId])
-  @@index([phoneNumber])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model ProtectionAuditLog {
-  id          String          @id @default(cuid())
-  claimId     String
-  adminUserId String
-  action      String          // CREATE_CLAIM, RUN_AUDIT, RE_RUN_AUDIT, UPDATE_STATUS, APPROVE_REFUND, REJECT_CLAIM, REQUEST_EVIDENCE, UPDATE_NOTES
-  result      String?
-  details     Json?
-  createdAt   DateTime        @default(now())
-
-  claim       ProtectionClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  adminUser   User            @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
-
-  @@index([claimId])
-  @@index([adminUserId])
-  @@index([createdAt])
-}
-
-// ─── Referral & Affiliate Program ─────────────────────────────────────────────
 
 enum AffiliateStatus {
   ACTIVE
@@ -1750,86 +1815,6 @@ enum ReferralLedgerType {
   ADJUSTMENT
 }
 
-model Affiliate {
-  id            String                @id @default(cuid())
-  userId        String?               @unique
-  code          String                @unique
-  name          String?
-  status        AffiliateStatus       @default(ACTIVE)
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-
-  user          User?                 @relation("UserAffiliate", fields: [userId], references: [id], onDelete: SetNull)
-  referrals     Referral[]
-  rewards       ReferralReward[]
-  ledgerEntries ReferralLedgerEntry[]
-
-  @@index([code])
-  @@index([status])
-  @@index([userId])
-}
-
-model Referral {
-  id             String         @id @default(cuid())
-  affiliateId    String
-  referredUserId String         @unique
-  status         ReferralStatus @default(PENDING)
-  clickedAt      DateTime?
-  signedUpAt     DateTime       @default(now())
-  qualifiedAt    DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  affiliate      Affiliate      @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
-  referredUser   User           @relation("UserReferral", fields: [referredUserId], references: [id], onDelete: Cascade)
-  rewards        ReferralReward[]
-
-  @@index([affiliateId])
-  @@index([status])
-}
-
-model ReferralReward {
-  id               String       @id @default(cuid())
-  affiliateId      String
-  referralId       String
-  referredUserId   String
-  subscriptionId   String?
-  paymentInvoiceId String?      @unique
-  rate             Decimal      @db.Decimal(5, 4)
-  baseAmount       Decimal      @db.Decimal(10, 2)
-  rewardAmount     Decimal      @db.Decimal(10, 2)
-  status           RewardStatus @default(APPROVED)
-  appliedAt        DateTime?
-  reversalReason   String?      @db.Text
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-
-  affiliate        Affiliate    @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
-  referral         Referral     @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  referredUser     User         @relation("UserReferralRewards", fields: [referredUserId], references: [id], onDelete: Cascade)
-
-  @@index([affiliateId])
-  @@index([referralId])
-  @@index([status])
-}
-
-model ReferralLedgerEntry {
-  id           String             @id @default(cuid())
-  affiliateId  String
-  type         ReferralLedgerType
-  amount       Decimal            @db.Decimal(10, 2)
-  balanceAfter Decimal            @db.Decimal(10, 2)
-  description  String?
-  referenceId  String?
-  createdAt    DateTime           @default(now())
-
-  affiliate    Affiliate          @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
-
-  @@index([affiliateId, createdAt])
-}
-
-// ─── Team Invitations ─────────────────────────────────────────────────────────
-
 enum TeamInvitationStatus {
   PENDING
   ACCEPTED
@@ -1837,33 +1822,6 @@ enum TeamInvitationStatus {
   CANCELLED
 }
 
-model TeamInvitation {
-  id          String               @id @default(cuid())
-  inviterId   String
-  email       String
-  name        String?
-  role        UserRole             @default(CHAT_ONLY)
-  codeHash    String
-  status      TeamInvitationStatus @default(PENDING)
-  expiresAt   DateTime
-  lastSentAt  DateTime             @default(now())
-  sendCount   Int                  @default(1)
-  acceptedAt  DateTime?
-  cancelledAt DateTime?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-
-  inviter     User                 @relation("UserTeamInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
-
-  @@index([inviterId, status])
-  @@index([email, status])
-  @@index([expiresAt])
-}
-
-// ─── Manual Payment System ───────────────────────────────────────────────────
-// النظام الرسمي الحالي للدفع (InstaPay / Etisalat Cash + مراجعة إدارية).
-// Fawaterak (src/lib/fawaterak.ts وما يستخدمه) مُعزول ومُعطّل — راجع التعليقات
-// هناك. لا تُنشئ أي منطق دفع جديد يعتمد عليه.
 enum PaymentRequestType {
   subscription
   token_package
@@ -1876,34 +1834,17 @@ enum PaymentRequestStatus {
   REJECTED
 }
 
-model PaymentRequest {
-  id              String                @id @default(cuid())
-  userId          String
-  type            PaymentRequestType
-  // subscription: planSlug + cycle مطلوبين. token_package/mcp_addon: packageId مطلوب.
-  planSlug        String?
-  cycle           String?
-  packageId       String?
-  productName     String
-  amount          Int
-  currency        String                @default("EGP")
-  paymentMethod   String?
-  status          PaymentRequestStatus  @default(PENDING)
-  requestedAt     DateTime              @default(now())
-  reviewedAt      DateTime?
-  reviewedById    String?
-  rejectionReason String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-
-  user            User                  @relation("UserPaymentRequests", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy      User?                 @relation("PaymentRequestReviewer", fields: [reviewedById], references: [id])
-
-  @@index([userId])
-  @@index([status])
-  @@index([userId, status])
-  @@index([createdAt])
+enum TrainingRuleType {
+  faq
+  policy
+  customer_issue
+  guardrail
+  sales_behavior
 }
 
-
+enum TrainingRuleStatus {
+  pending
+  approved
+  rejected
+}
 

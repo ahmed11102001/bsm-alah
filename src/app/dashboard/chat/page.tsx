@@ -882,7 +882,7 @@ export default function ChatPage() {
                             </span>
                           </div>
                         )}
-                        <Bubble msg={msg} onReact={sendReaction} onReply={setReplyingTo} onCopy={copyMessage} onForward={openForward} onQuoteClick={scrollToMessage} lang={lang} dark={dark} />
+                        <Bubble msg={msg} contactId={selected?.contact?.id} onReact={sendReaction} onReply={setReplyingTo} onCopy={copyMessage} onForward={openForward} onQuoteClick={scrollToMessage} lang={lang} dark={dark} />
                       </div>
                     );
                   })}
