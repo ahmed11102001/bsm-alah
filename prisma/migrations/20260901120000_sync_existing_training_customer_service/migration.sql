@@ -1,0 +1,2 @@
+-- Existing schema objects already present in the database.
+-- This migration only synchronizes Prisma migration history.
