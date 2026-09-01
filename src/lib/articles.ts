@@ -1,7 +1,7 @@
 /**
  * src/lib/articles.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Single source of truth for reading MDX-based articles from the filesystem.
+ * Single source of truth for reading Markdown (.md) articles from the filesystem.
  *
  * All public-facing article pages, sitemap, and metadata generation
  * MUST use these functions instead of accessing the filesystem directly.
@@ -23,8 +23,13 @@ const SITE_URL = "https://aiwni.com";
 
 // ─── Article Types ────────────────────────────────────────────────────────────
 
+export interface ArticleRobots {
+  index: boolean;
+  follow: boolean;
+}
+
 export interface Article {
-  /** URL-safe unique identifier — derived from filename or frontmatter */
+  /** URL-safe unique identifier (lowercase English letters, numbers, and hyphens only) */
   slug: string;
 
   /** Article title (required) */
@@ -48,7 +53,7 @@ export interface Article {
   /** Author name */
   author: string;
 
-  /** ISO date string — when the article was first published */
+  /** ISO date string — when the article was first published (required, no fallback) */
   publishedAt: string;
 
   /** ISO date string — when the article was last updated */
@@ -63,8 +68,8 @@ export interface Article {
   /** Whether this article should appear in "featured" sections */
   featured: boolean;
 
-  /** Robots directive override (default: "index, follow") */
-  robots: string | null;
+  /** Robots directive (default: { index: true, follow: true }) */
+  robots: ArticleRobots;
 
   /** Canonical URL override */
   canonical: string | null;
@@ -79,12 +84,12 @@ export interface Article {
   ogImage: string | null;
 
   /** Estimated reading time in minutes */
-  readingTime: number | null;
+  readingTime: number;
 
   /** Slugs of related articles for internal linking */
   relatedArticles: string[];
 
-  /** Raw MDX content body (without frontmatter) */
+  /** Raw Markdown content body (without frontmatter) */
   content: string;
 }
 
@@ -113,19 +118,33 @@ function validateFrontmatter(
     }
   }
 
-  // Validate publishedAt is a valid date
-  if (data.publishedAt) {
-    const date = new Date(String(data.publishedAt));
-    if (isNaN(date.getTime())) {
-      errors.push(`Invalid date for "publishedAt": "${data.publishedAt}"`);
+  // 1. Validate publishedAt is a valid date (NO FALLBACK)
+  if (data.publishedAt !== undefined && data.publishedAt !== null) {
+    const dateStr = String(data.publishedAt).trim();
+    if (!dateStr) {
+      errors.push(`"publishedAt" cannot be empty`);
+    } else {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        errors.push(`Invalid date format for "publishedAt": "${data.publishedAt}". Expected ISO format (e.g. "YYYY-MM-DD")`);
+      }
     }
   }
 
-  // Validate slug is URL-safe
+  // 2. Validate updatedAt if provided
+  if (data.updatedAt !== undefined && data.updatedAt !== null && String(data.updatedAt).trim()) {
+    const date = new Date(String(data.updatedAt).trim());
+    if (isNaN(date.getTime())) {
+      errors.push(`Invalid date format for "updatedAt": "${data.updatedAt}". Expected ISO format (e.g. "YYYY-MM-DD")`);
+    }
+  }
+
+  // 3. Validate slug: English letters + numbers + hyphens ONLY
   if (typeof data.slug === "string" && data.slug.trim()) {
-    if (/[^a-zA-Z0-9\u0621-\u06FF-]/.test(data.slug.trim())) {
+    const slug = data.slug.trim();
+    if (!/^[a-z0-9-]+$/.test(slug)) {
       errors.push(
-        `Slug contains invalid characters: "${data.slug}". Use only alphanumeric, Arabic, and hyphens.`
+        `Slug "${slug}" is invalid. Slug must contain only lowercase English letters, numbers, and hyphens (e.g. "whatsapp-marketing-guide").`
       );
     }
   }
@@ -142,25 +161,45 @@ function validateFrontmatter(
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function estimateReadingTime(content: string): number {
-  // Average Arabic reading speed ~180 wpm, English ~230 wpm. Use ~200 as middle.
-  const words = content.trim().split(/\s+/).length;
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 200));
 }
 
-function toISOString(value: unknown): string | null {
+function parseISOStrict(value: unknown): string | null {
   if (!value) return null;
-  try {
-    const date = new Date(String(value));
-    return isNaN(date.getTime()) ? null : date.toISOString();
-  } catch {
-    return null;
-  }
+  const str = String(value).trim();
+  if (!str) return null;
+  const date = new Date(str);
+  return isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function parseStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === "string" && value.trim()) return [value.trim()];
   return [];
+}
+
+function parseRobots(value: unknown): ArticleRobots {
+  const defaultRobots: ArticleRobots = { index: true, follow: true };
+  if (!value) return defaultRobots;
+
+  if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, unknown>;
+    return {
+      index: typeof obj.index === "boolean" ? obj.index : true,
+      follow: typeof obj.follow === "boolean" ? obj.follow : true,
+    };
+  }
+
+  if (typeof value === "string") {
+    const lower = value.toLowerCase();
+    return {
+      index: !lower.includes("noindex"),
+      follow: !lower.includes("nofollow"),
+    };
+  }
+
+  return defaultRobots;
 }
 
 // ─── Core Loader ──────────────────────────────────────────────────────────────
@@ -171,18 +210,18 @@ function loadArticleFromFile(filePath: string): Article | null {
 
   const validation = validateFrontmatter(data, filePath);
   if (!validation.valid) {
-    // In development, throw so devs see the error immediately.
-    // In production, skip the invalid article gracefully.
-    if (process.env.NODE_ENV === "development") {
-      throw new Error(
-        `Invalid article frontmatter in ${filePath}:\n${validation.errors.join("\n")}`
-      );
-    }
-    console.error(`[articles] Skipping invalid article: ${filePath}`);
-    return null;
+    throw new Error(
+      `Invalid article frontmatter in ${filePath}:\n${validation.errors.join("\n")}`
+    );
   }
 
   const slug = String(data.slug).trim();
+  const publishedAtISO = parseISOStrict(data.publishedAt);
+  if (!publishedAtISO) {
+    throw new Error(`Failed to parse publishedAt date for ${filePath}`);
+  }
+
+  const updatedAtISO = data.updatedAt ? parseISOStrict(data.updatedAt) : null;
 
   return {
     slug,
@@ -193,19 +232,20 @@ function loadArticleFromFile(filePath: string): Article | null {
     category: data.category ? String(data.category).trim() : null,
     tags: parseStringArray(data.tags),
     author: data.author ? String(data.author).trim() : "Wani",
-    publishedAt: toISOString(data.publishedAt) || new Date().toISOString(),
-    updatedAt: toISOString(data.updatedAt),
+    publishedAt: publishedAtISO,
+    updatedAt: updatedAtISO,
     coverImage: data.coverImage ? String(data.coverImage).trim() : null,
     coverImageAlt: data.coverImageAlt ? String(data.coverImageAlt).trim() : null,
     featured: data.featured === true,
-    robots: data.robots ? String(data.robots).trim() : null,
+    robots: parseRobots(data.robots),
     canonical: data.canonical ? String(data.canonical).trim() : null,
     ogTitle: data.ogTitle ? String(data.ogTitle).trim() : null,
     ogDescription: data.ogDescription ? String(data.ogDescription).trim() : null,
     ogImage: data.ogImage ? String(data.ogImage).trim() : null,
-    readingTime: data.readingTime
-      ? Number(data.readingTime)
-      : estimateReadingTime(content),
+    readingTime:
+      typeof data.readingTime === "number" && data.readingTime > 0
+        ? data.readingTime
+        : estimateReadingTime(content),
     relatedArticles: parseStringArray(data.relatedArticles),
     content: content.trim(),
   };
@@ -215,15 +255,15 @@ function loadArticleFromFile(filePath: string): Article | null {
 
 /**
  * Returns all published articles sorted by publishedAt DESC.
- * Skips files that fail frontmatter validation in production.
+ * Ignores draft files starting with `_` and documentation files like `README.md`.
  */
 export function getAllArticles(): Article[] {
   if (!fs.existsSync(ARTICLES_DIR)) return [];
 
   const files = fs
     .readdirSync(ARTICLES_DIR)
-    .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"))
-    .filter((f) => f !== "README.md");
+    .filter((f) => f.endsWith(".md") || f.endsWith(".mdx"))
+    .filter((f) => !f.startsWith("_") && f !== "README.md");
 
   const articles: Article[] = [];
 
@@ -237,9 +277,9 @@ export function getAllArticles(): Article[] {
   const slugMap = new Map<string, string>();
   for (const a of articles) {
     if (slugMap.has(a.slug)) {
-      const msg = `Duplicate article slug "${a.slug}" found. Each slug must be unique.`;
-      if (process.env.NODE_ENV === "development") throw new Error(msg);
-      console.error(`[articles] ${msg}`);
+      throw new Error(
+        `Duplicate article slug "${a.slug}" found in articles directory. Each slug must be unique.`
+      );
     }
     slugMap.set(a.slug, a.title);
   }
@@ -297,8 +337,22 @@ export function getArticleUrl(slug: string): string {
 
 /**
  * Builds Article JSON-LD structured data for a given article.
+ * When author is "Wani", author is typed as Organization. Otherwise Person.
  */
 export function buildArticleJsonLd(article: Article) {
+  const isWaniOrg = article.author.trim().toLowerCase() === "wani";
+
+  const authorSchema = isWaniOrg
+    ? {
+        "@type": "Organization",
+        name: "Wani",
+        url: SITE_URL,
+      }
+    : {
+        "@type": "Person",
+        name: article.author,
+      };
+
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -307,10 +361,7 @@ export function buildArticleJsonLd(article: Article) {
     ...(article.coverImage && { image: article.coverImage }),
     datePublished: article.publishedAt,
     ...(article.updatedAt && { dateModified: article.updatedAt }),
-    author: {
-      "@type": "Person",
-      name: article.author,
-    },
+    author: authorSchema,
     publisher: {
       "@type": "Organization",
       name: "Wani",

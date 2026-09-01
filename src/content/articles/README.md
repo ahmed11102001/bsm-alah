@@ -1,172 +1,147 @@
-# 📝 دليل كتابة مقالات Wani (MDX Articles)
+# 📝 دليل نظام مقالات Wani (Markdown Articles)
 
-## المكان
+## 1. مكان وضع المقالات
 
-كل مقال يتم إنشاؤه كملف `.mdx` داخل هذا المجلد:
+جميع ملفات المقالات توضع داخل هذا المجلد:
 
-```
+```text
 src/content/articles/
 ```
 
-## شكل ملف المقال
+- صيغة الملفات: **`.md`** (Markdown القياسي)
+- اسم الملف يجب أن يطابق تماماً الـ **slug**:
 
-اسم الملف يجب أن يكون **slug المقال** + `.mdx`:
-
+```text
+whatsapp-business-vs-api-difference.md
+whatsapp-crm-guide-for-businesses.md
 ```
-whatsapp-business-vs-api-difference.mdx
-whatsapp-crm-guide-for-businesses.mdx
-```
 
-## Frontmatter المطلوب
+> **ملاحظة المسودات:** أي ملف يبدأ بـ `_` (مثل `_draft-article.md`) أو ملف `README.md` يتم تجاهله تلقائياً بواسطة الـ loader ولن يظهر في الموقع أو الـ sitemap.
 
-كل ملف MDX يبدأ بـ frontmatter بين `---`:
+---
 
-### الحقول الإجبارية
+## 2. قواعد الـ Slug
+
+- **أحرف إنجليزية صغيرة + أرقام + شرطات (`-`) فقط**: `/^[a-z0-9-]+$/`
+- ممنوع المسافات أو الرموز الخاصة أو الحروف العربية في الـ slug.
+- يجب أن يكون الـ slug فريداً لكل مقال.
+- راجع `SEO_KEYWORD_MAP.md` لاختيار الـ slugs الاستراتيجية المعتمدة.
+
+---
+
+## 3. الـ Frontmatter والمواصفات
+
+كل مقال يبدأ بـ YAML Frontmatter محاط بـ `---` في أعلى الملف:
+
+### الحقول الإجبارية (Required)
 
 | الحقل | النوع | الوصف |
-|-------|-------|-------|
-| `title` | string | عنوان المقال |
-| `slug` | string | معرّف URL فريد (حروف إنجليزية + أرقام + شرطات فقط) |
-| `description` | string | وصف SEO (يظهر في نتائج البحث، 120-160 حرف) |
-| `publishedAt` | date | تاريخ النشر (YYYY-MM-DD) |
+| :--- | :--- | :--- |
+| `title` | `string` | عنوان المقال (يُعرض كـ `<h1>` وحيد في الصفحة وكـ SEO Title) |
+| `slug` | `string` | معرّف الـ URL الفريد بالإنجليزية |
+| `description` | `string` | وصف الـ SEO التعريفي (120-160 حرف لنتائج محركات البحث) |
+| `publishedAt` | `string` | تاريخ النشر بتنسيق ISO مثل `"2026-09-01"` (إجباري بدون fallback) |
 
-### الحقول الاختيارية
+### الحقول الاختيارية (Optional)
 
 | الحقل | النوع | الوصف | القيمة الافتراضية |
-|-------|-------|-------|-------------------|
-| `excerpt` | string | وصف مختصر للعرض في القوائم | `null` |
-| `keywords` | string[] | كلمات مفتاحية SEO | `[]` |
-| `category` | string | تصنيف المقال | `null` |
-| `tags` | string[] | وسوم للتصفية | `[]` |
-| `author` | string | اسم الكاتب | `"Wani"` |
-| `updatedAt` | date | تاريخ آخر تحديث | `null` |
-| `coverImage` | string | رابط صورة الغلاف | `null` |
-| `coverImageAlt` | string | نص بديل لصورة الغلاف | `null` |
-| `featured` | boolean | هل هو مقال مميز؟ | `false` |
-| `robots` | string | تحكم في الأرشفة | `"index, follow"` |
-| `canonical` | string | رابط canonical مخصص | يتم توليده تلقائياً |
-| `ogTitle` | string | عنوان Open Graph | يستخدم `title` |
-| `ogDescription` | string | وصف Open Graph | يستخدم `description` |
-| `ogImage` | string | صورة Open Graph | يستخدم `coverImage` |
-| `readingTime` | number | وقت القراءة بالدقائق | يتم حسابه تلقائياً |
-| `relatedArticles` | string[] | slugs مقالات مرتبطة | `[]` |
+| :--- | :--- | :--- | :--- |
+| `excerpt` | `string` | نبذة مختصرة تظهر أسفل العنوان وفي كروت القوائم | `null` |
+| `keywords` | `string[]` | كلمات مفتاحية موجهة لمحركات البحث | `[]` |
+| `category` | `string` | تصنيف المقال (مثل `"whatsapp-marketing"`) | `null` |
+| `tags` | `string[]` | وسوم إضافية لتصنيف المحتوى | `[]` |
+| `author` | `string` | اسم الكاتب (عند استخدام `"Wani"` تُعرّف كـ Organization في JSON-LD) | `"Wani"` |
+| `updatedAt` | `string` | تاريخ آخر تعديل على المقال بتنسيق ISO `"YYYY-MM-DD"` | `null` |
+| `coverImage` | `string` | رابط صورة الغلاف | `null` |
+| `coverImageAlt` | `string` | النص البديل لصورة الغلاف | `null` |
+| `featured` | `boolean` | هل المقال مميز؟ | `false` |
+| `robots` | `object` | تحكم الأرشفة: `index: true/false`, `follow: true/false` | `{ index: true, follow: true }` |
+| `canonical` | `string` | رابط Canonical مخصص | `https://aiwni.com/articles/{slug}` |
+| `ogTitle` | `string` | تخصيص عنوان OpenGraph | يطابق `title` |
+| `ogDescription` | `string` | تخصيص وصف OpenGraph | يطابق `description` |
+| `ogImage` | `string` | تخصيص صورة OpenGraph | يطابق `coverImage` |
+| `readingTime` | `number` | وقت القراءة بالدقائق (يُحسب تلقائياً إن لم يُحدد) | محسوب تلقائياً |
+| `relatedArticles` | `string[]` | مصفوفة slugs لمقالات ذات صلة لعرضها أسفل المقال | `[]` |
 
-## Template جاهز
-
-انسخ هذا القالب لإنشاء مقال جديد:
-
-```mdx
 ---
-title: ""
-slug: ""
-description: ""
-excerpt: ""
 
-keywords: []
+## 4. هيكل محتوى المقال (قاعدة الـ Headings)
 
-category: ""
-tags: []
+> ⚠️ **تنبيه هام جداً بخصوص الـ H1:**
+> صفحة المقال تحتوي بالفعل على وسم `<h1>` واحد فقط وهو **عنوان المقال** القادم من الـ Frontmatter.
+> لذلك **يجب أن يبدأ محتوى المقال داخل الـ Markdown بـ `##` (H2)** وليس بـ `#` (H1)، للحفاظ على معايير الـ SEO الدقيقة وعدم تكرار وسم H1.
+
+---
+
+## 5. Template جاهز لإنشاء مقال جديد
+
+```markdown
+---
+title: "عنوان المقال الكامل هنا"
+slug: "article-slug-here"
+description: "وصف جذاب ومختصر لمحركات البحث يشرح محتوى المقال في 120-160 حرف."
+excerpt: "نبذة تمهيدية سريعة تظهر أعلى المقال وفي بطاقة المقال بصفحة /articles."
+
+keywords:
+  - كلمة مفتاحية رئيسية
+  - كلمة مفتاحية ثانوية
+  - WhatsApp Marketing
+
+category: "whatsapp-marketing"
+tags:
+  - واتساب
+  - أتمتة
+  - مبيعات
 
 author: "Wani"
 
-publishedAt: "2026-01-01"
-updatedAt: ""
+publishedAt: "2026-09-01"
+updatedAt: "2026-09-01"
 
 coverImage: ""
-coverImageAlt: ""
+coverImageAlt: "وصف واضح لصورة الغلاف"
 
 featured: false
 
-relatedArticles: []
+robots:
+  index: true
+  follow: true
+
+relatedArticles:
+  - other-article-slug
 ---
 
-# عنوان المقال
+## المقدمة
 
-محتوى المقال هنا...
+نص المقدمة يبدأ هنا مباشرة باستخدام عناوين فرعية H2...
 
-## عنوان فرعي
+## القسم الرئيسي الأول
 
-نص تحت العنوان الفرعي...
+شرح الفكرة مع نقاط توضيحية:
 
-### نقطة مهمة
+- نقطة أولى
+- نقطة ثانية
+- نقطة ثالثة
 
-- نقطة 1
-- نقطة 2
-- نقطة 3
+### تفاصيل فرعية (H3)
 
-> اقتباس أو نصيحة مهمة
+تفاصيل إضافية...
 
-[رابط لصفحة وني](/)
+> **نصيحة عملية:** نصيحة هامة ومميزة للقارئ.
+
+| الميزة | التفاصيل | الفائدة |
+| :--- | :--- | :--- |
+| أتمتة الردود | رد فوري 24/7 | زيادة المبيعات |
+
+[تعرف على باقات وني](/#pricing)
 ```
 
-## قواعد الـ Slug
+---
 
-- **حروف إنجليزية فقط** + أرقام + شرطات (-)
-- **فريد** — لا يمكن أن يتكرر slug لمقالين
-- **مستقر** — لا تغيّر slug بعد النشر (يكسر الروابط والـ SEO)
-- **وصفي** — يجب أن يعكس محتوى المقال
-- راجع `SEO_KEYWORD_MAP.md` للـ slugs المقترحة
+## 6. سير العمل التلقائي
 
-## قواعد SEO
-
-1. **العنوان**: واضح ويحتوي الكلمة المفتاحية الرئيسية
-2. **الوصف**: 120-160 حرف، يشرح فائدة المقال للقارئ
-3. **الكلمات المفتاحية**: 3-6 كلمات مرتبطة بالموضوع (لا تحشو)
-4. **الروابط الداخلية**: اربط بالصفحات ذات الصلة (`/`, `/strategies`, `/#pricing`)
-5. **المقالات المرتبطة**: أضف 2-3 slugs لمقالات ذات صلة
-
-## إضافة صورة
-
-### صورة الغلاف
-
-```yaml
-coverImage: "https://res.cloudinary.com/your-cloud/image/upload/..."
-coverImageAlt: "وصف دقيق ومفيد للصورة — تجنب كلمات عامة مثل 'صورة' أو 'image'"
-```
-
-### صور داخل المقال
-
-```mdx
-![وصف الصورة](https://example.com/image.jpg)
-```
-
-## إضافة Related Articles
-
-```yaml
-relatedArticles:
-  - whatsapp-crm-guide-for-businesses
-  - whatsapp-automation-guide-24-7
-```
-
-يتم عرضها تلقائياً أسفل المقال كروابط.
-
-## طريقة النشر
-
-1. أنشئ ملف `.mdx` في `src/content/articles/`
-2. املأ الـ frontmatter بالحقول الإجبارية
-3. اكتب المحتوى بصيغة Markdown
-4. ادفع التغييرات إلى Git
-5. المقال سيظهر تلقائياً في:
-   - صفحة `/articles`
-   - صفحة `/articles/{slug}`
-   - ملف `sitemap.xml`
-
-## كيف يعمل النظام
-
-```
-ملف MDX → src/lib/articles.ts (loader) → صفحات Next.js
-                                        → Metadata & SEO
-                                        → Sitemap
-                                        → JSON-LD
-```
-
-- الـ loader يقرأ كل ملفات `.mdx` من هذا المجلد
-- يتحقق من صحة الـ frontmatter (يعطي خطأ واضح لو ناقص حقل إجباري)
-- يولّد metadata و JSON-LD تلقائياً من البيانات
-- المقالات **لا تعتمد على Database** — كلها من الملفات
-
-## ملاحظات
-
-- لا تعدّل `README.md` هذا إلا لتحديث التوثيق
-- لا تنشئ مجلدات فرعية — كل المقالات في مستوى واحد
-- الملفات التي تبدأ بـ `_` أو `README.md` يتم تجاهلها
+بمجرد حفظ الملف باسم `slug.md` داخل هذا المجلد:
+1. يقرأه الـ Loader (`src/lib/articles.ts`) ويتحقق من سلامة البيانات والتواريخ.
+2. يظهر تلقائياً في صفحة المقالات `/articles`.
+3. يُنشئ صفحته الثابتة `/articles/{slug}` مع كامل الـ Metadata و JSON-LD Schema و OpenGraph.
+4. يُدرج تلقائياً في ملف `sitemap.xml`.

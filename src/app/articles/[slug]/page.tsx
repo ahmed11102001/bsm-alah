@@ -48,9 +48,10 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
-    robots: article.robots
-      ? { index: !article.robots.includes("noindex"), follow: !article.robots.includes("nofollow") }
-      : { index: true, follow: true },
+    robots: {
+      index: article.robots.index,
+      follow: article.robots.follow,
+    },
     openGraph: {
       title: ogTitle,
       description: ogDescription,
