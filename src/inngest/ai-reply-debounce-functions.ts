@@ -9,9 +9,25 @@
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { MessageDirection } from "@/types/enums";
-import { runAIAgentReply } from "@/lib/ai-agent-runner";
+import {
+  runAIAgentReply,
+  recordFinalAIReplyFailure,
+} from "@/lib/ai-agent-runner";
 
 export const AI_REPLY_DEBOUNCE_DELAY = "8s";
+
+const NON_RETRIABLE_REASONS = new Set([
+  "off_topic",
+  "empty_reply",
+  "superseded",
+  "token_limit_reached",
+  "no_whatsapp_account",
+  "text_ai_disabled",
+  "agent_disabled",
+  "paused_human_reply",
+  "no_messages",
+  "no_valid_text_messages",
+]);
 
 export const aiReplyDebounceFn = inngest.createFunction(
   {
@@ -58,13 +74,36 @@ export const aiReplyDebounceFn = inngest.createFunction(
       return { sent: false, reason: "superseded" };
     }
 
-    // 3. تنفيذ توليد وإرسال رد الـ AI
-    return await step.run("generate-and-send-ai-reply", async () => {
-      return await runAIAgentReply({
-        contactId,
-        userId,
-        from,
+    // 3. تنفيذ توليد وإرسال رد الـ AI مع الـ Retry
+    try {
+      const result = await step.run("generate-and-send-ai-reply", async () => {
+        const r = await runAIAgentReply({
+          contactId,
+          userId,
+          from,
+        });
+        if (
+          !r.sent &&
+          !NON_RETRIABLE_REASONS.has(r.reason ?? "") &&
+          !r.reason?.startsWith("needs_human_")
+        ) {
+          // فشل فني حقيقي — ارمي خطأ ليقوم Inngest بإعادة المحاولة (retries: 2)
+          throw new Error(r.reason || "AI reply failed");
+        }
+        return r;
       });
-    });
+      return result;
+    } catch (err: any) {
+      // الوصول إلى هنا يتم فقط بعد استنفاد كامل محاولات الـ Retry (retries: 2)
+      await step.run("record-final-ai-reply-failure", async () => {
+        await recordFinalAIReplyFailure({
+          userId,
+          contactId,
+          from,
+          reason: err?.message || "unknown_error",
+        });
+      });
+      return { sent: false, reason: err?.message, finalFailure: true };
+    }
   }
 );

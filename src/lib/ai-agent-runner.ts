@@ -6,7 +6,10 @@ import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
-import { notifyAiHandoffNeeded } from "@/lib/notifications";
+import {
+  notifyAiHandoffNeeded,
+  notifyAutomationFailed,
+} from "@/lib/notifications";
 import { inngest } from "@/inngest/client";
 import {
   MessageDirection,
@@ -492,8 +495,62 @@ export async function runAIAgentReply(
       );
   }
 
+  // تحقق نهائي بعد محاولات إرسال الصورة والنص للتأكد من إرسال رسالة فعليًا
+  if (!sentWhatsappId) {
+    console.error(`[AI-AGENT] No message sent to ${from} (image/text send failed or empty)`);
+    return { sent: false, reason: "no_message_sent" };
+  }
+
   console.log(
     `[AI-AGENT] ✓ Sent debounced AI reply to ${from} via "${agent.provider}"`
   );
   return { sent: true, whatsappMsgId: sentWhatsappId };
+}
+
+/**
+ * دالة توثيق الفشل النهائي لرد الـ AI Agent بعد نفاد كافة محاولات الـ Retry.
+ * (أ) تسجيل رسالة فاشلة في جدول Message لتظهر في تايم لاين وسجل الأخطاء بتقارير الأتمتة.
+ * (ب) إرسال إشعار فوري لصاحب الحساب عبر notifyAutomationFailed.
+ */
+export async function recordFinalAIReplyFailure(params: {
+  userId: string;
+  contactId: string;
+  from: string;
+  reason: string;
+}) {
+  const { userId, contactId, from, reason } = params;
+
+  const contact = await prisma.contact.findUnique({
+    where: { id: contactId },
+    select: { name: true, phone: true },
+  });
+
+  // (أ) تسجيل رسالة فاشلة — عشان تظهر في تايم لاين وerrorLog تقارير الأتمتة
+  await prisma.message.create({
+    data: {
+      userId,
+      contactId,
+      direction: MessageDirection.outbound,
+      senderType: MessageSenderType.ai,
+      status: MessageStatus.failed,
+      type: MessageType.text,
+      content: null,
+      error: reason,
+    },
+  });
+
+  // (ب) إشعار لصاحب البيزنس — إعادة استخدام نظام الإشعارات الموجود أصلاً
+  await notifyAutomationFailed(
+    userId,
+    "Wani (الرد الآلي)",
+    contact?.name || contact?.phone || from,
+    contactId,
+    reason,
+  ).catch((e) =>
+    console.error("[AI-AGENT] Failed to send failure notification:", e)
+  );
+
+  console.error(
+    `[AI-AGENT] ✗ FINAL FAILURE after retries exhausted — contact=${contactId} reason=${reason}`
+  );
 }
