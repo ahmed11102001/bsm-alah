@@ -195,6 +195,11 @@ export default function AgentTrainingTab({ lang }: { lang: "ar" | "en" }) {
 
   // ── فتح تدريب جديد مع جلب السياق ──
   const openNewTraining = async (contactId?: string | null, messageId?: string | null) => {
+    if (!contactId || !messageId) {
+      toast.error(isAr ? "التدريب يجب أن يبدأ من رد فعلي في المحادثات" : "Training must start from an actual chat message");
+      router.push("/dashboard/chat");
+      return;
+    }
     setSelectedRule(null);
     setFeedbackText("");
     setExtractedData(null);
@@ -242,6 +247,11 @@ export default function AgentTrainingTab({ lang }: { lang: "ar" | "en" }) {
 
   // ── استدعاء استخراج القاعدة عبر LLM ──
   const handleExtract = async () => {
+    if (!activeContactId || !activeMessageId) {
+      toast.error(isAr ? "التدريب يجب أن يبدأ من رد فعلي للإيجنت في المحادثات" : "Training must be linked to an agent reply");
+      return;
+    }
+
     if (!feedbackText.trim()) {
       toast.error(isAr ? "يرجى كتابة تعليقك أو توجيهك أولاً" : "Please enter your feedback first");
       return;
@@ -439,11 +449,11 @@ export default function AgentTrainingTab({ lang }: { lang: "ar" | "en" }) {
         </div>
 
         <button
-          onClick={() => openNewTraining()}
+          onClick={() => router.push("/dashboard/chat")}
           className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-sm shadow-emerald-500/20 transition-all"
         >
-          <Plus className="w-4 h-4" />
-          {isAr ? "إضافة تدريب جديد" : "New Training Feedback"}
+          <MessageSquare className="w-4 h-4" />
+          {isAr ? "اذهب للمحادثات لاختيار رد" : "Go to chats to pick a reply"}
         </button>
       </div>
 
@@ -520,17 +530,17 @@ export default function AgentTrainingTab({ lang }: { lang: "ar" | "en" }) {
           <h4 className="font-bold text-gray-800 dark:text-gray-200 text-base mb-1">
             {isAr ? "لا توجد قواعد تدريب في هذه القائمة" : "No training rules found"}
           </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mb-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mb-4 leading-relaxed">
             {isAr
-              ? "يمكنك الضغط على زر 'تدريب الإيجنت' من أي رسالة في الشات، أو إضافة تعليق جديد من الزر أعلاه."
-              : "You can train the agent directly from chat messages or by clicking New Training Feedback."}
+              ? "التدريب يبدأ دائمًا من رد فعلي للإيجنت — اذهب للمحادثات، اضغط على زر 'تدريب الإيجنت' عند الرد الذي ترغب في تصحيحه لإضافة وتطبيق قاعدة جديدة."
+              : "Training starts from actual agent replies — go to chats and click 'Train Agent' on the reply you want to correct."}
           </p>
           <button
-            onClick={() => openNewTraining()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow-sm"
+            onClick={() => router.push("/dashboard/chat")}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all"
           >
-            <Plus className="w-3.5 h-3.5" />
-            {isAr ? "إضافة تدريب جديد" : "Add Training Feedback"}
+            <MessageSquare className="w-3.5 h-3.5" />
+            {isAr ? "اذهب للمحادثات لاختيار رد" : "Go to chats to pick a reply"}
           </button>
         </div>
       ) : (

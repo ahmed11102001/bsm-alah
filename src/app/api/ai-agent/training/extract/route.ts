@@ -41,33 +41,52 @@ export async function POST(req: NextRequest) {
 
     const { feedback, contactId, messageId } = parsed.data;
 
-    // جلب سياق الرسائل إذا وُجد contactId أو messageId
-    let contextMessages: { role: "user" | "assistant"; content: string }[] = [];
-    if (contactId) {
-      const messagesQuery = await prisma.message.findMany({
-        where: {
-          contactId,
-          userId,
-          deletedAt: null,
-          ...(messageId ? { createdAt: { lte: (await prisma.message.findUnique({ where: { id: messageId }, select: { createdAt: true } }))?.createdAt || new Date() } } : {}),
-        },
-        orderBy: { createdAt: "desc" },
-        take: 4,
-        select: {
-          id: true,
-          content: true,
-          direction: true,
-          senderType: true,
-          type: true,
-          createdAt: true,
-        },
-      });
+    // التحقق من أن الرسالة موجودة وتابعة لنفس المستخدم والمحادثة ومن نوع رد إيجنت (ai)
+    const targetMessage = await prisma.message.findFirst({
+      where: { id: messageId, contactId, userId, deletedAt: null },
+      select: { id: true, senderType: true, createdAt: true },
+    });
 
-      contextMessages = messagesQuery.reverse().map((m) => ({
+    if (!targetMessage) {
+      return NextResponse.json(
+        { error: "الرسالة المحددة غير موجودة أو لا تنتمي لهذه المحادثة" },
+        { status: 404 }
+      );
+    }
+
+    if (targetMessage.senderType !== "ai") {
+      return NextResponse.json(
+        { error: "التدريب يجب أن يكون على رد فعلي من الإيجنت، لا يمكن التعليق على رسالة العميل" },
+        { status: 400 }
+      );
+    }
+
+    // جلب سياق الرسائل حتى الرسالة المستهدفة
+    const messagesQuery = await prisma.message.findMany({
+      where: {
+        contactId,
+        userId,
+        deletedAt: null,
+        createdAt: { lte: targetMessage.createdAt },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      select: {
+        id: true,
+        content: true,
+        direction: true,
+        senderType: true,
+        type: true,
+        createdAt: true,
+      },
+    });
+
+    const contextMessages: { role: "user" | "assistant"; content: string }[] = messagesQuery
+      .reverse()
+      .map((m) => ({
         role: m.senderType === "ai" || m.direction === "outbound" ? "assistant" : "user",
         content: m.content || `[${m.type}]`,
       }));
-    }
 
     // جلب القواعد المخصصة الحالية للـ Guardrails
     const currentGuardrail = await prisma.aIGuardrail.findUnique({

@@ -481,8 +481,8 @@ export type TrainingRuleExtractionOutput = z.infer<typeof TrainingRuleExtraction
 
 export const TrainingExtractInputSchema = z.object({
   feedback: z.string().trim().min(2, "يرجى كتابة تعليق أو توجيه للتدريب"),
-  contactId: z.string().optional().nullable(),
-  messageId: z.string().optional().nullable(),
+  contactId: z.string().min(1, "لازم تختار محادثة حقيقية"),
+  messageId: z.string().min(1, "لازم تختار رسالة حقيقية من الإيجنت للتعليق عليها"),
 });
 export type TrainingExtractInput = z.infer<typeof TrainingExtractInputSchema>;
 
