@@ -22,6 +22,7 @@ import {
   type BillingCycle,
 } from "@/lib/pricing";
 import { notifySubscriptionSuccess } from "@/lib/notifications";
+import { toPrismaPlanTier } from "@/lib/plans";
 
 export type ManualPaymentType = "subscription" | "token_package" | "mcp_addon";
 
@@ -221,13 +222,15 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     const baseAmount = computePrice(plan.monthly, billingCycle) * cycleInfo.months;
     const creditApplied = Math.max(0, baseAmount - request.amount);
 
+    const prismaPlan = toPrismaPlanTier(planSlug);
+
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
       await tx.subscription.upsert({
         where: { userId: request.userId },
         update: {
-          plan: planSlug,
+          plan: prismaPlan,
           status: "active",
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
@@ -238,7 +241,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
         },
         create: {
           userId: request.userId,
-          plan: planSlug,
+          plan: prismaPlan,
           status: "active",
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,

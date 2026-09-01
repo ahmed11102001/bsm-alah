@@ -191,20 +191,20 @@ export default function ReferralProgramCard({
   const planRows = [
     {
       key: "starter" as const,
-      label: "Starter",
-      price: SUBSCRIPTION_PLANS.starter.monthly,
+      label: "Go",
+      price: SUBSCRIPTION_PLANS.go.monthly,
       rate: data.ratesByPlan.starter.finalRate,
     },
     {
       key: "pro" as const,
-      label: "Professional",
+      label: "Pro",
       price: SUBSCRIPTION_PLANS.pro.monthly,
       rate: data.ratesByPlan.pro.finalRate,
     },
     {
       key: "enterprise" as const,
-      label: "Enterprise",
-      price: SUBSCRIPTION_PLANS.enterprise.monthly,
+      label: "Max",
+      price: SUBSCRIPTION_PLANS.max.monthly,
       rate: data.ratesByPlan.enterprise.finalRate,
     },
   ];

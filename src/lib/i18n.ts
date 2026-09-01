@@ -463,10 +463,12 @@ export const translations = {
         protectionClaims: "Protection Claims",
       },
       plans: {
-        free: "مجانية",
-        starter: "Starter",
+        free: "Free",
+        go: "Go",
+        starter: "Go",
         pro: "Pro",
-        enterprise: "Enterprise",
+        max: "Max",
+        enterprise: "Max",
         beta: "Beta ✨",
       },
       users: {
@@ -1107,9 +1109,11 @@ export const translations = {
       },
       plans: {
         free: "Free",
-        starter: "Starter",
+        go: "Go",
+        starter: "Go",
         pro: "Pro",
-        enterprise: "Enterprise",
+        max: "Max",
+        enterprise: "Max",
         beta: "Beta ✨",
       },
       users: {

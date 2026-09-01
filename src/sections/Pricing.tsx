@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Minus, Sparkles, Zap, Shield, Bot, Store, Brain } from "lucide-react";
+import { Check, Minus, Sparkles, Zap, Shield, Rocket, Store, Brain, ArrowRight, ArrowLeft } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 import { usePixel } from "@/hooks/usePixel";
 import { canUseBillingCycle } from "@/lib/pricing";
 
 // ─── config ───────────────────────────────────────────────────────────────────
 const BASE_PRICES = [0, 249, 599, 1199];
-const ENTERPRISE_OFFER = 999;
+const MAX_OFFER = 999;
 
 const CYCLES = [
   { key: "monthly", label: { ar: "شهري", en: "Monthly" }, discount: 0 },
@@ -19,40 +19,86 @@ const CYCLES = [
 type Cycle = typeof CYCLES[number]["key"];
 
 const PLAN_STYLES = [
-  { card: "bg-rose-50 border border-rose-200", accent: "text-rose-500", iconBg: "bg-rose-100", dark: false, highlight: false, cta: "border border-rose-300 text-rose-600 hover:border-rose-500 hover:text-rose-800" },
-  { card: "bg-sky-50 border border-sky-200", accent: "text-sky-600", iconBg: "bg-sky-100", dark: false, highlight: false, cta: "border-2 border-sky-500 text-sky-700 hover:bg-sky-500 hover:text-white" },
-  { card: "bg-white border-2 border-[#25D366] shadow-xl shadow-green-100/50", accent: "text-[#25D366]", iconBg: "bg-green-50", dark: false, highlight: true, cta: "bg-[#25D366] text-white hover:bg-[#20bb5a]" },
-  { card: "bg-gray-950 border border-amber-700/50", accent: "text-amber-400", iconBg: "bg-amber-900/30", dark: true, highlight: false, cta: "bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold hover:from-amber-400 hover:to-yellow-300" },
+  {
+    card: "bg-slate-50/90 dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700 shadow-sm",
+    accent: "text-emerald-600 dark:text-emerald-400",
+    iconBg: "bg-emerald-100/70 dark:bg-emerald-950/50",
+    dark: false,
+    highlight: false,
+    badgeBg: "bg-gray-800 text-white dark:bg-gray-700",
+    cta: "border-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white font-bold",
+  },
+  {
+    card: "bg-gradient-to-b from-sky-50/90 to-cyan-50/40 dark:from-sky-950/20 dark:to-gray-900 border border-sky-300/80 dark:border-sky-800/60 shadow-lg shadow-sky-500/5",
+    accent: "text-sky-600 dark:text-sky-400",
+    iconBg: "bg-sky-100 dark:bg-sky-950/60",
+    dark: false,
+    highlight: false,
+    badgeBg: "bg-sky-600 text-white",
+    cta: "bg-gradient-to-r from-sky-500 to-cyan-600 text-white hover:from-sky-600 hover:to-cyan-700 shadow-md shadow-sky-500/25 font-bold",
+  },
+  {
+    card: "bg-gradient-to-b from-white via-emerald-50/30 to-white dark:from-gray-900 dark:via-emerald-950/20 dark:to-gray-900 border-2 border-[#25D366] shadow-2xl shadow-emerald-500/20 scale-[1.02] md:-translate-y-2 z-10",
+    accent: "text-[#25D366]",
+    iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
+    dark: false,
+    highlight: true,
+    badgeBg: "bg-[#25D366] text-white shadow-md shadow-emerald-500/40",
+    cta: "bg-[#25D366] text-white hover:bg-[#20bb5a] shadow-lg shadow-emerald-500/30 font-black text-base",
+  },
+  {
+    card: "bg-gradient-to-b from-[#111827] via-[#0b0f19] to-[#030712] border-2 border-amber-500/50 shadow-2xl shadow-amber-500/10 text-white",
+    accent: "text-amber-400",
+    iconBg: "bg-amber-500/20",
+    dark: true,
+    highlight: false,
+    badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-500 text-gray-950 font-black",
+    cta: "bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-gray-950 font-black hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/30",
+  },
 ];
 
 // social proof لكل plan
 const SOCIAL_PROOF = [
-  { ar: " انطلق بسرعة", en: "Quick Start" },
-  { ar: " بداية ميثالية", en: "Perfect for Growth" },
-  { ar: " افضل قيمة 💎 ", en: "💎 Best Value" },
-  { ar: "حلول مخصصة🏢", en: "Enterprise Solutions 🏢" },
+  { ar: "تجربة مجانية فورية ⚡", en: "Instant Free Trial ⚡" },
+  { ar: "انطلاقة سريعة وقوية 🚀", en: "Fast & Agile Launch 🚀" },
+  { ar: "الأعلى عائداً وقيمة 💎", en: "Best ROI & Value 💎" },
+  { ar: "قوة المؤسسات وذكاء AI 👑", en: "Enterprise AI Power 👑" },
 ];
 
-const PLAN_ICONS = [Sparkles, Bot, Store, Brain];
+const PLAN_ICONS = [Sparkles, Rocket, Store, Brain];
 
 function computePrice(base: number, cycle: Cycle) {
-  const disc = CYCLES.find(c => c.key === cycle)!.discount;
+  const disc = CYCLES.find((c) => c.key === cycle)!.discount;
   return Math.round(base * (1 - disc));
 }
 
 // ── 3D Tilt Card ──────────────────────────────────────────────────────────────
 function PricingCard({
-  index, plan, s, base, price, slug, isFree, isEnterprise,
-  Icon, saving, cycle, lang, isAr, numLocale, visible, onCTA,
+  index,
+  plan,
+  s,
+  base,
+  price,
+  slug,
+  isFree,
+  isMax,
+  Icon,
+  saving,
+  cycle,
+  lang,
+  isAr,
+  numLocale,
+  visible,
+  onCTA,
 }: {
   index: number;
   plan: (typeof t.pricing.plans)[number];
-  s: typeof PLAN_STYLES[number];
+  s: (typeof PLAN_STYLES)[number];
   base: number;
   price: number;
   slug: string;
   isFree: boolean;
-  isEnterprise: boolean;
+  isMax: boolean;
   Icon: React.ElementType;
   saving: number;
   cycle: Cycle;
@@ -73,11 +119,11 @@ function PricingCard({
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const rect = el.getBoundingClientRect();
-      const cx = (e.clientX - rect.left) / rect.width - 0.5;   // -0.5 → 0.5
+      const cx = (e.clientX - rect.left) / rect.width - 0.5;
       const cy = (e.clientY - rect.top) / rect.height - 0.5;
       setTilt({
-        x: cy * -14,    // rotateX
-        y: cx * 14,    // rotateY
+        x: cy * -12,
+        y: cx * 12,
         shine: { x: (cx + 0.5) * 100, y: (cy + 0.5) * 100 },
       });
     });
@@ -96,13 +142,13 @@ function PricingCard({
   });
 
   return (
-    <div style={{ ...fadeUp(index * 80), perspective: "900px" }}>
+    <div style={{ ...fadeUp(index * 90), perspective: "900px" }} className="flex">
       <div
         ref={cardRef}
         onMouseMove={onMouseMove}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={onMouseLeave}
-        className={`relative rounded-2xl p-6 flex flex-col gap-4 h-full cursor-default ${s.card}`}
+        className={`relative rounded-3xl p-6 sm:p-7 flex flex-col gap-4 w-full cursor-default ${s.card}`}
         dir={isAr ? "rtl" : "ltr"}
         style={{
           transform: hovered
@@ -112,150 +158,184 @@ function PricingCard({
           transition: hovered
             ? "transform 0.1s ease-out, box-shadow 0.2s ease"
             : "transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s ease",
-          boxShadow: hovered
-            ? s.highlight
-              ? "0 28px 60px rgba(37,211,102,0.25), 0 8px 24px rgba(0,0,0,0.12)"
-              : "0 28px 60px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.10)"
-            : s.highlight
-              ? "0 4px 24px rgba(37,211,102,0.12)"
-              : "none",
           willChange: "transform",
         }}
       >
         {/* ── Shine overlay ── */}
         {hovered && (
           <div
-            className="pointer-events-none absolute inset-0 rounded-2xl"
+            className="pointer-events-none absolute inset-0 rounded-3xl"
             style={{
-              background: `radial-gradient(circle at ${tilt.shine.x}% ${tilt.shine.y}%, rgba(255,255,255,${s.dark ? "0.06" : "0.18"}) 0%, transparent 65%)`,
+              background: `radial-gradient(circle at ${tilt.shine.x}% ${tilt.shine.y}%, rgba(255,255,255,${
+                s.dark ? "0.08" : "0.22"
+              }) 0%, transparent 65%)`,
               zIndex: 10,
             }}
           />
         )}
 
-        {/* popular badge */}
+        {/* Popular / Feature Ribbon Badge */}
         {"badge" in plan && plan.badge && (
-          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2" style={{ zIndex: 20 }}>
-            <span className="bg-[#25D366] text-white text-xs font-bold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap">
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2" style={{ zIndex: 20 }}>
+            <span
+              className={`text-xs font-black px-4 py-1 rounded-full shadow-lg whitespace-nowrap uppercase tracking-wider ${s.badgeBg}`}
+            >
               {tr(plan.badge as { ar: string; en: string }, lang)}
             </span>
           </div>
         )}
 
-        {/* icon + name */}
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${s.dark ? "bg-white/10" : s.highlight ? "bg-green-50" : "bg-gray-100"
-            }`}>
-            <Icon className={`w-4 h-4 ${s.dark ? "text-white" : s.highlight ? "text-[#25D366]" : "text-gray-500"}`} />
+        {/* Icon + Title Header */}
+        <div className="flex items-center gap-3 pt-1">
+          <div
+            className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${s.iconBg}`}
+          >
+            <Icon className={`w-5 h-5 ${s.accent}`} />
           </div>
           <div>
-            <p className={`text-xs font-bold uppercase tracking-widest ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
-              {tr(plan.name as { ar: string; en: string }, lang)}
-            </p>
-            <p className={`text-[11px] leading-tight ${s.dark ? "text-gray-400" : "text-gray-500"}`}>
+            <div className="flex items-center gap-2">
+              <h3 className={`text-xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
+                {tr(plan.name as { ar: string; en: string }, lang)}
+              </h3>
+              {isMax && (
+                <span className="inline-flex rounded-lg px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {isAr ? "AI متكامل" : "Full AI"}
+                </span>
+              )}
+            </div>
+            <p className={`text-xs leading-snug mt-0.5 ${s.dark ? "text-gray-300" : "text-gray-500"}`}>
               {tr(plan.tagline, lang)}
             </p>
-            {isEnterprise && (
-              <span className="mt-1.5 inline-flex rounded-xl px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {isAr ? "عرض خاص" : "Special Offer"}
-              </span>
-            )}
           </div>
         </div>
 
-        {/* price */}
-        <div className="py-1">
+        {/* Pricing Block */}
+        <div className="py-2">
           {isFree ? (
-            <p className={`text-4xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
-              {tr(t.pricing.free, lang)}
-            </p>
-          ) : isEnterprise ? (
-            <>
-              <div className="flex items-end gap-2">
-                <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
-                  {ENTERPRISE_OFFER.toLocaleString(numLocale)}
-                </span>
-                <span className="text-sm mb-1.5 line-through opacity-40 text-gray-400">
-                  {price.toLocaleString(numLocale)}
-                </span>
-                <span className="text-sm mb-1.5 text-gray-400">{tr(t.pricing.currency, lang)}</span>
-              </div>
-              <p className="text-[11px] text-[#1a9e50] font-semibold mt-0.5">
-                {isAr ? "عرض محدود — وفّر ٢٠٠ج/شهر" : "Limited offer — save 200 EGP/mo"}
+            <div>
+              <p className={`text-4xl font-black ${s.dark ? "text-white" : "text-gray-900"}`}>
+                {tr(t.pricing.free, lang)}
               </p>
-            </>
-          ) : (
-            <>
-              <div className="flex items-end gap-1.5">
-                <span className={`text-4xl font-black transition-all duration-300 ${s.dark ? "text-white" : "text-gray-900"}`}>
+              <p className="text-[11px] text-gray-400 mt-1">{isAr ? "بدون بطاقة ائتمان — مجاناً للأبد" : "No credit card needed — free forever"}</p>
+            </div>
+          ) : isMax ? (
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-4xl font-black tracking-tight ${s.dark ? "text-white" : "text-gray-900"}`}>
+                  {MAX_OFFER.toLocaleString(numLocale)}
+                </span>
+                <span className="text-sm line-through opacity-50 text-gray-400">
                   {price.toLocaleString(numLocale)}
                 </span>
-                <span className={`text-sm mb-1.5 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
+                <span className="text-sm text-gray-400 font-semibold">{tr(t.pricing.currency, lang)}</span>
+              </div>
+              <p className="text-xs text-amber-400 font-bold mt-1">
+                {isAr ? "🔥 عرض خاص: وفّر ٢٠٠ج شهرياً" : "🔥 Special offer: Save 200 EGP/mo"}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-baseline gap-1.5">
+                <span className={`text-4xl font-black tracking-tight ${s.dark ? "text-white" : "text-gray-900"}`}>
+                  {price.toLocaleString(numLocale)}
+                </span>
+                <span className={`text-sm font-semibold ${s.dark ? "text-gray-400" : "text-gray-500"}`}>
                   {tr(t.pricing.currency, lang)}
                 </span>
               </div>
               {saving > 0 ? (
-                <p className="text-[11px] text-[#1a9e50] font-semibold mt-0.5">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                   {tr(t.pricing.annualSave, lang)} {saving.toLocaleString(numLocale)} {tr(t.pricing.annualSaveSuffix, lang)}
                 </p>
               ) : (
-                <p className="text-[11px] text-gray-400 mt-0.5 h-4" />
+                <p className="text-xs text-gray-400 mt-1">
+                  {isAr ? "دفع شهري مرن مع إمكانية الإلغاء في أي وقت" : "Flexible monthly billing, cancel anytime"}
+                </p>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        {/* CTA */}
-        {isEnterprise ? (
-          <button
-            onClick={() => onCTA(slug, false, ENTERPRISE_OFFER, cycle)}
-            className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
-          >
-            {isAr ? "اشترك الآن" : "Subscribe Now"}
-          </button>
-        ) : (
-          <button
-            onClick={() => onCTA(slug, isFree, price, cycle)}
-            className={`w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all active:scale-95 ${s.cta}`}
-          >
-            {tr(plan.cta, lang)}
-          </button>
-        )}
-
-        {/* social proof */}
-        <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${s.dark ? "text-amber-400/80" : s.highlight ? "text-[#25D366]" : "text-gray-400"
-          }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${s.dark ? "bg-amber-400" : s.highlight ? "bg-[#25D366]" : "bg-gray-300"
-            }`} />
-          {isAr ? SOCIAL_PROOF[index].ar : SOCIAL_PROOF[index].en}
+        {/* CTA Button */}
+        <div>
+          {isMax ? (
+            <button
+              onClick={() => onCTA(slug, false, MAX_OFFER, cycle)}
+              className={`w-full py-3 px-4 rounded-2xl text-sm font-bold text-center transition-all active:scale-95 flex items-center justify-center gap-2 ${s.cta}`}
+            >
+              <span>{tr(plan.cta, lang)}</span>
+              {isAr ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </button>
+          ) : (
+            <button
+              onClick={() => onCTA(slug, isFree, price, cycle)}
+              className={`w-full py-3 px-4 rounded-2xl text-sm font-bold text-center transition-all active:scale-95 flex items-center justify-center gap-2 ${s.cta}`}
+            >
+              <span>{tr(plan.cta, lang)}</span>
+              {isAr ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
-        {/* divider */}
-        <div className={`h-px ${s.dark ? "bg-gray-800" : "bg-gray-100"}`} />
+        {/* Social Proof Tag */}
+        <div
+          className={`flex items-center gap-2 text-xs font-bold pt-1 ${
+            s.dark ? "text-amber-400" : s.highlight ? "text-[#25D366]" : "text-gray-600 dark:text-gray-400"
+          }`}
+        >
+          <div
+            className={`w-2 h-2 rounded-full animate-pulse ${
+              s.dark ? "bg-amber-400" : s.highlight ? "bg-[#25D366]" : "bg-sky-500"
+            }`}
+          />
+          <span>{isAr ? SOCIAL_PROOF[index].ar : SOCIAL_PROOF[index].en}</span>
+        </div>
 
-        {/* features */}
-        <ul className="space-y-2.5 flex-1">
-          {(plan.features as ReadonlyArray<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
-            <li key={fi} className="flex items-start gap-2.5">
-              {f.ok ? (
-                <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${s.highlight ? "text-[#25D366]" : s.dark ? "text-green-400" : "text-gray-400"
-                  }`} />
-              ) : (
-                <Minus className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-300" />
-              )}
-              <span className={`text-sm leading-snug ${!f.ok ? "text-gray-300" : s.dark ? "text-gray-200" : "text-gray-700"
-                }`}>
-                {tr(f, lang)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {/* Divider */}
+        <div className={`h-px my-1 ${s.dark ? "bg-gray-800" : "bg-gray-200/70 dark:bg-gray-700/60"}`} />
+
+        {/* Feature List */}
+        <div className="space-y-1 flex-1">
+          <p className={`text-[11px] font-bold uppercase tracking-wider mb-2.5 ${s.dark ? "text-gray-400" : "text-gray-400"}`}>
+            {isAr ? "المميزات المضمنة:" : "Included features:"}
+          </p>
+          <ul className="space-y-2.5">
+            {(plan.features as ReadonlyArray<{ ar: string; en: string; ok: boolean }>).map((f, fi) => (
+              <li key={fi} className="flex items-start gap-2.5 text-xs sm:text-sm">
+                {f.ok ? (
+                  <div
+                    className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      s.highlight
+                        ? "bg-emerald-500/20 text-[#25D366]"
+                        : s.dark
+                        ? "bg-amber-500/20 text-amber-400"
+                        : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
+                    }`}
+                  >
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </div>
+                ) : (
+                  <Minus className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-300" />
+                )}
+                <span
+                  className={`leading-relaxed font-medium ${
+                    !f.ok ? "text-gray-400 line-through opacity-60" : s.dark ? "text-gray-200" : "text-gray-700 dark:text-gray-200"
+                  }`}
+                >
+                  {tr(f, lang)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
 
-interface PricingProps { lang: Lang }
+interface PricingProps {
+  lang: Lang;
+}
 
 export default function Pricing({ lang }: PricingProps) {
   const isAr = lang === "ar";
@@ -273,18 +353,36 @@ export default function Pricing({ lang }: PricingProps) {
     const el = sectionRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
       { threshold: 0.1 }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
-  useEffect(() => { track("ViewContent", { content_name: "Pricing Section" }); }, []);
+  useEffect(() => {
+    track("ViewContent", { content_name: "Pricing Section" });
+  }, []);
 
   const handleCTA = (slug: string, isFree: boolean, price: number, selectedCycle: Cycle) => {
-    if (isFree) { track("CompleteRegistration", { content_name: "Free Plan" }); router.push("/register"); return; }
-    track("InitiateCheckout", { content_name: slug, content_ids: [slug], content_type: "product", value: price, currency: "EGP", num_items: 1 });
+    if (isFree) {
+      track("CompleteRegistration", { content_name: "Free Plan" });
+      router.push("/register");
+      return;
+    }
+    track("InitiateCheckout", {
+      content_name: slug,
+      content_ids: [slug],
+      content_type: "product",
+      value: price,
+      currency: "EGP",
+      num_items: 1,
+    });
 
     router.push(`/checkout?plan=${encodeURIComponent(slug)}&cycle=${encodeURIComponent(selectedCycle)}`);
   };
@@ -296,23 +394,30 @@ export default function Pricing({ lang }: PricingProps) {
   });
 
   return (
-    <section ref={sectionRef} id="pricing" className="py-20 lg:py-32 bg-white" dir={isAr ? "rtl" : "ltr"}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={sectionRef} id="pricing" className="py-20 lg:py-32 bg-white dark:bg-gray-950 relative overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
+      {/* Background soft ambient glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[250px] bg-sky-500/5 blur-[100px] rounded-full pointer-events-none" />
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* ── Header ── */}
-        <div className="text-center mb-10" style={fadeUp(0)}>
-          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-4 py-2 mb-4">
+        <div className="text-center mb-12" style={fadeUp(0)}>
+          <div className="inline-flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 rounded-full px-4 py-2 mb-4 shadow-sm">
             <Sparkles className="w-4 h-4 text-[#25D366]" />
-            <span className="text-[#25D366] text-sm font-medium">{tr(t.pricing.badge, lang)}</span>
+            <span className="text-emerald-700 dark:text-emerald-300 text-sm font-bold">{tr(t.pricing.badge, lang)}</span>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white mb-4 tracking-tight leading-tight">
             {tr(t.pricing.h2a, lang)}{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10 text-[#25D366]">{tr(t.pricing.h2b, lang)}</span>
+            <span className="relative inline-block text-[#25D366]">
+              {tr(t.pricing.h2b, lang)}
               <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 100 8" preserveAspectRatio="none">
                 <path
                   d="M0 6 Q50 0 100 6"
-                  stroke="#25D366" strokeWidth="2.5" fill="none" strokeLinecap="round"
+                  stroke="#25D366"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
                   style={{
                     strokeDasharray: 120,
                     strokeDashoffset: visible ? 0 : 120,
@@ -322,20 +427,29 @@ export default function Pricing({ lang }: PricingProps) {
               </svg>
             </span>
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto text-base mb-6">{tr(t.pricing.subtitle, lang)}</p>
+          <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-base sm:text-lg mb-8 leading-relaxed">
+            {tr(t.pricing.subtitle, lang)}
+          </p>
 
           {/* Billing cycle toggle */}
-          <div className="inline-flex items-center bg-gray-100 rounded-2xl p-1 gap-1">
-            {CYCLES.map(c => (
+          <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700 rounded-2xl p-1.5 gap-1.5 shadow-inner">
+            {CYCLES.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setCycle(c.key)}
-                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${cycle === c.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                  }`}
+                className={`relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  cycle === c.key
+                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
               >
                 {tr(c.label, lang)}
                 {c.discount > 0 && (
-                  <span className={`absolute -top-2 ${isAr ? "-left-2" : "-right-2"} bg-[#25D366] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full`}>
+                  <span
+                    className={`absolute -top-2.5 ${
+                      isAr ? "-left-2" : "-right-2"
+                    } bg-[#25D366] text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm`}
+                  >
                     -{Math.round(c.discount * 100)}%
                   </span>
                 )}
@@ -344,8 +458,8 @@ export default function Pricing({ lang }: PricingProps) {
           </div>
         </div>
 
-        {/* ── Cards ── */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
+        {/* ── Cards Grid ── */}
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
           {plans.map((plan, i) => {
             const s = PLAN_STYLES[i];
             const base = BASE_PRICES[i];
@@ -353,12 +467,11 @@ export default function Pricing({ lang }: PricingProps) {
             const planCycle = canUseBillingCycle(slug, cycle) ? cycle : "monthly";
             const price = computePrice(base, planCycle);
             const isFree = base === 0;
-            const isEnterprise = slug === "enterprise";
-            const Icon = PLAN_ICONS[i];
-            const disc = CYCLES.find(c => c.key === planCycle)!.discount;
-            const saving = base > 0 && disc > 0
-              ? Math.round(base * disc * (planCycle === "quarterly" ? 3 : 12))
-              : 0;
+            const isMax = slug === "max" || slug === "enterprise";
+            const Icon = PLAN_ICONS[i] || Sparkles;
+            const disc = CYCLES.find((c) => c.key === planCycle)!.discount;
+            const saving =
+              base > 0 && disc > 0 ? Math.round(base * disc * (planCycle === "quarterly" ? 3 : 12)) : 0;
 
             return (
               <PricingCard
@@ -370,7 +483,7 @@ export default function Pricing({ lang }: PricingProps) {
                 price={price}
                 slug={slug}
                 isFree={isFree}
-                isEnterprise={isEnterprise}
+                isMax={isMax}
                 Icon={Icon}
                 saving={saving}
                 cycle={cycle}
@@ -385,18 +498,18 @@ export default function Pricing({ lang }: PricingProps) {
         </div>
 
         {/* ── Guarantee strip ── */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-x-10 gap-y-4" style={fadeUp(400)}>
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-x-12 gap-y-4" style={fadeUp(400)}>
           {[
-            { icon: <Shield className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar1, lang) },
-            { icon: <Check className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar2, lang) },
-            { icon: <Zap className="w-4 h-4 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
+            { icon: <Shield className="w-5 h-5 text-[#25D366]" />, text: tr(t.pricing.guar1, lang) },
+            { icon: <Check className="w-5 h-5 text-[#25D366]" />, text: tr(t.pricing.guar2, lang) },
+            { icon: <Zap className="w-5 h-5 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm text-gray-500">
-              {item.icon}{item.text}
+            <div key={i} className="flex items-center gap-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 rounded-2xl border border-gray-100 dark:border-gray-800">
+              {item.icon}
+              <span>{item.text}</span>
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );

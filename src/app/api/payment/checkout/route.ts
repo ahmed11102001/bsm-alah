@@ -42,6 +42,7 @@ import {
     buildFawaterakCustomer,
 } from "@/lib/fawaterak";
 import { requirePermission } from "@/lib/permissions";
+import { toPrismaPlanTier } from "@/lib/plans";
 
 // اقلبه true فقط لو قررتم تفعيل Fawaterak فعليًا كوسيلة دفع بديلة/إضافية.
 const FAWATERAK_ENABLED = false;
@@ -142,10 +143,12 @@ export async function POST(req: NextRequest) {
             const periodEnd = new Date(now);
             periodEnd.setMonth(periodEnd.getMonth() + cycleInfo.months);
 
+            const prismaPlan = toPrismaPlanTier(planSlug);
+
             await prisma.subscription.upsert({
                 where: { userId: ownerId },
                 update: {
-                    plan: planSlug,
+                    plan: prismaPlan,
                     status: "active",
                     currentPeriodStart: now,
                     currentPeriodEnd: periodEnd,
@@ -156,7 +159,7 @@ export async function POST(req: NextRequest) {
                 },
                 create: {
                     userId: ownerId,
-                    plan: planSlug,
+                    plan: prismaPlan,
                     status: "active",
                     currentPeriodStart: now,
                     currentPeriodEnd: periodEnd,

@@ -39,8 +39,10 @@ import {
 import type { PlanTier } from "@/lib/plans";
 
 const SLUG_TO_TIER: Record<string, PlanTier> = {
+    go: "starter",
     starter: "starter",
     pro: "pro",
+    max: "enterprise",
     enterprise: "enterprise",
 };
 
