@@ -1,115 +1,117 @@
 // src/app/articles/[slug]/page.tsx
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight, Clock, User } from "lucide-react";
+import type { Metadata } from "next";
 
 import ArticleMarkdown from "@/components/ArticleMarkdown";
+import {
+  getArticleBySlug,
+  getArticleSlugs,
+  getRelatedArticles,
+  getArticleUrl,
+  buildArticleJsonLd,
+  buildBreadcrumbJsonLd,
+} from "@/lib/articles";
 
-export const revalidate = 60;
+// ─── Static Generation ────────────────────────────────────────────────────────
 
-function getPossibleSlugs(rawSlug: string): string[] {
-  const list = new Set<string>();
-  list.add(rawSlug);
-  try {
-    const decoded = decodeURIComponent(rawSlug);
-    list.add(decoded);
-    list.add(decoded.trim());
-  } catch {}
-  try {
-    const encoded = encodeURIComponent(rawSlug);
-    list.add(encoded);
-  } catch {}
-  return Array.from(list);
+export function generateStaticParams() {
+  return getArticleSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug: rawSlug } = await params;
-  const possibleSlugs = getPossibleSlugs(rawSlug);
-  const article = await prisma.article.findFirst({
-    where: { slug: { in: possibleSlugs }, published: true },
-    select: { title: true, excerpt: true, coverImage: true, publishedAt: true, slug: true },
-  });
-  if (!article) return { title: "مقال غير موجود" };
-  const canonicalSlug = encodeURI(article.slug);
+// ─── Dynamic Metadata ─────────────────────────────────────────────────────────
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
+
+  if (!article) {
+    return { title: "مقال غير موجود" };
+  }
+
+  const canonicalUrl =
+    article.canonical || getArticleUrl(article.slug);
+  const ogTitle = article.ogTitle || article.title;
+  const ogDescription = article.ogDescription || article.description;
+  const ogImage = article.ogImage || article.coverImage;
+
   return {
     title: article.title,
-    description: article.excerpt,
+    description: article.description,
+    keywords: article.keywords.length > 0 ? article.keywords : undefined,
+    authors: [{ name: article.author }],
     alternates: {
-      canonical: `https://aiwni.com/articles/${canonicalSlug}`,
+      canonical: canonicalUrl,
     },
+    robots: article.robots
+      ? { index: !article.robots.includes("noindex"), follow: !article.robots.includes("nofollow") }
+      : { index: true, follow: true },
     openGraph: {
-      title: article.title,
-      description: article.excerpt ?? undefined,
-      url: `https://aiwni.com/articles/${canonicalSlug}`,
+      title: ogTitle,
+      description: ogDescription,
+      url: canonicalUrl,
       locale: "ar_EG",
       type: "article",
-      ...(article.publishedAt && {
-        publishedTime: new Date(article.publishedAt).toISOString(),
-      }),
-      images: article.coverImage ? [article.coverImage] : [],
+      publishedTime: article.publishedAt,
+      ...(article.updatedAt && { modifiedTime: article.updatedAt }),
+      ...(ogImage && { images: [ogImage] }),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title: ogTitle,
+      description: ogDescription,
+      ...(ogImage && { images: [ogImage] }),
     },
   };
 }
 
-export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug: rawSlug } = await params;
-  const possibleSlugs = getPossibleSlugs(rawSlug);
-  const article = await prisma.article.findFirst({
-    where: { slug: { in: possibleSlugs }, published: true },
-  });
+// ─── Page Component ───────────────────────────────────────────────────────────
+
+export default async function ArticlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
 
   if (!article) notFound();
 
-  const date = article.publishedAt
-    ? new Date(article.publishedAt).toLocaleDateString("ar-EG", {
-      year: "numeric", month: "long", day: "numeric",
-    })
-    : "";
+  const relatedArticles = getRelatedArticles(slug);
 
-  // ── SEO: JSON-LD structured data ──────────────────────────────────────────────
-  const articleLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: article.title,
-    ...(article.excerpt && { description: article.excerpt }),
-    ...(article.coverImage && { image: article.coverImage }),
-    ...(article.publishedAt && {
-      datePublished: new Date(article.publishedAt).toISOString(),
-    }),
-    ...(article.updatedAt && {
-      dateModified: new Date(article.updatedAt).toISOString(),
-    }),
-    url: `https://aiwni.com/articles/${encodeURI(article.slug)}`,
-    publisher: {
-      "@type": "Organization",
-      name: "Wani",
-      url: "https://aiwni.com",
-      logo: "https://aiwni.com/faviconlink.svg",
-    },
-    mainEntityOfPage: `https://aiwni.com/articles/${encodeURI(article.slug)}`,
-  };
+  const date = new Date(article.publishedAt).toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
-  const breadcrumbLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "الرئيسية", item: "https://aiwni.com" },
-      { "@type": "ListItem", position: 2, name: "المقالات", item: "https://aiwni.com/articles" },
-      { "@type": "ListItem", position: 3, name: article.title, item: `https://aiwni.com/articles/${encodeURI(article.slug)}` },
-    ],
-  };
+  const articleLd = buildArticleJsonLd(article);
+  const breadcrumbLd = buildBreadcrumbJsonLd(article);
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
       {/* SEO: JSON-LD */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
 
       {/* Back */}
       <div className="border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur z-10">
         <div className="max-w-3xl mx-auto px-4 py-3">
-          <Link href="/articles" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#25D366] transition-colors">
+          <Link
+            href="/articles"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#25D366] transition-colors"
+          >
             <ArrowRight className="w-4 h-4" />
             العودة للمقالات
           </Link>
@@ -122,19 +124,31 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <div className="rounded-2xl overflow-hidden mb-10 aspect-video">
             <img
               src={article.coverImage}
-              alt={article.title}
+              alt={article.coverImageAlt || article.title}
               className="w-full h-full object-cover"
             />
           </div>
         )}
 
-        {/* Meta */}
-        {date && (
-          <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-4">
+          <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4" />
             <span>{date}</span>
           </div>
-        )}
+          {article.readingTime && (
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4" />
+              <span>{article.readingTime} دقائق قراءة</span>
+            </div>
+          )}
+          {article.author && (
+            <div className="flex items-center gap-1.5">
+              <User className="w-4 h-4" />
+              <span>{article.author}</span>
+            </div>
+          )}
+        </div>
 
         {/* Title */}
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-4">
@@ -153,12 +167,37 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         {/* Content */}
         <ArticleMarkdown content={article.content} />
+
+        {/* Related Articles */}
+        {relatedArticles.length > 0 && (
+          <div className="mt-16 pt-8 border-t border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">مقالات ذات صلة</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {relatedArticles.map((related) => (
+                <Link
+                  key={related.slug}
+                  href={`/articles/${related.slug}`}
+                  className="group block p-5 rounded-2xl border border-gray-100 hover:border-[#25D366]/40 transition-colors"
+                >
+                  <h3 className="font-bold text-gray-900 group-hover:text-[#25D366] transition-colors mb-1.5 line-clamp-2">
+                    {related.title}
+                  </h3>
+                  {(related.excerpt || related.description) && (
+                    <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
+                      {related.excerpt || related.description}
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </article>
 
       {/* CTA */}
       <div className="bg-gray-900 text-white py-16 px-4 mt-16">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-3">جاهز تبدأ مع وني ؟ </h2>
+          <h2 className="text-2xl font-bold mb-3">جاهز تبدأ مع وني ؟</h2>
           <p className="text-gray-400 mb-6">أتمتة الرسائل وربط متجرك بخطوات بسيطة</p>
           <Link
             href="/#pricing"

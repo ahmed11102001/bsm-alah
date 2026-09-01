@@ -1,9 +1,9 @@
 import { MetadataRoute } from "next";
-import prisma from "@/lib/prisma";
+import { getAllArticles } from "@/lib/articles";
 
 export const revalidate = 3600;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://aiwni.com";
 
   // Static public SEO routes
@@ -112,26 +112,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic published articles
-  let articleRoutes: MetadataRoute.Sitemap = [];
-  try {
-    const articles = await prisma.article.findMany({
-      where: { published: true },
-      select: {
-        slug: true,
-        updatedAt: true,
-      },
-    });
-
-    articleRoutes = articles.map((article: { slug: string; updatedAt: Date }) => ({
-      url: `${baseUrl}/articles/${encodeURI(article.slug)}`,
-      lastModified: article.updatedAt ? new Date(article.updatedAt) : new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }));
-  } catch (error) {
-    console.error("[SITEMAP] Error fetching published articles:", error);
-  }
+  // Dynamic articles from MDX files (NOT from database)
+  const articles = getAllArticles();
+  const articleRoutes: MetadataRoute.Sitemap = articles.map((article) => ({
+    url: `${baseUrl}/articles/${encodeURI(article.slug)}`,
+    lastModified: article.updatedAt
+      ? new Date(article.updatedAt)
+      : new Date(article.publishedAt),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
 
   return [...staticRoutes, ...articleRoutes];
 }
