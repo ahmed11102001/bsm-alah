@@ -4,12 +4,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import { uploadToCloudinary }        from "@/lib/cloudinary";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 export const runtime = "nodejs";
+
+function ownerId(session: any): string {
+  return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  // Plan guard: رفع الصور متاح من باقة Go (starter) فأعلى
+  const owner = ownerId(session);
+  const mediaGuard = await checkFeature(owner, "mediaMessages");
+  const mediaBlocked = guardResponse(mediaGuard);
+  if (mediaBlocked) return mediaBlocked;
 
   const form = await req.formData();
   const file = form.get("file") as File | null;

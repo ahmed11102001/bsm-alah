@@ -386,6 +386,7 @@ const FEATURE_LABELS: Record<BooleanFeature, string> = {
   customAudiences: "الجمهور المخصص",
   storeIntegration: "ربط المتجر والأتمتة",
   aiAgent: "AI Sales Assistant",
+  googleSheets: "استيراد ومزامنة Google Sheets",
 };
 
 export async function checkFeature(

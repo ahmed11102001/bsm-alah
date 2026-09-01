@@ -20,6 +20,7 @@ export interface PlanLimits {
   customAudiences:     boolean;
   storeIntegration:    boolean;  // ربط Shopify / WooCommerce / EasyOrders + أتمتة المتجر
   aiAgent:             boolean;  // AI Sales Assistant (Wani)
+  googleSheets:        boolean;  // استيراد ومزامنة Google Sheets
 }
 
 const FREE_LIMITS: PlanLimits = {
@@ -35,6 +36,7 @@ const FREE_LIMITS: PlanLimits = {
   customAudiences:    false,
   storeIntegration:   false,
   aiAgent:            false,
+  googleSheets:       false,
 };
 
 const GO_LIMITS: PlanLimits = {
@@ -50,6 +52,7 @@ const GO_LIMITS: PlanLimits = {
   customAudiences:    true,
   storeIntegration:   false,
   aiAgent:            false,
+  googleSheets:       true,
 };
 
 const PRO_LIMITS: PlanLimits = {
@@ -65,6 +68,7 @@ const PRO_LIMITS: PlanLimits = {
   customAudiences:    true,
   storeIntegration:   true,
   aiAgent:            false,
+  googleSheets:       true,
 };
 
 const MAX_LIMITS: PlanLimits = {
@@ -80,6 +84,7 @@ const MAX_LIMITS: PlanLimits = {
   customAudiences:    true,
   storeIntegration:   true,
   aiAgent:            true,
+  googleSheets:       true,
 };
 
 export const PLANS: Record<PlanTier, PlanLimits> = {
@@ -108,6 +113,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
   | "customAudiences"
   | "storeIntegration"
   | "aiAgent"
+  | "googleSheets"
 >, PlanTier> = {
   scheduledCampaigns: "starter",
   advancedReports:    "pro",
@@ -116,6 +122,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
   customAudiences:    "starter",
   storeIntegration:   "pro",
   aiAgent:            "enterprise",
+  googleSheets:       "starter",
 };
 
 // ─── ترتيب الباقات للمقارنة ───────────────────────────────────────────────────

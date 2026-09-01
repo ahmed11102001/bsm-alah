@@ -6,9 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown, Sheet, RefreshCw, Unplug, ChevronDown, FileSpreadsheet,
+  Users, Plus, Search, Star, MessageSquareDashed, PenLine, Loader2, TrendingUp, Crown, Sheet, RefreshCw, Unplug, ChevronDown, FileSpreadsheet, Lock,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { useSubscription } from "@/lib/dashboard-context";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -27,6 +28,8 @@ import { GoogleSheetsImportDialog } from "./_components/GoogleSheetsImportDialog
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Contacts() {
   const { t, dir, locale } = useLanguage();
+  const { planTier } = useSubscription();
+  const isFree = planTier === "free";
   const ct = t.contacts;
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
 
@@ -328,9 +331,20 @@ export default function Contacts() {
                 <FileSpreadsheet className="w-4 h-4 text-gray-500" />
                 <span><span className="block text-sm font-medium">Excel / CSV</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "رفع ملف من الجهاز" : "Upload a local file"}</span></span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => setShowGoogle(true)}>
+              <DropdownMenuItem
+                className={`gap-3 py-2.5 ${isFree ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                onClick={() => {
+                  if (isFree) {
+                    toast.dismiss("plan-lock");
+                    toast.error(locale === "ar" ? "Google Sheets متاحة من باقة Go فما فوق. قم بالترقية." : "Google Sheets is available on Go plan and above. Please upgrade.", { id: "plan-lock" });
+                    return;
+                  }
+                  setShowGoogle(true);
+                }}
+              >
                 <Sheet className="w-4 h-4 text-green-600" />
                 <span><span className="block text-sm font-medium">Google Sheets</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "اختيار Spreadsheet ومزامنته" : "Import and sync a spreadsheet"}</span></span>
+                {isFree && <Lock className="w-3.5 h-3.5 text-amber-500 ms-auto flex-shrink-0" />}
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => setShowCustom(true)}>
                 <PenLine className="w-4 h-4 text-purple-500" />

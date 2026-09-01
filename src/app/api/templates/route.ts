@@ -245,7 +245,8 @@ export async function POST(req: Request) {
       const resData = await response.json();
       if (resData.error) {
         console.error("Meta create template error response:", resData);
-        return NextResponse.json({ error: resData.error.message || "فشل إرسال القالب إلى ميتا" }, { status: 400 });
+        const errMsg = resData.error.error_user_msg || resData.error.message || "فشل إرسال القالب إلى ميتا";
+        return NextResponse.json({ error: errMsg }, { status: 400 });
       }
 
       metaId = resData.id;

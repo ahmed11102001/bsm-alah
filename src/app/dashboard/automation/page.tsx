@@ -31,7 +31,7 @@ import {
   Bot, Plus, MoreVertical, Trash2, Edit2, Loader2, MessageSquare, ImageIcon,
   Zap, ToggleLeft, ToggleRight, CheckCircle, Save, Sparkles, Key,
   X, ListFilter, CornerDownLeft,
-  Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid,
+  Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid, Lock,
 } from "lucide-react";
 import SmartFollowUpTab from "@/app/dashboard/automation/SmartFollowUp/page";
 import AiAgentDashboard from "@/app/dashboard/automation/_components/AiAgentDashboard";
@@ -297,6 +297,7 @@ export default function Automation() {
   const [launchingAb, setLaunchingAb] = useState(false);
   const isEnterprise = planTier === "enterprise";
   const isProOrAbove = planTier === "pro" || planTier === "enterprise";
+  const isFree = planTier === "free";
 
   const aiLockMsg = tx(
     lang,
@@ -1304,8 +1305,14 @@ export default function Automation() {
                   <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
                     {tx(lang, "صورة مرفقة", "Attached image")} <span className="text-gray-400 font-normal text-xs">{tx(lang, "(اختياري)", "(optional)")}</span>
+                    {isFree && <Lock className="w-3 h-3 text-amber-500" />}
                   </Label>
-                  {ruleForm.replyMediaUrl ? (
+                  {isFree ? (
+                    <div className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 cursor-not-allowed">
+                      <Lock className="w-5 h-5 text-amber-400 mb-1" />
+                      <span className="text-xs text-amber-500 font-medium">{tx(lang, "متاحة من باقة Go فما فوق", "Available on Go plan and above")}</span>
+                    </div>
+                  ) : ruleForm.replyMediaUrl ? (
                     <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
                       <img src={ruleForm.replyMediaUrl} alt="preview" className="w-full max-h-40 object-cover" />
                       <button
@@ -1345,8 +1352,14 @@ export default function Automation() {
                   <Label className="text-sm mb-1.5 block flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
                     {tx(lang, "صورة مرفقة", "Attached image")} <span className="text-gray-400 font-normal text-xs">{tx(lang, "(اختياري)", "(optional)")}</span>
+                    {isFree && <Lock className="w-3 h-3 text-amber-500" />}
                   </Label>
-                  {ruleForm.replyMediaUrl ? (
+                  {isFree ? (
+                    <div className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-xl border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 cursor-not-allowed">
+                      <Lock className="w-5 h-5 text-amber-400 mb-1" />
+                      <span className="text-xs text-amber-500 font-medium">{tx(lang, "متاحة من باقة Go فما فوق", "Available on Go plan and above")}</span>
+                    </div>
+                  ) : ruleForm.replyMediaUrl ? (
                     <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
                       <img src={ruleForm.replyMediaUrl} alt="preview" className="w-full max-h-40 object-cover" />
                       <button type="button" onClick={() => setRuleForm(f => ({ ...f, replyMediaUrl: "" }))}

@@ -410,6 +410,16 @@ function ShopifyContent({
                 📋 <strong>Shopify Admin → Settings → Apps → Develop apps → Create app</strong>
                 <br />
                 فعّل: <strong>read_orders, write_orders, read_checkouts, read_customers, read_products</strong>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-0.5 ms-1.5 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-300 transition-colors text-[10px] font-medium align-middle"
+                  onClick={() => {
+                    navigator.clipboard.writeText("read_orders, write_orders, read_checkouts, read_customers, read_products");
+                    toast.success("تم نسخ الصلاحيات ✓");
+                  }}
+                >
+                  <Copy className="w-2.5 h-2.5" /> نسخ
+                </button>
                 <br />
                 ثم <strong>Install app</strong> وانسخ الـ Admin API access token
               </p>
