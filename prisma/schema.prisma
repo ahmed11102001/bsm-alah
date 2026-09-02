@@ -1557,6 +1557,7 @@ enum MessageSenderType {
 enum CampaignStatus {
   draft
   scheduled
+  queued
   running
   completed
   failed

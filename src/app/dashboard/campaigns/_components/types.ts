@@ -6,7 +6,7 @@ export interface Template {
 }
 export interface Campaign {
   id: string; name: string;
-  status: "draft" | "scheduled" | "running" | "completed" | "failed";
+  status: "draft" | "scheduled" | "queued" | "running" | "completed" | "failed";
   sentCount: number; deliveredCount: number; readCount: number;
   failedCount: number; totalQueued: number; queuedCount: number;
   scheduledAt: string | null; createdAt: string; completedAt: string | null;

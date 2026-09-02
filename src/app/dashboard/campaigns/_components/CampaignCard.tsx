@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Megaphone, Eye, RefreshCw, Trash2, Clock } from "lucide-react";
+import { Megaphone, Eye, RefreshCw, Trash2, Clock, Calendar, Loader2 } from "lucide-react";
 import { tr } from "./i18n";
 import { statusConfig } from "./helpers";
 import { SendProgress } from "./SendProgress";
@@ -60,18 +60,31 @@ export function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBl
           </div>
         </div>
 
-        {/* ── Send progress bar (only) ── */}
-        {campaign.totalQueued > 0 && (
+        {/* ── Send progress bar (for running, completed, and queued) ── */}
+        {campaign.totalQueued > 0 && campaign.status !== "scheduled" && (
           <div className="mt-3 border-t border-gray-50 dark:border-gray-700 pt-3">
             <SendProgress campaign={campaign} lang={lang} />
           </div>
         )}
 
-        {/* ── Scheduled badge ── */}
+        {/* ── Queued banner ── */}
+        {campaign.status === "queued" && (
+          <div className="mt-2.5 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
+            <Clock className="w-3.5 h-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5 animate-pulse" />
+            <div className="flex-1">
+              <span className="font-semibold">{tr("queued", lang)}:</span> {tr("queuedHint", lang)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Scheduled banner ── */}
         {campaign.status === "scheduled" && campaign.scheduledAt && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1.5 rounded-lg">
-            <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-            {tr("scheduled", lang)}: {new Date(campaign.scheduledAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
+          <div className="mt-2.5 flex items-start gap-2 text-xs text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+            <Calendar className="w-3.5 h-3.5 flex-shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-semibold">{tr("scheduled", lang)}:</span> {new Date(campaign.scheduledAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
+              <p className="text-[11px] text-blue-600/80 dark:text-blue-400/80 mt-0.5">{tr("scheduledHint", lang)}</p>
+            </div>
           </div>
         )}
       </CardContent>

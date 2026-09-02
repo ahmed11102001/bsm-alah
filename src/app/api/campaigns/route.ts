@@ -291,13 +291,24 @@ async function handleCreate(userId: string, body: any) {
       accessToken: decryptToken(account.accessToken),
     });
 
-    await inngest.send({
-      name: "campaign/send",
-      data: {
-        campaignId: campaign.id,
-        scheduledAt: isScheduled ? scheduledDate?.toISOString() : null,
-      },
-    });
+    if (isScheduled) {
+      await inngest.send({
+        name: "campaign/schedule",
+        data: {
+          campaignId: campaign.id,
+          scheduledAt: scheduledDate!.toISOString(),
+          userId,
+        },
+      });
+    } else {
+      await inngest.send({
+        name: "campaign/send",
+        data: {
+          campaignId: campaign.id,
+          userId,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -306,7 +317,7 @@ async function handleCreate(userId: string, body: any) {
       scheduled: isScheduled,
       message: isScheduled
         ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-        : `تم إنشاء الحملة — جاري الإرسال`,
+        : `تم وضع الحملة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`,
     });
   } catch (err) {
     await refundCampaignQuota(userId);
@@ -384,14 +395,14 @@ async function handleRepeat(userId: string, campaignId: string) {
 
     await inngest.send({
       name: "campaign/send",
-      data: { campaignId: newCampaign.id, scheduledAt: null },
+      data: { campaignId: newCampaign.id, userId },
     });
 
     return NextResponse.json({
       success: true,
       campaignId: newCampaign.id,
       queued,
-      message: `تم تكرار الحملة — جاري الإرسال`,
+      message: `تم وضع الحملة المكررة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`,
     });
   } catch (err) {
     await refundCampaignQuota(userId);

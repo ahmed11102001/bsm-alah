@@ -5,7 +5,7 @@
 
 import { serve } from "inngest/next";
 import { inngest } from "@/inngest/client";
-import { processCampaign, sendDirectMessage, processQueueItem, handleNewLeadBot, processDelayedStoreAutomation } from "@/inngest/functions";
+import { scheduleCampaign, processCampaign, sendDirectMessage, processQueueItem, handleNewLeadBot, processDelayedStoreAutomation } from "@/inngest/functions";
 import {
   handleShopifyOrderCreated,
   handleShopifyOrderFulfilled,
@@ -50,6 +50,7 @@ import { googleSheetsSyncCron } from "@/inngest/google-sheets-functions";
 const inngestHandler = serve({
   client: inngest,
   functions: [
+    scheduleCampaign,
     aiReplyDebounceFn,
     handoffResumeFn,
     processCampaign,

@@ -46,6 +46,7 @@ export type MessageSenderType = (typeof MessageSenderType)[keyof typeof MessageS
 export const CampaignStatus = {
   draft: "draft",
   scheduled: "scheduled",
+  queued: "queued",
   running: "running",
   completed: "completed",
   failed: "failed",

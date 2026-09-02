@@ -395,6 +395,7 @@ export default function Campaigns() {
   const STATUS_FILTERS = [
     { value: "all", label: tr("filterAll", lang) },
     { value: "running", label: tr("filterRunning", lang) },
+    { value: "queued", label: tr("filterQueued", lang) },
     { value: "scheduled", label: tr("filterScheduled", lang) },
     { value: "completed", label: tr("filterCompleted", lang) },
     { value: "failed", label: tr("filterFailed", lang) },

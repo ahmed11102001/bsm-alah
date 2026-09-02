@@ -18,31 +18,90 @@ const CAMPAIGN_CHUNK_SIZE = 200;
 
 // ─── String literals بدل الـ enums (تعمل بدون prisma generate محلياً) ────────
 const QueueStatus = { pending: "pending", processing: "processing", sent: "sent", failed: "failed", cancelled: "cancelled" } as const;
-const CampaignStatus = { running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
+const CampaignStatus = { draft: "draft", queued: "queued", running: "running", completed: "completed", scheduled: "scheduled", failed: "failed" } as const;
 const MessageStatus = { sent: "sent", failed: "failed" } as const;
 const MessageDirection = { outbound: "outbound" } as const;
 const MessageType = { template: "template" } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Function 1: processCampaign
+// Function 0: scheduleCampaign (Scheduling Handler)
+// ═══════════════════════════════════════════════════════════════════════════════
+// تنتظر حتى موعد الحملة المجدولة دون حجز أي Concurrency slot خاص بالتنفيذ
+// عند حلول الموعد: تحول الحالة إلى queued وترسل event campaign/send للتنفيذ الفعلي
+export const scheduleCampaign = inngest.createFunction(
+  {
+    id: "schedule-campaign",
+    retries: 2,
+    triggers: [{ event: "campaign/schedule" }],
+  },
+  async ({ event, step }: { event: any; step: any }) => {
+    const { campaignId, scheduledAt, userId } = event.data as {
+      campaignId: string;
+      scheduledAt: string;
+      userId?: string;
+    };
+
+    if (scheduledAt) {
+      await step.sleepUntil("wait-for-schedule", new Date(scheduledAt));
+    }
+
+    // تحقق من أن الحملة لم تلغ أو تحذف أثناء فترة الانتظار
+    const campaign = await step.run("check-campaign", async () => {
+      return await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { id: true, status: true, userId: true },
+      });
+    });
+
+    if (!campaign || campaign.status === CampaignStatus.completed || campaign.status === CampaignStatus.failed) {
+      return { skipped: true, reason: "Campaign already ended or deleted" };
+    }
+
+    // نقل الحملة إلى قائمة الانتظار الفعلية
+    await step.run("mark-queued", async () => {
+      await prisma.$transaction([
+        prisma.messageQueue.updateMany({
+          where: { campaignId, status: QueueStatus.pending },
+          data: { scheduledAt: new Date() },
+        }),
+        prisma.campaign.update({
+          where: { id: campaignId },
+          data: { status: CampaignStatus.queued },
+        }),
+      ]);
+    });
+
+    // إرسال event التنفيذ ليدخل في مسار الـ execution concurrency
+    await step.sendEvent("dispatch-campaign-send", {
+      name: "campaign/send",
+      data: {
+        campaignId,
+        userId: campaign.userId ?? userId,
+      },
+    });
+
+    return { scheduled: true, dispatchedAt: new Date().toISOString() };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Function 1: processCampaign (Execution Processor)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const processCampaign = inngest.createFunction(
   {
     id: "process-campaign",
     retries: 2,
-    concurrency: { limit: 5 },
+    concurrency: [
+      { limit: 5 },                                // السعة الإجمالية المتزامنة للمنصة
+      { limit: 2, key: "event.data.userId" },      // حماية المستخدمين من احتكار السعة
+    ],
     triggers: [{ event: "campaign/send" }],
   },
   async ({ event, step }: { event: any; step: any }) => {
-    const { campaignId, scheduledAt } = event.data as {
+    const { campaignId } = event.data as {
       campaignId: string;
-      scheduledAt: string | null;
+      scheduledAt?: string | null;
     };
-
-    // ── Step 0: لو مجدولة — استنى لحد الموعد ─────────────────────────────────
-    if (scheduledAt) {
-      await step.sleepUntil("wait-for-schedule", new Date(scheduledAt));
-    }
 
     // ── Step 1: جيب بيانات الحملة والحساب ────────────────────────────────────
     const campaign = await step.run("get-campaign-data", async () => {
@@ -80,7 +139,7 @@ export const processCampaign = inngest.createFunction(
 
     const account = campaign.user.whatsappAccount;
 
-    // ── Step 2: تحديث الحملة لـ running ──────────────────────────────────────
+    // ── Step 2: تحديث الحملة لـ running فور بدء المعالجة الفعلية ──────────────
     await step.run("mark-running", async () => {
       await prisma.campaign.update({
         where: { id: campaignId },

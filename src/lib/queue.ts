@@ -220,10 +220,10 @@ export async function enqueueCampaign(params: {
   await prisma.campaign.update({
     where: { id: campaignId },
     data: {
-      status: scheduledAt ? CampaignStatus.scheduled : CampaignStatus.running,
+      status: scheduledAt ? CampaignStatus.scheduled : CampaignStatus.queued,
       totalQueued: numbers.length,
       queuedCount: numbers.length,
-      startedAt: scheduledAt ? null : new Date(),
+      startedAt: null,
       scheduledAt: scheduledAt ?? null,
     },
   });
@@ -277,12 +277,12 @@ export async function triggerScheduledCampaigns(): Promise<number> {
       status: CampaignStatus.scheduled,
       scheduledAt: { lte: now },
     },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
 
   if (due.length === 0) return 0;
 
-  // حوّل رسائلها من scheduledAt مستقبلي لـ now
+  // حوّل رسائلها من scheduledAt مستقبلي لـ now وضع حالتها queued ثم أرسل لـ Inngest
   for (const campaign of due) {
     await prisma.$transaction([
       prisma.messageQueue.updateMany({
@@ -296,9 +296,14 @@ export async function triggerScheduledCampaigns(): Promise<number> {
       }),
       prisma.campaign.update({
         where: { id: campaign.id },
-        data: { status: CampaignStatus.running, startedAt: now },
+        data: { status: CampaignStatus.queued },
       }),
     ]);
+
+    await inngest.send({
+      name: "campaign/send",
+      data: { campaignId: campaign.id, userId: campaign.userId },
+    });
   }
 
   return due.length;
