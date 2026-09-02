@@ -7,8 +7,9 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Image as ImageIcon, FileText, Video, Link as LinkIcon, Plus } from "lucide-react";
+import { Loader2, Image as ImageIcon, FileText, Video, Link as LinkIcon, Plus, Lock } from "lucide-react";
 import { ParsedTemplate } from "@/hooks/useTemplateParser";
+import { useSubscription } from "@/lib/dashboard-context";
 import { toast } from "sonner";
 
 interface Props {
@@ -44,11 +45,27 @@ function tr(key: keyof typeof t, lang: "ar" | "en" = "ar") {
 export function DynamicTemplateForm({ parsedTemplate, availableColumns, values, onChange, lang = "ar" }: Props) {
   const [uploading, setUploading] = useState(false);
 
+  let isMediaLocked = false;
+  try {
+    const sub = useSubscription();
+    isMediaLocked = !sub.canMedia && sub.planTier === "free";
+  } catch {
+    isMediaLocked = false;
+  }
+
   const updateValue = (key: string, val: string) => {
     onChange({ ...values, [key]: val });
   };
 
   const handleMediaUpload = async (file: File) => {
+    if (isMediaLocked) {
+      toast.error(
+        lang === "ar"
+          ? "رفع الصور والوسائط متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+          : "Uploading media requires Go plan or higher. Please upgrade."
+      );
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -116,24 +133,62 @@ export function DynamicTemplateForm({ parsedTemplate, availableColumns, values, 
       {/* Media Header */}
       {parsedTemplate.requiresHeaderMedia !== "NONE" && (
         <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 p-4 rounded-xl">
-          <Label className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-1.5">
-            {parsedTemplate.requiresHeaderMedia === "IMAGE" ? <ImageIcon className="w-4 h-4" /> :
-             parsedTemplate.requiresHeaderMedia === "VIDEO" ? <Video className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-            {tr("headerMedia", lang)}
+          <Label className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              {parsedTemplate.requiresHeaderMedia === "IMAGE" ? <ImageIcon className="w-4 h-4" /> :
+               parsedTemplate.requiresHeaderMedia === "VIDEO" ? <Video className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+              {tr("headerMedia", lang)}
+            </span>
+            {isMediaLocked && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                <Lock className="w-3 h-3" />
+                <span>Go</span>
+              </span>
+            )}
           </Label>
 
-          <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer transition mb-3
-            ${uploading ? "border-blue-300 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-white dark:hover:bg-gray-800"}`}>
-            <input type="file" 
-              accept={
-                parsedTemplate.requiresHeaderMedia === "IMAGE" ? "image/jpeg,image/png,image/webp" :
-                parsedTemplate.requiresHeaderMedia === "VIDEO" ? "video/mp4,video/3gpp" : 
-                "application/pdf"
-              } 
-              className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} 
-            />
-            {uploading ? (
+          <label
+            onClick={e => {
+              if (isMediaLocked) {
+                e.preventDefault();
+                toast.error(
+                  lang === "ar"
+                    ? "رفع الصور والوسائط متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+                    : "Uploading media requires Go plan or higher. Please upgrade."
+                );
+              }
+            }}
+            className={`flex flex-col items-center justify-center w-full min-h-[96px] py-3 px-4 border-2 border-dashed rounded-xl transition mb-3 relative overflow-hidden
+            ${isMediaLocked
+              ? "border-amber-200 dark:border-amber-800/40 bg-amber-50/40 dark:bg-amber-900/10 cursor-pointer opacity-90 hover:opacity-100"
+              : uploading
+              ? "border-blue-300 bg-blue-50 dark:bg-blue-900/10 cursor-wait"
+              : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-white dark:hover:bg-gray-800 cursor-pointer"
+            }`}>
+            {!isMediaLocked && (
+              <input type="file" 
+                accept={
+                  parsedTemplate.requiresHeaderMedia === "IMAGE" ? "image/jpeg,image/png,image/webp" :
+                  parsedTemplate.requiresHeaderMedia === "VIDEO" ? "video/mp4,video/3gpp" : 
+                  "application/pdf"
+                } 
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleMediaUpload(f); e.target.value = ""; }} 
+              />
+            )}
+            {isMediaLocked ? (
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-1.5 border border-amber-500/20">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  {lang === "ar" ? "رفع الصور متاح في باقة Go وما فوقها" : "Image upload is locked on Free plan"}
+                </span>
+                <span className="text-[11px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
+                  {lang === "ar" ? "قم بترقية باقتك أو أدخل رابط مباشر بالأسفل" : "Upgrade your plan or enter a direct link below"}
+                </span>
+              </div>
+            ) : uploading ? (
               <><Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" /><span className="text-xs text-blue-500 font-medium">{tr("uploading", lang)}</span></>
             ) : (
               <>

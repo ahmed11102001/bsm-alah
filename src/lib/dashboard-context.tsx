@@ -51,6 +51,7 @@ interface SubscriptionContextValue {
     campaignAtMax: boolean;
     canStore: boolean;
     canAI: boolean;
+    canMedia: boolean;
     canUseClaude: boolean;
     isSuper: boolean;
 }
@@ -124,6 +125,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         campaignAtMax,
         canStore: planLimits?.storeIntegration ?? false,
         canAI: planLimits?.aiAgent ?? false,
+        canMedia: planLimits?.mediaMessages ?? false,
         canUseClaude: planAtLeast(planTier as PlanTier, "pro"),
         isSuper: !!session?.user?.isSuper,
     };
