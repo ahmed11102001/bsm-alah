@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
+import { syncPushSubscriptionOnLogin, urlBase64ToUint8Array } from "@/lib/push-client";
 import DeviceNotificationModal, {
   ALL_NOTIFICATION_TYPES_LIST,
 } from "./DeviceNotificationModal";
@@ -121,17 +122,6 @@ function t(raw: string, lang: "ar" | "en"): string {
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
 export default function NotificationBell({
   onNavigate,
   lang = "ar",
@@ -226,22 +216,26 @@ export default function NotificationBell({
     return () => document.removeEventListener("mousedown", handler);
   }, [setOpen]);
 
-  // Check Push Notification Status
+  // Check Push Notification Status and sync on login
   useEffect(() => {
     if (
+      typeof window === "undefined" ||
       !("Notification" in window) ||
       !("serviceWorker" in navigator) ||
       !("PushManager" in window)
     ) {
       setPushSupported(false);
+      setPushEnabled(false);
       return;
     }
+
     if (Notification.permission === "granted") {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.pushManager.getSubscription().then((sub) => {
-          setPushEnabled(!!sub);
-        });
+      // إذن المتصفح ممنوح: مزامنة فورية والتأكد من وجود اشتراك حقيقي ومسجل لهذا المستخدم
+      syncPushSubscriptionOnLogin().then((synced) => {
+        setPushEnabled(synced);
       });
+    } else {
+      setPushEnabled(false);
     }
   }, []);
 
@@ -254,7 +248,7 @@ export default function NotificationBell({
       await navigator.serviceWorker.ready;
 
       if (pushEnabled) {
-        // Unsubscribe
+        // Unsubscribe يدوياً من واجهة الجرس
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
           const json = sub.toJSON();
@@ -262,29 +256,23 @@ export default function NotificationBell({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ endpoint: json.endpoint }),
-          });
-          await sub.unsubscribe();
+          }).catch(() => undefined);
+          await sub.unsubscribe().catch(() => undefined);
         }
         setPushEnabled(false);
       } else {
         // Subscribe
         const permission = await Notification.requestPermission();
         if (permission === "granted") {
-          const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_KEY) as any,
-          });
-          const json = sub.toJSON();
-          await fetch("/api/push/subscribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-          });
-          setPushEnabled(true);
+          const success = await syncPushSubscriptionOnLogin();
+          setPushEnabled(success);
+        } else {
+          setPushEnabled(false);
         }
       }
     } catch (err) {
       console.error("[PUSH] Toggle error:", err);
+      setPushEnabled(false);
     } finally {
       setPushLoading(false);
     }

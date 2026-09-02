@@ -1,28 +1,129 @@
 // src/lib/push-client.ts
-// ─── تنظيف اشتراك الـPush Notifications عند تسجيل الخروج ────────────────────
-//
-// المشكلة اللي بيحلها الملف ده:
-// اشتراك الـPush (endpoint) مرتبط بالمتصفح/الجهاز نفسه، مش بجلسة اليوزر.
-// لو أحمد سجّل دخول على جهاز وفعّل إشعارات الجهاز، وبعدين عمل Logout، ومستخدم
-// تاني سجّل دخول على نفس الجهاز/المتصفح من غير ما يعمل toggle للإشعارات يدويًا
-// — كان اشتراك أحمد القديم (endpoint) لسه شغال في المتصفح ومسجّل في الداتابيز
-// على userId بتاعه، فإشعارات أحمد كانت ممكن تفضل توصل للجهاز ده حتى بعد ما
-// يطلع من حسابه.
-//
-// الحل: قبل ما نعمل signOut فعليًا، نلغي اشتراك الـPush بتاع المتصفح خالص
-// (browser-level unsubscribe) ونمسح الـrecord بتاعه من السيرفر. كده أي مستخدم
-// جديد يسجّل دخول على نفس الجهاز، هيحتاج يعمل subscribe جديد بنفسه (endpoint
-// جديد يتربط بحسابه هو بس).
-//
-// ملحوظة: الملف ده جزء من منطق التطبيق (dashboard) بعد تسجيل الدخول — مالوش
-// أي علاقة باللاندينج بيدج العامة (src/app/[locale], src/components/LandingPage).
+// ─── إدارة اشتراك الـPush Notifications في المتصفح والـAuth ──────────────────
 
 /**
- * يحاول يلغي اشتراك الـPush الحالي على الجهاز/المتصفح ده — على مستوى المتصفح
- * (PushManager.unsubscribe) وعلى مستوى السيرفر (حذف الـPushSubscription record).
- *
- * آمن للاستدعاء دايمًا: بيلتقط أي error من غير ما يوقف تنفيذ الـlogout —
- * حتى لو الجلسة خلصت بالفعل (401) أو المتصفح مش بيدعم Push أصلاً.
+ * تحويل مفتاح VAPID من Base64 إلى Uint8Array
+ */
+export function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+/**
+ * فحص ما إذا كان هناك اشتراك Push فعلي وصالح على الجهاز ومربوط بالمستخدم الحالي في الـDB.
+ * لا يعتمد فقط على Notification.permission بل يتحقق من الاشتراك الحقيقي في الـDB.
+ */
+export async function checkPushSubscriptionStatus(): Promise<boolean> {
+  try {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      return false;
+    }
+
+    if (Notification.permission !== "granted") {
+      return false;
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg.pushManager) return false;
+
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return false;
+
+    // التحقق من أن الـ endpoint مسجل في الـ DB ومربوط بالمستخدم الحالي
+    const res = await fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`);
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    return !!data.enabled;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * عند تسجيل الدخول أو تحميل لوحة التحكم:
+ * إذا كان إذن المتصفح مسموحًا (Notification.permission === 'granted'):
+ * 1. يتحقق من وجود PushSubscription على الجهاز
+ * 2. إذا لم يكن موجودًا (أو منتهيًا)، يعيد إنشاء الاشتراك تلقائيًا
+ * 3. يسجل/يحدث الاشتراك في الـDB ويربطه بالمستخدم الحالي فورًا
+ * 4. يرجع boolean يعبر عما إذا كان الاشتراك فعالًا ومسجلاً للمستخدم الحالي
+ */
+export async function syncPushSubscriptionOnLogin(): Promise<boolean> {
+  try {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      return false;
+    }
+
+    if (Notification.permission !== "granted") {
+      return false;
+    }
+
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) return false;
+
+    // تسجيل الـService Worker وضمان جاهزيته
+    await navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg.pushManager) return false;
+
+    // 1. فحص الاشتراك الحالي على الجهاز
+    let sub = await reg.pushManager.getSubscription();
+
+    // 2. إذا لم يكن هناك اشتراك على الجهاز، نعيد إنشاء الاشتراك تلقائيًا
+    if (!sub) {
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as any,
+        });
+      } catch (subErr) {
+        console.warn("[PUSH] Auto-resubscribe error on login:", subErr);
+        return false;
+      }
+    }
+
+    if (!sub) return false;
+
+    const json = sub.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      return false;
+    }
+
+    // 3. ربط وتحديث الاشتراك في الداتابيز بحساب المستخدم الحالي
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: json.keys,
+      }),
+    });
+
+    return res.ok;
+  } catch (err) {
+    console.error("[PUSH] Sync push subscription on login failed:", err);
+    return false;
+  }
+}
+
+/**
+ * إلغاء اشتراك الـPush يدوياً عند رغبة المستخدم الصريحة (مثل toggle off في الإعدادات)
  */
 export async function unsubscribePushOnThisDevice(): Promise<void> {
   try {
@@ -36,8 +137,6 @@ export async function unsubscribePushOnThisDevice(): Promise<void> {
 
     const endpoint = sub.endpoint;
 
-    // 1) امسح الـrecord من السيرفر (best-effort — لو الجلسة خلصت هيرجع 401
-    //    وده مش مشكلة، لأن هنلغي الاشتراك من المتصفح في الخطوة الجاية على أي حال)
     try {
       await fetch("/api/push/unsubscribe", {
         method: "POST",
@@ -45,26 +144,25 @@ export async function unsubscribePushOnThisDevice(): Promise<void> {
         body: JSON.stringify({ endpoint }),
       });
     } catch {
-      /* شبكة/سيرفر مش متاح — نكمل نلغي محليًا برضو */
+      /* network error */
     }
 
-    // 2) الأهم: إلغاء الاشتراك من المتصفح نفسه، عشان الـendpoint ده يبقى
-    //    منتهي فعليًا ومايفضلش يستقبل push حتى لو السيرفر معملوش delete
     await sub.unsubscribe();
   } catch {
-    /* أي خطأ هنا متوقعشي يمنع تسجيل الخروج */
+    /* ignore error */
   }
 }
 
 /**
- * Wrapper حوالين next-auth's signOut(): بيلغي اشتراك الـPush على الجهاز ده
- * الأول، وبعدين يعمل signOut عادي بنفس الـoptions.
- * استخدمها بدل ما تستدعي signOut() مباشرة من أي مكان جوه الـdashboard.
+ * تسجيل الخروج (signOut):
+ * - إذن المتصفح Notification.permission يظل كما هو.
+ * - لا يتم حذف أو إلغاء اشتراك الـPushSubscription من المتصفح/الجهاز لمجرد تسجيل الخروج.
+ * - عند تسجيل الدخول مجددًا، يقوم syncPushSubscriptionOnLogin بربط الجهاز بالمستخدم الصحيح تلقائيًا.
  */
 export async function signOutWithPushCleanup(
   signOutFn: (options?: { callbackUrl?: string; redirect?: boolean }) => Promise<any>,
   options?: { callbackUrl?: string; redirect?: boolean }
 ): Promise<void> {
-  await unsubscribePushOnThisDevice();
+  // لا نحذف PushSubscription من الجهاز عند تسجيل الخروج
   await signOutFn(options);
 }
