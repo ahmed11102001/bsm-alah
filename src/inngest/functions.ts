@@ -45,38 +45,43 @@ export const scheduleCampaign = inngest.createFunction(
       await step.sleepUntil("wait-for-schedule", new Date(scheduledAt));
     }
 
-    // تحقق من أن الحملة لم تلغ أو تحذف أثناء فترة الانتظار
-    const campaign = await step.run("check-campaign", async () => {
-      return await prisma.campaign.findUnique({
-        where: { id: campaignId },
-        select: { id: true, status: true, userId: true },
+    // الانتقال الذري: من scheduled -> queued فقط
+    // لو الحملة تم إلغاؤها، حذفها، أو تحويلها مسبقاً، لن يتم إرسال event التنفيذ
+    const transitionResult = await step.run("mark-queued-atomic", async () => {
+      return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const campaign = await tx.campaign.findUnique({
+          where: { id: campaignId },
+          select: { id: true, status: true, userId: true },
+        });
+
+        if (!campaign || campaign.status !== CampaignStatus.scheduled) {
+          return { success: false, reason: `Campaign status is ${campaign?.status ?? "not found"}` };
+        }
+
+        await tx.campaign.update({
+          where: { id: campaignId },
+          data: { status: CampaignStatus.queued },
+        });
+
+        await tx.messageQueue.updateMany({
+          where: { campaignId, status: QueueStatus.pending },
+          data: { scheduledAt: new Date() },
+        });
+
+        return { success: true, userId: campaign.userId };
       });
     });
 
-    if (!campaign || campaign.status === CampaignStatus.completed || campaign.status === CampaignStatus.failed) {
-      return { skipped: true, reason: "Campaign already ended or deleted" };
+    if (!transitionResult.success) {
+      return { skipped: true, reason: transitionResult.reason };
     }
 
-    // نقل الحملة إلى قائمة الانتظار الفعلية
-    await step.run("mark-queued", async () => {
-      await prisma.$transaction([
-        prisma.messageQueue.updateMany({
-          where: { campaignId, status: QueueStatus.pending },
-          data: { scheduledAt: new Date() },
-        }),
-        prisma.campaign.update({
-          where: { id: campaignId },
-          data: { status: CampaignStatus.queued },
-        }),
-      ]);
-    });
-
-    // إرسال event التنفيذ ليدخل في مسار الـ execution concurrency
+    // إرسال event التنفيذ الفعلي ليدخل طابور الـ concurrency
     await step.sendEvent("dispatch-campaign-send", {
       name: "campaign/send",
       data: {
         campaignId,
-        userId: campaign.userId ?? userId,
+        userId: transitionResult.userId ?? userId,
       },
     });
 
@@ -135,17 +140,25 @@ export const processCampaign = inngest.createFunction(
 
     if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
     if (!campaign.user?.whatsappAccount) throw new Error("No WhatsApp account linked");
-    if (campaign.status === CampaignStatus.completed) return { skipped: true };
+    if (campaign.status === CampaignStatus.completed) return { skipped: true, reason: "Already completed" };
 
     const account = campaign.user.whatsappAccount;
 
-    // ── Step 2: تحديث الحملة لـ running فور بدء المعالجة الفعلية ──────────────
-    await step.run("mark-running", async () => {
-      await prisma.campaign.update({
-        where: { id: campaignId },
+    // ── Step 2: تحديث الحملة لـ running بنظام ذري لمنع أي تشغيل مكرر ────────
+    const startResult = await step.run("mark-running-atomic", async () => {
+      const updateResult = await prisma.campaign.updateMany({
+        where: {
+          id: campaignId,
+          status: { in: [CampaignStatus.queued, CampaignStatus.draft] },
+        },
         data: { status: CampaignStatus.running, startedAt: new Date() },
       });
+      return { started: updateResult.count > 0 };
     });
+
+    if (!startResult.started) {
+      return { skipped: true, reason: `Campaign status is ${campaign.status}, skipping duplicate run` };
+    }
 
     // ── Step 3+4: إرسال الرسائل بـ chunked cursor pagination ──────────────────
     //

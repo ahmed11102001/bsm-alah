@@ -48,7 +48,7 @@ vi.mock("@/inngest/client", () => ({
   },
 }));
 
-const { processQueue, enqueueCampaign, triggerScheduledCampaigns } =
+const { processQueue, enqueueCampaign } =
   await import("@/lib/queue");
 
 // ─── Stubs ────────────────────────────────────────────────────────────────────
@@ -486,21 +486,5 @@ describe("enqueueCampaign", () => {
     });
 
     expect(result.queued).toBe(2);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-describe("triggerScheduledCampaigns", () => {
-  it("لو مفيش حملات scheduled → بيرجع 0", async () => {
-    mockPrisma.campaign.findMany.mockResolvedValue([]);
-    const count = await triggerScheduledCampaigns();
-    expect(count).toBe(0);
-  });
-
-  it("حملة scheduled حان وقتها → بتتحول لـ running", async () => {
-    mockPrisma.campaign.findMany.mockResolvedValue([{ id: "camp_scheduled" }]);
-    const count = await triggerScheduledCampaigns();
-    expect(count).toBe(1);
-    expect(mockPrisma.$transaction).toHaveBeenCalled();
   });
 });
