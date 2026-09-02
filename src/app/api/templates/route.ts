@@ -245,7 +245,15 @@ export async function POST(req: Request) {
       const resData = await response.json();
       if (resData.error) {
         console.error("Meta create template error response:", resData);
-        const errMsg = resData.error.error_user_msg || resData.error.message || "فشل إرسال القالب إلى ميتا";
+        const userMsg = resData.error.error_user_msg;
+        const userTitle = resData.error.error_user_title;
+        const errorDetails = resData.error.error_data?.details;
+        const technicalMsg = resData.error.message;
+        
+        const errMsg = userMsg
+          ? `${userTitle ? userTitle + ": " : ""}${userMsg}`
+          : (errorDetails || technicalMsg || "فشل إرسال القالب إلى ميتا");
+          
         return NextResponse.json({ error: errMsg }, { status: 400 });
       }
 

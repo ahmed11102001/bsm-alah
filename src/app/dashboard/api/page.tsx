@@ -792,7 +792,7 @@ export default function API() {
   const api = t.api;
 
   const [openCard, setOpenCard] = useState<CardId | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+
   const [waLoading, setWaLoading] = useState(false);
   const [waConnected, setWaConnected] = useState(false);
   const [waData, setWaData] = useState<{ phoneNumberId?: string; wabaId?: string } | null>(null);
@@ -976,15 +976,7 @@ export default function API() {
     } finally { setElevenLabsSaving(false); }
   };
 
-  const handleSyncTemplates = async () => {
-    setIsSyncing(true);
-    try {
-      const result = await syncWhatsAppTemplates();
-      if (result.success) toast.success(api.syncSuccess(result.count ?? 0));
-      else toast.error(result.error || api.syncError);
-    } catch { toast.error(api.syncError); }
-    finally { setIsSyncing(false); }
-  };
+
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1320,11 +1312,6 @@ export default function API() {
               شاهد طريقة الربط
             </Button>
           </a>
-          <Button variant="outline" className="gap-2 dark:border-gray-700 dark:text-gray-300"
-            onClick={handleSyncTemplates} disabled={isSyncing}>
-            <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
-            {isSyncing ? api.syncing : api.syncBtn}
-          </Button>
         </div>
       </div>
 
