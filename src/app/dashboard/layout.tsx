@@ -1159,7 +1159,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     },
     {
       id: "strategies",
-      href: "/strategies",
+      href: "/strategies?from=dashboard",
       permission: "STRATEGIES_VIEW",
       icon: Sparkles,
       labelAr: "الاستراتيجيات",

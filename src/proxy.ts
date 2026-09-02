@@ -154,12 +154,11 @@ export async function proxy(req: NextRequest) {
   const isDashboard = pathname.startsWith("/dashboard");
   const isOnboarding = pathname.startsWith("/onboarding");
   const isCheckout = pathname.startsWith("/checkout");
-  const isStrategies = pathname === "/strategies" || pathname.startsWith("/strategies/");
 
-  if (isDashboard || isOnboarding || isCheckout || isStrategies) {
+  if (isDashboard || isOnboarding || isCheckout) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    if (!token && (isDashboard || isStrategies)) {
+    if (!token && isDashboard) {
       return applyHeaders(NextResponse.redirect(new URL(`/${currentLocale}`, req.url)), nonce, req, currentLocale);
     }
 
@@ -171,7 +170,7 @@ export async function proxy(req: NextRequest) {
     }
 
     if (token) {
-      if ((isDashboard || isStrategies) && token.needsOnboarding) {
+      if (isDashboard && token.needsOnboarding) {
         return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce, req, currentLocale);
       }
       if (isOnboarding && !token.needsOnboarding) {
@@ -179,13 +178,6 @@ export async function proxy(req: NextRequest) {
       }
 
       const role = token.role as UserRole | undefined;
-
-      if (isStrategies) {
-        if (!hasPermission(role, "STRATEGIES_VIEW")) {
-          const fallback = hasPermission(role, "CHAT_VIEW") ? "/dashboard/chat" : "/dashboard";
-          return applyHeaders(NextResponse.redirect(new URL(fallback, req.url)), nonce, req, currentLocale);
-        }
-      }
 
       if (isDashboard) {
         const section = pathname.split("/")[2] || "__root__";

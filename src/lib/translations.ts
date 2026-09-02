@@ -466,7 +466,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
     ],
     company: [
       { ar: "من نحن", en: "About Us", href: "/about" },
-      { ar: "استراتيجيات التسويق", en: "Marketing Strategies", href: "/strategies" },
+      { ar: "استراتيجيات التسويق", en: "Marketing Strategies", href: "/strategies?from=landing" },
       { ar: "بورتال المطورين", en: "Developer Portal", href: "/developers" },
       { ar: "سياسة الخصوصية", en: "Privacy Policy", href: "/privacy" },
       { ar: "شروط الاستخدام", en: "Terms of Use", href: "/terms" },

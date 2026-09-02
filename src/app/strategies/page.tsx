@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import type { Locale } from "@/lib/i18n";
 import {
@@ -17,7 +17,7 @@ import {
   MessagesSquare,
   Target,
 } from "lucide-react";
-import React from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────
 // نصوص الصفحة — محلية هنا بدل ما نضيفها لملف الترجمة الرئيسي (i18n.ts) الكبير،
@@ -26,7 +26,8 @@ import React from "react";
 // ─────────────────────────────────────────────────────────────────────────
 const copy = {
   ar: {
-    back: "العودة للداشبورد",
+    backDashboard: "العودة للداشبورد",
+    backHome: "العودة للرئيسية",
     title: "الاستراتيجيات",
     subtitle: "مش شاشات، ولا خطوات — دي أساليب تفكير تجارية شغالة لوحدها",
     live: "شاهد الاستراتيجية",
@@ -34,7 +35,8 @@ const copy = {
     footer: "كل استراتيجية بتتكلم نفس اللغة البصرية، بقصة مختلفة",
   },
   en: {
-    back: "Back to dashboard",
+    backDashboard: "Back to dashboard",
+    backHome: "Back to home",
     title: "Strategies",
     subtitle: "Not screens, not steps — these are business instincts, running on their own",
     live: "Watch the strategy",
@@ -196,9 +198,61 @@ function StrategyCard({ s, locale }: { s: StrategyDef; locale: Locale }) {
 
 function StrategiesInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale, setLocale, dir } = useLanguage();
   const t = copy[locale];
   const BackIcon = dir === "rtl" ? ArrowRight : ArrowLeft;
+
+  const [origin, setOrigin] = useState<"dashboard" | "landing">("landing");
+
+  useEffect(() => {
+    const from = searchParams.get("from");
+    if (from === "dashboard") {
+      setOrigin("dashboard");
+      try {
+        sessionStorage.setItem("wani_strategies_origin", "dashboard");
+      } catch {}
+      return;
+    }
+    if (from === "landing") {
+      setOrigin("landing");
+      try {
+        sessionStorage.setItem("wani_strategies_origin", "landing");
+      } catch {}
+      return;
+    }
+
+    try {
+      const saved = sessionStorage.getItem("wani_strategies_origin");
+      if (saved === "dashboard" || saved === "landing") {
+        setOrigin(saved);
+        return;
+      }
+    } catch {}
+
+    if (typeof document !== "undefined" && document.referrer) {
+      try {
+        const refUrl = new URL(document.referrer);
+        if (refUrl.pathname.startsWith("/dashboard")) {
+          setOrigin("dashboard");
+          try {
+            sessionStorage.setItem("wani_strategies_origin", "dashboard");
+          } catch {}
+          return;
+        }
+      } catch {}
+    }
+
+    setOrigin("landing");
+  }, [searchParams]);
+
+  const handleBack = () => {
+    if (origin === "dashboard") {
+      router.push("/dashboard");
+    } else {
+      router.push(locale === "en" ? "/en" : "/ar");
+    }
+  };
 
   return (
     <div dir={dir} className="min-h-screen relative overflow-hidden" style={{ background: "#050710" }}>
@@ -222,11 +276,13 @@ function StrategiesInner() {
         {/* الهيدر */}
         <div className="flex items-center justify-between gap-3 mb-8 sm:mb-12">
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={handleBack}
             className="flex items-center gap-2 text-white/50 hover:text-white/85 text-sm font-medium transition-colors px-3 py-2 rounded-xl hover:bg-white/5"
           >
             <BackIcon className="w-4 h-4" />
-            <span className="hidden xs:inline">{t.back}</span>
+            <span className="hidden xs:inline">
+              {origin === "dashboard" ? t.backDashboard : t.backHome}
+            </span>
           </button>
 
           <button
@@ -267,7 +323,9 @@ function StrategiesInner() {
 export default function StrategiesPage() {
   return (
     <LanguageProvider>
-      <StrategiesInner />
+      <Suspense fallback={null}>
+        <StrategiesInner />
+      </Suspense>
     </LanguageProvider>
   );
 }
