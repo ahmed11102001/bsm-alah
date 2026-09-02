@@ -8,7 +8,7 @@ import {
   Search, Send, Paperclip, Mic, X, Reply, MoreVertical, Check, CheckCheck,
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
   MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
-  MicOff, Loader2, Megaphone, Filter, Circle, Mic2,
+  MicOff, Loader2, Megaphone, Filter, Circle, Mic2, Lock,
   ArrowLeft, ChevronLeft, Bot,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -87,6 +87,7 @@ export default function ChatPage() {
   const [forwardTargets, setForwardTargets] = useState<Conversation[]>([]);
   const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
   const [forwardingBusy, setForwardingBusy] = useState(false);
+  const [canSendMedia, setCanSendMedia] = useState(true);
 
   // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
   const isExpired = useMemo(() => {
@@ -109,7 +110,7 @@ export default function ChatPage() {
   const searchBg = dark ? "bg-[#2a3942] text-[#d1d7db] placeholder-[#8696a0]" : "bg-[#f0f2f5] text-gray-800 placeholder-gray-400";
   const hoverRow = dark ? "hover:bg-[#2a3942]" : "hover:bg-[#f5f6f6]";
   const selectedRow = dark ? "bg-[#2a3942]" : "bg-[#e8f5e9]";
-  const msgAreaBg = dark ? "#0b141a" : "#efeae2";
+  const msgAreaBg = dark ? "#0b141a" : "#f0f2f5";
 
   // ── Fetch helpers ────────────────────────────────────────────────
   const fetchConvs = useCallback(async () => {
@@ -118,6 +119,9 @@ export default function ChatPage() {
       const r = await fetch(`/api/chat?${q}`);
       const d = await r.json();
       setConvs(d.conversations ?? []);
+      if (typeof d.canSendMedia === "boolean") {
+        setCanSendMedia(d.canSendMedia);
+      }
     } catch { /* silent */ }
     finally { setLoadingConvs(false); }
   }, [filter, search]);
@@ -134,6 +138,9 @@ export default function ChatPage() {
     try {
       const r = await fetch(`/api/chat?type=messages&contactId=${contactId}`, { signal: controller.signal });
       const d = await r.json();
+      if (typeof d.canSendMedia === "boolean") {
+        setCanSendMedia(d.canSendMedia);
+      }
       const newMsgs: Message[] = d.messages ?? [];
       if (requestId !== messageRequestId.current || controller.signal.aborted) return;
 
@@ -381,6 +388,14 @@ export default function ChatPage() {
 
   const sendFile = async (file: File, mediaType: string) => {
     if (!selected) return;
+    if (!canSendMedia) {
+      toast.error(
+        lang === "ar"
+          ? "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+          : "Sending images and files requires Go plan or higher. Please upgrade."
+      );
+      return;
+    }
     setSending(true);
     try {
       const formData = new FormData();
@@ -396,6 +411,14 @@ export default function ChatPage() {
   };
 
   const toggleRecord = async () => {
+    if (!canSendMedia) {
+      toast.error(
+        lang === "ar"
+          ? "تسجيل وإرسال الرسائل الصوتية متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+          : "Voice messages require Go plan or higher. Please upgrade."
+      );
+      return;
+    }
     if (recording) {
       mediaRecRef.current?.stop(); setRecording(false);
     } else {
@@ -519,9 +542,9 @@ export default function ChatPage() {
   }, [convs, searchInput]);
 
   const ATTACH_OPTIONS = [
-    { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, accept: "image/*", color: "bg-purple-500" },
+    { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, accept: "image/*", color: "bg-purple-500", locked: !canSendMedia },
     { key: "video", label: t[lang].videoLabel, icon: <Video className="w-4 h-4" />, accept: "video/*", color: "bg-red-500", disabled: true },
-    { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500" },
+    { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500", locked: !canSendMedia },
   ];
 
   // ─────────────────────────────────────────────────────────────────
@@ -850,9 +873,6 @@ export default function ChatPage() {
                 if (atBottom) setHasNewMsgs(false);
               }}
               style={{
-                backgroundImage: dark
-                  ? "none"
-                  : `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 backgroundColor: msgAreaBg,
               }}
             >
@@ -954,25 +974,52 @@ export default function ChatPage() {
                     ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
                     rounded-2xl shadow-xl overflow-hidden border w-44`}>
                     {ATTACH_OPTIONS.map(a => {
-                      const isDisabled = Boolean(a.disabled);
+                      const isLocked = Boolean(a.locked);
+                      const isDisabled = Boolean(a.disabled) || isLocked;
                       return (
                         <label key={a.key}
-                          onClick={e => { if (isDisabled) e.preventDefault(); }}
-                          className={`flex items-center gap-3 px-4 py-3 transition-colors ${isDisabled ? "opacity-50 cursor-not-allowed" : `cursor-pointer ${hoverRow}`
-                            }`}>
-                          <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
-                            {a.icon}
-                          </span>
-                          <span className={`text-sm ${isDisabled ? textSub : textMain}`}>{a.label}</span>
-                          <input type="file" accept={a.accept} className="hidden" disabled={isDisabled}
-                            onChange={async e => {
-                              if (isDisabled) return;
-                              const f = e.target.files?.[0];
-                              if (!f) return;
-                              await sendFile(f, a.key);
-                              setShowAttach(false);
-                              e.target.value = "";
-                            }} />
+                          onClick={e => {
+                            if (isLocked) {
+                              e.preventDefault();
+                              toast.error(
+                                lang === "ar"
+                                  ? "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+                                  : "Sending images and files requires Go plan or higher. Please upgrade."
+                              );
+                              return;
+                            }
+                            if (isDisabled) e.preventDefault();
+                          }}
+                          className={`flex items-center justify-between px-4 py-3 transition-colors ${
+                            isDisabled && !isLocked
+                              ? "opacity-50 cursor-not-allowed"
+                              : isLocked
+                              ? "opacity-60 hover:opacity-90 cursor-pointer"
+                              : `cursor-pointer ${hoverRow}`
+                          }`}>
+                          <div className="flex items-center gap-3">
+                            <span className={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white flex-shrink-0`}>
+                              {a.icon}
+                            </span>
+                            <span className={`text-sm ${isDisabled && !isLocked ? textSub : textMain}`}>{a.label}</span>
+                          </div>
+                          {isLocked && (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Go</span>
+                            </span>
+                          )}
+                          {!isLocked && (
+                            <input type="file" accept={a.accept} className="hidden" disabled={isDisabled}
+                              onChange={async e => {
+                                if (isDisabled) return;
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                await sendFile(f, a.key);
+                                setShowAttach(false);
+                                e.target.value = "";
+                              }} />
+                          )}
                         </label>
                       );
                     })}

@@ -10,6 +10,7 @@ import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { decryptToken } from "@/lib/crypto";
 import { requirePermission } from "@/lib/permissions";
 import type { Permission } from "@/lib/permissions";
+import { checkFeature, guardResponse } from "@/lib/plan-guard";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -194,7 +195,13 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     handoffAt: (c as any).handoffAt ?? null,
   }));
 
-  return NextResponse.json({ conversations });
+  const mediaGuard = await checkFeature(userId, "mediaMessages");
+
+  return NextResponse.json({
+    conversations,
+    canSendMedia: mediaGuard.allowed,
+    plan: mediaGuard.allowed ? undefined : mediaGuard.plan,
+  });
 }
 
 // ─── GET messages ─────────────────────────────────────────────────────────────
@@ -205,22 +212,25 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
   const contact = await prisma.contact.findFirst({ where: contactScope(session, contactId) });
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
-  const messages = await prisma.message.findMany({
-    where: {
-      contactId,
-      userId,
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-    select: {
-      id: true, content: true, type: true,
-      direction: true, status: true, senderType: true,
-      mediaUrl: true, createdAt: true,
-      replyToMessageId: true,
-      replyTo: { select: { id: true, content: true, type: true, mediaUrl: true, direction: true } },
-    },
-  });
+  const [messages, mediaGuard] = await Promise.all([
+    prisma.message.findMany({
+      where: {
+        contactId,
+        userId,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+      select: {
+        id: true, content: true, type: true,
+        direction: true, status: true, senderType: true,
+        mediaUrl: true, createdAt: true,
+        replyToMessageId: true,
+        replyTo: { select: { id: true, content: true, type: true, mediaUrl: true, direction: true } },
+      },
+    }),
+    checkFeature(userId, "mediaMessages"),
+  ]);
 
   // Mark inbound as read
   await prisma.$transaction([
@@ -234,7 +244,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
     }),
   ]);
 
-  return NextResponse.json({ messages });
+  return NextResponse.json({ messages, canSendMedia: mediaGuard.allowed });
 }
 
 // ─── POST /api/chat ────────────────────────────────────────────────────────────
@@ -474,6 +484,12 @@ async function sendMessage(
 
   const isTemplate = type === "template" && !!templateName;
   const isMedia = type === "media" && !!content;
+
+  if (isMedia) {
+    const mediaGuard = await checkFeature(userId, "mediaMessages");
+    if (!mediaGuard.allowed) return guardResponse(mediaGuard)!;
+  }
+
   const mediaKind = isMedia ? content!.split(":", 1)[0] : "";
   const msgType: MessageType = isTemplate ? MessageType.template
     : isMedia && Object.values(MessageType).includes(mediaKind as MessageType) ? mediaKind as MessageType
@@ -566,6 +582,12 @@ async function forwardMessage(userId: string, sourceMessageId?: string, targetCo
 // ─── Send media (file upload) ─────────────────────────────────────────────────
 async function sendMedia(userId: string, req: NextRequest, session: any) {
   try {
+    // ── تحقق من قيود الباقة للوسائط ──
+    const mediaGuard = await checkFeature(userId, "mediaMessages");
+    if (!mediaGuard.allowed) {
+      return guardResponse(mediaGuard)!;
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const contactId = formData.get("contactId") as string | null;
