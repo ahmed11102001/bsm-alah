@@ -71,7 +71,7 @@ export const TX = {
     goContacts: { ar: "عرض القائمة", en: "View list" },
     goContactsToast: { ar: "اذهب إلى صفحة الجمهور", en: "Go to Audience page" },
     manualSync: { ar: "مزامنة يدوية", en: "Manual Sync" },
-    manualSyncSub: { ar: "سحب آخر 100 طلب من إيزي أوردرز", en: "Pull latest 100 orders from EasyOrders" },
+    manualSyncSub: { ar: "إعادة مزامنة المنتجات من EasyOrders — الطلبات تصل تلقائياً عبر Webhook", en: "Re-sync products from EasyOrders — orders arrive automatically via Webhook" },
     syncing: { ar: "جاري المزامنة...", en: "Syncing..." },
     syncNow: { ar: "مزامنة الآن", en: "Sync now" },
     webhookTitle: { ar: "الطلبات تصل تلقائياً عبر Webhook", en: "Orders arrive automatically via Webhook" },

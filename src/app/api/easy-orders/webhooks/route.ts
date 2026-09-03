@@ -1,36 +1,69 @@
 // src/app/api/easy-orders/webhooks/route.ts
+//
+// EasyOrders webhook authentication contract (per official docs):
+//   - EasyOrders POSTs to whatever URL the seller configured in their
+//     dashboard, and sends a "secret" header carrying the value EasyOrders
+//     generated when the webhook was created.
+//   - There is no "uid + token" contract on EasyOrders' side — that was a
+//     home-grown scheme from the old integration. It is removed: the only
+//     real authentication is verifying the "secret" header against the
+//     store's stored webhookSecret.
+//   - "uid" stays as a query param purely for routing (which WANI user this
+//     webhook belongs to) since the URL we generate is user-specific, but it
+//     carries no authentication weight by itself.
+
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
-import { inngest } from "@/inngest/client";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { attributeOrderToCampaign } from "@/lib/attribution";
 import { triggerStoreAutomation } from "@/lib/store-automation";
 
-function userToken(userId: string): string {
-  return createHmac("sha256", process.env.NEXTAUTH_SECRET ?? "secret")
-    .update(userId)
-    .digest("hex")
-    .slice(0, 32);
-}
-
-export function generateEasyOrderWebhookUrl(userId: string): string {
-  const base  = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
-  const token = userToken(userId);
-  return `${base}/api/easy-orders/webhooks?uid=${userId}&token=${token}`;
-}
-
 export async function GET() {
-  return NextResponse.json({ status: "ok", service: "EasyOrder Webhook" });
+  return NextResponse.json({ status: "ok", service: "EasyOrders Webhook" });
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("uid");
-    const token  = searchParams.get("token");
 
-    if (!userId || !token || token !== userToken(userId)) {
-      console.warn("[EASYORDER] Invalid token for uid:", userId);
+    if (!userId) {
+      console.warn("[EasyOrders] Webhook received without uid");
+      return NextResponse.json({ error: "Missing uid" }, { status: 400 });
+    }
+
+    console.log("[EasyOrders] Webhook received");
+
+    const store = await prisma.easyOrdersStore.findUnique({
+      where:  { userId },
+      select: { id: true, webhookSecret: true },
+    });
+
+    if (!store) {
+      console.warn("[EasyOrders] Webhook received for unknown/unconnected store");
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+
+    if (!store.webhookSecret) {
+      console.warn("[EasyOrders] Webhook Not Configured — no secret saved for this store");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 428 });
+    }
+
+    const providedSecret = req.headers.get("secret") ?? "";
+    const expectedSecret = isEncrypted(store.webhookSecret)
+      ? decryptToken(store.webhookSecret)
+      : store.webhookSecret;
+
+    if (!providedSecret || !safeEqual(providedSecret, expectedSecret)) {
+      console.warn("[EasyOrders] Webhook signature/secret validation failed");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -41,22 +74,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    console.log("[EASYORDER] Payload:", JSON.stringify(payload).slice(0, 300));
-
     // ── الفصل بناءً على event_type ─────────────────────────────────────────
     // EasyOrders ترسل نوعين مختلفين من الـ Webhook على نفس الرابط:
     // 1. Order Created: يحتوي على بيانات الأوردر الكاملة
-    // 2. Order Status Change: يحتوي على order_id و old_status و new_status فقط
+    // 2. Order Status Change: يحتوي على event_type = "order-status-update"
     const eventType = payload?.event_type;
 
     if (eventType === "order-status-update") {
-      return handleOrderStatusUpdate(payload, userId);
+      return handleOrderStatusUpdate(payload, userId, store.id);
     }
 
-    // ── معالجة Order Created (الحالة الافتراضية) ───────────────────────────
-    return handleOrderCreated(payload, userId);
+    return handleOrderCreated(payload, userId, store.id);
   } catch (err) {
-    console.error("[EASYORDER] Unexpected error:", err);
+    console.error("[EasyOrders] Webhook unexpected error:", err);
+    // 200 عشان EasyOrders متعملش retry storm لو الخطأ من عندنا مش قابل للحل بإعادة المحاولة
     return NextResponse.json({ status: "error" }, { status: 200 });
   }
 }
@@ -64,8 +95,7 @@ export async function POST(req: NextRequest) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Order Created — إنشاء أوردر جديد
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleOrderCreated(payload: any, userId: string) {
-  // ── استخراج بيانات الأوردر — بيدعم صيغ مختلفة ───────────────────────────
+async function handleOrderCreated(payload: any, userId: string, easyOrdersStoreId: string) {
   const order = payload?.order ?? payload;
 
   const rawPhone: string =
@@ -76,7 +106,7 @@ async function handleOrderCreated(payload: any, userId: string) {
     order?.customer?.phone    ??
     order?.billing_address?.phone ?? "";
 
-  // ── تصحيح حقل الاسم: EasyOrders ترسل الاسم في full_name ────────────────
+  // EasyOrders ترسل اسم العميل في full_name
   const customerName: string =
     order?.full_name          ??
     order?.name               ??
@@ -86,27 +116,21 @@ async function handleOrderCreated(payload: any, userId: string) {
     order?.customer?.first_name ?? "العميل";
 
   const orderNumber = String(order?.order_number ?? order?.id ?? order?.order_id ?? "");
-  const totalStr    = String(order?.total ?? order?.total_price ?? order?.amount ?? "0");
+  const totalStr    = String(order?.total ?? order?.total_cost ?? order?.total_price ?? order?.amount ?? "0");
   const revenue     = parseFloat(totalStr) || 0;
-  const status      = order?.status ?? order?.order_status ?? "جديد";
+  const status      = order?.status ?? order?.order_status ?? "pending";
   const externalId  = String(order?.id ?? order?.order_id ?? orderNumber);
 
   if (!rawPhone) {
-    console.warn("[EASYORDER] No phone in payload");
+    console.warn("[EasyOrders] Webhook ignored: no phone in payload");
     return NextResponse.json({ status: "ignored", reason: "no_phone" });
   }
 
   const cleanPhone = rawPhone.replace(/\D/g, "");
   if (cleanPhone.length < 9) {
-    console.warn("[EASYORDER] Phone too short:", cleanPhone);
+    console.warn("[EasyOrders] Webhook ignored: phone too short");
     return NextResponse.json({ status: "ignored", reason: "invalid_phone" });
   }
-
-  // ── جيب المتجر ────────────────────────────────────────────────────────────
-  const easyStore = await prisma.easyOrdersStore.findUnique({
-    where:  { userId },
-    select: { id: true },
-  });
 
   // ── Upsert contact ────────────────────────────────────────────────────────
   const contact = await prisma.contact.upsert({
@@ -121,16 +145,17 @@ async function handleOrderCreated(payload: any, userId: string) {
     update: { status, total: revenue },
     create: {
       userId,
-      source:           "easyorders",
+      source:            "easyorders",
       externalId,
       orderNumber,
-      customerPhone:    cleanPhone,
+      customerPhone:     cleanPhone,
       customerName,
-      total:            revenue,
-      currency:         "EGP",
+      total:             revenue,
+      currency:          "EGP",
       status,
-      easyOrdersStoreId: easyStore?.id ?? null,
-      orderedAt:        new Date(),
+      rawData:           order as object,
+      easyOrdersStoreId,
+      orderedAt:         new Date(),
     },
   });
 
@@ -142,59 +167,39 @@ async function handleOrderCreated(payload: any, userId: string) {
     revenue,
   });
 
-  // ── Inngest: رسالة تأكيد الأوردر ─────────────────────────────────────────
-  await inngest.send({
-    name: "easyorder/order.received",
-    data: {
-      userId,
-      contactId:        contact.id,
-      phone:            cleanPhone,
-      name:             customerName,
-      orderNumber,
-      total:            totalStr,
-      status,
-      easyOrdersStoreId: easyStore?.id ?? null,
+  // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
+  await triggerStoreAutomation({
+    userId,
+    automationType: "order_confirm",
+    storeSource:    "easyorders",
+    storeId:        easyOrdersStoreId,
+    customerPhone:  cleanPhone,
+    contactId:      contact.id,
+    storeOrderId:   storeOrder.id,
+    // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
+    templateVars: {
+      body: [customerName, orderNumber, totalStr],
     },
   });
 
-  // ── أتمتة تأكيد الأوردر: بعت قالب واتساب فوراً لو الأتمتة متفعّلة ──
-  if (easyStore?.id) {
-    // ── أتمتة تأكيد الأوردر: بيبعت قالب ميتا مع متغيرات الأوردر الحقيقية ──
-    await triggerStoreAutomation({
-      userId,
-      automationType: "order_confirm",
-      storeSource:    "easyorders",
-      storeId:        easyStore.id,
-      customerPhone:  cleanPhone,
-      contactId:      contact.id,
-      storeOrderId:   storeOrder.id,
-      // {{1}} اسم العميل  {{2}} رقم الأوردر  {{3}} الإجمالي
-      templateVars: {
-        body: [customerName, orderNumber, totalStr],
-      },
-    });
-  }
-
-  console.log(`[EASYORDER] ✓ Order #${orderNumber} processed for ${cleanPhone}`);
+  console.log(`[EasyOrders] ✓ Order #${orderNumber} processed`);
   return NextResponse.json({ status: "success" });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Order Status Update — تحديث حالة الأوردر (شحن، دفع، إلخ)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function handleOrderStatusUpdate(payload: any, userId: string) {
+async function handleOrderStatusUpdate(payload: any, userId: string, easyOrdersStoreId: string) {
   const orderId   = String(payload?.order_id ?? "");
-  const oldStatus = payload?.old_status ?? "";
   const newStatus = payload?.new_status ?? "";
 
-  console.log(`[EASYORDER] Status update: order=${orderId} ${oldStatus} → ${newStatus}`);
-
   if (!orderId) {
-    console.warn("[EASYORDER] Status update missing order_id");
+    console.warn("[EasyOrders] Status update ignored: no order_id");
     return NextResponse.json({ status: "ignored", reason: "no_order_id" });
   }
 
-  // ── جلب بيانات الطلب المسجل مسبقاً من قاعدة البيانات ──────────────────
+  console.log(`[EasyOrders] Status update received for order`);
+
   const storeOrder = await prisma.storeOrder.findFirst({
     where: {
       source:     "easyorders",
@@ -211,11 +216,10 @@ async function handleOrderStatusUpdate(payload: any, userId: string) {
   });
 
   if (!storeOrder) {
-    console.warn(`[EASYORDER] No stored order found for externalId=${orderId}`);
+    console.warn("[EasyOrders] Status update ignored: order not found locally");
     return NextResponse.json({ status: "ignored", reason: "order_not_found" });
   }
 
-  // ── تحديث حالة الأوردر في قاعدة البيانات ────────────────────────────────
   await prisma.storeOrder.update({
     where: { id: storeOrder.id },
     data:  { status: newStatus },
@@ -226,18 +230,16 @@ async function handleOrderStatusUpdate(payload: any, userId: string) {
     const cleanPhone = storeOrder.customerPhone;
 
     if (!cleanPhone) {
-      console.warn("[EASYORDER] No phone stored for order:", orderId);
+      console.warn("[EasyOrders] Shipping automation skipped: no phone stored for order");
       return NextResponse.json({ status: "updated", shipped: false, reason: "no_phone" });
     }
 
-    // ── جلب الـ contact من قاعدة البيانات ────────────────────────────────
     const contact = await prisma.contact.findFirst({
       where:  { phone: cleanPhone, userId },
       select: { id: true },
     });
 
     if (contact) {
-      // ── أتمتة تحديث الشحن: بيبعت قالب ميتا مع رقم الأوردر ──────────
       // EasyOrders لا توفر رابط تتبع في الـ payload، لذا نستخدم "—" كنص بديل
       await triggerStoreAutomation({
         userId,
@@ -249,19 +251,16 @@ async function handleOrderStatusUpdate(payload: any, userId: string) {
         storeOrderId:   storeOrder.id,
         // {{1}} رقم الأوردر  {{2}} رابط التتبع
         templateVars: {
-          body: [
-            storeOrder.orderNumber ?? orderId,
-            "—",
-          ],
+          body: [storeOrder.orderNumber ?? orderId, "—"],
         },
       });
 
-      console.log(`[EASYORDER] ✓ Shipped automation triggered for order #${storeOrder.orderNumber ?? orderId}`);
+      console.log(`[EasyOrders] ✓ Shipped automation triggered`);
     } else {
-      console.warn(`[EASYORDER] No contact found for phone ${cleanPhone}`);
+      console.warn("[EasyOrders] Shipping automation skipped: no contact found for phone");
     }
   }
 
-  console.log(`[EASYORDER] ✓ Status updated: order #${storeOrder.orderNumber ?? orderId} → ${newStatus}`);
+  console.log(`[EasyOrders] ✓ Status updated → ${newStatus}`);
   return NextResponse.json({ status: "updated", newStatus });
 }

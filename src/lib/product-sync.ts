@@ -219,6 +219,33 @@ export async function syncShopifyProducts(
 }
 
 // ── EasyOrders Product Sync ──────────────────────────────────────────────────
+// Public API: GET https://api.easy-orders.net/api/v1/external-apps/products
+// Auth: Api-Key header. Paginated via `page` (no documented `per_page`/limit
+// override beyond the API's default page size), so we page through results
+// until an empty page or MAX_PRODUCTS_PER_SYNC is reached.
+// `join=Variations.Props,Variants.VariationProps` is required to receive
+// variant/variation data in the response (see EasyOrders query-parameters docs).
+const EASYORDERS_PRODUCTS_ENDPOINT = "https://api.easy-orders.net/api/v1/external-apps/products";
+const EASYORDERS_PRODUCTS_JOIN = "Variations.Props,Variants.VariationProps";
+
+export class EasyOrdersApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "EasyOrdersApiError";
+  }
+}
+
+/** Extracts a valid EasyOrders external product id, or null if none exists.
+ *  Never returns the literal string "undefined" — a raw `String(p.id)` on an
+ *  undefined id silently produces "undefined", which used to leak into the
+ *  DB as a fake-but-truthy external id. */
+function extractEasyOrdersExternalId(p: any): string | null {
+  const raw = p?.id ?? p?._id ?? p?.code;
+  if (raw === undefined || raw === null || raw === "") return null;
+  const id = String(raw);
+  return id === "undefined" || id === "null" ? null : id;
+}
+
 export async function syncEasyOrdersProducts(
   userId: string,
   apiKey: string
@@ -232,24 +259,10 @@ export async function syncEasyOrdersProducts(
   });
 
   try {
-    const res = await fetch("https://api.easy-orders.net/api/v1/external-apps/products", {
-      headers: {
-        "Api-Key": apiKey,
-        "Accept": "application/json",
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-
-    if (!res.ok) {
-      throw new Error(`EasyOrders API responded with status ${res.status}`);
-    }
-
-    const data = await res.json();
-    const rawProducts: any[] = Array.isArray(data) ? data : (data.data || data.products || []);
-
     const fetchedIds = new Set<string>();
     let totalSynced = 0;
     let errorsCount = 0;
+    let skippedNoId = 0;
     const syncTime = new Date();
     const existingOverlays = await prisma.product.findMany({
       where: { userId, source: ProductSource.easyorders },
@@ -257,68 +270,112 @@ export async function syncEasyOrdersProducts(
     });
     const overlayByExternalId = new Map(existingOverlays.map((product) => [product.externalId, product]));
 
-    for (const p of rawProducts) {
-      if (fetchedIds.size >= MAX_PRODUCTS_PER_SYNC) break;
-      const externalId = String(p.id || p._id || p.code);
-      if (!externalId) continue;
-      fetchedIds.add(externalId);
+    let page = 1;
+    const MAX_PAGES = 200; // safety cap regardless of MAX_PRODUCTS_PER_SYNC
 
-      const name = p.name || p.title || "بدون اسم";
-      const description = p.description ? p.description.replace(/<[^>]*>?/gm, "").trim() : null;
-      const price = p.price != null ? parseFloat(p.price) : null;
-      const compareAtPrice = p.compare_at_price != null ? parseFloat(p.compare_at_price) : null;
-      const currency = p.currency || "EGP";
-      const images: string[] = Array.isArray(p.images) ? p.images.map((img: any) => typeof img === "string" ? img : img.url || img.src).filter(Boolean) : (p.image ? [p.image] : []);
-      const stock = p.quantity != null ? parseInt(p.quantity, 10) : (p.stock != null ? parseInt(p.stock, 10) : null);
-      const category = p.category?.name || p.category || null;
-      const isActive = p.status ? (p.status === "active" || p.status === 1 || p.status === true) : true;
-      const overlay = overlayByExternalId.get(externalId);
-      const searchText = buildSearchText({ name, description, category, aiNotes: overlay?.aiNotes, aiKeywords: overlay?.aiKeywords });
+    while (fetchedIds.size < MAX_PRODUCTS_PER_SYNC && page <= MAX_PAGES) {
+      const url = `${EASYORDERS_PRODUCTS_ENDPOINT}?page=${page}&join=${encodeURIComponent(EASYORDERS_PRODUCTS_JOIN)}`;
+      const res = await fetch(url, {
+        headers: {
+          "Api-Key": apiKey,
+          "Accept": "application/json",
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
 
-      try {
-        await prisma.product.upsert({
-          where: {
-            source_externalId_userId: {
+      if (!res.ok) {
+        throw new EasyOrdersApiError(res.status, `EasyOrders API responded with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      const rawProducts: any[] = Array.isArray(data)
+        ? data
+        : (data.data || data.products || data.items || []);
+
+      if (!rawProducts.length) break;
+
+      for (const p of rawProducts) {
+        if (fetchedIds.size >= MAX_PRODUCTS_PER_SYNC) break;
+
+        const externalId = extractEasyOrdersExternalId(p);
+        if (!externalId) {
+          skippedNoId++;
+          continue;
+        }
+        fetchedIds.add(externalId);
+
+        const name = p.name || p.title || "بدون اسم";
+        const description = p.description ? p.description.replace(/<[^>]*>?/gm, "").trim() : null;
+        const price = p.price != null ? parseFloat(p.price) : null;
+        const compareAtPrice = p.sale_price != null && p.sale_price !== 0
+          ? price
+          : (p.compare_at_price != null ? parseFloat(p.compare_at_price) : null);
+        const actualPrice = p.sale_price != null && p.sale_price !== 0 ? parseFloat(p.sale_price) : price;
+        const currency = p.currency || "EGP";
+        const images: string[] = Array.isArray(p.images) ? p.images.map((img: any) => typeof img === "string" ? img : img?.url || img?.src).filter(Boolean) : (p.thumb ? [p.thumb] : (p.image ? [p.image] : []));
+        const stock = p.quantity != null ? parseInt(p.quantity, 10) : (p.stock != null ? parseInt(p.stock, 10) : null);
+        const category = p.categories?.[0]?.name || p.category?.name || p.category || null;
+        const isActive = p.status ? (p.status === "active" || p.status === 1 || p.status === true) : true;
+        const variantsData = (Array.isArray(p.variants) && p.variants.length) || (Array.isArray(p.variations) && p.variations.length)
+          ? { variants: p.variants ?? [], variations: p.variations ?? [] }
+          : undefined;
+        const overlay = overlayByExternalId.get(externalId);
+        const searchText = buildSearchText({ name, description, category, aiNotes: overlay?.aiNotes, aiKeywords: overlay?.aiKeywords });
+
+        try {
+          await prisma.product.upsert({
+            where: {
+              source_externalId_userId: {
+                source: ProductSource.easyorders,
+                externalId,
+                userId,
+              },
+            },
+            update: {
+              name,
+              description,
+              price: actualPrice,
+              compareAtPrice,
+              currency,
+              images,
+              variants: variantsData as any,
+              stock,
+              category,
+              isActive,
+              searchText,
+              lastSyncedAt: syncTime,
+            },
+            create: {
+              userId,
               source: ProductSource.easyorders,
               externalId,
-              userId,
+              name,
+              description,
+              price: actualPrice,
+              compareAtPrice,
+              currency,
+              images,
+              variants: variantsData as any,
+              stock,
+              category,
+              isActive,
+              searchText,
+              lastSyncedAt: syncTime,
             },
-          },
-          update: {
-            name,
-            description,
-            price,
-            compareAtPrice,
-            currency,
-            images,
-            stock,
-            category,
-            isActive,
-            searchText,
-            lastSyncedAt: syncTime,
-          },
-          create: {
-            userId,
-            source: ProductSource.easyorders,
-            externalId,
-            name,
-            description,
-            price,
-            compareAtPrice,
-            currency,
-            images,
-            stock,
-            category,
-            isActive,
-            searchText,
-            lastSyncedAt: syncTime,
-          },
-        });
-        totalSynced++;
-      } catch (e) {
-        console.error(`[ProductSync/EasyOrders] Failed to upsert product ${externalId}`, e);
-        errorsCount++;
+          });
+          totalSynced++;
+        } catch (e) {
+          console.error(`[ProductSync/EasyOrders] Failed to upsert product ${externalId}`, e);
+          errorsCount++;
+        }
       }
+
+      if (rawProducts.length === 0) break;
+      page++;
+    }
+
+    if (skippedNoId > 0) {
+      console.warn(`[ProductSync/EasyOrders] Skipped ${skippedNoId} product(s) with no valid id`);
     }
 
     const fetchedArray = Array.from(fetchedIds);

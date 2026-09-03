@@ -126,6 +126,9 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   }
 
   // ── Manual Sync (EasyOrders only) ───────────────────────────────────────
+  // ملاحظة: الـ Public API الحالي لـ EasyOrders لا يوفر سحب كل الطلبات دفعة
+  // واحدة، فالطلبات بتوصل حصريًا عبر الـ Webhook. الزرار ده بقى بيعيد مزامنة
+  // المنتجات بدل الطلبات.
   async function handleSync() {
     setSyncing(true);
     try {
@@ -134,16 +137,22 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reuseStoredKey: true }),
       });
-      const d: { success?: boolean; synced?: number; error?: string; hasMore?: boolean } = await r.json();
+      const d: { success?: boolean; productsSynced?: number; productSyncError?: string | null; error?: string } = await r.json();
 
       if (!r.ok) {
         toast.error(d.error ?? (lang === "ar" ? "فشلت المزامنة" : "Sync failed"));
         return;
       }
 
-      toast.success(
-        `${lang === "ar" ? "✅ تمت مزامنة" : "✅ Synced"} ${d.synced ?? 0} ${lang === "ar" ? "طلب" : "orders"}${d.hasMore ? (lang === "ar" ? " — اضغط مجدداً للمزيد" : " — press again for more") : ""}`
-      );
+      if (d.productSyncError) {
+        toast.error(
+          lang === "ar" ? `تمت المزامنة الجزئية: ${d.productSyncError}` : `Partial sync: ${d.productSyncError}`
+        );
+      } else {
+        toast.success(
+          `${lang === "ar" ? "✅ تمت مزامنة" : "✅ Synced"} ${d.productsSynced ?? 0} ${lang === "ar" ? "منتج" : "products"}`
+        );
+      }
       // إعادة تحميل العملاء بعد المزامنة
       await fetchCustomers(1, search);
 

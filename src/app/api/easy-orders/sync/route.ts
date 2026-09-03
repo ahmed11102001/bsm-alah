@@ -1,43 +1,94 @@
 // src/app/api/easy-orders/sync/route.ts
-// ─── مزامنة طلبات EasyOrders بالـ API Key ─────────────────────────────────────
-// يدعم:
-//   1. تمرير apiKey مباشرة (أول مرة)
-//   2. reuseStoredKey: true (من صفحة المتجر — يقرأ المفتاح من الـ DB)
+// ─── ربط متجر EasyOrders والتحقق من الـ Public API Key ──────────────────────
+//
+// ملاحظة مهمة: الـ Public API الحالي لـ EasyOrders لا يوفر endpoint لسحب كل
+// الطلبات دفعة واحدة (لا يوجد GET /orders?page=... موثّق). لذلك هذا الراوت
+// لم يعد يجلب طلبات على الإطلاق — الطلبات تصل حصريًا عبر الـ Webhook
+// (src/app/api/easy-orders/webhooks/route.ts).
+//
+// هذا الراوت مسؤول فقط عن:
+//   1. التحقق من صحة الـ Public API Key (validate-before-save).
+//   2. حفظ/تحديث بيانات المتجر بعد التحقق الناجح فقط.
+//   3. إطلاق مزامنة المنتجات (فورية + في الخلفية عبر Inngest للمرات القادمة).
+//
+// PATCH يُستخدم لحفظ الـ Webhook Secret بشكل منفصل تمامًا عن الـ API Key
+// (EasyOrders يولّد Webhook Secret مستقل عند إنشاء الـ Webhook من الداشبورد).
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession }          from "next-auth";
 import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
-import { OrderSource }               from "@/types/enums";
 import { decryptToken, encryptToken, isEncrypted } from "@/lib/crypto";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission }         from "@/lib/permissions";
+import { syncEasyOrdersProducts }    from "@/lib/product-sync";
 
-const PAGE_SIZE = 100;
+const EASYORDERS_PRODUCTS_ENDPOINT = "https://api.easy-orders.net/api/v1/external-apps/products";
 
-// ─── نوع أوردر EasyOrders ─────────────────────────────────────────────────────
-interface EasyOrderItem {
-  id:            string | number;
-  order_number?: string | number;
-  status?:       string;
-  total?:        string | number;
-  currency?:     string;
-  customer?: {
-    name?:        string;
-    phone?:       string;
-  };
-  billing_address?: { phone?: string };
-  phone?:           string;
-  customer_phone?:  string;
-  customer_name?:   string;
-  created_at?:      string;
+// ─── نتيجة التحقق من الـ API Key ──────────────────────────────────────────────
+type ValidationResult =
+  | { ok: true }
+  | { ok: false; status: number; code: string; message: string };
+
+/**
+ * يتحقق من الـ API Key عن طريق نداء فعلي لـ GET products بحد أقصى منتج واحد.
+ * لا يفترض نجاح العملية لمجرد إمكانية حفظ المفتاح — ينادي EasyOrders فعليًا
+ * ويفرّق بين أنواع الأخطاء المختلفة بدل تحويلها كلها لـ 502 عام.
+ */
+async function validateEasyOrdersApiKey(apiKey: string): Promise<ValidationResult> {
+  try {
+    const res = await fetch(`${EASYORDERS_PRODUCTS_ENDPOINT}?page=1&limit=1`, {
+      headers: {
+        "Api-Key": apiKey,
+        "Accept": "application/json",
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (res.ok) return { ok: true };
+
+    if (res.status === 401) {
+      return { ok: false, status: 401, code: "invalid_api_key", message: "API Key غير صحيح" };
+    }
+    if (res.status === 403) {
+      return {
+        ok: false,
+        status: 403,
+        code: "insufficient_permissions",
+        message: "الـ API Key لا يملك صلاحية products:read — راجع صلاحيات المفتاح في داشبورد EasyOrders",
+      };
+    }
+    if (res.status === 400) {
+      return { ok: false, status: 400, code: "bad_request", message: "طلب غير صحيح إلى EasyOrders API" };
+    }
+    if (res.status === 404) {
+      return { ok: false, status: 404, code: "not_found", message: "المتجر أو الـ endpoint غير موجود" };
+    }
+    if (res.status === 429) {
+      return { ok: false, status: 429, code: "rate_limited", message: "تم تجاوز الحد المسموح من الطلبات، حاول لاحقًا" };
+    }
+    return {
+      ok: false,
+      status: res.status,
+      code: "easyorders_error",
+      message: `خطأ من EasyOrders API: ${res.status}`,
+    };
+  } catch (err: unknown) {
+    const isTimeout = err instanceof Error && err.name === "TimeoutError";
+    console.error("[EasyOrders] Connection validation failed:", isTimeout ? "timeout" : "network error");
+    return {
+      ok: false,
+      status: 0,
+      code: isTimeout ? "timeout" : "network_error",
+      message: isTimeout ? "انتهت مهلة الاتصال بـ EasyOrders" : "تعذر الاتصال بـ EasyOrders API",
+    };
+  }
 }
 
-// ─── GET — حالة المزامنة الحالية ─────────────────────────────────────────────
+// ─── GET — حالة الربط الحالية ─────────────────────────────────────────────
 export async function GET(): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
 
   const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
-
   if (denied) return denied;
 
   const user = await prisma.user.findUnique({
@@ -46,10 +97,11 @@ export async function GET(): Promise<NextResponse> {
       id:              true,
       easyOrdersStore: {
         select: {
-          storeName:   true,
-          totalSynced: true,
-          lastSyncAt:  true,
-          isActive:    true,
+          storeName:     true,
+          totalSynced:   true,
+          lastSyncAt:    true,
+          isActive:      true,
+          webhookSecret: true,
         },
       },
     },
@@ -63,23 +115,27 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ connected: false });
   }
 
-  const { storeName, totalSynced, lastSyncAt, isActive } = user.easyOrdersStore;
+  const { storeName, totalSynced, lastSyncAt, isActive, webhookSecret } = user.easyOrdersStore;
 
   return NextResponse.json({
-    connected: true,
+    connected:         true,
     storeName,
     totalSynced,
     lastSyncAt,
     isActive,
+    webhookConfigured: Boolean(webhookSecret),
   });
 }
 
-// ─── POST — ربط المتجر وسحب الطلبات ─────────────────────────────────────────
+// ─── POST — التحقق من الـ API Key + ربط المتجر + مزامنة المنتجات ───────────
+//
+// body:
+//   { apiKey, storeName }         → أول ربط (أو تحديث الـ API Key)
+//   { reuseStoredKey: true }      → إعادة مزامنة المنتجات يدويًا بالمفتاح المحفوظ
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
 
   const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
-
   if (denied) return denied;
 
   const user = await prisma.user.findUnique({
@@ -87,12 +143,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     select: {
       id:              true,
       easyOrdersStore: {
-        select: {
-          id:          true,
-          apiKey:      true,
-          storeName:   true,
-          totalSynced: true,
-        },
+        select: { id: true, apiKey: true, storeName: true, totalSynced: true },
       },
     },
   });
@@ -101,10 +152,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   let body: {
-    apiKey?:          string;
-    storeName?:       string;
-    page?:            number;
-    reuseStoredKey?:  boolean;
+    apiKey?:         string;
+    storeName?:      string;
+    reuseStoredKey?: boolean;
   };
 
   try {
@@ -113,193 +163,128 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { storeName, page = 1, reuseStoredKey = false } = body;
+  const { storeName, reuseStoredKey = false } = body;
 
   // ── اختيار الـ API Key ───────────────────────────────────────────────────
   let apiKey: string;
 
   if (reuseStoredKey) {
-    // يقرأ المفتاح المحفوظ من الـ DB (من صفحة المتجر)
     if (!user.easyOrdersStore?.apiKey) {
       return NextResponse.json(
-        { error: "لا يوجد API Key محفوظ، يرجى ربط المتجر أولاً من صفحة API" },
+        { error: "لا يوجد API Key محفوظ، يرجى ربط المتجر أولاً" },
         { status: 422 }
       );
     }
-    apiKey = isEncrypted(user.easyOrdersStore.apiKey) ? decryptToken(user.easyOrdersStore.apiKey) : user.easyOrdersStore.apiKey;
+    apiKey = isEncrypted(user.easyOrdersStore.apiKey)
+      ? decryptToken(user.easyOrdersStore.apiKey)
+      : user.easyOrdersStore.apiKey;
   } else {
-    // تمرير مباشر من صفحة API (أول ربط)
     if (!body.apiKey?.trim()) {
       return NextResponse.json({ error: "apiKey مطلوب" }, { status: 400 });
     }
     apiKey = body.apiKey.trim();
   }
 
-  // ── حفظ / تحديث بيانات المتجر ───────────────────────────────────────────
+  // ── التحقق الفعلي من المفتاح قبل أي حفظ ─────────────────────────────────
+  console.log("[EasyOrders] Connection validation started");
+  const validation = await validateEasyOrdersApiKey(apiKey);
+
+  if (!validation.ok) {
+    console.warn(`[EasyOrders] Connection validation failed: code=${validation.code} status=${validation.status}`);
+    return NextResponse.json(
+      { error: validation.message, code: validation.code },
+      { status: validation.status === 0 ? 502 : (validation.status === 429 ? 429 : 422) }
+    );
+  }
+  console.log("[EasyOrders] Connection validation succeeded");
+
+  // ── حفظ / تحديث بيانات المتجر — فقط بعد نجاح التحقق ─────────────────────
   const store = await prisma.easyOrdersStore.upsert({
     where:  { userId: user.id },
     update: {
-      apiKey: encryptToken(apiKey),
+      ...(reuseStoredKey ? {} : { apiKey: encryptToken(apiKey) }),
       ...(storeName?.trim() ? { storeName: storeName.trim() } : {}),
+      isActive: true,
     },
     create: {
-      userId:        user.id,
-      apiKey: encryptToken(apiKey),
-      storeName:     storeName?.trim() || "متجري",
-      webhookSecret: apiKey, // نفس المفتاح كـ secret مبدئياً
+      userId:    user.id,
+      apiKey:    encryptToken(apiKey),
+      storeName: storeName?.trim() || "متجري",
+      // webhookSecret يبقى فارغًا حتى يُنشئ المستخدم الـ Webhook من داشبورد
+      // EasyOrders ويلصق السر الحقيقي عبر PATCH — لا يُشتق أبدًا من apiKey.
     },
   });
 
-  // ── مزامنة المنتجات في الخلفية ──────────────────────────────────────────
+  // ── مزامنة المنتجات فورًا (نتيجة مباشرة للمستخدم) ───────────────────────
+  console.log("[EasyOrders] Product sync started");
+  let productSync;
+  try {
+    productSync = await syncEasyOrdersProducts(user.id, apiKey);
+  } catch (err: unknown) {
+    console.error("[EasyOrders] Product sync failed unexpectedly:", err);
+    productSync = { synced: 0, errors: 1, deactivated: 0, errorMessage: "Unknown error" };
+  }
+
+  if (productSync.errorMessage || productSync.errors > 0) {
+    console.warn(`[EasyOrders] Product sync failed: synced=${productSync.synced} errors=${productSync.errors}`);
+  }
+
+  // ── جدولة مزامنة دورية في الخلفية (لا تمنع نجاح الربط لو فشلت الجدولة) ──
   try {
     const { inngest } = await import("@/inngest/client");
     void inngest.send({
       name: "product/sync.requested",
       data: { userId: user.id, source: "easyorders" },
-    }).catch(err => console.error("[EasyOrders Connect] Failed to trigger product sync", err));
-  } catch (e) {
+    }).catch(err => console.error("[EasyOrders] Failed to schedule background product sync", err));
+  } catch {
     // non-blocking
   }
 
-  // ── جلب الطلبات من EasyOrders API ───────────────────────────────────────
-  let orders: EasyOrderItem[] = [];
-
-  try {
-    const res = await fetch(
-      `https://api.easyorders.io/api/v1/orders?per_page=${PAGE_SIZE}&page=${page}`,
-      {
-        headers: {
-          Authorization:  `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          Accept:         "application/json",
-        },
-        signal: AbortSignal.timeout(15_000),
-      }
-    );
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error("[EO-SYNC] API error:", res.status, errText.slice(0, 200));
-
-      if (res.status === 401 || res.status === 403) {
-        return NextResponse.json(
-          { error: "API Key غير صحيح أو منتهي الصلاحية" },
-          { status: 422 }
-        );
-      }
-      return NextResponse.json(
-        { error: `خطأ من EasyOrders API: ${res.status}` },
-        { status: 502 }
-      );
-    }
-
-    const data: unknown = await res.json();
-    orders = Array.isArray(data)
-      ? (data as EasyOrderItem[])
-      : ((data as Record<string, unknown>)?.orders as EasyOrderItem[] ??
-         (data as Record<string, unknown>)?.data  as EasyOrderItem[] ?? []);
-
-  } catch (fetchErr: unknown) {
-    const msg = fetchErr instanceof Error ? fetchErr.message : "Unknown error";
-    console.error("[EO-SYNC] Fetch error:", msg);
-    return NextResponse.json(
-      { error: "تعذر الاتصال بـ EasyOrders API" },
-      { status: 502 }
-    );
-  }
-
-  if (!orders.length) {
-    return NextResponse.json({
-      success:  true,
-      synced:   0,
-      message:  "لا توجد طلبات في هذه الصفحة",
-      hasMore:  false,
-      nextPage: null,
-    });
-  }
-
-  // ── حفظ كل أوردر ─────────────────────────────────────────────────────────
-  let synced = 0;
-
-  for (const order of orders) {
-    const rawPhone: string =
-      order?.customer?.phone          ??
-      order?.billing_address?.phone   ??
-      order?.phone                    ??
-      order?.customer_phone           ??
-      "";
-
-    if (!rawPhone) continue;
-
-    const phone = rawPhone.replace(/\D/g, "");
-    if (phone.length < 9) continue;
-
-    const name: string       = order?.customer?.name ?? order?.customer_name ?? "عميل";
-    const externalId: string = String(order.id);
-    const orderNumber        = String(order.order_number ?? order.id);
-    const totalRaw           = parseFloat(String(order.total ?? "0"));
-    const total              = isNaN(totalRaw) ? 0 : totalRaw;
-    const currency           = order.currency ?? "EGP";
-    const status             = order.status   ?? "pending";
-    const orderedAt          = order.created_at ? new Date(order.created_at) : new Date();
-
-    // ── Upsert Contact ──────────────────────────────────────────────────
-    const contact = await prisma.contact.upsert({
-      where:  { phone_userId: { phone, userId: user.id } },
-      update: { name: name !== "عميل" ? name : undefined },
-      create: { phone, userId: user.id, name },
-    });
-
-    // ── Upsert StoreOrder ───────────────────────────────────────────────
-    await prisma.storeOrder.upsert({
-      where: {
-        source_externalId_userId: {
-          source:     OrderSource.easyorders,
-          externalId,
-          userId:     user.id,
-        },
-      },
-      update: { status, total },
-      create: {
-        userId:            user.id,
-        source:            OrderSource.easyorders,
-        externalId,
-        orderNumber,
-        customerName:      name,
-        customerPhone:     phone,
-        total,
-        currency,
-        status,
-        rawData:           order as object,
-        contactId:         contact.id,
-        easyOrdersStoreId: store.id,
-        orderedAt,
-      },
-    });
-
-    synced++;
-  }
-
-  // ── تحديث عداد المزامنة ──────────────────────────────────────────────────
-  const updated = await prisma.easyOrdersStore.update({
-    where: { id: store.id },
-    data:  {
-      lastSyncAt:  new Date(),
-      totalSynced: { increment: synced },
-    },
-    select: { totalSynced: true, storeName: true },
-  });
-
-  console.log(`[EO-SYNC] ✓ Synced ${synced} orders — user: ${user.id}`);
-
+  // ── فشل مزامنة المنتجات لا يعني أن الربط نفسه فشل — الـ API Key تم التحقق منه بنجاح ──
   return NextResponse.json({
-    success:     true,
-    synced,
-    hasMore:     orders.length === PAGE_SIZE,
-    nextPage:    orders.length === PAGE_SIZE ? page + 1 : null,
-    storeName:   updated.storeName,
-    totalSynced: updated.totalSynced,
+    success:          true,
+    connected:        true,
+    storeName:        store.storeName,
+    productsSynced:   productSync.synced,
+    productSyncError: productSync.errorMessage ?? (productSync.errors > 0 ? "بعض المنتجات فشلت أثناء المزامنة" : null),
   });
+}
+
+// ─── PATCH — حفظ Webhook Secret بشكل منفصل عن الـ API Key ──────────────────
+export async function PATCH(req: NextRequest): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+
+  const denied = requirePermission(session, "STORE_INTEGRATIONS_MANAGE");
+  if (denied) return denied;
+
+  const user = await prisma.user.findUnique({
+    where:  { email: session!.user.email },
+    select: { id: true, easyOrdersStore: { select: { id: true } } },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  if (!user.easyOrdersStore) {
+    return NextResponse.json({ error: "يجب ربط المتجر أولاً قبل حفظ الـ Webhook Secret" }, { status: 422 });
+  }
+
+  let body: { webhookSecret?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.webhookSecret?.trim()) {
+    return NextResponse.json({ error: "webhookSecret مطلوب" }, { status: 400 });
+  }
+
+  await prisma.easyOrdersStore.update({
+    where: { id: user.easyOrdersStore.id },
+    data:  { webhookSecret: encryptToken(body.webhookSecret.trim()) },
+  });
+
+  return NextResponse.json({ success: true, webhookConfigured: true });
 }
 
 // ─── DELETE — فك ربط المتجر ───────────────────────────────────────────────────
