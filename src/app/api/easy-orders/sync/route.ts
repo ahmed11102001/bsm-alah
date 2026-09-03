@@ -143,11 +143,12 @@ export async function GET(): Promise<NextResponse> {
       id:              true,
       easyOrdersStore: {
         select: {
-          storeName:     true,
-          totalSynced:   true,
-          lastSyncAt:    true,
-          isActive:      true,
-          webhookSecret: true,
+          storeName:                 true,
+          totalSynced:               true,
+          lastSyncAt:                true,
+          isActive:                  true,
+          webhookSecretOrders:       true,
+          webhookSecretStatusUpdate: true,
         },
       },
     },
@@ -161,15 +162,16 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ connected: false });
   }
 
-  const { storeName, totalSynced, lastSyncAt, isActive, webhookSecret } = user.easyOrdersStore;
+  const { storeName, totalSynced, lastSyncAt, isActive, webhookSecretOrders, webhookSecretStatusUpdate } = user.easyOrdersStore;
 
   return NextResponse.json({
-    connected:         true,
+    connected:                     true,
     storeName,
     totalSynced,
     lastSyncAt,
     isActive,
-    webhookConfigured: Boolean(webhookSecret),
+    webhookOrdersConfigured:       Boolean(webhookSecretOrders),
+    webhookStatusUpdateConfigured: Boolean(webhookSecretStatusUpdate),
   });
 }
 
@@ -297,7 +299,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
 }
 
-// ─── PATCH — حفظ Webhook Secret بشكل منفصل عن الـ API Key ──────────────────
+// ─── PATCH — حفظ Webhook Secret (لكل نوع Webhook على حدة) ──────────────────
+// EasyOrders بتولّد سِر مختلف لكل Webhook — لازم Webhook منفصل لكل event type
+// وسِر منفصل لكل واحد. body: { type: "orders" | "status_update", secret }
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
 
@@ -315,23 +319,28 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "يجب ربط المتجر أولاً قبل حفظ الـ Webhook Secret" }, { status: 422 });
   }
 
-  let body: { webhookSecret?: string };
+  let body: { type?: string; secret?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body.webhookSecret?.trim()) {
-    return NextResponse.json({ error: "webhookSecret مطلوب" }, { status: 400 });
+  if (body.type !== "orders" && body.type !== "status_update") {
+    return NextResponse.json({ error: "type يجب أن يكون orders أو status_update" }, { status: 400 });
   }
+  if (!body.secret?.trim()) {
+    return NextResponse.json({ error: "secret مطلوب" }, { status: 400 });
+  }
+
+  const field = body.type === "orders" ? "webhookSecretOrders" : "webhookSecretStatusUpdate";
 
   await prisma.easyOrdersStore.update({
     where: { id: user.easyOrdersStore.id },
-    data:  { webhookSecret: encryptToken(body.webhookSecret.trim()) },
+    data:  { [field]: encryptToken(body.secret.trim()) },
   });
 
-  return NextResponse.json({ success: true, webhookConfigured: true });
+  return NextResponse.json({ success: true, type: body.type, configured: true });
 }
 
 // ─── DELETE — فك ربط المتجر ───────────────────────────────────────────────────
