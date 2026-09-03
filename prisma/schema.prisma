@@ -513,12 +513,13 @@ model EasyOrdersStore {
   userId        String            @unique
   storeName     String
   apiKey        String
-  // Public API Key و Webhook Secret قيمتان مختلفتان تمامًا في EasyOrders.
-  // apiKey: يُستخدم للمصادقة مع Public API (Api-Key header).
-  // webhookSecret: القيمة التي يولّدها EasyOrders عند إنشاء الـ Webhook من الداشبورد،
-  //                وتُرسل في هيدر "secret" مع كل استدعاء Webhook. اختيارية حتى يقوم
-  //                المستخدم بإنشاء الـ Webhook ولصق السر هنا — لا تُملأ تلقائيًا من apiKey.
-  webhookSecret String?
+  // EasyOrders بتولّد سِر (secret) منفصل لكل Webhook بيتعمل، حتى لو كل الـ
+  // Webhooks بتشاور على نفس الـ URL. عشان كده لازم سِرّين منفصلين — واحد
+  // للـ Webhook من نوع "Orders" (order created) وواحد للـ Webhook من نوع
+  // "Order Status Update". كلاهما اختياري لحد ما المستخدم يعمل الـ Webhook
+  // المطابق من داشبورد EasyOrders ويلصق السر هنا — لا يُشتق أبدًا من apiKey.
+  webhookSecretOrders       String?
+  webhookSecretStatusUpdate String?
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt

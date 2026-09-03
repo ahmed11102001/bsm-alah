@@ -30,6 +30,13 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
+// EasyOrders يولّد سِر مختلف لكل Webhook — حتى لو كل الـ Webhooks بتشاور على
+// نفس الـ URL. عشان كده لازم Webhook منفصل لكل event type، وسِر منفصل لكل
+// واحد فيهم يتقارن بيه.
+function pickExpectedSecretField(eventType: string | undefined): "webhookSecretOrders" | "webhookSecretStatusUpdate" {
+  return eventType === "order-status-update" ? "webhookSecretStatusUpdate" : "webhookSecretOrders";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -44,27 +51,12 @@ export async function POST(req: NextRequest) {
 
     const store = await prisma.easyOrdersStore.findUnique({
       where:  { userId },
-      select: { id: true, webhookSecret: true },
+      select: { id: true, webhookSecretOrders: true, webhookSecretStatusUpdate: true },
     });
 
     if (!store) {
       console.warn("[EasyOrders] Webhook received for unknown/unconnected store");
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
-    }
-
-    if (!store.webhookSecret) {
-      console.warn("[EasyOrders] Webhook Not Configured — no secret saved for this store");
-      return NextResponse.json({ error: "Webhook not configured" }, { status: 428 });
-    }
-
-    const providedSecret = req.headers.get("secret") ?? "";
-    const expectedSecret = isEncrypted(store.webhookSecret)
-      ? decryptToken(store.webhookSecret)
-      : store.webhookSecret;
-
-    if (!providedSecret || !safeEqual(providedSecret, expectedSecret)) {
-      console.warn("[EasyOrders] Webhook signature/secret validation failed");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let payload: any;
@@ -75,10 +67,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ── الفصل بناءً على event_type ─────────────────────────────────────────
-    // EasyOrders ترسل نوعين مختلفين من الـ Webhook على نفس الرابط:
+    // EasyOrders ترسل نوعين مختلفين من الـ Webhook على نفس الرابط (لو المستخدم
+    // عمل Webhook منفصل لكل نوع، وده المتوقع دلوقتي):
     // 1. Order Created: يحتوي على بيانات الأوردر الكاملة
     // 2. Order Status Change: يحتوي على event_type = "order-status-update"
     const eventType = payload?.event_type;
+    const expectedField = pickExpectedSecretField(eventType);
+    const storedSecret = store[expectedField];
+
+    if (!storedSecret) {
+      console.warn(`[EasyOrders] Webhook Not Configured — no secret saved for event type "${eventType ?? "orders"}"`);
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 428 });
+    }
+
+    const providedSecret = req.headers.get("secret") ?? "";
+    const expectedSecret = isEncrypted(storedSecret) ? decryptToken(storedSecret) : storedSecret;
+
+    if (!providedSecret || !safeEqual(providedSecret, expectedSecret)) {
+      console.warn("[EasyOrders] Webhook signature/secret validation failed");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     if (eventType === "order-status-update") {
       return handleOrderStatusUpdate(payload, userId, store.id);

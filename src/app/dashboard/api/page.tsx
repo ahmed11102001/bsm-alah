@@ -461,9 +461,10 @@ function ShopifyContent({
 interface EasyOrdersLabels {
   storeLabel: string; storePlaceholder: string;
   apiKeyLabel: string; webhookLabel: string; webhookWarning: string;
-  webhookSecretLabel: string; webhookSecretPlaceholder: string;
+  webhookSecretOrdersLabel: string; webhookSecretStatusUpdateLabel: string; webhookSecretPlaceholder: string;
   saveSecretBtn: string; savingSecretBtn: string;
-  webhookConfiguredBadge: string; webhookNotConfiguredBadge: string;
+  webhookOrdersConfiguredBadge: string; webhookOrdersNotConfiguredBadge: string;
+  webhookStatusConfiguredBadge: string; webhookStatusNotConfiguredBadge: string;
   syncingBtn: string; syncBtn: string; apiKeyErr: string;
   syncSuccess: (synced: number) => string;
   syncErr: string;
@@ -474,22 +475,47 @@ interface EasyOrdersLabels {
 
 function EasyOrdersContent({
   apiKey, setApiKey, storeName, setStoreName, webhookUrl, syncing, status, onSync,
-  webhookSecret, setWebhookSecret, savingSecret, onSaveSecret,
+  webhookSecretOrders, setWebhookSecretOrders, savingSecretOrders, onSaveSecretOrders,
+  webhookSecretStatusUpdate, setWebhookSecretStatusUpdate, savingSecretStatusUpdate, onSaveSecretStatusUpdate,
   labels, locale,
 }: {
   apiKey: string; setApiKey: (v: string) => void;
   storeName: string; setStoreName: (v: string) => void;
   webhookUrl: string; syncing: boolean;
-  status: { connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string; webhookConfigured?: boolean } | null;
+  status: {
+    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string;
+    webhookOrdersConfigured?: boolean; webhookStatusUpdateConfigured?: boolean;
+  } | null;
   onSync: () => void;
-  webhookSecret: string; setWebhookSecret: (v: string) => void;
-  savingSecret: boolean; onSaveSecret: () => void;
+  webhookSecretOrders: string; setWebhookSecretOrders: (v: string) => void;
+  savingSecretOrders: boolean; onSaveSecretOrders: () => void;
+  webhookSecretStatusUpdate: string; setWebhookSecretStatusUpdate: (v: string) => void;
+  savingSecretStatusUpdate: boolean; onSaveSecretStatusUpdate: () => void;
   labels: EasyOrdersLabels;
   locale: string;
 }) {
   const dateStr = status?.lastSyncAt
     ? new Date(status.lastSyncAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-US")
     : "";
+
+  const webhookBadge = (configured: boolean | undefined, configuredLabel: string, notConfiguredLabel: string) => (
+    <div className={cn(
+      "flex items-center gap-2 p-2 rounded-lg border",
+      configured
+        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+        : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+    )}>
+      {configured
+        ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+        : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />}
+      <p className={cn(
+        "text-xs font-medium",
+        configured ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"
+      )}>
+        {configured ? configuredLabel : notConfiguredLabel}
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
@@ -501,24 +527,8 @@ function EasyOrdersContent({
           </p>
         </div>
       )}
-      {status?.connected && (
-        <div className={cn(
-          "flex items-center gap-2 p-2 rounded-lg border",
-          status.webhookConfigured
-            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-            : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-        )}>
-          {status.webhookConfigured
-            ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-            : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />}
-          <p className={cn(
-            "text-xs font-medium",
-            status.webhookConfigured ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"
-          )}>
-            {status.webhookConfigured ? labels.webhookConfiguredBadge : labels.webhookNotConfiguredBadge}
-          </p>
-        </div>
-      )}
+      {status?.connected && webhookBadge(status.webhookOrdersConfigured, labels.webhookOrdersConfiguredBadge, labels.webhookOrdersNotConfiguredBadge)}
+      {status?.connected && webhookBadge(status.webhookStatusUpdateConfigured, labels.webhookStatusConfiguredBadge, labels.webhookStatusNotConfiguredBadge)}
       <div>
         <Label className="text-xs dark:text-gray-400">{labels.storeLabel}</Label>
         <Input placeholder={labels.storePlaceholder} value={storeName} onChange={e => setStoreName(e.target.value)}
@@ -545,16 +555,31 @@ function EasyOrdersContent({
         <div className="mt-1"><CopyInput value={webhookUrl} placeholder={labels.loading} /></div>
         <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1">{labels.webhookWarning}</p>
       </div>
+      {/* EasyOrders بتولّد سِر مختلف لكل Webhook — لازم Webhook منفصل لكل نوع، وسِر منفصل لكل واحد */}
       <div>
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <Shield className="w-3 h-3" /> {labels.webhookSecretLabel}
+          <Shield className="w-3 h-3" /> {labels.webhookSecretOrdersLabel}
         </Label>
-        <Input placeholder={labels.webhookSecretPlaceholder} dir="ltr" value={webhookSecret}
-          onChange={e => setWebhookSecret(e.target.value)} type="password"
+        <Input placeholder={labels.webhookSecretPlaceholder} dir="ltr" value={webhookSecretOrders}
+          onChange={e => setWebhookSecretOrders(e.target.value)} type="password"
           className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600" />
-        <Button onClick={onSaveSecret} disabled={savingSecret || !webhookSecret.trim() || !status?.connected}
+        <Button onClick={onSaveSecretOrders} disabled={savingSecretOrders || !webhookSecretOrders.trim() || !status?.connected}
           size="sm" variant="outline" className="w-full gap-2 mt-2">
-          {savingSecret
+          {savingSecretOrders
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
+            : <>{labels.saveSecretBtn}</>}
+        </Button>
+      </div>
+      <div>
+        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+          <Shield className="w-3 h-3" /> {labels.webhookSecretStatusUpdateLabel}
+        </Label>
+        <Input placeholder={labels.webhookSecretPlaceholder} dir="ltr" value={webhookSecretStatusUpdate}
+          onChange={e => setWebhookSecretStatusUpdate(e.target.value)} type="password"
+          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600" />
+        <Button onClick={onSaveSecretStatusUpdate} disabled={savingSecretStatusUpdate || !webhookSecretStatusUpdate.trim() || !status?.connected}
+          size="sm" variant="outline" className="w-full gap-2 mt-2">
+          {savingSecretStatusUpdate
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
             : <>{labels.saveSecretBtn}</>}
         </Button>
@@ -844,10 +869,13 @@ export default function API() {
   const [eoWebhookUrl, setEoWebhookUrl] = useState("");
   const [eoUrlLoaded, setEoUrlLoaded] = useState(false);
   const [eoSyncing, setEoSyncing] = useState(false);
-  const [eoWebhookSecret, setEoWebhookSecret] = useState("");
-  const [eoSavingSecret, setEoSavingSecret] = useState(false);
+  const [eoWebhookSecretOrders, setEoWebhookSecretOrders] = useState("");
+  const [eoSavingSecretOrders, setEoSavingSecretOrders] = useState(false);
+  const [eoWebhookSecretStatusUpdate, setEoWebhookSecretStatusUpdate] = useState("");
+  const [eoSavingSecretStatusUpdate, setEoSavingSecretStatusUpdate] = useState(false);
   const [eoStatus, setEoStatus] = useState<{
-    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string; webhookConfigured?: boolean;
+    connected: boolean; storeName?: string; totalSynced?: number; lastSyncAt?: string;
+    webhookOrdersConfigured?: boolean; webhookStatusUpdateConfigured?: boolean;
   } | null>(null);
   const [shopifyStatus, setShopifyStatus] = useState<{
     connected: boolean; storeName?: string; connectedAt?: string | null; webhookUrl?: string;
@@ -1119,27 +1147,35 @@ export default function API() {
         storeName: d.storeName,
         totalSynced: d.productsSynced,
         lastSyncAt: new Date().toISOString(),
-        webhookConfigured: prev?.webhookConfigured ?? false,
+        webhookOrdersConfigured: prev?.webhookOrdersConfigured ?? false,
+        webhookStatusUpdateConfigured: prev?.webhookStatusUpdateConfigured ?? false,
       }));
     } catch { toast.error(api.cards.easyorders.syncErr); }
     finally { setEoSyncing(false); }
   };
 
-  const handleEoSaveSecret = async () => {
-    if (!eoWebhookSecret.trim()) { toast.error(api.cards.easyorders.secretErr); return; }
-    setEoSavingSecret(true);
+  const handleEoSaveSecret = async (type: "orders" | "status_update") => {
+    const secret = type === "orders" ? eoWebhookSecretOrders : eoWebhookSecretStatusUpdate;
+    if (!secret.trim()) { toast.error(api.cards.easyorders.secretErr); return; }
+    const setSaving = type === "orders" ? setEoSavingSecretOrders : setEoSavingSecretStatusUpdate;
+    setSaving(true);
     try {
       const r = await fetch("/api/easy-orders/sync", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookSecret: eoWebhookSecret.trim() }),
+        body: JSON.stringify({ type, secret: secret.trim() }),
       });
       const d = await r.json();
       if (!r.ok) { toast.error(d.error ?? api.cards.easyorders.syncErr); return; }
       toast.success(api.cards.easyorders.secretSavedMsg);
-      setEoStatus(prev => prev ? { ...prev, webhookConfigured: true } : prev);
-      setEoWebhookSecret("");
+      setEoStatus(prev => prev
+        ? {
+            ...prev,
+            ...(type === "orders" ? { webhookOrdersConfigured: true } : { webhookStatusUpdateConfigured: true }),
+          }
+        : prev);
+      if (type === "orders") setEoWebhookSecretOrders(""); else setEoWebhookSecretStatusUpdate("");
     } catch { toast.error(api.cards.easyorders.syncErr); }
-    finally { setEoSavingSecret(false); }
+    finally { setSaving(false); }
   };
 
   const handleShConnect = async () => {
@@ -1462,8 +1498,10 @@ export default function API() {
                 storeName={eoStoreName} setStoreName={setEoStoreName}
                 webhookUrl={eoWebhookUrl} syncing={eoSyncing} status={eoStatus}
                 onSync={handleEoSync}
-                webhookSecret={eoWebhookSecret} setWebhookSecret={setEoWebhookSecret}
-                savingSecret={eoSavingSecret} onSaveSecret={handleEoSaveSecret}
+                webhookSecretOrders={eoWebhookSecretOrders} setWebhookSecretOrders={setEoWebhookSecretOrders}
+                savingSecretOrders={eoSavingSecretOrders} onSaveSecretOrders={() => handleEoSaveSecret("orders")}
+                webhookSecretStatusUpdate={eoWebhookSecretStatusUpdate} setWebhookSecretStatusUpdate={setEoWebhookSecretStatusUpdate}
+                savingSecretStatusUpdate={eoSavingSecretStatusUpdate} onSaveSecretStatusUpdate={() => handleEoSaveSecret("status_update")}
                 labels={api.cards.easyorders} locale={locale}
               />
             )}
