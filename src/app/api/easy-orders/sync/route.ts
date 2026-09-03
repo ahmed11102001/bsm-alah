@@ -24,15 +24,32 @@ import { syncEasyOrdersProducts }    from "@/lib/product-sync";
 
 const EASYORDERS_PRODUCTS_ENDPOINT = "https://api.easy-orders.net/api/v1/external-apps/products";
 
-// ─── نتيجة التحقق من الـ API Key ──────────────────────────────────────────────
 type ValidationResult =
   | { ok: true }
-  | { ok: false; status: number; code: string; message: string };
+  | { ok: false; status: number; code: string; message: string; details?: unknown };
+
+function safeResponseDetails(text: string): unknown {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+
+  // Keep logs/responses bounded. EasyOrders error bodies should be small, but
+  // this prevents an unexpectedly large upstream response from flooding logs/UI.
+  const bounded = trimmed.slice(0, 2000);
+  try {
+    return JSON.parse(bounded);
+  } catch {
+    return bounded;
+  }
+}
 
 /**
  * يتحقق من الـ API Key عن طريق نداء فعلي لـ GET products بحد أقصى منتج واحد.
  * لا يفترض نجاح العملية لمجرد إمكانية حفظ المفتاح — ينادي EasyOrders فعليًا
- * ويفرّق بين أنواع الأخطاء المختلفة بدل تحويلها كلها لـ 502 عام.
+ * ويفرّق بين أنواع الأخطاء المختلفة.
+ *
+ * مهم: نقرأ body الخاص بـEasyOrders عند الفشل ونحتفظ به في details، لأن
+ * status=400 وحده لا يوضح سبب رفض الطلب. الـAPI Key نفسه لا يتم تسجيله أو
+ * إرجاعه أبدًا.
  */
 async function validateEasyOrdersApiKey(apiKey: string): Promise<ValidationResult> {
   try {
@@ -46,8 +63,17 @@ async function validateEasyOrdersApiKey(apiKey: string): Promise<ValidationResul
 
     if (res.ok) return { ok: true };
 
+    const responseText = await res.text();
+    const details = safeResponseDetails(responseText);
+
     if (res.status === 401) {
-      return { ok: false, status: 401, code: "invalid_api_key", message: "API Key غير صحيح" };
+      return {
+        ok: false,
+        status: 401,
+        code: "invalid_api_key",
+        message: "API Key غير صحيح",
+        details,
+      };
     }
     if (res.status === 403) {
       return {
@@ -55,22 +81,42 @@ async function validateEasyOrdersApiKey(apiKey: string): Promise<ValidationResul
         status: 403,
         code: "insufficient_permissions",
         message: "الـ API Key لا يملك صلاحية products:read — راجع صلاحيات المفتاح في داشبورد EasyOrders",
+        details,
       };
     }
     if (res.status === 400) {
-      return { ok: false, status: 400, code: "bad_request", message: "طلب غير صحيح إلى EasyOrders API" };
+      return {
+        ok: false,
+        status: 400,
+        code: "bad_request",
+        message: "EasyOrders رفضت طلب التحقق (400). راجع تفاصيل الخطأ المرفقة.",
+        details,
+      };
     }
     if (res.status === 404) {
-      return { ok: false, status: 404, code: "not_found", message: "المتجر أو الـ endpoint غير موجود" };
+      return {
+        ok: false,
+        status: 404,
+        code: "not_found",
+        message: "المتجر أو الـ endpoint غير موجود",
+        details,
+      };
     }
     if (res.status === 429) {
-      return { ok: false, status: 429, code: "rate_limited", message: "تم تجاوز الحد المسموح من الطلبات، حاول لاحقًا" };
+      return {
+        ok: false,
+        status: 429,
+        code: "rate_limited",
+        message: "تم تجاوز الحد المسموح من الطلبات، حاول لاحقًا",
+        details,
+      };
     }
     return {
       ok: false,
       status: res.status,
       code: "easyorders_error",
       message: `خطأ من EasyOrders API: ${res.status}`,
+      details,
     };
   } catch (err: unknown) {
     const isTimeout = err instanceof Error && err.name === "TimeoutError";
@@ -165,7 +211,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { storeName, reuseStoredKey = false } = body;
 
-  // ── اختيار الـ API Key ───────────────────────────────────────────────────
   let apiKey: string;
 
   if (reuseStoredKey) {
@@ -185,20 +230,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     apiKey = body.apiKey.trim();
   }
 
-  // ── التحقق الفعلي من المفتاح قبل أي حفظ ─────────────────────────────────
   console.log("[EasyOrders] Connection validation started");
   const validation = await validateEasyOrdersApiKey(apiKey);
 
   if (!validation.ok) {
-    console.warn(`[EasyOrders] Connection validation failed: code=${validation.code} status=${validation.status}`);
+    console.warn("[EasyOrders] Connection validation failed", {
+      code: validation.code,
+      status: validation.status,
+      details: validation.details,
+    });
+
     return NextResponse.json(
-      { error: validation.message, code: validation.code },
+      {
+        error: validation.message,
+        code: validation.code,
+        details: validation.details,
+      },
       { status: validation.status === 0 ? 502 : (validation.status === 429 ? 429 : 422) }
     );
   }
   console.log("[EasyOrders] Connection validation succeeded");
 
-  // ── حفظ / تحديث بيانات المتجر — فقط بعد نجاح التحقق ─────────────────────
   const store = await prisma.easyOrdersStore.upsert({
     where:  { userId: user.id },
     update: {
@@ -210,12 +262,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       userId:    user.id,
       apiKey:    encryptToken(apiKey),
       storeName: storeName?.trim() || "متجري",
-      // webhookSecret يبقى فارغًا حتى يُنشئ المستخدم الـ Webhook من داشبورد
-      // EasyOrders ويلصق السر الحقيقي عبر PATCH — لا يُشتق أبدًا من apiKey.
     },
   });
 
-  // ── مزامنة المنتجات فورًا (نتيجة مباشرة للمستخدم) ───────────────────────
   console.log("[EasyOrders] Product sync started");
   let productSync;
   try {
@@ -229,7 +278,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.warn(`[EasyOrders] Product sync failed: synced=${productSync.synced} errors=${productSync.errors}`);
   }
 
-  // ── جدولة مزامنة دورية في الخلفية (لا تمنع نجاح الربط لو فشلت الجدولة) ──
   try {
     const { inngest } = await import("@/inngest/client");
     void inngest.send({
@@ -240,7 +288,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // non-blocking
   }
 
-  // ── فشل مزامنة المنتجات لا يعني أن الربط نفسه فشل — الـ API Key تم التحقق منه بنجاح ──
   return NextResponse.json({
     success:          true,
     connected:        true,
