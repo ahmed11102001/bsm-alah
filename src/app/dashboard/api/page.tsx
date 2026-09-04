@@ -912,6 +912,7 @@ export default function API() {
   const [elevenLabsAgentId, setElevenLabsAgentId] = useState("");
   const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("");
   const [elevenLabsSaving, setElevenLabsSaving] = useState(false);
+  const [elevenLabsEditMode, setElevenLabsEditMode] = useState(false);
   const [elevenLabsAgentData, setElevenLabsAgentData] = useState<Record<string, unknown> | null>(null);
 
   // ── Load initial data ───────────────────────────────────────────────────────
@@ -1058,8 +1059,8 @@ export default function API() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(elevenLabsAgentData ?? {}),
-          elevenLabsEnabled,
-          voiceRepliesEnabled,
+          elevenLabsEnabled: true,
+          voiceRepliesEnabled: voiceRepliesEnabled || !isElevenLabsLinked,
           elevenLabsApiKey: elevenLabsApiKey.trim(),
           elevenLabsAgentId: elevenLabsAgentId.trim() || null,
           elevenLabsVoiceId: elevenLabsVoiceId.trim() || null,
@@ -1076,7 +1077,39 @@ export default function API() {
     } finally { setElevenLabsSaving(false); }
   };
 
+  const isElevenLabsLinked = Boolean(elevenLabsAgentData?.elevenLabsAgentId && elevenLabsAgentData?.elevenLabsApiKey);
 
+  const handleDisconnectElevenLabs = async () => {
+    const msg = locale === "ar"
+      ? "هتفك ربط ElevenLabs — الردود الصوتية هتتوقف. متأكد؟"
+      : "You are about to disconnect ElevenLabs — voice replies will stop. Sure?";
+    if (!confirm(msg)) return;
+    try {
+      const r = await fetch("/api/ai-agent", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(elevenLabsAgentData ?? {}),
+          elevenLabsEnabled: false,
+          voiceRepliesEnabled: false,
+          elevenLabsApiKey: null,
+          elevenLabsAgentId: null,
+          elevenLabsVoiceId: null,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Disconnect failed");
+      setElevenLabsAgentData(d);
+      setElevenLabsEnabled(false);
+      setVoiceRepliesEnabled(false);
+      setElevenLabsApiKey("");
+      setElevenLabsAgentId("");
+      setElevenLabsVoiceId("");
+      toast.success(locale === "ar" ? "تم فك ربط ElevenLabs" : "ElevenLabs disconnected");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not disconnect");
+    }
+  };
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1327,11 +1360,11 @@ export default function API() {
       {
         id: "elevenlabs",
         title: "ElevenLabs",
-        subtitle: locale === "ar" ? "الردود الصوتية بالذكاء الاصطناعي" : "AI Voice Replies (TTS)",
+        subtitle: locale === "ar" ? "إيجنت صوتي مستقل يفكر ويرد بنفسه" : "An independent voice agent that thinks and replies on its own",
         steps: [
-          { title: locale === "ar" ? "أدخل API Key" : "Enter API Key", desc: locale === "ar" ? "انسخ الـ API Key من حساب ElevenLabs" : "Copy your API Key from ElevenLabs" },
-          { title: locale === "ar" ? "أدخل Voice ID" : "Enter Voice ID", desc: locale === "ar" ? "اختر الصوت وانسخ Voice ID الخاص به" : "Choose voice and copy its ID" },
-          { title: locale === "ar" ? "فعّل الردود الصوتية" : "Enable Voice Replies", desc: locale === "ar" ? "سيتم إرسال رسائل صوتية مع ردود الـ AI تلقائياً" : "AI replies will include voice notes" },
+          { title: locale === "ar" ? "جهّز الـ Agent على ElevenLabs" : "Set up your Agent on ElevenLabs", desc: locale === "ar" ? "من Conversational AI، جهّز الـ Agent بمعرفته وبرومبته الخاصين" : "In Conversational AI, configure your agent with its own knowledge and prompt" },
+          { title: locale === "ar" ? "أدخل API Key والـ Agent ID" : "Enter API Key & Agent ID", desc: locale === "ar" ? "من إعدادات الحساب والـ Agent بتاعك على ElevenLabs" : "From your ElevenLabs account and agent settings" },
+          { title: locale === "ar" ? "اربط وفعّل الرد الصوتي" : "Connect & enable Voice Reply", desc: locale === "ar" ? "الـ Agent هيرد بنفسه على واتساب — مستقل عن رد وني النصي" : "Your agent replies on WhatsApp — independent from Wani's text replies" },
         ],
       },
       {
@@ -1666,72 +1699,104 @@ export default function API() {
               </div>
             )}
             {card.id === "elevenlabs" && (
-              <div className="space-y-4">
-                <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
-                  <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <span>
-                    {locale === "ar"
-                      ? "اربط الـ Conversational AI Agent بتاعك على ElevenLabs عشان يرد بصوته على عملائك على واتساب — الـ Agent نفسه هو اللي بيفكر ويرد (بمعرفته وبرومبته اللي جهزته على لوحة ElevenLabs)، مش مجرد تحويل نص لصوت. المفتاح مشفر بالكامل."
-                      : "Connect your ElevenLabs Conversational AI Agent so it replies with its own voice on WhatsApp — the agent itself thinks and replies (using its own knowledge & prompt configured on ElevenLabs), not just text-to-speech. Your API key is encrypted."}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {locale === "ar" ? "ربط تكامل ElevenLabs (Integration)" : "Enable ElevenLabs Integration"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {locale === "ar"
-                        ? "تفعيل الاتصال بحساب ElevenLabs الخاص بك"
-                        : "Connect and enable your ElevenLabs account"}
-                    </p>
+              isElevenLabsLinked && !elevenLabsEditMode ? (
+                <div className="space-y-3">
+                  {/* Connected badge — نفس شكل حالة الاتصال بتاعة Meta */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-800/40 flex items-center justify-center flex-shrink-0">
+                      <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                        {locale === "ar" ? "تم ربط ElevenLabs بنجاح ✅" : "ElevenLabs connected successfully ✅"}
+                      </p>
+                      <p className="text-[11px] text-green-600/70 dark:text-green-400/60">
+                        {locale === "ar" ? "الـ Agent الصوتي شغّال" : "Your voice agent is active"}
+                      </p>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle ElevenLabs Integration">
-                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
-                  </button>
-                </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {locale === "ar" ? "تفعيل مخرج الرد الصوتي (Voice Reply)" : "Enable Voice Reply Output"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {locale === "ar"
-                        ? "الـ Agent الصوتي بتاعك هيرد بنفسه (بمعرفته الخاصة) على واتساب — رد مستقل تماماً عن رد وني النصي"
-                        : "Your own ElevenLabs agent will reply independently on WhatsApp — separate from Wani's text replies"}
-                    </p>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Agent ID</p>
+                      <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{elevenLabsAgentId}</p>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setVoiceRepliesEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle Voice Replies Output">
-                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", voiceRepliesEnabled ? "translate-x-6" : "translate-x-0")} />
-                  </button>
+
+                  <div className="flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-3">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {locale === "ar" ? "الرد الصوتي مفعّل" : "Voice Reply enabled"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const next = !voiceRepliesEnabled;
+                        setVoiceRepliesEnabled(next);
+                        try {
+                          const r = await fetch("/api/ai-agent", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ ...(elevenLabsAgentData ?? {}), elevenLabsEnabled: true, voiceRepliesEnabled: next, elevenLabsApiKey: elevenLabsApiKey.trim(), elevenLabsAgentId: elevenLabsAgentId.trim() || null, elevenLabsVoiceId: elevenLabsVoiceId.trim() || null }),
+                          });
+                          const d = await r.json();
+                          if (!r.ok) throw new Error(d.error ?? "Save failed");
+                          setElevenLabsAgentData(d);
+                        } catch (e: any) {
+                          setVoiceRepliesEnabled(!next);
+                          toast.error(e?.message ?? "Could not update");
+                        }
+                      }}
+                      className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")}
+                      aria-label="Toggle Voice Replies Output"
+                    >
+                      <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", voiceRepliesEnabled ? "translate-x-6" : "translate-x-0")} />
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setElevenLabsEditMode(true)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
+                    </button>
+                    <button
+                      onClick={handleDisconnectElevenLabs}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-red-200 dark:border-red-800/40 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {locale === "ar" ? "فك الربط" : "Disconnect"}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
-                  <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
+              ) : (
+                <div className="space-y-3">
+                  {!isElevenLabsLinked && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30">
+                      <WifiOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        {locale === "ar" ? "ElevenLabs مش مربوط — أدخل البيانات عشان تربط" : "ElevenLabs is not connected — enter credentials to connect"}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
+                    <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Agent ID *</Label>
+                    <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
+                  </div>
+                  <Button
+                    onClick={async () => { await handleSaveElevenLabs(); setElevenLabsEditMode(false); }}
+                    disabled={elevenLabsSaving}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5"
+                  >
+                    {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (locale === "ar" ? "ربط ElevenLabs" : "Connect ElevenLabs")}
+                  </Button>
                 </div>
-                <div>
-                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Agent ID *" : "Agent ID *"}</Label>
-                  <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    {locale === "ar"
-                      ? "من ElevenLabs → Conversational AI → اختار الـ Agent بتاعك وانسخ الـ Agent ID. ده الـ Agent اللي هيفكر ويرد بصوته بمعرفته الخاصة — إجباري لتفعيل الرد الصوتي."
-                      : "From ElevenLabs → Conversational AI → select your agent and copy its Agent ID. This agent thinks and replies with its own knowledge — required to enable Voice Reply."}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Voice ID (اختياري / قديم)" : "Voice ID (optional / legacy)"}</Label>
-                  <Input value={elevenLabsVoiceId} onChange={e => setElevenLabsVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" dir="ltr" className="rounded-xl text-xs" />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    {locale === "ar"
-                      ? "غير مستخدم في الرد الصوتي الحالي — صوت الـ Agent بيتحدد من إعداداته هو على لوحة ElevenLabs مباشرة."
-                      : "Not used by the current voice reply flow — the agent's voice is configured directly in its ElevenLabs settings."}
-                  </p>
-                </div>
-                <Button onClick={handleSaveElevenLabs} disabled={elevenLabsSaving} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5">
-                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (locale === "ar" ? "حفظ إعدادات ElevenLabs" : "Save ElevenLabs settings")}
-                </Button>
-              </div>
+              )
             )}
           </IntegrationCard>
         ))}

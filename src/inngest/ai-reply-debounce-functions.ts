@@ -21,6 +21,7 @@ const NON_RETRIABLE_REASONS = new Set([
   "empty_reply",
   "superseded",
   "token_limit_reached",
+  "both_replies_disabled", // بديل "token_limit_reached" لما قناة الصوت متاحة برضه — نفس المنطق: مش فشل فني
   "no_whatsapp_account",
   "text_ai_disabled",
   "agent_disabled",

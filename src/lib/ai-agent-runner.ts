@@ -41,13 +41,6 @@ export async function runAIAgentReply(
 ): Promise<RunAIAgentReplyResult> {
   const { contactId, userId, from } = params;
 
-  // 1. فحص حصة الـ AI Tokens (Plan Guard)
-  const aiPlanGuard = await checkAITokensLimit(userId);
-  if (!aiPlanGuard.allowed) {
-    console.log(`[AI-AGENT] Blocked — token limit reached for ${userId}`);
-    return { sent: false, reason: "token_limit_reached" };
-  }
-
   // 2. جلب جهة الاتصال وبيانات حساب الواتساب
   const contact = await prisma.contact.findUnique({
     where: { id: contactId },
@@ -119,7 +112,7 @@ export async function runAIAgentReply(
 
   // 4.5. فحص قنوات الإخراج (Output Channels: Text Reply & Voice Reply)
   // Text Reply: مفعل إذا كان مفعل عاماً ولم يعطله المستخدم لهذا الـ Contact
-  const isTextOutEnabled = (agent.textRepliesEnabled ?? true) && (contact.textAiEnabled !== false);
+  let isTextOutEnabled = (agent.textRepliesEnabled ?? true) && (contact.textAiEnabled !== false);
 
   // 1. Integration: هل تكامل ElevenLabs مربوط ومفعل بالمفتاح؟
   const voiceApiKey = agent.elevenLabsApiKey
@@ -131,11 +124,23 @@ export async function runAIAgentReply(
   const isVoiceOutputEnabled = Boolean(agent.voiceRepliesEnabled);
 
   // Voice Out ينفذ فقط إذا: التكامل مربوط + الرد الصوتي مفعّل + المحادثة لم تلغِ الصوت (Opt-out)
+  // ملحوظة مهمة: الرد الصوتي (ElevenLabs Convai) قناة مستقلة تماماً عن Wani AI —
+  // بيتحاسب على حساب ElevenLabs بتاع العميل نفسه، مش من توكنز Wani — فمينفعش
+  // فحص حصة توكنز Wani يمنعه أو يأثر عليه.
   const isVoiceOutEnabled = isElevenLabsConnected && isVoiceOutputEnabled && !contact.voiceOptOut;
 
-  // إذا كانت القناتان معطلتين، لا داعي لتوليد رد
+  // فحص حصة الـ AI Tokens (Plan Guard) — بيأثر على قناة النص بس (اللي بتستخدم Wani AI فعلياً)
+  if (isTextOutEnabled) {
+    const aiPlanGuard = await checkAITokensLimit(userId);
+    if (!aiPlanGuard.allowed) {
+      console.log(`[AI-AGENT] Text channel blocked — token limit reached for ${userId}`);
+      isTextOutEnabled = false;
+    }
+  }
+
+  // إذا كانت القناتان معطلتين (بعد فحص الحصة)، لا داعي لتوليد رد
   if (!isTextOutEnabled && !isVoiceOutEnabled) {
-    console.log(`[AI-AGENT] Both Text Reply and Voice Reply are disabled for ${from}`);
+    console.log(`[AI-AGENT] Both Text Reply and Voice Reply are disabled/unavailable for ${from}`);
     return { sent: false, reason: "both_replies_disabled" };
   }
 
