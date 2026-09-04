@@ -1,4 +1,33 @@
-# واتساب بزنس vs WhatsApp Business API: إيه الفرق ومتى تحتاج API؟
+---
+title: "واتساب بزنس vs WhatsApp Business API: إيه الفرق ومتى تحتاج API؟"
+slug: "whatsapp-business-vs-api-difference"
+description: "الفرق بين واتساب بزنس وWhatsApp Business API بشكل عملي: المميزات والحدود، وإمتى يكون الانتقال إلى API خطوة منطقية لشركتك."
+excerpt: "دليل عملي يقارن بين تطبيق واتساب بزنس وWhatsApp Business API ويساعدك تحدد الأنسب لحجم شغلك وفريقك."
+keywords:
+  - "الفرق بين واتساب بزنس وواتساب API"
+  - "WhatsApp Business vs API"
+  - "مقارنة واتساب للأعمال"
+  - "حدود تطبيق واتساب بزنس"
+  - "متى أحتاج WhatsApp API"
+category: "واتساب للأعمال"
+tags:
+  - "واتساب"
+  - "واتساب بزنس"
+  - "WhatsApp API"
+author: "Wani"
+publishedAt: "2026-09-01"
+updatedAt: "2026-09-01"
+coverImage: ""
+coverImageAlt: ""
+featured: true
+robots:
+  index: true
+  follow: true
+relatedArticles:
+  - "whatsapp-crm-guide-for-businesses"
+  - "whatsapp-campaign"
+  - "whatsapp-automation-ecommerce"
+---
 
 لو بتستخدم **واتساب بزنس** لإدارة شغلك، غالبًا في مرحلة معينة هتبدأ تسأل: هل التطبيق كفاية فعلًا؟ ولا شركتي محتاجة **WhatsApp Business API**؟
 
