@@ -55,6 +55,9 @@ export async function GET(req: NextRequest) {
     elevenLabsEnabled: false,
     elevenLabsApiKey:  null,
     elevenLabsAgentId: null,
+    voiceRepliesEnabled: false,
+    elevenLabsVoiceId: null,
+    elevenLabsModelId: null,
   });
 }
 
@@ -93,6 +96,9 @@ export async function PUT(req: NextRequest) {
       elevenLabsEnabled,
       elevenLabsApiKey,
       elevenLabsAgentId,
+      voiceRepliesEnabled,
+      elevenLabsVoiceId,
+      elevenLabsModelId,
     } = body;
 
     const apiKeyTrim =
@@ -118,6 +124,13 @@ export async function PUT(req: NextRequest) {
         ? 3
         : null;
 
+    const resolvedVoiceRepliesEnabled =
+      typeof voiceRepliesEnabled === "boolean"
+        ? voiceRepliesEnabled
+        : typeof elevenLabsEnabled === "boolean"
+        ? elevenLabsEnabled
+        : false;
+
     const payload = {
       isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
       provider:  providerEnum,
@@ -135,9 +148,12 @@ export async function PUT(req: NextRequest) {
         typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
       handoffResumeMinutes: parsedHandoffResume,
       elevenLabsEnabled:
-        typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : false,
+        typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : resolvedVoiceRepliesEnabled,
+      voiceRepliesEnabled: resolvedVoiceRepliesEnabled,
       elevenLabsApiKey:  encryptedApiKey,
       elevenLabsAgentId: agentIdTrim || null,
+      elevenLabsVoiceId: typeof elevenLabsVoiceId === "string" ? elevenLabsVoiceId.trim() || null : null,
+      elevenLabsModelId: typeof elevenLabsModelId === "string" ? elevenLabsModelId.trim() || null : null,
     };
 
     const agent = await prisma.aIAgent.upsert({

@@ -72,6 +72,9 @@ interface AIAgent {
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
+  voiceRepliesEnabled?: boolean;
+  elevenLabsVoiceId?: string;
+  elevenLabsModelId?: string;
 }
 type Lang = "ar" | "en";
 const tx = (lang: Lang, ar: string, en: string) => (lang === "ar" ? ar : en);
@@ -80,6 +83,7 @@ const EMPTY_AGENT: AIAgent = {
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
   systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
+  voiceRepliesEnabled: false, elevenLabsVoiceId: "", elevenLabsModelId: "",
 };
 type AutoSubTab = "keywords" | "welcome" | "interactive" | "smart_followup" | "timebased" | "ab";
 
@@ -348,6 +352,9 @@ export default function Automation() {
         elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
         elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
         elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
+        voiceRepliesEnabled: agentData.voiceRepliesEnabled ?? false,
+        elevenLabsVoiceId: agentData.elevenLabsVoiceId ?? "",
+        elevenLabsModelId: agentData.elevenLabsModelId ?? "",
       });
     } catch { toast.error(tx(lang, "خطأ في تحميل البيانات", "Failed to load data")); }
     finally { setLoading(false); }

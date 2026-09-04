@@ -40,6 +40,9 @@ interface AiAgentSettings {
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
+  voiceRepliesEnabled?: boolean;
+  elevenLabsVoiceId?: string | null;
+  elevenLabsModelId?: string | null;
 }
 
 interface CustomerServiceData {
@@ -181,6 +184,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
     systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
     elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
+    voiceRepliesEnabled: false, elevenLabsVoiceId: "", elevenLabsModelId: "",
   });
   const [customerService, setCustomerService] = useState<CustomerServiceData>({
     generalSupportInfo: "",

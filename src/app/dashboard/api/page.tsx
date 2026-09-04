@@ -909,6 +909,7 @@ export default function API() {
   const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
   const [elevenLabsAgentId, setElevenLabsAgentId] = useState("");
+  const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("");
   const [elevenLabsSaving, setElevenLabsSaving] = useState(false);
   const [elevenLabsAgentData, setElevenLabsAgentData] = useState<Record<string, unknown> | null>(null);
 
@@ -983,9 +984,10 @@ export default function API() {
     fetch("/api/ai-agent").then(r => r.ok ? r.json() : null).then(d => {
       if (!d) return;
       setElevenLabsAgentData(d);
-      setElevenLabsEnabled(Boolean(d.elevenLabsEnabled));
+      setElevenLabsEnabled(Boolean(d.voiceRepliesEnabled ?? d.elevenLabsEnabled));
       setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
       setElevenLabsAgentId(d.elevenLabsAgentId ?? "");
+      setElevenLabsVoiceId(d.elevenLabsVoiceId ?? "");
     }).catch(() => { });
     if (typeof window !== "undefined") setWebhookUrl(`https://${window.location.host}/api/webhook`);
     loadShopifyStatus();
@@ -1039,8 +1041,14 @@ export default function API() {
   };
 
   const handleSaveElevenLabs = async () => {
-    if (!elevenLabsAgentId.trim()) { toast.error("Enter the Agent ID first"); return; }
-    if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) { toast.error("Enter the ElevenLabs API key first"); return; }
+    if (!elevenLabsVoiceId.trim() && !elevenLabsAgentId.trim()) {
+      toast.error(locale === "ar" ? "أدخل إما Voice ID أو Agent ID" : "Enter either Voice ID or Agent ID");
+      return;
+    }
+    if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) {
+      toast.error(locale === "ar" ? "أدخل مفتاح ElevenLabs API أولاً" : "Enter the ElevenLabs API key first");
+      return;
+    }
     setElevenLabsSaving(true);
     try {
       const r = await fetch("/api/ai-agent", {
@@ -1049,15 +1057,18 @@ export default function API() {
         body: JSON.stringify({
           ...(elevenLabsAgentData ?? {}),
           elevenLabsEnabled,
+          voiceRepliesEnabled: elevenLabsEnabled,
           elevenLabsApiKey: elevenLabsApiKey.trim(),
-          elevenLabsAgentId: elevenLabsAgentId.trim(),
+          elevenLabsAgentId: elevenLabsAgentId.trim() || null,
+          elevenLabsVoiceId: elevenLabsVoiceId.trim() || null,
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "Save failed");
       setElevenLabsAgentData(d);
       setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
-      toast.success("ElevenLabs settings saved");
+      setElevenLabsVoiceId(d.elevenLabsVoiceId ?? "");
+      toast.success(locale === "ar" ? "تم حفظ إعدادات الردود الصوتية بنجاح" : "ElevenLabs Voice Reply settings saved");
     } catch (e: any) {
       toast.error(e?.message ?? "Could not save settings");
     } finally { setElevenLabsSaving(false); }
@@ -1314,11 +1325,11 @@ export default function API() {
       {
         id: "elevenlabs",
         title: "ElevenLabs",
-        subtitle: "Connect your voice agent",
+        subtitle: locale === "ar" ? "الردود الصوتية بالذكاء الاصطناعي" : "AI Voice Replies (TTS)",
         steps: [
-          { title: "Create an Agent", desc: "Create a voice agent in ElevenLabs Conversational AI" },
-          { title: "Enter credentials", desc: "Paste your API Key and Agent ID" },
-          { title: "Enable voice", desc: "Save the settings to use your voice agent with Wani" },
+          { title: locale === "ar" ? "أدخل API Key" : "Enter API Key", desc: locale === "ar" ? "انسخ الـ API Key من حساب ElevenLabs" : "Copy your API Key from ElevenLabs" },
+          { title: locale === "ar" ? "أدخل Voice ID" : "Enter Voice ID", desc: locale === "ar" ? "اختر الصوت وانسخ Voice ID الخاص به" : "Choose voice and copy its ID" },
+          { title: locale === "ar" ? "فعّل الردود الصوتية" : "Enable Voice Replies", desc: locale === "ar" ? "سيتم إرسال رسائل صوتية مع ردود الـ AI تلقائياً" : "AI replies will include voice notes" },
         ],
       },
       {
@@ -1656,11 +1667,24 @@ export default function API() {
               <div className="space-y-4">
                 <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-xs text-purple-700 dark:text-purple-300">
                   <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <span>Connect your ElevenLabs voice agent. Your API key is encrypted and never shown after saving.</span>
+                  <span>
+                    {locale === "ar"
+                      ? "اربط ElevenLabs لإرسال ردود صوتية بالذكاء الاصطناعي (TTS). المفتاح مشفر بالكامل."
+                      : "Connect ElevenLabs to send automated voice replies. Your API key is encrypted and never shown after saving."}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
-                  <div><p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Enable voice agent</p><p className="text-xs text-gray-500">Use ElevenLabs for voice conversations</p></div>
-                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle ElevenLabs">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {locale === "ar" ? "تفعيل الردود الصوتية (Voice Replies)" : "Enable Voice Replies"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {locale === "ar"
+                        ? "إرسال ردود الـ AI كرسائل صوتية بجانب النص عبر ElevenLabs"
+                        : "Send AI replies as voice messages via ElevenLabs TTS"}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle Voice Replies">
                     <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
                   </button>
                 </div>
@@ -1669,12 +1693,25 @@ export default function API() {
                   <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
                 </div>
                 <div>
-                  <Label className="text-xs mb-1 block">Agent ID *</Label>
-                  <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
+                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Voice ID (المفضل)" : "Voice ID (Preferred)"}</Label>
+                  <Input value={elevenLabsVoiceId} onChange={e => setElevenLabsVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" dir="ltr" className="rounded-xl text-xs" />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {locale === "ar"
+                      ? "من ElevenLabs → Voices → اختار الصوت وانسخ Voice ID"
+                      : "From ElevenLabs → Voices → Select voice & copy Voice ID"}
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400">From ElevenLabs Dashboard → Conversational AI → Agent → Copy ID</p>
+                <div>
+                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Agent ID (بديل اختياري)" : "Agent ID (Optional fallback)"}</Label>
+                  <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {locale === "ar"
+                      ? "من Conversational AI → Agent ID (سيتم استخراج الـ Voice ID منه تلقائياً)"
+                      : "From Conversational AI → Agent ID (Voice ID will be resolved from it)"}
+                  </p>
+                </div>
                 <Button onClick={handleSaveElevenLabs} disabled={elevenLabsSaving} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5">
-                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save ElevenLabs settings"}
+                  {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (locale === "ar" ? "حفظ إعدادات ElevenLabs" : "Save ElevenLabs settings")}
                 </Button>
               </div>
             )}

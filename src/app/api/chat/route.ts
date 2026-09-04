@@ -119,7 +119,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
       assignedTo: { select: { id: true, name: true } },
       isPinned: true, isArchived: true,
       unreadCount: true, lastMessageAt: true,
-      voiceAgentEnabled: true, textAiEnabled: true, aiStatus: true,
+      voiceAgentEnabled: true, voiceOptOut: true, textAiEnabled: true, aiStatus: true,
       handoffReason: true, handoffAt: true, lastAiRepliedAt: true,
       // آخر رسالة فعلية (inbound أو outbound) — للـ preview الصح
       messages: {
@@ -182,13 +182,23 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     result = contacts.filter((c: typeof contacts[number]) => s.has(c.id));
   }
 
+  const aiAgent = await prisma.aIAgent.findUnique({
+    where: { userId },
+    select: { voiceRepliesEnabled: true, elevenLabsEnabled: true, elevenLabsApiKey: true },
+  });
+  const globalVoiceEnabled = Boolean(
+    (aiAgent?.voiceRepliesEnabled || aiAgent?.elevenLabsEnabled) &&
+    aiAgent?.elevenLabsApiKey
+  );
+
   const conversations = result.map((c: typeof contacts[number]) => ({
     contact: { id: c.id, name: c.name, phone: c.phone, assignedToUserId: c.assignedToUserId, assignedTo: c.assignedTo },
     lastMessage: c.messages[0] ?? null,
     unreadCount: c._count.messages,
     lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
     isArchived: c.isArchived,
-    voiceAgentEnabled: (c as any).voiceAgentEnabled ?? false,
+    voiceAgentEnabled: globalVoiceEnabled ? !((c as any).voiceOptOut ?? false) : false,
+    voiceOptOut: (c as any).voiceOptOut ?? false,
     textAiEnabled: (c as any).textAiEnabled ?? true,
     aiStatus: (c as any).aiStatus ?? "AUTO",
     handoffReason: (c as any).handoffReason ?? null,
@@ -199,6 +209,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
 
   return NextResponse.json({
     conversations,
+    globalVoiceEnabled,
     canSendMedia: mediaGuard.allowed,
     plan: mediaGuard.allowed ? undefined : mediaGuard.plan,
   });
@@ -358,28 +369,36 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  // ── Toggle Voice Agent ──────────────────────────────────────────────────────
+  // ── Toggle Voice Agent / Override ──────────────────────────────────────────
   if (action === "toggleVoiceAgent") {
     const enable = body.enable as boolean;
 
-    // تأكد إن اليوزر عنده ElevenLabs مربوط
+    // تأكد إن اليوزر عنده ElevenLabs مربوط ومفعل
     const agentSettings = await prisma.aIAgent.findUnique({
       where: { userId },
-      select: { elevenLabsEnabled: true, elevenLabsApiKey: true, elevenLabsAgentId: true },
+      select: { elevenLabsEnabled: true, elevenLabsApiKey: true, voiceRepliesEnabled: true },
     });
 
-    if (enable && (!agentSettings?.elevenLabsEnabled || !agentSettings?.elevenLabsApiKey || !agentSettings?.elevenLabsAgentId)) {
+    const isVoiceConfigured = Boolean(
+      (agentSettings?.voiceRepliesEnabled || agentSettings?.elevenLabsEnabled) &&
+      agentSettings?.elevenLabsApiKey
+    );
+
+    if (enable && !isVoiceConfigured) {
       return NextResponse.json(
-        { error: "فعّل وأضف ElevenLabs API Key و Agent ID في إعدادات الذكاء الاصطناعي أولاً" },
+        { error: "فعّل الردود الصوتية وأضف ElevenLabs API Key في إعدادات الربط أولاً" },
         { status: 400 }
       );
     }
 
     await prisma.contact.update({
       where: { id: contactId, userId },
-      data: { voiceAgentEnabled: enable },
+      data: {
+        voiceOptOut: !enable,
+        voiceAgentEnabled: enable,
+      },
     });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, voiceAgentEnabled: enable });
   }
 
   // ── Toggle Text AI Agent ───────────────────────────────────────────────────

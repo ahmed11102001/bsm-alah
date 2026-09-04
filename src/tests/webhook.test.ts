@@ -74,7 +74,7 @@ vi.mock("@/lib/notifications", () => ({
   createNotification:     vi.fn(),
 }));
 vi.mock("@/lib/cloudinary",   () => ({ downloadFromMetaAndUpload: vi.fn() }));
-vi.mock("@/lib/elevenlabs",   () => ({ callVoiceAgent: vi.fn(), uploadAudioToCloudinary: vi.fn() }));
+vi.mock("@/lib/elevenlabs",   () => ({ generateVoiceReply: vi.fn(), callVoiceAgent: vi.fn(), uploadAudioToCloudinary: vi.fn() }));
 vi.mock("@/lib/ai-agent",     () => ({ getAIReply: vi.fn() }));
 
 // ─── استيراد الـ handler بعد الـ mocks ───────────────────────────────────────

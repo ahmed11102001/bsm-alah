@@ -88,6 +88,7 @@ export default function ChatPage() {
   const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
   const [forwardingBusy, setForwardingBusy] = useState(false);
   const [canSendMedia, setCanSendMedia] = useState(true);
+  const [globalVoiceEnabled, setGlobalVoiceEnabled] = useState(false);
 
   // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
   const isExpired = useMemo(() => {
@@ -121,6 +122,9 @@ export default function ChatPage() {
       setConvs(d.conversations ?? []);
       if (typeof d.canSendMedia === "boolean") {
         setCanSendMedia(d.canSendMedia);
+      }
+      if (typeof d.globalVoiceEnabled === "boolean") {
+        setGlobalVoiceEnabled(d.globalVoiceEnabled);
       }
     } catch { /* silent */ }
     finally { setLoadingConvs(false); }
@@ -476,6 +480,10 @@ export default function ChatPage() {
   };
 
   const toggleVoiceAgent = async (contactId: string, enable: boolean) => {
+    if (!globalVoiceEnabled && enable) {
+      toast.error(lang === "ar" ? "فعّل الردود الصوتية في إعدادات الربط (ElevenLabs) أولاً" : "Enable Voice Replies in Integrations (ElevenLabs) first");
+      return;
+    }
     try {
       const r = await fetch("/api/chat", {
         method: "PATCH",
@@ -770,8 +778,11 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
+                      title={!globalVoiceEnabled ? (lang === "ar" ? "الردود الصوتية معطلة في الإعدادات" : "Voice Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
-                        ${selected.voiceAgentEnabled
+                        ${!globalVoiceEnabled
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
+                          : selected.voiceAgentEnabled
                           ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
                           : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                     >

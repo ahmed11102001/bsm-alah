@@ -37,7 +37,8 @@ export async function getElevenLabsVoiceId(
 export async function textToSpeech(
   text:    string,
   voiceId: string,
-  apiKey:  string
+  apiKey:  string,
+  modelId: string = "eleven_multilingual_v2"
 ): Promise<Buffer | null> {
   try {
     const res = await fetch(
@@ -51,7 +52,7 @@ export async function textToSpeech(
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_multilingual_v2",
+          model_id: modelId || "eleven_multilingual_v2",
           voice_settings: {
             stability:         0.5,
             similarity_boost:  0.75,
@@ -72,28 +73,42 @@ export async function textToSpeech(
   }
 }
 
-// ─── الدالة الرئيسية: نص جاهز → audio buffer ─────────────────────────────────
-// textReply بييجي من getAIReply في webhook — مش بيتولّد هنا
-export async function callVoiceAgent({
-  agentId,
+// ─── توليد الرد الصوتي (TTS Output Channel) ──────────────────────────────────
+// textReply بييجي من AI Agent runner — مش بيتولّد هنا
+export async function generateVoiceReply({
   apiKey,
   textReply,
+  voiceId,
+  agentId,
+  modelId,
 }: {
-  agentId:   string;
-  apiKey:    string;
-  textReply: string;
+  apiKey:     string;
+  textReply:  string;
+  voiceId?:   string | null;
+  agentId?:   string | null;
+  modelId?:   string | null;
 }): Promise<VoiceAgentResult> {
   if (!textReply?.trim())
     return { ok: false, error: "النص فاضي" };
 
-  const voiceId     = await getElevenLabsVoiceId(agentId, apiKey);
-  const audioBuffer = await textToSpeech(textReply, voiceId, apiKey);
+  let resolvedVoiceId = voiceId?.trim();
+  if (!resolvedVoiceId && agentId?.trim()) {
+    resolvedVoiceId = await getElevenLabsVoiceId(agentId.trim(), apiKey);
+  }
+  if (!resolvedVoiceId) {
+    resolvedVoiceId = DEFAULT_VOICE_ID;
+  }
+
+  const audioBuffer = await textToSpeech(textReply, resolvedVoiceId, apiKey, modelId || "eleven_multilingual_v2");
 
   if (!audioBuffer)
     return { ok: false, error: "فشل في تحويل النص لصوت" };
 
   return { ok: true, audioBuffer };
 }
+
+// Backward compatibility alias
+export const callVoiceAgent = generateVoiceReply;
 
 // ─── رفع audio buffer على Cloudinary ─────────────────────────────────────────
 export async function uploadAudioToCloudinary(

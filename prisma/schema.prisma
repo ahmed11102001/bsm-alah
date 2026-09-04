@@ -290,6 +290,7 @@ model Contact {
   unreadCount            Int                     @default(0)
   updatedAt              DateTime                @updatedAt
   voiceAgentEnabled      Boolean                 @default(false)
+  voiceOptOut            Boolean                 @default(false)
   lastAiRepliedAt        DateTime?
   textAiEnabled          Boolean                 @default(true)
   aiStatus               ConversationStatus      @default(AUTO)
@@ -624,6 +625,9 @@ model AIAgent {
   elevenLabsEnabled    Boolean               @default(false)
   elevenLabsApiKey     String?
   elevenLabsAgentId    String?
+  voiceRepliesEnabled  Boolean               @default(false)
+  elevenLabsVoiceId    String?
+  elevenLabsModelId    String?
   languageMode         String                @default("auto")
   websiteButtonText    String?
   websiteUrl           String?

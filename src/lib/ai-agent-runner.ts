@@ -2,10 +2,11 @@
 // ─── AI Agent Runner — تنفيذ توليد وإرسال رد الـ AI Agent بعد الـ Debounce ───
 
 import prisma from "@/lib/prisma";
-import { decryptToken } from "@/lib/crypto";
+import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
+import { generateVoiceReply, uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import {
   notifyAiHandoffNeeded,
   notifyAutomationFailed,
@@ -54,6 +55,7 @@ export async function runAIAgentReply(
       phone: true,
       name: true,
       textAiEnabled: true,
+      voiceOptOut: true,
       aiStatus: true,
       user: {
         select: {
@@ -105,6 +107,12 @@ export async function runAIAgentReply(
       languageMode: true,
       websiteUrl: true,
       websiteButtonText: true,
+      elevenLabsEnabled: true,
+      elevenLabsApiKey: true,
+      elevenLabsAgentId: true,
+      voiceRepliesEnabled: true,
+      elevenLabsVoiceId: true,
+      elevenLabsModelId: true,
     },
   });
 
@@ -477,6 +485,80 @@ export async function runAIAgentReply(
         data: { lastAiRepliedAt: sentAt },
       }),
     ]);
+  }
+
+  // 12.5. قناة الرد الصوتي المستقلة (Voice Reply Output Channel)
+  // نفس الـ AI reply يتم تحويله لصوت عبر ElevenLabs TTS وإرساله كـ WhatsApp audio
+  // - لا يولد AI response جديد
+  // - لا يخصم AI tokens إضافية (تم حسابها بالفعل في الرد النصي)
+  // - فشل Voice لا يؤثر على الرسالة التي تم إرسالها بالفعل (Non-blocking)
+  const isVoiceGloballyEnabled = Boolean(agent.voiceRepliesEnabled || agent.elevenLabsEnabled);
+  const voiceApiKey = agent.elevenLabsApiKey
+    ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
+    : null;
+
+  if (
+    sentWhatsappId &&
+    isVoiceGloballyEnabled &&
+    voiceApiKey?.trim() &&
+    !contact.voiceOptOut &&
+    result.reply?.trim()
+  ) {
+    try {
+      const voiceResult = await generateVoiceReply({
+        apiKey: voiceApiKey.trim(),
+        textReply: result.reply.trim(),
+        voiceId: agent.elevenLabsVoiceId,
+        agentId: agent.elevenLabsAgentId,
+        modelId: agent.elevenLabsModelId,
+      });
+
+      if (voiceResult.ok && voiceResult.audioBuffer) {
+        const audioUrl = await uploadAudioToCloudinary(voiceResult.audioBuffer);
+        if (audioUrl) {
+          const audioRes = await fetch(apiBase, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: from,
+              type: "audio",
+              audio: { link: audioUrl },
+            }),
+          });
+
+          if (audioRes.ok) {
+            const audioData = await audioRes.json();
+            const voiceWhatsappId = audioData?.messages?.[0]?.id as string | undefined;
+            const audioSentAt = new Date();
+
+            await prisma.message.create({
+              data: {
+                userId,
+                contactId: contact.id,
+                content: result.reply,
+                type: MessageType.audio,
+                direction: MessageDirection.outbound,
+                status: MessageStatus.sent,
+                senderType: MessageSenderType.ai,
+                whatsappId: voiceWhatsappId,
+                mediaUrl: audioUrl,
+                sentAt: audioSentAt,
+              },
+            });
+            console.log(`[VOICE-REPLY] ✓ Sent audio message to ${from}`);
+          } else {
+            console.error("[VOICE-REPLY] WhatsApp audio send failed:", await audioRes.text());
+          }
+        } else {
+          console.error("[VOICE-REPLY] Cloudinary audio upload failed");
+        }
+      } else {
+        console.error("[VOICE-REPLY] TTS generation failed:", voiceResult.error);
+      }
+    } catch (voiceErr) {
+      console.error("[VOICE-REPLY] Non-blocking voice reply error:", voiceErr);
+    }
   }
 
   // 13. جدولة Conversation Nudge إذا كان الـ AI يتوقع رداً من العميل
