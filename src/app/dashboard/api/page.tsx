@@ -1043,8 +1043,8 @@ export default function API() {
   };
 
   const handleSaveElevenLabs = async () => {
-    if (!elevenLabsVoiceId.trim() && !elevenLabsAgentId.trim()) {
-      toast.error(locale === "ar" ? "أدخل إما Voice ID أو Agent ID" : "Enter either Voice ID or Agent ID");
+    if (!elevenLabsAgentId.trim()) {
+      toast.error(locale === "ar" ? "أدخل Agent ID بتاع الـ Conversational AI Agent أولاً" : "Enter your Conversational AI Agent ID first");
       return;
     }
     if (!elevenLabsApiKey.trim() && !elevenLabsAgentData?.elevenLabsApiKey) {
@@ -1671,8 +1671,8 @@ export default function API() {
                   <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <span>
                     {locale === "ar"
-                      ? "اربط ElevenLabs لإرسال ردود صوتية بالذكاء الاصطناعي (TTS). المفتاح مشفر بالكامل."
-                      : "Connect ElevenLabs to send automated voice replies. Your API key is encrypted and never shown after saving."}
+                      ? "اربط الـ Conversational AI Agent بتاعك على ElevenLabs عشان يرد بصوته على عملائك على واتساب — الـ Agent نفسه هو اللي بيفكر ويرد (بمعرفته وبرومبته اللي جهزته على لوحة ElevenLabs)، مش مجرد تحويل نص لصوت. المفتاح مشفر بالكامل."
+                      : "Connect your ElevenLabs Conversational AI Agent so it replies with its own voice on WhatsApp — the agent itself thinks and replies (using its own knowledge & prompt configured on ElevenLabs), not just text-to-speech. Your API key is encrypted."}
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
@@ -1698,8 +1698,8 @@ export default function API() {
                     </p>
                     <p className="text-xs text-gray-500">
                       {locale === "ar"
-                        ? "إرسال الردود الصادرة من الـ AI كرسائل صوتية بجانب النص"
-                        : "Send AI replies as voice messages via ElevenLabs TTS"}
+                        ? "الـ Agent الصوتي بتاعك هيرد بنفسه (بمعرفته الخاصة) على واتساب — رد مستقل تماماً عن رد وني النصي"
+                        : "Your own ElevenLabs agent will reply independently on WhatsApp — separate from Wani's text replies"}
                     </p>
                   </div>
                   <button type="button" onClick={() => setVoiceRepliesEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle Voice Replies Output">
@@ -1711,21 +1711,21 @@ export default function API() {
                   <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
                 </div>
                 <div>
-                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Voice ID (المفضل)" : "Voice ID (Preferred)"}</Label>
-                  <Input value={elevenLabsVoiceId} onChange={e => setElevenLabsVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" dir="ltr" className="rounded-xl text-xs" />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    {locale === "ar"
-                      ? "من ElevenLabs → Voices → اختار الصوت وانسخ Voice ID"
-                      : "From ElevenLabs → Voices → Select voice & copy Voice ID"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Agent ID (بديل اختياري)" : "Agent ID (Optional fallback)"}</Label>
+                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Agent ID *" : "Agent ID *"}</Label>
                   <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
                   <p className="text-[11px] text-gray-400 mt-1">
                     {locale === "ar"
-                      ? "من Conversational AI → Agent ID (سيتم استخراج الـ Voice ID منه تلقائياً)"
-                      : "From Conversational AI → Agent ID (Voice ID will be resolved from it)"}
+                      ? "من ElevenLabs → Conversational AI → اختار الـ Agent بتاعك وانسخ الـ Agent ID. ده الـ Agent اللي هيفكر ويرد بصوته بمعرفته الخاصة — إجباري لتفعيل الرد الصوتي."
+                      : "From ElevenLabs → Conversational AI → select your agent and copy its Agent ID. This agent thinks and replies with its own knowledge — required to enable Voice Reply."}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">{locale === "ar" ? "Voice ID (اختياري / قديم)" : "Voice ID (optional / legacy)"}</Label>
+                  <Input value={elevenLabsVoiceId} onChange={e => setElevenLabsVoiceId(e.target.value)} placeholder="21m00Tcm4TlvDq8ikWAM" dir="ltr" className="rounded-xl text-xs" />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {locale === "ar"
+                      ? "غير مستخدم في الرد الصوتي الحالي — صوت الـ Agent بيتحدد من إعداداته هو على لوحة ElevenLabs مباشرة."
+                      : "Not used by the current voice reply flow — the agent's voice is configured directly in its ElevenLabs settings."}
                   </p>
                 </div>
                 <Button onClick={handleSaveElevenLabs} disabled={elevenLabsSaving} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5">

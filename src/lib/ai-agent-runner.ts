@@ -6,7 +6,8 @@ import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
-import { generateVoiceReply, uploadAudioToCloudinary } from "@/lib/elevenlabs";
+import { uploadAudioToCloudinary } from "@/lib/elevenlabs";
+import { runConvaiVoiceReply, type ConvaiContextMessage } from "@/lib/elevenlabs-convai-runner";
 import {
   notifyAiHandoffNeeded,
   notifyAutomationFailed,
@@ -197,12 +198,20 @@ export async function runAIAgentReply(
   const combinedSearchText =
     inboundTexts.slice(0, 3).reverse().join(" ") || inboundTexts[0] || "";
 
+  // متغيرات مشتركة بين قناة النص وقناة الصوت — القناتان مستقلتان تماماً بقى:
+  // فشل/توقف توليد النص (off-topic, خطأ API, رد فاضي...) ما بيمنعش تنفيذ قناة الصوت خالص، والعكس صحيح.
+  let textResult: Awaited<ReturnType<typeof getAIReply>> | null = null;
+  let relevantProducts: import("@/lib/product-search").RelevantProduct[] = [];
+  let suggestedProducts: import("@/lib/product-search").SuggestedProduct[] = [];
+  let productImageUrl: string | undefined;
+
+  if (isTextOutEnabled) {
   // 7. جلب مصادر المعرفة المهيكلة (المنتجات، السياسات، الـ Guardrails، سلوك البيع، موقع الويب)
   const { getRelevantProducts, getSuggestedProducts } = await import(
     "@/lib/product-search"
   );
 
-  const relevantProducts = await getRelevantProducts(
+  relevantProducts = await getRelevantProducts(
     userId,
     combinedSearchText,
     5
@@ -245,7 +254,6 @@ export async function runAIAgentReply(
       }),
     ]);
 
-  let suggestedProducts: import("@/lib/product-search").SuggestedProduct[] = [];
   if (
     relevantProducts.length > 0 &&
     salesSettings &&
@@ -282,7 +290,7 @@ export async function runAIAgentReply(
     issues.length > 0;
 
   // 8. استدعاء نموذج الذكاء الاصطناعي
-  const result = await getAIReply(
+  textResult = await getAIReply(
     aiMessages,
     {
       brandName: agent.brandName,
@@ -322,21 +330,16 @@ export async function runAIAgentReply(
     agent.provider as "gemini" | "openai"
   );
 
-  if (!result.ok) {
-    console.error(`[AI-AGENT] Generation error:`, result.error);
-    return { sent: false, reason: result.error };
-  }
-
-  if (result.offTopic) {
+  if (!textResult.ok) {
+    console.error(`[AI-AGENT] Text generation error (voice channel unaffected):`, textResult.error);
+  } else if (textResult.offTopic) {
     console.log(
-      `[AI-AGENT] Off-topic — no reply sent for "${combinedSearchText}"`
+      `[AI-AGENT] Off-topic — no text reply sent for "${combinedSearchText}"`
     );
-    return { sent: false, reason: "off_topic" };
-  }
-
-  if (!result.reply?.trim()) {
-    return { sent: false, reason: "empty_reply" };
-  }
+  } else if (!textResult.reply?.trim()) {
+    console.log(`[AI-AGENT] Empty text reply — skipping text channel only`);
+  } else {
+  const result = textResult;
 
   // 9. التعامل مع طلب التحويل لموظف بشري (Handoff)
   if (result.action === "handoff") {
@@ -386,7 +389,6 @@ export async function runAIAgentReply(
   }
 
   // 11. استخراج صورة أول منتج متطابق (Product Image Resolution)
-  let productImageUrl: string | undefined;
   if (result.productIds?.length && relevantProducts.length > 0) {
     const retrievedIdSet = new Set([
       ...relevantProducts.map((p) => p.id),
@@ -404,8 +406,11 @@ export async function runAIAgentReply(
       }
     }
   }
+  } // ← نهاية else (نجاح توليد النص) الخاصة بـ Handoff/Tokens/Product-Image (خطوات 9-11)
+  } // ← نهاية if (isTextOutEnabled) الخاصة بجلب المعرفة وتوليد النص (خطوات 7-11)
 
   // 12. إرسال الرسالة عبر Meta WhatsApp Cloud API وتوثيقها في قاعدة البيانات
+  // (السطور دي مشتركة بين القناتين — لازمة سواء اتفعل النص أو الصوت أو الاتنين)
   const decryptedToken = decryptToken(account.accessToken);
   const apiBase = `https://graph.facebook.com/${GRAPH_API_VERSION}/${account.phoneNumberId}/messages`;
   const headers = {
@@ -417,8 +422,9 @@ export async function runAIAgentReply(
   let sentVoiceWhatsappId: string | undefined;
   const sentAt = new Date();
 
-  // ── Output Channel 1: Text Reply (إذا كان مفعل) ─────────────────────────
-  if (isTextOutEnabled) {
+  // ── Output Channel 1: Text Reply (إذا كان مفعل ونجح توليد النص) ──────────
+  if (isTextOutEnabled && textResult?.ok && textResult.reply?.trim()) {
+    const textReply = textResult.reply;
     // إرسال صورة مع Caption إذا وُجدت
     if (productImageUrl?.trim()) {
       const imgRes = await fetch(apiBase, {
@@ -430,7 +436,7 @@ export async function runAIAgentReply(
           type: "image",
           image: {
             link: productImageUrl.trim(),
-            caption: result.reply || undefined,
+            caption: textReply || undefined,
           },
         }),
       });
@@ -443,7 +449,7 @@ export async function runAIAgentReply(
             data: {
               userId,
               contactId: contact.id,
-              content: result.reply || null,
+              content: textReply || null,
               mediaUrl: productImageUrl,
               type: MessageType.image,
               direction: MessageDirection.outbound,
@@ -465,7 +471,7 @@ export async function runAIAgentReply(
     }
 
     // إرسال نص إذا لم يتم إرسال صورة
-    if (!sentWhatsappId && result.reply?.trim()) {
+    if (!sentWhatsappId && textReply.trim()) {
       const metaRes = await fetch(apiBase, {
         method: "POST",
         headers,
@@ -473,7 +479,7 @@ export async function runAIAgentReply(
           messaging_product: "whatsapp",
           to: from,
           type: "text",
-          text: { body: result.reply },
+          text: { body: textReply },
         }),
       });
 
@@ -486,7 +492,7 @@ export async function runAIAgentReply(
             data: {
               userId,
               contactId: contact.id,
-              content: result.reply,
+              content: textReply,
               type: MessageType.text,
               direction: MessageDirection.outbound,
               status: MessageStatus.sent,
@@ -507,19 +513,30 @@ export async function runAIAgentReply(
     }
   }
 
-  // ── Output Channel 2: Voice Reply (إذا كان مفعل) ─────────────────────────
-  // نفس finalTextReply يتم تحويله لصوت عبر ElevenLabs TTS وإرساله كـ WhatsApp audio
-  // - لا يولد AI response جديد
-  // - لا يخصم AI tokens إضافية (تم حسابها بالفعل في الرد النصي)
-  // - فشل Voice لا يؤثر على الرسالة النصية التي تم إرسالها بالفعل (Non-blocking)
-  if (isVoiceOutEnabled && result.reply?.trim()) {
+  // ── Output Channel 2: Voice Reply (قناة مستقلة تماماً) ───────────────────
+  // بيكلم عقل الـ ElevenLabs Convai Agent بتاع العميل مباشرة (بمعرفته/برومبته هو).
+  // - لا يستخدم أي رد اتولّد من Wani AI (getAIReply) إطلاقاً
+  // - لا يخصم أي AI tokens بتاعة Wani
+  // - مستقل تماماً عن نجاح/فشل/off-topic قناة النص (Non-blocking في الاتجاهين)
+  if (isVoiceOutEnabled) {
     try {
-      const voiceResult = await generateVoiceReply({
+      // أحدث رسائل العميل الجديدة (اللي لسه محدش رد عليها) = الرسالة اللي هيرد عليها الـ Agent
+      const latestInboundTexts = inboundTexts.slice(-3);
+      const voiceUserMessage = latestInboundTexts.join("\n").trim();
+
+      // باقي المحادثة قبل كده = سياق (Context) بنبعته للـ Agent يفهم بيه الموقف
+      const convaiContextMessages: ConvaiContextMessage[] = aiMessages
+        .slice(0, Math.max(aiMessages.length - latestInboundTexts.length, 0))
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      if (!voiceUserMessage) {
+        console.log(`[VOICE-REPLY] لا توجد رسالة نصية واردة لإرسالها للـ Agent — تخطي`);
+      } else {
+      const voiceResult = await runConvaiVoiceReply({
         apiKey: voiceApiKey!.trim(),
-        textReply: result.reply.trim(),
-        voiceId: agent.elevenLabsVoiceId,
-        agentId: agent.elevenLabsAgentId,
-        modelId: agent.elevenLabsModelId,
+        agentId: agent.elevenLabsAgentId ?? "",
+        userMessage: voiceUserMessage,
+        contextMessages: convaiContextMessages,
       });
 
       if (voiceResult.ok && voiceResult.audioBuffer) {
@@ -546,7 +563,7 @@ export async function runAIAgentReply(
                 data: {
                   userId,
                   contactId: contact.id,
-                  content: result.reply,
+                  content: voiceResult.textReply ?? voiceUserMessage,
                   type: MessageType.audio,
                   direction: MessageDirection.outbound,
                   status: MessageStatus.sent,
@@ -569,15 +586,16 @@ export async function runAIAgentReply(
           console.error("[VOICE-REPLY] Cloudinary audio upload failed");
         }
       } else {
-        console.error("[VOICE-REPLY] TTS generation failed:", voiceResult.error);
+        console.error("[VOICE-REPLY] ElevenLabs Convai agent failed:", voiceResult.error);
       }
+      } // ← نهاية else (فيه رسالة عميل نبعتها للـ Agent)
     } catch (voiceErr) {
       console.error("[VOICE-REPLY] Non-blocking voice reply error:", voiceErr);
     }
   }
 
-  // 13. جدولة Conversation Nudge إذا كان الـ AI يتوقع رداً من العميل
-  if (result.expectsReply && contact.id) {
+  // 13. جدولة Conversation Nudge إذا كان الـ AI يتوقع رداً من العميل (خاص بقناة النص فقط حالياً)
+  if (textResult?.expectsReply && contact.id) {
     await inngest
       .send({
         name: "agent-conversation.nudge-check",

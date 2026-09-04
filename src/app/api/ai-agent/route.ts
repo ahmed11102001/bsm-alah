@@ -133,6 +133,18 @@ export async function PUT(req: NextRequest) {
         ? elevenLabsEnabled
         : false;
 
+    // ── Validation: الرد الصوتي الجديد بيكلم عقل الـ Convai Agent مباشرة،
+    // يبقى Agent ID بقى إجباري لو الـ Voice Reply مفعّل (مش اختياري زي زمان)
+    if (resolvedVoiceRepliesEnabled && !agentIdTrim) {
+      return NextResponse.json(
+        {
+          error:
+            "لتفعيل الرد الصوتي لازم تدخل Agent ID بتاع الـ Conversational AI Agent من لوحة تحكم ElevenLabs أولاً",
+        },
+        { status: 400 }
+      );
+    }
+
     const payload = {
       isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
       provider:  providerEnum,
