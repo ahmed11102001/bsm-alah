@@ -72,6 +72,7 @@ interface AIAgent {
   elevenLabsEnabled: boolean;
   elevenLabsApiKey: string;
   elevenLabsAgentId: string;
+  textRepliesEnabled?: boolean;
   voiceRepliesEnabled?: boolean;
   elevenLabsVoiceId?: string;
   elevenLabsModelId?: string;
@@ -83,6 +84,7 @@ const EMPTY_AGENT: AIAgent = {
   productsInfo: "", pricingInfo: "", workingHours: "", tone: "friendly",
   systemPrompt: "", languageMode: "auto", websiteUrl: "", websiteButtonText: "", pauseMinutes: 10, handoffResumeMinutes: 3,
   elevenLabsEnabled: false, elevenLabsApiKey: "", elevenLabsAgentId: "",
+  textRepliesEnabled: true,
   voiceRepliesEnabled: false, elevenLabsVoiceId: "", elevenLabsModelId: "",
 };
 type AutoSubTab = "keywords" | "welcome" | "interactive" | "smart_followup" | "timebased" | "ab";
@@ -352,6 +354,7 @@ export default function Automation() {
         elevenLabsEnabled: agentData.elevenLabsEnabled ?? false,
         elevenLabsApiKey: agentData.elevenLabsApiKey ?? "",
         elevenLabsAgentId: agentData.elevenLabsAgentId ?? "",
+        textRepliesEnabled: agentData.textRepliesEnabled ?? true,
         voiceRepliesEnabled: agentData.voiceRepliesEnabled ?? false,
         elevenLabsVoiceId: agentData.elevenLabsVoiceId ?? "",
         elevenLabsModelId: agentData.elevenLabsModelId ?? "",

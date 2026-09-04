@@ -184,8 +184,9 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
 
   const aiAgent = await prisma.aIAgent.findUnique({
     where: { userId },
-    select: { voiceRepliesEnabled: true, elevenLabsEnabled: true, elevenLabsApiKey: true },
+    select: { textRepliesEnabled: true, voiceRepliesEnabled: true, elevenLabsEnabled: true, elevenLabsApiKey: true },
   });
+  const globalTextEnabled = aiAgent?.textRepliesEnabled ?? true;
   const globalVoiceEnabled = Boolean(
     (aiAgent?.voiceRepliesEnabled || aiAgent?.elevenLabsEnabled) &&
     aiAgent?.elevenLabsApiKey
@@ -199,7 +200,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     isArchived: c.isArchived,
     voiceAgentEnabled: globalVoiceEnabled ? !((c as any).voiceOptOut ?? false) : false,
     voiceOptOut: (c as any).voiceOptOut ?? false,
-    textAiEnabled: (c as any).textAiEnabled ?? true,
+    textAiEnabled: globalTextEnabled ? ((c as any).textAiEnabled ?? true) : false,
     aiStatus: (c as any).aiStatus ?? "AUTO",
     handoffReason: (c as any).handoffReason ?? null,
     handoffAt: (c as any).handoffAt ?? null,
@@ -209,6 +210,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
 
   return NextResponse.json({
     conversations,
+    globalTextEnabled,
     globalVoiceEnabled,
     canSendMedia: mediaGuard.allowed,
     plan: mediaGuard.allowed ? undefined : mediaGuard.plan,

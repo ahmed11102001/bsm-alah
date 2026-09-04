@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
     elevenLabsEnabled: false,
     elevenLabsApiKey:  null,
     elevenLabsAgentId: null,
+    textRepliesEnabled: true,
     voiceRepliesEnabled: false,
     elevenLabsVoiceId: null,
     elevenLabsModelId: null,
@@ -96,6 +97,7 @@ export async function PUT(req: NextRequest) {
       elevenLabsEnabled,
       elevenLabsApiKey,
       elevenLabsAgentId,
+      textRepliesEnabled,
       voiceRepliesEnabled,
       elevenLabsVoiceId,
       elevenLabsModelId,
@@ -147,6 +149,8 @@ export async function PUT(req: NextRequest) {
       pauseMinutes:
         typeof pauseMinutes === "number" ? Math.max(1, pauseMinutes) : 10,
       handoffResumeMinutes: parsedHandoffResume,
+      textRepliesEnabled:
+        typeof textRepliesEnabled === "boolean" ? textRepliesEnabled : true,
       elevenLabsEnabled:
         typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : resolvedVoiceRepliesEnabled,
       voiceRepliesEnabled: resolvedVoiceRepliesEnabled,

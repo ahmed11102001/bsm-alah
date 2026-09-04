@@ -625,6 +625,7 @@ model AIAgent {
   elevenLabsEnabled    Boolean               @default(false)
   elevenLabsApiKey     String?
   elevenLabsAgentId    String?
+  textRepliesEnabled   Boolean               @default(true)
   voiceRepliesEnabled  Boolean               @default(false)
   elevenLabsVoiceId    String?
   elevenLabsModelId    String?

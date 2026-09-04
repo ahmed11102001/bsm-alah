@@ -76,12 +76,6 @@ export async function runAIAgentReply(
     return { sent: false, reason: "no_whatsapp_account" };
   }
 
-  // 3. فحص ما إذا كان الـ Text AI معطلاً لهذه الجهة
-  if (contact.textAiEnabled === false) {
-    console.log(`[AI-AGENT] Paused — text AI is disabled for ${from}`);
-    return { sent: false, reason: "text_ai_disabled" };
-  }
-
   if (contact.aiStatus && contact.aiStatus !== "AUTO") {
     console.log(
       `[AI-AGENT] Paused — conversation needs human (status: ${contact.aiStatus})`
@@ -107,6 +101,7 @@ export async function runAIAgentReply(
       languageMode: true,
       websiteUrl: true,
       websiteButtonText: true,
+      textRepliesEnabled: true,
       elevenLabsEnabled: true,
       elevenLabsApiKey: true,
       elevenLabsAgentId: true,
@@ -119,6 +114,20 @@ export async function runAIAgentReply(
   if (!agent?.isEnabled) {
     console.log(`[AI-AGENT] Agent is disabled for user ${userId}`);
     return { sent: false, reason: "agent_disabled" };
+  }
+
+  // 4.5. فحص قنوات الإخراج (Output Channels: Text Reply & Voice Reply)
+  const isTextOutEnabled = (agent.textRepliesEnabled ?? true) && (contact.textAiEnabled !== false);
+  const isVoiceGloballyEnabled = Boolean(agent.voiceRepliesEnabled || agent.elevenLabsEnabled);
+  const voiceApiKey = agent.elevenLabsApiKey
+    ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
+    : null;
+  const isVoiceOutEnabled = isVoiceGloballyEnabled && Boolean(voiceApiKey?.trim()) && !contact.voiceOptOut;
+
+  // إذا كانت القناتان معطلتين، لا داعي لتوليد رد
+  if (!isTextOutEnabled && !isVoiceOutEnabled) {
+    console.log(`[AI-AGENT] Both Text Reply and Voice Reply are disabled for ${from}`);
+    return { sent: false, reason: "both_replies_disabled" };
   }
 
   // 5. فحص الإيقاف المؤقت إذا رد إنسان مؤخراً (Human Pause Check)
@@ -397,116 +406,108 @@ export async function runAIAgentReply(
   };
 
   let sentWhatsappId: string | undefined;
+  let sentVoiceWhatsappId: string | undefined;
   const sentAt = new Date();
 
-  // إرسال صورة مع Caption إذا وُجدت
-  if (productImageUrl?.trim()) {
-    const imgRes = await fetch(apiBase, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: from,
-        type: "image",
-        image: {
-          link: productImageUrl.trim(),
-          caption: result.reply || undefined,
-        },
-      }),
-    });
-
-    if (imgRes.ok) {
-      const imgData = await imgRes.json();
-      sentWhatsappId = imgData?.messages?.[0]?.id as string | undefined;
-      await prisma.$transaction([
-        prisma.message.create({
-          data: {
-            userId,
-            contactId: contact.id,
-            content: result.reply || null,
-            mediaUrl: productImageUrl,
-            type: MessageType.image,
-            direction: MessageDirection.outbound,
-            status: MessageStatus.sent,
-            senderType: MessageSenderType.ai,
-            whatsappId: sentWhatsappId,
-            sentAt,
+  // ── Output Channel 1: Text Reply (إذا كان مفعل) ─────────────────────────
+  if (isTextOutEnabled) {
+    // إرسال صورة مع Caption إذا وُجدت
+    if (productImageUrl?.trim()) {
+      const imgRes = await fetch(apiBase, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: from,
+          type: "image",
+          image: {
+            link: productImageUrl.trim(),
+            caption: result.reply || undefined,
           },
         }),
-        prisma.contact.update({
-          where: { id: contact.id },
-          data: { lastAiRepliedAt: sentAt },
+      });
+
+      if (imgRes.ok) {
+        const imgData = await imgRes.json();
+        sentWhatsappId = imgData?.messages?.[0]?.id as string | undefined;
+        await prisma.$transaction([
+          prisma.message.create({
+            data: {
+              userId,
+              contactId: contact.id,
+              content: result.reply || null,
+              mediaUrl: productImageUrl,
+              type: MessageType.image,
+              direction: MessageDirection.outbound,
+              status: MessageStatus.sent,
+              senderType: MessageSenderType.ai,
+              whatsappId: sentWhatsappId,
+              sentAt,
+            },
+          }),
+          prisma.contact.update({
+            where: { id: contact.id },
+            data: { lastAiRepliedAt: sentAt },
+          }),
+        ]);
+      } else {
+        const err = await imgRes.text();
+        console.error(`[AI-AGENT] Image send failed for ${from}:`, err);
+      }
+    }
+
+    // إرسال نص إذا لم يتم إرسال صورة
+    if (!sentWhatsappId && result.reply?.trim()) {
+      const metaRes = await fetch(apiBase, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: from,
+          type: "text",
+          text: { body: result.reply },
         }),
-      ]);
-    } else {
-      const err = await imgRes.text();
-      console.error(`[AI-AGENT] Image send failed for ${from}:`, err);
+      });
+
+      if (metaRes.ok) {
+        const metaData = await metaRes.json();
+        sentWhatsappId = metaData?.messages?.[0]?.id as string | undefined;
+
+        await prisma.$transaction([
+          prisma.message.create({
+            data: {
+              userId,
+              contactId: contact.id,
+              content: result.reply,
+              type: MessageType.text,
+              direction: MessageDirection.outbound,
+              status: MessageStatus.sent,
+              senderType: MessageSenderType.ai,
+              whatsappId: sentWhatsappId,
+              sentAt,
+            },
+          }),
+          prisma.contact.update({
+            where: { id: contact.id },
+            data: { lastAiRepliedAt: sentAt },
+          }),
+        ]);
+      } else {
+        const err = await metaRes.text();
+        console.error(`[AI-AGENT] Meta text send failed for ${from}:`, err);
+      }
     }
   }
 
-  // إرسال نص إذا لم يتم إرسال صورة
-  if (!sentWhatsappId && result.reply?.trim()) {
-    const metaRes = await fetch(apiBase, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: from,
-        type: "text",
-        text: { body: result.reply },
-      }),
-    });
-
-    if (!metaRes.ok) {
-      const err = await metaRes.text();
-      console.error(`[AI-AGENT] Meta text send failed for ${from}:`, err);
-      return { sent: false, reason: err };
-    }
-
-    const metaData = await metaRes.json();
-    sentWhatsappId = metaData?.messages?.[0]?.id as string | undefined;
-
-    await prisma.$transaction([
-      prisma.message.create({
-        data: {
-          userId,
-          contactId: contact.id,
-          content: result.reply,
-          type: MessageType.text,
-          direction: MessageDirection.outbound,
-          status: MessageStatus.sent,
-          senderType: MessageSenderType.ai,
-          whatsappId: sentWhatsappId,
-          sentAt,
-        },
-      }),
-      prisma.contact.update({
-        where: { id: contact.id },
-        data: { lastAiRepliedAt: sentAt },
-      }),
-    ]);
-  }
-
-  // 12.5. قناة الرد الصوتي المستقلة (Voice Reply Output Channel)
-  // نفس الـ AI reply يتم تحويله لصوت عبر ElevenLabs TTS وإرساله كـ WhatsApp audio
+  // ── Output Channel 2: Voice Reply (إذا كان مفعل) ─────────────────────────
+  // نفس finalTextReply يتم تحويله لصوت عبر ElevenLabs TTS وإرساله كـ WhatsApp audio
   // - لا يولد AI response جديد
   // - لا يخصم AI tokens إضافية (تم حسابها بالفعل في الرد النصي)
-  // - فشل Voice لا يؤثر على الرسالة التي تم إرسالها بالفعل (Non-blocking)
-  const isVoiceGloballyEnabled = Boolean(agent.voiceRepliesEnabled || agent.elevenLabsEnabled);
-  const voiceApiKey = agent.elevenLabsApiKey
-    ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
-    : null;
-
-  if (
-    sentWhatsappId &&
-    isVoiceGloballyEnabled &&
-    voiceApiKey?.trim() &&
-    !contact.voiceOptOut &&
-    result.reply?.trim()
-  ) {
+  // - فشل Voice لا يؤثر على الرسالة النصية التي تم إرسالها بالفعل (Non-blocking)
+  if (isVoiceOutEnabled && result.reply?.trim()) {
     try {
       const voiceResult = await generateVoiceReply({
-        apiKey: voiceApiKey.trim(),
+        apiKey: voiceApiKey!.trim(),
         textReply: result.reply.trim(),
         voiceId: agent.elevenLabsVoiceId,
         agentId: agent.elevenLabsAgentId,
@@ -529,23 +530,29 @@ export async function runAIAgentReply(
 
           if (audioRes.ok) {
             const audioData = await audioRes.json();
-            const voiceWhatsappId = audioData?.messages?.[0]?.id as string | undefined;
+            sentVoiceWhatsappId = audioData?.messages?.[0]?.id as string | undefined;
             const audioSentAt = new Date();
 
-            await prisma.message.create({
-              data: {
-                userId,
-                contactId: contact.id,
-                content: result.reply,
-                type: MessageType.audio,
-                direction: MessageDirection.outbound,
-                status: MessageStatus.sent,
-                senderType: MessageSenderType.ai,
-                whatsappId: voiceWhatsappId,
-                mediaUrl: audioUrl,
-                sentAt: audioSentAt,
-              },
-            });
+            await prisma.$transaction([
+              prisma.message.create({
+                data: {
+                  userId,
+                  contactId: contact.id,
+                  content: result.reply,
+                  type: MessageType.audio,
+                  direction: MessageDirection.outbound,
+                  status: MessageStatus.sent,
+                  senderType: MessageSenderType.ai,
+                  whatsappId: sentVoiceWhatsappId,
+                  mediaUrl: audioUrl,
+                  sentAt: audioSentAt,
+                },
+              }),
+              prisma.contact.update({
+                where: { id: contact.id },
+                data: { lastAiRepliedAt: audioSentAt },
+              }),
+            ]);
             console.log(`[VOICE-REPLY] ✓ Sent audio message to ${from}`);
           } else {
             console.error("[VOICE-REPLY] WhatsApp audio send failed:", await audioRes.text());
@@ -577,16 +584,17 @@ export async function runAIAgentReply(
       );
   }
 
-  // تحقق نهائي بعد محاولات إرسال الصورة والنص للتأكد من إرسال رسالة فعليًا
-  if (!sentWhatsappId) {
-    console.error(`[AI-AGENT] No message sent to ${from} (image/text send failed or empty)`);
+  const finalWhatsappMsgId = sentWhatsappId || sentVoiceWhatsappId;
+  // تحقق نهائي بعد محاولات إرسال النص أو الصوت
+  if (!finalWhatsappMsgId) {
+    console.error(`[AI-AGENT] No message sent to ${from} (text/voice send failed or empty)`);
     return { sent: false, reason: "no_message_sent" };
   }
 
   console.log(
-    `[AI-AGENT] ✓ Sent debounced AI reply to ${from} via "${agent.provider}"`
+    `[AI-AGENT] ✓ Sent debounced AI reply to ${from} via "${agent.provider}" (text: ${Boolean(sentWhatsappId)}, voice: ${Boolean(sentVoiceWhatsappId)})`
   );
-  return { sent: true, whatsappMsgId: sentWhatsappId };
+  return { sent: true, whatsappMsgId: finalWhatsappMsgId };
 }
 
 /**

@@ -88,6 +88,7 @@ export default function ChatPage() {
   const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
   const [forwardingBusy, setForwardingBusy] = useState(false);
   const [canSendMedia, setCanSendMedia] = useState(true);
+  const [globalTextEnabled, setGlobalTextEnabled] = useState(true);
   const [globalVoiceEnabled, setGlobalVoiceEnabled] = useState(false);
 
   // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
@@ -122,6 +123,9 @@ export default function ChatPage() {
       setConvs(d.conversations ?? []);
       if (typeof d.canSendMedia === "boolean") {
         setCanSendMedia(d.canSendMedia);
+      }
+      if (typeof d.globalTextEnabled === "boolean") {
+        setGlobalTextEnabled(d.globalTextEnabled);
       }
       if (typeof d.globalVoiceEnabled === "boolean") {
         setGlobalVoiceEnabled(d.globalVoiceEnabled);
@@ -502,6 +506,10 @@ export default function ChatPage() {
   };
 
   const toggleTextAi = async (contactId: string, enable: boolean) => {
+    if (!globalTextEnabled && enable) {
+      toast.error(lang === "ar" ? "الردود النصية معطلة في إعدادات الـ AI Agent" : "Text replies are disabled in AI Agent settings");
+      return;
+    }
     try {
       const r = await fetch("/api/chat", {
         method: "PATCH",
@@ -768,8 +776,11 @@ export default function ChatPage() {
                   <>
                     <button
                       onClick={() => toggleTextAi(selected.contact.id, !selected.textAiEnabled)}
+                      title={!globalTextEnabled ? (lang === "ar" ? "الردود النصية معطلة في الإعدادات" : "Text Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
-                        ${selected.textAiEnabled !== false
+                        ${!globalTextEnabled
+                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
+                          : selected.textAiEnabled !== false
                           ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]"
                           : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                     >
