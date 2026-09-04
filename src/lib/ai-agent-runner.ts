@@ -117,12 +117,20 @@ export async function runAIAgentReply(
   }
 
   // 4.5. فحص قنوات الإخراج (Output Channels: Text Reply & Voice Reply)
+  // Text Reply: مفعل إذا كان مفعل عاماً ولم يعطله المستخدم لهذا الـ Contact
   const isTextOutEnabled = (agent.textRepliesEnabled ?? true) && (contact.textAiEnabled !== false);
-  const isVoiceGloballyEnabled = Boolean(agent.voiceRepliesEnabled || agent.elevenLabsEnabled);
+
+  // 1. Integration: هل تكامل ElevenLabs مربوط ومفعل بالمفتاح؟
   const voiceApiKey = agent.elevenLabsApiKey
     ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
     : null;
-  const isVoiceOutEnabled = isVoiceGloballyEnabled && Boolean(voiceApiKey?.trim()) && !contact.voiceOptOut;
+  const isElevenLabsConnected = Boolean(agent.elevenLabsEnabled && voiceApiKey?.trim());
+
+  // 2. Output Decision: هل الرد الصوتي مفعّل كقناة إخراج للـ AI Agent؟
+  const isVoiceOutputEnabled = Boolean(agent.voiceRepliesEnabled);
+
+  // Voice Out ينفذ فقط إذا: التكامل مربوط + الرد الصوتي مفعّل + المحادثة لم تلغِ الصوت (Opt-out)
+  const isVoiceOutEnabled = isElevenLabsConnected && isVoiceOutputEnabled && !contact.voiceOptOut;
 
   // إذا كانت القناتان معطلتين، لا داعي لتوليد رد
   if (!isTextOutEnabled && !isVoiceOutEnabled) {

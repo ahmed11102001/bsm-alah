@@ -258,4 +258,55 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
     });
     expect(textCall).toBeDefined();
   });
+
+  it("Test 8: Integration connected (elevenLabsEnabled=true) but Voice Output OFF (voiceRepliesEnabled=false) → No Voice sent", async () => {
+    mockPrisma.aIAgent.findUnique.mockResolvedValue({
+      isEnabled: true,
+      provider: "gemini",
+      textRepliesEnabled: true,
+      voiceRepliesEnabled: false,
+      elevenLabsEnabled: true,
+      elevenLabsApiKey: "xi-api-key",
+      elevenLabsVoiceId: "voice_abc",
+    });
+
+    const result = await runAIAgentReply({
+      contactId: "contact_1",
+      userId: "user_1",
+      from: "201012345678",
+    });
+
+    expect(result.sent).toBe(true);
+    expect(mockGenerateVoiceReply).not.toHaveBeenCalled();
+    const audioCall = mockFetch.mock.calls.find((c) => {
+      const body = JSON.parse(c[1]?.body || "{}");
+      return body.type === "audio";
+    });
+    expect(audioCall).toBeUndefined();
+  });
+
+  it("Test 9: Voice Output ON (voiceRepliesEnabled=true) but Integration NOT connected (elevenLabsEnabled=false) → No Voice sent", async () => {
+    mockPrisma.aIAgent.findUnique.mockResolvedValue({
+      isEnabled: true,
+      provider: "gemini",
+      textRepliesEnabled: true,
+      voiceRepliesEnabled: true,
+      elevenLabsEnabled: false,
+      elevenLabsApiKey: "xi-api-key",
+    });
+
+    const result = await runAIAgentReply({
+      contactId: "contact_1",
+      userId: "user_1",
+      from: "201012345678",
+    });
+
+    expect(result.sent).toBe(true);
+    expect(mockGenerateVoiceReply).not.toHaveBeenCalled();
+    const audioCall = mockFetch.mock.calls.find((c) => {
+      const body = JSON.parse(c[1]?.body || "{}");
+      return body.type === "audio";
+    });
+    expect(audioCall).toBeUndefined();
+  });
 });

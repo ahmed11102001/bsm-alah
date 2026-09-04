@@ -907,6 +907,7 @@ export default function API() {
   const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
   const [showElevenLabsUpgrade, setShowElevenLabsUpgrade] = useState(false);
   const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
+  const [voiceRepliesEnabled, setVoiceRepliesEnabled] = useState(false);
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
   const [elevenLabsAgentId, setElevenLabsAgentId] = useState("");
   const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("");
@@ -984,7 +985,8 @@ export default function API() {
     fetch("/api/ai-agent").then(r => r.ok ? r.json() : null).then(d => {
       if (!d) return;
       setElevenLabsAgentData(d);
-      setElevenLabsEnabled(Boolean(d.voiceRepliesEnabled ?? d.elevenLabsEnabled));
+      setElevenLabsEnabled(Boolean(d.elevenLabsEnabled));
+      setVoiceRepliesEnabled(Boolean(d.voiceRepliesEnabled));
       setElevenLabsApiKey(d.elevenLabsApiKey ?? "");
       setElevenLabsAgentId(d.elevenLabsAgentId ?? "");
       setElevenLabsVoiceId(d.elevenLabsVoiceId ?? "");
@@ -1057,7 +1059,7 @@ export default function API() {
         body: JSON.stringify({
           ...(elevenLabsAgentData ?? {}),
           elevenLabsEnabled,
-          voiceRepliesEnabled: elevenLabsEnabled,
+          voiceRepliesEnabled,
           elevenLabsApiKey: elevenLabsApiKey.trim(),
           elevenLabsAgentId: elevenLabsAgentId.trim() || null,
           elevenLabsVoiceId: elevenLabsVoiceId.trim() || null,
@@ -1676,16 +1678,32 @@ export default function API() {
                 <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {locale === "ar" ? "تفعيل الردود الصوتية (Voice Replies)" : "Enable Voice Replies"}
+                      {locale === "ar" ? "ربط تكامل ElevenLabs (Integration)" : "Enable ElevenLabs Integration"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {locale === "ar"
-                        ? "إرسال ردود الـ AI كرسائل صوتية بجانب النص عبر ElevenLabs"
+                        ? "تفعيل الاتصال بحساب ElevenLabs الخاص بك"
+                        : "Connect and enable your ElevenLabs account"}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle ElevenLabs Integration">
+                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-purple-100 dark:border-purple-800 bg-white/60 dark:bg-gray-900/40 p-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {locale === "ar" ? "تفعيل مخرج الرد الصوتي (Voice Reply)" : "Enable Voice Reply Output"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {locale === "ar"
+                        ? "إرسال الردود الصادرة من الـ AI كرسائل صوتية بجانب النص"
                         : "Send AI replies as voice messages via ElevenLabs TTS"}
                     </p>
                   </div>
-                  <button type="button" onClick={() => setElevenLabsEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", elevenLabsEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle Voice Replies">
-                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", elevenLabsEnabled ? "translate-x-6" : "translate-x-0")} />
+                  <button type="button" onClick={() => setVoiceRepliesEnabled(v => !v)} className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")} aria-label="Toggle Voice Replies Output">
+                    <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", voiceRepliesEnabled ? "translate-x-6" : "translate-x-0")} />
                   </button>
                 </div>
                 <div>

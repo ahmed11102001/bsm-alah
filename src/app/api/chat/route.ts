@@ -188,7 +188,8 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
   });
   const globalTextEnabled = aiAgent?.textRepliesEnabled ?? true;
   const globalVoiceEnabled = Boolean(
-    (aiAgent?.voiceRepliesEnabled || aiAgent?.elevenLabsEnabled) &&
+    aiAgent?.elevenLabsEnabled &&
+    aiAgent?.voiceRepliesEnabled &&
     aiAgent?.elevenLabsApiKey
   );
 
@@ -382,13 +383,14 @@ export async function PATCH(req: NextRequest) {
     });
 
     const isVoiceConfigured = Boolean(
-      (agentSettings?.voiceRepliesEnabled || agentSettings?.elevenLabsEnabled) &&
+      agentSettings?.elevenLabsEnabled &&
+      agentSettings?.voiceRepliesEnabled &&
       agentSettings?.elevenLabsApiKey
     );
 
     if (enable && !isVoiceConfigured) {
       return NextResponse.json(
-        { error: "فعّل الردود الصوتية وأضف ElevenLabs API Key في إعدادات الربط أولاً" },
+        { error: "تأكد من تفعيل ربط ElevenLabs وتفعيل الردود الصوتية أولاً" },
         { status: 400 }
       );
     }
