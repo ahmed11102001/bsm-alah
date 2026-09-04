@@ -157,25 +157,46 @@ export default function NotificationBell({
 
   const playNotifSound = useCallback(() => {
     try {
-      const ctx = new AudioContext();
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
+      const AC =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      if (ctx.state === "suspended") void ctx.resume();
 
-      // نغمتين سريعين بشبه واتساب
-      [0, 0.15].forEach((delay, i) => {
+      const master = ctx.createGain();
+      master.gain.value = 1;
+      // فلتر lowpass بيلطّف الحواف الحادة للنغمة
+      const warmth = ctx.createBiquadFilter();
+      warmth.type = "lowpass";
+      warmth.frequency.value = 2400;
+      master.connect(warmth);
+      warmth.connect(ctx.destination);
+
+      // رنة هادية لكن مسموعة: E5 → A5 بموجة sine
+      // هجوم تدريجي + اضمحلال طويل بدل الصفير السريع الحاد
+      const notes = [
+        { freq: 659.25, delay: 0 },
+        { freq: 880, delay: 0.18 },
+      ];
+      notes.forEach(({ freq, delay }) => {
+        const t0 = ctx.currentTime + delay;
         const osc = ctx.createOscillator();
-        osc.connect(gain);
+        const env = ctx.createGain();
         osc.type = "sine";
-        osc.frequency.value = i === 0 ? 784 : 1047; // G5 → C6
-        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
-        gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + delay + 0.02);
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          ctx.currentTime + delay + 0.25
-        );
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.25);
+        osc.frequency.value = freq;
+        env.gain.setValueAtTime(0, t0);
+        env.gain.linearRampToValueAtTime(0.15, t0 + 0.05); // هجوم ناعم
+        env.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6); // اضمحلال هادئ
+        osc.connect(env);
+        env.connect(master);
+        osc.start(t0);
+        osc.stop(t0 + 0.65);
       });
+
+      // تنظيف حتى لا تتسرب نسخ AudioContext مع كل إشعار
+      window.setTimeout(() => void ctx.close().catch(() => undefined), 1200);
     } catch {
       /* المتصفح منع AudioContext */
     }
