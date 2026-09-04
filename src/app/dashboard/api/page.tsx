@@ -465,6 +465,7 @@ interface EasyOrdersLabels {
   saveSecretBtn: string; savingSecretBtn: string;
   webhookOrdersConfiguredBadge: string; webhookOrdersNotConfiguredBadge: string;
   webhookStatusConfiguredBadge: string; webhookStatusNotConfiguredBadge: string;
+  connectFirstHint: string;
   syncingBtn: string; syncBtn: string; apiKeyErr: string;
   syncSuccess: (synced: number) => string;
   syncErr: string;
@@ -569,6 +570,9 @@ function EasyOrdersContent({
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
             : <>{labels.saveSecretBtn}</>}
         </Button>
+        {!status?.connected && (
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
+        )}
       </div>
       <div>
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
@@ -583,6 +587,9 @@ function EasyOrdersContent({
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
             : <>{labels.saveSecretBtn}</>}
         </Button>
+        {!status?.connected && (
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
+        )}
       </div>
       {dateStr && (
         <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">{labels.lastSync(dateStr)}</p>
@@ -959,7 +966,16 @@ export default function API() {
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => { });
     if (canUseStoreIntegrations) {
-      fetch("/api/easy-orders/sync").then(r => r.json()).then(d => setEoStatus(d)).catch(() => { });
+      fetch("/api/easy-orders/sync")
+        .then(async r => {
+          if (!r.ok) {
+            console.error("[EasyOrders] Failed to load status", r.status);
+            return null;
+          }
+          return r.json();
+        })
+        .then(d => { if (d) setEoStatus(d); })
+        .catch(err => console.error("[EasyOrders] Status fetch error", err));
     }
     if (canUseClaude) {
       fetch("/api/me/api-key").then(r => r.ok ? r.json() : { apiKey: "" }).then(d => setClaudeApiKey(d.apiKey ?? "")).catch(() => { });
