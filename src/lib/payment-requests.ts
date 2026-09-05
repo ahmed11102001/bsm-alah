@@ -307,6 +307,38 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     });
   }
 
+  // ── Conversions API (server-side Purchase) ──
+  // لحظة الموافقة الحقيقية بتحصل والأدمن هو اللي فاتح المتصفح — مفيش Pixel
+  // client-side يقدر يسجّلها. بتتبعت fire-and-forget بعد نجاح التفعيل،
+  // وفشلها أبدًا ما يفشّل الموافقة نفسها (الـ libs فيها .catch داخلي).
+  try {
+    const buyer = await prisma.user.findUnique({
+      where: { id: request.userId },
+      select: { email: true, phone: true, metaClickId: true },
+    });
+    if (buyer) {
+      const { sendMetaPurchaseEvent } = await import("@/lib/meta-capi");
+      const { sendOpenAIPurchaseEvent } = await import("@/lib/openai-ads-capi");
+      const contentName =
+        request.planSlug ?? request.packageId ?? request.type ?? "subscription";
+      void sendMetaPurchaseEvent({
+        userId: request.userId,
+        email: buyer.email,
+        phone: buyer.phone,
+        value: request.amount,
+        currency: "EGP",
+        contentName,
+        clickId: buyer.metaClickId,
+      });
+      void sendOpenAIPurchaseEvent({
+        eventId: crypto.randomUUID(),
+        sourceUrl: `https://aiwni.com/checkout?plan=${request.planSlug ?? ""}`,
+      });
+    }
+  } catch (e) {
+    console.error("[ManualPayment] Failed to dispatch purchase events:", e);
+  }
+
   return prisma.paymentRequest.findUnique({ where: { id: requestId } });
 }
 

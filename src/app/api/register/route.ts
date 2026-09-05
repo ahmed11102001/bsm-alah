@@ -116,13 +116,28 @@ export async function POST(req: Request) {
     }
 
     // ── ربط الإحالة (Referral Attribution) إذا كان المستخدم قادمًا من رابط إحالة ──
+    // ── + نقل Ads click IDs (Meta fbc / OpenAI oppref) للـ Conversions API ──
     try {
       const cookieHeader = req.headers.get("cookie") || "";
-      const match = cookieHeader.match(/(?:^|;\s*)wani_ref=([^;]+)/);
-      const refCode = match ? decodeURIComponent(match[1]) : null;
+      const getCookie = (name: string) => {
+        const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+        return match ? decodeURIComponent(match[1]) : null;
+      };
+      const refCode = getCookie("wani_ref");
       if (refCode) {
         const { trackReferralSignup } = await import("@/lib/referral/service");
         await trackReferralSignup({ referredUserId: user.id, refCode });
+      }
+      const metaClickId = getCookie("wani_fbc");
+      const openaiClickId = getCookie("wani_oppref");
+      if (metaClickId || openaiClickId) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            ...(metaClickId ? { metaClickId } : {}),
+            ...(openaiClickId ? { openaiClickId } : {}),
+          },
+        }).catch((e) => console.error("[register] failed to save click IDs:", e));
       }
     } catch (refErr) {
       console.error("[register] failed to link referral:", refErr);

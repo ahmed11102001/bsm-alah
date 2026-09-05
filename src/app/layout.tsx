@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
 import MetaPixel from "@/components/metapixel";
+import OpenAIPixel from "@/components/openaipixel";
 import { Analytics } from "@vercel/analytics/next";
 
 const cairo = Cairo({
@@ -179,6 +180,7 @@ export default async function RootLayout({
       </head>
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/30">
         <MetaPixel nonce={nonce} />
+        <OpenAIPixel />
         <Analytics />
         <ClientProvider>
           {children}

@@ -77,6 +77,35 @@ function applyHeaders(
         });
       }
     }
+
+    // ── Ads click-ID capture (first touch, 90 days) ──
+    // Meta fbclid → نخزنه بصيغة fbc الجاهزة للـ Conversions API
+    // OpenAI oppref → نخزنه خام للاستخدام المستقبلي
+    const cleanClickId = (v: string | null) => {
+      if (!v) return null;
+      const clean = v.trim().slice(0, 128);
+      return /^[A-Za-z0-9_-]+$/.test(clean) ? clean : null;
+    };
+    const fbclid = cleanClickId(req.nextUrl.searchParams.get("fbclid"));
+    if (fbclid && !req.cookies.has("wani_fbc")) {
+      response.cookies.set("wani_fbc", `fb.1.${Date.now()}.${fbclid}`, {
+        path: "/",
+        maxAge: 90 * 24 * 60 * 60,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
+    const oppref = cleanClickId(req.nextUrl.searchParams.get("oppref"));
+    if (oppref && !req.cookies.has("wani_oppref")) {
+      response.cookies.set("wani_oppref", oppref, {
+        path: "/",
+        maxAge: 90 * 24 * 60 * 60,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
   }
   return response;
 }
@@ -128,9 +157,14 @@ export async function proxy(req: NextRequest) {
   // فالشرط ده رياضيًا مستحيل يلمس أي API route أو webhook.
   if (!onDevHost && rawPathname.startsWith("/developers")) {
     const logicalPath = rawPathname.slice("/developers".length) || "/";
-    return NextResponse.redirect(
-      new URL(`https://developers.aiwni.com${logicalPath}${req.nextUrl.search}`),
-      301
+    // applyHeaders عشان كوكيز الـ attribution (ref/fbclid/oppref) تتسجّل حتى على الـ redirect
+    return applyHeaders(
+      NextResponse.redirect(
+        new URL(`https://developers.aiwni.com${logicalPath}${req.nextUrl.search}`),
+        301
+      ),
+      nonce,
+      req
     );
   }
 

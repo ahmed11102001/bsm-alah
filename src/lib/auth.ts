@@ -120,6 +120,18 @@ export const authOptions: NextAuthOptions = {
           const { trackReferralSignup } = await import("@/lib/referral/service");
           await trackReferralSignup({ referredUserId: user.id, refCode });
         }
+        // نقل Ads click IDs (Meta fbc / OpenAI oppref) للـ Conversions API
+        const metaClickId = cookieStore.get("wani_fbc")?.value;
+        const openaiClickId = cookieStore.get("wani_oppref")?.value;
+        if (metaClickId || openaiClickId) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              ...(metaClickId ? { metaClickId } : {}),
+              ...(openaiClickId ? { openaiClickId } : {}),
+            },
+          }).catch((e) => console.error("[auth] Failed to save click IDs for Google user:", e));
+        }
       } catch (refErr) {
         console.error("[auth] Failed to track referral for Google user:", refErr);
       }

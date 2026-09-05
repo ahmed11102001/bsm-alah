@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { usePixel } from "@/hooks/usePixel";
 import { ArrowRight, Check, ChevronDown, ChevronUp, Copy, CreditCard, Loader2, MessageCircle, Shield, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { BILLING_CYCLES, canUseBillingCycle, computePrice, SUBSCRIPTION_PLANS, TOKEN_PACKAGES, MCP_ADDON_PACKAGES, type BillingCycle, type PlanSlug } from "@/lib/pricing";
@@ -34,6 +35,7 @@ function CheckoutContent() {
   const [showFeatures, setShowFeatures] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const { track } = usePixel();
 
   // جلب رصيد الإحالات المتاح للمستخدم
   useState(() => {
@@ -80,6 +82,14 @@ function CheckoutContent() {
   const remainingCredit = referralCredit - appliedCredit;
 
   const productName = isAddonPurchase ? (addonPackage?.label ?? "حزمة غير معروفة") : plan.name;
+
+  // Pixel: فتح /checkout وبدأ يشوف بيانات الدفع (Meta AddPaymentInfo + OpenAI checkout_started)
+  useEffect(() => {
+    track("AddPaymentInfo", {
+      content_name: isAddonPurchase ? (addonPackage?.label ?? packageId ?? "package") : plan.slug,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const whatsappMessage = useMemo(() => [
     "مرحبًا Wani 👋",
     isAddonPurchase ? `أتممت دفع ${productName}.` : `أتممت دفع اشتراك ${productName}.`,
@@ -142,6 +152,12 @@ function CheckoutContent() {
         toast.error(data.error || "تعذر تسجيل طلب الدفع، حاول مرة أخرى");
         return;
       }
+      // Pixel: طلب دفع يدوي ناجح = Lead (Meta) + lead_created (OpenAI)
+      track("Lead", {
+        content_name: isAddonPurchase ? (addonPackage?.label ?? packageId ?? "package") : plan.slug,
+        value: finalPrice,
+        currency: "EGP",
+      });
       window.open(`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
     } catch {
       setSubmitError("تعذر تسجيل طلب الدفع، تحقق من الاتصال وحاول مرة أخرى");
