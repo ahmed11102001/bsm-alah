@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import HeroAnimation from "./_components/HeroAnimation";
 import HeroCinematic from "./_components/HeroCinematic";
 import { LanguageProvider, useLanguage } from "./_components/LanguageProvider";
-import { useDevPath } from "@/lib/dev-links";
+import { useDevPath, MAIN_BASE_URL } from "@/lib/dev-links";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DevelopersLandingPage() {
@@ -76,7 +76,9 @@ function PageContent() {
           {/* Links moved from Bottom Bar to Top Bar */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <Link
-              href="/"
+              href={MAIN_BASE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="marketers-nav-btn"
               style={{
                 fontSize: "13px",

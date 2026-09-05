@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
-import { useDevPath } from "@/lib/dev-links";
+import { useDevPath, MAIN_BASE_URL } from "@/lib/dev-links";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TemplateStatus = "LOCAL_DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "DISABLED";
@@ -555,7 +555,7 @@ export default function ProjectTemplatesPage() {
                   </div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
                     {t("This templates page is dedicated to OTP only. Notification and marketing templates are available in the ", "صفحة القوالب دي مخصصة لـ OTP فقط. قوالب الإشعارات والتسويق متاحة في ")}
-                    <a href="/" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>{t("Wani Marketing Platform ←", "منصة وني التسويقية ←")}</a>
+                    <a href={MAIN_BASE_URL} target="_blank" rel="noopener noreferrer" style={{ color: "#818cf8", textDecoration: "none", fontWeight: 500 }}>{t("Wani Marketing Platform ←", "منصة وني التسويقية ←")}</a>
                     {t(" — you can use them in WhatsApp campaigns and automation.", " — بتقدر تستخدمها في كامبينات الواتساب والأتمتة.")}
                   </div>
                 </div>

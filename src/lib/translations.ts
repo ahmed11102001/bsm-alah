@@ -1,5 +1,6 @@
 // src/lib/translations.ts
 // ─── Landing Page Translations (AR / EN) ─────────────────────────────────────
+import { DEVELOPERS_BASE_URL } from "./dev-links";
 
 export type Lang = "ar" | "en";
 
@@ -462,12 +463,12 @@ If a customer asks directly — we recommend transparency, and there's a setting
       { ar: "المميزات", en: "Features", href: "#features" },
       { ar: "كيف يعمل", en: "How It Works", href: "#how-it-works" },
       { ar: "الأسعار", en: "Pricing", href: "#pricing" },
-      { ar: "API للمطورين", en: "Developer API", href: "/developers/docs" },
+      { ar: "API للمطورين", en: "Developer API", href: `${DEVELOPERS_BASE_URL}/docs` },
     ],
     company: [
       { ar: "من نحن", en: "About Us", href: "/about" },
       { ar: "استراتيجيات التسويق", en: "Marketing Strategies", href: "/strategies?from=landing" },
-      { ar: "بورتال المطورين", en: "Developer Portal", href: "/developers" },
+      { ar: "بورتال المطورين", en: "Developer Portal", href: DEVELOPERS_BASE_URL },
       { ar: "سياسة الخصوصية", en: "Privacy Policy", href: "/privacy" },
       { ar: "شروط الاستخدام", en: "Terms of Use", href: "/terms" },
     ],
@@ -475,7 +476,7 @@ If a customer asks directly — we recommend transparency, and there's a setting
       { ar: "المقالات", en: "Blog", href: "/articles" },
       { ar: "الأسئلة الشائعة", en: "FAQ", href: "#faq" },
       { ar: "كيف يعمل", en: "How It Works", href: "#how-it-works" },
-      { ar: "توثيق API", en: "API Docs", href: "/developers/docs" },
+      { ar: "توثيق API", en: "API Docs", href: `${DEVELOPERS_BASE_URL}/docs` },
     ],
     legal: [
       { ar: "شروط الاستخدام", en: "Terms of Service", href: "/terms" },

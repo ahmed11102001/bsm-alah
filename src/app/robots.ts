@@ -1,6 +1,34 @@
 import { MetadataRoute } from "next";
+import { headers } from "next/headers";
+import { DEVELOPERS_BASE_URL, isDevHostname } from "@/lib/dev-links";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+
+  // ── Developer subdomain: SEO مستقل تمامًا ──
+  // developers.aiwni.com/robots.txt → قواعد بمساراته الفعلية + sitemap الخاص به
+  if (isDevHostname(host)) {
+    return {
+      rules: {
+        userAgent: "*",
+        allow: "/",
+        disallow: [
+          "/api/",
+          "/portal/",
+          "/welcome/",
+          "/signin",
+          "/signup",
+          "/forgot-password",
+          "/reset-password",
+        ],
+      },
+      sitemap: `${DEVELOPERS_BASE_URL}/sitemap.xml`,
+    };
+  }
+
+  // ── Main domain ──
+  // aiwni.com/robots.txt → sitemap الدومين الرئيسي فقط (من غير أي مسار developers)
   const baseUrl = "https://aiwni.com";
 
   return {
@@ -20,15 +48,6 @@ export default function robots(): MetadataRoute.Robots {
         "/developers/signup",
         "/developers/forgot-password",
         "/developers/reset-password",
-        // ── نفس قواعد قسم المطورين بالمسارات الفعلية على الـ subdomain ──
-        // (developers.aiwni.com بيخدم نفس الملف ده، والقواعد أعلاه ببادئة
-        // /developers لا تنطبق على مساراته، فالنسخة دي بتغطيها)
-        "/portal/",
-        "/welcome/",
-        "/signin",
-        "/signup",
-        "/forgot-password",
-        "/reset-password",
         "/onboarding/",
         "/payment/",
         "/reset-password/",

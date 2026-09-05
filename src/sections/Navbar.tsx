@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X, User, Languages, Sparkles, Code2 } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 interface NavbarProps {
   onLoginClick:  () => void;
@@ -115,7 +116,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
               </button>
 
               {/* Developers btn */}
-              <Link href="/developers" style={{ textDecoration: "none" }}>
+              <Link href={DEVELOPERS_BASE_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
                 <button
                   className="h-9 text-sm gap-1.5 flex items-center transition-all duration-200 px-4 rounded-lg"
                   style={{
@@ -225,7 +226,7 @@ export default function Navbar({ onLoginClick, lang, onLangChange }: NavbarProps
 
               <div className="h-px bg-gray-100 my-2" />
 
-              <Link href="/developers" onClick={closeMobile}
+              <Link href={DEVELOPERS_BASE_URL} target="_blank" rel="noopener noreferrer" onClick={closeMobile}
                 className="flex items-center gap-2 w-full py-3 px-3 rounded-xl font-medium transition-colors text-sm"
                 style={{ color: "#25D366", animation: "fade-in-up 0.35s cubic-bezier(0.16,1,0.3,1) 220ms both",
                   textDecoration: "none" }}>

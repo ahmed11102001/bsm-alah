@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Megaphone, Package, Shield, AlertCircle, ChevronLeft } from "lucide-react";
 import { T } from "./i18n";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import type { FormState, Lang, TemplateCategory } from "./types";
 
 export function Step1({ form, setForm, lang, onNext, onCancel }: {
@@ -107,7 +108,7 @@ export function Step1({ form, setForm, lang, onNext, onCancel }: {
                                         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 text-center leading-tight">
                                             {lang === "ar" ? "قوالب الـ OTP مخصصة للمطورين فقط." : "OTP templates are for developers only."}
                                             <br />
-                                            <a href="/developers" className="font-bold underline hover:text-indigo-800 dark:hover:text-indigo-200">
+                                            <a href={DEVELOPERS_BASE_URL} target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-indigo-800 dark:hover:text-indigo-200">
                                                 {lang === "ar" ? "اكتشف وني للمطورين ←" : "Explore Wani Developers ←"}
                                             </a>
                                         </p>

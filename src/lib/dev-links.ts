@@ -9,6 +9,9 @@
 
 export const DEVELOPERS_BASE_URL = "https://developers.aiwni.com";
 
+// الدومين الرئيسي (قسم التسويق) — للروابط المتبادلة اللي بتتفتح في تاب جديد
+export const MAIN_BASE_URL = "https://aiwni.com";
+
 const DEV_HOSTNAMES = new Set([
   "developers.aiwni.com",
   "developers.localhost",

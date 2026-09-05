@@ -9,6 +9,7 @@ import {
   renderDeveloperResetEmail,
   renderTeamInviteEmail,
 } from "@/lib/email-templates";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 const DEFAULT_FROM = "Wani <support@aiwni.com>";
 
@@ -80,7 +81,8 @@ export async function sendDeveloperResetEmail(
   token: string,
   locale: Locale = "ar"
 ) {
-  const resetUrl = `${getEmailBaseUrl()}/developers/reset-password?token=${encodeURIComponent(token)}`;
+  // رابط إعادة تعيين المطورين يوجّه مباشرة للسب دومين (من غير المرور بتحويل 301)
+  const resetUrl = `${DEVELOPERS_BASE_URL}/reset-password?token=${encodeURIComponent(token)}`;
   const { subject, html, text } = renderDeveloperResetEmail({ firstName, resetUrl, locale });
   await sendEmail({ to, subject, html, text });
 }

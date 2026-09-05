@@ -1,10 +1,47 @@
 import { MetadataRoute } from "next";
+import { headers } from "next/headers";
 import { getAllArticles } from "@/lib/articles";
-import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
+import { DEVELOPERS_BASE_URL, isDevHostname } from "@/lib/dev-links";
 
 export const revalidate = 3600;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// ── Sitemap مستقل للـ Developer subdomain ──
+// developers.aiwni.com/sitemap.xml → صفحات المطورين فقط، بروابطها المطلقة الخاصة
+function developersSitemap(): MetadataRoute.Sitemap {
+  return [
+    {
+      url: `${DEVELOPERS_BASE_URL}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${DEVELOPERS_BASE_URL}/docs`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${DEVELOPERS_BASE_URL}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${DEVELOPERS_BASE_URL}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+  ];
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const h = await headers();
+  if (isDevHostname(h.get("x-forwarded-host") ?? h.get("host"))) {
+    return developersSitemap();
+  }
+
   const baseUrl = "https://aiwni.com";
 
   // Static public SEO routes
@@ -74,30 +111,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
-    },
-    {
-      url: `${DEVELOPERS_BASE_URL}`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${DEVELOPERS_BASE_URL}/docs`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${DEVELOPERS_BASE_URL}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${DEVELOPERS_BASE_URL}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "yearly",
-      priority: 0.3,
     },
     {
       url: `${baseUrl}/privacy`,

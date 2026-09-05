@@ -118,6 +118,9 @@ export default function Footer({ lang }: FooterProps) {
                         href={link.href}
                         className="text-sm transition-colors duration-200 hover:text-[#25D366]"
                         style={{ color: "#8fa89a" }}
+                        {...(link.href.startsWith("http")
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
                       >
                         {tr(link as { ar: string; en: string; href: string }, lang)}
                       </a>

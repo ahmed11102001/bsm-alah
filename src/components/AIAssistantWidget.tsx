@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Loader2, ChevronDown } from "lucide-react";
 import type { Lang } from "@/lib/translations";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -429,7 +430,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
   const waHref = `https://wa.me/${SALES_WA}?text=${encodeURIComponent(
     f.waMsg(formName || "زائر", selections.businessLabel ?? selections.developerNeedLabel ?? selections.business ?? "", selections.goal ?? selections.developerNeed ?? "")
   )}`;
-  const developerCtaHref = "/developers";
+  const developerCtaHref = DEVELOPERS_BASE_URL;
 
   // ═════════════════════════════════════════════════════════════════════════
   // Render
@@ -680,7 +681,7 @@ export default function AIAssistantWidget({ lang }: { lang: Lang }) {
             {step === "done" && !isTyping && messages.some(m => m.text.includes("✅")) && (
               <div className="flex flex-col gap-2 wp-fade-in">
                 {selections.audience === "developer" && (
-                  <a href={developerCtaHref}
+                  <a href={developerCtaHref} target="_blank" rel="noopener noreferrer"
                     className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white font-semibold
                                py-2.5 rounded-xl text-sm text-center transition-all duration-200 active:scale-[.98]">
                     {lang === "ar" ? "🚀 ادخل Developer Portal" : "🚀 Explore Developer Portal"}
