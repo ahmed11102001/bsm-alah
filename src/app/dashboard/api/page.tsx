@@ -312,6 +312,11 @@ function ShopifyContent({
   syncing: boolean;
 }) {
   const [showToken, setShowToken] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (status?.connected) setShowForm(false);
+  }, [status?.connected]);
 
   async function handleDisconnect() {
     if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
@@ -324,7 +329,7 @@ function ShopifyContent({
     <div className="space-y-3">
 
       {/* ── متجر مربوط ─────────────────────────────────────────────────────── */}
-      {status?.connected && (
+      {status?.connected && !showForm && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20
                           rounded-lg border border-green-200 dark:border-green-800">
@@ -332,13 +337,6 @@ function ShopifyContent({
             <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
               {status.storeName} — متصل ✅
             </p>
-            <button
-              onClick={handleDisconnect}
-              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
-                         dark:hover:bg-red-900/20 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
           {/* زر Sync Webhooks للمتاجر المربوطة */}
           <button
@@ -353,11 +351,29 @@ function ShopifyContent({
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> جاري تسجيل الـ Webhooks...</>
               : <><RefreshCw className="w-3.5 h-3.5" /> مزامنة الـ Webhooks تلقائياً</>}
           </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+                         border border-gray-200 dark:border-gray-700 text-xs font-medium
+                         text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> تعديل البيانات
+            </button>
+            <button
+              onClick={handleDisconnect}
+              className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+                         border border-red-200 dark:border-red-800/40 text-xs font-medium
+                         text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> فك الربط
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── فورم الربط (قبل الربط فقط) ──────────────────────────────────────── */}
-      {!status?.connected && (
+      {/* ── فورم الربط (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
+      {(!status?.connected || showForm) && (
         <div className="space-y-3">
           <div>
             <Label className="text-xs dark:text-gray-400">اسم المتجر *</Label>
@@ -439,12 +455,12 @@ function ShopifyContent({
         <CopyInput value={webhookUrl} placeholder={webhookUrl ? "" : "جاري التحميل..."} />
       </div>
 
-      {/* ── زر الحفظ (قبل الربط فقط) ──────────────────────────────────────── */}
-      {!status?.connected && (
+      {/* ── زر الحفظ (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
+      {(!status?.connected || showForm) && (
         <Button
           size="sm"
           onClick={onConnect}
-          disabled={loading || !storeName.trim()}
+          disabled={loading || !storeName.trim() || !shopDomain.trim()}
           className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
         >
           {loading
@@ -475,7 +491,7 @@ interface EasyOrdersLabels {
 }
 
 function EasyOrdersContent({
-  apiKey, setApiKey, storeName, setStoreName, webhookUrl, syncing, status, onSync,
+  apiKey, setApiKey, storeName, setStoreName, webhookUrl, syncing, status, onSync, onDisconnect,
   webhookSecretOrders, setWebhookSecretOrders, savingSecretOrders, onSaveSecretOrders,
   webhookSecretStatusUpdate, setWebhookSecretStatusUpdate, savingSecretStatusUpdate, onSaveSecretStatusUpdate,
   labels, locale,
@@ -488,6 +504,7 @@ function EasyOrdersContent({
     webhookOrdersConfigured?: boolean; webhookStatusUpdateConfigured?: boolean;
   } | null;
   onSync: () => void;
+  onDisconnect: () => void;
   webhookSecretOrders: string; setWebhookSecretOrders: (v: string) => void;
   savingSecretOrders: boolean; onSaveSecretOrders: () => void;
   webhookSecretStatusUpdate: string; setWebhookSecretStatusUpdate: (v: string) => void;
@@ -523,9 +540,16 @@ function EasyOrdersContent({
       {status?.connected && (
         <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
           <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+          <p className="flex-1 text-xs text-green-700 dark:text-green-300 font-medium">
             {labels.connectedBadge(status.storeName ?? "", status.totalSynced ?? 0)}
           </p>
+          <button
+            onClick={onDisconnect}
+            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
+                       dark:hover:bg-red-900/20 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       )}
       {status?.connected && webhookBadge(status.webhookOrdersConfigured, labels.webhookOrdersConfiguredBadge, labels.webhookOrdersNotConfiguredBadge)}
@@ -1216,6 +1240,24 @@ export default function API() {
     finally { setEoSyncing(false); }
   };
 
+  const handleEoDisconnect = async () => {
+    const msg = locale === "ar"
+      ? "هتفك ربط إيزي أوردرز — الأوردرات مش هتتزامن تلقائي بعد كده. متأكد؟"
+      : "You are about to disconnect EasyOrders — orders will stop syncing automatically. Sure?";
+    if (!confirm(msg)) return;
+    try {
+      const r = await fetch("/api/easy-orders/sync", { method: "DELETE" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Error");
+      setEoStatus({ connected: false });
+      setEoApiKey("");
+      setEoStoreName("");
+      toast.success(locale === "ar" ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
+    } catch (e: any) {
+      toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Disconnect failed"));
+    }
+  };
+
   const handleEoSaveSecret = async (type: "orders" | "status_update") => {
     const secret = type === "orders" ? eoWebhookSecretOrders : eoWebhookSecretStatusUpdate;
     if (!secret.trim()) { toast.error(api.cards.easyorders.secretErr); return; }
@@ -1323,12 +1365,12 @@ export default function API() {
       },
       {
         id: "shopify",
-        title: "ربط Shopify",
-        subtitle: "عن طريق Webhook مباشرة",
+        title: locale === "ar" ? "ربط Shopify" : "Connect Shopify",
+        subtitle: locale === "ar" ? "دومين + Access Token — تسجيل تلقائي للـ Webhooks" : "Domain + Access Token — auto Webhook setup",
         steps: [
-          { title: "احفظ اسم المتجر", desc: "أدخل اسم متجرك واضغط حفظ عشان تاخد الـ Webhook URL" },
-          { title: "افتح Shopify", desc: "Settings → Notifications → Webhooks → Create webhook" },
-          { title: "الصق الـ URL", desc: "اختر الحدث (Order creation) وألصق الـ Webhook URL" },
+          { title: locale === "ar" ? "أنشئ Custom App على Shopify" : "Create a Custom App on Shopify", desc: locale === "ar" ? "من لوحة تحكم متجرك: Settings → Apps → Develop apps → Create an app. ده تطبيق خاص بيك انت بتعمله جوه متجرك، مش تطبيق من الـ App Store." : "In your store admin: Settings → Apps → Develop apps → Create an app. This is a private app you create inside your own store, not one you install from the App Store." },
+          { title: locale === "ar" ? "فعّل الصلاحيات وخد الـ Token" : "Grant scopes & copy the token", desc: locale === "ar" ? "فعّل read_orders, write_orders, read_checkouts, read_customers, read_products، ثم Install app وانسخ الـ Admin API access token" : "Enable read_orders, write_orders, read_checkouts, read_customers, read_products, then Install app and copy the Admin API access token" },
+          { title: locale === "ar" ? "أدخل البيانات في وني واربط" : "Enter the details in Wani & connect", desc: locale === "ar" ? "اسم المتجر + الدومين (متجرك.myshopify.com) + الـ Token — لو حطيت الـToken هنسجل الـ Webhooks تلقائيًا، من غير ما تدخل Shopify تاني" : "Store name + domain (yourstore.myshopify.com) + the token — with the token provided, webhooks are registered automatically, no need to go back into Shopify" },
         ],
       },
       {
@@ -1560,6 +1602,7 @@ export default function API() {
                 storeName={eoStoreName} setStoreName={setEoStoreName}
                 webhookUrl={eoWebhookUrl} syncing={eoSyncing} status={eoStatus}
                 onSync={handleEoSync}
+                onDisconnect={handleEoDisconnect}
                 webhookSecretOrders={eoWebhookSecretOrders} setWebhookSecretOrders={setEoWebhookSecretOrders}
                 savingSecretOrders={eoSavingSecretOrders} onSaveSecretOrders={() => handleEoSaveSecret("orders")}
                 webhookSecretStatusUpdate={eoWebhookSecretStatusUpdate} setWebhookSecretStatusUpdate={setEoWebhookSecretStatusUpdate}
