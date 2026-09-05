@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: DEVELOPERS_BASE_URL,
   },
+  // فيف أيقون خاصة بقسم المطورين (لوجو التطبيق) بدل فيف أيقون المسوقين
+  icons: {
+    icon: [{ url: "/landingpage-dev.svg", type: "image/svg+xml" }],
+    shortcut: ["/landingpage-dev.svg"],
+  },
   openGraph: {
     title: "Wani for Developers — WhatsApp OTP API",
     description:
