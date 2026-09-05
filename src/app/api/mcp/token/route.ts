@@ -47,8 +47,29 @@ export async function POST(req: NextRequest) {
     let apiKey: string;
     try {
       const decoded = Buffer.from(code, "base64url").toString("utf-8");
-      // الصيغة: "apiKey:timestamp"
-      apiKey = decoded.split(":")[0];
+      // الصيغة: "apiKey:timestamp" (timestamp بصيغة base36 من Date.now())
+      const parts = decoded.split(":");
+      apiKey = parts[0];
+      const timestampStr = parts[1];
+
+      // ── تحقق من صلاحية الـ code الزمنية (5 دقايق) ─────────────────────────
+      // بدون التحقق ده، الـ code كان بيفضل صالح للأبد — وبما إنه مش موقّع
+      // (base64 مش تشفير)، أي حد شافه كان يقدر يستبدله بـ access_token
+      // في أي وقت لاحق.
+      const timestamp = timestampStr ? parseInt(timestampStr, 36) : NaN;
+      if (!apiKey || !Number.isFinite(timestamp)) {
+        return NextResponse.json(
+          { error: "invalid_grant", error_description: "Malformed code" },
+          { status: 400, headers: CORS }
+        );
+      }
+      const CODE_TTL_MS = 5 * 60 * 1000; // 5 دقايق
+      if (Date.now() - timestamp > CODE_TTL_MS) {
+        return NextResponse.json(
+          { error: "invalid_grant", error_description: "Code has expired — restart the authorization flow" },
+          { status: 400, headers: CORS }
+        );
+      }
     } catch {
       return NextResponse.json(
         { error: "invalid_grant", error_description: "Invalid code" },

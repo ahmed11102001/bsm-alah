@@ -7,8 +7,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { MessageStatus, MessageDirection, CampaignStatus } from "@/types/enums";
+import { MessageStatus, MessageDirection } from "@/types/enums";
 import { checkMCPCommandsLimit, incrementMCPCommandUsage } from "@/lib/plan-guard";
+import { createTemplateForUser, deleteTemplateForUser } from "@/lib/templates-actions";
+import { createCampaignForUser } from "@/lib/campaigns-actions";
+import { getAiAgentSettingsForMcp, updateAiAgentSettingsForMcp } from "@/lib/ai-agent-mcp";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 async function resolveUser(req: NextRequest) {
@@ -186,7 +189,7 @@ const TOOLS = [
   },
   {
     name: "delete_template",
-    description: "حذف قالب من النظام ومن Meta (إذا كان مرسلاً) — يتطلب اسم القالب أو ID",
+    description: "حذف قالب من النظام ومن Meta (إذا كان مرسلاً) — إجراء نهائي، لازم تأكيد صريح من المستخدم قبل الاستدعاء",
     inputSchema: {
       type: "object",
       properties: {
@@ -194,13 +197,17 @@ const TOOLS = [
           type: "string",
           description: "ID القالب من قاعدة البيانات — استخدم list_templates للحصول عليه",
         },
+        confirm: {
+          type: "boolean",
+          description: "لازم يكون true — لا تستدعي هذه الأداة إلا بعد ما يأكد المستخدم صراحةً إنه عايز يحذف القالب ده",
+        },
       },
-      required: ["template_id"],
+      required: ["template_id", "confirm"],
     },
   },
   {
     name: "create_campaign",
-    description: "إنشاء وإطلاق حملة تسويقية جديدة — يمكن إرسالها فوراً أو جدولتها لوقت محدد",
+    description: "إنشاء وإطلاق حملة تسويقية جديدة — يمكن إرسالها فوراً أو جدولتها لوقت محدد. إجراء حقيقي بيبعت رسائل واتساب فعلية — لازم تأكيد صريح من المستخدم قبل الاستدعاء",
     inputSchema: {
       type: "object",
       properties: {
@@ -220,8 +227,43 @@ const TOOLS = [
           type: "string",
           description: "وقت الجدولة بصيغة ISO 8601 — مثال: 2026-05-25T18:00:00 — اتركه فارغاً للإرسال الفوري",
         },
+        confirm: {
+          type: "boolean",
+          description: "لازم يكون true — لا تستدعي هذه الأداة إلا بعد ما يأكد المستخدم صراحةً تفاصيل الحملة (الاسم، القالب، الجمهور، الموعد)",
+        },
       },
-      required: ["name", "template_name", "audience_id"],
+      required: ["name", "template_name", "audience_id", "confirm"],
+    },
+  },
+  {
+    name: "get_ai_agent_settings",
+    description: "قراءة إعدادات AI Agent الحالية (الرد النصي) — البراند، وصف النشاط، المنتجات، الأسعار، مواعيد العمل، اللهجة، لغة الرد، البرومبت المخصص. لا يشمل إعدادات ElevenLabs (بتتظبط يدويًا من صفحة Integrations فقط)",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "update_ai_agent_settings",
+    description: "تحديث إعدادات AI Agent (الرد النصي) — أي حقل متبعتش بيفضل زي ما هو، مفيش داعي تبعت كل الحقول مرة واحدة. لا يشمل إعدادات ElevenLabs",
+    inputSchema: {
+      type: "object",
+      properties: {
+        is_enabled: { type: "boolean", description: "تفعيل/تعطيل الرد الآلي بالكامل" },
+        provider: { type: "string", enum: ["gemini", "openai"], description: "موديل الذكاء الاصطناعي المستخدم للرد" },
+        brand_name: { type: "string", description: "اسم البراند/المتجر" },
+        business_description: { type: "string", description: "وصف مختصر عن النشاط التجاري" },
+        products_info: { type: "string", description: "معلومات المنتجات — بيستخدمها الأجنت في الرد على استفسارات العملاء" },
+        pricing_info: { type: "string", description: "معلومات الأسعار" },
+        working_hours: { type: "string", description: "مواعيد العمل" },
+        tone: { type: "string", enum: ["friendly", "formal", "colloquial"], description: "لهجة الرد: ودود/رسمي/عامية مصرية" },
+        system_prompt: { type: "string", description: "تعليمات مخصصة إضافية للأجنت (system prompt)" },
+        language_mode: { type: "string", enum: ["auto", "ar", "en"], description: "لغة الرد: تلقائي حسب رسالة العميل، أو عربي دايمًا، أو إنجليزي دايمًا" },
+        pause_minutes: { type: "number", description: "مدة إيقاف الرد الآلي بعد ما موظف يرد يدويًا (دقائق)" },
+        handoff_resume_minutes: { type: "number", description: "بعد كام دقيقة الأجنت يرجع يشتغل تاني بعد التسليم لموظف — اتركه null لإلغاء الرجوع التلقائي" },
+      },
+      required: [],
     },
   },
 ];
@@ -476,29 +518,17 @@ async function runTool(name: string, args: any, ownerId: string) {
         return { error: `ترتيب المتغيرات غير صحيح — يجب أن تكون {{1}} {{2}} ... بدون تخطي` };
     }
 
-    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
-
-    const res = await fetch(`${host}/api/templates`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-mcp-user-id": ownerId,
-        "x-mcp-internal": "true",
-      },
-      body: JSON.stringify({
-        name: tplName.toLowerCase(),
-        category,
-        language,
-        headerType: header_type,
-        headerText: header_text,
-        body,
-        footer,
-        buttons,
-        exampleVars: example_vars,
-        draft,
-        _mcpInternal: true,
-        _mcpOwnerId: ownerId,
-      }),
+    const res = await createTemplateForUser(ownerId, {
+      name: tplName.toLowerCase(),
+      category,
+      language,
+      headerType: header_type,
+      headerText: header_text,
+      body,
+      footer,
+      buttons,
+      exampleVars: example_vars,
+      draft,
     });
 
     const data = await res.json();
@@ -522,10 +552,12 @@ async function runTool(name: string, args: any, ownerId: string) {
 
   // ── delete_template ──────────────────────────────────────────────────────
   if (name === "delete_template") {
-    const { template_id } = args;
+    const { template_id, confirm } = args;
 
     if (!template_id)
       return { error: "template_id مطلوب — استخدم list_templates للحصول عليه" };
+    if (confirm !== true)
+      return { error: "لازم تأكيد صريح (confirm: true) من المستخدم قبل حذف القالب" };
 
     const template = await prisma.template.findFirst({
       where: { id: template_id, userId: ownerId },
@@ -535,22 +567,7 @@ async function runTool(name: string, args: any, ownerId: string) {
     if (!template)
       return { error: `القالب "${template_id}" غير موجود أو لا ينتمي لحسابك` };
 
-    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
-
-    const res = await fetch(`${host}/api/templates`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-mcp-user-id": ownerId,
-        "x-mcp-internal": "true",
-      },
-      body: JSON.stringify({
-        id: template_id,
-        _mcpInternal: true,
-        _mcpOwnerId: ownerId,
-      }),
-    });
-
+    const res = await deleteTemplateForUser(ownerId, template_id);
     const data = await res.json();
 
     if (!res.ok)
@@ -565,7 +582,7 @@ async function runTool(name: string, args: any, ownerId: string) {
 
   // ── create_campaign ──────────────────────────────────────────────────────
   if (name === "create_campaign") {
-    const { name: campaignName, template_name, audience_id, scheduled_at } = args;
+    const { name: campaignName, template_name, audience_id, scheduled_at, confirm } = args;
 
     if (!campaignName?.trim())
       return { error: "اسم الحملة مطلوب" };
@@ -573,6 +590,8 @@ async function runTool(name: string, args: any, ownerId: string) {
       return { error: "اسم القالب مطلوب — استخدم list_templates لمعرفة القوالب المتاحة" };
     if (!audience_id)
       return { error: "ID قائمة الاتصال مطلوب — استخدم list_contacts لمعرفة القوائم المتاحة" };
+    if (confirm !== true)
+      return { error: "لازم تأكيد صريح (confirm: true) من المستخدم قبل إطلاق الحملة — اعرض له التفاصيل (الاسم، القالب، الجمهور، الموعد) واستنى تأكيده الأول" };
 
     // جيب أرقام الجمهور
     const audience = await prisma.audience.findFirst({
@@ -588,28 +607,11 @@ async function runTool(name: string, args: any, ownerId: string) {
 
     const numbers = audience.contacts.map(c => c.phone);
 
-    // بعت request لـ campaigns API مع نفس الـ apiKey للمصادقة
-    const host = process.env.NEXTAUTH_URL ?? "https://aiwni.com";
-
-    const apiKey = await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { apiKey: true },
-    });
-
-    const res = await fetch(`${host}/api/campaigns`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-mcp-user-id": ownerId,  // internal header — validated inside
-      },
-      body: JSON.stringify({
-        name: campaignName.trim(),
-        templateName: template_name,
-        numbers,
-        scheduledAt: scheduled_at ?? null,
-        _mcpInternal: true,
-        _mcpOwnerId: ownerId,
-      }),
+    const res = await createCampaignForUser(ownerId, {
+      name: campaignName.trim(),
+      templateName: template_name,
+      numbers,
+      scheduledAt: scheduled_at ?? null,
     });
 
     const data = await res.json();
@@ -629,6 +631,50 @@ async function runTool(name: string, args: any, ownerId: string) {
       موعد_الإرسال: scheduled_at
         ? new Date(scheduled_at).toLocaleString("ar-EG")
         : "فوري",
+    };
+  }
+
+  // ── get_ai_agent_settings ────────────────────────────────────────────────
+  if (name === "get_ai_agent_settings") {
+    const settings = await getAiAgentSettingsForMcp(ownerId);
+    return {
+      مفعّل: settings.isEnabled,
+      الموديل: settings.provider,
+      اسم_البراند: settings.brandName,
+      وصف_النشاط: settings.businessDesc,
+      معلومات_المنتجات: settings.productsInfo,
+      معلومات_الأسعار: settings.pricingInfo,
+      مواعيد_العمل: settings.workingHours,
+      لهجة_الرد: settings.tone,
+      لغة_الرد: settings.languageMode,
+      البرومبت_المخصص: settings.systemPrompt,
+      دقائق_الإيقاف_بعد_رد_موظف: settings.pauseMinutes,
+      دقائق_الرجوع_بعد_التسليم: settings.handoffResumeMinutes,
+    };
+  }
+
+  // ── update_ai_agent_settings ─────────────────────────────────────────────
+  if (name === "update_ai_agent_settings") {
+    const result = await updateAiAgentSettingsForMcp(ownerId, args);
+    if ("error" in result) return { error: result.error };
+
+    return {
+      نجاح: true,
+      رسالة: "✅ تم تحديث إعدادات AI Agent",
+      الإعدادات_الحالية: {
+        مفعّل: result.settings.isEnabled,
+        الموديل: result.settings.provider,
+        اسم_البراند: result.settings.brandName,
+        وصف_النشاط: result.settings.businessDesc,
+        معلومات_المنتجات: result.settings.productsInfo,
+        معلومات_الأسعار: result.settings.pricingInfo,
+        مواعيد_العمل: result.settings.workingHours,
+        لهجة_الرد: result.settings.tone,
+        لغة_الرد: result.settings.languageMode,
+        البرومبت_المخصص: result.settings.systemPrompt,
+        دقائق_الإيقاف_بعد_رد_موظف: result.settings.pauseMinutes,
+        دقائق_الرجوع_بعد_التسليم: result.settings.handoffResumeMinutes,
+      },
     };
   }
 

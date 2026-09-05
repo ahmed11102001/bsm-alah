@@ -776,6 +776,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isAr ? "كلما زادت معرفة وني بالبراند والمنتجات والسياسات، أصبحت ردوده أكثر دقة" : "The more Wani knows about your brand, the more accurate its replies"}
             </p>
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+              <Info className="w-3 h-3 flex-shrink-0" />
+              <span dir="auto">Wani is AI and can make mistakes.</span>
+            </p>
           </div>
         </div>
 
