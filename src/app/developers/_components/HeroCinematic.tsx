@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { ArrowRight, Zap, Shield, BarChart2, Play, Pause, Sparkles } from "lucide-react";
 import { useLanguage } from "./LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 // ─── Camera math ──────────────────────────────────────────────────────────────
 const WORLD_SCALE = 3; // الـ world أكبر من الإطار بـ 3 أضعاف في كل بُعد
@@ -155,6 +156,7 @@ function TypingLine({ line, lineNum, isTerminalActive, lineIndex, reducedMotion 
 
 export default function HeroCinematic() {
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const isAr = language === "ar";
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -488,7 +490,7 @@ export default function HeroCinematic() {
               )}
             </p>
             <Link
-              href="/developers/signup"
+              href={devPath("/signup")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

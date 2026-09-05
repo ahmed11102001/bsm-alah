@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import { getAllArticles } from "@/lib/articles";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 export const revalidate = 3600;
 
@@ -75,25 +76,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/developers`,
+      url: `${DEVELOPERS_BASE_URL}`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/developers/docs`,
+      url: `${DEVELOPERS_BASE_URL}/docs`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/developers/privacy`,
+      url: `${DEVELOPERS_BASE_URL}/privacy`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/developers/terms`,
+      url: `${DEVELOPERS_BASE_URL}/terms`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,

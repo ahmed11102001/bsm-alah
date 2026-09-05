@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useLanguage } from "../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 interface Project {
   id: string;
@@ -33,6 +34,7 @@ function toRoman(num: number): string {
 
 export default function ProjectsDashboard() {
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -432,7 +434,7 @@ export default function ProjectsDashboard() {
                     {activeProjects.map((project) => (
                       <Link 
                         key={project.id} 
-                        href={`/developers/portal/projects/${project.id}`} 
+                        href={devPath(`/portal/projects/${project.id}`)} 
                         className="project-card"
                         onClick={(e) => {
                           if (project.canEnter === false) {

@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import { redirect }     from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { LanguageProvider } from "./_components/LanguageProvider";
 
 export const metadata: Metadata = {
@@ -15,13 +16,13 @@ export const metadata: Metadata = {
   description:
     "بورتال المطورين من وني: أرسل رسائل واتساب OTP وإشعارات برمجياً عبر WhatsApp Business API. توثيق كامل، أمثلة كود، ودعم فني.",
   alternates: {
-    canonical: "https://aiwni.com/developers",
+    canonical: DEVELOPERS_BASE_URL,
   },
   openGraph: {
     title: "Wani for Developers — WhatsApp OTP API",
     description:
       "أرسل واتساب OTP وإشعارات من تطبيقك عبر API بسيط وموثوق. ابدأ التكامل في دقائق.",
-    url: "https://aiwni.com/developers",
+    url: DEVELOPERS_BASE_URL,
     locale: "ar_EG",
     type: "website",
   },

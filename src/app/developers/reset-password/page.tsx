@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function ResetPasswordPage() {
   return (
@@ -18,6 +19,7 @@ function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const { language, toggleLanguage, t } = useLanguage();
+  const devPath = useDevPath();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -123,7 +125,7 @@ function ResetPasswordContent() {
           {success ? (
             <div className="success-box">
               {t("Password changed successfully. You can now sign in.", "تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.")}<br /><br />
-              <Link href="/developers/signin" style={{ color: '#fff', textDecoration: 'underline' }}>
+              <Link href={devPath("/signin")} style={{ color: '#fff', textDecoration: 'underline' }}>
                 {t("Sign In", "تسجيل الدخول")}
               </Link>
             </div>

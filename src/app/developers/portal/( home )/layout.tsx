@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
+import { devRedirect } from "@/lib/dev-server";
 import prisma from "@/lib/prisma";
 import PortalSidebar from "../_components/PortalSidebar";
 
 export default async function PortalHomeLayout({ children }: { children: ReactNode }) {
   const session = await getDevSession();
-  if (!session) redirect("/developers/signin");
+  if (!session) return devRedirect("/developers/signin");
 
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
@@ -15,7 +15,7 @@ export default async function PortalHomeLayout({ children }: { children: ReactNo
     },
   });
 
-  if (!developer) redirect("/developers/signin");
+  if (!developer) return devRedirect("/developers/signin");
 
   return (
     <div style={{ height: "100%", background: "#060810", display: "flex", overflow: "hidden" }}>

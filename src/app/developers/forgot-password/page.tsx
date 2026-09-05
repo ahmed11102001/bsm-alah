@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function ForgotPasswordPage() {
   return (
@@ -14,6 +15,7 @@ export default function ForgotPasswordPage() {
 
 function ForgotPasswordContent() {
   const { language, toggleLanguage, t } = useLanguage();
+  const devPath = useDevPath();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -132,7 +134,7 @@ function ForgotPasswordContent() {
                 "A password reset link has been sent to your email (if it's registered with us).",
                 "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني (إذا كان مسجلاً لدينا)."
               )}<br /><br />
-              <Link href="/developers/signin" style={{ color: '#fff', textDecoration: 'underline' }}>
+              <Link href={devPath("/signin")} style={{ color: '#fff', textDecoration: 'underline' }}>
                 {t("Back to Sign In", "العودة لتسجيل الدخول")}
               </Link>
             </div>
@@ -158,7 +160,7 @@ function ForgotPasswordContent() {
 
           {!success && (
             <div className="auth-footer">
-              <Link href="/developers/signin">{t("Back to Sign In", "الرجوع لتسجيل الدخول")}</Link>
+              <Link href={devPath("/signin")}>{t("Back to Sign In", "الرجوع لتسجيل الدخول")}</Link>
             </div>
           )}
         </div>

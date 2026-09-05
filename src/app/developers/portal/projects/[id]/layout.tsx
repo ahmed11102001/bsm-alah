@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
+import { devRedirect } from "@/lib/dev-server";
 import prisma from "@/lib/prisma";
 import ProjectSidebar from "./_components/ProjectSidebar";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
@@ -14,13 +14,13 @@ export default async function ProjectLayout({
 }) {
   const { id } = await params;
   const session = await getDevSession();
-  if (!session) redirect("/developers/signin");
+  if (!session) return devRedirect("/developers/signin");
 
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
   });
 
-  if (!developer) redirect("/developers/signin");
+  if (!developer) return devRedirect("/developers/signin");
 
   const allProjects = await prisma.developerProject.findMany({
     where: { 
@@ -36,7 +36,7 @@ export default async function ProjectLayout({
 
   // Verify this project belongs to this developer or owner
   const baseProject = await getProjectForOwnerOrDeveloper(id, session.id);
-  if (!baseProject) redirect("/developers/portal");
+  if (!baseProject) return devRedirect("/developers/portal");
 
   const project = await prisma.developerProject.findFirst({
     where: { id: baseProject.id },
@@ -59,7 +59,7 @@ export default async function ProjectLayout({
     },
   });
 
-  if (!project) redirect("/developers/portal");
+  if (!project) return devRedirect("/developers/portal");
 
   const viewerRole = project.ownerId === session.id ? "owner" : "developer";
 

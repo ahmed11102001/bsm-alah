@@ -86,6 +86,23 @@ function isPublicDevRoute(pathname: string): boolean {
   return PUBLIC_DEV_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
+// ── Developer Subdomain host detection ───────────────────────────────────────
+const DEV_HOSTS = new Set([
+  "developers.aiwni.com",
+  "developers.localhost", // للتطوير المحلي بعد شيل البورت
+]);
+
+function getRequestHost(req: NextRequest): string {
+  // x-forwarded-host بيتفضّل لو موجود (وجود أي طبقة proxy تانية قدام Vercel)،
+  // وإلا نرجع لـ host العادي. في الحالتين بنشيل البورت (:3000 مثلاً) قبل المقارنة.
+  const raw = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  return raw.split(":")[0].toLowerCase();
+}
+
+function isDevHost(req: NextRequest): boolean {
+  return DEV_HOSTS.has(getRequestHost(req));
+}
+
 const ROUTE_PERMISSIONS: Record<string, Permission> = {
   __root__: "REPORTS_VIEW",
   chat: "CHAT_VIEW",
@@ -102,8 +119,30 @@ const ROUTE_PERMISSIONS: Record<string, Permission> = {
 };
 
 export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const rawPathname = req.nextUrl.pathname;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const onDevHost = isDevHost(req);
+
+  // ── 0. جسر التوافق: /developers/* على الدومين الرئيسي → 301 دائم للـ subdomain ──
+  // آمن على الـ APIs: كل APIs المطورين تحت /api/developers/... (مش /developers/...)،
+  // فالشرط ده رياضيًا مستحيل يلمس أي API route أو webhook.
+  if (!onDevHost && rawPathname.startsWith("/developers")) {
+    const logicalPath = rawPathname.slice("/developers".length) || "/";
+    return NextResponse.redirect(
+      new URL(`https://developers.aiwni.com${logicalPath}${req.nextUrl.search}`),
+      301
+    );
+  }
+
+  // ── الـ pathname "المنطقي" اللي كل الكود التحت (من غير أي تعديل) هيشتغل عليه ──
+  // على الـ subdomain: أي مسار غير /api يتحول لمساره الحقيقي تحت /developers.
+  // على الدومين الرئيسي: يفضل زي ما هو (rawPathname == pathname دايمًا).
+  // استثناء: ملفات الميتا الجذرية (robots.txt / sitemap.xml) بتتخدم من نفس
+  // الـ route على أي هوست — ومحتواها بقى dual-host أصلًا — فبتعدي من غير prefix.
+  const DEV_HOST_PASSTHROUGH = new Set(["/robots.txt", "/sitemap.xml"]);
+  const pathname = (onDevHost && !rawPathname.startsWith("/api") && !DEV_HOST_PASSTHROUGH.has(rawPathname))
+    ? `/developers${rawPathname === "/" ? "" : rawPathname}`
+    : rawPathname;
 
   // ── 1. Root Landing Page auto-redirection ──
   if (pathname === "/") {
@@ -130,25 +169,54 @@ export async function proxy(req: NextRequest) {
   });
 
   if (pathname.startsWith("/developers")) {
-    if (isPublicDevRoute(pathname)) return nextWithNonce(req, nonce, currentLocale);
+    // helper محلي: يبني redirect target صح حسب الهوست (subdomain-relative أو /developers/...)
+    const devRedirectTarget = (logicalPath: string) =>
+      new URL(onDevHost ? logicalPath : `/developers${logicalPath}`, req.url);
+
+    // helper محلي: الـ rewrite الفعلي للـ pathname المنطقي (بس لما الفحوصات تعدي).
+    // بينقل نفس request headers اللي nextWithNonce بيحطها (x-nonce/x-locale/x-dir/x-pathname)
+    // عشان الـ RootLayout و MetaPixel يشتغلوا identically على الـ subdomain.
+    const rewriteIfNeeded = () => {
+      if (!onDevHost || rawPathname === pathname) return null;
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set("x-nonce", nonce);
+      requestHeaders.set("x-locale", currentLocale);
+      requestHeaders.set("x-dir", currentLocale === "en" ? "ltr" : "rtl");
+      requestHeaders.set("x-pathname", pathname);
+      requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
+      return NextResponse.rewrite(new URL(`${pathname}${req.nextUrl.search}`, req.url), {
+        request: { headers: requestHeaders },
+      });
+    };
+
+    if (isPublicDevRoute(pathname)) {
+      const rewritten = rewriteIfNeeded();
+      return rewritten
+        ? applyHeaders(rewritten, nonce, req, currentLocale)
+        : nextWithNonce(req, nonce, currentLocale);
+    }
     const devSession = await getDevSessionFromRequest(req);
     if (!devSession) {
-      const url = new URL("/developers/signin", req.url);
-      url.searchParams.set("callbackUrl", pathname);
+      const url = devRedirectTarget("/signin");
+      url.searchParams.set("callbackUrl", onDevHost ? rawPathname : pathname);
       return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
     if (devSession.status === "SUSPENDED") {
-      const url = new URL("/developers/signin", req.url);
+      const url = devRedirectTarget("/signin");
       url.searchParams.set("error", "suspended");
       return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
     if (devSession.status === "PENDING_META" && !pathname.startsWith("/developers/connect-meta")) {
-      return applyHeaders(NextResponse.redirect(new URL("/developers/connect-meta", req.url)), nonce, req, currentLocale);
+      return applyHeaders(NextResponse.redirect(devRedirectTarget("/connect-meta")), nonce, req, currentLocale);
     }
     if (devSession.status === "ACTIVE" && pathname.startsWith("/developers/connect-meta")) {
-      return applyHeaders(NextResponse.redirect(new URL("/developers/portal", req.url)), nonce, req, currentLocale);
+      return applyHeaders(NextResponse.redirect(devRedirectTarget("/portal")), nonce, req, currentLocale);
     }
-    return nextWithNonce(req, nonce, currentLocale);
+    // كل الفحوصات عدّت بنجاح — دلوقتي بس نعمل الـ rewrite الفعلي لو محتاجينه
+    const rewritten = rewriteIfNeeded();
+    return rewritten
+      ? applyHeaders(rewritten, nonce, req, currentLocale)
+      : nextWithNonce(req, nonce, currentLocale);
   }
 
   const isDashboard = pathname.startsWith("/dashboard");

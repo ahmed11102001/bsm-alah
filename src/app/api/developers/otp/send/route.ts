@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { createHash, randomBytes } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { decryptToken } from "@/lib/crypto";
@@ -271,7 +272,7 @@ export async function POST(req: NextRequest) {
           ok: false,
           error: "انتهت فترة الـ Trial (أو وصلت للحد الأقصى) — اشترك في باقة الأونر للاستمرار",
           code: "TRIAL_EXPIRED",
-          upgradeUrl: `/developers/portal/projects/${auth.projectId}/billing`,
+          upgradeUrl: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
         },
         { status: 403 }
       );
@@ -284,7 +285,7 @@ export async function POST(req: NextRequest) {
           type: "TRIAL_WARNING",
           title: "تنبيه استهلاك الباقة المجانية",
           message: "وصلت لـ 80% من رصيد الرسائل المجانية (40 من 50) لمشروعك.",
-          link: `/developers/portal/projects/${auth.projectId}/billing`
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`
         }
       });
       await prisma.developerProject.update({

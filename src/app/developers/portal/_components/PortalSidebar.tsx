@@ -5,15 +5,17 @@ import { usePathname } from "next/navigation";
 import { FolderOpen, ChevronLeft, X, BarChart2 } from "lucide-react";
 import { useMobileNav } from "./MobileNavContext";
 import { useLanguage } from "../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function PortalSidebar({ developer }: { developer: any }) {
   const pathname = usePathname();
   const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
 
   const NAV_ITEMS = [
-    { label: t("Projects", "المشاريع"), href: "/developers/portal", icon: FolderOpen, exact: true },
-    { label: t("Developer Reports", "تقارير المطور"), href: "/developers/portal/reports", icon: BarChart2 },
+    { label: t("Projects", "المشاريع"), href: devPath("/portal"), icon: FolderOpen, exact: true },
+    { label: t("Developer Reports", "تقارير المطور"), href: devPath("/portal/reports"), icon: BarChart2 },
   ];
 
   const fullName =

@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 export const metadata: Metadata = {
   title: "توثيق API واتساب OTP — WhatsApp OTP API Documentation",
   description:
     "مرجع كامل لـ Wani WhatsApp OTP API: أمثلة طلبات، أكواد الاستجابة، وأفضل الممارسات لإرسال رسائل واتساب OTP برمجياً من تطبيقك.",
   alternates: {
-    canonical: "https://aiwni.com/developers/docs",
+    canonical: `${DEVELOPERS_BASE_URL}/docs`,
   },
   openGraph: {
     title: "Wani API Documentation — توثيق واتساب OTP API",
     description:
       "مرجع كامل لأرسال واتساب OTP برمجياً: endpoints، أكواد الخطأ، وأمثلة كود.",
-    url: "https://aiwni.com/developers/docs",
+    url: `${DEVELOPERS_BASE_URL}/docs`,
     locale: "ar_EG",
     type: "article",
   },
@@ -32,13 +33,13 @@ const breadcrumbLd = {
       "@type": "ListItem",
       position: 2,
       name: "المطورين",
-      item: "https://aiwni.com/developers",
+      item: DEVELOPERS_BASE_URL,
     },
     {
       "@type": "ListItem",
       position: 3,
       name: "توثيق API",
-      item: "https://aiwni.com/developers/docs",
+      item: `${DEVELOPERS_BASE_URL}/docs`,
     },
   ],
 };

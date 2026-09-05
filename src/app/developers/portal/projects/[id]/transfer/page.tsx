@@ -5,11 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Share2, AlertTriangle, Check, Mail, ArrowLeft, Copy, UserX } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function TransferProjectPage() {
   const params = useParams();
   const projectId = params.id as string;
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const router = useRouter();
 
   const [project, setProject] = useState<any>(null);
@@ -212,7 +214,7 @@ export default function TransferProjectPage() {
       `}</style>
 
       <div className="transfer-root" style={{ direction: dir }}>
-        <Link href={`/developers/portal/projects/${projectId}`} className="back-link">
+        <Link href={devPath(`/portal/projects/${projectId}`)} className="back-link">
           <ArrowLeft size={14} />
           {t("Back to project", "رجوع للمشروع")}
         </Link>

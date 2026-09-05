@@ -11,6 +11,7 @@ import {
 import { useMobileNav } from "../../../_components/MobileNavContext";
 
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 interface Project {
   id: string;
@@ -18,16 +19,16 @@ interface Project {
   status: string;
 }
 
-function getNavItems(projectId: string, t: (en: string, ar: string) => string) {
+function getNavItems(projectId: string, t: (en: string, ar: string) => string, devPath: (p: string) => string) {
   return [
-    { label: t("Overview", "نظرة عامة"),    href: `/developers/portal/projects/${projectId}`,               icon: LayoutDashboard, exact: true },
-    { label: "API Keys",     href: `/developers/portal/projects/${projectId}/api-keys`,      icon: Key },
-    { label: t("Templates", "القوالب"),      href: `/developers/portal/projects/${projectId}/otp-templates`, icon: FileText },
-    { label: t("Quick Start", "البدء السريع"), href: `/developers/portal/projects/${projectId}/quick-start`,   icon: Code },
-    { label: "Live Tester",  href: `/developers/portal/projects/${projectId}/live-tester`,   icon: Zap },
-    { label: t("Activity Logs", "السجلات"),      href: `/developers/portal/projects/${projectId}/activity-logs`, icon: Activity },
-    { label: t("Project Plan", "خطة المشروع"), href: `/developers/portal/projects/${projectId}/billing`, icon: CreditCard },
-    { label: t("Transfer Project", "تسليم المشروع"),href: `/developers/portal/projects/${projectId}/transfer`,      icon: Share2 },
+    { label: t("Overview", "نظرة عامة"),    href: devPath(`/portal/projects/${projectId}`),               icon: LayoutDashboard, exact: true },
+    { label: "API Keys",     href: devPath(`/portal/projects/${projectId}/api-keys`),      icon: Key },
+    { label: t("Templates", "القوالب"),      href: devPath(`/portal/projects/${projectId}/otp-templates`), icon: FileText },
+    { label: t("Quick Start", "البدء السريع"), href: devPath(`/portal/projects/${projectId}/quick-start`),   icon: Code },
+    { label: "Live Tester",  href: devPath(`/portal/projects/${projectId}/live-tester`),   icon: Zap },
+    { label: t("Activity Logs", "السجلات"),      href: devPath(`/portal/projects/${projectId}/activity-logs`), icon: Activity },
+    { label: t("Project Plan", "خطة المشروع"), href: devPath(`/portal/projects/${projectId}/billing`), icon: CreditCard },
+    { label: t("Transfer Project", "تسليم المشروع"),href: devPath(`/portal/projects/${projectId}/transfer`),      icon: Share2 },
   ];
 }
 
@@ -46,8 +47,9 @@ export default function ProjectSidebar({
   const [showSwitcher, setShowSwitcher] = useState(false);
   const { isMobileNavOpen, setMobileNavOpen } = useMobileNav();
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
 
-  const NAV_ITEMS = getNavItems(project.id, t);
+  const NAV_ITEMS = getNavItems(project.id, t, devPath);
   const metaConnected = !!project.metaConnection?.isVerified;
 
   const fullName =
@@ -245,7 +247,7 @@ export default function ProjectSidebar({
               {allProjects.map((p) => (
                 <Link
                   key={p.id}
-                  href={`/developers/portal/projects/${p.id}`}
+                  href={devPath(`/portal/projects/${p.id}`)}
                   className={`dropdown-item ${p.id === project.id ? "active" : ""}`}
                   onClick={() => setShowSwitcher(false)}
                 >
@@ -255,7 +257,7 @@ export default function ProjectSidebar({
               ))}
               {viewerRole === "developer" && (
                 <Link
-                  href="/developers/portal"
+                  href={devPath("/portal")}
                   className="dropdown-item dropdown-item-new"
                   onClick={() => setShowSwitcher(false)}
                 >
@@ -296,7 +298,7 @@ export default function ProjectSidebar({
 
           {/* Meta status */}
           <Link
-            href={`/developers/portal/projects/${project.id}`}
+            href={devPath(`/portal/projects/${project.id}`)}
             className={`meta-badge ${metaConnected ? "connected" : "disconnected"}`}
           >
             <div className="meta-dot" />

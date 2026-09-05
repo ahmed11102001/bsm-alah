@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TemplateStatus = "LOCAL_DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "DISABLED";
@@ -30,6 +31,7 @@ function WAPreview({ headerType, headerText, body, footer, category, addSecurity
   addSecurityRecommendation?: boolean; codeExpirationMinutes?: number; otpType?: string;
 }) {
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
 
   // Computed on the client after mount only — calling new Date() directly
   // during render made the server-rendered markup and the client's first
@@ -197,6 +199,7 @@ export default function ProjectTemplatesPage() {
   const projectId = params.id as string;
 
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "create">("list");
@@ -649,7 +652,7 @@ export default function ProjectTemplatesPage() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#f59e0b", marginBottom: 3 }}>{t("Meta is not connected to this project", "Meta مش مربوط بالمشروع ده")}</div>
                         <div style={{ fontSize: 12, color: "rgba(245,158,11,0.7)", lineHeight: 1.5 }}>
                           {t("The template will be saved as a draft only and will not be submitted to Meta. ", "القالب هيتحفظ كمسودة فقط ومش هيتبعت لـ Meta. ")}
-                          <a href={`/developers/portal/projects/${projectId}`} style={{ color: "#f59e0b", fontWeight: 600, textDecoration: "underline" }}>{t("Connect Meta from the Overview page ←", "اربط Meta من نظرة عامة ←")}</a>
+                          <a href={devPath(`/portal/projects/${projectId}`)} style={{ color: "#f59e0b", fontWeight: 600, textDecoration: "underline" }}>{t("Connect Meta from the Overview page ←", "اربط Meta من نظرة عامة ←")}</a>
                         </div>
                       </div>
                     </div>

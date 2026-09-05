@@ -8,6 +8,7 @@
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { decryptToken } from "@/lib/crypto";
 import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyWhatsAppTokenExpired, notifyWhatsAppTokenInvalid, notifyAiTokensLow } from "@/lib/notifications";
@@ -425,7 +426,7 @@ export const ownerPlanRenewalCheck = inngest.createFunction(
           type: "PLAN_EXPIRING_SOON",
           title: "تذكير بتجديد الباقة",
           message: `يتبقى 3 أيام على انتهاء باقة مشروع "${project.name}".`,
-          link: `/developers/portal/projects/${project.id}/billing`,
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
         },
       });
       await prisma.developerProject.update({
@@ -452,7 +453,7 @@ export const ownerPlanRenewalCheck = inngest.createFunction(
           type: "PLAN_EXPIRED",
           title: "انتهت باقة الأونر",
           message: `انتهت باقة مشروع "${project.name}" وتوقف إرسال رسائل OTP حتى التجديد.`,
-          link: `/developers/portal/projects/${project.id}/billing`,
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
         },
       });
       await prisma.developerProject.update({

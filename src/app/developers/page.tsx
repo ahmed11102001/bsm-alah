@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import HeroAnimation from "./_components/HeroAnimation";
 import HeroCinematic from "./_components/HeroCinematic";
 import { LanguageProvider, useLanguage } from "./_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DevelopersLandingPage() {
@@ -17,6 +18,7 @@ export default function DevelopersLandingPage() {
 
 function PageContent() {
   const { language, toggleLanguage, t } = useLanguage();
+  const devPath = useDevPath();
 
   return (
     <div
@@ -94,7 +96,7 @@ function PageContent() {
               {t("Marketers", "المسوقين")}
             </Link>
             <Link
-              href="/developers/docs"
+              href={devPath("/docs")}
               className="top-nav-link"
               style={{
                 fontSize: "13px",
@@ -106,7 +108,7 @@ function PageContent() {
               {t("Docs", "Docs")}
             </Link>
             <Link
-              href="/developers/privacy"
+              href={devPath("/privacy")}
               className="top-nav-link"
               style={{
                 fontSize: "13px",
@@ -118,7 +120,7 @@ function PageContent() {
               {t("Privacy", "الخصوصية")}
             </Link>
             <Link
-              href="/developers/terms"
+              href={devPath("/terms")}
               className="top-nav-link"
               style={{
                 fontSize: "13px",
@@ -135,7 +137,7 @@ function PageContent() {
         {/* Action Buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Link
-            href="/developers/signin"
+            href={devPath("/signin")}
             className="nav-link-secondary"
             style={{
               padding: "8px 16px",
@@ -149,7 +151,7 @@ function PageContent() {
             {t("Sign In", "تسجيل دخول")}
           </Link>
           <Link
-            href="/developers/signup"
+            href={devPath("/signup")}
             className="nav-link-primary"
             style={{
               padding: "8px 18px",

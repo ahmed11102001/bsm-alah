@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLanguage } from "../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 type Bi = { ar: string; en: string };
 
@@ -220,6 +221,7 @@ function renderBody(text: string) {
 
 export default function DeveloperTermsPage() {
   const { language, toggleLanguage, t } = useLanguage();
+  const devPath = useDevPath();
   const locale: "ar" | "en" = language === "ar" ? "ar" : "en";
   const dir = locale === "ar" ? "rtl" : "ltr";
   const isAr = locale === "ar";
@@ -249,7 +251,7 @@ export default function DeveloperTermsPage() {
           }}
         >
           <Link
-            href="/developers"
+            href={devPath("/")}
             style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.6)", fontSize: 13, textDecoration: "none" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ transform: isAr ? "none" : "rotate(180deg)" }}>
@@ -475,11 +477,11 @@ export default function DeveloperTermsPage() {
               color: "rgba(255,255,255,0.4)",
             }}
           >
-            <Link href="/developers/privacy" style={{ color: "inherit", textDecoration: "none" }}>
+            <Link href={devPath("/privacy")} style={{ color: "inherit", textDecoration: "none" }}>
               {t("Privacy Policy", "سياسة الخصوصية")}
             </Link>
             <span>•</span>
-            <Link href="/developers" style={{ color: "inherit", textDecoration: "none" }}>
+            <Link href={devPath("/")} style={{ color: "inherit", textDecoration: "none" }}>
               {t("Developer Portal Home", "الرئيسية")}
             </Link>
           </div>

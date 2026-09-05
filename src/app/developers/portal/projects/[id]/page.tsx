@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useLanguage } from "../../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 declare global {
@@ -67,6 +68,7 @@ export default function ProjectOverviewPage() {
   const projectId = params.id as string;
 
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [keys, setKeys] = useState<ApiKeyPreview[]>([]);
   const [templates, setTemplates] = useState<TemplatePreview[]>([]);
@@ -1121,7 +1123,7 @@ export default function ProjectOverviewPage() {
               </span>
 
               <Link
-                href={`/developers/portal/projects/${projectId}/api-keys`}
+                href={devPath(`/portal/projects/${projectId}/api-keys`)}
                 className="pov-section-link"
               >
                 {t("View All ←", "عرض الكل ←")}
@@ -1194,7 +1196,7 @@ export default function ProjectOverviewPage() {
               </span>
 
               <Link
-                href={`/developers/portal/projects/${projectId}/otp-templates`}
+                href={devPath(`/portal/projects/${projectId}/otp-templates`)}
                 className="pov-section-link"
               >
                 {t("View All ←", "عرض الكل ←")}
@@ -1714,7 +1716,7 @@ export default function ProjectOverviewPage() {
             </div>
 
             <Link
-              href={`/developers/portal/projects/${projectId}/transfer`}
+              href={devPath(`/portal/projects/${projectId}/transfer`)}
               className="btn-transfer"
             >
               <Share2 size={14} />

@@ -20,6 +20,15 @@ export default function robots(): MetadataRoute.Robots {
         "/developers/signup",
         "/developers/forgot-password",
         "/developers/reset-password",
+        // ── نفس قواعد قسم المطورين بالمسارات الفعلية على الـ subdomain ──
+        // (developers.aiwni.com بيخدم نفس الملف ده، والقواعد أعلاه ببادئة
+        // /developers لا تنطبق على مساراته، فالنسخة دي بتغطيها)
+        "/portal/",
+        "/welcome/",
+        "/signin",
+        "/signup",
+        "/forgot-password",
+        "/reset-password",
         "/onboarding/",
         "/payment/",
         "/reset-password/",

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { CreditCard, Check, AlertTriangle, ShieldCheck, X, Activity } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 function getRenewalCTA(plan: string, planRenewsAt: string | null, language: "ar" | "en") {
   if (plan !== "OWNER_PLAN") {
@@ -43,6 +44,7 @@ export default function BillingPage() {
   const projectId = params.id as string;
   const statusParam = searchParams.get("status");
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const dir = language === "ar" ? "rtl" : "ltr";
   const align = language === "ar" ? "right" : "left";
 
@@ -67,7 +69,7 @@ export default function BillingPage() {
 
   async function handleCheckout() {
     setCheckoutLoading(true);
-    router.push(`/developers/portal/projects/${projectId}/checkout`);
+    router.push(devPath(`/portal/projects/${projectId}/checkout`));
   }
 
   if (loading) {

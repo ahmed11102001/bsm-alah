@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/dev-auth";
+import { devRedirect } from "@/lib/dev-server";
 import prisma from "@/lib/prisma";
 import { isOwnerOnlyAccount } from "@/lib/dev-role";
 import PortalTopBar from "./_components/PortalTopBar";
@@ -14,7 +14,7 @@ import { LanguageProvider } from "../_components/LanguageProvider";
 // ────────────────────────────────────────────────────────────────────────────
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const session = await getDevSession();
-  if (!session) redirect("/developers/signin");
+  if (!session) return devRedirect("/developers/signin");
 
   const developer = await prisma.developerUser.findUnique({
     where: { id: session.id },
@@ -27,8 +27,8 @@ export default async function PortalLayout({ children }: { children: ReactNode }
     },
   });
 
-  if (!developer) redirect("/developers/signin");
-  if (developer.status === "SUSPENDED") redirect("/developers/signin?error=suspended");
+  if (!developer) return devRedirect("/developers/signin");
+  if (developer.status === "SUSPENDED") return devRedirect("/developers/signin?error=suspended");
 
   const ownerOnly = await isOwnerOnlyAccount(developer.id);
 

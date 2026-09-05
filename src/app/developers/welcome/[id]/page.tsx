@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLanguage } from "../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 import { Check, Rocket } from "lucide-react";
 
 // ── Particle burst animation (premium, one-shot) ──────────────────────────────
@@ -119,6 +120,7 @@ export default function WelcomePage() {
   const router = useRouter();
   const projectId = params.id as string;
   const { language, t } = useLanguage();
+  const devPath = useDevPath();
   const dir = language === "ar" ? "rtl" : "ltr";
 
   const [loading, setLoading] = useState(true);
@@ -136,7 +138,7 @@ export default function WelcomePage() {
       .then((data) => {
         if (!active) return;
         if (data.alreadySeen || data.error) {
-          router.replace(`/developers/portal/projects/${projectId}`);
+          router.replace(devPath(`/portal/projects/${projectId}`));
           return;
         }
 
@@ -147,7 +149,7 @@ export default function WelcomePage() {
       })
       .catch(() => {
         if (active) {
-          router.replace(`/developers/portal/projects/${projectId}`);
+          router.replace(devPath(`/portal/projects/${projectId}`));
         }
       });
 
@@ -230,7 +232,7 @@ export default function WelcomePage() {
           {/* CTA Button */}
           <button
             className={`btn-enter-portal ${showContent ? "fade-in delay-3" : ""}`}
-            onClick={() => router.push(`/developers/portal/projects/${projectId}`)}
+            onClick={() => router.push(devPath(`/portal/projects/${projectId}`))}
           >
             <Rocket size={18} />
             {t("Enter Project Dashboard", "دخول لوحة المشروع")}

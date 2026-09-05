@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function DevSignUpPage() {
   return (
@@ -17,6 +18,7 @@ export default function DevSignUpPage() {
 function SignUpContent() {
   const router = useRouter();
   const { language, toggleLanguage, t } = useLanguage();
+  const devPath = useDevPath();
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -58,7 +60,7 @@ function SignUpContent() {
       const data = await res.json();
       setLoading(false);
       if (!res.ok) { setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني")); return; }
-      router.push(data.redirect || "/developers/portal");
+      router.push(devPath(data.redirect || "/portal"));
       router.refresh();
     } catch {
       setLoading(false);
@@ -459,7 +461,7 @@ function SignUpContent() {
             </form>
 
             <div className="auth-footer">
-              {t("Already have an account? ", "عندك حساب بالفعل؟ ")}<Link href="/developers/signin">{t("Sign In", "تسجيل الدخول")}</Link>
+              {t("Already have an account? ", "عندك حساب بالفعل؟ ")}<Link href={devPath("/signin")}>{t("Sign In", "تسجيل الدخول")}</Link>
             </div>
           </div>
         </div>

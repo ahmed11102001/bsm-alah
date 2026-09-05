@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
 
 export default function DevSignInPage() {
   return (
@@ -16,7 +17,10 @@ export default function DevSignInPage() {
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/developers/portal";
+  const devPath = useDevPath();
+  // الـ fallback والـ redirect من الـ API ممكن ييجوا بالبادئة الكاملة —
+  // devPath() بتوحّدهم على الهوست الحالي (بتشيل /developers على الـ subdomain)
+  const callbackUrl = searchParams.get("callbackUrl") || devPath("/portal");
   const errorParam = searchParams.get("error");
   const { language, toggleLanguage, t } = useLanguage();
 
@@ -56,7 +60,7 @@ function SignInContent() {
       const data = await res.json();
       setLoading(false);
       if (!res.ok) { setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني")); return; }
-      router.push(data.redirect || callbackUrl);
+      router.push(devPath(data.redirect || callbackUrl));
       router.refresh();
     } catch {
       setLoading(false);
@@ -114,8 +118,8 @@ function SignInContent() {
       const data = await res.json();
       setLoading(false);
       if (!res.ok) { setError(data.error || t("Something went wrong", "حصل خطأ")); return; }
-      
-      router.push(data.redirect || callbackUrl);
+
+      router.push(devPath(data.redirect || callbackUrl));
       router.refresh();
     } catch {
       setLoading(false);
@@ -417,7 +421,7 @@ function SignInContent() {
                       </button>
                     </div>
                   </div>
-                  <Link href="/developers/forgot-password" className="forgot-link">{t("Forgot password?", "نسيت كلمة المرور؟")}</Link>
+                  <Link href={devPath("/forgot-password")} className="forgot-link">{t("Forgot password?", "نسيت كلمة المرور؟")}</Link>
                   {error && <div className="error-box">{error}</div>}
                   <button type="submit" className="submit-btn" disabled={loading}>
                     {loading ? <><div className="spinner" />{t("Signing in...", "جاري الدخول...")}</> : t("Sign In", "دخول")}
@@ -425,7 +429,7 @@ function SignInContent() {
                 </form>
 
                 <div className="auth-footer">
-                  {t("Don't have an account? ", "ماعندكش حساب؟ ")}<Link href="/developers/signup">{t("Sign Up", "سجّل جديد")}</Link>
+                  {t("Don't have an account? ", "ماعندكش حساب؟ ")}<Link href={devPath("/signup")}>{t("Sign Up", "سجّل جديد")}</Link>
                 </div>
               </>
             ) : (
@@ -498,7 +502,7 @@ function SignInContent() {
               </>
             )}
 
-            <Link href="/developers" className="back-link">
+            <Link href={devPath("/")} className="back-link">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={language === 'ar' ? "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" : "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"} />
               </svg>
