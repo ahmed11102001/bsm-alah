@@ -1,5 +1,6 @@
 // src/app/dashboard/admin/_components/ProtectionClaimsTab.tsx
 "use client";
+import { DetailPanelSkeleton, TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -641,12 +642,7 @@ export default function ProtectionClaimsTab({
   // ═══════════════════════════════════════════════════════════════════════════════
   if (selectedClaimId) {
     if (loadingDetail) {
-      return (
-        <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <Loader2 className="w-8 h-8 text-[#25D366] animate-spin" />
-          <p className="text-sm text-gray-500">{isAr ? "جاري تحميل بيانات الفحص الشامل..." : "Loading Protection Audit details..."}</p>
-        </div>
-      );
+      return <DetailPanelSkeleton />;
     }
 
     if (!selectedClaim) {
@@ -1912,9 +1908,7 @@ export default function ProtectionClaimsTab({
       {/* Claims Table */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-[#25D366]" />
-          </div>
+          <div className="p-3"><TableRowsSkeleton rows={6} bare cols={3} /></div>
         ) : claims.length === 0 ? (
           <div className="text-center py-16 px-4">
             <Shield className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />

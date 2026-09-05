@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // ─── SmartFollowUpTab.tsx ──────────────────────────────────────────────────────
 // Replaces the old "noreply" (المتابعة) + "advanced_followup" (المتابعة المتقدمة) tabs.
@@ -220,7 +221,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
     }
   };
 
-  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+  if (loading) return <div className="p-2"><ListRowsSkeleton rows={3} /></div>;
 
 
 
@@ -397,7 +398,7 @@ function CartFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => void }
     }
   };
 
-  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+  if (loading) return <div className="p-2"><ListRowsSkeleton rows={3} /></div>;
 
   return (
     <div className="space-y-4">
@@ -560,7 +561,7 @@ function OrderConfirmFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () =
     }
   };
 
-  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+  if (loading) return <div className="p-2"><ListRowsSkeleton rows={3} /></div>;
 
   return (
     <div className="space-y-4">
@@ -752,7 +753,7 @@ function CampaignFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
     }
   };
 
-  if (loading) return <div className="p-8 text-center">{tx(lang, "جاري التحميل...", "Loading...")}</div>;
+  if (loading) return <div className="p-2"><ListRowsSkeleton rows={3} /></div>;
 
   return (
     <div className="space-y-4">

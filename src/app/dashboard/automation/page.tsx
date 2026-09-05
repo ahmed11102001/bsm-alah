@@ -1,4 +1,5 @@
 "use client";
+import { AutomationPageSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // ─── Automation.tsx ───────────────────────────────────────────────────────────
 // Tabs:
@@ -697,9 +698,7 @@ export default function Automation() {
   }, [lang]);
 
   if (loading) return (
-    <div className="flex justify-center items-center py-32">
-      <Loader2 className="w-10 h-10 animate-spin text-gray-300" />
-    </div>
+    <AutomationPageSkeleton />
   );
 
   // ─── Sub-tab content ──────────────────────────────────────────────────────

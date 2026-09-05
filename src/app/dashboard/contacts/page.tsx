@@ -1,4 +1,5 @@
 "use client";
+import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import ExcelJS from "exceljs";
@@ -356,9 +357,7 @@ export default function Contacts() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-gray-300 dark:text-gray-600" />
-        </div>
+        <CardsGridSkeleton count={6} />
       ) : (
         <div className="space-y-8">
 

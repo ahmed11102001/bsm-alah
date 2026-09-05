@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -536,7 +537,7 @@ export default function Campaigns() {
 
       {/* List */}
       {loadingList ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 text-green-400 animate-spin" /></div>
+        <ListRowsSkeleton rows={4} />
       ) : campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">

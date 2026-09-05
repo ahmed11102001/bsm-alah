@@ -1,5 +1,6 @@
 // src/app/dashboard/admin/_components/PaymentsTab.tsx
 "use client";
+import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -209,9 +210,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-gray-400">
-          <Loader2 className="w-6 h-6 animate-spin" />
-        </div>
+        <ListRowsSkeleton rows={4} />
       ) : requests.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
           <Wallet className="w-10 h-10 mb-2 opacity-40" />

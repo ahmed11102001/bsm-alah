@@ -1,4 +1,5 @@
 "use client";
+import { AiAgentPageSkeleton, TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -744,12 +745,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">{isAr ? "جاري تحميل وني..." : "Loading Wani..."}</p>
-      </div>
-    );
+    return <AiAgentPageSkeleton />;
   }
 
   const MAIN_TABS: Array<{ id: MainTab; label: string; icon: any }> = [
@@ -1083,7 +1079,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         {/* الجدول الموحّد */}
                         <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
                           {productsLoading ? (
-                            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 text-emerald-500 animate-spin" /></div>
+                            <div className="p-3"><TableRowsSkeleton rows={4} bare cols={2} /></div>
                           ) : products.length === 0 ? (
                             <p className="text-xs text-gray-400 text-center py-8">{isAr ? "مفيش نتائج مطابقة" : "No matching products"}</p>
                           ) : (

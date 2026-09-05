@@ -1,4 +1,5 @@
 "use client";
+import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -200,7 +201,7 @@ export default function WaniPartnerPage() {
           </Link>
         </div>
       ) : cards === undefined ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+        <CardsGridSkeleton count={3} />
       ) : !editing ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">

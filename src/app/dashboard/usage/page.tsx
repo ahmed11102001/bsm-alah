@@ -1,4 +1,5 @@
 "use client";
+import { PageHeaderSkeleton, StatCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -382,7 +383,7 @@ export default function UsagePage() {
 
   if (!dashData) {
     return loadingDash
-      ? <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>
+      ? <div className="space-y-6"><PageHeaderSkeleton /><StatCardsSkeleton count={4} /></div>
       : null;
   }
 

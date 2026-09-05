@@ -1,4 +1,5 @@
 "use client";
+import { TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -717,7 +718,7 @@ export default function AdminPage() {
               />
             </div>
             {loading ? (
-              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              <TableRowsSkeleton rows={5} />
             ) : (
               <div className="admin-table-scroll">
               <table className="w-full min-w-[680px]">
@@ -906,7 +907,7 @@ export default function AdminPage() {
               ))}
             </div>
             {loadingT ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              <TableRowsSkeleton rows={5} />
             ) : testimonials.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500 text-sm">
                 {testimonialsTab === "pending" ? adm.testimonials.emptyPending : adm.testimonials.emptyApproved}
@@ -1017,7 +1018,7 @@ export default function AdminPage() {
             )}
 
             {loadingC ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              <TableRowsSkeleton rows={5} />
             ) : coupons.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500 text-sm">{adm.coupons.empty}</div>
             ) : (
@@ -1207,7 +1208,7 @@ export default function AdminPage() {
             {!showArticleF && (
               <>
                 {loadingA ? (
-                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+                  <TableRowsSkeleton rows={5} />
                 ) : articles.length === 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
                     <FileText className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />
@@ -1415,7 +1416,7 @@ export default function AdminPage() {
 
             {/* Table */}
             {loadingL ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              <TableRowsSkeleton rows={5} />
             ) : leads.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
                 <Target className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />
@@ -1532,7 +1533,7 @@ export default function AdminPage() {
         {activeTab === "wani-partner" && (
           <div>
             {loadingWani ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+              <TableRowsSkeleton rows={5} />
             ) : waniCards.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
                 <Handshake className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />

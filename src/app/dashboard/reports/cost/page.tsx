@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton, StatCardsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -127,8 +128,9 @@ export default function CostReportTab() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+      <div className="space-y-6">
+        <StatCardsSkeleton count={3} />
+        <ListRowsSkeleton rows={4} />
       </div>
     );
   }

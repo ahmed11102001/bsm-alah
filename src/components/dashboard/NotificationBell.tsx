@@ -1,5 +1,6 @@
 // src/components/dashboard/NotificationBell.tsx
 "use client";
+import { ChatListSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -396,9 +397,7 @@ export default function NotificationBell({
           {/* List Container */}
           <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/40">
             {loading && notifs.length === 0 ? (
-              <div className="flex justify-center py-12">
-                <div className="w-6 h-6 border-2 border-gray-200 dark:border-gray-700 border-t-[#25D366] rounded-full animate-spin" />
-              </div>
+              <ChatListSkeleton rows={3} />
             ) : notifs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 text-gray-400 dark:text-gray-500">
                 <Bell className="w-9 h-9 mb-2 opacity-25" />

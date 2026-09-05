@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -168,7 +169,7 @@ export function GoogleSheetsImportDialog({
             </Button>
           </div>
         ) : loading && !spreadsheets.length ? (
-          <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-green-500" /></div>
+          <ListRowsSkeleton rows={3} />
         ) : (
           <div className="space-y-4">
             <label className="block text-sm dark:text-gray-200">{text("Spreadsheet", "Spreadsheet", locale)}

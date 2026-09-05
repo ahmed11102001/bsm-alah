@@ -1,4 +1,5 @@
 "use client";
+import { ChatListSkeleton, ChatMessagesSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import {
   useState, useEffect, useRef, useCallback, useMemo,
@@ -650,9 +651,7 @@ export default function ChatPage() {
         {/* List */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {loadingConvs ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="w-7 h-7 animate-spin text-gray-300" />
-            </div>
+            <ChatListSkeleton rows={7} />
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <MessageSquare className={`w-12 h-12 mb-3 ${dark ? "text-[#2a3942]" : "text-gray-200"}`} />
@@ -899,9 +898,7 @@ export default function ChatPage() {
               }}
             >
               {loadingMsgs && messages.length === 0 ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-7 h-7 animate-spin text-gray-300" />
-                </div>
+                <ChatMessagesSkeleton />
               ) : messages.length === 0 ? (
                 <div className="flex justify-center">
                   <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>

@@ -1,4 +1,5 @@
 "use client";
+import { TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -708,10 +709,7 @@ export default function TeamPage() {
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
-          <p className="text-sm text-gray-400">{tm.loading}</p>
-        </div>
+        <TableRowsSkeleton rows={4} cols={2} />
       ) : (
         <div className="space-y-8">
           <div>

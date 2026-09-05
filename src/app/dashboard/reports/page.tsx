@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton, ReportsOverviewSkeleton, TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -209,7 +210,7 @@ export default function ReportsOverviewPage() {
       <Tabs value={tab}>
         <TabsContent value="overview">
           {loadingOverview ? (
-            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-green-400" /></div>
+            <ReportsOverviewSkeleton />
           ) : !overview ? null : (
             <div className="space-y-6">
               {/* KPI cards */}
@@ -363,7 +364,7 @@ export default function ReportsOverviewPage() {
             <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-0">
                 {loadingCust ? (
-                  <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
+                  <div className="p-3"><TableRowsSkeleton rows={5} bare cols={2} /></div>
                 ) : customers.length === 0 ? (
                   <div className="text-center py-16 text-gray-400 text-sm">{pageText[locale].customers.noResults}</div>
                 ) : (
@@ -414,7 +415,7 @@ export default function ReportsOverviewPage() {
         {/* ══════════════ TEAM ══════════════ */}
         <TabsContent value="team">
           {loadingTeam ? (
-            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-green-400" /></div>
+            <ListRowsSkeleton rows={4} />
           ) : team.length === 0 ? (
             <div className="text-center py-20">
               <Shield className="w-12 h-12 text-gray-200 mx-auto mb-3" />

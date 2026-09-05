@@ -1,4 +1,5 @@
 "use client";
+import { TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/lib/language-context";
@@ -269,12 +270,7 @@ export default function TemplatesPage() {
         <p className="text-sm font-bold text-gray-800 dark:text-white mb-3">{t.myTemplates}</p>
         <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Loader2 className="w-8 h-8 text-[#25D366] animate-spin mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {lang === "ar" ? "جاري تحميل القوالب..." : "Loading templates..."}
-              </p>
-            </div>
+            <div className="p-3"><TableRowsSkeleton rows={5} bare cols={2} /></div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center mb-4">

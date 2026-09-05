@@ -1,4 +1,5 @@
 "use client";
+import { ReportsOverviewSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -270,12 +271,7 @@ export default function AutomationReportTab() {
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        <p className="text-sm text-gray-500">{t.loading}</p>
-      </div>
-    );
+    return <ReportsOverviewSkeleton />;
   }
 
   // ── Error state ────────────────────────────────────────────────────────────

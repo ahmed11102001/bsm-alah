@@ -1,4 +1,5 @@
 "use client";
+import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // src/app/dashboard/store/page.tsx
 // ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
@@ -91,11 +92,7 @@ export default function Store({ onOpenChat }: StoreProps) {
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
-      </div>
-    );
+    return <CardsGridSkeleton count={3} />;
   }
 
   // ── No Store ─────────────────────────────────────────────────────────────

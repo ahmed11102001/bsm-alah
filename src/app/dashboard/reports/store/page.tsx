@@ -1,4 +1,5 @@
 "use client";
+import { ReportsOverviewSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -77,9 +78,7 @@ export default function ReportsStorePage() {
       </Card>
 
           {loadingStore ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-green-400" />
-            </div>
+            <ReportsOverviewSkeleton />
           ) : !storeReport ? (
             <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
               <CardContent className="p-12 text-center text-gray-400">

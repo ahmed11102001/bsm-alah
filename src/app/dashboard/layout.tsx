@@ -1,4 +1,5 @@
 "use client";
+import { DashboardHomeSkeleton, FormSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import "@/app/globals.css";
 import { useState, useEffect, useRef } from "react";
@@ -212,11 +213,7 @@ function WhatsAppProfileView({ onBack, locale, dir }: {
   const BackArrow = dir === "rtl" ? ArrowRight : ArrowLeft;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-[#25D366]" />
-      </div>
-    );
+    return <FormSkeleton rows={5} />;
   }
 
   return (
@@ -1548,7 +1545,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           />
           <PushNotificationPrompt />
           {loadingDash && !dashData ? (
-            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>
+            <DashboardHomeSkeleton />
           ) : children}
         </div>
       </main>

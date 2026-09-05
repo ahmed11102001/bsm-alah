@@ -1,4 +1,5 @@
 "use client";
+import { ChatListSkeleton, DashboardHomeSkeleton, ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -391,7 +392,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             </CardHeader>
             <CardContent className="px-4 sm:px-5 pb-5 flex flex-col items-center justify-center h-[240px] text-center">
               {loadingOverview ? (
-                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+                <div className="animate-pulse flex flex-col items-center gap-2 py-4">
+                  <div className="h-10 w-24 rounded-xl bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-3 w-40 max-w-full rounded-full bg-gray-100 dark:bg-gray-700/60" />
+                </div>
               ) : (
                 <>
                   <p className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{numFmt(overview?.aiAgentReplies ?? 0)}</p>
@@ -462,7 +466,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </CardHeader>
           <CardContent className="px-4 sm:px-5 pb-4">
             {loadingOverview ? (
-              <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+              <div className="py-4"><ListRowsSkeleton rows={3} /></div>
             ) : !overview || overview.automationPerformance.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Zap className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -511,7 +515,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </CardHeader>
           <CardContent className="px-0 pb-2">
             {loadingOverview ? (
-              <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+              <div className="py-2"><ChatListSkeleton rows={3} /></div>
             ) : !overview || overview.recentConversations.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -563,7 +567,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </CardHeader>
           <CardContent className="px-4 sm:px-5 pb-4">
             {loadingCost ? (
-              <div className="h-[200px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+              <div className="h-[200px] flex items-end justify-center gap-2 animate-pulse">
+                {[35, 60, 45, 80, 55, 70, 50].map((h, i) => (
+                  <div key={i} className="w-8 rounded-t-lg bg-gray-200 dark:bg-gray-700" style={{ height: `${h}%` }} />
+                ))}
+              </div>
             ) : !templateCost || templateCostTotal === 0 ? (
               <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
                 <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
@@ -720,7 +728,7 @@ export default function DashboardHomePage() {
 
   if (!dashData) {
     return loadingDash
-      ? <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-gray-300" /></div>
+      ? <DashboardHomeSkeleton />
       : null;
   }
 

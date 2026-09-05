@@ -1,4 +1,5 @@
 "use client";
+import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -518,10 +519,7 @@ export default function AgentTrainingTab({ lang }: { lang: "ar" | "en" }) {
 
       {/* ── Training Rules List ── */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700">
-          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
-          <p className="text-sm text-gray-500">{isAr ? "جاري تحميل سجل التدريب..." : "Loading training rules..."}</p>
-        </div>
+        <ListRowsSkeleton rows={4} />
       ) : filteredRules.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 text-center px-4">
           <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center text-gray-400 mb-3">

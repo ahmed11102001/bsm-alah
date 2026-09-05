@@ -1,4 +1,5 @@
 "use client";
+import { TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -174,9 +175,7 @@ export default function ReportsLogsPage() {
           </div>
 
           {loadingLogs ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-[#25D366]" />
-            </div>
+            <div className="p-3"><TableRowsSkeleton rows={6} bare cols={3} /></div>
           ) : !logs?.messages?.length ? (
             <p className="text-center py-12 text-gray-400 text-sm">{pageText[locale].logs.noRecords}</p>
           ) : (
