@@ -17,7 +17,8 @@ function buildCsp(nonce: string): string {
     "'self'", "https://graph.facebook.com", "https://graph.instagram.com",
     "https://www.facebook.com", "https://web.facebook.com", "https://connect.facebook.net", "https://*.cloudinary.com",
     "https://api.inngest.com", "https://api.elevenlabs.io", "https://*.upstash.io",
-    "https://api.anthropic.com", "https://o4511405530284032.ingest.us.sentry.io", "wss:",
+    "https://api.anthropic.com", "https://o4511405530284032.ingest.us.sentry.io",
+    "https://bzr.openai.com", "https://bzrcdn.openai.com", "wss:",
     isDev ? "http://localhost:*" : "",
   ].filter(Boolean).join(" ");
   return [
