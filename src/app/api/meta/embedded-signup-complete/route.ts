@@ -12,8 +12,10 @@
 // Meta token-exchange endpoint — Meta requires it to match what was sent in
 // FB.login extras.  Without it the exchange silently fails and returns no token.
 //
-// FIX: WABA discovery now also tries /me/businesses?fields=whatsapp_business_accounts
-// as a fallback, which works for System Users and Business token flows.
+// NOTE: WABA discovery uses Strategy A only (/me/whatsapp_business_accounts).
+// The old /me/businesses fallback (Strategy B) was removed because it depends on
+// the `business_management` permission — if auto-discovery fails, the user is
+// directed to the manual connect form (Access Token + Phone Number ID + WABA ID).
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -177,7 +179,7 @@ export async function POST(req: NextRequest) {
   let phone_number_id = rawPhoneId as string | undefined;
   let waba_id = rawWabaId as string | undefined;
 
-  let discoveryDebug: { strategyA?: any; strategyB?: any } = {};
+  let discoveryDebug: { strategyA?: any } = {};
 
   if (!phone_number_id || !waba_id) {
     console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] WABA/Phone not fully provided in payload, running discovery...");
@@ -210,38 +212,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Strategy B: /me/businesses fallback ──
-  if (!phone_number_id || !waba_id) {
-    try {
-      const bizRes = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/me/businesses` +
-        `?fields=whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number}}`,
-        { headers: { Authorization: `Bearer ${businessToken}` } },
-      );
-      const bizData = await bizRes.json();
-
-      const firstBiz = bizData.data?.[0];
-      const firstWaba = firstBiz?.whatsapp_business_accounts?.data?.[0];
-
-      console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy B discovery response:", {
-        status: bizRes.status,
-        ok: bizRes.ok,
-        bizCount: bizData?.data?.length ?? 0,
-        foundWabaId: firstWaba?.id,
-        foundPhoneId: firstWaba?.phone_numbers?.data?.[0]?.id,
-        error: bizData?.error,
-      });
-
-      if (firstWaba) {
-        waba_id = waba_id ?? firstWaba.id;
-        phone_number_id = phone_number_id ?? firstWaba.phone_numbers?.data?.[0]?.id;
-      } else if (!bizRes.ok) {
-        discoveryDebug.strategyB = bizData?.error ?? bizData;
-      }
-    } catch (err: any) {
-      console.warn("[EmbeddedSignup][BACKEND DIAGNOSTIC] Strategy B failed:", err?.message || err);
-    }
-  }
+  // ── Strategy B (/me/businesses fallback) removed ──
+  // كانت معتمدة على صلاحية business_management اللي اتشالت. لو الاكتشاف
+  // التلقائي فشل، اليوزر بيستخدم فورم الربط اليدوي الموجود في WhatsAppContent.
 
   console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Discovery resolution result:", {
     resolvedPhoneId: phone_number_id,
@@ -256,14 +229,15 @@ export async function POST(req: NextRequest) {
     );
 
     const permissionIssue =
-      discoveryDebug.strategyA?.code === 10 || discoveryDebug.strategyB?.code === 10 ||
-      discoveryDebug.strategyA?.type === "OAuthException" || discoveryDebug.strategyB?.type === "OAuthException";
+      discoveryDebug.strategyA?.code === 10 ||
+      discoveryDebug.strategyA?.type === "OAuthException";
 
     return NextResponse.json(
       {
+        code: "WABA_DISCOVERY_FAILED",
         error: permissionIssue
-          ? "الفلو نجح عند فيسبوك بس التوكن معندوش صلاحية الوصول لبيانات الـ WhatsApp Business Account — راجع صلاحيات whatsapp_business_management و business_management في Facebook Login Configuration (config_id) في Meta Developer Console."
-          : "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى",
+          ? "الاكتشاف التلقائي لرقمك ماقدرش يحصل على WABA ID أو Phone Number ID — ده بيحصل أحيانًا لو حساب الواتساب بتاعك تابع لـ Business Manager مختلف. انزل تحت واستخدم خيار 'أدخل البيانات يدوياً' — تقدر تلاقي الـ Phone Number ID والـ WABA ID من Meta Business Suite ← WhatsApp Accounts."
+          : "لم نتمكن من الحصول على WABA ID أو Phone Number ID — انزل تحت واستخدم خيار 'أدخل البيانات يدوياً' بإدخال الـ Phone Number ID والـ WABA ID من Meta Business Suite ← WhatsApp Accounts.",
       },
       { status: 502 },
     );

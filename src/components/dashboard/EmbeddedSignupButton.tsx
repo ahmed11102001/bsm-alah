@@ -180,6 +180,12 @@ export default function EmbeddedSignupButton({
         const errMsg = data.error ?? (locale === "ar" ? "فشل الربط" : "Connection failed");
         setError(errMsg);
         toast.error(errMsg);
+        // فشل الاكتشاف التلقائي → وصّل نظر اليوزر للفورم اليدوي الموجود تحت مباشرة
+        if (data.code === "WABA_DISCOVERY_FAILED") {
+          setTimeout(() => {
+            document.getElementById("manual-connect-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 300);
+        }
         return;
       }
 

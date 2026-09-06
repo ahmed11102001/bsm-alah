@@ -250,7 +250,7 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form id="manual-connect-form" onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label className="text-xs dark:text-gray-400">Access Token</Label>
           <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..." required

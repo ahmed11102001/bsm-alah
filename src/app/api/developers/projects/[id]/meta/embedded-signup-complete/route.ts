@@ -150,33 +150,17 @@ export async function POST(
     }
   }
 
-  if (!phone_number_id || !waba_id) {
-    try {
-      const bizRes = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/me/businesses` +
-          `?fields=whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number}}`,
-        { headers: { Authorization: `Bearer ${businessToken}` } },
-      );
-      const bizData = await bizRes.json();
-
-      const firstBiz  = bizData.data?.[0];
-      const firstWaba = firstBiz?.whatsapp_business_accounts?.data?.[0];
-
-      if (firstWaba) {
-        waba_id          = waba_id ?? firstWaba.id;
-        const firstPhone = firstWaba.phone_numbers?.data?.[0];
-        phone_number_id      = phone_number_id      ?? firstPhone?.id;
-        display_phone_number = display_phone_number ?? firstPhone?.display_phone_number;
-      }
-    } catch (err) {
-      console.warn("[DEV-EmbeddedSignup] Strategy B (businesses fallback) failed:", err);
-    }
-  }
+  // Strategy B (/me/businesses fallback) removed — كانت معتمدة على صلاحية
+  // business_management اللي اتشالت. الفشل هنا بيرجع code عشان الواجهة
+  // توجّه اليوزر للربط اليدوي.
 
   if (!phone_number_id || !waba_id) {
     console.error("[DEV-EmbeddedSignup] Could not resolve WABA/Phone — rawPhoneId:", rawPhoneId, "rawWabaId:", rawWabaId);
     return NextResponse.json(
-      { error: "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى" },
+      {
+        code: "WABA_DISCOVERY_FAILED",
+        error: "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى",
+      },
       { status: 502 },
     );
   }
