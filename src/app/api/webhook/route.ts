@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import prisma from "@/lib/prisma";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
+import { SHOPIFY_CREDENTIALS_SELECT } from "@/lib/shopify-auth";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
@@ -244,7 +245,7 @@ export async function POST(req: NextRequest) {
         let order = contextId
           ? await prisma.storeOrder.findFirst({
             where: { userId, confirmationMessageId: contextId },
-            include: { shopifyStore: { select: { shop: true, accessToken: true } } },
+            include: { shopifyStore: { select: SHOPIFY_CREDENTIALS_SELECT } },
           })
           : null;
 
@@ -253,7 +254,7 @@ export async function POST(req: NextRequest) {
           order = await prisma.storeOrder.findFirst({
             where: { userId, customerPhone: from, status: "awaiting_confirmation" },
             orderBy: { orderedAt: "desc" },
-            include: { shopifyStore: { select: { shop: true, accessToken: true } } },
+            include: { shopifyStore: { select: SHOPIFY_CREDENTIALS_SELECT } },
           });
         }
 
@@ -269,31 +270,42 @@ export async function POST(req: NextRequest) {
           }
 
           // ── تحديث الحالة فعليًا في متجر شوبيفاي (لو الأوردر مصدره شوبيفاي) ──
-          if (order.source === "shopify" && order.shopifyStore && order.shopifyStore.accessToken) {
+          // التوكن بيتحل عبر getValidShopifyAccessToken (دائم أو مؤقت متجدد).
+          if (order.source === "shopify" && order.shopifyStore) {
             try {
-              const shopifyToken = isEncrypted(order.shopifyStore.accessToken)
-                ? decryptToken(order.shopifyStore.accessToken)
-                : order.shopifyStore.accessToken;
+              const { getValidShopifyAccessToken } = await import("@/lib/shopify-auth");
+              const shopifyToken = await getValidShopifyAccessToken(order.shopifyStore).catch(() => null);
 
-              const { tagShopifyOrderConfirmed, cancelShopifyOrder } = await import("@/lib/shopify-api");
-              const result = payload === "CONFIRM_ORDER"
-                ? await tagShopifyOrderConfirmed(order.shopifyStore.shop, shopifyToken, order.externalId)
-                : await cancelShopifyOrder(order.shopifyStore.shop, shopifyToken, order.externalId);
-
-              if (!result.ok) {
-                console.error(
-                  `[SHOPIFY-ORDER-SYNC] Failed to ${payload === "CONFIRM_ORDER" ? "confirm" : "cancel"} order ${order.externalId} in Shopify:`,
-                  result.error,
-                );
+              if (!shopifyToken) {
+                console.error(`[SHOPIFY-ORDER-SYNC] No valid credentials for order ${order.externalId}`);
                 const { notifyShopifyOrderSyncFailed } = await import("@/lib/notifications");
                 await notifyShopifyOrderSyncFailed(
                   userId,
                   order.orderNumber || order.externalId,
                   payload === "CONFIRM_ORDER" ? "confirm" : "cancel",
-                  result.error ?? "unknown error",
+                  "لا توجد بيانات اعتماد Shopify صالحة",
                 );
               } else {
-                console.log(`[SHOPIFY-ORDER-SYNC] Order ${order.externalId} ${payload === "CONFIRM_ORDER" ? "tagged confirmed" : "cancelled"} in Shopify`);
+                const { tagShopifyOrderConfirmed, cancelShopifyOrder } = await import("@/lib/shopify-api");
+                const result = payload === "CONFIRM_ORDER"
+                  ? await tagShopifyOrderConfirmed(order.shopifyStore.shop, shopifyToken, order.externalId)
+                  : await cancelShopifyOrder(order.shopifyStore.shop, shopifyToken, order.externalId);
+
+                if (!result.ok) {
+                  console.error(
+                    `[SHOPIFY-ORDER-SYNC] Failed to ${payload === "CONFIRM_ORDER" ? "confirm" : "cancel"} order ${order.externalId} in Shopify:`,
+                    result.error,
+                  );
+                  const { notifyShopifyOrderSyncFailed } = await import("@/lib/notifications");
+                  await notifyShopifyOrderSyncFailed(
+                    userId,
+                    order.orderNumber || order.externalId,
+                    payload === "CONFIRM_ORDER" ? "confirm" : "cancel",
+                    result.error ?? "unknown error",
+                  );
+                } else {
+                  console.log(`[SHOPIFY-ORDER-SYNC] Order ${order.externalId} ${payload === "CONFIRM_ORDER" ? "tagged confirmed" : "cancelled"} in Shopify`);
+                }
               }
             } catch (shopifyErr) {
               // لا نكسر فلو تأكيد الطلب للعميل حتى لو فشل التحديث الخارجي في شوبيفاي

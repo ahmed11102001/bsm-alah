@@ -3,8 +3,22 @@ import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { syncShopifyProducts, syncEasyOrdersProducts, syncWooCommerceProducts } from "@/lib/product-sync";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
+import {
+  SHOPIFY_CREDENTIALS_SELECT,
+  getValidShopifyAccessToken,
+} from "@/lib/shopify-auth";
+import type { Prisma } from "@prisma/client";
 
 const plainCredential = (value: string) => isEncrypted(value) ? decryptToken(value) : value;
+
+// متجر شوبيفاي "قابل للمزامنة" لو عنده توكن دائم أو مجموعة client credentials
+const SHOPIFY_SYNCABLE_WHERE: Prisma.ShopifyStoreWhereInput = {
+  isActive: true,
+  OR: [
+    { accessToken: { not: null } },
+    { clientId: { not: null }, clientSecret: { not: null } },
+  ],
+};
 
 // ── 1. Cron Job: Product Sync كل 6 ساعات ────────────────────────────────────
 export const productSyncCron = inngest.createFunction(
@@ -17,15 +31,19 @@ export const productSyncCron = inngest.createFunction(
     // Step 1: Shopify Sync
     const shopifyResults = await step.run("sync-all-shopify-stores", async () => {
       const stores = await prisma.shopifyStore.findMany({
-        where: { isActive: true, accessToken: { not: null } },
-        select: { userId: true, shop: true, accessToken: true },
+        where: SHOPIFY_SYNCABLE_WHERE,
+        select: { userId: true, ...SHOPIFY_CREDENTIALS_SELECT },
       });
 
       const results = [];
       for (const store of stores) {
-        if (!store.accessToken) continue;
+        const token = await getValidShopifyAccessToken(store).catch((err) => {
+          console.error(`[Inngest/Cron] Shopify token resolve failed for ${store.shop}:`, err);
+          return null;
+        });
+        if (!token) continue;
         try {
-          const res = await syncShopifyProducts(store.userId, store.shop, plainCredential(store.accessToken));
+          const res = await syncShopifyProducts(store.userId, store.shop, token);
           results.push({ userId: store.userId, shop: store.shop, ...res });
         } catch (err: any) {
           console.error(`[Inngest/Cron] Shopify sync failed for ${store.shop}:`, err);
@@ -85,14 +103,18 @@ export const productSyncOnDemand = inngest.createFunction(
       results.shopify = await step.run("sync-user-shopify", async () => {
         const store = await prisma.shopifyStore.findUnique({
           where: { userId },
-          select: { shop: true, accessToken: true, isActive: true },
+          select: { isActive: true, ...SHOPIFY_CREDENTIALS_SELECT },
         });
 
-        if (!store || !store.isActive || !store.accessToken) {
+        if (!store || !store.isActive) {
           return { skipped: true, reason: "No active Shopify store connected" };
         }
+        const token = await getValidShopifyAccessToken(store).catch(() => null);
+        if (!token) {
+          return { skipped: true, reason: "No valid Shopify credentials" };
+        }
 
-        return syncShopifyProducts(userId, store.shop, plainCredential(store.accessToken));
+        return syncShopifyProducts(userId, store.shop, token);
       });
     }
 

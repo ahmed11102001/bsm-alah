@@ -6,7 +6,10 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { registerAllWebhooks }       from "@/app/api/shopify/install/route";
-import { decryptToken, isEncrypted } from "@/lib/crypto";
+import {
+  SHOPIFY_CREDENTIALS_SELECT,
+  getValidShopifyAccessToken,
+} from "@/lib/shopify-auth";
 import { requirePermission } from "@/lib/permissions";
 
 export async function POST() {
@@ -28,20 +31,19 @@ export async function POST() {
 
     const store = await prisma.shopifyStore.findUnique({
       where:  { userId },
-      select: { shop: true, accessToken: true },
+      select: SHOPIFY_CREDENTIALS_SELECT,
     });
 
     if (!store)
       return NextResponse.json({ error: "لا يوجد متجر Shopify مربوط" }, { status: 404 });
 
-    if (!store.accessToken)
+    const webhookUrl = generateShopifyWebhookUrl(userId);
+    const token = await getValidShopifyAccessToken(store);
+    if (!token)
       return NextResponse.json(
-        { error: "لا يوجد Access Token محفوظ — قم بتعديل المتجر وأضف الـ Token أولاً" },
+        { error: "لا توجد بيانات اعتماد صالحة — قم بتعديل المتجر وأضف Access Token أو Client ID/Secret أولاً" },
         { status: 400 }
       );
-
-    const webhookUrl = generateShopifyWebhookUrl(userId);
-    const token = isEncrypted(store.accessToken) ? decryptToken(store.accessToken) : store.accessToken;
     const result     = await registerAllWebhooks(store.shop, token, webhookUrl);
 
     return NextResponse.json({

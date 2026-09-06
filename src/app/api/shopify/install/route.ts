@@ -5,6 +5,11 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { encryptToken }              from "@/lib/crypto";
+import {
+  getShopifyAuthMethod,
+  getValidShopifyAccessToken,
+  requestClientCredentialsToken,
+} from "@/lib/shopify-auth";
 import { requirePermission } from "@/lib/permissions";
 
 // الـ topics اللي محتاجينها — بالترتيب الصح
@@ -135,10 +140,12 @@ export async function POST(req: NextRequest) {
     if (denied) return denied;
 
     const body = await req.json();
-    const { storeName, shopDomain, accessToken } = body as {
-      storeName?:   string;
-      shopDomain?:  string;
-      accessToken?: string;
+    const { storeName, shopDomain, accessToken, clientId, clientSecret } = body as {
+      storeName?:    string;
+      shopDomain?:   string;
+      accessToken?:  string;
+      clientId?:     string;
+      clientSecret?: string;
     };
 
     if (!storeName?.trim())
@@ -186,10 +193,26 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
 
-    // ── لو في access token: تحقق منه ───────────────────────────────────────
-    const cleanToken = accessToken?.trim() || null;
-    if (cleanToken) {
-      const tokenValid = await verifyAccessToken(verifiedDomain, cleanToken);
+    // ── بيانات الاعتماد: legacy token أو (clientId + clientSecret) ─────────
+    // - مجموعة واحدة كافية، والاتنين مع بعض مقبولين (الأولوية للدائم).
+    // - مجموعة ناقصة (clientId من غير secret أو العكس) → 400.
+    // - لا شيء إطلاقًا → مسموح (ربط يدوي بالـ webhooks فقط، زي قبل كده).
+    const cleanToken        = accessToken?.trim()  || null;
+    const cleanClientId     = clientId?.trim()     || null;
+    const cleanClientSecret = clientSecret?.trim() || null;
+
+    if ((cleanClientId && !cleanClientSecret) || (!cleanClientId && cleanClientSecret))
+      return NextResponse.json(
+        { error: "ابعت Client ID و Client Secret مع بعض — المجموعة ناقصة" },
+        { status: 400 }
+      );
+
+    const hasLegacy = !!cleanToken;
+    const hasCC     = !!(cleanClientId && cleanClientSecret);
+
+    // ── التحقق من الصحة قبل الحفظ ─────────────────────────────────────────
+    if (hasLegacy) {
+      const tokenValid = await verifyAccessToken(verifiedDomain, cleanToken!);
       if (!tokenValid)
         return NextResponse.json(
           { error: "الـ Access Token غير صحيح أو منتهي — تحقق من صلاحيات الـ Custom App" },
@@ -197,14 +220,39 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    // توكن مؤقت مُتحقق منه — بيتخزن في الكاش عند الحفظ لتفادي نداء مضاعف
+    let verifiedCC: { accessToken: string; expiresAt: Date } | null = null;
+    if (hasCC) {
+      const exchanged = await requestClientCredentialsToken(
+        verifiedDomain, cleanClientId!, cleanClientSecret!
+      );
+      if (!exchanged)
+        return NextResponse.json(
+          { error: "Client ID/Secret غلط أو الـ App مش متثبتة على المتجر — تأكد إن الـ App والمتجر في نفس الـ organization" },
+          { status: 422 }
+        );
+      verifiedCC = {
+        accessToken: exchanged.accessToken,
+        expiresAt:   new Date(Date.now() + exchanged.expiresIn * 1000),
+      };
+    }
+
     // ── حفظ المتجر ──────────────────────────────────────────────────────────
+    // القاعدة: المجموعة المبعوتة صراحةً بتتبدل، والمجموعة التانية بتتمسح فقط
+    // لو اتبعتت مجموعة جديدة مكانها — لو لم يُبعث شيء تُحفظ القيم القديمة.
+    // (الأولوية عند القراءة للتوكن الدائم — راجع src/lib/shopify-auth.ts)
+    const ownStore = await prisma.shopifyStore.findUnique({ where: { userId } });
     const savedStore = await prisma.shopifyStore.upsert({
       where:  { userId },
       update: {
         shop:        verifiedDomain,
         storeName:   storeName.trim(),
         isActive:    true,
-        accessToken: cleanToken ? encryptToken(cleanToken) : null,
+        accessToken:  hasLegacy ? encryptToken(cleanToken!)  : (!hasCC ? (ownStore?.accessToken ?? null)  : null),
+        clientId:     hasCC     ? cleanClientId!             : (!hasLegacy ? (ownStore?.clientId ?? null) : null),
+        clientSecret: hasCC     ? encryptToken(cleanClientSecret!) : (!hasLegacy ? (ownStore?.clientSecret ?? null) : null),
+        cachedAccessToken:    hasCC && verifiedCC ? encryptToken(verifiedCC.accessToken) : (!hasLegacy && !hasCC ? (ownStore?.cachedAccessToken ?? null) : null),
+        cachedTokenExpiresAt: hasCC && verifiedCC ? verifiedCC.expiresAt : (!hasLegacy && !hasCC ? (ownStore?.cachedTokenExpiresAt ?? null) : null),
         updatedAt:   new Date(),
       },
       create: {
@@ -212,21 +260,28 @@ export async function POST(req: NextRequest) {
         shop:        verifiedDomain,
         storeName:   storeName.trim(),
         isActive:    true,
-        accessToken: cleanToken ? encryptToken(cleanToken) : null,
+        accessToken:  hasLegacy ? encryptToken(cleanToken!) : null,
+        clientId:     hasCC ? cleanClientId! : null,
+        clientSecret: hasCC ? encryptToken(cleanClientSecret!) : null,
+        cachedAccessToken:    hasCC && verifiedCC ? encryptToken(verifiedCC.accessToken) : null,
+        cachedTokenExpiresAt: hasCC && verifiedCC ? verifiedCC.expiresAt : null,
       },
     });
 
     const webhookUrl = generateShopifyWebhookUrl(userId);
 
-    // ── تسجيل الـ webhooks ومزامنة المنتجات تلقائياً لو في token ───────────────
+    // ── تسجيل الـ webhooks ومزامنة المنتجات تلقائياً لو في توكن صالح ──────────
+    // التوكن بيتحل عبر getValidShopifyAccessToken (دائم أو مؤقت متجدد) بدل
+    // القراءة المباشرة — المتاجر القديمة سلوكها كما هو تمامًا.
     let webhooksResult: { registered: string[]; failed: string[] } | null = null;
     let hasProductScope = false;
-    if (cleanToken) {
-      webhooksResult = await registerAllWebhooks(verifiedDomain, cleanToken, webhookUrl);
+    const resolvedToken = await getValidShopifyAccessToken(savedStore);
+    if (resolvedToken) {
+      webhooksResult = await registerAllWebhooks(verifiedDomain, resolvedToken, webhookUrl);
 
       // Check for read_products scope & trigger sync
       const { verifyShopifyProductScope } = await import("@/lib/shopify-api");
-      const scopeCheck = await verifyShopifyProductScope(verifiedDomain, cleanToken);
+      const scopeCheck = await verifyShopifyProductScope(verifiedDomain, resolvedToken);
       hasProductScope = scopeCheck.hasProductScope;
 
       if (hasProductScope) {
@@ -243,6 +298,7 @@ export async function POST(req: NextRequest) {
       storeName:   storeName.trim(),
       domain:      verifiedDomain,
       webhookUrl,
+      authMethod:  getShopifyAuthMethod(savedStore),
       hasProductScope,
       webhooks:    webhooksResult
         ? {
@@ -260,6 +316,7 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── DELETE — فك ربط المتجر ───────────────────────────────────────────────────
+// بيمسح الصف كله: accessToken + clientId + clientSecret + الكاش مع بعض.
 export async function DELETE() {
   try {
     const session = await getServerSession(authOptions);

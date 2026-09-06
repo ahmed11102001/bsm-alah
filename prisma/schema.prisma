@@ -503,6 +503,13 @@ model ShopifyStore {
   storeName   String
   accessToken String?
   scope       String?
+  // Client Credentials (Dev Dashboard apps — ما بعد يناير 2026):
+  // الـ secret والتوكن المؤقت متشفرين بـ encryptToken زي accessToken.
+  // legacy لو clientId null → المسار القديم بتوكن دائم shpat_.
+  clientId              String?
+  clientSecret          String?
+  cachedAccessToken     String?
+  cachedTokenExpiresAt  DateTime?
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt

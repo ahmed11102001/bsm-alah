@@ -5,6 +5,7 @@ import { authOptions }      from "@/lib/auth";
 import prisma               from "@/lib/prisma";
 import { checkFeature, guardResponse } from "@/lib/plan-guard";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
+import { getShopifyAuthMethod } from "@/lib/shopify-auth";
 import { requirePermission } from "@/lib/permissions";
 
 export async function GET() {
@@ -31,7 +32,7 @@ export async function GET() {
 
     const store = await prisma.shopifyStore.findUnique({
       where:  { userId },
-      select: { shop: true, createdAt: true },
+      select: { shop: true, createdAt: true, accessToken: true, clientId: true, clientSecret: true },
     }).catch(() => null);
 
     return NextResponse.json({
@@ -39,6 +40,7 @@ export async function GET() {
       connected:   !!store,
       storeName:   store?.shop  ?? null,
       connectedAt: store?.createdAt ?? null,
+      authMethod:  store ? getShopifyAuthMethod(store) : "none",
     });
   } catch (e) {
     console.error("[Shopify URL]", e);

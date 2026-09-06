@@ -4,7 +4,10 @@
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
-import { decryptToken, isEncrypted } from "@/lib/crypto";
+import {
+  SHOPIFY_CREDENTIALS_SELECT,
+  getValidShopifyAccessToken,
+} from "@/lib/shopify-auth";
 
 // ─── Helper: تنظيف رقم الهاتف ───────────────────────────────────────────────
 function cleanPhone(phone: string): string {
@@ -216,12 +219,13 @@ export const handleShopifyCartAbandoned = inngest.createFunction(
       if (!firstItemProductId && !firstItemVariantId) return null;
       const store = await prisma.shopifyStore.findUnique({
         where: { id: shopifyStoreId },
-        select: { shop: true, accessToken: true },
+        select: SHOPIFY_CREDENTIALS_SELECT,
       });
-      if (!store?.accessToken) return null;
+      if (!store) return null;
+      const token = await getValidShopifyAccessToken(store).catch(() => null);
+      if (!token) return null;
 
       const { getShopifyProductImageUrl } = await import("@/lib/shopify-api");
-      const token = isEncrypted(store.accessToken) ? decryptToken(store.accessToken) : store.accessToken;
       return getShopifyProductImageUrl(store.shop, token, {
         productId: firstItemProductId,
         variantId: firstItemVariantId,

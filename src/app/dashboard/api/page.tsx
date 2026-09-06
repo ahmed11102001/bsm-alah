@@ -290,11 +290,13 @@ interface ShopifyStatus {
   storeName?: string;
   connectedAt?: string | null;
   webhookUrl?: string;
+  authMethod?: "legacy_token" | "client_credentials" | "none";
 }
 
 function ShopifyContent({
   storeName, setStoreName, shopDomain, setShopDomain,
   accessToken, setAccessToken,
+  clientId, setClientId, clientSecret, setClientSecret,
   webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
 }: {
   storeName: string;
@@ -303,6 +305,10 @@ function ShopifyContent({
   setShopDomain: (v: string) => void;
   accessToken: string;
   setAccessToken: (v: string) => void;
+  clientId: string;
+  setClientId: (v: string) => void;
+  clientSecret: string;
+  setClientSecret: (v: string) => void;
   webhookUrl: string;
   status: ShopifyStatus | null;
   onConnect: () => void;
@@ -312,6 +318,7 @@ function ShopifyContent({
   syncing: boolean;
 }) {
   const [showToken, setShowToken] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -336,6 +343,11 @@ function ShopifyContent({
             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
             <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
               {status.storeName} — متصل ✅
+              {status.authMethod && status.authMethod !== "none" && (
+                <span className="ms-1.5 text-[10px] font-normal text-green-600 dark:text-green-400">
+                  ({status.authMethod === "legacy_token" ? "Access Token" : "Client ID/Secret"})
+                </span>
+              )}
             </p>
           </div>
           {/* زر Sync Webhooks للمتاجر المربوطة */}
@@ -399,10 +411,13 @@ function ShopifyContent({
           </div>
           {/* Admin API Access Token */}
           <div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-4 mb-2">
+              اختر <strong>مجموعة واحدة بس</strong>: Access Token (لو عندك Custom App من قبل يناير 2026)، أو Client ID + Client Secret (لو عملت الـ App من Dev Dashboard).
+            </p>
             <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
               <Key className="w-3 h-3 text-orange-500" />
               Admin API Access Token
-              <span className="text-gray-400 font-normal mr-1">(مُوصى به — لتفعيل السلة المهجورة تلقائياً)</span>
+              <span className="text-gray-400 font-normal mr-1">(للمتاجر القديمة — يبدأ بـ shpat_)</span>
             </Label>
             <div className="relative mt-1">
               <Input
@@ -421,14 +436,63 @@ function ShopifyContent({
                 {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <div className="mt-1.5 p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-800/30">
+          </div>
+          {/* Client ID + Client Secret (Dev Dashboard) */}
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Key className="w-3 h-3 text-blue-500" />
+              Client ID
+              <span className="text-gray-400 font-normal mr-1">(للربط الجديد من Dev Dashboard)</span>
+            </Label>
+            <Input
+              placeholder="مثال: 8a1b2c3d4e5f..."
+              value={clientId}
+              onChange={e => setClientId(e.target.value)}
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left"
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
+              <Key className="w-3 h-3 text-blue-500" />
+              Client Secret
+            </Label>
+            <div className="relative mt-1">
+              <Input
+                placeholder="shpss_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                value={clientSecret}
+                onChange={e => setClientSecret(e.target.value)}
+                type={showSecret ? "text" : "password"}
+                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecret(v => !v)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="mt-1 text-[10px] text-gray-400 leading-4">
+              وني بتطلب توكن مؤقت تلقائيًا من بياناتك وبتجدده قبل انتهائه — مش محتاج تعمل حاجة يدويًا.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-800/30">
               <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-4">
-                📋 <strong>Shopify Admin → Settings → Apps → Develop apps → Create app</strong>
+                📋 <strong>متجر قديم (Custom App قبل يناير 2026):</strong>
                 <br />
-                فعّل: <strong>read_orders, write_orders, read_checkouts, read_customers, read_products</strong>
+                Shopify Admin → Settings → Apps → Develop apps → افتح الـ App بتاعك → <strong>Install app</strong> وانسخ الـ Admin API access token.
+              </p>
+            </div>
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/30">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 leading-4">
+                📋 <strong>ربط جديد دلوقتي:</strong> روح على dev.shopify.com/dashboard → اعمل App → فعّل الصلاحيات:
+                <strong>read_orders, write_orders, read_checkouts, read_customers, read_products</strong>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-0.5 ms-1.5 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-300 transition-colors text-[10px] font-medium align-middle"
+                  className="inline-flex items-center gap-0.5 ms-1.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-800/40 hover:bg-blue-200 dark:hover:bg-blue-800/60 text-blue-800 dark:text-blue-300 transition-colors text-[10px] font-medium align-middle"
                   onClick={() => {
                     navigator.clipboard.writeText("read_orders, write_orders, read_checkouts, read_customers, read_products");
                     toast.success("تم نسخ الصلاحيات ✓");
@@ -437,7 +501,7 @@ function ShopifyContent({
                   <Copy className="w-2.5 h-2.5" /> نسخ
                 </button>
                 <br />
-                ثم <strong>Install app</strong> وانسخ الـ Admin API access token
+                ثبّت الـ App على متجرك → هتلاقي <strong>Client ID</strong> و <strong>Client Secret</strong> في صفحة الـ App — مفيش Access Token هيظهرلك، وده طبيعي.
               </p>
             </div>
           </div>
@@ -910,10 +974,13 @@ export default function API() {
   } | null>(null);
   const [shopifyStatus, setShopifyStatus] = useState<{
     connected: boolean; storeName?: string; connectedAt?: string | null; webhookUrl?: string;
+    authMethod?: "legacy_token" | "client_credentials" | "none";
   } | null>(null);
   const [shStoreName, setShStoreName] = useState("");
   const [shShopDomain, setShShopDomain] = useState("");
   const [shAccessToken, setShAccessToken] = useState("");
+  const [shClientId, setShClientId] = useState("");
+  const [shClientSecret, setShClientSecret] = useState("");
   const [shWebhookUrl, setShWebhookUrl] = useState("");
   const [shUrlLoaded, setShUrlLoaded] = useState(false);
   const [shConnecting, setShConnecting] = useState(false);
@@ -957,6 +1024,7 @@ export default function API() {
           storeName: shUrl.storeName,
           connectedAt: shUrl.connectedAt,
           webhookUrl,
+          authMethod: shUrl.authMethod,
         });
       } else {
         setShopifyStatus({ connected: false, webhookUrl });
@@ -1285,6 +1353,13 @@ export default function API() {
   const handleShConnect = async () => {
     if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
     if (!shShopDomain.trim()) { toast.error("أدخل دومين Shopify — مطلوب للتحقق من المتجر"); return; }
+    const token = shAccessToken.trim();
+    const clientId = shClientId.trim();
+    const clientSecret = shClientSecret.trim();
+    if ((clientId && !clientSecret) || (!clientId && clientSecret)) {
+      toast.error("ابعت Client ID و Client Secret مع بعض — المجموعة ناقصة");
+      return;
+    }
     setShConnecting(true);
     try {
       const r = await fetch("/api/shopify/install", {
@@ -1293,7 +1368,9 @@ export default function API() {
         body: JSON.stringify({
           storeName: shStoreName.trim(),
           shopDomain: shShopDomain.trim(),
-          accessToken: shAccessToken.trim() || undefined,
+          accessToken: token || undefined,
+          clientId: clientId || undefined,
+          clientSecret: clientSecret || undefined,
         }),
       });
       const d = await r.json();
@@ -1306,6 +1383,7 @@ export default function API() {
         toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify يدوياً`);
       }
       setShStoreName(""); setShShopDomain(""); setShAccessToken("");
+      setShClientId(""); setShClientSecret("");
       loadShopifyStatus();
     } catch { toast.error("خطأ في الاتصال"); }
     finally { setShConnecting(false); }
@@ -1586,6 +1664,8 @@ export default function API() {
                 storeName={shStoreName}
                 shopDomain={shShopDomain} setShopDomain={setShShopDomain}
                 accessToken={shAccessToken} setAccessToken={setShAccessToken}
+                clientId={shClientId} setClientId={setShClientId}
+                clientSecret={shClientSecret} setClientSecret={setShClientSecret}
                 setStoreName={setShStoreName}
                 webhookUrl={shWebhookUrl}
                 status={shopifyStatus}
