@@ -124,7 +124,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   if (useDbCards) {
     const card = dbCards![index % dbCards!.length];
     return (
-      <Card className="h-full border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
+      <Card className="h-full border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
         <CardContent className="p-0 h-full min-h-[240px] relative">
           <PartnerCardTemplate template={card.template} content={card} animKey={card.id} />
         </CardContent>
@@ -324,7 +324,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {kpis.map((k) => (
-          <Card key={k.label} className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <Card key={k.label} className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
@@ -346,7 +346,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         ))}
 
         {/* ── Campaigns card: richer breakdown (Running/Scheduled/Completed) ── */}
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardContent className="p-3 sm:p-5">
             <div className="flex items-start justify-between mb-1">
               <div className="min-w-0 flex-1">
@@ -383,7 +383,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
         {/* ── Wani AI Agent — real stat for Enterprise, upsell hook below it ── */}
         {hasAiAgent ? (
-          <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+          <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
             <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-emerald-600" />
@@ -457,7 +457,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
       {/* ── Automation Performance + Recent Conversations + Template Cost ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.automation.title}</CardTitle>
             <button onClick={() => router.push("/dashboard/automation")} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
@@ -506,7 +506,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.conversations.title}</CardTitle>
             <button onClick={() => router.push("/dashboard/chat")} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
@@ -553,7 +553,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
 
         {/* ── Template Cost (Marketing vs Service) ── */}
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
@@ -631,7 +631,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       </div>
 
       {/* ── Recent Campaigns ── */}
-      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
+      <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
           <CardTitle className="text-base font-bold">{h.campaigns.title}</CardTitle>
           <button onClick={onCreateCampaign} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
