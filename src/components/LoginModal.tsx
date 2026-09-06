@@ -314,7 +314,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={false}
-        className="w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
+        className="force-light w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
         dir="rtl"
       >
         {/* Top gradient bar */}

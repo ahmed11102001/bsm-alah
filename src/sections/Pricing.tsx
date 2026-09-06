@@ -20,27 +20,27 @@ type Cycle = typeof CYCLES[number]["key"];
 
 const PLAN_STYLES = [
   {
-    card: "bg-slate-50/90 dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700 shadow-sm",
-    accent: "text-emerald-600 dark:text-emerald-400",
-    iconBg: "bg-emerald-100/70 dark:bg-emerald-950/50",
+    card: "bg-slate-50/90 border border-slate-200/80 shadow-sm",
+    accent: "text-emerald-600",
+    iconBg: "bg-emerald-100/70",
     dark: false,
     highlight: false,
-    badgeBg: "bg-gray-800 text-white dark:bg-gray-700",
-    cta: "border-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white font-bold",
+    badgeBg: "bg-gray-800 text-white",
+    cta: "border-2 border-emerald-500/40 text-emerald-700 hover:bg-emerald-500 hover:text-white font-bold",
   },
   {
-    card: "bg-gradient-to-b from-sky-50/90 to-cyan-50/40 dark:from-sky-950/20 dark:to-gray-900 border border-sky-300/80 dark:border-sky-800/60 shadow-lg shadow-sky-500/5",
-    accent: "text-sky-600 dark:text-sky-400",
-    iconBg: "bg-sky-100 dark:bg-sky-950/60",
+    card: "bg-gradient-to-b from-sky-50/90 to-cyan-50/40 border border-sky-300/80 shadow-lg shadow-sky-500/5",
+    accent: "text-sky-600",
+    iconBg: "bg-sky-100",
     dark: false,
     highlight: false,
     badgeBg: "bg-sky-600 text-white",
     cta: "bg-gradient-to-r from-sky-500 to-cyan-600 text-white hover:from-sky-600 hover:to-cyan-700 shadow-md shadow-sky-500/25 font-bold",
   },
   {
-    card: "bg-gradient-to-b from-white via-emerald-50/30 to-white dark:from-gray-900 dark:via-emerald-950/20 dark:to-gray-900 border-2 border-[#25D366] shadow-2xl shadow-emerald-500/20 scale-[1.02] md:-translate-y-2 z-10",
+    card: "bg-gradient-to-b from-white via-emerald-50/30 to-white border-2 border-[#25D366] shadow-2xl shadow-emerald-500/20 scale-[1.02] md:-translate-y-2 z-10",
     accent: "text-[#25D366]",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
+    iconBg: "bg-emerald-100",
     dark: false,
     highlight: true,
     badgeBg: "bg-[#25D366] text-white shadow-md shadow-emerald-500/40",
@@ -244,7 +244,7 @@ function PricingCard({
                 </span>
               </div>
               {saving > 0 ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                <p className="text-xs text-emerald-600 font-bold mt-1">
                   {tr(t.pricing.annualSave, lang)} {saving.toLocaleString(numLocale)} {tr(t.pricing.annualSaveSuffix, lang)}
                 </p>
               ) : (
@@ -280,7 +280,7 @@ function PricingCard({
         {/* Social Proof Tag */}
         <div
           className={`flex items-center gap-2 text-xs font-bold pt-1 ${
-            s.dark ? "text-amber-400" : s.highlight ? "text-[#25D366]" : "text-gray-600 dark:text-gray-400"
+            s.dark ? "text-amber-400" : s.highlight ? "text-[#25D366]" : "text-gray-600"
           }`}
         >
           <div
@@ -292,7 +292,7 @@ function PricingCard({
         </div>
 
         {/* Divider */}
-        <div className={`h-px my-1 ${s.dark ? "bg-gray-800" : "bg-gray-200/70 dark:bg-gray-700/60"}`} />
+        <div className={`h-px my-1 ${s.dark ? "bg-gray-800" : "bg-gray-200/70"}`} />
 
         {/* Feature List */}
         <div className="space-y-1 flex-1">
@@ -309,7 +309,7 @@ function PricingCard({
                         ? "bg-emerald-500/20 text-[#25D366]"
                         : s.dark
                         ? "bg-amber-500/20 text-amber-400"
-                        : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
+                        : "bg-sky-500/15 text-sky-600"
                     }`}
                   >
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -319,7 +319,7 @@ function PricingCard({
                 )}
                 <span
                   className={`leading-relaxed font-medium ${
-                    !f.ok ? "text-gray-400 line-through opacity-60" : s.dark ? "text-gray-200" : "text-gray-700 dark:text-gray-200"
+                    !f.ok ? "text-gray-400 line-through opacity-60" : s.dark ? "text-gray-200" : "text-gray-700"
                   }`}
                 >
                   {tr(f, lang)}
@@ -394,7 +394,7 @@ export default function Pricing({ lang }: PricingProps) {
   });
 
   return (
-    <section ref={sectionRef} id="pricing" className="py-20 lg:py-32 bg-white dark:bg-gray-950 relative overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
+    <section ref={sectionRef} id="pricing" className="py-20 lg:py-32 bg-white relative overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
       {/* Background soft ambient glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[250px] bg-sky-500/5 blur-[100px] rounded-full pointer-events-none" />
@@ -402,12 +402,12 @@ export default function Pricing({ lang }: PricingProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* ── Header ── */}
         <div className="text-center mb-12" style={fadeUp(0)}>
-          <div className="inline-flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 rounded-full px-4 py-2 mb-4 shadow-sm">
+          <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 rounded-full px-4 py-2 mb-4 shadow-sm">
             <Sparkles className="w-4 h-4 text-[#25D366]" />
-            <span className="text-emerald-700 dark:text-emerald-300 text-sm font-bold">{tr(t.pricing.badge, lang)}</span>
+            <span className="text-emerald-700 text-sm font-bold">{tr(t.pricing.badge, lang)}</span>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white mb-4 tracking-tight leading-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4 tracking-tight leading-tight">
             {tr(t.pricing.h2a, lang)}{" "}
             <span className="relative inline-block text-[#25D366]">
               {tr(t.pricing.h2b, lang)}
@@ -427,20 +427,20 @@ export default function Pricing({ lang }: PricingProps) {
               </svg>
             </span>
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-base sm:text-lg mb-8 leading-relaxed">
+          <p className="text-gray-500 max-w-2xl mx-auto text-base sm:text-lg mb-8 leading-relaxed">
             {tr(t.pricing.subtitle, lang)}
           </p>
 
           {/* Billing cycle toggle */}
-          <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700 rounded-2xl p-1.5 gap-1.5 shadow-inner">
+          <div className="inline-flex items-center bg-gray-100 border border-gray-200/80 rounded-2xl p-1.5 gap-1.5 shadow-inner">
             {CYCLES.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setCycle(c.key)}
                 className={`relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                   cycle === c.key
-                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                    ? "bg-white text-gray-900 shadow-md"
+                    : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 {tr(c.label, lang)}
@@ -504,7 +504,7 @@ export default function Pricing({ lang }: PricingProps) {
             { icon: <Check className="w-5 h-5 text-[#25D366]" />, text: tr(t.pricing.guar2, lang) },
             { icon: <Zap className="w-5 h-5 text-[#25D366]" />, text: tr(t.pricing.guar3, lang) },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <div key={i} className="flex items-center gap-2.5 text-sm font-bold text-gray-600 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
               {item.icon}
               <span>{item.text}</span>
             </div>

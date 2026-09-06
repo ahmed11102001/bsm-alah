@@ -3,6 +3,8 @@ import { Cairo, Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
+import ForceLight from "@/components/ForceLight";
+import { isPublicPage } from "@/lib/is-public-page";
 import MetaPixel from "@/components/metapixel";
 import OpenAIPixel from "@/components/openaipixel";
 import { Analytics } from "@vercel/analytics/next";
@@ -158,6 +160,9 @@ export default async function RootLayout({
     else locale = "ar";
   }
   const dir = headerList.get("x-dir") || (locale === "en" ? "ltr" : "rtl");
+  // Dashboard dark mode must never leak outside the dashboard — public
+  // marketing pages are pinned to LIGHT (vars) regardless of <html>.dark.
+  const forceLight = isPublicPage(pathname);
 
   return (
     <html
@@ -183,7 +188,7 @@ export default async function RootLayout({
         <OpenAIPixel />
         <Analytics />
         <ClientProvider>
-          {children}
+          {forceLight ? <ForceLight>{children}</ForceLight> : children}
         </ClientProvider>
       </body>
     </html>
