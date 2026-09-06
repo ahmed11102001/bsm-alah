@@ -522,3 +522,120 @@ export async function notifyTeamMemberJoined(userId: string, memberName: string 
     meta: { memberName, memberEmail },
   });
 }
+
+// ─── إشعارات الأدمن (Super Admins فقط) ───────────────────────────────────────
+// بتتبعت لكل حساب عليه isSuper — اليوزر العادي عمره ما يشوف الأنواع دي لأن
+// الصفوف بتنشأ للأدمن بس. fire-and-forget: فشل الإشعار لا يكسر الفلو الأساسي.
+
+type AdminNotifyInput = {
+  type: NotificationType;
+  title: string;
+  body: string;
+  link: string;
+  meta?: Record<string, any>;
+};
+
+export async function notifySuperAdmins(input: AdminNotifyInput) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { isSuper: true, deletedAt: null },
+      select: { id: true },
+    });
+    if (admins.length === 0) return;
+    await Promise.allSettled(
+      admins.map((admin) =>
+        createNotification({ userId: admin.id, ...input })
+      )
+    );
+  } catch (err) {
+    console.error("[NOTIFY-ADMINS] Failed:", err);
+  }
+}
+
+// ── فاتورة دفع جديدة بانتظار المراجعة (داشبورد عادي أو بورتال مطورين) ────────
+export async function notifyAdminNewPaymentRequest(params: {
+  payerName: string;
+  payerEmail?: string | null;
+  productName: string;
+  amount: number;
+  currency?: string | null;
+  isDeveloper: boolean;
+  projectName?: string | null;
+  paymentRequestId: string;
+}) {
+  const who = params.isDeveloper
+    ? `مطوّر: ${params.payerName}${params.projectName ? ` — مشروع ${params.projectName}` : ""}`
+    : params.payerName;
+  await notifySuperAdmins({
+    type: NotificationType.NEW_PAYMENT_REQUEST,
+    title: bi("🧾 فاتورة دفع جديدة بانتظار المراجعة", "🧾 New payment request pending review"),
+    body: bi(
+      `${who} — ${params.productName} (${params.amount} ${params.currency ?? "EGP"})`,
+      `${who} — ${params.productName} (${params.amount} ${params.currency ?? "EGP"})`,
+    ),
+    link: "/dashboard/admin",
+    meta: {
+      paymentRequestId: params.paymentRequestId,
+      isDeveloper: params.isDeveloper,
+      payerEmail: params.payerEmail ?? null,
+      projectName: params.projectName ?? null,
+      amount: params.amount,
+    },
+  });
+}
+
+// ── كارت WANI Partner جديد بانتظار المراجعة ──────────────────────────────────
+export async function notifyAdminNewPartnerCard(params: {
+  userName: string;
+  userEmail?: string | null;
+  brandName: string;
+  cardId: string;
+}) {
+  await notifySuperAdmins({
+    type: NotificationType.NEW_PARTNER_CARD,
+    title: bi("🎴 كارت WANI Partner جديد بانتظار المراجعة", "🎴 New WANI Partner card pending review"),
+    body: bi(
+      `${params.userName} بعت كارت جديد لبراند "${params.brandName}" — محتاج مراجعة قبل النشر.`,
+      `${params.userName} submitted a new card for brand "${params.brandName}" — needs review before publishing.`,
+    ),
+    link: "/dashboard/admin",
+    meta: { cardId: params.cardId, userEmail: params.userEmail ?? null, brandName: params.brandName },
+  });
+}
+
+// ── تقييم (Testimonial) جديد بانتظار الموافقة ────────────────────────────────
+export async function notifyAdminNewTestimonial(params: {
+  name: string;
+  rating: number;
+  testimonialId: string;
+}) {
+  await notifySuperAdmins({
+    type: NotificationType.NEW_TESTIMONIAL,
+    title: bi("⭐ تقييم جديد بانتظار الموافقة", "⭐ New testimonial pending approval"),
+    body: bi(
+      `${params.name} بعت تقييم (${params.rating}/5) — محتاج موافقة قبل العرض.`,
+      `${params.name} submitted a review (${params.rating}/5) — needs approval before display.`,
+    ),
+    link: "/dashboard/admin",
+    meta: { testimonialId: params.testimonialId, rating: params.rating },
+  });
+}
+
+// ── عميل محتمل (Lead) جديد من فورم الموقع ────────────────────────────────────
+export async function notifyAdminNewLead(params: {
+  name: string;
+  phone: string;
+  business: string;
+  leadId: string;
+}) {
+  await notifySuperAdmins({
+    type: NotificationType.NEW_LEAD,
+    title: bi("📩 عميل محتمل جديد", "📩 New lead"),
+    body: bi(
+      `${params.name} (${params.phone}) — ${params.business}`,
+      `${params.name} (${params.phone}) — ${params.business}`,
+    ),
+    link: "/dashboard/admin",
+    meta: { leadId: params.leadId, phone: params.phone },
+  });
+}

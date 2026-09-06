@@ -62,5 +62,29 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // 🔔 إشعار الأدمن بفاتورة مطور جديدة — fire-and-forget
+  void (async () => {
+    try {
+      const dev = await prisma.developerUser.findUnique({
+        where: { id: session.id },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      const devName = dev ? `${dev.firstName} ${dev.lastName}`.trim() : session.email;
+      const { notifyAdminNewPaymentRequest } = await import("@/lib/notifications");
+      await notifyAdminNewPaymentRequest({
+        payerName: devName || session.email,
+        payerEmail: dev?.email ?? session.email,
+        productName: request.productName,
+        amount: request.amount,
+        currency: request.currency,
+        isDeveloper: true,
+        projectName: project.name,
+        paymentRequestId: request.id,
+      });
+    } catch (err) {
+      console.error("[DevBilling] Admin notify failed:", err);
+    }
+  })();
+
   return NextResponse.json({ success: true, reused: false, paymentRequest: request });
 }

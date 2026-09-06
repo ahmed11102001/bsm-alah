@@ -53,6 +53,21 @@ export async function POST(req: NextRequest) {
       },
     }).catch(() => {});
 
+    // 🔔 إشعار الأدمن بعميل محتمل جديد — fire-and-forget
+    void (async () => {
+      try {
+        const { notifyAdminNewLead } = await import("@/lib/notifications");
+        await notifyAdminNewLead({
+          name: lead.name,
+          phone: lead.phone,
+          business: lead.business,
+          leadId: lead.id,
+        });
+      } catch (err) {
+        console.error("[leads POST] Admin notify failed:", err);
+      }
+    })();
+
     return NextResponse.json({ ok: true, id: lead.id }, { status: 201 });
   } catch (err) {
     console.error("[leads POST]", err);

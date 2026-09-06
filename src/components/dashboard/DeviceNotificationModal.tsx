@@ -27,6 +27,10 @@ import {
   CreditCard,
   Layers,
   Search,
+  Receipt,
+  Star,
+  UserPlus,
+  LayoutGrid,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 import { toast } from "sonner";
@@ -191,6 +195,17 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
     icon: <AlertTriangle className="w-4 h-4 text-red-600" />,
     bgClass: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400",
   },
+  {
+    type: NotificationType.NEW_PAYMENT_REQUEST,
+    category: "billing",
+    title: { ar: "فاتورة دفع جديدة (للأدمن)", en: "New Payment Request (Admin)" },
+    description: {
+      ar: "تنبيه الأدمن فقط عند وصول طلب دفع جديد بانتظار المراجعة",
+      en: "Admin-only alert when a new payment request awaits review",
+    },
+    icon: <Receipt className="w-4 h-4 text-emerald-600" />,
+    bgClass: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+  },
 
   // ── 5. Automation & Smart Follow-ups ──
   {
@@ -260,6 +275,39 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
     },
     icon: <Sparkles className="w-4 h-4 text-yellow-500" />,
     bgClass: "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
+  },
+  {
+    type: NotificationType.NEW_PARTNER_CARD,
+    category: "system",
+    title: { ar: "كارت Partner جديد (للأدمن)", en: "New Partner Card (Admin)" },
+    description: {
+      ar: "تنبيه الأدمن فقط عند وصول كارت WANI Partner جديد بانتظار المراجعة",
+      en: "Admin-only alert when a new WANI Partner card awaits review",
+    },
+    icon: <LayoutGrid className="w-4 h-4 text-purple-500" />,
+    bgClass: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+  },
+  {
+    type: NotificationType.NEW_TESTIMONIAL,
+    category: "system",
+    title: { ar: "تقييم جديد (للأدمن)", en: "New Testimonial (Admin)" },
+    description: {
+      ar: "تنبيه الأدمن فقط عند وصول تقييم جديد بانتظار الموافقة",
+      en: "Admin-only alert when a new testimonial awaits approval",
+    },
+    icon: <Star className="w-4 h-4 text-amber-500" />,
+    bgClass: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+  },
+  {
+    type: NotificationType.NEW_LEAD,
+    category: "system",
+    title: { ar: "عميل محتمل جديد (للأدمن)", en: "New Lead (Admin)" },
+    description: {
+      ar: "تنبيه الأدمن فقط عند وصول عميل محتمل جديد من فورم الموقع",
+      en: "Admin-only alert when a new lead arrives from the site form",
+    },
+    icon: <UserPlus className="w-4 h-4 text-blue-500" />,
+    bgClass: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
   },
 ];
 

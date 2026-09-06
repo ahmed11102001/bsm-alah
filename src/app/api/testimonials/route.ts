@@ -90,6 +90,20 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // 🔔 إشعار الأدمن بتقييم جديد بانتظار الموافقة — fire-and-forget
+  void (async () => {
+    try {
+      const { notifyAdminNewTestimonial } = await import("@/lib/notifications");
+      await notifyAdminNewTestimonial({
+        name: testimonial.name,
+        rating: testimonial.rating,
+        testimonialId: testimonial.id,
+      });
+    } catch (err) {
+      console.error("[Testimonials] Admin notify failed:", err);
+    }
+  })();
+
   return NextResponse.json(
     { success: true, message: "شكراً! رأيك في انتظار المراجعة", id: testimonial.id },
     { status: 201 }

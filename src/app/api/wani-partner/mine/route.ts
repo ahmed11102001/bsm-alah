@@ -62,6 +62,25 @@ export async function PUT(req: NextRequest) {
     card = await prisma.waniPartnerCard.create({ data: { ...content, userId: session.user.id, status: "pending" } });
   }
 
+  // 🔔 إشعار الأدمن بكارت جديد/معدّل بانتظار المراجعة — fire-and-forget
+  void (async () => {
+    try {
+      const owner = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, email: true },
+      });
+      const { notifyAdminNewPartnerCard } = await import("@/lib/notifications");
+      await notifyAdminNewPartnerCard({
+        userName: owner?.name?.trim() || owner?.email || "مستخدم",
+        userEmail: owner?.email ?? null,
+        brandName: (card as { brandName?: string }).brandName ?? "—",
+        cardId: card.id,
+      });
+    } catch (err) {
+      console.error("[WaniPartner] Admin notify failed:", err);
+    }
+  })();
+
   return NextResponse.json(card);
 }
 

@@ -172,6 +172,28 @@ export async function createManualPaymentRequest(
     },
   });
 
+  // 🔔 إشعار الأدمن بفاتورة جديدة — fire-and-forget (لا يكسر إنشاء الطلب)
+  void (async () => {
+    try {
+      const payer = await prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { name: true, email: true },
+      });
+      const { notifyAdminNewPaymentRequest } = await import("@/lib/notifications");
+      await notifyAdminNewPaymentRequest({
+        payerName: payer?.name?.trim() || payer?.email || "عميل",
+        payerEmail: payer?.email ?? null,
+        productName: request.productName,
+        amount: request.amount,
+        currency: request.currency,
+        isDeveloper: false,
+        paymentRequestId: request.id,
+      });
+    } catch (err) {
+      console.error("[ManualPayment] Admin notify failed:", err);
+    }
+  })();
+
   return { request, reused: false as const };
 }
 

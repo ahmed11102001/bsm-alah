@@ -104,6 +104,10 @@ export const NotificationType = {
   AUTOMATION_FAILED: "AUTOMATION_FAILED",
   AUTOMATION_LOOP_STOPPED: "AUTOMATION_LOOP_STOPPED",
   TEAM_MEMBER_JOINED: "TEAM_MEMBER_JOINED",
+  NEW_PAYMENT_REQUEST: "NEW_PAYMENT_REQUEST",
+  NEW_PARTNER_CARD: "NEW_PARTNER_CARD",
+  NEW_TESTIMONIAL: "NEW_TESTIMONIAL",
+  NEW_LEAD: "NEW_LEAD",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

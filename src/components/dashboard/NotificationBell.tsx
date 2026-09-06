@@ -23,6 +23,10 @@ import {
   UserCheck,
   Laptop,
   SlidersHorizontal,
+  Receipt,
+  Star,
+  UserPlus,
+  LayoutGrid,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 import { syncPushSubscriptionOnLogin, urlBase64ToUint8Array } from "@/lib/push-client";
@@ -60,6 +64,10 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   AUTOMATION_FAILED: <XCircle className="w-4 h-4 text-red-500" />,
   AUTOMATION_LOOP_STOPPED: <AlertTriangle className="w-4 h-4 text-yellow-500" />,
   TEAM_MEMBER_JOINED: <UserCheck className="w-4 h-4 text-emerald-600" />,
+  NEW_PAYMENT_REQUEST: <Receipt className="w-4 h-4 text-emerald-600" />,
+  NEW_PARTNER_CARD: <LayoutGrid className="w-4 h-4 text-purple-500" />,
+  NEW_TESTIMONIAL: <Star className="w-4 h-4 text-amber-500" />,
+  NEW_LEAD: <UserPlus className="w-4 h-4 text-blue-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -82,6 +90,10 @@ const TYPE_BG: Record<NotificationType, string> = {
   AUTOMATION_FAILED: "bg-red-50 dark:bg-red-950/40",
   AUTOMATION_LOOP_STOPPED: "bg-yellow-50 dark:bg-yellow-950/40",
   TEAM_MEMBER_JOINED: "bg-emerald-50 dark:bg-emerald-950/40",
+  NEW_PAYMENT_REQUEST: "bg-emerald-50 dark:bg-emerald-950/40",
+  NEW_PARTNER_CARD: "bg-purple-50 dark:bg-purple-950/40",
+  NEW_TESTIMONIAL: "bg-amber-50 dark:bg-amber-950/40",
+  NEW_LEAD: "bg-blue-50 dark:bg-blue-950/40",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {
