@@ -91,6 +91,13 @@ export default function BillingPage() {
         {t("Payment successful! Your subscription is now active.", "تم الدفع بنجاح! اشتراكك مفعل الآن.")}
       </div>
     );
+  } else if (statusParam === "pending") {
+    statusMessage = (
+      <div className="status-box success">
+        <ShieldCheck size={18} />
+        {t("Your request is under review.", "طلبك قيد المراجعة — هيتفعل بعد تأكيد الأدمن.")}
+      </div>
+    );
   } else if (statusParam === "failed") {
     statusMessage = (
       <div className="status-box failed">

@@ -35,6 +35,11 @@ export async function GET(req: NextRequest) {
       { user: { email: { contains: search, mode: "insensitive" } } },
       { user: { name: { contains: search, mode: "insensitive" } } },
       { user: { phone: { contains: search, mode: "insensitive" } } },
+      { developerUser: { email: { contains: search, mode: "insensitive" } } },
+      { developerUser: { firstName: { contains: search, mode: "insensitive" } } },
+      { developerUser: { lastName: { contains: search, mode: "insensitive" } } },
+      { developerUser: { phone: { contains: search, mode: "insensitive" } } },
+      { developerProject: { name: { contains: search, mode: "insensitive" } } },
     ];
   }
 
@@ -45,6 +50,8 @@ export async function GET(req: NextRequest) {
       take: 300,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
+        developerUser: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+        developerProject: { select: { id: true, name: true } },
         reviewedBy: { select: { id: true, name: true, email: true } },
       },
     }),

@@ -2,8 +2,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 //  POST /api/payment/manual/request
 //  بيسجّل Payment Request بحالة PENDING قبل ما المستخدم يفتح WhatsApp لإرسال
-//  إثبات الدفع. ده الـflow الرسمي الحالي للدفع (Manual Payment) — مفيش أي
-//  اتصال بـFawaterak هنا.
+//  إثبات الدفع. ده الـflow الرسمي الحالي للدفع (Manual Payment).
 //
 //  Body: {
 //    type:              "subscription" | "token_package" | "mcp_addon"

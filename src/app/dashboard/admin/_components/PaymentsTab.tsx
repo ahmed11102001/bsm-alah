@@ -10,7 +10,9 @@ import {
 
 interface PaymentRequestItem {
   id: string;
-  type: "subscription" | "token_package" | "mcp_addon";
+  type: "subscription" | "token_package" | "mcp_addon" | "developer_owner_plan";
+  developerUserId: string | null;
+  developerProjectId: string | null;
   planSlug: string | null;
   cycle: string | null;
   packageId: string | null;
@@ -23,7 +25,9 @@ interface PaymentRequestItem {
   reviewedAt: string | null;
   rejectionReason: string | null;
   createdAt: string;
-  user: { id: string; name: string | null; email: string; phone: string | null };
+  user: { id: string; name: string | null; email: string; phone: string | null } | null;
+  developerUser: { id: string; firstName: string; lastName: string; email: string; phone: string } | null;
+  developerProject: { id: string; name: string } | null;
   reviewedBy: { id: string; name: string | null; email: string } | null;
 }
 
@@ -61,6 +65,7 @@ const TYPE_LABELS: Record<string, { ar: string; en: string }> = {
   subscription: { ar: "اشتراك", en: "Subscription" },
   token_package: { ar: "باقة توكن", en: "Token Package" },
   mcp_addon: { ar: "إضافة Claude", en: "Claude Addon" },
+  developer_owner_plan: { ar: "باقة أونر (مطوّر)", en: "Owner Plan (Developer)" },
 };
 
 function formatDate(d: string | null, locale: string): string {
@@ -223,6 +228,11 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
             const BadgeIcon = badge.icon;
             const typeLabel = TYPE_LABELS[r.type] ?? { ar: r.type, en: r.type };
             const isExpanded = expandedId === r.id;
+            const isDeveloperRequest = Boolean(r.developerUserId);
+            const displayName = r.user?.name
+              ?? (r.developerUser ? `${r.developerUser.firstName} ${r.developerUser.lastName}`.trim() || r.developerUser.email : "—");
+            const displayEmail = r.user?.email ?? r.developerUser?.email ?? "—";
+            const displayPhone = r.user?.phone ?? r.developerUser?.phone ?? null;
 
             return (
               <div
@@ -237,10 +247,18 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                     <UserIcon className="w-4 h-4 text-gray-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                      {r.user.name || r.user.email}
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate flex items-center gap-1.5 flex-wrap">
+                      {displayName}
+                      {isDeveloperRequest && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800">
+                          {isAr ? "مطوّر" : "Developer"}
+                        </span>
+                      )}
+                      {isDeveloperRequest && r.developerProject && (
+                        <span className="text-[11px] font-normal text-gray-500">— {r.developerProject.name}</span>
+                      )}
                     </p>
-                    <p className="text-xs text-gray-400 truncate">{r.user.email}</p>
+                    <p className="text-xs text-gray-400 truncate">{displayEmail}</p>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
                     <Package className="w-3.5 h-3.5 text-gray-400" />
@@ -264,6 +282,12 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                         <p className="text-gray-400 mb-0.5">{isAr ? "النوع" : "Type"}</p>
                         <p className="font-bold text-gray-800 dark:text-gray-200">{isAr ? typeLabel.ar : typeLabel.en}</p>
                       </div>
+                      {isDeveloperRequest && r.developerProject && (
+                        <div>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "المشروع" : "Project"}</p>
+                          <p className="font-bold text-gray-800 dark:text-gray-200">{r.developerProject.name}</p>
+                        </div>
+                      )}
                       {r.cycle && (
                         <div>
                           <p className="text-gray-400 mb-0.5">{isAr ? "دورة الفوترة" : "Billing cycle"}</p>
@@ -281,7 +305,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                       )}
                       <div>
                         <p className="text-gray-400 mb-0.5">{isAr ? "رقم الهاتف" : "Phone"}</p>
-                        <p className="font-bold text-gray-800 dark:text-gray-200" dir="ltr">{r.user.phone || "—"}</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-200" dir="ltr">{displayPhone || "—"}</p>
                       </div>
                       {r.reviewedAt && (
                         <div>

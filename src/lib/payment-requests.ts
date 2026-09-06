@@ -6,8 +6,9 @@
 //  ويرسل إثبات الدفع على WhatsApp → الأدمن يراجع الطلب من "المدفوعات" في لوحة
 //  التحكم ويضغط تأكيد/رفض → عند التأكيد يتم تفعيل الباقة/الإضافة فعليًا هنا.
 //
-//  Fawaterak (src/lib/fawaterak.ts) مُعزول ومُعطّل حاليًا — راجع التعليقات هناك
-//  وفي src/app/api/payment/checkout/route.ts. لا يوجد أي استدعاء نشط له.
+//  طلبات المطورين (type = developer_owner_plan) بتستخدم نفس الجدول بس مربوطة
+//  بـ developerUserId/developerProjectId بدل userId، وعند الموافقة بتفعّل
+//  DeveloperProject.plan = OWNER_PLAN لمدة 30 يوم.
 // ══════════════════════════════════════════════════════════════════════════════
 
 import prisma from "@/lib/prisma";
@@ -204,6 +205,9 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
   }
 
   if (request.type === "subscription") {
+    if (!request.userId) {
+      throw new ManualPaymentError("طلب الاشتراك ده مش مربوط بحساب عميل", 400);
+    }
     const planSlug = request.planSlug as PlanSlug | null;
     if (!planSlug || !SUBSCRIPTION_PLANS[planSlug]) {
       throw new ManualPaymentError("بيانات الباقة غير صالحة في الطلب", 400);
@@ -223,12 +227,13 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     const creditApplied = Math.max(0, baseAmount - request.amount);
 
     const prismaPlan = toPrismaPlanTier(planSlug);
+    const clientUserId: string = request.userId;
 
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
       await tx.subscription.upsert({
-        where: { userId: request.userId },
+        where: { userId: clientUserId },
         update: {
           plan: prismaPlan,
           status: "active",
@@ -240,7 +245,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
           periodResetAt: now,
         },
         create: {
-          userId: request.userId,
+          userId: clientUserId,
           plan: prismaPlan,
           status: "active",
           currentPeriodStart: now,
@@ -252,16 +257,20 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     if (creditApplied > 0) {
       const { applyReferralCreditToInvoice } = await import("@/lib/referral/service");
       await applyReferralCreditToInvoice({
-        userId: request.userId,
+        userId: clientUserId,
         amountToDeduct: creditApplied,
         description: `تغطية جزء من اشتراك ${plan.name} من رصيد الإحالات (دفع يدوي)`,
       }).catch((err) => console.error("[ManualPayment] فشل خصم رصيد الإحالات:", err));
     }
 
-    await notifySubscriptionSuccess(request.userId, plan.name).catch(() => { });
+    await notifySubscriptionSuccess(clientUserId, plan.name).catch(() => { });
   } else if (request.type === "token_package") {
+    if (!request.userId) {
+      throw new ManualPaymentError("طلب التوكن ده مش مربوط بحساب عميل", 400);
+    }
     const pkg = TOKEN_PACKAGES.find((p) => p.id === request.packageId);
     if (!pkg) throw new ManualPaymentError("بيانات الحزمة غير صالحة في الطلب", 400);
+    const tokenUserId: string = request.userId;
 
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
@@ -273,7 +282,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       // منتهي فعلاً، بنبدأ دورة 30 يوم جديدة من دلوقتي.
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       const existing = await tx.subscription.findUnique({
-        where: { userId: request.userId },
+        where: { userId: tokenUserId },
         select: { aiTokensBonusBalance: true, aiTokensBonusExpiresAt: true },
       });
       const hasActiveBalance =
@@ -283,7 +292,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
         existing.aiTokensBonusExpiresAt > now;
 
       await tx.subscription.update({
-        where: { userId: request.userId },
+        where: { userId: tokenUserId },
         data: {
           aiTokensBonusBalance: { increment: pkg.tokens },
           ...(hasActiveBalance ? {} : { aiTokensBonusExpiresAt: thirtyDaysFromNow }),
@@ -291,18 +300,50 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       });
     });
   } else if (request.type === "mcp_addon") {
+    if (!request.userId) {
+      throw new ManualPaymentError("طلب الإضافة ده مش مربوط بحساب عميل", 400);
+    }
     const pkg = MCP_ADDON_PACKAGES.find((p) => p.id === request.packageId);
     if (!pkg) throw new ManualPaymentError("بيانات الحزمة غير صالحة في الطلب", 400);
+    const mcpUserId: string = request.userId;
 
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
-      // نفس الحيلة المستخدمة في addMCPCommandsBonus (src/lib/plan-guard.ts)
-      // وفي webhook فواتيرك القديم: تنقيص العداد بعدد كبير جدًا يخلي أوامر
-      // MCP فعليًا غير محدودة لحد ما يتصفّر العداد آخر الشهر (periodResetAt).
+      // نفس الحيلة المستخدمة في addMCPCommandsBonus (src/lib/plan-guard.ts):
+      // تنقيص العداد بعدد كبير جدًا يخلي أوامر MCP فعليًا غير محدودة لحد ما
+      // يتصفّر العداد آخر الشهر (periodResetAt).
       await tx.subscription.update({
-        where: { userId: request.userId },
+        where: { userId: mcpUserId },
         data: { mcpCommandsUsedThisMonth: { decrement: 999_999 } },
+      });
+    });
+  } else if ((request.type as string) === "developer_owner_plan") {
+    if (!request.developerProjectId) {
+      throw new ManualPaymentError("طلب باقة الأونر ده مش مربوط بأي مشروع", 400);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await claimPending(tx);
+
+      const project = await tx.developerProject.findUnique({
+        where: { id: request.developerProjectId as string },
+        select: { planRenewsAt: true },
+      });
+
+      const baseDate =
+        project?.planRenewsAt && project.planRenewsAt > now ? project.planRenewsAt : now;
+      const newRenewsAt = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      await tx.developerProject.update({
+        where: { id: request.developerProjectId as string },
+        data: {
+          plan: "OWNER_PLAN",
+          planStartedAt: now,
+          planRenewsAt: newRenewsAt,
+          planExpiringNotifiedAt: null,
+          planExpiredNotifiedAt: null,
+        },
       });
     });
   }
@@ -311,9 +352,14 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
   // لحظة الموافقة الحقيقية بتحصل والأدمن هو اللي فاتح المتصفح — مفيش Pixel
   // client-side يقدر يسجّلها. بتتبعت fire-and-forget بعد نجاح التفعيل،
   // وفشلها أبدًا ما يفشّل الموافقة نفسها (الـ libs فيها .catch داخلي).
+  // طلبات المطورين (developer_owner_plan) مالهاش User عادي فبتتخطى الخطوة دي.
+  if (!request.userId) {
+    return prisma.paymentRequest.findUnique({ where: { id: requestId } });
+  }
+  const buyerUserId: string = request.userId;
   try {
     const buyer = await prisma.user.findUnique({
-      where: { id: request.userId },
+      where: { id: buyerUserId },
       select: { email: true, phone: true, metaClickId: true },
     });
     if (buyer) {
@@ -322,7 +368,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       const contentName =
         request.planSlug ?? request.packageId ?? request.type ?? "subscription";
       void sendMetaPurchaseEvent({
-        userId: request.userId,
+        userId: buyerUserId,
         email: buyer.email,
         phone: buyer.phone,
         value: request.amount,

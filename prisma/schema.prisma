@@ -512,10 +512,10 @@ model ShopifyStore {
 }
 
 model EasyOrdersStore {
-  id            String            @id @default(cuid())
-  userId        String            @unique
-  storeName     String
-  apiKey        String
+  id                        String            @id @default(cuid())
+  userId                    String            @unique
+  storeName                 String
+  apiKey                    String
   // EasyOrders بتولّد سِر (secret) منفصل لكل Webhook بيتعمل، حتى لو كل الـ
   // Webhooks بتشاور على نفس الـ URL. عشان كده لازم سِرّين منفصلين — واحد
   // للـ Webhook من نوع "Orders" (order created) وواحد للـ Webhook من نوع
@@ -523,14 +523,14 @@ model EasyOrdersStore {
   // المطابق من داشبورد EasyOrders ويلصق السر هنا — لا يُشتق أبدًا من apiKey.
   webhookSecretOrders       String?
   webhookSecretStatusUpdate String?
-  isActive      Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  lastSyncAt    DateTime?
-  totalSynced   Int               @default(0)
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  automations   StoreAutomation[]
-  orders        StoreOrder[]
+  isActive                  Boolean           @default(true)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  lastSyncAt                DateTime?
+  totalSynced               Int               @default(0)
+  user                      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  automations               StoreAutomation[]
+  orders                    StoreOrder[]
 
   @@index([userId])
 }
@@ -738,17 +738,17 @@ model CustomerServiceSettings {
 }
 
 model AgentTrainingRule {
-  id               String              @id @default(cuid())
+  id               String             @id @default(cuid())
   userId           String
   contactId        String?
   messageId        String?
-  feedback         String              @db.Text
+  feedback         String             @db.Text
   contextSnapshot  Json?
   type             TrainingRuleType?
-  content          String?             @db.Text
+  content          String?            @db.Text
   extractedData    Json?
   appliesTo        String?
-  status           TrainingRuleStatus  @default(pending)
+  status           TrainingRuleStatus @default(pending)
   confidence       Float?
   extractionModel  String?
   extractionError  String?
@@ -756,8 +756,8 @@ model AgentTrainingRule {
   appliedRecordId  String?
   reviewedByUserId String?
   reviewedAt       DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
@@ -1093,6 +1093,7 @@ model DeveloperUser {
   projects            DeveloperProject[]
   ownedProjects       DeveloperProject[]            @relation("ProjectOwner")
   otpLogs             OtpLog[]
+  paymentRequests     PaymentRequest[]              @relation("DeveloperPaymentRequests")
 
   @@map("developer_users")
 }
@@ -1123,6 +1124,7 @@ model DeveloperProject {
   metaConnection         DeveloperMetaConnection?
   otpTemplates           DeveloperOtpTemplate[]
   invites                DeveloperProjectInvite[]
+  paymentRequests        PaymentRequest[]
   developer              DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
   owner                  DeveloperUser?           @relation("ProjectOwner", fields: [ownerId], references: [id])
 
@@ -1459,29 +1461,35 @@ model TeamInvitation {
 }
 
 model PaymentRequest {
-  id              String               @id @default(cuid())
-  userId          String
-  type            PaymentRequestType
-  planSlug        String?
-  cycle           String?
-  packageId       String?
-  productName     String
-  amount          Int
-  currency        String               @default("EGP")
-  paymentMethod   String?
-  status          PaymentRequestStatus @default(PENDING)
-  requestedAt     DateTime             @default(now())
-  reviewedAt      DateTime?
-  reviewedById    String?
-  rejectionReason String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  reviewedBy      User?                @relation("PaymentRequestReviewer", fields: [reviewedById], references: [id])
-  user            User                 @relation("UserPaymentRequests", fields: [userId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(cuid())
+  userId             String?
+  developerUserId    String?
+  developerProjectId String?
+  type               PaymentRequestType
+  planSlug           String?
+  cycle              String?
+  packageId          String?
+  productName        String
+  amount             Int
+  currency           String               @default("EGP")
+  paymentMethod      String?
+  status             PaymentRequestStatus @default(PENDING)
+  requestedAt        DateTime             @default(now())
+  reviewedAt         DateTime?
+  reviewedById       String?
+  rejectionReason    String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  reviewedBy         User?                @relation("PaymentRequestReviewer", fields: [reviewedById], references: [id])
+  user               User?                @relation("UserPaymentRequests", fields: [userId], references: [id], onDelete: Cascade)
+  developerUser      DeveloperUser?       @relation("DeveloperPaymentRequests", fields: [developerUserId], references: [id], onDelete: Cascade)
+  developerProject   DeveloperProject?    @relation(fields: [developerProjectId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([developerUserId])
   @@index([status])
   @@index([userId, status])
+  @@index([developerUserId, status])
   @@index([createdAt])
 }
 
@@ -1840,6 +1848,7 @@ enum PaymentRequestType {
   subscription
   token_package
   mcp_addon
+  developer_owner_plan
 }
 
 enum PaymentRequestStatus {
@@ -1861,4 +1870,3 @@ enum TrainingRuleStatus {
   approved
   rejected
 }
-
