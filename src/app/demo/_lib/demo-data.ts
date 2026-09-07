@@ -232,11 +232,11 @@ export const DEMO_OVERVIEW_DATA = {
   ],
   aiAgentReplies: 72,
   recentConversations: [
-    { id: "demo-c-1", name: "ندي حمدي", lastMessage: "متى ستحمل العطر الجديد؟", lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(), status: "auto", unread: true },
-    { id: "demo-c-2", name: "سالي صلاح", lastMessage: "هل السعر يشمل الشحن؟", lastMessageAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), status: "needs_human", unread: false },
-    { id: "demo-c-3", name: "خالد المصري", lastMessage: "شكراً على الرد السريع", lastMessageAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), status: "human_active", unread: true },
-    { id: "demo-c-4", name: "مريم جمال", lastMessage: "هل يمكنني الدفع عند الاستلام؟", lastMessageAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(), status: "auto", unread: false },
-    { id: "demo-c-5", name: "أحمد خالد", lastMessage: "أريد أطيب العطور الرجالية", lastMessageAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), status: "needs_human", unread: true },
+    { id: "demo-c-1", name: "ندي حمدي", lastMessage: "متى ستحمل العطر الجديد؟", lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(), status: "auto", unread: true, unreadCount: 3 },
+    { id: "demo-c-2", name: "سالي صلاح", lastMessage: "هل السعر يشمل الشحن؟", lastMessageAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), status: "needs_human", unread: false, unreadCount: 0 },
+    { id: "demo-c-3", name: "خالد المصري", lastMessage: "شكراً على الرد السريع", lastMessageAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), status: "human_active", unread: true, unreadCount: 1 },
+    { id: "demo-c-4", name: "مريم جمال", lastMessage: "هل يمكنني الدفع عند الاستلام؟", lastMessageAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
+    { id: "demo-c-5", name: "أحمد خالد", lastMessage: "أريد أطيب العطور الرجالية", lastMessageAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), status: "needs_human", unread: true, unreadCount: 5 },
   ],
 };
 

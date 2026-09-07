@@ -185,6 +185,7 @@ export async function GET(req: NextRequest) {
                 lastMessageAt: c.lastMessageAt,
                 status: STATUS_MAP[c.aiStatus] ?? "auto",
                 unread: c.unreadCount > 0,
+                unreadCount: c.unreadCount,
             };
         });
 
