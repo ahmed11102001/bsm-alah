@@ -1,7 +1,9 @@
 // src/lib/shopify-api.ts
 // ─── Shopify Admin REST API helpers — نداءات بسيطة، بدون client كامل ─────────
 
-const SHOPIFY_API_VERSION = "2024-01";
+// ─── نسخة الـ API المركزية — المصدر الوحيد المعتمد في كل التكامل ─────────────
+// حدّث الرقم هنا فقط عند الحاجة للترقية (نسخ Shopify مدعومة ~12 شهرًا).
+export const SHOPIFY_API_VERSION = "2026-07";
 
 interface ShopifyVariantResponse {
     variant?: { id: number; product_id: number; image_id: number | null };

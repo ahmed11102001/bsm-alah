@@ -1,7 +1,7 @@
 // src/lib/product-sync.ts
 import prisma from "@/lib/prisma";
 import { Prisma, ProductSource } from "@prisma/client";
-import { verifyShopifyProductScope } from "@/lib/shopify-api";
+import { SHOPIFY_API_VERSION, verifyShopifyProductScope } from "@/lib/shopify-api";
 
 export const MAX_PRODUCTS_PER_SYNC = 5000;
 
@@ -62,7 +62,7 @@ export async function syncShopifyProducts(
       return { source: ProductSource.shopify, synced: 0, errors: 1, deactivated: 0, errorMessage: errMsg };
     }
 
-    let pageUrl: string | null = `https://${shop}/admin/api/2024-01/products.json?limit=250`;
+    let pageUrl: string | null = `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=250`;
     const fetchedIds = new Set<string>();
     let totalSynced = 0;
     let errorsCount = 0;

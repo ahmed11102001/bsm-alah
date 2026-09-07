@@ -320,6 +320,32 @@ function ShopifyContent({
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [oauthShop, setOAuthShop] = useState("");
+
+  // ── الربط التلقائي (Public App OAuth) مقفول خلف env — من غيره لا يظهر شيء ──
+  // NEXT_PUBLIC_* تُضمّن وقت البناء؛ لحد ما تُضاف القيمة الحقيقية بعد موافقة
+  // Shopify، الشرط false والواجهة مطابقة تمامًا للوضع الحالي.
+  const isOAuthReady = Boolean(process.env.NEXT_PUBLIC_SHOPIFY_APP_CLIENT_ID);
+
+  function handleOAuthConnect() {
+    const shop = oauthShop.trim();
+    if (!shop) { toast.error("أدخل دومين متجرك أولاً (مثال: mystore.myshopify.com)"); return; }
+    window.location.href = `/api/shopify/auth?shop=${encodeURIComponent(shop)}`;
+  }
+
+  // تغليف شرطي: الفورم اليدوي يظهر عاديًا، أو مطويًا داخل details لو وضع OAuth
+  // مفعّل ولسه مفيش ربط — بدون تكرار أي JSX.
+  function MaybeManualDetails({ children }: { children: React.ReactNode }) {
+    if (!isOAuthReady || status?.connected) return <>{children}</>;
+    return (
+      <details className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2">
+        <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400 py-1 select-none">
+          أو اربط يدويًا (Access Token / Client ID)
+        </summary>
+        <div className="pt-2 pb-1">{children}</div>
+      </details>
+    );
+  }
 
   useEffect(() => {
     if (status?.connected) setShowForm(false);
@@ -384,8 +410,35 @@ function ShopifyContent({
         </div>
       )}
 
+      {/* ── الربط التلقائي (Public App OAuth) — يظهر فقط لو بيانات التطبيق مضافة ── */}
+      {isOAuthReady && !status?.connected && (
+        <div className="space-y-2 rounded-xl border border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 p-3">
+          <Label className="text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
+            ⚡ الربط التلقائي (موصى به)
+          </Label>
+          <Input
+            placeholder="mystore.myshopify.com"
+            value={oauthShop}
+            onChange={e => setOAuthShop(e.target.value)}
+            className="dark:bg-gray-700 dark:border-gray-600 text-left"
+            dir="ltr"
+          />
+          <Button
+            size="sm"
+            onClick={handleOAuthConnect}
+            className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Zap className="w-4 h-4" /> ربط تلقائي بضغطة واحدة
+          </Button>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-4">
+            هتتوجه لصفحة موافقة Shopify الرسمية وترجع مربوطًا تلقائيًا — من غير نسخ أي توكنات.
+          </p>
+        </div>
+      )}
+
       {/* ── فورم الربط (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
       {(!status?.connected || showForm) && (
+        <MaybeManualDetails>
         <div className="space-y-3">
           <div>
             <Label className="text-xs dark:text-gray-400">اسم المتجر *</Label>
@@ -506,6 +559,7 @@ function ShopifyContent({
             </div>
           </div>
         </div>
+        </MaybeManualDetails>
       )}
 
       {/* ── Webhook URL ───────────────────────────────────────────────────────── */}

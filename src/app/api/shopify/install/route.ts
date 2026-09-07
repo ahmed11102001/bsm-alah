@@ -5,6 +5,8 @@ import { authOptions }               from "@/lib/auth";
 import prisma                        from "@/lib/prisma";
 import { generateShopifyWebhookUrl } from "@/app/api/shopify/webhooks/route";
 import { encryptToken }              from "@/lib/crypto";
+import { SHOPIFY_API_VERSION }       from "@/lib/shopify-api";
+import { normalizeShopDomain }       from "@/lib/shopify-domain";
 import {
   getShopifyAuthMethod,
   getValidShopifyAccessToken,
@@ -23,22 +25,7 @@ const REQUIRED_TOPICS = [
   "customers/update",
 ] as const;
 
-// ── تنظيف وتوحيد الدومين ──────────────────────────────────────────────────────
-function normalizeShopDomain(input: string): string | null {
-  const clean = input
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "")
-    .split("/")[0];
-
-  const domain = clean.includes(".")
-    ? clean
-    : `${clean}.myshopify.com`;
-
-  if (!/^[a-z0-9-]+\.myshopify\.com$/.test(domain)) return null;
-  return domain;
-}
+// ── تنظيف وتوحيد الدومين — منطق مشترك في src/lib/shopify-domain.ts (مستورد أعلى الملف) ──
 
 // ── التحقق من الدومين ──────────────────────────────────────────────────────────
 async function verifyShopifyDomain(domain: string): Promise<boolean> {
@@ -64,7 +51,7 @@ async function registerWebhook(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(
-      `https://${shop}/admin/api/2024-01/webhooks.json`,
+      `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/webhooks.json`,
       {
         method:  "POST",
         headers: {
@@ -118,7 +105,7 @@ export async function registerAllWebhooks(
 async function verifyAccessToken(shop: string, token: string): Promise<boolean> {
   try {
     const res = await fetch(
-      `https://${shop}/admin/api/2024-01/shop.json`,
+      `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/shop.json`,
       {
         headers: { "X-Shopify-Access-Token": token },
         signal:  AbortSignal.timeout(8_000),

@@ -2,8 +2,8 @@
  * src/types/shopify.ts
  *
  * Types للـ payloads الجاية من Shopify Webhooks.
- * مبنية على Shopify REST Admin API 2024-01.
- * https://shopify.dev/docs/api/admin-rest/2024-01/resources/webhook
+ * مبنية على Shopify REST Admin API 2026-07 (راجع SHOPIFY_API_VERSION في src/lib/shopify-api.ts).
+ * https://shopify.dev/docs/api/admin-rest/2026-07/resources/webhook
  */
 
 // ─── Shared ────────────────────────────────────────────────────────────────────

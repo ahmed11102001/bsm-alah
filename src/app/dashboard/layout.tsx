@@ -209,6 +209,35 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     }
   }, [session?.user?.role, pathname, router]);
 
+  // ── نتيجة ربط Shopify التلقائي (OAuth callback) — toast مرة واحدة وتنظيف الـURL ──
+  // مقروءة من window.location عمدًا (بدل useSearchParams) لتفادي Suspense boundary.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("shopify_connected");
+    const err = params.get("shopify_error");
+    if (!connected && !err) return;
+    if (connected) {
+      toast.success("تم ربط متجر Shopify تلقائيًا ✅");
+    } else {
+      const messages: Record<string, string> = {
+        missing_params: "ناقص بيانات الرجوع من Shopify — حاول تاني",
+        invalid_shop: "دومين المتجر غير صالح",
+        invalid_state: "انتهت صلاحية جلسة الربط — حاول تاني",
+        user_not_found: "الحساب غير موجود",
+        token_exchange_failed: "فشل استبدال الكود بتوكن — حاول تاني",
+        no_token: "Shopify مرجعش توكن — حاول تاني",
+        shop_taken: "المتجر مربوط بحساب آخر بالفعل",
+        oauth_not_configured: "الربط التلقائي غير مفعّل حاليًا",
+      };
+      toast.error(messages[err ?? ""] ?? "فشل الربط التلقائي — حاول تاني");
+    }
+    params.delete("shopify_connected");
+    params.delete("shopify_error");
+    const rest = params.toString();
+    router.replace(rest ? `${pathname}?${rest}` : pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Desktop: close the floating Account menu when clicking outside it or pressing Escape.
   useEffect(() => {
     if (!accountPanelOpen) return;
