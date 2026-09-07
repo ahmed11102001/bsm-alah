@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  RefreshCw, Plus, Search, CheckCircle2, Clock, XCircle, Ban,
+  RefreshCw, Plus, Search, CheckCircle2, Clock,
   ChevronLeft, Smartphone, LayoutGrid, FileText, Sparkles, Package, Megaphone, CheckCheck, Loader2,
 } from "lucide-react";
 
@@ -40,7 +40,6 @@ export default function TemplatesPage() {
   const [waniEditTpl, setWaniEditTpl] = useState<Template | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCat, setFilterCat] = useState<string>("ALL");
-  const [filterLang, setFilterLang] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
@@ -80,18 +79,17 @@ export default function TemplatesPage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fetchTemplates]);
 
+  // Design pilot: 3 إحصائيات بقرار — أسقطنا مرفوض/متوقف (لا تُستخدم عمليًا؛
+  // صفوفها تظهر بشاراتها في عرض "الكل" عند وجودها)
   const stats = {
     total: templates.length,
     approved: templates.filter(t => t.status === "APPROVED").length,
     pending: templates.filter(t => t.status === "PENDING").length,
-    rejected: templates.filter(t => t.status === "REJECTED").length,
-    paused: templates.filter(t => t.status === "PAUSED").length,
   };
 
   const filtered = templates.filter(tp => {
     if (filterStatus !== "ALL" && tp.status !== filterStatus) return false;
     if (filterCat !== "ALL" && tp.category !== filterCat) return false;
-    if (filterLang !== "ALL" && tp.language !== filterLang) return false;
     if (search && !tp.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -213,15 +211,13 @@ export default function TemplatesPage() {
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: t.stats.total, value: stats.total, cls: "text-gray-800 dark:text-white", icon: <LayoutGrid className="w-4 h-4 text-gray-400" /> },
           { label: t.stats.approved, value: stats.approved, cls: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> },
           { label: t.stats.pending, value: stats.pending, cls: "text-amber-700  dark:text-amber-400", icon: <Clock className="w-4 h-4 text-amber-500" /> },
-          { label: t.stats.rejected, value: stats.rejected, cls: "text-red-700    dark:text-red-400", icon: <XCircle className="w-4 h-4 text-red-500" /> },
-          { label: t.stats.paused, value: stats.paused, cls: "text-gray-500   dark:text-gray-400", icon: <Ban className="w-4 h-4 text-gray-400" /> },
         ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+          <div key={s.label} className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 flex items-center gap-3 shadow-sm">
             {s.icon}
             <div>
               <p className={`text-xl font-bold leading-none ${s.cls}`}>{s.value}</p>
@@ -240,9 +236,9 @@ export default function TemplatesPage() {
             className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
         </div>
 
-        {/* Status filter */}
+        {/* Status filter — الكل/مقبول/قيد المراجعة فقط (مرفوض/متوقف خارج الفلاتر السريعة) */}
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          {["ALL", "APPROVED", "PENDING", "REJECTED"].map(s => (
+          {["ALL", "APPROVED", "PENDING"].map(s => (
             <button key={s}
               onClick={() => setFilterStatus(s)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all
@@ -268,12 +264,12 @@ export default function TemplatesPage() {
       {/* My Templates Table */}
       <div>
         <p className="text-sm font-bold text-gray-800 dark:text-white mb-3">{t.myTemplates}</p>
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
           {loading ? (
             <div className="p-3"><TableRowsSkeleton rows={5} bare cols={2} /></div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center mb-4">
                 <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
               </div>
               <p className="font-semibold text-gray-700 dark:text-gray-300">{t.empty}</p>
@@ -496,7 +492,7 @@ export default function TemplatesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Form panel */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 shadow-sm">
           {step === 1
             ? <Step1 form={form} setForm={setForm} lang={lang}
               onNext={() => setStep(2)}
@@ -509,7 +505,7 @@ export default function TemplatesPage() {
 
         {/* Preview panel */}
         <div className="lg:col-span-1 sticky top-6">
-          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Smartphone className="w-3.5 h-3.5" /> {t.preview}
             </p>

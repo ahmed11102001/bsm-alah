@@ -80,7 +80,7 @@ export function Step1({ form, setForm, lang, onNext, onCancel }: {
                                 <button
                                     disabled={isAuth}
                                     onClick={() => { if (!isAuth) setForm({ ...form, category: cat.key }); }}
-                                    className={`w-full text-start rounded-2xl border-2 p-4 transition-all
+                                    className={`w-full text-start rounded-xl border-2 p-4 transition-all
                     ${isAuth ? "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" : "hover:shadow-sm"}
                     ${!isAuth && form.category === cat.key
                                             ? "border-[#25D366] bg-[#25D366]/5 dark:bg-[#25D366]/10 ring-1 ring-[#25D366]/30"

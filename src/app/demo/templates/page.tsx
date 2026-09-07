@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Plus, Search, Sparkles, Package, Megaphone, LayoutGrid, FileText, CheckCircle2, Clock, XCircle, Ban, ChevronLeft, Smartphone } from "lucide-react";
+import { RefreshCw, Plus, Search, Sparkles, Package, Megaphone, LayoutGrid, FileText, CheckCircle2, Clock, ChevronLeft, Smartphone } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { T } from "@/app/dashboard/templates/_components/i18n";
 import { WANI_READY } from "@/app/dashboard/templates/_components/wani-ready-templates";
@@ -35,7 +35,6 @@ export default function DemoTemplatesPage() {
   const [waniEditTpl, setWaniEditTpl] = useState<Template | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCat, setFilterCat] = useState<string>("ALL");
-  const [filterLang, setFilterLang] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
   const defaultForm: FormState = { name: "", category: "", language: "ar", headerType: "none", headerText: "", body: "", footer: "", buttons: [], exampleVars: [] };
@@ -45,14 +44,11 @@ export default function DemoTemplatesPage() {
     total: templates.length,
     approved: templates.filter(tpl => tpl.status === "APPROVED").length,
     pending: templates.filter(tpl => tpl.status === "PENDING").length,
-    rejected: templates.filter(tpl => tpl.status === "REJECTED").length,
-    paused: templates.filter(tpl => tpl.status === "PAUSED").length,
   };
 
   const filtered = templates.filter(tp => {
     if (filterStatus !== "ALL" && tp.status !== filterStatus) return false;
     if (filterCat !== "ALL" && tp.category !== filterCat) return false;
-    if (filterLang !== "ALL" && tp.language !== filterLang) return false;
     if (search && !tp.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -123,15 +119,13 @@ export default function DemoTemplatesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: t.stats.total, value: stats.total, icon: <LayoutGrid className="w-4 h-4 text-gray-400" /> },
           { label: t.stats.approved, value: stats.approved, icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> },
           { label: t.stats.pending, value: stats.pending, icon: <Clock className="w-4 h-4 text-amber-500" /> },
-          { label: t.stats.rejected, value: stats.rejected, icon: <XCircle className="w-4 h-4 text-red-500" /> },
-          { label: t.stats.paused, value: stats.paused, icon: <Ban className="w-4 h-4 text-gray-400" /> },
         ].map((item) => (
-          <div key={item.label} className="rounded-2xl p-4 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm flex items-center gap-3">
+          <div key={item.label} className="rounded-xl p-4 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center">{item.icon}</div>
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{item.value}</p>
@@ -148,7 +142,7 @@ export default function DemoTemplatesPage() {
             className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
         </div>
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          {["ALL", "APPROVED", "PENDING", "REJECTED"].map(s => (
+          {["ALL", "APPROVED", "PENDING"].map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${filterStatus === s ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
               {s === "ALL" ? t.filters.all : t.status[s as TemplateStatus]}
@@ -165,7 +159,7 @@ export default function DemoTemplatesPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-8 h-8 border-2 border-gray-200 dark:border-gray-700 border-t-[#25D366] rounded-full animate-spin mb-3" />
@@ -322,7 +316,7 @@ export default function DemoTemplatesPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 shadow-sm">
           {step === 1 ? (
             <Step1 form={form} setForm={setForm} lang={lang} onNext={() => setStep(2)} onCancel={() => { setView("list"); setStep(1); }} />
           ) : (
@@ -331,7 +325,7 @@ export default function DemoTemplatesPage() {
         </div>
 
         <div className="lg:col-span-1 sticky top-6">
-          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" />{t.preview}</p>
             <WhatsAppPreview form={form} lang={lang} />
           </div>

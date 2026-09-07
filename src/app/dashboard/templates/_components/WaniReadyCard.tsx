@@ -72,7 +72,7 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
     return (
         <div
             className="group relative bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700
-        rounded-2xl p-4 hover:shadow-md hover:border-[#25D366]/40 dark:hover:border-[#25D366]/30
+          rounded-xl p-4 hover:shadow-md hover:border-[#25D366]/40 dark:hover:border-[#25D366]/30
         transition-all duration-200 cursor-pointer"
             onClick={onView}
         >
