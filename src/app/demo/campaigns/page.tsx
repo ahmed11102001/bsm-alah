@@ -180,22 +180,39 @@ export default function DemoCampaignsPage() {
       const campaign: Campaign = {
         id: `demo-cmp-${Date.now()}`,
         name: campaignName.trim(),
-        status: isScheduled ? "scheduled" : "completed",
-        sentCount: isScheduled ? 0 : numbers.length,
-        deliveredCount: isScheduled ? 0 : Math.max(0, Math.round(numbers.length * 0.94)),
-        readCount: isScheduled ? 0 : Math.max(0, Math.round(numbers.length * 0.83)),
-        failedCount: isScheduled ? 0 : Math.max(0, Math.round(numbers.length * 0.02)),
+        // محاكاة الطابور الحقيقي: الفورية تبدأ queued ثم تُنجز بعد ثوانٍ
+        status: isScheduled ? "scheduled" : "queued",
+        sentCount: 0,
+        deliveredCount: 0,
+        readCount: 0,
+        failedCount: 0,
         totalQueued: numbers.length,
-        queuedCount: isScheduled ? numbers.length : 0,
+        queuedCount: numbers.length,
         scheduledAt: isScheduled ? new Date(scheduledAt).toISOString() : null,
         createdAt: now.toISOString(),
-        completedAt: isScheduled ? null : now.toISOString(),
+        completedAt: null,
         template: { name: selectedTemplate.name, content: selectedTemplate.content, category: selectedTemplate.category },
       };
       setCampaigns(prev => [campaign, ...prev]);
       setDialogOpen(false);
       resetDialog();
-      toast.success(lang === "ar" ? "تم إنشاء الحملة بنجاح" : "Campaign created successfully");
+      toast.success(isScheduled
+        ? (lang === "ar" ? "تم جدولة الحملة ✅" : "Campaign scheduled successfully")
+        : (lang === "ar" ? "تم وضع الحملة في قائمة الانتظار — سيبدأ الإرسال تلقائياً" : "Campaign queued — sending will start automatically"));
+      if (!isScheduled) {
+        window.setTimeout(() => {
+          setCampaigns(prev => prev.map(c => c.id === campaign.id ? {
+            ...c,
+            status: "completed",
+            sentCount: numbers.length,
+            deliveredCount: Math.max(0, Math.round(numbers.length * 0.94)),
+            readCount: Math.max(0, Math.round(numbers.length * 0.83)),
+            failedCount: Math.max(0, Math.round(numbers.length * 0.02)),
+            queuedCount: 0,
+            completedAt: new Date().toISOString(),
+          } : c));
+        }, 5000);
+      }
       setSubmitting(false);
     }, 500);
   };
@@ -284,6 +301,7 @@ export default function DemoCampaignsPage() {
         {[
           { value: "all", label: tr("filterAll", lang) },
           { value: "running", label: tr("filterRunning", lang) },
+          { value: "queued", label: tr("filterQueued", lang) },
           { value: "scheduled", label: tr("filterScheduled", lang) },
           { value: "completed", label: tr("filterCompleted", lang) },
           { value: "failed", label: tr("filterFailed", lang) },

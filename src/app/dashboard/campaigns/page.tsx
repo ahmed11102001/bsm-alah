@@ -311,7 +311,9 @@ export default function Campaigns() {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
           toast.dismiss(tid);
-          toast.success(data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅");
+          // رسالة الباك إند نفسها توضح الانتظار ("تم وضع الحملة في قائمة الانتظار") —
+          // لا نستبدلها برسالة عامة حتى يعرف اليوزر أن حملته لم تُنسَ.
+          toast.success(data.message ?? (data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅"));
           window.dispatchEvent(new Event("trigger-review-prompt"));
           setDialogOpen(false); resetDialog(); await loadCampaigns();
           return;
@@ -351,7 +353,8 @@ export default function Campaigns() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
       toast.dismiss(tid);
-      toast.success(data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅");
+      // نفس مبدأ الفرع أعلاه: رسالة الباك إند توضح الانتظار — لا نستبدلها.
+      toast.success(data.message ?? (data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅"));
       window.dispatchEvent(new Event("trigger-review-prompt"));
       setDialogOpen(false); resetDialog(); await loadCampaigns();
     } catch (err: any) { toast.dismiss(tid); toast.error(err.message); }
@@ -393,10 +396,13 @@ export default function Campaigns() {
   const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount + c.readCount, 0);
   const totalRead = campaigns.reduce((a, c) => a + c.readCount, 0);
 
-  // Design pilot: 5 فلاتر بقرار — أسقطنا queued (عابرة) وdraft (لا تُنشأ من الواجهة)
+  // Design pilot: أسقطنا draft فقط (حالة عابرة — الـenqueue يتم في نفس الطلب).
+  // أُعيدت queued عمدًا: هي حالة "بانتظار سعة الإرسال" (Inngest: 5 عامة / 2 لكل
+  // يوزر) — اليوزر يحتاج يراها ويفلتر عليها ليعرف أن حملته لم تُنسَ.
   const STATUS_FILTERS = [
     { value: "all", label: tr("filterAll", lang) },
     { value: "running", label: tr("filterRunning", lang) },
+    { value: "queued", label: tr("filterQueued", lang) },
     { value: "scheduled", label: tr("filterScheduled", lang) },
     { value: "completed", label: tr("filterCompleted", lang) },
     { value: "failed", label: tr("filterFailed", lang) },
