@@ -1,9 +1,9 @@
 // src/app/dashboard/store/_components/StoreTab.tsx
 // ─── المحتوى الكامل لكل متجر (KPIs + أتمتات + عملاء) ────────────────────────
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  Package, Users, TrendingUp, RefreshCw, Search, Loader2, Phone, ChevronRight, Globe,
+  Package, Users, TrendingUp, RefreshCw, Search, Loader2, Phone, ChevronRight, Globe, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,16 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   const [templates, setTemplates] = useState<AutomationTemplate[]>([]);
   const [loadingA, setLoadingA] = useState(true);
 
+  // ── تبويبا العمل اليومي/الإعداد — العملاء افتراضيًا، والأتمتة تلقائيًا ────
+  // لو لم تُفعّل أي أتمتة بعد (إعداد أول مرة). اختيار اليوزر لا يُتجاوَز أبدًا.
+  // ملاحظة تنفيذ: التبويب عبر hidden (لا إلغاء mount) — الكروت بلا effects.
+  const [storeTab, setStoreTab] = useState<"customers" | "automations">("customers");
+  const tabTouched = useRef(false);
+  const pickTab = (t: "customers" | "automations") => {
+    tabTouched.current = true;
+    setStoreTab(t);
+  };
+
   const [syncing, setSyncing] = useState(false);
 
   // ── Fetch Customers ─────────────────────────────────────────────────────
@@ -65,8 +75,12 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
       const r = await fetch(`/api/store/automation?source=${store.source}`);
       if (!r.ok) throw new Error("fetch failed");
       const d: { automations: AutomationItem[]; templates: AutomationTemplate[] } = await r.json();
-      setAutomations(d.automations ?? []);
+      const list = d.automations ?? [];
+      setAutomations(list);
       setTemplates(d.templates ?? []);
+      if (!tabTouched.current && list.length > 0 && list.every((a) => !a.isEnabled)) {
+        setStoreTab("automations");
+      }
     } catch {
       toast.error(lang === "ar" ? "تعذر تحميل automations" : "Failed to load automations");
     } finally {
@@ -78,6 +92,11 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
     fetchCustomers(1, "");
     fetchAutomations();
   }, [fetchCustomers, fetchAutomations]);
+
+  useEffect(() => {
+    tabTouched.current = false;
+    setStoreTab("customers");
+  }, [store.source]);
 
   // Debounced search
   useEffect(() => {
@@ -196,8 +215,28 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         />
       </div>
 
+      {/* ── تبويبا العمل اليومي / الإعداد ─────────────────────────────────── */}
+      <div className="flex gap-1.5 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl w-fit">
+        <TabButton
+          active={storeTab === "customers"}
+          onClick={() => pickTab("customers")}
+          icon={<Users className="w-4 h-4" />}
+          label={tr("tabCustomers", lang)}
+          count={total}
+          lang={lang}
+        />
+        <TabButton
+          active={storeTab === "automations"}
+          onClick={() => pickTab("automations")}
+          icon={<Zap className="w-4 h-4" />}
+          label={tr("tabAutomations", lang)}
+          count={automations.filter((a) => a.isEnabled).length}
+          lang={lang}
+        />
+      </div>
+
       {/* ── Automations ───────────────────────────────────────────────────── */}
-      <section>
+      <section className={storeTab === "automations" ? "" : "hidden"}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
             {tr("automationsTitle", lang)}
@@ -210,7 +249,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         {loadingA ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-gray-100 dark:bg-gray-700 rounded-2xl animate-pulse" />
+              <div key={i} className="h-48 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : (
@@ -231,7 +270,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
       </section>
 
       {/* ── Customers ─────────────────────────────────────────────────────── */}
-      <section>
+      <section className={storeTab === "customers" ? "" : "hidden"}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
             {tr("customersTitle", lang)}
@@ -261,7 +300,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         {loadingC && customers.length === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-44 bg-gray-100 dark:bg-gray-700 rounded-2xl animate-pulse" />
+              <div key={i} className="h-44 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : customers.length === 0 ? (
@@ -294,8 +333,11 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         )}
       </section>
 
-      {/* ── Contact List Banner ────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center gap-4">
+      {/* ── Contact List Banner — تخص العملاء ───────────────────────────────── */}
+      <div className={cn(
+        "bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center gap-4",
+        storeTab === "customers" ? "" : "hidden"
+      )}>
         <div className="w-11 h-11 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
           <Phone className="w-5 h-5 text-[#25D366]" />
         </div>
@@ -316,8 +358,8 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </button>
       </div>
 
-      {/* ── EasyOrders Manual Sync ─────────────────────────────────────────── */}
-      {store.source === "easyorders" && (
+      {/* ── EasyOrders Manual Sync — صيانة، مع الأتمتة ──────────────────────── */}
+      {storeTab === "automations" && store.source === "easyorders" && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center justify-between gap-4">
           <div>
             <p className="font-semibold text-sm text-gray-800 dark:text-white">{tr("manualSync", lang)}</p>
@@ -334,8 +376,8 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </div>
       )}
 
-      {/* ── WooCommerce Webhook Info ───────────────────────────────────────── */}
-      {store.source === "woocommerce" && (
+      {/* ── WooCommerce Webhook Info — إعداد، مع الأتمتة ───────────────────── */}
+      {storeTab === "automations" && store.source === "woocommerce" && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -356,5 +398,38 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── زرار تبويب داخلي بعدّاد — نفس لغة تبويبات المنصات أعلى الصفحة ──────────
+function TabButton({ active, onClick, icon, label, count, lang }: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  count: number;
+  lang: "ar" | "en";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-[10px] text-sm font-medium transition-all",
+        active
+          ? "bg-white dark:bg-gray-800 text-[#25D366] shadow-sm"
+          : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+      )}
+    >
+      {icon}
+      {label}
+      <span className={cn(
+        "text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center",
+        active
+          ? "bg-[#25D366]/10 text-[#25D366]"
+          : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300"
+      )}>
+        {count.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}
+      </span>
+    </button>
   );
 }

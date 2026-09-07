@@ -192,7 +192,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
   return (
     <>
       <div className={cn(
-        "bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-5 transition-all relative",
+        "bg-white dark:bg-gray-800 rounded-xl border shadow-sm p-5 transition-all relative",
         enabled && !isUnsupported
           ? "border-[#25D366]/40 dark:border-[#25D366]/25"
           : "border-gray-100 dark:border-gray-700",

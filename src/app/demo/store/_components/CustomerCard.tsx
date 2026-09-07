@@ -22,7 +22,7 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
     const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
 
             {/* Header */}
             <div className="p-4 flex items-start gap-3">

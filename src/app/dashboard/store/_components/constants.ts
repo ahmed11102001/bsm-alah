@@ -63,6 +63,8 @@ export const TX = {
     automationsTitle: { ar: "⚙️ أتمتات المتجر", en: "⚙️ Store Automations" },
     enabled: { ar: "مفعّل", en: "enabled" },
     customersTitle: { ar: "👥 العملاء", en: "👥 Customers" },
+    tabCustomers: { ar: "العملاء", en: "Customers" },
+    tabAutomations: { ar: "الأتمتة", en: "Automations" },
     searchPh: { ar: "اسم أو رقم أو طلب...", en: "Name, number, or order..." },
     noCustomers: { ar: "لا يوجد عملاء مطابقون", en: "No matching customers" },
     loadMore: { ar: "تحميل المزيد", en: "Load more" },
