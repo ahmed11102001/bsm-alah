@@ -12,7 +12,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer,
 } from "recharts";
 import {
-  MessageSquare, Send, BarChart3,
+  MessageSquare, Send,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
   PieChart as PieChartIcon, Lock, Sparkles, Megaphone,
@@ -101,6 +101,9 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const cb = overview?.campaignBreakdown;
   const campaignTotal = cb ? cb.running + cb.scheduled + cb.completed + cb.draft + cb.failed : stats.totalCampaigns;
 
+  // ── Design pilot: الـHero إجراءٌ واحد — المحادثات التي تحتاج تدخلًا بشريًا ──
+  const needsHumanList = overview.recentConversations.filter((c) => c.status === "needs_human");
+
   const campaignLimitActive = whatsappConnected && campaignAtLimit;
   const showMetaConnectPrompt = () => {
     const message = locale === "ar"
@@ -134,7 +137,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-[#25D366]" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
@@ -154,10 +157,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-5 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">{h.subtitle}</p>
+          <h1 className="text-lg sm:text-xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">{h.subtitle}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button
@@ -176,14 +179,38 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      {/* ── Design pilot: Hero واحد — إجراء اليوم: المحادثات بانتظار تدخلك ──── */}
+      {needsHumanList.length > 0 && (
+        <button
+          onClick={() => router.push("/demo/chat")}
+          className="w-full text-start rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/15 px-4 py-3.5 mb-5 flex items-center gap-3 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-warning flex-shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-gray-900 dark:text-gray-100">
+              {numFmt(needsHumanList.length)}{" "}
+              {locale === "ar"
+                ? (needsHumanList.length === 1 ? "محادثة بانتظار تدخلك" : "محادثات بانتظار تدخلك")
+                : (needsHumanList.length === 1 ? "conversation needs you" : "conversations need you")}
+            </span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+              {needsHumanList[0].name} — {needsHumanList[0].lastMessage || "—"}
+            </span>
+          </span>
+          <span className="text-xs font-bold text-white bg-[#25D366] hover:bg-[#20bb5a] rounded-lg px-3.5 py-2 flex-shrink-0">
+            {locale === "ar" ? "متابعة" : "Review"}
+          </span>
+        </button>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         {kpis.map((k) => (
           <Card key={k.label} className="border border-gray-100 dark:border-gray-700 shadow-sm">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 leading-tight">{k.label}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-none">{numFmt(k.value)}</p>
+                  <p className="text-xl font-bold leading-none">{numFmt(k.value)}</p>
                   {k.sub && (
                     <p className={`text-[10px] sm:text-xs mt-1.5 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-gray-400"}`}>
                       {k.trend === "up" && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
@@ -199,35 +226,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         ))}
 
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
-          <CardContent className="p-3 sm:p-5">
-            <div className="flex items-start justify-between mb-1">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 leading-tight">{h.kpi.campaigns}</p>
-                <p className="text-xl sm:text-2xl font-bold leading-none">{numFmt(stats.totalCampaigns)}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ms-2 bg-orange-50 dark:bg-orange-900/20">
-                <BarChart3 className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-            {cb && campaignTotal > 0 ? (
-              <>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                  {cb.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{cb.running} {ov.campaignBreakdown.running}</span>}
-                  {cb.scheduled > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />{cb.scheduled} {ov.campaignBreakdown.scheduled}</span>}
-                  {cb.completed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />{cb.completed} {ov.campaignBreakdown.completed}</span>}
-                </div>
-                <div className="flex w-full h-1.5 rounded-full overflow-hidden mt-2 bg-gray-100 dark:bg-gray-700">
-                  {cb.running > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(cb.running / campaignTotal) * 100}%` }} />}
-                  {cb.scheduled > 0 && <div className="bg-amber-500 h-full" style={{ width: `${(cb.scheduled / campaignTotal) * 100}%` }} />}
-                  {cb.completed > 0 && <div className="bg-blue-500 h-full" style={{ width: `${(cb.completed / campaignTotal) * 100}%` }} />}
-                </div>
-              </>
-            ) : (
-              <p className="text-[10px] sm:text-xs mt-1.5 text-gray-400">{h.kpi.thisMonth(data.plan.usage.campaignsThisMonth)}</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* كارت الحملات المصغّر مدمج كشرائح في هيدر "الحملات الأخيرة" بالأسفل (pilot) */}
       </div>
 
       {/* ── Wani AI Agent + Sponsor spotlight ── */}
@@ -236,7 +235,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         <Card className="border border-dashed border-gray-300 dark:border-gray-600 shadow-sm overflow-hidden lg:col-span-2 bg-gray-50/60 dark:bg-gray-800/30">
           <CardContent className="p-0 h-full">
             <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
-              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Megaphone className="w-7 h-7 text-gray-400" />
               </div>
               <div className="flex-1 min-w-0 text-center sm:text-start">
@@ -491,7 +490,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
       <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
-          <CardTitle className="text-base font-bold">{h.campaigns.title}</CardTitle>
+          <div className="flex items-center gap-2 min-w-0">
+            <CardTitle className="text-base font-bold flex-shrink-0">{h.campaigns.title}</CardTitle>
+            {cb && campaignTotal > 0 && (
+              <span className="hidden sm:flex items-center gap-x-2 text-[10px] text-gray-500 dark:text-gray-400">
+                <span className="font-bold text-gray-700 dark:text-gray-300">{numFmt(stats.totalCampaigns)}</span>
+                {cb.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success" />{cb.running}</span>}
+                {cb.scheduled > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-warning" />{cb.scheduled}</span>}
+                {cb.completed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-info" />{cb.completed}</span>}
+              </span>
+            )}
+          </div>
           <button onClick={onCreateCampaign} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
             {h.campaigns.viewAll} <ChevronLeft className="w-3.5 h-3.5" />
           </button>

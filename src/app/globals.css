@@ -24,6 +24,21 @@
     --input: 240 5.9% 90%;
     --ring: 142.1 76.2% 36.3%;
     --radius: 0.5rem;
+    /* ── Design System pilot: semantic colors ──
+       primary/destructive = الإجراء والخطر فقط. success/warning/info
+       للحالات — ممنوع استخدام الأخضر البراندي كـ"نجاح". */
+    --success: 161 94% 30%;
+    --success-foreground: 0 0% 98%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 98%;
+    --info: 221 83% 53%;
+    --info-foreground: 0 0% 98%;
+    /* ── Design System pilot: motion tokens ──
+       fast = hover/focus، normal = فتح/إغلاق، slow = انتقالات كبرى فقط. */
+    --motion-fast: 150ms;
+    --motion-normal: 250ms;
+    --motion-slow: 400ms;
+    --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .dark {
@@ -46,6 +61,12 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 142.1 76.2% 36.3%;
+    --success: 160 80% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 240 10% 3.9%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
   }
 }
 
@@ -817,4 +838,18 @@ textarea:focus {
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 142.1 76.2% 36.3%;
+}
+
+/* ── Design System pilot: احترام تقليل الحركة ────────────────────────────
+   أي animation بلا سبب وظيفي يجب إزالتها أصلًا؛ هذا الحارس يغطي الباقي
+   للمستخدمين الذين فعّلوا prefers-reduced-motion في نظامهم. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
