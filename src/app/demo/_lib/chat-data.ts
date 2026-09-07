@@ -82,11 +82,11 @@ const mona: Conversation = {
         assignedTo: null,
     },
     lastMessage: {
-        id: "m-mona-1", content: "عندكم شحن لأسوان؟", type: "text",
-        direction: "inbound", status: "read", createdAt: minutesAgo(18),
+        id: "m-mona-3", content: "ممكن رقم للتواصل؟", type: "text",
+        direction: "inbound", status: "delivered", createdAt: minutesAgo(5),
     },
-    unreadCount: 1,
-    lastMessageAt: minutesAgo(18),
+    unreadCount: 3,
+    lastMessageAt: minutesAgo(5),
     isArchived: false,
     textAiEnabled: false,
     aiStatus: "NEEDS_HUMAN",
@@ -96,6 +96,8 @@ const mona: Conversation = {
 
 const monaMessages: Message[] = [
     { id: "m-mona-1", content: "عندكم شحن لأسوان؟", type: "text", direction: "inbound", status: "read", mediaUrl: null, createdAt: minutesAgo(18) },
+    { id: "m-mona-2", content: "وممكن الدفع عند الاستلام؟", type: "text", direction: "inbound", status: "delivered", mediaUrl: null, createdAt: minutesAgo(12) },
+    { id: "m-mona-3", content: "ممكن رقم للتواصل؟", type: "text", direction: "inbound", status: "delivered", mediaUrl: null, createdAt: minutesAgo(5) },
 ];
 
 // ─── محادثة 4: خالد المصري — محادثة عدى عليها 24 ساعة (تحذير القالب) ────────────
@@ -115,7 +117,7 @@ const khaled: Conversation = {
     lastMessageAt: hoursAgo(28),
     isArchived: false,
     textAiEnabled: false,
-    aiStatus: "AUTO",
+    aiStatus: "HUMAN_ACTIVE",
 };
 
 const khaledMessages: Message[] = [

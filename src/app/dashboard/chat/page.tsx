@@ -269,6 +269,22 @@ export default function ChatPage() {
     };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
 
+  // ── Deep-link من كارت الهوم: ?contact=<id> يفتح المحادثة تلقائيًا ──────────
+  // يُستهلك مرة واحدة ثم يُمسح من الـURL حتى لا يُعاد الفتح مع كل تحديث قائمة.
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current || convs.length === 0) return;
+    const id = new URLSearchParams(window.location.search).get("contact");
+    if (!id) return;
+    const match = convs.find(c => c.contact.id === id);
+    if (!match) return;
+    deepLinked.current = true;
+    selectConv(match);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("contact");
+    window.history.replaceState(null, "", url.toString());
+  }, [convs, selectConv]);
+
   // ── بولينج دوري لقائمة المحادثات (sidebar) ─────────────────────────
   // عشان الـ unread badges والمحادثات الجديدة تتحدث live حتى لو مفيش
   // محادثة مفتوحة، أو المستخدم مش بيغيّر filter/search.

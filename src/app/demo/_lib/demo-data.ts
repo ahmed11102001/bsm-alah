@@ -231,12 +231,13 @@ export const DEMO_OVERVIEW_DATA = {
     { id: "wani-ai-agent", name: "Wani AI", source: "ai" as const, isEnabled: true, triggered: 72, successRate: 86 },
   ],
   aiAgentReplies: 72,
+  // نفس الـids في chat-data.ts — ليعمل الـdeep-link (?contact=) من كارت الهوم
   recentConversations: [
-    { id: "demo-c-1", name: "ندي حمدي", lastMessage: "متى ستحمل العطر الجديد؟", lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(), status: "auto", unread: true, unreadCount: 3 },
-    { id: "demo-c-2", name: "سالي صلاح", lastMessage: "هل السعر يشمل الشحن؟", lastMessageAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), status: "needs_human", unread: false, unreadCount: 0 },
-    { id: "demo-c-3", name: "خالد المصري", lastMessage: "شكراً على الرد السريع", lastMessageAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), status: "human_active", unread: true, unreadCount: 1 },
-    { id: "demo-c-4", name: "مريم جمال", lastMessage: "هل يمكنني الدفع عند الاستلام؟", lastMessageAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
-    { id: "demo-c-5", name: "أحمد خالد", lastMessage: "أريد أطيب العطور الرجالية", lastMessageAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), status: "needs_human", unread: true, unreadCount: 5 },
+    { id: "demo-contact-sara", name: "سارة أحمد", lastMessage: "تمام، هوصلك رابط تأكيد الطلب دلوقتي 🌸", lastMessageAt: new Date(Date.now() - 2 * 60000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
+    { id: "demo-contact-mona", name: "منى عبد الله", lastMessage: "ممكن رقم للتواصل؟", lastMessageAt: new Date(Date.now() - 5 * 60000).toISOString(), status: "needs_human", unread: true, unreadCount: 3 },
+    { id: "demo-contact-omar", name: "عمر خالد", lastMessage: "تم شحن طلبك رقم #4821 🚚 هيوصلك خلال يومين", lastMessageAt: new Date(Date.now() - 40 * 60000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
+    { id: "demo-contact-khaled", name: "خالد المصري", lastMessage: "لو سمحت المنتج لسه متاح؟", lastMessageAt: new Date(Date.now() - 28 * 3600 * 1000).toISOString(), status: "human_active", unread: false, unreadCount: 0 },
+    { id: "demo-contact-hadeer", name: "هدير مصطفى", lastMessage: "شكرًا ليكم، حاجات هدية حلوة أوي 🎁", lastMessageAt: new Date(Date.now() - 9 * 24 * 3600 * 1000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
   ],
 };
 

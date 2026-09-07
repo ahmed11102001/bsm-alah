@@ -58,6 +58,18 @@ export default function DemoChatPage() {
     const [chatViewMode, setChatViewMode] = useState<"chat" | "timeline">("chat");
     const [mobileShowChat, setMobileShowChat] = useState(false);
 
+    // ── Deep-link من كارت الهوم: ?contact=<id> يفتح المحادثة تلقائيًا ────────
+    useEffect(() => {
+        const id = new URLSearchParams(window.location.search).get("contact");
+        if (!id) return;
+        if (!DEMO_CONVERSATIONS.some(c => c.contact.id === id)) return;
+        setSelectedId(id);
+        setMobileShowChat(true);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("contact");
+        window.history.replaceState(null, "", url.toString());
+    }, []);
+
     const [text, setText] = useState("");
     const [sending, setSending] = useState(false);
     const [showAttach, setShowAttach] = useState(false);
