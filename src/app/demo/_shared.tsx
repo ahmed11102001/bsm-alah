@@ -5,9 +5,6 @@ import {
 
 // ─── نسخة الديمو من src/app/dashboard/_shared.tsx ────────────────────────────
 // نفس الثوابت بالظبط، الفرق الوحيد إن sidebarHref بيوجه لـ /demo مش /dashboard.
-// مجموعات السايدبار مشتركة من الداشبورد (نفس التقسيم في كل مكان).
-export { SIDEBAR_GROUPS } from "@/app/dashboard/_shared";
-export type { SidebarGroupId } from "@/app/dashboard/_shared";
 
 export const SIDEBAR_IDS = [
     { icon: Home, id: "home" },

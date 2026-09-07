@@ -16,13 +16,6 @@ export const translations = {
       store: "المتجر",
       api: "التكاملات",
       admin: "Admin",
-      groups: {
-        workspace: "مساحة العمل",
-        engage: "التفاعل",
-        commerce: "التجارة",
-        insights: "التقارير",
-        management: "الإدارة",
-      },
     },
     theme: {
       dark: "وضع داكن",
@@ -690,13 +683,6 @@ export const translations = {
       store: "Store",
       api: "Integrations",
       admin: "Admin",
-      groups: {
-        workspace: "Workspace",
-        engage: "Engage",
-        commerce: "Commerce",
-        insights: "Insights",
-        management: "Management",
-      },
     },
     theme: {
       dark: "Dark mode",

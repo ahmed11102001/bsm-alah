@@ -22,20 +22,6 @@ export const SIDEBAR_IDS = [
 
 ] as const satisfies ReadonlyArray<{ icon: any; id: string; permission: Permission | null }>;
 
-// ─── Sidebar groups — تجميع العناصر لتقليل الـcognitive overload ─────────────
-// المستخدم يفهم "فين أنا؟" عبر 5 مجموعات بدل قائمة مسطحة من 10 عناصر.
-// المجموعة التي تصبح فارغة بعد فلترة الصلاحيات لا تُعرض إطلاقًا.
-// ترتيب المجموعات: يومي أولًا (Workspace)، والإدارة آخرًا قبل Admin/الحساب.
-export const SIDEBAR_GROUPS = [
-    { id: "workspace", items: ["home", "chat", "contacts"] },
-    { id: "engage", items: ["campaigns", "templates", "automation"] },
-    { id: "commerce", items: ["store"] },
-    { id: "insights", items: ["reports"] },
-    { id: "management", items: ["team", "api"] },
-] as const;
-
-export type SidebarGroupId = (typeof SIDEBAR_GROUPS)[number]["id"];
-
 // ─── العناصر اللي مسموح للـ role يشوفها في الـ Sidebar ────────────────────
 // OWNER بياخد كل حاجة تلقائي (hasPermission بترجع true ليه في أي permission).
 export function visibleSidebarIds(role: UserRole | undefined | null) {

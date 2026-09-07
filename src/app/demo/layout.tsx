@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { SubscriptionProvider, useSubscription, type DashboardData } from "./_lib/dashboard-context";
 import {
-  SIDEBAR_IDS, SIDEBAR_GROUPS, PLAN_COLORS, sidebarHref,
+  SIDEBAR_IDS, PLAN_COLORS, sidebarHref,
 } from "./_shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -592,13 +592,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   const sidebarItems = SIDEBAR_IDS.map(item => ({
     ...item,
-    label: t.sidebar[item.id as keyof typeof t.sidebar] as string,
+    label: t.sidebar[item.id as keyof typeof t.sidebar],
   }));
-  const sidebarGroups = SIDEBAR_GROUPS.map(group => ({
-    ...group,
-    label: t.sidebar.groups[group.id],
-    items: sidebarItems.filter(item => (group.items as readonly string[]).includes(item.id)),
-  })).filter(group => group.items.length > 0);
 
   const displayName = dashData?.user.name ?? (locale === "ar" ? "المستخدم" : "User");
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -628,29 +623,18 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="p-3 space-y-1 flex-1 overflow-y-auto overflow-x-hidden">
-            {sidebarGroups.map((group) => (
-              <div key={group.id}>
-                {!sidebarCollapsed && (
-                  <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 select-none">
-                    {group.label}
-                  </p>
-                )}
-                <div className="space-y-1">
-                  {group.items.map((item) => (
-                    <Link key={item.id} href={sidebarHref(item.id)}
-                      data-sidebar-id={item.id}
-                      title={sidebarCollapsed ? item.label : undefined}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
-                        } ${activeSection === item.id
-                          ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        }`}>
-                      <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                      {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+            {sidebarItems.map((item) => (
+              <Link key={item.id} href={sidebarHref(item.id)}
+                data-sidebar-id={item.id}
+                title={sidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
+                  } ${activeSection === item.id
+                    ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  }`}>
+                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+              </Link>
             ))}
           </nav>
 
@@ -720,27 +704,20 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             </div>
 
             <nav className="px-4 mt-4 space-y-1.5">
-              {sidebarGroups.map((group) => (
-                <div key={group.id}>
-                  <p className="px-5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 select-none">
-                    {group.label}
-                  </p>
-                  {group.items.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={sidebarHref(item.id)}
-                      data-sidebar-id={item.id}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
-                        ? "bg-[#25D366] text-white shadow-sm"
-                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                        }`}
-                    >
-                      <item.icon className="w-5 h-5 flex-shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
-                </div>
+              {sidebarItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={sidebarHref(item.id)}
+                  data-sidebar-id={item.id}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
+                    ? "bg-[#25D366] text-white shadow-sm"
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                    }`}
+                >
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
               ))}
             </nav>
 
