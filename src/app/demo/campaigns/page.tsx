@@ -237,7 +237,7 @@ export default function DemoCampaignsPage() {
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-[#25D366]" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">{metaPrompt}</p>
@@ -270,7 +270,7 @@ export default function DemoCampaignsPage() {
           { label: tr("totalDelivered", lang), value: totalDelivered, icon: <CheckCircle className="w-4 h-4 text-green-600" /> },
           { label: tr("totalRead", lang), value: totalRead, icon: <Eye className="w-4 h-4 text-purple-600" /> },
         ].map((item) => (
-          <div key={item.label} className="rounded-2xl p-4 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm flex items-center gap-3">
+          <div key={item.label} className="rounded-xl p-4 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">{item.icon}</div>
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{item.value.toLocaleString()}</p>
@@ -287,7 +287,6 @@ export default function DemoCampaignsPage() {
           { value: "scheduled", label: tr("filterScheduled", lang) },
           { value: "completed", label: tr("filterCompleted", lang) },
           { value: "failed", label: tr("filterFailed", lang) },
-          { value: "draft", label: tr("filterDraft", lang) },
         ].map((filter) => (
           <button key={filter.value} onClick={() => setFilterStatus(filter.value)} className={`rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap ${filterStatus === filter.value ? "bg-[#25D366] text-white" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"}`}>
             {filter.label}
@@ -296,8 +295,8 @@ export default function DemoCampaignsPage() {
       </div>
 
       {filteredCampaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center rounded-3xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-          <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
+        <div className="flex flex-col items-center justify-center py-24 text-center rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+          <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
             <Megaphone className="w-10 h-10 text-gray-300" />
           </div>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{filterStatus === "all" ? tr("noCampaigns", lang) : tr("noFilterMatch", lang)}</h3>

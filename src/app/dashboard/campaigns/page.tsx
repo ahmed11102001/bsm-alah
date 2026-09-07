@@ -393,14 +393,13 @@ export default function Campaigns() {
   const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount + c.readCount, 0);
   const totalRead = campaigns.reduce((a, c) => a + c.readCount, 0);
 
+  // Design pilot: 5 فلاتر بقرار — أسقطنا queued (عابرة) وdraft (لا تُنشأ من الواجهة)
   const STATUS_FILTERS = [
     { value: "all", label: tr("filterAll", lang) },
     { value: "running", label: tr("filterRunning", lang) },
-    { value: "queued", label: tr("filterQueued", lang) },
     { value: "scheduled", label: tr("filterScheduled", lang) },
     { value: "completed", label: tr("filterCompleted", lang) },
     { value: "failed", label: tr("filterFailed", lang) },
-    { value: "draft", label: tr("filterDraft", lang) },
   ];
 
   function showLimitToast() {
@@ -423,10 +422,10 @@ export default function Campaigns() {
   }
 
   function showMetaConnectToast() {
+    // Design pilot: المودال يكفي — window.alert الأصلي محذوف (تجربة مزعجة)
     const message = lang === "ar"
       ? "اربط رقمك بميتا علشان تعمل حملة"
       : "Connect your Meta number to create a campaign.";
-    window.alert(message);
     setMetaPrompt(message);
     window.setTimeout(() => setMetaPrompt(null), 3500);
   }
@@ -449,7 +448,7 @@ export default function Campaigns() {
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-[#25D366]" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
@@ -502,7 +501,7 @@ export default function Campaigns() {
             { label: tr("totalDelivered", lang), value: totalDelivered, icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-900/20" },
             { label: tr("totalRead", lang), value: totalRead, icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
           ].map(s => (
-            <div key={s.label} className={`${s.bg} rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3`}>
+            <div key={s.label} className={`${s.bg} rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3`}>
               <span className={`${s.color} flex-shrink-0`}>{s.icon}</span>
               <div className="min-w-0">
                 <p className={`text-lg sm:text-xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
@@ -515,12 +514,12 @@ export default function Campaigns() {
 
       {/* Overall rates */}
       {totalSent > 0 && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 mb-5 space-y-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 mb-5 space-y-3 shadow-sm">
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
             <BarChart3 className="w-4 h-4 text-gray-400" /> {tr("overallPerf", lang)}
           </p>
-          <ProgressBar label={tr("deliveryRate", lang)} value={totalDelivered} max={totalSent} color="bg-green-400" textColor="text-green-600 dark:text-green-400" />
-          <ProgressBar label={tr("readRate", lang)} value={totalRead} max={totalSent} color="bg-purple-400" textColor="text-purple-600 dark:text-purple-400" />
+          <ProgressBar label={tr("deliveryRate", lang)} value={totalDelivered} max={totalSent} color="bg-success" textColor="text-success" />
+          <ProgressBar label={tr("readRate", lang)} value={totalRead} max={totalSent} color="bg-info" textColor="text-info" />
         </div>
       )}
 
@@ -540,7 +539,7 @@ export default function Campaigns() {
         <ListRowsSkeleton rows={4} />
       ) : campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
+            <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
             <Megaphone className="w-10 h-10 text-gray-300" />
           </div>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">
