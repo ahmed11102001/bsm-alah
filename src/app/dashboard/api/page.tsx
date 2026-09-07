@@ -298,6 +298,7 @@ function ShopifyContent({
   accessToken, setAccessToken,
   clientId, setClientId, clientSecret, setClientSecret,
   webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
+  isSuperAdmin,
 }: {
   storeName: string;
   setStoreName: (v: string) => void;
@@ -316,6 +317,7 @@ function ShopifyContent({
   onSyncWebhooks: () => void;
   loading: boolean;
   syncing: boolean;
+  isSuperAdmin: boolean;
 }) {
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -325,7 +327,9 @@ function ShopifyContent({
   // ── الربط التلقائي (Public App OAuth) مقفول خلف env — من غيره لا يظهر شيء ──
   // NEXT_PUBLIC_* تُضمّن وقت البناء؛ لحد ما تُضاف القيمة الحقيقية بعد موافقة
   // Shopify، الشرط false والواجهة مطابقة تمامًا للوضع الحالي.
+  // استثناء: السوبر أدمن يشوف الزرار دائمًا لغرض الاختبار (isSuperAdmin).
   const isOAuthReady = Boolean(process.env.NEXT_PUBLIC_SHOPIFY_APP_CLIENT_ID);
+  const showOAuth = isOAuthReady || isSuperAdmin;
 
   function handleOAuthConnect() {
     const shop = oauthShop.trim();
@@ -336,7 +340,7 @@ function ShopifyContent({
   // تغليف شرطي: الفورم اليدوي يظهر عاديًا، أو مطويًا داخل details لو وضع OAuth
   // مفعّل ولسه مفيش ربط — بدون تكرار أي JSX.
   function MaybeManualDetails({ children }: { children: React.ReactNode }) {
-    if (!isOAuthReady || status?.connected) return <>{children}</>;
+    if (!showOAuth || status?.connected) return <>{children}</>;
     return (
       <details className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2">
         <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400 py-1 select-none">
@@ -410,11 +414,16 @@ function ShopifyContent({
         </div>
       )}
 
-      {/* ── الربط التلقائي (Public App OAuth) — يظهر فقط لو بيانات التطبيق مضافة ── */}
-      {isOAuthReady && !status?.connected && (
+      {/* ── الربط التلقائي (Public App OAuth) — للسوبر أدمن دائمًا، وللكل عند التفعيل ── */}
+      {showOAuth && !status?.connected && (
         <div className="space-y-2 rounded-xl border border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 p-3">
           <Label className="text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
             ⚡ الربط التلقائي (موصى به)
+            {isSuperAdmin && !isOAuthReady && (
+              <span className="font-normal text-[10px] text-amber-600 dark:text-amber-400">
+                (وضع الاختبار — ضع SHOPIFY_APP_CLIENT_ID في البيئة)
+              </span>
+            )}
           </Label>
           <Input
             placeholder="mystore.myshopify.com"
@@ -1001,7 +1010,8 @@ function WebhookContent({ webhookUrl, verifyToken, hint }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function API() {
-  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier } = useSubscription();
+  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier, isSuper } =
+useSubscription();
   const initialData = dashData?.whatsapp;
   const { t, dir, locale } = useLanguage();
   const api = t.api;
@@ -1721,6 +1731,7 @@ export default function API() {
                 clientId={shClientId} setClientId={setShClientId}
                 clientSecret={shClientSecret} setClientSecret={setShClientSecret}
                 setStoreName={setShStoreName}
+                isSuperAdmin={!!isSuper}
                 webhookUrl={shWebhookUrl}
                 status={shopifyStatus}
                 onConnect={handleShConnect}
