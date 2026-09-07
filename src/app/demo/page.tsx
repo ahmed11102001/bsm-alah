@@ -101,9 +101,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const cb = overview?.campaignBreakdown;
   const campaignTotal = cb ? cb.running + cb.scheduled + cb.completed + cb.draft + cb.failed : stats.totalCampaigns;
 
-  // ── Design pilot: الـHero إجراءٌ واحد — المحادثات التي تحتاج تدخلًا بشريًا ──
-  const needsHumanList = overview.recentConversations.filter((c) => c.status === "needs_human");
-
   const campaignLimitActive = whatsappConnected && campaignAtLimit;
   const showMetaConnectPrompt = () => {
     const message = locale === "ar"
@@ -178,30 +175,6 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Button>
         </div>
       </div>
-
-      {/* ── Design pilot: Hero واحد — إجراء اليوم: المحادثات بانتظار تدخلك ──── */}
-      {needsHumanList.length > 0 && (
-        <button
-          onClick={() => router.push("/demo/chat")}
-          className="w-full text-start rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/15 px-4 py-3.5 mb-5 flex items-center gap-3 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-warning flex-shrink-0" />
-          <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-gray-900 dark:text-gray-100">
-              {numFmt(needsHumanList.length)}{" "}
-              {locale === "ar"
-                ? (needsHumanList.length === 1 ? "محادثة بانتظار تدخلك" : "محادثات بانتظار تدخلك")
-                : (needsHumanList.length === 1 ? "conversation needs you" : "conversations need you")}
-            </span>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-              {needsHumanList[0].name} — {needsHumanList[0].lastMessage || "—"}
-            </span>
-          </span>
-          <span className="text-xs font-bold text-white bg-[#25D366] hover:bg-[#20bb5a] rounded-lg px-3.5 py-2 flex-shrink-0">
-            {locale === "ar" ? "متابعة" : "Review"}
-          </span>
-        </button>
-      )}
 
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         {kpis.map((k) => (

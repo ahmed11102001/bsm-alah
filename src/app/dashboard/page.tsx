@@ -10,7 +10,7 @@ import { STATUS_BADGE } from "@/app/dashboard/_shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  MessageSquare, Send, BarChart3,
+  MessageSquare, Send,
   Plus, TrendingUp, Calendar, ChevronLeft,
   CheckCircle, Loader2, Feather, Bot, Zap,
   PieChart as PieChartIcon, Lock, Sparkles,
@@ -278,7 +278,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-[#25D366]" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
@@ -299,10 +299,10 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       )}
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-5 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">{h.subtitle}</p>
+          <h1 className="text-lg sm:text-xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">{h.subtitle}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button
@@ -322,14 +322,14 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         {kpis.map((k) => (
           <Card key={k.label} className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 leading-tight">{k.label}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-none">{numFmt(k.value)}</p>
+                  <p className="text-xl font-bold leading-none">{numFmt(k.value)}</p>
                   {k.sub && (
                     <p className={`text-[10px] sm:text-xs mt-1.5 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-gray-400"}`}>
                       {k.trend === "up" && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
@@ -345,36 +345,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         ))}
 
-        {/* ── Campaigns card: richer breakdown (Running/Scheduled/Completed) ── */}
-        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
-          <CardContent className="p-3 sm:p-5">
-            <div className="flex items-start justify-between mb-1">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 leading-tight">{h.kpi.campaigns}</p>
-                <p className="text-xl sm:text-2xl font-bold leading-none">{numFmt(stats.totalCampaigns)}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ms-2 bg-orange-50 dark:bg-orange-900/20">
-                <BarChart3 className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-            {cb && campaignTotal > 0 ? (
-              <>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                  {cb.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{cb.running} {ov.campaignBreakdown.running}</span>}
-                  {cb.scheduled > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />{cb.scheduled} {ov.campaignBreakdown.scheduled}</span>}
-                  {cb.completed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />{cb.completed} {ov.campaignBreakdown.completed}</span>}
-                </div>
-                <div className="flex w-full h-1.5 rounded-full overflow-hidden mt-2 bg-gray-100 dark:bg-gray-700">
-                  {cb.running > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(cb.running / campaignTotal) * 100}%` }} />}
-                  {cb.scheduled > 0 && <div className="bg-amber-500 h-full" style={{ width: `${(cb.scheduled / campaignTotal) * 100}%` }} />}
-                  {cb.completed > 0 && <div className="bg-blue-500 h-full" style={{ width: `${(cb.completed / campaignTotal) * 100}%` }} />}
-                </div>
-              </>
-            ) : (
-              <p className="text-[10px] sm:text-xs mt-1.5 text-gray-400">{h.kpi.thisMonth(data.plan.usage.campaignsThisMonth)}</p>
-            )}
-          </CardContent>
-        </Card>
+        {/* كارت الحملات المصغّر مدمج كشرائح في هيدر "الحملات الأخيرة" بالأسفل */}
       </div>
 
       {/* ── Wani AI Agent + WANI Partner ── */}
@@ -633,7 +604,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {/* ── Recent Campaigns ── */}
       <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
-          <CardTitle className="text-base font-bold">{h.campaigns.title}</CardTitle>
+          <div className="flex items-center gap-2 min-w-0">
+            <CardTitle className="text-base font-bold flex-shrink-0">{h.campaigns.title}</CardTitle>
+            {cb && campaignTotal > 0 && (
+              <span className="hidden sm:flex items-center gap-x-2 text-[10px] text-gray-500 dark:text-gray-400">
+                <span className="font-bold text-gray-700 dark:text-gray-300">{numFmt(stats.totalCampaigns)}</span>
+                {cb.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success" />{cb.running}</span>}
+                {cb.scheduled > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-warning" />{cb.scheduled}</span>}
+                {cb.completed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-info" />{cb.completed}</span>}
+              </span>
+            )}
+          </div>
           <button onClick={onCreateCampaign} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
             {h.campaigns.viewAll} <ChevronLeft className="w-3.5 h-3.5" />
           </button>
