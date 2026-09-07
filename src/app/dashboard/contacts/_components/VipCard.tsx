@@ -14,7 +14,7 @@ export function VipCard({ audience }: { audience: Audience; onView: () => void }
   const viewDetails = () => router.push(`/dashboard/contacts/audience/${encodeURIComponent(audience.id)}`);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/40 dark:via-yellow-950/30 dark:to-orange-950/40 shadow-md hover:shadow-xl transition-all duration-300 group">
+    <div className="relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/40 dark:via-yellow-950/30 dark:to-orange-950/40 shadow-md hover:shadow-xl transition-all duration-300 group">
       <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 rounded-t-2xl" />
       <div className="absolute -top-3 -left-3 opacity-5 dark:opacity-10 pointer-events-none"><Crown className="w-28 h-28 text-amber-500" /></div>
       <div className="p-4 flex flex-col gap-3 relative">

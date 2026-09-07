@@ -24,7 +24,7 @@ export function DropZone({ onFile }: { onFile: (f: File) => void }) {
       onDragLeave={() => setOver(false)}
       onDrop={e => { e.preventDefault(); setOver(false); handle(e.dataTransfer.files); }}
       onClick={() => ref.current?.click()}
-      className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl
+      className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl
         p-10 cursor-pointer transition-all select-none
         ${over
           ? "border-green-400 bg-green-50 dark:bg-green-900/20"

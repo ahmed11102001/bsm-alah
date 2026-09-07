@@ -48,7 +48,7 @@ export function AudienceCard({ audience, onEdit, onDelete }: {
   const viewDetails = () => router.push(`/dashboard/contacts/audience/${encodeURIComponent(audience.id)}`);
 
   return (
-    <div className={`${cfg.bg} ${cfg.border} border rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow`}>
+    <div className={`${cfg.bg} ${cfg.border} border rounded-xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-10 h-10 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>

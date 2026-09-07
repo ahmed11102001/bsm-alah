@@ -155,7 +155,7 @@ export function GoogleSheetsImportDialog({
 
         {featureLocked ? (
           <div className="py-10 text-center space-y-4">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center"><Lock className="w-7 h-7 text-amber-500" /></div>
+            <div className="mx-auto w-14 h-14 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center"><Lock className="w-7 h-7 text-amber-500" /></div>
             <div>
               <p className="font-bold text-gray-900 dark:text-white">{text("Google Sheets متاحة للمشتركين فقط", "Google Sheets is available on paid plans", locale)}</p>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{text("قم بالترقية إلى Starter أو أعلى لاستيراد الجمهور ومزامنته من Google Sheets.", "Upgrade to Starter or higher to import and sync audiences from Google Sheets.", locale)}</p>

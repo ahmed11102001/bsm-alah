@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users, ArrowRight,
-  MessageCircle, Bot, AlertCircle, Pin, ChevronLeft, ChevronRight,
+  MessageCircle, AlertCircle, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { normalizePhone, isValidPhone } from "./phone-utils";
@@ -255,7 +255,7 @@ export default function AudienceDetailsPage() {
 
         {editMode ? (
             <div className="flex min-h-0 flex-1 flex-col p-6">
-              <div className="mb-4 rounded-2xl bg-gray-50 p-4 dark:bg-gray-800">
+              <div className="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold dark:text-white">
                   <Plus className="h-4 w-4" /> إضافة عميل
                 </div>
@@ -280,7 +280,7 @@ export default function AudienceDetailsPage() {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-gray-100 dark:border-gray-800">
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-gray-100 dark:border-gray-800">
                 {shownEditContacts.map((c) => (
                   <div key={c.id} className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 last:border-0 dark:border-gray-800">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold dark:bg-gray-800 dark:text-gray-200">
@@ -315,12 +315,11 @@ export default function AudienceDetailsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 border-b border-gray-100 px-6 py-4 sm:grid-cols-5 dark:border-gray-800">
+              {/* Design pilot: 3 إحصائيات بقرار — الإجمالي، من يحتاج متابعة، النشط */}
+              <div className="grid grid-cols-3 gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-800">
                 <Metric icon={<Users className="h-4 w-4" />} label="إجمالي العملاء" value={total} />
+                <Metric icon={<AlertCircle className="h-4 w-4" />} label="يحتاج متابعة" value={stats.unread} />
                 <Metric icon={<MessageCircle className="h-4 w-4" />} label="نشط آخر 7 أيام" value={stats.active} />
-                <Metric icon={<AlertCircle className="h-4 w-4" />} label="عندهم رسائل" value={stats.unread} />
-                <Metric icon={<Bot className="h-4 w-4" />} label="AI مفعّل" value={stats.ai} />
-                <Metric icon={<Pin className="h-4 w-4" />} label="مثبّت" value={stats.pinned} />
               </div>
 
               <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
@@ -348,10 +347,9 @@ export default function AudienceDetailsPage() {
                       <option value="oldest">الأقدم نشاطًا</option>
                     </select>
                   </div>
-
-                  <span className="text-[11px] text-gray-400">الفلاتر</span>
                 </div>
 
+                {/* Design pilot: 4 فلاتر بقرار — أسقطنا نشط/AI/مثبّت (ضجيج بلا إجراء) */}
                 <div
                   dir="rtl"
                   className="mt-2 w-full overflow-x-auto overflow-y-hidden pb-2 [scrollbar-color:#9ca3af_#f3f4f6] [scrollbar-width:auto] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100"
@@ -359,11 +357,8 @@ export default function AudienceDetailsPage() {
                 >
                   <div dir="rtl" className="flex w-max min-w-full flex-nowrap items-center justify-start gap-2 px-0.5">
                     <FilterButton active={filter === "all"} onClick={() => { setPage(1); setFilter("all"); }}>الكل</FilterButton>
-                    <FilterButton active={filter === "active"} onClick={() => { setPage(1); setFilter("active"); }}>نشط</FilterButton>
-                    <FilterButton active={filter === "unread"} onClick={() => { setPage(1); setFilter("unread"); }}>عليه متابعة</FilterButton>
-                    <FilterButton active={filter === "ai"} onClick={() => { setPage(1); setFilter("ai"); }}>AI</FilterButton>
+                    <FilterButton active={filter === "unread"} onClick={() => { setPage(1); setFilter("unread"); }}>يحتاج متابعة</FilterButton>
                     <FilterButton active={filter === "handoff"} onClick={() => { setPage(1); setFilter("handoff"); }}>تدخل بشري</FilterButton>
-                    <FilterButton active={filter === "pinned"} onClick={() => { setPage(1); setFilter("pinned"); }}>مثبّت</FilterButton>
                     <FilterButton active={filter === "archived"} onClick={() => { setPage(1); setFilter("archived"); }}>مؤرشف</FilterButton>
                   </div>
                 </div>
@@ -380,7 +375,7 @@ export default function AudienceDetailsPage() {
                     <p className="text-sm">لا يوجد عملاء يطابقون البحث أو الفلتر</p>
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
                     <div className="hidden min-w-[900px] grid-cols-[2fr_1.2fr_.8fr_.9fr_1.1fr_1fr_1.1fr] gap-3 bg-gray-50 px-4 py-3 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400 md:grid">
                       <span>العميل</span><span>آخر نشاط</span><span>الرسائل</span><span>الطلبات</span>
                       <span>الحالة</span><span>AI</span><span>المسؤول</span>
@@ -411,9 +406,8 @@ export default function AudienceDetailsPage() {
                         <div className="flex flex-wrap gap-1">
                           {c.unreadCount > 0 && <Badge>متابعة {c.unreadCount}</Badge>}
                           {c.handoffAt && <Badge tone="amber">تدخل بشري</Badge>}
-                          {c.isPinned && <Badge tone="blue">مثبّت</Badge>}
                           {c.isArchived && <Badge tone="gray">مؤرشف</Badge>}
-                          {!c.unreadCount && !c.handoffAt && !c.isPinned && !c.isArchived && <Badge tone="green">طبيعي</Badge>}
+                          {!c.unreadCount && !c.handoffAt && !c.isArchived && <Badge tone="green">طبيعي</Badge>}
                         </div>
 
                         <div>
@@ -474,12 +468,11 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
   );
 }
 
-function Badge({ children, tone = "red" }: { children: ReactNode; tone?: "red" | "green" | "amber" | "blue" | "gray" }) {
+function Badge({ children, tone = "red" }: { children: ReactNode; tone?: "red" | "green" | "amber" | "gray" }) {
   const classes = {
     red: "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400",
     green: "bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400",
     amber: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
-    blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400",
     gray: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   }[tone];
 

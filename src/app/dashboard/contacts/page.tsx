@@ -300,10 +300,10 @@ export default function Contacts() {
             bg: "bg-red-50 dark:bg-red-900/20",
           },
         ].map(s => (
-          <div key={s.label} className={`${s.bg} rounded-2xl p-4 flex items-center gap-3`}>
+          <div key={s.label} className={`${s.bg} rounded-xl p-4 flex items-center gap-3`}>
             {s.icon}
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{numFmt(s.value)}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{numFmt(s.value)}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{s.label}</p>
             </div>
           </div>
@@ -447,7 +447,7 @@ export default function Contacts() {
 
           {customCards.length === 0 && excelCards.length === 0 && googleCards.length === 0 && !vip && !engaged && !noResp && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
+              <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
                 <Users className="w-10 h-10 text-gray-300 dark:text-gray-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">{ct.empty.title}</h3>
