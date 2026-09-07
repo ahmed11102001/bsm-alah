@@ -49,8 +49,11 @@ export function verifyState(state: string): string | null {
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com";
+  // الهبوط مباشرة على صفحة التكاملات (/dashboard/api) — باراميتر tab=api لا
+  // يستهلكه أي كود، أما هذا المسار فهو صفحة ShopifyContent نفسها، ومعالج
+  // الـtoast في dashboard/layout يغطي كل صفحات الداشبورد.
   const fail = (reason: string) =>
-    NextResponse.redirect(new URL(`/dashboard?tab=api&shopify_error=${reason}`, appUrl));
+    NextResponse.redirect(new URL(`/dashboard/api?shopify_error=${reason}`, appUrl));
 
   const code = req.nextUrl.searchParams.get("code");
   const shop = req.nextUrl.searchParams.get("shop");
@@ -136,5 +139,5 @@ export async function GET(req: NextRequest) {
     console.error("[Shopify OAuth] Post-connect setup failed:", err instanceof Error ? err.message : err);
   }
 
-  return NextResponse.redirect(new URL("/dashboard?tab=api&shopify_connected=1", appUrl));
+  return NextResponse.redirect(new URL("/dashboard/api?shopify_connected=1", appUrl));
 }
