@@ -68,6 +68,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   NEW_PARTNER_CARD: <LayoutGrid className="w-4 h-4 text-purple-500" />,
   NEW_TESTIMONIAL: <Star className="w-4 h-4 text-amber-500" />,
   NEW_LEAD: <UserPlus className="w-4 h-4 text-blue-500" />,
+  SHOPIFY_GDPR: <ShoppingBag className="w-4 h-4 text-teal-600" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -94,6 +95,7 @@ const TYPE_BG: Record<NotificationType, string> = {
   NEW_PARTNER_CARD: "bg-purple-50 dark:bg-purple-950/40",
   NEW_TESTIMONIAL: "bg-amber-50 dark:bg-amber-950/40",
   NEW_LEAD: "bg-blue-50 dark:bg-blue-950/40",
+  SHOPIFY_GDPR: "bg-teal-50 dark:bg-teal-950/40",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {

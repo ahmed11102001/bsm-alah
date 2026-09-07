@@ -1648,6 +1648,7 @@ enum NotificationType {
   NEW_PARTNER_CARD
   NEW_TESTIMONIAL
   NEW_LEAD
+  SHOPIFY_GDPR
 }
 
 enum ConversationStatus {

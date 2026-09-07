@@ -111,6 +111,19 @@ export async function POST(req: NextRequest) {
         }
         break;
 
+      // ── GDPR الإجبارية (Public App) — الرد دائمًا 200 ─────────────────────
+      case "customers/data_request":
+        await handleCustomerDataRequest(payload, userId, shopifyStore);
+        break;
+
+      case "customers/redact":
+        await handleCustomerRedact(payload, userId, shopifyStore);
+        break;
+
+      case "shop/redact":
+        await handleShopRedact(payload, userId, shopifyStore);
+        break;
+
       default:
         console.log(`[Shopify WH] Unhandled topic: ${topic}`);
     }
@@ -455,5 +468,137 @@ async function handleCustomerUpdated(customer: ShopifyCustomer, userId: string) 
     });
   } catch (error) {
     console.error("[Shopify] handleCustomerUpdated error:", error);
+  }
+}
+
+// ─── GDPR الإجبارية (Public App) ─────────────────────────────────────────────
+// القاعدة الذهبية: أي خطأ داخلي يُلتقط هنا، والـroute الرئيسي يرد دائمًا 200 —
+// شوبيفاي تعتبر أي رد غير 2xx فشلًا في الامتثال.
+//
+// ملاحظة تصميم: جهات الاتصال (Contact) مشتركة مع CRM الواتساب الخاص بالتاجر،
+// لذلك التنفيذ يُخفي الهوية (anonymize) بدل الحذف الشامل — حذف المحادثات
+// التجارية للتاجر سيكون تدميرًا لبياناته هو، لا امتثالًا. الصفوف الخاصة
+// بالمتجر فقط (الأوردرات/السلات/الأتمتة/المتجر نفسه) تُحذف فعليًا.
+
+interface GdprCustomerPayload {
+  shop_id?: unknown;
+  shop_domain?: unknown;
+  customer?: { id?: unknown; email?: unknown; phone?: unknown } | null;
+  orders_requested?: unknown;
+}
+
+interface GdprShopPayload {
+  shop_id?: unknown;
+  shop_domain?: unknown;
+}
+
+type GdprStore = { id: string; userId: string; shop: string };
+
+function gdprCustomerIdentity(payload: GdprCustomerPayload): { email: string | null; phone: string | null } {
+  const c = payload.customer ?? {};
+  const email = typeof c.email === "string" && c.email.includes("@") ? c.email : null;
+  const rawPhone = typeof c.phone === "string" ? c.phone : null;
+  const phone = rawPhone ? rawPhone.replace(/\D/g, "") || null : null;
+  return { email, phone };
+}
+
+// ── customers/data_request: العميل طلب نسخة من بياناته ──────────────────────
+// المطلوب: تزويد صاحب المتجر بالبيانات خلال 30 يومًا — نجمع ملخصًا فوريًا
+// وننوّه الأدمن لاتخاذ إجراء (الرد نفسه 200 فوري).
+async function handleCustomerDataRequest(payload: unknown, userId: string, store: GdprStore) {
+  try {
+    const p = (payload ?? {}) as GdprCustomerPayload;
+    const { email, phone } = gdprCustomerIdentity(p);
+    if (typeof p.shop_domain === "string" && p.shop_domain && p.shop_domain !== store.shop) {
+      console.warn(`[Shopify GDPR] data_request shop mismatch: ${p.shop_domain} ≠ ${store.shop}`);
+    }
+
+    let summary = "لا توجد بيانات مطابقة مخزنة لدينا";
+    if (phone) {
+      const [contacts, orders, carts] = await Promise.all([
+        prisma.contact.count({ where: { userId, phone } }),
+        prisma.storeOrder.count({ where: { userId, shopifyStoreId: store.id, customerPhone: phone } }),
+        prisma.abandonedCart.count({ where: { userId, shopifyStoreId: store.id, customerPhone: phone } }),
+      ]);
+      summary = `جهات اتصال: ${contacts}، أوردرات شوبيفاي: ${orders}، سلات مهجورة: ${carts}`;
+    }
+
+    console.log(`[Shopify GDPR] data_request — shop=${store.shop} email=${email ?? "—"} phone=${phone ?? "—"} | ${summary}`);
+    const { notifyAdminShopifyGdpr } = await import("@/lib/notifications");
+    await notifyAdminShopifyGdpr("data_request", store.shop, email ?? phone ?? "—", summary);
+  } catch (error) {
+    console.error("[Shopify GDPR] data_request error:", error);
+  }
+}
+
+// ── customers/redact: مسح بيانات عميل ────────────────────────────────────────
+// نُخفي الهوية في الصفوف المشتركة (اسم/ملاحظات) ونحذف التسويقية الخاصة بالمتجر.
+async function handleCustomerRedact(payload: unknown, userId: string, store: GdprStore) {
+  try {
+    const p = (payload ?? {}) as GdprCustomerPayload;
+    const { email, phone } = gdprCustomerIdentity(p);
+    if (typeof p.shop_domain === "string" && p.shop_domain && p.shop_domain !== store.shop) {
+      console.warn(`[Shopify GDPR] customer_redact shop mismatch: ${p.shop_domain} ≠ ${store.shop}`);
+    }
+    if (!phone) {
+      console.log(`[Shopify GDPR] customer_redact — no phone to match (email=${email ?? "—"})`);
+      const { notifyAdminShopifyGdpr } = await import("@/lib/notifications");
+      await notifyAdminShopifyGdpr("customer_redact", store.shop, email ?? "—", "لا يوجد رقم هاتف للمطابقة التلقائية — يلزم مراجعة يدوية");
+      return;
+    }
+
+    const [contacts, orders, carts] = await Promise.all([
+      prisma.contact.updateMany({
+        where: { userId, phone },
+        data: { name: "[محذوف — GDPR]", notes: null },
+      }),
+      prisma.storeOrder.updateMany({
+        where: { userId, shopifyStoreId: store.id, customerPhone: phone },
+        data: { customerName: "[محذوف — GDPR]" },
+      }),
+      prisma.abandonedCart.deleteMany({
+        where: { userId, shopifyStoreId: store.id, customerPhone: phone },
+      }),
+    ]);
+
+    console.log(`[Shopify GDPR] customer_redact — shop=${store.shop} phone=${phone} | contacts=${contacts.count} orders=${orders.count} carts=${carts.count}`);
+    const { notifyAdminShopifyGdpr } = await import("@/lib/notifications");
+    await notifyAdminShopifyGdpr(
+      "customer_redact", store.shop, phone,
+      `إخفاء هوية: ${contacts.count} جهة اتصال، ${orders.count} أوردر — حذف: ${carts.count} سلة مهجورة`
+    );
+  } catch (error) {
+    console.error("[Shopify GDPR] customer_redact error:", error);
+  }
+}
+
+// ── shop/redact: مسح كل بيانات المتجر (بعد إلغاء التثبيت بـ48 ساعة) ──────────
+// حذف فعلي للصفوف الخاصة بالمتجر فقط؛ بيانات CRM الواتساب المشتركة للتاجر
+// (جهات الاتصال/المحادثات) لا تُمس — إلغاء تثبيت تطبيق شوبيفاي لا يبرر
+// تدمير النظام التسويقي الكامل للتاجر.
+async function handleShopRedact(payload: unknown, userId: string, store: GdprStore) {
+  try {
+    const p = (payload ?? {}) as GdprShopPayload;
+    if (typeof p.shop_domain === "string" && p.shop_domain && p.shop_domain !== store.shop) {
+      console.warn(`[Shopify GDPR] shop_redact shop mismatch: ${p.shop_domain} ≠ ${store.shop}`);
+    }
+
+    const [carts, orders, automations] = await Promise.all([
+      prisma.abandonedCart.deleteMany({ where: { shopifyStoreId: store.id } }),
+      prisma.storeOrder.deleteMany({ where: { shopifyStoreId: store.id } }),
+      prisma.storeAutomation.deleteMany({ where: { shopifyStoreId: store.id } }),
+    ]);
+    await prisma.shopifyStore.delete({ where: { id: store.id } }).catch((err) => {
+      console.error("[Shopify GDPR] shop_redact store delete failed:", err);
+    });
+
+    console.log(`[Shopify GDPR] shop_redact — shop=${store.shop} | carts=${carts.count} orders=${orders.count} automations=${automations.count} store=deleted`);
+    const { notifyAdminShopifyGdpr } = await import("@/lib/notifications");
+    await notifyAdminShopifyGdpr(
+      "shop_redact", store.shop, store.shop,
+      `حذف: ${orders.count} أوردر، ${carts.count} سلة، ${automations.count} أتمتة + سجل الربط نفسه`
+    );
+  } catch (error) {
+    console.error("[Shopify GDPR] shop_redact error:", error);
   }
 }

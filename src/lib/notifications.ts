@@ -523,6 +523,32 @@ export async function notifyTeamMemberJoined(userId: string, memberName: string 
   });
 }
 
+// ── Shopify GDPR الإجبارية (إشعار أدمن للمتابعة) ────────────────────────────────
+// تُطلق من webhooks/route.ts عند وصول data_request/redact — الرد لشوبيفاي فوري
+// (200)، والإشعار يضمن المتابعة البشرية (خصوصًا data_request: مهلة 30 يومًا).
+export async function notifyAdminShopifyGdpr(
+  kind: "data_request" | "customer_redact" | "shop_redact",
+  shop: string,
+  subject: string,
+  summary: string,
+) {
+  const titles = {
+    data_request: bi("📥 طلب نسخة بيانات عميل (GDPR)", "📥 Customer data request (GDPR)"),
+    customer_redact: bi("🧹 طلب مسح بيانات عميل (GDPR)", "🧹 Customer redact request (GDPR)"),
+    shop_redact: bi("🏬 طلب مسح بيانات متجر (GDPR)", "🏬 Shop redact request (GDPR)"),
+  } as const;
+  await notifySuperAdmins({
+    type: NotificationType.SHOPIFY_GDPR,
+    title: titles[kind],
+    body: bi(
+      `متجر ${shop} — ${subject}: ${summary}`,
+      `Shop ${shop} — ${subject}: ${summary}`,
+    ),
+    link: "/dashboard/admin",
+    meta: { kind, shop, subject, summary, source: "shopify_gdpr" },
+  });
+}
+
 // ─── إشعارات الأدمن (Super Admins فقط) ───────────────────────────────────────
 // بتتبعت لكل حساب عليه isSuper — اليوزر العادي عمره ما يشوف الأنواع دي لأن
 // الصفوف بتنشأ للأدمن بس. fire-and-forget: فشل الإشعار لا يكسر الفلو الأساسي.

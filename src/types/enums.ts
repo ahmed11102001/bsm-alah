@@ -108,6 +108,7 @@ export const NotificationType = {
   NEW_PARTNER_CARD: "NEW_PARTNER_CARD",
   NEW_TESTIMONIAL: "NEW_TESTIMONIAL",
   NEW_LEAD: "NEW_LEAD",
+  SHOPIFY_GDPR: "SHOPIFY_GDPR",
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

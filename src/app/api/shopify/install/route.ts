@@ -25,6 +25,16 @@ const REQUIRED_TOPICS = [
   "customers/update",
 ] as const;
 
+// ── GDPR الإجبارية — شرط لأي Public App (فحص تلقائي قبل مراجعة Shopify) ────
+// مختلفة عن التجارية فوق: طلب نسخة بيانات العميل، مسح بياناته، مسح بيانات
+// المتجر. تُسجَّل على نفس عنوان الـwebhook وتُعالج في webhooks/route.ts —
+// والمعالج يرد دائمًا 200 حتى لو فشل داخليًا (شرط شوبيفاي).
+const MANDATORY_GDPR_TOPICS = [
+  "customers/data_request",
+  "customers/redact",
+  "shop/redact",
+] as const;
+
 // ── تنظيف وتوحيد الدومين — منطق مشترك في src/lib/shopify-domain.ts (مستورد أعلى الملف) ──
 
 // ── التحقق من الدومين ──────────────────────────────────────────────────────────
@@ -78,7 +88,7 @@ async function registerWebhook(
   }
 }
 
-// ── تسجيل كل الـ webhooks المطلوبة ───────────────────────────────────────────
+// ── تسجيل كل الـ webhooks المطلوبة (تجارية + GDPR الإجبارية) ────────────────
 export async function registerAllWebhooks(
   shop:        string,
   accessToken: string,
@@ -87,7 +97,7 @@ export async function registerAllWebhooks(
   const registered: string[] = [];
   const failed:     string[] = [];
 
-  for (const topic of REQUIRED_TOPICS) {
+  for (const topic of [...REQUIRED_TOPICS, ...MANDATORY_GDPR_TOPICS]) {
     const result = await registerWebhook(shop, accessToken, topic, webhookUrl);
     if (result.ok) {
       registered.push(topic);

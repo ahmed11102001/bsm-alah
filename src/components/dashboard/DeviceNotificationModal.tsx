@@ -309,6 +309,17 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
     icon: <UserPlus className="w-4 h-4 text-blue-500" />,
     bgClass: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
   },
+  {
+    type: NotificationType.SHOPIFY_GDPR,
+    category: "system",
+    title: { ar: "طلب امتثال GDPR من شوبيفاي (للأدمن)", en: "Shopify GDPR Request (Admin)" },
+    description: {
+      ar: "تنبيه الأدمن فقط عند وصول طلب نسخة أو مسح بيانات من شوبيفاي",
+      en: "Admin-only alert when a Shopify data/redact request arrives",
+    },
+    icon: <ShoppingBag className="w-4 h-4 text-teal-600" />,
+    bgClass: "bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400",
+  },
 ];
 
 export const ALL_NOTIFICATION_TYPES_LIST: NotificationType[] = ALL_SYSTEM_NOTIFICATIONS.map(
