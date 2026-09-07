@@ -19,21 +19,29 @@ import { getValidShopifyAccessToken } from "@/lib/shopify-auth";
 
 const STATE_TTL_MS = 10 * 60 * 1000; // صلاحية الـstate: 10 دقائق ضد الـreplay
 
-function verifyState(state: string): string | null {
+export function verifyState(state: string): string | null {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) return null;
   try {
-    const decoded = Buffer.from(state, "base64url").toString("utf-8");
-    const [email, nonce, ts, signature] = decoded.split(".");
-    if (!email || !nonce || !ts || !signature) return null;
-    const payload = `${email}.${nonce}.${ts}`;
-    const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+    // الصيغة: base64url(JSON) + "." + sig — الفصل من آخر نقطة فقط،
+    // فمحتوى الإيميل (نقاطه) لا يؤثر إطلاقًا على التحليل.
+    const dot = state.lastIndexOf(".");
+    if (dot <= 0) return null;
+    const payloadB64 = state.slice(0, dot);
+    const signature = state.slice(dot + 1);
+    const expected = crypto.createHmac("sha256", secret).update(payloadB64).digest("hex");
     // مقارنة ثابتة الزمن لمنع timing attacks
     const sigBuf = Buffer.from(signature, "hex");
     const expBuf = Buffer.from(expected, "hex");
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
-    if (Date.now() - Number(ts) > STATE_TTL_MS) return null;
-    return email;
+    const parsed = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf-8")) as {
+      email?: unknown;
+      nonce?: unknown;
+      ts?: unknown;
+    };
+    if (typeof parsed.email !== "string" || !parsed.email || typeof parsed.ts !== "number") return null;
+    if (Date.now() - parsed.ts > STATE_TTL_MS) return null; // صلاحية 10 دقائق ضد الـreplay
+    return parsed.email;
   } catch {
     return null;
   }

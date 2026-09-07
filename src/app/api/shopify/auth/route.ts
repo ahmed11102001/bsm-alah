@@ -39,17 +39,21 @@ export async function GET(req: NextRequest) {
 
   // ── حماية CSRF + تمرير هوية اليوزر عبر state موقّع (بدون جدول DB إضافي) ──
   // التوقيع بـ NEXTAUTH_SECRET — يُتحقق منه في الـcallback مع حد 10 دقائق.
+  // الصيغة: base64url(JSON) + "." + HMAC — آمنة تمامًا مع الإيميلات التي
+  // تحتوي نقاط (لا نعتمد أبدًا على تقسيم النص بالنقاط لاستخراج الحقول).
   const nextAuthSecret = process.env.NEXTAUTH_SECRET;
   if (!nextAuthSecret) {
     return NextResponse.json({ error: "إعداد المصادقة ناقص" }, { status: 500 });
   }
   const nonce = crypto.randomBytes(16).toString("hex");
-  const payload = `${session.user.email}.${nonce}.${Date.now()}`;
+  const payloadB64 = Buffer.from(
+    JSON.stringify({ email: session.user.email, nonce, ts: Date.now() })
+  ).toString("base64url");
   const signature = crypto
     .createHmac("sha256", nextAuthSecret)
-    .update(payload)
+    .update(payloadB64)
     .digest("hex");
-  const state = Buffer.from(`${payload}.${signature}`).toString("base64url");
+  const state = `${payloadB64}.${signature}`;
 
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://aiwni.com"}/api/shopify/callback`;
   const scopes = process.env.SHOPIFY_APP_SCOPES ?? "read_orders,write_orders,read_products,read_customers,read_checkouts";
