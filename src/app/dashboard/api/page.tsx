@@ -59,13 +59,15 @@ const CARD_VISUALS: CardVisual[] = [
   { id: "elevenlabs", icon: <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-7 h-7 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
 ];
 
-function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "" }: {
+function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "", externalLink, locale = "ar" }: {
   id: CardId; title: string; subtitle: string;
   steps: { title: string; desc: string }[];
   isOpen: boolean; onToggle: () => void;
   children: React.ReactNode;
   locked?: boolean;
   lockMessage?: string;
+  externalLink?: { href: string; label: string };
+  locale?: string;
 }) {
   const v = CARD_VISUALS.find(c => c.id === id)!;
   return (
@@ -115,6 +117,40 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
               </div>
             ))}
           </div>
+
+          {/* ── رابط المنصة الرسمي ── */}
+          {externalLink && (
+            <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/70 dark:border-gray-700/70 shadow-xs backdrop-blur-sm">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-gray-700 shadow-xs", v.accentColor)}>
+                  <ExternalLink className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                    {externalLink.label}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {locale === "ar" ? "الانتقال إلى المنصة الرسمية لضبط الإعدادات وجلب المفاتيح" : "Go to official platform settings and get keys"}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={externalLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs",
+                  "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600",
+                  v.accentColor,
+                  "hover:shadow hover:-translate-y-0.5"
+                )}
+              >
+                <span>{locale === "ar" ? "فتح المنصة في تاب جديد" : "Open in new tab"}</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
+
           <div className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 border border-white dark:border-gray-700">
             {children}
           </div>
@@ -212,6 +248,19 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
             {locale === "ar" ? "فك الربط" : "Disconnect"}
           </button>
         </div>
+
+        {/* Link to Meta for Developers */}
+        <div className="pt-1 flex items-center justify-center">
+          <a
+            href="https://developers.facebook.com/apps"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 hover:underline font-medium"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            {locale === "ar" ? "إدارة تطبيق واتساب على Meta for Developers" : "Manage WhatsApp App on Meta for Developers"}
+          </a>
+        </div>
       </div>
     );
   }
@@ -228,6 +277,25 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
           </p>
         </div>
       )}
+
+      {/* ── رابط منصة Meta للمطورين ── */}
+      <div className="p-2.5 rounded-xl bg-green-50/70 dark:bg-green-900/20 border border-green-200/70 dark:border-green-800/40 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <img src="/partners/meta.svg" alt="Meta" className="w-4 h-4 object-contain" />
+          <span className="text-xs font-medium text-green-800 dark:text-green-300">
+            {locale === "ar" ? "لوحة مطوري Meta (Meta for Developers)" : "Meta for Developers Portal"}
+          </span>
+        </div>
+        <a
+          href="https://developers.facebook.com/apps"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400 font-semibold hover:underline"
+        >
+          <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
 
       {/* ── زر الربط التلقائي (Embedded Signup) ── */}
       {onAutoConnectSuccess && (
@@ -299,6 +367,7 @@ function ShopifyContent({
   clientId, setClientId, clientSecret, setClientSecret,
   webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
   isSuperAdmin,
+  locale = "ar",
 }: {
   storeName: string;
   setStoreName: (v: string) => void;
@@ -318,6 +387,7 @@ function ShopifyContent({
   loading: boolean;
   syncing: boolean;
   isSuperAdmin: boolean;
+  locale?: string;
 }) {
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -364,6 +434,36 @@ function ShopifyContent({
 
   return (
     <div className="space-y-3">
+      {/* ── رابط منصة Shopify ── */}
+      <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/40 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <img src="/partners/shopify.svg" alt="Shopify" className="w-4 h-4 object-contain" />
+          <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
+            {locale === "ar" ? "لوحة تحكم وتطوير Shopify" : "Shopify Admin & Dev"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <a
+            href="https://dev.shopify.com/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 font-semibold hover:underline"
+          >
+            <span>{locale === "ar" ? "لوحة المطورين (Dev)" : "Dev Dashboard"}</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <a
+            href="https://admin.shopify.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:underline"
+          >
+            <span>{locale === "ar" ? "إدارة المتجر (Admin)" : "Store Admin"}</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
 
       {/* ── متجر مربوط ─────────────────────────────────────────────────────── */}
       {status?.connected && !showForm && (
@@ -664,6 +764,25 @@ function EasyOrdersContent({
 
   return (
     <div className="space-y-3">
+      {/* ── رابط منصة EasyOrders ── */}
+      <div className="p-2.5 rounded-xl bg-orange-50/70 dark:bg-orange-900/20 border border-orange-200/70 dark:border-orange-800/40 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-4 h-4 object-contain" />
+          <span className="text-xs font-medium text-orange-800 dark:text-orange-300">
+            {locale === "ar" ? "لوحة تحكم إيزي أوردرز (EasyOrders)" : "EasyOrders Dashboard"}
+          </span>
+        </div>
+        <a
+          href="https://app.easy-orders.net"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-orange-700 dark:text-orange-400 font-semibold hover:underline"
+        >
+          <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
       {status?.connected && (
         <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
           <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -845,6 +964,25 @@ function WooCommerceContent({ status, onRefresh, locale }: {
 
   return (
     <div className="space-y-3">
+      {/* ── رابط توثيق ودليل WooCommerce ── */}
+      <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-900/20 border border-purple-200/70 dark:border-purple-800/40 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-4 h-4 object-contain" />
+          <span className="text-xs font-medium text-purple-800 dark:text-purple-300">
+            {isAr ? "دليل مفاتيح وتوثيق WooCommerce REST API" : "WooCommerce REST API Docs"}
+          </span>
+        </div>
+        <a
+          href="https://woocommerce.com/document/woocommerce-rest-api/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-purple-700 dark:text-purple-400 font-semibold hover:underline"
+        >
+          <span>{isAr ? "فتح الدليل الرسمي" : "Open Official Guide"}</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
       {/* Connected Badge */}
       {status?.connected && (
         <div className="space-y-2">
@@ -988,11 +1126,29 @@ function WooCommerceContent({ status, onRefresh, locale }: {
 }
 
 // ─── Webhook Content ──────────────────────────────────────────────────────────
-function WebhookContent({ webhookUrl, verifyToken, hint }: {
-  webhookUrl: string; verifyToken: string; hint: string;
+function WebhookContent({ webhookUrl, verifyToken, hint, locale = "ar" }: {
+  webhookUrl: string; verifyToken: string; hint: string; locale?: string;
 }) {
   return (
     <div className="space-y-3">
+      {/* ── رابط أداة Webhook.site ── */}
+      <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Webhook className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <span className="text-xs font-medium text-gray-800 dark:text-gray-300">
+            {locale === "ar" ? "أداة فحص واختبار الـ Webhooks (Webhook.site)" : "Webhook Testing Tool (Webhook.site)"}
+          </span>
+        </div>
+        <a
+          href="https://webhook.site"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 font-semibold hover:underline"
+        >
+          <span>{locale === "ar" ? "فتح الموقع" : "Open Tool"}</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
       <div>
         <Label className="text-xs text-gray-600 dark:text-gray-400 font-bold">Callback URL</Label>
         <div className="mt-1"><CopyInput value={webhookUrl} /></div>
@@ -1498,12 +1654,17 @@ useSubscription();
   const CARD_DEFS: {
     id: CardId; title: string; subtitle: string;
     steps: { title: string; desc: string }[];
+    externalLink?: { href: string; label: string };
   }[] = [
       {
         id: "whatsapp",
         title: api.cards.whatsapp.title,
         subtitle: api.cards.whatsapp.subtitle,
         steps: api.cards.whatsapp.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+        externalLink: {
+          href: "https://developers.facebook.com/apps",
+          label: locale === "ar" ? "لوحة مطوري Meta (Meta for Developers)" : "Meta for Developers",
+        },
       },
       {
         id: "shopify",
@@ -1514,12 +1675,20 @@ useSubscription();
           { title: locale === "ar" ? "فعّل الصلاحيات وخد الـ Token" : "Grant scopes & copy the token", desc: locale === "ar" ? "فعّل read_orders, write_orders, read_checkouts, read_customers, read_products، ثم Install app وانسخ الـ Admin API access token" : "Enable read_orders, write_orders, read_checkouts, read_customers, read_products, then Install app and copy the Admin API access token" },
           { title: locale === "ar" ? "أدخل البيانات في وني واربط" : "Enter the details in Wani & connect", desc: locale === "ar" ? "اسم المتجر + الدومين (متجرك.myshopify.com) + الـ Token — لو حطيت الـToken هنسجل الـ Webhooks تلقائيًا، من غير ما تدخل Shopify تاني" : "Store name + domain (yourstore.myshopify.com) + the token — with the token provided, webhooks are registered automatically, no need to go back into Shopify" },
         ],
+        externalLink: {
+          href: "https://dev.shopify.com/dashboard",
+          label: locale === "ar" ? "لوحة مطوري Shopify (Dev Dashboard)" : "Shopify Dev Dashboard",
+        },
       },
       {
         id: "easyorders",
         title: api.cards.easyorders.title,
         subtitle: api.cards.easyorders.subtitle,
         steps: api.cards.easyorders.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+        externalLink: {
+          href: "https://app.easy-orders.net",
+          label: locale === "ar" ? "لوحة تحكم إيزي أوردرز (EasyOrders)" : "EasyOrders Dashboard",
+        },
       },
       {
         id: "woocommerce",
@@ -1530,6 +1699,10 @@ useSubscription();
           { title: locale === "ar" ? "اضغط ربط المتجر" : "Click Connect", desc: locale === "ar" ? "هنتحقق من صحة البيانات ونبدأ مزامنة المنتجات تلقائياً" : "We'll verify credentials and auto-sync products" },
           { title: locale === "ar" ? "أضف الـ Webhook" : "Add the Webhook", desc: locale === "ar" ? "انسخ الـ Webhook URL وأضفه في WooCommerce → Settings → Advanced → Webhooks" : "Copy the Webhook URL and add it in WooCommerce → Settings → Advanced → Webhooks" },
         ],
+        externalLink: {
+          href: "https://woocommerce.com/document/woocommerce-rest-api/",
+          label: locale === "ar" ? "دليل وتوثيق WooCommerce REST API" : "WooCommerce REST API Docs",
+        },
       },
       {
         id: "claude",
@@ -1540,6 +1713,10 @@ useSubscription();
           { title: "افتح Claude Desktop", desc: "حمّل التطبيق من claude.ai/download ثم افتح الإعدادات" },
           { title: "الصق الـ Config", desc: "انسخ إعدادات الربط والصقها في Settings → Developer → MCP" },
         ],
+        externalLink: {
+          href: "https://claude.ai/download",
+          label: locale === "ar" ? "تحميل تطبيق Claude Desktop" : "Download Claude Desktop",
+        },
       },
       {
         id: "elevenlabs",
@@ -1550,12 +1727,20 @@ useSubscription();
           { title: locale === "ar" ? "أدخل API Key والـ Agent ID" : "Enter API Key & Agent ID", desc: locale === "ar" ? "من إعدادات الحساب والـ Agent بتاعك على ElevenLabs" : "From your ElevenLabs account and agent settings" },
           { title: locale === "ar" ? "اربط وفعّل الرد الصوتي" : "Connect & enable Voice Reply", desc: locale === "ar" ? "الـ Agent هيرد بنفسه على واتساب — مستقل عن رد وني النصي" : "Your agent replies on WhatsApp — independent from Wani's text replies" },
         ],
+        externalLink: {
+          href: "https://elevenlabs.io/app/conversational-ai",
+          label: locale === "ar" ? "منصة ElevenLabs Conversational AI" : "ElevenLabs Conversational AI",
+        },
       },
       {
         id: "webhook",
         title: api.cards.webhook.title,
         subtitle: api.cards.webhook.subtitle,
         steps: api.cards.webhook.steps.map((s: any) => ({ title: s.title, desc: s.desc })),
+        externalLink: {
+          href: "https://webhook.site",
+          label: locale === "ar" ? "أداة فحص واختبار Webhook.site" : "Test Webhooks on Webhook.site",
+        },
       },
     ];
 
@@ -1681,6 +1866,7 @@ useSubscription();
           <IntegrationCard
             key={card.id}
             {...card}
+            locale={locale}
             isOpen={openCard === card.id}
             onToggle={() => handleCardClick(card.id)}
             locked={isCardLocked(card.id)}
@@ -1739,6 +1925,7 @@ useSubscription();
                 syncing={shSyncing}
                 onRefresh={loadShopifyStatus}
                 loading={shConnecting}
+                locale={locale}
               />
             )}
             {card.id === "easyorders" && (
@@ -1759,7 +1946,7 @@ useSubscription();
               <WooCommerceContent status={wooStatus} onRefresh={loadShopifyStatus} locale={locale} />
             )}
             {card.id === "webhook" && (
-              <WebhookContent webhookUrl={webhookUrl} verifyToken={verifyToken} hint={api.cards.webhook.hint} />
+              <WebhookContent webhookUrl={webhookUrl} verifyToken={verifyToken} hint={api.cards.webhook.hint} locale={locale} />
             )}
             {card.id === "claude" && (
               <div className="space-y-5 pt-1">
@@ -1957,6 +2144,19 @@ useSubscription();
                       {locale === "ar" ? "فك الربط" : "Disconnect"}
                     </button>
                   </div>
+
+                  {/* ── Link to ElevenLabs ── */}
+                  <div className="pt-1 flex items-center justify-center">
+                    <a
+                      href="https://elevenlabs.io/app/conversational-ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {locale === "ar" ? "إدارة الـ Agent على منصة ElevenLabs" : "Manage Agent on ElevenLabs"}
+                    </a>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1968,6 +2168,26 @@ useSubscription();
                       </p>
                     </div>
                   )}
+
+                  {/* ── رابط منصة ElevenLabs ── */}
+                  <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-900/20 border border-purple-200/70 dark:border-purple-800/40 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-4 h-4 object-contain" />
+                      <span className="text-xs font-medium text-purple-800 dark:text-purple-300">
+                        {locale === "ar" ? "منصة ElevenLabs Conversational AI" : "ElevenLabs Conversational AI"}
+                      </span>
+                    </div>
+                    <a
+                      href="https://elevenlabs.io/app/conversational-ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-purple-700 dark:text-purple-400 font-semibold hover:underline"
+                    >
+                      <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+
                   <div>
                     <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
                     <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
