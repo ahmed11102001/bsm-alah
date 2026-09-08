@@ -5,18 +5,33 @@ import prisma from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { createTemplateForUser, deleteTemplateForUser } from "@/lib/templates-actions";
 
-// جلب القوالب للعرض
+// جلب القوالب للعرض — مع علامة الحساب المالك لكل قالب (للبادج)
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     const denied = requirePermission(session, "TEMPLATES_VIEW");
     if (denied) return denied;
     const ownerId = (session!.user as any).parentId || session!.user.id;
-    const templates = await prisma.template.findMany({
-      where: { userId: ownerId },
-      orderBy: { createdAt: "desc" }
-    });
-    return NextResponse.json(templates || []);
+    const [templates, account] = await Promise.all([
+      prisma.template.findMany({
+        where: { userId: ownerId },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.whatsAppAccount.findUnique({
+        where: { userId: ownerId },
+        select: { id: true, wabaId: true },
+      }),
+    ]);
+    // isCurrentAccount: القالب يخص الحساب المتصل حاليًا (أو قديم غير منسوب).
+    // الشكل ثابت (array) — الويزرد يتجاهل الحقول الزائدة بأمان.
+    const shaped = (templates || []).map((t) => ({
+      ...t,
+      isCurrentAccount:
+        !account ||
+        (t.whatsappAccountId != null && t.whatsappAccountId === account.id) ||
+        (t.whatsappAccountId == null && (t.wabaId == null || t.wabaId === account.wabaId)),
+    }));
+    return NextResponse.json(shaped);
   } catch (error) {
     return NextResponse.json({ error: "خطأ في السيرفر" }, { status: 500 });
   }

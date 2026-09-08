@@ -293,6 +293,19 @@ export default function TemplatesPage() {
                         <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#25D366] transition-colors">
                           {tpl.name}
                         </span>
+                        {(tpl.isCurrentAccount === false) ? (
+                          <span className="mt-1 block w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                            {lang === "ar" ? "حساب واتساب آخر" : "Another WhatsApp account"}
+                          </span>
+                        ) : (tpl.whatsappAccountId || tpl.wabaId) ? (
+                          <span className="mt-1 block w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                            {lang === "ar" ? "الحساب الحالي" : "Current account"}
+                          </span>
+                        ) : (
+                          <span className="mt-1 block w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            {lang === "ar" ? "قديم — غير منسوب" : "Legacy — unattributed"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5"><CategoryBadge category={tpl.category} lang={lang} /></td>
                       <td className="px-4 py-3.5">

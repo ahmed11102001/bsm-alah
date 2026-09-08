@@ -31,6 +31,11 @@ export async function saveWhatsAppSettings(data: {
   // تشفير الـ token قبل الحفظ في DB
   const encryptedToken = encryptToken(accessToken);
 
+  // لو هذا WABA مختلف عن المربوط سابقًا: انسب القوالب القديمة (null) للحساب
+  // المغادِر حتى لا تتسرب لويزرد الحساب الجديد
+  const { attributeLegacyTemplatesToDepartingAccount } = await import("@/lib/templates-actions");
+  await attributeLegacyTemplatesToDepartingAccount(ownerId, wabaId);
+
   await prisma.whatsAppAccount.upsert({
     where: { userId: ownerId },
     update: {
@@ -135,6 +140,8 @@ export async function syncWhatsAppTemplates() {
           buttons,
           rejectedReason,
           components: temp.components,
+          whatsappAccountId: account.id,
+          wabaId: account.wabaId,
           updatedAt: new Date()
         },
         create: {
@@ -150,7 +157,9 @@ export async function syncWhatsAppTemplates() {
           footer,
           buttons,
           rejectedReason,
-          components: temp.components
+          components: temp.components,
+          whatsappAccountId: account.id,
+          wabaId: account.wabaId,
         },
       });
       syncedCount++;

@@ -11,7 +11,7 @@ import {
   DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Plus, Send, Megaphone, RefreshCw, CheckCircle, Eye, MessageSquare, Loader2, BarChart3,
+  Plus, Send, Megaphone, RefreshCw, CheckCircle, Eye, MessageSquare, Loader2, BarChart3, Clock,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
@@ -39,6 +39,10 @@ export default function Campaigns() {
   const [total, setTotal] = useState(0);
   const [loadingList, setLoadingList] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  // ضغط سعة التنفيذ من الباك إند — لشريط الشفافية عند وجود منتظرين
+  const [queueInfo, setQueueInfo] = useState<{
+    globalActive: number; globalLimit: number; queuedWaiting: number;
+  } | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -105,6 +109,13 @@ export default function Campaigns() {
 
       setCampaigns(list);
       setTotal(data.total ?? list.length);
+      setQueueInfo(data.queue
+        ? {
+            globalActive: Number(data.queue.globalActive ?? 0),
+            globalLimit: Number(data.queue.globalLimit ?? 5),
+            queuedWaiting: Number(data.queue.queuedWaiting ?? 0),
+          }
+        : null);
     } catch { if (!silent) toast.error(tr("errLoadCampaigns", lang)); }
     finally { if (!silent) setLoadingList(false); }
   }, [filterStatus]);
@@ -114,7 +125,10 @@ export default function Campaigns() {
       const res = await fetch("/api/templates");
       const data = await res.json();
       const list: Template[] = Array.isArray(data) ? data : (data.data ?? []);
-      const approved = list.filter(t => ["approved", "APPROVED"].includes(t.status ?? ""));
+      // قوالب الحساب المتصل حاليًا فقط — المثبوت لحساب آخر مخفي هنا ومرفوض
+      // في الباك إند حتى لو أُرسل id يدويًا (isCurrentAccount من GET).
+      const scoped = list.filter((t: any) => t.isCurrentAccount !== false);
+      const approved = scoped.filter(t => ["approved", "APPROVED"].includes(t.status ?? ""));
       setTemplates(approved);
       if (approved.length > 0) setSelectedTemplate(approved[0]);
     } catch { toast.error(tr("errLoadTemplates", lang)); }
@@ -529,9 +543,21 @@ export default function Campaigns() {
         </div>
       )}
 
+      {/* ── شريط شفافية السعة — يظهر فقط عند وجود حملات منتظرة ─────────── */}
+      {/* الأرقام من الباك إند (نفس حدود Inngest) لا من الحالة المحلية */}
+      {queueInfo && queueInfo.queuedWaiting > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-xl px-3.5 py-2.5 mb-4">
+          <Clock className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
+          <span>
+            {lang === "ar"
+              ? `${queueInfo.queuedWaiting} في قائمة الانتظار — سعة التنفيذ مشغولة (${queueInfo.globalActive}/${queueInfo.globalLimit}) وستبدأ تلقائيًا`
+              : `${queueInfo.queuedWaiting} waiting — execution capacity busy (${queueInfo.globalActive}/${queueInfo.globalLimit}), auto-starting`}
+          </span>
+        </div>
+      )}
+
       {/* Filter pills */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 flex-nowrap scrollbar-hide">
-        {STATUS_FILTERS.map(f => (
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 flex-nowrap scrollbar-hide">        {STATUS_FILTERS.map(f => (
           <button key={f.value} onClick={() => setFilterStatus(f.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0
               ${filterStatus === f.value ? "bg-green-500 text-white" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"}`}>

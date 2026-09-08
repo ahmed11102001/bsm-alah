@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
     // تشفير الـ token قبل الحفظ في DB
     const encryptedToken = encryptToken(accessToken);
 
+    // نسب القوالب القديمة للحساب المغادِر عند التبديل (تمنع تسربها للجديد)
+    const { attributeLegacyTemplatesToDepartingAccount } = await import("@/lib/templates-actions");
+    await attributeLegacyTemplatesToDepartingAccount(ownerId, wabaId);
+
     // حفظ أو تحديث بيانات واتساب الخاص باليوزر
     await prisma.whatsAppAccount.upsert({
       where: { userId: ownerId },

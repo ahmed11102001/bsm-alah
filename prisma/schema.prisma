@@ -184,6 +184,7 @@ model WhatsAppAccount {
   automationInteractions   AutomationInteraction[]
   messageQueues            MessageQueue[]
   protectionClaims         ProtectionClaim[]
+  templates                Template[]
   user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -335,15 +336,22 @@ model Template {
   buttons                  Json?
   rejectedReason           String?
   components               Json?
+  // ربط القالب بحساب واتساب المالك — يمنع استخدام قالب حساب قديم بعد التبديل.
+  // null/null = قديم غير منسوب (يتعرض بحذر مع badge، ويُقبل في الباك إند لعدم كسر القديم).
+  whatsappAccountId        String?
+  wabaId                   String?
   automationRules          AutomationRule[]
   campaigns                Campaign[]
   campaignFollowUpSettings CampaignFollowUpSetting[]
   storeAutomations         StoreAutomation[]
   user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount          WhatsAppAccount?          @relation(fields: [whatsappAccountId], references: [id], onDelete: SetNull)
 
   @@unique([metaId, userId])
   @@index([userId])
   @@index([status])
+  @@index([whatsappAccountId])
+  @@index([wabaId])
 }
 
 model Campaign {

@@ -64,7 +64,7 @@ describe("GET /api/templates", () => {
     expect(mockPrisma.template.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: "user-1" } })
     );
-    expect(data).toEqual([{ id: "t1", userId: "user-1" }]);
+    expect(data).toEqual([{ id: "t1", userId: "user-1", isCurrentAccount: true }]);
   });
 
   it("بيستخدم parentId (حساب فرعي) لو موجود بدل الـ id", async () => {

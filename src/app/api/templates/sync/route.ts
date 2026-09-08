@@ -69,7 +69,8 @@ export async function POST() {
       // 5. Extract rejected reason
       const rejectedReason = temp.rejected_reason || null;
 
-      // Update or insert template in DB
+      // Update or insert template in DB — مختومة بالحساب الحالي (المزامنة
+      // دليل قاطع أن القالب يعيش في WABA الحالية)
       await prisma.template.upsert({
         where: { metaId_userId: { metaId: String(temp.id), userId: ownerId } },
         update: {
@@ -84,6 +85,8 @@ export async function POST() {
           buttons,
           rejectedReason,
           components: temp.components,
+          whatsappAccountId: account.id,
+          wabaId: account.wabaId,
           updatedAt: new Date()
         },
         create: {
@@ -99,7 +102,9 @@ export async function POST() {
           footer,
           buttons,
           rejectedReason,
-          components: temp.components
+          components: temp.components,
+          whatsappAccountId: account.id,
+          wabaId: account.wabaId,
         },
       });
       syncedCount++;

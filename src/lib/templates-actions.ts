@@ -222,7 +222,7 @@ export async function createTemplateForUser(ownerId: string, input: {
     finalStatus = "PENDING"; // Draft saved as pending in local state
   }
 
-  // Save to Database
+  // Save to Database — مختومة بالحساب الحالي (لمنع التسرب بعد تبديل الحساب)
   const newTemp = await prisma.template.create({
     data: {
       metaId,
@@ -236,11 +236,37 @@ export async function createTemplateForUser(ownerId: string, input: {
       headerText: headerType === "text" ? headerText : null,
       footer: footer || null,
       buttons: (buttons || null) as any,
-      components: (metaComponents.length > 0 ? metaComponents : null) as any
+      components: (metaComponents.length > 0 ? metaComponents : null) as any,
+      ...(account
+        ? { whatsappAccountId: account.id, wabaId: account.wabaId }
+        : {}),
     }
   });
 
   return NextResponse.json(newTemp);
+}
+
+// ─── نسب القوالب القديمة (null) للحساب المغادِر عند تبديل حساب واتساب ───────
+// تُستدعى قبل upsert الحساب الجديد في كل مسارات الربط. القوالب المنسوبة
+// لحساب آخر تُخفى تلقائيًا عن ويزرد الحملات (فلترة GET) وتُرفض في الباك إند.
+// لا تمسح شيئًا ولا تنسب لحساب لم ينشئها — فقط توثق الحساب المغادِر المعروف.
+export async function attributeLegacyTemplatesToDepartingAccount(
+  ownerId: string,
+  newWabaId: string,
+): Promise<void> {
+  try {
+    const current = await prisma.whatsAppAccount.findUnique({
+      where: { userId: ownerId },
+      select: { wabaId: true },
+    });
+    if (!current?.wabaId || current.wabaId === newWabaId) return;
+    await prisma.template.updateMany({
+      where: { userId: ownerId, whatsappAccountId: null, wabaId: null },
+      data: { wabaId: current.wabaId },
+    });
+  } catch (err) {
+    console.error("[Templates] Switch attribution failed:", err instanceof Error ? err.message : err);
+  }
 }
 
 export async function deleteTemplateForUser(ownerId: string, id: string) {

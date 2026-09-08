@@ -12,6 +12,10 @@ export interface Template {
     headerText?: string; footer?: string; buttons?: TemplateButton[];
     createdAt?: string; updatedAt?: string; rejectedReason?: string;
     isWaniReady?: boolean; exampleVars?: string[]; group?: "store" | "followup" | "campaign";
+    // ربط الحساب (من GET /api/templates) — لبادج "الحساب الحالي/آخر/قديم"
+    whatsappAccountId?: string | null;
+    wabaId?: string | null;
+    isCurrentAccount?: boolean;
 }
 export interface FormState {
     name: string; category: TemplateCategory | ""; language: string;

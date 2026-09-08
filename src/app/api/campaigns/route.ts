@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { MessageStatus, QueueStatus } from "@/types/enums";
 import { requirePermission } from "@/lib/permissions";
 import { createCampaignForUser, repeatCampaignForUser } from "@/lib/campaigns-actions";
+import { getCampaignQueuePressure } from "@/lib/campaign-queue";
 function resolveUserId(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
 }
@@ -115,7 +116,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ campaigns, total, page, limit });
+    // ── ضغط سعة التنفيذ الحالية (لشريط الشفافية في الواجهة) ─────────────────
+    // لا يفشل الطلب لو تعذر القياس — يُرجع null وتُخفي الواجهة الشريط.
+    const queue = await getCampaignQueuePressure(userId).catch(() => null);
+
+    return NextResponse.json({ campaigns, total, page, limit, queue });
   } catch (err) {
     console.error("GET /api/campaigns:", err);
     return NextResponse.json({ error: "فشل في جلب الحملات" }, { status: 500 });

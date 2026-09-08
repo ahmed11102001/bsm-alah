@@ -18,6 +18,7 @@ import {
 import { enqueueCampaign } from "@/lib/queue";
 import { inngest } from "@/inngest/client";
 import { decryptToken } from "@/lib/crypto";
+import { getCampaignQueuePressure } from "@/lib/campaign-queue";
 
 export async function createCampaignForUser(userId: string, body: any) {
   const { name, templateName, numbers, scheduledAt, templateVars, attributionHours, recipients } = body;
@@ -76,6 +77,17 @@ export async function createCampaignForUser(userId: string, body: any) {
       { status: 404 }
     );
 
+  // ── ملكية القالب: المثبوت لحساب واتساب آخر مرفوض حتى لو أُرسل id يدويًا ────
+  // null/null = قديم غير منسوب → مقبول لعدم كسر الموجود.
+  if (
+    (template.whatsappAccountId && template.whatsappAccountId !== account.id) ||
+    (template.wabaId && template.wabaId !== account.wabaId)
+  )
+    return NextResponse.json(
+      { error: "هذا القالب تابع لحساب واتساب آخر — اختر قالبًا من الحساب المتصل حاليًا" },
+      { status: 422 }
+    );
+
   // Build templateVariables snapshot for the campaign record
   const templateVariablesSnapshot = hasRecipients
     ? { mapping: body.recipients?.[0]?.templateVars ?? null, source: "per-recipient" }
@@ -131,18 +143,73 @@ export async function createCampaignForUser(userId: string, body: any) {
       });
     }
 
+    const verdict = await honestQueueVerdict(userId, queued, isScheduled);
     return NextResponse.json({
       success: true,
       campaignId: campaign.id,
       queued,
       scheduled: isScheduled,
-      message: isScheduled
-        ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
-        : `تم وضع الحملة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`,
+      startsImmediately: verdict?.startsImmediately ?? false,
+      queue: verdict?.queue ?? null,
+      message:
+        verdict?.message ??
+        (isScheduled
+          ? `تم جدولة الحملة — ${queued} رسالة في الانتظار`
+          : `تم وضع الحملة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`),
     });
   } catch (err) {
     await refundCampaignQuota(userId);
     throw err;
+  }
+}
+
+// ─── رسالة إنشاء صادقة حسب سعة التنفيذ الفعلية ───────────────────────────────
+// تُستدعى بعد إرسال حدث التنفيذ: لو توجد سعة حرة → "بدأ الإرسال"، وإلا الانتظار.
+// عند تعذر القياس: null → يلتزم المتصل برسالة الانتظار المحافظة (لا ادعاء كاذب).
+export async function honestQueueVerdict(
+  userId: string,
+  queued: number,
+  scheduled: boolean,
+): Promise<{
+  message: string;
+  startsImmediately: boolean;
+  queue: { globalActive: number; userActive: number; globalLimit: number; userLimit: number; queuedWaiting: number } | null;
+} | null> {
+  try {
+    if (scheduled) {
+      return {
+        message: `تم جدولة الحملة — ${queued} رسالة في الانتظار`,
+        startsImmediately: false,
+        queue: null,
+      };
+    }
+    const pressure = await getCampaignQueuePressure(userId);
+    if (pressure.startsImmediately) {
+      return {
+        message: `بدأ إرسال الحملة مباشرة ✅`,
+        startsImmediately: true,
+        queue: {
+          globalActive: pressure.globalActive,
+          userActive: pressure.userActive,
+          globalLimit: pressure.globalLimit,
+          userLimit: pressure.userLimit,
+          queuedWaiting: pressure.queuedWaiting,
+        },
+      };
+    }
+    return {
+      message: `الحملة في قائمة الانتظار — سعة التنفيذ مشغولة (${pressure.globalActive}/${pressure.globalLimit}) وستبدأ تلقائيًا`,
+      startsImmediately: false,
+      queue: {
+        globalActive: pressure.globalActive,
+        userActive: pressure.userActive,
+        globalLimit: pressure.globalLimit,
+        userLimit: pressure.userLimit,
+        queuedWaiting: pressure.queuedWaiting,
+      },
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -172,6 +239,16 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
 
   const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
   if (!account) return NextResponse.json({ error: "لم يتم ربط حساب واتساب" }, { status: 400 });
+
+  // نفس قاعدة الملكية أعلاه — الحساب قد يكون تبدّل منذ الحملة الأصلية
+  if (
+    (original.template.whatsappAccountId && original.template.whatsappAccountId !== account.id) ||
+    (original.template.wabaId && original.template.wabaId !== account.wabaId)
+  )
+    return NextResponse.json(
+      { error: "قالب الحملة الأصلية تابع لحساب واتساب آخر — أنشئ حملة جديدة بقالب الحساب الحالي" },
+      { status: 422 }
+    );
 
   const numbers = [
     ...new Set(
@@ -216,11 +293,16 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
       data: { campaignId: newCampaign.id, userId },
     });
 
+    const verdict = await honestQueueVerdict(userId, queued, false);
     return NextResponse.json({
       success: true,
       campaignId: newCampaign.id,
       queued,
-      message: `تم وضع الحملة المكررة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`,
+      startsImmediately: verdict?.startsImmediately ?? false,
+      queue: verdict?.queue ?? null,
+      message:
+        verdict?.message ??
+        `تم وضع الحملة المكررة في قائمة الانتظار — سيبدأ الإرسال تلقائياً`,
     });
   } catch (err) {
     await refundCampaignQuota(userId);

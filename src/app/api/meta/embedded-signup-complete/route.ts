@@ -267,6 +267,10 @@ export async function POST(req: NextRequest) {
   /* ── 6. Save encrypted token + IDs to DB (Neon) ─────────────────────────── */
   const encryptedToken = encryptToken(businessToken);
 
+  // نسب القوالب القديمة للحساب المغادِر عند التبديل (تمنع تسربها للجديد)
+  const { attributeLegacyTemplatesToDepartingAccount } = await import("@/lib/templates-actions");
+  await attributeLegacyTemplatesToDepartingAccount(ownerId, waba_id);
+
   try {
     console.log("[EmbeddedSignup][BACKEND DIAGNOSTIC] Performing Neon DB upsert for user:", ownerId);
     await prisma.whatsAppAccount.upsert({
