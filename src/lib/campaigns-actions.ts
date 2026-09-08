@@ -18,7 +18,7 @@ import {
 import { enqueueCampaign } from "@/lib/queue";
 import { inngest } from "@/inngest/client";
 import { decryptToken } from "@/lib/crypto";
-import { getCampaignQueuePressure } from "@/lib/campaign-queue";
+import { getCampaignQueuePressure, type CampaignQueuePressure } from "@/lib/campaign-queue";
 
 export async function createCampaignForUser(userId: string, body: any) {
   const { name, templateName, numbers, scheduledAt, templateVars, attributionHours, recipients } = body;
@@ -110,6 +110,8 @@ export async function createCampaignForUser(userId: string, body: any) {
       },
     });
 
+    const pressure = isScheduled ? null : await getCampaignQueuePressure(userId).catch(() => null);
+
     const { queued } = await enqueueCampaign({
       campaignId: campaign.id,
       userId,
@@ -122,6 +124,7 @@ export async function createCampaignForUser(userId: string, body: any) {
       whatsappAccountId: account.id,
       phoneNumberId: account.phoneNumberId,
       accessToken: decryptToken(account.accessToken),
+      startsImmediately: pressure?.startsImmediately ?? false,
     });
 
     if (isScheduled) {
@@ -143,7 +146,7 @@ export async function createCampaignForUser(userId: string, body: any) {
       });
     }
 
-    const verdict = await honestQueueVerdict(userId, queued, isScheduled);
+    const verdict = await honestQueueVerdict(userId, queued, isScheduled, pressure ?? undefined);
     return NextResponse.json({
       success: true,
       campaignId: campaign.id,
@@ -166,10 +169,15 @@ export async function createCampaignForUser(userId: string, body: any) {
 // ─── رسالة إنشاء صادقة حسب سعة التنفيذ الفعلية ───────────────────────────────
 // تُستدعى بعد إرسال حدث التنفيذ: لو توجد سعة حرة → "بدأ الإرسال"، وإلا الانتظار.
 // عند تعذر القياس: null → يلتزم المتصل برسالة الانتظار المحافظة (لا ادعاء كاذب).
+// precomputedPressure اختياري: لو الفانكشن اللي نادى علينا كانت أصلاً قاست
+// السعة قبل ما تنادي enqueueCampaign (عشان تحدد draft/queued)، بنستخدم نفس
+// القياس هنا بدل ما نعمل query تاني ونخاطر بعدم اتساق بين الحالة المحفوظة
+// في قاعدة البيانات والرسالة المعروضة.
 export async function honestQueueVerdict(
   userId: string,
   queued: number,
   scheduled: boolean,
+  precomputedPressure?: CampaignQueuePressure,
 ): Promise<{
   message: string;
   startsImmediately: boolean;
@@ -183,7 +191,7 @@ export async function honestQueueVerdict(
         queue: null,
       };
     }
-    const pressure = await getCampaignQueuePressure(userId);
+    const pressure = precomputedPressure ?? (await getCampaignQueuePressure(userId));
     if (pressure.startsImmediately) {
       return {
         message: `بدأ إرسال الحملة مباشرة ✅`,
@@ -274,6 +282,8 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
       },
     });
 
+    const pressure = await getCampaignQueuePressure(userId).catch(() => null);
+
     const { queued } = await enqueueCampaign({
       campaignId: newCampaign.id,
       userId,
@@ -284,6 +294,7 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
       whatsappAccountId: account.id,
       phoneNumberId: account.phoneNumberId,
       accessToken: decryptToken(account.accessToken),
+      startsImmediately: pressure?.startsImmediately ?? false,
     });
 
     await inngest.send({
@@ -291,7 +302,7 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
       data: { campaignId: newCampaign.id, userId },
     });
 
-    const verdict = await honestQueueVerdict(userId, queued, false);
+    const verdict = await honestQueueVerdict(userId, queued, false, pressure ?? undefined);
     return NextResponse.json({
       success: true,
       campaignId: newCampaign.id,

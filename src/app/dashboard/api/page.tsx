@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
 import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
+import { normalizeShopDomain } from "@/lib/shopify-domain";
 
 type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude" | "elevenlabs";
 
@@ -394,16 +395,28 @@ function ShopifyContent({
   const [showForm, setShowForm] = useState(false);
   const [oauthShop, setOAuthShop] = useState("");
 
-  // ── الربط التلقائي (Public App OAuth) مقفول خلف env — من غيره لا يظهر شيء ──
-  // NEXT_PUBLIC_* تُضمّن وقت البناء؛ لحد ما تُضاف القيمة الحقيقية بعد موافقة
-  // Shopify، الشرط false والواجهة مطابقة تمامًا للوضع الحالي.
-  // استثناء: السوبر أدمن يشوف الزرار دائمًا لغرض الاختبار (isSuperAdmin).
-  const isOAuthReady = Boolean(process.env.NEXT_PUBLIC_SHOPIFY_APP_CLIENT_ID);
-  const showOAuth = isOAuthReady || isSuperAdmin;
+  // ── الربط التلقائي (Public App OAuth) متاح للجميع ──
+  const showOAuth = true;
 
   function handleOAuthConnect() {
-    const shop = oauthShop.trim();
-    if (!shop) { toast.error("أدخل دومين متجرك أولاً (مثال: mystore.myshopify.com)"); return; }
+    const raw = oauthShop.trim();
+    if (!raw) {
+      toast.error(
+        locale === "ar"
+          ? "أدخل دومين متجرك أولاً (مثال: mystore.myshopify.com أو mystore)"
+          : "Enter your store domain first (e.g. mystore.myshopify.com or mystore)"
+      );
+      return;
+    }
+    const shop = normalizeShopDomain(raw);
+    if (!shop) {
+      toast.error(
+        locale === "ar"
+          ? "دومين Shopify غير صالح — بصيغة متجر.myshopify.com"
+          : "Invalid Shopify domain (format: yourstore.myshopify.com)"
+      );
+      return;
+    }
     window.location.href = `/api/shopify/auth?shop=${encodeURIComponent(shop)}`;
   }
 
@@ -503,16 +516,11 @@ function ShopifyContent({
         </div>
       )}
 
-      {/* ── الربط التلقائي (Public App OAuth) — للسوبر أدمن دائمًا، وللكل عند التفعيل ── */}
+      {/* ── الربط التلقائي (Public App OAuth) — متاح للجميع ── */}
       {showOAuth && !status?.connected && (
         <div className="space-y-2 rounded-xl border border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 p-3">
           <Label className="text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
-            ⚡ الربط التلقائي (موصى به)
-            {isSuperAdmin && !isOAuthReady && (
-              <span className="font-normal text-[10px] text-amber-600 dark:text-amber-400">
-                (وضع الاختبار — ضع SHOPIFY_APP_CLIENT_ID في البيئة)
-              </span>
-            )}
+            ⚡ {locale === "ar" ? "الربط التلقائي (موصى به)" : "Automatic Connection (Recommended)"}
           </Label>
           <Input
             placeholder="mystore.myshopify.com"
@@ -526,10 +534,12 @@ function ShopifyContent({
             onClick={handleOAuthConnect}
             className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
           >
-            <Zap className="w-4 h-4" /> ربط تلقائي بضغطة واحدة
+            <Zap className="w-4 h-4" /> {locale === "ar" ? "ربط تلقائي بضغطة واحدة" : "1-Click Auto Connect"}
           </Button>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-4">
-            هتتوجه لصفحة موافقة Shopify الرسمية وترجع مربوطًا تلقائيًا — من غير نسخ أي توكنات.
+            {locale === "ar"
+              ? "هتتوجه لصفحة موافقة Shopify الرسمية وترجع مربوطًا تلقائيًا — من غير نسخ أي توكنات."
+              : "You'll be redirected to official Shopify approval page and connected automatically — without copying any tokens."}
           </p>
         </div>
       )}

@@ -178,11 +178,17 @@ export async function enqueueCampaign(params: {
   whatsappAccountId: string;
   phoneNumberId: string;
   accessToken: string;
+  // لو معروف مسبقًا إن سعة التنفيذ متاحة (نفس فحص getCampaignQueuePressure)،
+  // بنبدأ الحالة بـ draft بدل queued — عشان الليست ماتقولش "في قائمة
+  // الانتظار / سعة التنفيذ مشغولة" لحملة هتتحول لـ running خلال لحظات.
+  // "queued" لازم تفضل معناها الحرفي: فعلاً مستنية سعة تنفيذ.
+  startsImmediately?: boolean;
 }): Promise<{ queued: number }> {
   const {
     campaignId, userId, numbers, recipients, templateName,
     templateLang = "ar", templateVars, scheduledAt,
     whatsappAccountId, phoneNumberId, accessToken,
+    startsImmediately = false,
   } = params;
 
   const sendAt = scheduledAt ?? new Date();
@@ -217,10 +223,17 @@ export async function enqueueCampaign(params: {
   await prisma.messageQueue.createMany({ data, skipDuplicates: false });
 
   // تحديث حالة الحملة
+  // مجدولة → scheduled دايمًا. غير مجدولة: draft لو هتبدأ فورًا (سعة متاحة)،
+  // queued فقط لو فعلاً مستنية سعة تنفيذ — processCampaign بيقبل الحالتين
+  // (draft/queued) كـ claimable زي ما هو، فمفيش أي تغيير في منطق التنفيذ.
+  const initialStatus = scheduledAt
+    ? CampaignStatus.scheduled
+    : (startsImmediately ? CampaignStatus.draft : CampaignStatus.queued);
+
   await prisma.campaign.update({
     where: { id: campaignId },
     data: {
-      status: scheduledAt ? CampaignStatus.scheduled : CampaignStatus.queued,
+      status: initialStatus,
       totalQueued: numbers.length,
       queuedCount: numbers.length,
       startedAt: null,
