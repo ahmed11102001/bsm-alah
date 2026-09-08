@@ -23,13 +23,17 @@ export async function GET(req: Request) {
       }),
     ]);
     // isCurrentAccount: القالب يخص الحساب المتصل حاليًا (أو قديم غير منسوب).
-    // الشكل ثابت (array) — الويزرد يتجاهل الحقول الزائدة بأمان.
-    const shaped = (templates || []).map((t) => ({
+    // مهم: WhatsAppAccount صف واحد ثابت لكل يوزر (upsert على userId) —
+    // بيتم الكتابة فوقه في نفس الـ id عند كل إعادة ربط، فـ whatsappAccountId
+    // (foreign key) بيفضل ثابت على نفس القيمة للأبد بغض النظر عن أي حساب
+    // واتساب اتربط فعليًا وقتها. ده يخليه عديم الفايدة كمؤشر على "هل ده
+    // نفس الحساب الحالي" — أي قالب اتزامن قبل كده (قديم أو جديد) هيبقى
+    // whatsappAccountId بتاعه == account.id دايمًا (tautology).
+    // الفيصل الحقيقي الوحيد هو wabaId، لأنه قيمة نصية بتتاخد "صورة" وقت
+    // المزامنة نفسها ومش بتتغير بعد كده لحد ما يتزامن القالب تاني.
+    const shaped = (templates || []).map((t: (typeof templates)[number]) => ({
       ...t,
-      isCurrentAccount:
-        !account ||
-        (t.whatsappAccountId != null && t.whatsappAccountId === account.id) ||
-        (t.whatsappAccountId == null && (t.wabaId == null || t.wabaId === account.wabaId)),
+      isCurrentAccount: !account || t.wabaId == null || t.wabaId === account.wabaId,
     }));
     return NextResponse.json(shaped);
   } catch (error) {

@@ -78,11 +78,11 @@ export async function createCampaignForUser(userId: string, body: any) {
     );
 
   // ── ملكية القالب: المثبوت لحساب واتساب آخر مرفوض حتى لو أُرسل id يدويًا ────
-  // null/null = قديم غير منسوب → مقبول لعدم كسر الموجود.
-  if (
-    (template.whatsappAccountId && template.whatsappAccountId !== account.id) ||
-    (template.wabaId && template.wabaId !== account.wabaId)
-  )
+  // wabaId هو الفيصل الوحيد الموثوق — whatsappAccountId بيفضل نفس القيمة
+  // دايمًا لأي قالب اتزامن قبل كده (صف WhatsAppAccount ثابت بيتكتب فوقه عند
+  // كل إعادة ربط)، فمينفعش نعتمد عليه هنا. null = قديم غير منسوب → مقبول
+  // لعدم كسر الموجود.
+  if (template.wabaId && template.wabaId !== account.wabaId)
     return NextResponse.json(
       { error: "هذا القالب تابع لحساب واتساب آخر — اختر قالبًا من الحساب المتصل حاليًا" },
       { status: 422 }
@@ -240,11 +240,9 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
   const account = await prisma.whatsAppAccount.findUnique({ where: { userId } });
   if (!account) return NextResponse.json({ error: "لم يتم ربط حساب واتساب" }, { status: 400 });
 
-  // نفس قاعدة الملكية أعلاه — الحساب قد يكون تبدّل منذ الحملة الأصلية
-  if (
-    (original.template.whatsappAccountId && original.template.whatsappAccountId !== account.id) ||
-    (original.template.wabaId && original.template.wabaId !== account.wabaId)
-  )
+  // نفس قاعدة الملكية أعلاه — الحساب قد يكون تبدّل منذ الحملة الأصلية.
+  // wabaId فقط هو الفيصل الموثوق (راجع تعليق createCampaignForUser).
+  if (original.template.wabaId && original.template.wabaId !== account.wabaId)
     return NextResponse.json(
       { error: "قالب الحملة الأصلية تابع لحساب واتساب آخر — أنشئ حملة جديدة بقالب الحساب الحالي" },
       { status: 422 }
