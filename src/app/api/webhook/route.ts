@@ -999,6 +999,12 @@ async function handleAutomation(ctx: {
   // بيبدأ فترة انتظار 8 ثواني. لو جت رسالة تانية قبل ما الـ sleep يخلص،
   // cancelOn بيلغي الـ function وبيتجدول واحدة جديدة بآخر triggerMessageId.
   const resolvedContactId = contactForAI?.id ?? ctxContactId;
+  // ── إشارة "AI يجهز ردًا" للداشبورد — تُمسح عند اكتمال/إلغاء الرد ──────────
+  // fire-and-forget: فشلها لا يمنع جدولة الرد نفسه.
+  void prisma.contact.update({
+    where: { id: resolvedContactId },
+    data: { aiReplyPendingAt: new Date() },
+  }).catch(() => {});
   await inngest.send({
     name: "agent-conversation.ai-reply-check",
     data: {

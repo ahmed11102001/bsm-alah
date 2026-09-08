@@ -121,6 +121,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
       unreadCount: true, lastMessageAt: true,
       voiceAgentEnabled: true, voiceOptOut: true, textAiEnabled: true, aiStatus: true,
       handoffReason: true, handoffAt: true, lastAiRepliedAt: true,
+      aiReplyPendingAt: true,
       // آخر رسالة فعلية (inbound أو outbound) — للـ preview الصح
       messages: {
         take: 1,
@@ -193,6 +194,10 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     aiAgent?.elevenLabsApiKey
   );
 
+  // نافذة حداثة إشارة "AI يجهز ردًا" — تغطي debounce (8s) + التوليد + هامش،
+  // والمسح الفعلي يتم عند اكتمال/إلغاء الرد في كل الأحوال.
+  const AI_PREPARING_FRESH_MS = 45_000;
+  const now = Date.now();
   const conversations = result.map((c: typeof contacts[number]) => ({
     contact: { id: c.id, name: c.name, phone: c.phone, assignedToUserId: c.assignedToUserId, assignedTo: c.assignedTo },
     lastMessage: c.messages[0] ?? null,
@@ -205,6 +210,7 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     aiStatus: (c as any).aiStatus ?? "AUTO",
     handoffReason: (c as any).handoffReason ?? null,
     handoffAt: (c as any).handoffAt ?? null,
+    aiPreparing: !!c.aiReplyPendingAt && (now - c.aiReplyPendingAt.getTime() < AI_PREPARING_FRESH_MS),
   }));
 
   const mediaGuard = await checkFeature(userId, "mediaMessages");
@@ -553,10 +559,10 @@ async function sendMessage(
       },
     });
 
-    // حدّث lastMessageAt فوراً
+    // حدّث lastMessageAt فوراً + امسح إشارة "AI يجهز ردًا" (الرد البشري ألغاها)
     await tx.contact.update({
       where: { id: contactId },
-      data: { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date(), aiReplyPendingAt: null },
     });
 
     if (contact.aiStatus === "NEEDS_HUMAN") {

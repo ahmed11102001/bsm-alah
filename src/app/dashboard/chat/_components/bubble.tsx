@@ -13,9 +13,37 @@ import { MsgTick } from "./masgtic";
 
 const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
+// ─── تمييز نص البحث داخل الرسالة — يُستخدم عند البحث داخل المحادثة ──────────
+// يرجع null لو لا يوجد تطابق (لنسقط على العرض الأصلي linkify).
+function highlightText(text: string, query: string): React.ReactNode | null {
+  const q = query.trim();
+  if (!q) return null;
+  const lower = text.toLowerCase();
+  const lq = q.toLowerCase();
+  if (!lower.includes(lq)) return null;
+  const parts: React.ReactNode[] = [];
+  let i = 0;
+  let key = 0;
+  for (;;) {
+    const idx = lower.indexOf(lq, i);
+    if (idx === -1) {
+      parts.push(text.slice(i));
+      break;
+    }
+    if (idx > i) parts.push(text.slice(i, idx));
+    parts.push(
+      <mark key={key++} className="bg-yellow-300 dark:bg-yellow-500/70 text-inherit rounded-sm px-0.5">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+    );
+    i = idx + q.length;
+  }
+  return <>{parts}</>;
+}
+
 // ─── Bubble ───────────────────────────────────────────────────────────────────
 export function Bubble({
-  msg, contactId, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark,
+  msg, contactId, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark, highlight,
 }: {
   msg: Message;
   contactId?: string;
@@ -26,6 +54,7 @@ export function Bubble({
   onQuoteClick?: (id: string) => void;
   lang: Lang;
   dark: boolean;
+  highlight?: string;
 }) {
   const router = useRouter();
   const isMe = msg.direction === "outbound";
@@ -238,7 +267,7 @@ export function Bubble({
 
           {msg.content && (
             <p className={`leading-relaxed whitespace-pre-wrap break-words ${textColor}`} dir="auto">
-              {linkify(msg.content)}
+              {highlight?.trim() ? (highlightText(msg.content, highlight) ?? linkify(msg.content)) : linkify(msg.content)}
             </p>
           )}
 

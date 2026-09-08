@@ -18,6 +18,7 @@ export interface Conversation {
   aiStatus?: string;
   handoffReason?: string | null;
   handoffAt?: string | null;
+  aiPreparing?: boolean;
 }
 export interface Message {
   id: string; content: string | null; type: string;

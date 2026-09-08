@@ -294,6 +294,9 @@ model Contact {
   voiceAgentEnabled      Boolean                 @default(false)
   voiceOptOut            Boolean                 @default(false)
   lastAiRepliedAt        DateTime?
+  // إشارة لحظية: مضبوطة لحظة جدولة رد AI (debounce) وتُمسح عند اكتماله/إلغائه.
+  // تُستخدم لعرض "AI يجهز ردًا…" داخل الشات — ليست حالة دائمة.
+  aiReplyPendingAt       DateTime?
   textAiEnabled          Boolean                 @default(true)
   aiStatus               ConversationStatus      @default(AUTO)
   handoffAt              DateTime?

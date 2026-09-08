@@ -54,6 +54,7 @@ export const aiReplyDebounceFn = inngest.createFunction(
       `[AI-DEBOUNCE] Started — contact=${contactId} message=${triggerMessageId}`
     );
 
+    try {
     // 1. انتظار تجميع أي رسائل متتالية إضافية
     await step.sleep("wait-for-more-messages", AI_REPLY_DEBOUNCE_DELAY);
 
@@ -105,6 +106,15 @@ export const aiReplyDebounceFn = inngest.createFunction(
         });
       });
       return { sent: false, reason: err?.message, finalFailure: true };
+    }
+    } finally {
+      // ── مسح إشارة "AI يجهز ردًا" مهما كانت النتيجة (إرسال/تسليم/فشل/إلغاء) ──
+      await step.run("clear-ai-pending-signal", async () => {
+        await prisma.contact.update({
+          where: { id: contactId },
+          data: { aiReplyPendingAt: null },
+        }).catch(() => {});
+      });
     }
   }
 );

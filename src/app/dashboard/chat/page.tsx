@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   Search, Send, Paperclip, Mic, X, Reply, MoreVertical, Check, CheckCheck,
   Clock, Image as ImageIcon, FileText, Video, MapPin, Smile,
-  MessageSquare, ChevronDown, Users, Archive, Trash2, Plus,
+  MessageSquare, ChevronDown, ChevronUp, Users, Archive, Trash2, Plus,
   MicOff, Loader2, Megaphone, Filter, Circle, Mic2, Lock,
   ArrowLeft, ChevronLeft, Bot,
 } from "lucide-react";
@@ -80,6 +80,10 @@ export default function ChatPage() {
   const messageRequestInFlight = useRef(false);
   const pendingScroll = useRef<"initial" | "new" | null>(null);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
+  // ── البحث داخل المحادثة المفتوحة ──────────────────────────────────────────
+  const [msgSearchOpen, setMsgSearchOpen] = useState(false);
+  const [msgQuery, setMsgQuery] = useState("");
+  const [msgMatchIdx, setMsgMatchIdx] = useState(0);
   const [assignmentMembers, setAssignmentMembers] = useState<{ id: string; name: string | null; email: string; image: string | null }[]>([]);
   const [canAssign, setCanAssign] = useState(false);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
@@ -100,6 +104,54 @@ export default function ChatPage() {
     if (!lastInbound) return messages.length > 0;
     return (Date.now() - new Date(lastInbound.createdAt).getTime()) > 24 * 60 * 60 * 1000;
   }, [selected, messages]);
+
+  // ── نسخة حيّة من المحددة (قائمة المحادثات تتحدث بالـpolling) ───────────────
+  // تُستخدم لإشارة "AI يجهز ردًا" لحظيًا دون انتظار إعادة الاختيار.
+  const selectedLive = selected
+    ? (convs.find(c => c.contact.id === selected.contact.id) ?? selected)
+    : null;
+  const showAiPreparing = !!selectedLive?.aiPreparing;
+
+  // ── نتائج البحث داخل المحادثة + التنقل بينها ──────────────────────────────
+  const msgMatches = useMemo(() => {
+    const q = msgQuery.trim().toLowerCase();
+    if (!msgSearchOpen || !q) return [] as string[];
+    return messages
+      .filter(m => (m.content ?? "").toLowerCase().includes(q))
+      .map(m => m.id);
+  }, [messages, msgQuery, msgSearchOpen]);
+  const activeMatchId = msgMatches.length > 0
+    ? msgMatches[((msgMatchIdx % msgMatches.length) + msgMatches.length) % msgMatches.length]
+    : null;
+
+  const jumpToMatch = useCallback((idx: number) => {
+    if (msgMatches.length === 0) return;
+    const safe = ((idx % msgMatches.length) + msgMatches.length) % msgMatches.length;
+    setMsgMatchIdx(safe);
+    const id = msgMatches[safe];
+    requestAnimationFrame(() => {
+      document.getElementById(`message-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [msgMatches]);
+
+  // آخر نتيجة تُعرض تلقائيًا عند تغيّر الاستعلام أو المحادثة
+  useEffect(() => {
+    if (msgMatches.length > 0) {
+      setMsgMatchIdx(msgMatches.length - 1);
+      const id = msgMatches[msgMatches.length - 1];
+      requestAnimationFrame(() => {
+        document.getElementById(`message-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgQuery, selected?.contact.id]);
+
+  // تصفير البحث عند تبديل المحادثة
+  useEffect(() => {
+    setMsgSearchOpen(false);
+    setMsgQuery("");
+    setMsgMatchIdx(0);
+  }, [selected?.contact.id]);
 
 
   // ── Theme classes ────────────────────────────────────────────────
@@ -629,9 +681,9 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters — Design pilot: AI والأتمتة ضمن أول 4، المؤرشف آخرًا، بلا today */}
         <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto scrollbar-hide`}>
-          {(["all", "replied", "today", "unread", "archived"] as FilterType[]).map(f => (
+          {(["all", "unread"] as FilterType[]).map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
@@ -667,6 +719,18 @@ export default function ChatPage() {
             <Clock className="w-3 h-3" />
             {t[lang].automation}
           </button>
+          {(["replied", "archived"] as FilterType[]).map(f => (
+            <button key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
+                ? "bg-[#25d366] text-white"
+                : dark
+                  ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}>
+              {t[lang][f]}
+            </button>
+          ))}
         </div>
 
         {/* List */}
@@ -823,6 +887,13 @@ export default function ChatPage() {
                   </>
                 )}
                 <button
+                  onClick={() => { setMsgSearchOpen(v => !v); }}
+                  title={lang === "ar" ? "بحث في المحادثة" : "Search in conversation"}
+                  className={`p-2 rounded-full transition-colors ${msgSearchOpen ? "text-[#25d366] bg-[#25d366]/10" : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+                <button
                   onClick={() => { setSelected(null); setMessages([]); setMobileShowChat(false); }}
                   className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
                 >
@@ -869,6 +940,70 @@ export default function ChatPage() {
                 </DropdownMenu>
               </div>
             </header>
+
+            {/* ── البحث داخل المحادثة ─────────────────────────────────────── */}
+            {msgSearchOpen && (
+              <div className={`px-3 py-2 border-b ${borderLight} flex items-center gap-1.5 ${headerBg}`}>
+                <Search className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                <input
+                  value={msgQuery}
+                  onChange={e => setMsgQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") jumpToMatch(msgMatchIdx + (e.shiftKey ? -1 : 1));
+                    if (e.key === "Escape") { setMsgSearchOpen(false); setMsgQuery(""); }
+                  }}
+                  placeholder={lang === "ar" ? "ابحث في الرسائل…" : "Search messages…"}
+                  autoFocus
+                  className={`flex-1 min-w-0 bg-transparent outline-none text-sm ${textMain} placeholder:text-gray-400`}
+                />
+                {msgQuery.trim() !== "" && (
+                  <span className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0">
+                    {msgMatches.length > 0 ? `${msgMatches.indexOf(activeMatchId as string) + 1}/${msgMatches.length}` : "0"}
+                  </span>
+                )}
+                <button
+                  onClick={() => jumpToMatch(msgMatchIdx - 1)}
+                  disabled={msgMatches.length === 0}
+                  aria-label={lang === "ar" ? "السابق" : "Previous"}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => jumpToMatch(msgMatchIdx + 1)}
+                  disabled={msgMatches.length === 0}
+                  aria-label={lang === "ar" ? "التالي" : "Next"}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => { setMsgSearchOpen(false); setMsgQuery(""); }}
+                  aria-label={lang === "ar" ? "إغلاق البحث" : "Close search"}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* ── AI يجهز ردًا — إشارة حقيقية من الباك إند (debounce مجدول) ── */}
+            {showAiPreparing && (
+              <div className={`px-3 py-1.5 border-b ${borderLight} flex items-center gap-2`}>
+                <span className="flex gap-1" aria-hidden>
+                  {[0, 1, 2].map(i => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#25d366] animate-bounce"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    />
+                  ))}
+                </span>
+                <span className={`text-xs ${textSub}`}>
+                  {lang === "ar" ? "الوكيل الذكي يجهز ردًا…" : "AI is preparing a reply…"}
+                </span>
+              </div>
+            )}
 
             {selected.aiStatus && selected.aiStatus !== "AUTO" && (
               <div className={`px-3 py-2 border-b ${selected.aiStatus === "NEEDS_HUMAN" ? "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300" : "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300"}`}>
@@ -933,7 +1068,7 @@ export default function ChatPage() {
                   {messages.map((msg, i) => {
                     const showDate = i === 0 || dateStr(messages[i - 1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                     return (
-                      <div key={msg.id} id={`message-${msg.id}`}>
+                      <div key={msg.id} id={`message-${msg.id}`} className={activeMatchId === msg.id ? "rounded-xl ring-2 ring-[#25d366] ring-offset-1" : ""}>
                         {showDate && (
                           <div className="flex justify-center my-3">
                             <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
@@ -942,7 +1077,7 @@ export default function ChatPage() {
                             </span>
                           </div>
                         )}
-                        <Bubble msg={msg} contactId={selected?.contact?.id} onReact={sendReaction} onReply={setReplyingTo} onCopy={copyMessage} onForward={openForward} onQuoteClick={scrollToMessage} lang={lang} dark={dark} />
+                        <Bubble msg={msg} contactId={selected?.contact?.id} onReact={sendReaction} onReply={setReplyingTo} onCopy={copyMessage} onForward={openForward} onQuoteClick={scrollToMessage} lang={lang} dark={dark} highlight={msgSearchOpen ? msgQuery : undefined} />
                       </div>
                     );
                   })}
