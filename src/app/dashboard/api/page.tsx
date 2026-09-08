@@ -407,19 +407,8 @@ function ShopifyContent({
     window.location.href = `/api/shopify/auth?shop=${encodeURIComponent(shop)}`;
   }
 
-  // تغليف شرطي: الفورم اليدوي يظهر عاديًا، أو مطويًا داخل details لو وضع OAuth
-  // مفعّل ولسه مفيش ربط — بدون تكرار أي JSX.
-  function MaybeManualDetails({ children }: { children: React.ReactNode }) {
-    if (!showOAuth || status?.connected) return <>{children}</>;
-    return (
-      <details className="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2">
-        <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400 py-1 select-none">
-          أو اربط يدويًا (Access Token / Client ID)
-        </summary>
-        <div className="pt-2 pb-1">{children}</div>
-      </details>
-    );
-  }
+  const [manualOpen, setManualOpen] = useState(false);
+  const isManualVisible = !showOAuth || Boolean(status?.connected) || manualOpen;
 
   useEffect(() => {
     if (status?.connected) setShowForm(false);
@@ -545,16 +534,34 @@ function ShopifyContent({
         </div>
       )}
 
-      {/* ── فورم الربط (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
-      {(!status?.connected || showForm) && (
-        <MaybeManualDetails>
-        <div className="space-y-3">
+      {/* ── زر فتح/طي الربط اليدوي لو الـ OAuth ظاهر ── */}
+      {showOAuth && !status?.connected && (
+        <button
+          type="button"
+          onClick={() => setManualOpen(v => !v)}
+          className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-xs font-semibold text-gray-700 dark:text-gray-300 select-none cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Key className="w-3.5 h-3.5 text-blue-500" />
+            {locale === "ar" ? "أو اربط يدويًا (Access Token / Client ID)" : "Or connect manually (Access Token / Client ID)"}
+          </span>
+          <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform duration-200", isManualVisible && "rotate-180")} />
+        </button>
+      )}
+
+      {/* ── فورم الربط اليدوي (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
+      {(!status?.connected || showForm) && isManualVisible && (
+        <div className={cn(
+          "space-y-3",
+          showOAuth && "p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-900/20"
+        )}>
           <div>
             <Label className="text-xs dark:text-gray-400">اسم المتجر *</Label>
             <Input
               placeholder="مثال: متجر العلاء"
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
+              autoComplete="off"
               className="mt-1 dark:bg-gray-700 dark:border-gray-600"
             />
           </div>
@@ -567,6 +574,7 @@ function ShopifyContent({
               placeholder="mystore.myshopify.com"
               value={shopDomain}
               onChange={e => setShopDomain(e.target.value)}
+              autoComplete="off"
               className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left"
               dir="ltr"
             />
@@ -583,11 +591,19 @@ function ShopifyContent({
             </Label>
             <div className="relative mt-1">
               <Input
+                id="shopify-admin-access-token"
+                name="shopify_admin_access_token_custom"
                 placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 value={accessToken}
                 onChange={e => setAccessToken(e.target.value)}
                 type={showToken ? "text" : "password"}
-                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10"
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
+                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10 font-mono"
                 dir="ltr"
               />
               <button
@@ -607,10 +623,13 @@ function ShopifyContent({
               <span className="text-gray-400 font-normal mr-1">(للربط الجديد من Dev Dashboard)</span>
             </Label>
             <Input
+              id="shopify-client-id"
+              name="shopify_client_id_custom"
               placeholder="مثال: 8a1b2c3d4e5f..."
               value={clientId}
               onChange={e => setClientId(e.target.value)}
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left"
+              autoComplete="off"
+              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left font-mono"
               dir="ltr"
             />
           </div>
@@ -621,11 +640,19 @@ function ShopifyContent({
             </Label>
             <div className="relative mt-1">
               <Input
+                id="shopify-client-secret"
+                name="shopify_client_secret_custom"
                 placeholder="shpss_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 value={clientSecret}
                 onChange={e => setClientSecret(e.target.value)}
                 type={showSecret ? "text" : "password"}
-                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10"
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
+                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10 font-mono"
                 dir="ltr"
               />
               <button
@@ -668,7 +695,6 @@ function ShopifyContent({
             </div>
           </div>
         </div>
-        </MaybeManualDetails>
       )}
 
       {/* ── Webhook URL ───────────────────────────────────────────────────────── */}
