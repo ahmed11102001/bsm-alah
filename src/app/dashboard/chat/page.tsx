@@ -21,6 +21,7 @@ import {
   DropdownMenuSubContent, DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { playSendSound } from "@/lib/sounds";
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 import { t, type Lang } from "./_components/i18n";
@@ -330,6 +331,7 @@ export default function ChatPage() {
         body: JSON.stringify({ action: "send", contactId: selected.contact.id, content: body, type: "text", replyToMessageId: replyingTo?.id }),
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      playSendSound();
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); setText(body); }
     finally { setSending(false); setReplyingTo(null); }
@@ -386,6 +388,7 @@ export default function ChatPage() {
       });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
       toast.success(t[lang].templateSent);
+      playSendSound();
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }
@@ -405,6 +408,7 @@ export default function ChatPage() {
         });
         if (!r.ok) throw new Error();
         toast.success(t[lang].locationSent);
+        playSendSound();
         fetchMsgs(selected.contact.id);
       } catch { toast.error(t[lang].locationFailed); }
       finally { setSending(false); }
@@ -430,6 +434,7 @@ export default function ChatPage() {
       const r = await fetch("/api/chat", { method: "POST", body: formData });
       if (!r.ok) { const d = await r.json(); throw new Error(d.error ?? t[lang].locationFailed); }
       toast.success(t[lang].fileSent);
+      playSendSound();
       fetchMsgs(selected.contact.id);
     } catch (e: any) { toast.error(e.message); }
     finally { setSending(false); }

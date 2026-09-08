@@ -21,6 +21,7 @@ import {
     DropdownMenuSubContent, DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { playSendSound } from "@/lib/sounds";
 
 import { t, type Lang } from "./_components/i18n";
 import type { Conversation, Message, FilterType } from "./_components/types";
@@ -174,6 +175,7 @@ export default function DemoChatPage() {
             } : null,
         };
         appendMessage(selected.contact.id, msg);
+        playSendSound();
         setSending(false);
         setReplyingTo(null);
 
