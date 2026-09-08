@@ -465,6 +465,76 @@ export const processCampaign = inngest.createFunction(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Reaper: الحملات العالقة في running — تُعلَّم failed + إشعار لصاحبها
+// ═══════════════════════════════════════════════════════════════════════════════
+// متى تعلق حملة؟ processCampaign يحجز ذريًا queued/draft → running ثم يرسل
+// inline؛ لو الـrun مات (crash بلا retry ناجح) تبقى running للأبد وتحجز slot
+// وهميًا في عدّاد ضغط السعة (campaign-queue.ts) وتضلل الواجهة.
+//
+// الشرط متحفظ عمدًا — تُحصد الحملة فقط لو تحقق كل ما يلي:
+//   1) status = running ولا تحديث منذ CAMPAIGN_ACTIVE_FRESH_MS (نفس تعريف
+//      "نشط" في عدّاد الضغط — تناسق بنيوي، لا رقمان مختلفان).
+//   2) لا توجد صفوف queue حيّة (processing، أو pending يحين سحبها الآن) —
+//      أي لا worker (inline run ولا fan-out cron) يمكن أن يتقدم فيها.
+// التحديث نفسه مشروط بنفس الشرط (updateMany ذري) لسباق لحظة الإحياء.
+// لا يمس: scheduled (جدولها الخاص)، queued (انتظار طبيعي)، draft.
+// يعمل كل 15 دقيقة، retries: 0 — التكة التالية تغطي أي فشل.
+export async function reapStuckRunningCampaigns(now = new Date()): Promise<{ reaped: string[] }> {
+  const { CAMPAIGN_ACTIVE_FRESH_MS } = await import("@/lib/campaign-queue");
+  const staleSince = new Date(now.getTime() - CAMPAIGN_ACTIVE_FRESH_MS);
+
+  const candidates = await prisma.campaign.findMany({
+    where: { status: CampaignStatus.running, updatedAt: { lt: staleSince } },
+    select: { id: true, userId: true, name: true, failedCount: true },
+  });
+
+  const reaped: string[] = [];
+  for (const c of candidates) {
+    const liveRows = await prisma.messageQueue.count({
+      where: {
+        campaignId: c.id,
+        OR: [
+          { status: QueueStatus.processing },
+          {
+            status: QueueStatus.pending,
+            OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+          },
+        ],
+      },
+    });
+    if (liveRows > 0) continue; // ما زال هناك ما يمكن لعامل أن يسحبه — ليست عالقة
+
+    const claimed = await prisma.campaign.updateMany({
+      where: { id: c.id, status: CampaignStatus.running, updatedAt: { lt: staleSince } },
+      data: { status: CampaignStatus.failed, completedAt: new Date() },
+    });
+    if (claimed.count === 0) continue; // أُحييت في هذه اللحظة — تُترك وشأنها
+
+    reaped.push(c.id);
+    try {
+      const { notifyCampaignFailed } = await import("@/lib/notifications");
+      await notifyCampaignFailed(c.userId, c.name, c.id, c.failedCount);
+    } catch (err) {
+      console.error("[Reaper] notify failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  if (reaped.length > 0) console.log(`[Reaper] marked failed: ${reaped.join(", ")}`);
+  return { reaped };
+}
+
+export const reapStuckCampaigns = inngest.createFunction(
+  {
+    id: "reap-stuck-campaigns",
+    retries: 0,
+    triggers: [{ cron: "*/15 * * * *" }],
+  },
+  async ({ step }: { step: any }) => {
+    return step.run("reap", async () => reapStuckRunningCampaigns());
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Function 2: sendDirectMessage
 // ═══════════════════════════════════════════════════════════════════════════════
 export const sendDirectMessage = inngest.createFunction(
