@@ -3,6 +3,7 @@
 import { ChatListSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import {
   Bell,
   X,
@@ -32,6 +33,8 @@ import { NotificationType } from "@/types/enums";
 import { syncPushSubscriptionOnLogin, urlBase64ToUint8Array } from "@/lib/push-client";
 import DeviceNotificationModal, {
   ALL_NOTIFICATION_TYPES_LIST,
+  USER_NOTIFICATION_TYPES_LIST,
+  ADMIN_NOTIFICATION_TYPES,
 } from "./DeviceNotificationModal";
 
 interface Notification {
@@ -120,6 +123,7 @@ interface Props {
   lang?: "ar" | "en";
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  isSuperAdmin?: boolean;
 }
 
 // parse bilingual JSON stored as {"ar":"...","en":"..."} — falls back to raw string
@@ -142,7 +146,15 @@ export default function NotificationBell({
   lang = "ar",
   isOpen,
   onOpenChange,
+  isSuperAdmin,
 }: Props) {
+  const { data: session } = useSession();
+  const isSuper = Boolean(
+    isSuperAdmin ??
+      (session?.user as any)?.isSuper ??
+      (session?.user as any)?.role === "SUPER_ADMIN"
+  );
+
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -160,11 +172,13 @@ export default function NotificationBell({
         const stored = localStorage.getItem("wani_push_pref_types");
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return isSuper ? parsed : parsed.filter((t) => !ADMIN_NOTIFICATION_TYPES.has(t));
+          }
         }
       } catch {}
     }
-    return ALL_NOTIFICATION_TYPES_LIST;
+    return isSuper ? ALL_NOTIFICATION_TYPES_LIST : USER_NOTIFICATION_TYPES_LIST;
   });
 
   const ref = useRef<HTMLDivElement>(null);
@@ -493,8 +507,20 @@ export default function NotificationBell({
                   </div>
                   <span className="text-[10px] text-gray-400 dark:text-gray-400 font-normal">
                     {lang === "ar"
-                      ? `مخصص (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`
-                      : `Selected (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`}
+                      ? `مخصص (${
+                          selectedTypes.filter((t) => isSuper || !ADMIN_NOTIFICATION_TYPES.has(t)).length
+                        }/${
+                          isSuper
+                            ? ALL_NOTIFICATION_TYPES_LIST.length
+                            : USER_NOTIFICATION_TYPES_LIST.length
+                        })`
+                      : `Selected (${
+                          selectedTypes.filter((t) => isSuper || !ADMIN_NOTIFICATION_TYPES.has(t)).length
+                        }/${
+                          isSuper
+                            ? ALL_NOTIFICATION_TYPES_LIST.length
+                            : USER_NOTIFICATION_TYPES_LIST.length
+                        })`}
                   </span>
                 </div>
               </button>
@@ -548,6 +574,7 @@ export default function NotificationBell({
         pushEnabled={pushEnabled}
         onTogglePush={togglePush}
         pushLoading={pushLoading}
+        isSuperAdmin={isSuper}
       />
     </div>
   );

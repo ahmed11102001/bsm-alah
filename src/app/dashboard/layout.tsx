@@ -721,6 +721,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               lang={locale === "en" ? "en" : "ar"}
               isOpen={activeTopPanel === "notifications"}
               onOpenChange={openNotifications}
+              isSuperAdmin={isSuper}
             />
 
             {/* Claude Connected Badge */}

@@ -3,7 +3,8 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   X,
   Check,
@@ -31,6 +32,7 @@ import {
   Star,
   UserPlus,
   LayoutGrid,
+  ShieldAlert,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 import { toast } from "sonner";
@@ -42,6 +44,7 @@ export interface NotificationItemDef {
   description: { ar: string; en: string };
   icon: React.ReactNode;
   bgClass: string;
+  adminOnly?: boolean;
 }
 
 export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
@@ -198,6 +201,7 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
   {
     type: NotificationType.NEW_PAYMENT_REQUEST,
     category: "billing",
+    adminOnly: true,
     title: { ar: "فاتورة دفع جديدة (للأدمن)", en: "New Payment Request (Admin)" },
     description: {
       ar: "تنبيه الأدمن فقط عند وصول طلب دفع جديد بانتظار المراجعة",
@@ -279,6 +283,7 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
   {
     type: NotificationType.NEW_PARTNER_CARD,
     category: "system",
+    adminOnly: true,
     title: { ar: "كارت Partner جديد (للأدمن)", en: "New Partner Card (Admin)" },
     description: {
       ar: "تنبيه الأدمن فقط عند وصول كارت WANI Partner جديد بانتظار المراجعة",
@@ -290,6 +295,7 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
   {
     type: NotificationType.NEW_TESTIMONIAL,
     category: "system",
+    adminOnly: true,
     title: { ar: "تقييم جديد (للأدمن)", en: "New Testimonial (Admin)" },
     description: {
       ar: "تنبيه الأدمن فقط عند وصول تقييم جديد بانتظار الموافقة",
@@ -301,6 +307,7 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
   {
     type: NotificationType.NEW_LEAD,
     category: "system",
+    adminOnly: true,
     title: { ar: "عميل محتمل جديد (للأدمن)", en: "New Lead (Admin)" },
     description: {
       ar: "تنبيه الأدمن فقط عند وصول عميل محتمل جديد من فورم الموقع",
@@ -312,6 +319,7 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
   {
     type: NotificationType.SHOPIFY_GDPR,
     category: "system",
+    adminOnly: true,
     title: { ar: "طلب امتثال GDPR من شوبيفاي (للأدمن)", en: "Shopify GDPR Request (Admin)" },
     description: {
       ar: "تنبيه الأدمن فقط عند وصول طلب نسخة أو مسح بيانات من شوبيفاي",
@@ -326,6 +334,14 @@ export const ALL_NOTIFICATION_TYPES_LIST: NotificationType[] = ALL_SYSTEM_NOTIFI
   (n) => n.type
 );
 
+export const ADMIN_NOTIFICATION_TYPES = new Set<NotificationType>(
+  ALL_SYSTEM_NOTIFICATIONS.filter((n) => n.adminOnly).map((n) => n.type)
+);
+
+export const USER_NOTIFICATION_TYPES_LIST: NotificationType[] = ALL_SYSTEM_NOTIFICATIONS
+  .filter((n) => !n.adminOnly)
+  .map((n) => n.type);
+
 interface DeviceNotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -335,6 +351,7 @@ interface DeviceNotificationModalProps {
   pushEnabled: boolean;
   onTogglePush: () => void;
   pushLoading?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 export default function DeviceNotificationModal({
@@ -346,11 +363,42 @@ export default function DeviceNotificationModal({
   pushEnabled,
   onTogglePush,
   pushLoading = false,
+  isSuperAdmin,
 }: DeviceNotificationModalProps) {
-  const isAr = lang === "ar";
-  const [selected, setSelected] = useState<Set<NotificationType>>(
-    () => new Set(selectedTypes.length > 0 ? selectedTypes : ALL_NOTIFICATION_TYPES_LIST)
+  const { data: session } = useSession();
+  const isSuper = Boolean(
+    isSuperAdmin ??
+      (session?.user as any)?.isSuper ??
+      (session?.user as any)?.role === "SUPER_ADMIN"
   );
+  const isAr = lang === "ar";
+
+  // تصفية الإشعارات المتاحة: إشعارات الأدمن تظهر فقط إذا كان المستخدم سوبر أدمن
+  const availableNotifications = useMemo(() => {
+    return ALL_SYSTEM_NOTIFICATIONS.filter((item) => {
+      if (item.adminOnly && !isSuper) return false;
+      return true;
+    });
+  }, [isSuper]);
+
+  const availableTypesList = useMemo(() => {
+    return availableNotifications.map((n) => n.type);
+  }, [availableNotifications]);
+
+  const [selected, setSelected] = useState<Set<NotificationType>>(() => {
+    const list = selectedTypes.length > 0 ? selectedTypes : availableTypesList;
+    return new Set(list.filter((t) => isSuper || !ADMIN_NOTIFICATION_TYPES.has(t)));
+  });
+
+  // مزامنة حالة selected إذا تغير المستخدم أو أنواع الإشعارات
+  useEffect(() => {
+    if (selectedTypes.length > 0) {
+      setSelected(new Set(selectedTypes.filter((t) => isSuper || !ADMIN_NOTIFICATION_TYPES.has(t))));
+    } else {
+      setSelected(new Set(availableTypesList));
+    }
+  }, [selectedTypes, isSuper, availableTypesList]);
+
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -368,7 +416,7 @@ export default function DeviceNotificationModal({
   );
 
   const filteredNotifications = useMemo(() => {
-    return ALL_SYSTEM_NOTIFICATIONS.filter((item) => {
+    return availableNotifications.filter((item) => {
       if (activeCategory !== "all" && item.category !== activeCategory) {
         return false;
       }
@@ -378,17 +426,19 @@ export default function DeviceNotificationModal({
       const descStr = (isAr ? item.description.ar : item.description.en).toLowerCase();
       return titleStr.includes(q) || descStr.includes(q);
     });
-  }, [activeCategory, searchQuery, isAr]);
+  }, [availableNotifications, activeCategory, searchQuery, isAr]);
 
   if (!isOpen) return null;
 
-  const isAllSelected = selected.size === ALL_SYSTEM_NOTIFICATIONS.length;
+  const isAllSelected =
+    availableTypesList.length > 0 &&
+    availableTypesList.every((t) => selected.has(t));
 
   const toggleSelectAll = () => {
     if (isAllSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(ALL_NOTIFICATION_TYPES_LIST));
+      setSelected(new Set(availableTypesList));
     }
   };
 
@@ -405,7 +455,9 @@ export default function DeviceNotificationModal({
   };
 
   const handleSave = () => {
-    const list = Array.from(selected);
+    const list = Array.from(selected).filter(
+      (t) => isSuper || !ADMIN_NOTIFICATION_TYPES.has(t)
+    );
     onSave(list);
     toast.success(
       isAr
@@ -439,7 +491,7 @@ export default function DeviceNotificationModal({
                   {isAr ? "تخصيص إشعارات الجهاز" : "Device Notification Settings"}
                 </h2>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-950 text-[#128C7E] dark:text-[#25D366]">
-                  {selected.size} / {ALL_SYSTEM_NOTIFICATIONS.length}
+                  {availableTypesList.filter((t) => selected.has(t)).length} / {availableNotifications.length}
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -553,6 +605,11 @@ export default function DeviceNotificationModal({
                         <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
                           {isAr ? item.title.ar : item.title.en}
                         </p>
+                        {item.adminOnly && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40">
+                            {isAr ? "سوبر أدمن فقط" : "Super Admin"}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
                         {isAr ? item.description.ar : item.description.en}

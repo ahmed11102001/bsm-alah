@@ -318,21 +318,21 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
         </div>
       )}
 
-      <form id="manual-connect-form" onSubmit={onSubmit} className="space-y-3">
+      <form id="manual-connect-form" onSubmit={onSubmit} className="space-y-3" autoComplete="off">
         <div>
           <Label className="text-xs dark:text-gray-400">Access Token</Label>
-          <Input name="accessToken" defaultValue={initialData?.accessToken || ""} placeholder="EAA..." required
-            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+          <Input name="accessToken" id="wa_access_token" defaultValue={initialData?.accessToken || ""} placeholder="EAA..." required
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
         </div>
         <div>
           <Label className="text-xs dark:text-gray-400">Phone Number ID</Label>
-          <Input name="phoneNumberId" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..." required
-            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+          <Input name="phoneNumberId" id="wa_phone_number_id" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..." required
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
         </div>
         <div>
           <Label className="text-xs dark:text-gray-400">WABA ID</Label>
-          <Input name="wabaId" defaultValue={initialData?.wabaId || ""} placeholder="987654321..." required
-            className="mt-1 dark:bg-gray-700 dark:border-gray-600" dir="ltr" />
+          <Input name="wabaId" id="wa_waba_id" defaultValue={initialData?.wabaId || ""} placeholder="987654321..." required
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
         </div>
         <Button disabled={loading} size="sm" className="w-full gap-2">
           {loading
@@ -828,16 +828,36 @@ function EasyOrdersContent({
       {status?.connected && webhookBadge(status.webhookStatusUpdateConfigured, labels.webhookStatusConfiguredBadge, labels.webhookStatusNotConfiguredBadge)}
       <div>
         <Label className="text-xs dark:text-gray-400">{labels.storeLabel}</Label>
-        <Input placeholder={labels.storePlaceholder} value={storeName} onChange={e => setStoreName(e.target.value)}
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
+        <Input
+          id="easyorders_store_name"
+          name="easyorders_store_name"
+          autoComplete="off"
+          placeholder={labels.storePlaceholder}
+          value={storeName}
+          onChange={e => setStoreName(e.target.value)}
+          className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+        />
       </div>
       <div>
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
           <Shield className="w-3 h-3" /> {labels.apiKeyLabel}
         </Label>
-        <Input placeholder="eo_live_xxxxxxxxxxxx" dir="ltr" value={apiKey}
-          onChange={e => setApiKey(e.target.value)} type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600" />
+        <Input
+          id="easyorders_api_key_custom"
+          name="easyorders_api_key_custom"
+          autoComplete="new-password"
+          autoCorrect="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          placeholder="eo_live_xxxxxxxxxxxx"
+          dir="ltr"
+          value={apiKey}
+          onChange={e => setApiKey(e.target.value)}
+          type="password"
+          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
+        />
       </div>
       <Button onClick={onSync} disabled={syncing || !apiKey.trim()} size="sm"
         className="w-full gap-2 bg-orange-600 hover:bg-orange-700">
@@ -857,9 +877,22 @@ function EasyOrdersContent({
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
           <Shield className="w-3 h-3" /> {labels.webhookSecretOrdersLabel}
         </Label>
-        <Input placeholder={labels.webhookSecretPlaceholder} dir="ltr" value={webhookSecretOrders}
-          onChange={e => setWebhookSecretOrders(e.target.value)} type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600" />
+        <Input
+          id="easyorders_secret_orders_custom"
+          name="easyorders_secret_orders_custom"
+          autoComplete="new-password"
+          autoCorrect="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          placeholder={labels.webhookSecretPlaceholder}
+          dir="ltr"
+          value={webhookSecretOrders}
+          onChange={e => setWebhookSecretOrders(e.target.value)}
+          type="password"
+          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
+        />
         <Button onClick={onSaveSecretOrders} disabled={savingSecretOrders || !webhookSecretOrders.trim() || !status?.connected}
           size="sm" variant="outline" className="w-full gap-2 mt-2">
           {savingSecretOrders
@@ -874,9 +907,22 @@ function EasyOrdersContent({
         <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
           <Shield className="w-3 h-3" /> {labels.webhookSecretStatusUpdateLabel}
         </Label>
-        <Input placeholder={labels.webhookSecretPlaceholder} dir="ltr" value={webhookSecretStatusUpdate}
-          onChange={e => setWebhookSecretStatusUpdate(e.target.value)} type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600" />
+        <Input
+          id="easyorders_secret_status_custom"
+          name="easyorders_secret_status_custom"
+          autoComplete="new-password"
+          autoCorrect="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          placeholder={labels.webhookSecretPlaceholder}
+          dir="ltr"
+          value={webhookSecretStatusUpdate}
+          onChange={e => setWebhookSecretStatusUpdate(e.target.value)}
+          type="password"
+          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
+        />
         <Button onClick={onSaveSecretStatusUpdate} disabled={savingSecretStatusUpdate || !webhookSecretStatusUpdate.trim() || !status?.connected}
           size="sm" variant="outline" className="w-full gap-2 mt-2">
           {savingSecretStatusUpdate
@@ -1047,6 +1093,9 @@ function WooCommerceContent({ status, onRefresh, locale }: {
           <div>
             <Label className="text-xs dark:text-gray-400">{isAr ? "اسم المتجر *" : "Store name *"}</Label>
             <Input
+              id="woo_store_name"
+              name="woo_store_name"
+              autoComplete="off"
               placeholder={isAr ? "مثال: متجري" : "E.g. My Store"}
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
@@ -1058,6 +1107,9 @@ function WooCommerceContent({ status, onRefresh, locale }: {
               <Globe className="w-3 h-3" /> {isAr ? "رابط المتجر *" : "Store URL *"}
             </Label>
             <Input
+              id="woo_store_url"
+              name="woo_store_url"
+              autoComplete="off"
               placeholder="https://mystore.com"
               dir="ltr"
               value={storeUrl}
@@ -1070,6 +1122,14 @@ function WooCommerceContent({ status, onRefresh, locale }: {
               <Key className="w-3 h-3 text-purple-500" /> Consumer Key *
             </Label>
             <Input
+              id="woo_consumer_key_custom"
+              name="woo_consumer_key_custom"
+              autoComplete="new-password"
+              autoCorrect="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
               placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               dir="ltr"
               value={consumerKey}
@@ -1084,6 +1144,14 @@ function WooCommerceContent({ status, onRefresh, locale }: {
             </Label>
             <div className="relative mt-1">
               <Input
+                id="woo_consumer_secret_custom"
+                name="woo_consumer_secret_custom"
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 dir="ltr"
                 value={consumerSecret}
@@ -2216,11 +2284,35 @@ useSubscription();
 
                   <div>
                     <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
-                    <Input type="password" value={elevenLabsApiKey} onChange={e => setElevenLabsApiKey(e.target.value)} placeholder="sk_••••••••" dir="ltr" className="rounded-xl text-xs" />
+                    <Input
+                      id="elevenlabs_api_key_custom"
+                      name="elevenlabs_api_key_custom"
+                      type="password"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      value={elevenLabsApiKey}
+                      onChange={e => setElevenLabsApiKey(e.target.value)}
+                      placeholder="sk_••••••••"
+                      dir="ltr"
+                      className="rounded-xl text-xs font-mono"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs mb-1 block">Agent ID *</Label>
-                    <Input value={elevenLabsAgentId} onChange={e => setElevenLabsAgentId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" dir="ltr" className="rounded-xl text-xs" />
+                    <Input
+                      id="elevenlabs_agent_id_custom"
+                      name="elevenlabs_agent_id_custom"
+                      autoComplete="off"
+                      value={elevenLabsAgentId}
+                      onChange={e => setElevenLabsAgentId(e.target.value)}
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      dir="ltr"
+                      className="rounded-xl text-xs font-mono"
+                    />
                   </div>
                   <Button
                     onClick={async () => { await handleSaveElevenLabs(); setElevenLabsEditMode(false); }}

@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import DemoModeBanner from "./_components/DemoModeBanner";
 import { DEMO_NOTIFICATIONS, type DemoNotification } from "./_lib/demo-data";
-import DeviceNotificationModal, { ALL_NOTIFICATION_TYPES_LIST } from "@/components/dashboard/DeviceNotificationModal";
+import DeviceNotificationModal, { ALL_NOTIFICATION_TYPES_LIST, USER_NOTIFICATION_TYPES_LIST } from "@/components/dashboard/DeviceNotificationModal";
 
 // ─── Theme Toggle (نفس الأصلي بالظبط، مفيش فيه أي fetch) ─────────────────────
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
@@ -159,7 +159,7 @@ function DemoNotificationBell() {
   const [notifs, setNotifs] = useState<DemoNotification[]>(DEMO_NOTIFICATIONS);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState(ALL_NOTIFICATION_TYPES_LIST);
+  const [selectedTypes, setSelectedTypes] = useState(USER_NOTIFICATION_TYPES_LIST);
   const unread = notifs.filter(n => !n.isRead).length;
 
   const markAsRead = (id: string) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
@@ -249,7 +249,7 @@ function DemoNotificationBell() {
                     <SlidersHorizontal className="w-3 h-3 text-gray-400 group-hover:text-[#128C7E] dark:group-hover:text-[#25D366] transition-colors" />
                   </div>
                   <span className="text-[10px] text-gray-400 dark:text-gray-400 font-normal">
-                    {lang === "ar" ? `مخصص (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})` : `Selected (${selectedTypes.length}/${ALL_NOTIFICATION_TYPES_LIST.length})`}
+                    {lang === "ar" ? `مخصص (${selectedTypes.length}/${USER_NOTIFICATION_TYPES_LIST.length})` : `Selected (${selectedTypes.length}/${USER_NOTIFICATION_TYPES_LIST.length})`}
                   </span>
                 </div>
               </button>
@@ -275,6 +275,7 @@ function DemoNotificationBell() {
             onSave={(types) => setSelectedTypes(types)}
             pushEnabled={pushEnabled}
             onTogglePush={handleTogglePush}
+            isSuperAdmin={false}
           />
         </>
       )}
