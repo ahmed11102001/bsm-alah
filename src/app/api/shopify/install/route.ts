@@ -23,17 +23,25 @@ const REQUIRED_TOPICS = [
   "checkouts/update",   // ← السلة المهجورة (يجي أكتر من مرة)
   "customers/create",
   "customers/update",
+  "app/uninstalled",    // ← التاجر شال التطبيق — يوقف استخدام التوكن فورًا
 ] as const;
 
-// ── GDPR الإجبارية — شرط لأي Public App (فحص تلقائي قبل مراجعة Shopify) ────
-// مختلفة عن التجارية فوق: طلب نسخة بيانات العميل، مسح بياناته، مسح بيانات
-// المتجر. تُسجَّل على نفس عنوان الـwebhook وتُعالج في webhooks/route.ts —
+// ── GDPR الإجبارية — شرط لأي Public App، لكن مش بتتسجل هنا ─────────────────
+// شوبيفاي بترفض تسجيل الـ3 topics دول عبر REST /webhooks.json العادي (بترجع
+// "invalid topic"). لازم تتسجل *مرة واحدة* من Partner Dashboard → App →
+// Configuration → Compliance webhooks (أو shopify.app.toml لو بتستخدموا الـCLI)،
+// بـURL واحد مشترك لكل التجار: {APP_URL}/api/shopify/compliance — مش هنا،
+// لأن ده URL فيه uid مختلف لكل تاجر ومفيش uid يتحدد مقدمًا لحدث زي ده.
+// المعالجة الفعلية في src/app/api/shopify/compliance/route.ts.
+//
 // والمعالج يرد دائمًا 200 حتى لو فشل داخليًا (شرط شوبيفاي).
-const MANDATORY_GDPR_TOPICS = [
+// القايمة هنا للتوثيق بس — متتحطش في REQUIRED_TOPICS ولا في أي loop تسجيل REST.
+const MANDATORY_GDPR_TOPICS_SET_MANUALLY_IN_PARTNER_DASHBOARD = [
   "customers/data_request",
   "customers/redact",
   "shop/redact",
 ] as const;
+void MANDATORY_GDPR_TOPICS_SET_MANUALLY_IN_PARTNER_DASHBOARD; // توثيق فقط
 
 // ── تنظيف وتوحيد الدومين — منطق مشترك في src/lib/shopify-domain.ts (مستورد أعلى الملف) ──
 
@@ -97,7 +105,7 @@ export async function registerAllWebhooks(
   const registered: string[] = [];
   const failed:     string[] = [];
 
-  for (const topic of [...REQUIRED_TOPICS, ...MANDATORY_GDPR_TOPICS]) {
+  for (const topic of REQUIRED_TOPICS) {
     const result = await registerWebhook(shop, accessToken, topic, webhookUrl);
     if (result.ok) {
       registered.push(topic);

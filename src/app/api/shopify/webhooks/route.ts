@@ -1,8 +1,21 @@
 // src/app/api/shopify/webhooks/route.ts
 // ─── ويب هوك Shopify — نظام uid+token زي EasyOrders ─────────────────────────
+//
+// طبقتين حماية دلوقتي:
+// 1) uid+token (زي ما كان دايمًا) — بيثبت إن الـ URL معروف بس للي عنده الـ secret.
+// 2) X-Shopify-Hmac-Sha256 (لو فيه secret نقدر نتحقق بيه) — بيثبت إن الـ body
+//    فعلاً جاي من شوبيفاي ومتغيّرش في الطريق. نجرب SHOPIFY_APP_CLIENT_SECRET
+//    (متاجر OAuth) وبعدين clientSecret الخاص بالمتجر (متاجر Client Credentials)؛
+//    لو المتجر legacy token بس من غير أي secret معروف، منعرفش نتحقق من الـHMAC
+//    فبنكتفي بطبقة uid+token زي ما هي (مش قادرين نخترع secret مش موجود).
+//
+// ملاحظة: الـ3 GDPR topics (customers/data_request, customers/redact,
+// shop/redact) انتقلوا لـ /api/shopify/compliance — شوبيفاي مش بتسمح بتسجيلهم
+// عبر REST /webhooks.json العادي أصلاً، فمفيش داعي يتعاملوا هنا كمان.
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac }                from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import prisma                        from "@/lib/prisma";
+import { decryptToken }              from "@/lib/crypto";
 import { inngest }                   from "@/inngest/client";
 import { attributeOrderToCampaign }  from "@/lib/attribution";
 import {
@@ -29,6 +42,18 @@ export function generateShopifyWebhookUrl(userId: string): string {
   return `${base}/api/shopify/webhooks?uid=${userId}&token=${token}`;
 }
 
+// ── تحقق HMAC (نفس منطق شوبيفاي: base64(HMAC-SHA256(rawBody, secret))) ───────
+function verifyShopifyHmac(rawBody: string, header: string, secret: string): boolean {
+  try {
+    const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("base64");
+    const a = Buffer.from(expected);
+    const b = Buffer.from(header);
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   return NextResponse.json({ status: "ok", service: "Shopify Webhook" });
 }
@@ -49,20 +74,41 @@ export async function POST(req: NextRequest) {
                 ?? req.headers.get("x-shopify-topic")
                 ?? "";
 
-    let payload: unknown;
-    try { payload = await req.json(); }
-    catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-
-    // ── جيب المتجر ───────────────────────────────────────────────────────────
+    // ── جيب المتجر (قبل قراءة الـbody — محتاجين clientSecret لو موجود) ────────
     const shopifyStore = await prisma.shopifyStore.findUnique({
       where:  { userId },
-      select: { id: true, userId: true, shop: true },
+      select: { id: true, userId: true, shop: true, clientSecret: true },
     });
 
     if (!shopifyStore) {
       console.warn(`[Shopify WH] Store not found for userId: ${userId}`);
       return NextResponse.json({ status: "ignored" });
     }
+
+    // ── الـbody الخام أولاً — الـHMAC بيتحسب على النص الخام قبل أي parsing ─────
+    const rawBody = await req.text();
+    const hmacHeader = req.headers.get("X-Shopify-Hmac-Sha256") ?? req.headers.get("x-shopify-hmac-sha256");
+
+    const candidateSecrets = [
+      process.env.SHOPIFY_APP_CLIENT_SECRET,
+      shopifyStore.clientSecret ? decryptToken(shopifyStore.clientSecret) : null,
+    ].filter((s): s is string => Boolean(s));
+
+    if (hmacHeader && candidateSecrets.length > 0) {
+      const verified = candidateSecrets.some(secret => verifyShopifyHmac(rawBody, hmacHeader, secret));
+      if (!verified) {
+        console.warn(`[Shopify WH] HMAC mismatch — store: ${shopifyStore.shop}`);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } else if (candidateSecrets.length === 0) {
+      // متجر legacy token يدوي من غير أي secret معروف — منقدرش نتحقق من الـHMAC،
+      // فبنكتفي بطبقة uid+token اللي فوق (سلوك السنين اللي فاتت، من غير تغيير).
+      console.log(`[Shopify WH] No signing secret known for ${shopifyStore.shop} — relying on uid+token only`);
+    }
+
+    let payload: unknown;
+    try { payload = JSON.parse(rawBody); }
+    catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
     console.log(`[Shopify WH] ${topic || "order"} — store: ${shopifyStore.shop}`);
 
@@ -111,18 +157,15 @@ export async function POST(req: NextRequest) {
         }
         break;
 
-      // ── GDPR الإجبارية (Public App) — الرد دائمًا 200 ─────────────────────
-      case "customers/data_request":
-        await handleCustomerDataRequest(payload, userId, shopifyStore);
+      // ── تعطيل التطبيق: التاجر عمل uninstall من شوبيفاي ─────────────────────
+      case "app/uninstalled":
+        await handleAppUninstalled(userId, shopifyStore.shop);
         break;
 
-      case "customers/redact":
-        await handleCustomerRedact(payload, userId, shopifyStore);
-        break;
-
-      case "shop/redact":
-        await handleShopRedact(payload, userId, shopifyStore);
-        break;
+      // ملاحظة: الـ3 GDPR topics (customers/data_request, customers/redact,
+      // shop/redact) بقوا بيوصلوا لـ /api/shopify/compliance مباشرة — شوبيفاي
+      // بترفض تسجيلهم أصلاً عبر REST /webhooks.json العادي زي باقي التوبيكات
+      // هنا، فمفيش case ليهم في السويتش ده.
 
       default:
         console.log(`[Shopify WH] Unhandled topic: ${topic}`);
@@ -471,6 +514,29 @@ async function handleCustomerUpdated(customer: ShopifyCustomer, userId: string) 
   }
 }
 
+// ── app/uninstalled: التاجر شال التطبيق من متجره ──────────────────────────────
+// نوقف استخدام التوكن/الاعتماد فورًا (مش هتنفع تتستخدم في نداءات API تانية)،
+// من غير ما نمسح سجل المتجر نفسه أو أوردراته — ده مختلف عن shop/redact اللي
+// بيحصل بعد 48 ساعة ولازم يمسح البيانات فعليًا حسب متطلبات GDPR.
+async function handleAppUninstalled(userId: string, shop: string) {
+  try {
+    await prisma.shopifyStore.update({
+      where: { userId },
+      data: {
+        isActive:             false,
+        accessToken:          null,
+        clientId:             null,
+        clientSecret:         null,
+        cachedAccessToken:    null,
+        cachedTokenExpiresAt: null,
+      },
+    });
+    console.log(`[Shopify WH] app/uninstalled — store deactivated: ${shop}`);
+  } catch (error) {
+    console.error("[Shopify WH] handleAppUninstalled error:", error);
+  }
+}
+
 // ─── GDPR الإجبارية (Public App) ─────────────────────────────────────────────
 // القاعدة الذهبية: أي خطأ داخلي يُلتقط هنا، والـroute الرئيسي يرد دائمًا 200 —
 // شوبيفاي تعتبر أي رد غير 2xx فشلًا في الامتثال.
@@ -480,19 +546,19 @@ async function handleCustomerUpdated(customer: ShopifyCustomer, userId: string) 
 // التجارية للتاجر سيكون تدميرًا لبياناته هو، لا امتثالًا. الصفوف الخاصة
 // بالمتجر فقط (الأوردرات/السلات/الأتمتة/المتجر نفسه) تُحذف فعليًا.
 
-interface GdprCustomerPayload {
+export interface GdprCustomerPayload {
   shop_id?: unknown;
   shop_domain?: unknown;
   customer?: { id?: unknown; email?: unknown; phone?: unknown } | null;
   orders_requested?: unknown;
 }
 
-interface GdprShopPayload {
+export interface GdprShopPayload {
   shop_id?: unknown;
   shop_domain?: unknown;
 }
 
-type GdprStore = { id: string; userId: string; shop: string };
+export type GdprStore = { id: string; userId: string; shop: string };
 
 function gdprCustomerIdentity(payload: GdprCustomerPayload): { email: string | null; phone: string | null } {
   const c = payload.customer ?? {};
@@ -505,7 +571,7 @@ function gdprCustomerIdentity(payload: GdprCustomerPayload): { email: string | n
 // ── customers/data_request: العميل طلب نسخة من بياناته ──────────────────────
 // المطلوب: تزويد صاحب المتجر بالبيانات خلال 30 يومًا — نجمع ملخصًا فوريًا
 // وننوّه الأدمن لاتخاذ إجراء (الرد نفسه 200 فوري).
-async function handleCustomerDataRequest(payload: unknown, userId: string, store: GdprStore) {
+export async function handleCustomerDataRequest(payload: unknown, userId: string, store: GdprStore) {
   try {
     const p = (payload ?? {}) as GdprCustomerPayload;
     const { email, phone } = gdprCustomerIdentity(p);
@@ -533,7 +599,7 @@ async function handleCustomerDataRequest(payload: unknown, userId: string, store
 
 // ── customers/redact: مسح بيانات عميل ────────────────────────────────────────
 // نُخفي الهوية في الصفوف المشتركة (اسم/ملاحظات) ونحذف التسويقية الخاصة بالمتجر.
-async function handleCustomerRedact(payload: unknown, userId: string, store: GdprStore) {
+export async function handleCustomerRedact(payload: unknown, userId: string, store: GdprStore) {
   try {
     const p = (payload ?? {}) as GdprCustomerPayload;
     const { email, phone } = gdprCustomerIdentity(p);
@@ -576,7 +642,7 @@ async function handleCustomerRedact(payload: unknown, userId: string, store: Gdp
 // حذف فعلي للصفوف الخاصة بالمتجر فقط؛ بيانات CRM الواتساب المشتركة للتاجر
 // (جهات الاتصال/المحادثات) لا تُمس — إلغاء تثبيت تطبيق شوبيفاي لا يبرر
 // تدمير النظام التسويقي الكامل للتاجر.
-async function handleShopRedact(payload: unknown, userId: string, store: GdprStore) {
+export async function handleShopRedact(payload: unknown, userId: string, store: GdprStore) {
   try {
     const p = (payload ?? {}) as GdprShopPayload;
     if (typeof p.shop_domain === "string" && p.shop_domain && p.shop_domain !== store.shop) {
