@@ -9,7 +9,15 @@ export function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBl
   campaign: Campaign; onDelete: () => void; onRepeat: () => void; onDetails: () => void;
   repeatBlocked: boolean; repeatBlockedNote: string; lang: Lang;
 }) {
-  const cfg = statusConfig(lang)[campaign.status] ?? statusConfig(lang).draft;
+  // "draft" في النظام ده حالة عابرة بس (بتتحول running خلال لحظات من
+  // processCampaign) — أول ما تتحط totalQueued يبقى معناها فعليًا "بدأ
+  // التنفيذ"، مش "مسودة" غير مرسلة زي المعنى التقليدي للكلمة. نعرضها زي
+  // running بصريًا بدون ما نغيّر حالة قاعدة البيانات نفسها (لازم تفضل draft
+  // عشان الـ atomic claim في processCampaign يقدر يستلمها).
+  const isPreClaimRunning = campaign.status === "draft" && campaign.totalQueued > 0;
+  const cfg = isPreClaimRunning
+    ? statusConfig(lang).running
+    : (statusConfig(lang)[campaign.status] ?? statusConfig(lang).draft);
   return (
     <Card className="border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
       <CardContent className="p-3 sm:p-4">
@@ -24,7 +32,7 @@ export function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBl
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{campaign.name}</h3>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.color}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${campaign.status === "running" ? "animate-pulse" : ""}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${(campaign.status === "running" || isPreClaimRunning) ? "animate-pulse" : ""}`} />
                 {cfg.label}
               </span>
               {campaign.template?.name && (

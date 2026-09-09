@@ -10,7 +10,8 @@ import {
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
   Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
-  PlayCircle, Wifi, WifiOff, AlertTriangle,
+  Wifi, WifiOff, AlertTriangle, Search, X,
+  Filter, Bot, Code2, Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,15 @@ import EmbeddedSignupButton from "@/components/dashboard/EmbeddedSignupButton";
 import { normalizeShopDomain } from "@/lib/shopify-domain";
 
 type CardId = "whatsapp" | "shopify" | "easyorders" | "woocommerce" | "webhook" | "claude" | "elevenlabs";
+type CategoryId = "all" | "messaging" | "ecommerce" | "ai" | "developer";
+
+const CATEGORIES: { id: CategoryId; labelAr: string; labelEn: string; icon: React.ReactNode; cardIds: CardId[] }[] = [
+  { id: "all", labelAr: "الكل", labelEn: "All", icon: <Filter className="w-3.5 h-3.5" />, cardIds: ["whatsapp", "shopify", "easyorders", "woocommerce", "claude", "elevenlabs", "webhook"] },
+  { id: "messaging", labelAr: "المراسلة", labelEn: "Messaging", icon: <MessageSquare className="w-3.5 h-3.5" />, cardIds: ["whatsapp"] },
+  { id: "ecommerce", labelAr: "المتاجر", labelEn: "E-Commerce", icon: <Store className="w-3.5 h-3.5" />, cardIds: ["shopify", "easyorders", "woocommerce"] },
+  { id: "ai", labelAr: "الذكاء الاصطناعي", labelEn: "AI & Voice", icon: <Bot className="w-3.5 h-3.5" />, cardIds: ["claude", "elevenlabs"] },
+  { id: "developer", labelAr: "المطورين", labelEn: "Developers", icon: <Code2 className="w-3.5 h-3.5" />, cardIds: ["webhook"] },
+];
 
 // ─── CopyInput ────────────────────────────────────────────────────────────────
 function CopyInput({ value, placeholder }: { value: string; placeholder?: string }) {
@@ -60,68 +70,236 @@ const CARD_VISUALS: CardVisual[] = [
   { id: "elevenlabs", icon: <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-7 h-7 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
 ];
 
-function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, children, locked = false, lockMessage = "", externalLink, locale = "ar" }: {
-  id: CardId; title: string; subtitle: string;
+// ─── Disconnect Confirmation Modal ──────────────────────────────────────────
+function DisconnectModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  loading,
+  locale = "ar",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  loading?: boolean;
+  locale?: string;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-red-200 dark:border-red-900/50" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900 dark:text-white text-base">{title}</h3>
+            <p className="text-xs text-red-500 dark:text-red-400 font-medium">
+              {locale === "ar" ? "إجراء حساس — يؤثر على الأتمتة الحالية" : "Sensitive action — affects active automations"}
+            </p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-gray-800/60 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
+          {description}
+        </p>
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {locale === "ar" ? "نعم، تأكيد فك الربط" : "Yes, Disconnect"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+            className="dark:border-gray-700 dark:text-gray-300"
+          >
+            {locale === "ar" ? "إلغاء" : "Cancel"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Unified Upgrade Modal ──────────────────────────────────────────────────
+function UpgradeModal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  price = "599 ج/شهر",
+  plan = "pro",
+  locale = "ar",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  description: string;
+  price?: string;
+  plan?: string;
+  locale?: string;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-amber-200 dark:border-amber-900/50" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 flex items-center justify-center flex-shrink-0 shadow-inner">
+            <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-1.5">
+              {title}
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                PRO+
+              </span>
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {locale === "ar" ? "هذه الميزة متوفرة للباقات المتقدمة" : "Available on Pro and Enterprise plans"}
+            </p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-amber-50/50 dark:bg-amber-950/20 p-3.5 rounded-xl border border-amber-100/70 dark:border-amber-900/30">
+          {description}
+        </p>
+        <div className="flex gap-2 pt-2">
+          <Button
+            onClick={() => { onClose(); window.location.href = `/checkout?plan=${plan}`; }}
+            className="flex-1 gap-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold shadow-md hover:shadow-lg transition-all"
+          >
+            <Zap className="w-4 h-4" />
+            {locale === "ar" ? `ترقية الباقة الآن (${price})` : `Upgrade Plan Now (${price})`}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="dark:border-gray-700 dark:text-gray-300"
+          >
+            {locale === "ar" ? "لاحقاً" : "Later"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── IntegrationCard ──────────────────────────────────────────────────────────
+function IntegrationCard({
+  id,
+  title,
+  subtitle,
+  steps,
+  isOpen,
+  onToggle,
+  children,
+  locked = false,
+  lockMessage = "",
+  externalLink,
+  locale = "ar",
+  connected = false,
+  connectedLabel,
+}: {
+  id: CardId;
+  title: string;
+  subtitle: string;
   steps: { title: string; desc: string }[];
-  isOpen: boolean; onToggle: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
   locked?: boolean;
   lockMessage?: string;
   externalLink?: { href: string; label: string };
   locale?: string;
+  connected?: boolean;
+  connectedLabel?: string;
 }) {
   const v = CARD_VISUALS.find(c => c.id === id)!;
   return (
     <div className={cn(
       "rounded-2xl border transition-all duration-300",
       isOpen
-        ? `${v.bgLight} ${v.bgDark} ${v.borderLight} ${v.borderDark}`
-        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm",
-      isOpen && "md:col-span-2"
+        ? `${v.bgLight} ${v.bgDark} ${v.borderLight} ${v.borderDark} shadow-md`
+        : "bg-white dark:bg-gray-800/90 border-gray-200 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm",
+      isOpen && ""
     )}>
       <button onClick={onToggle}
         title={locked ? lockMessage : undefined}
         className="w-full text-right p-5 flex items-center justify-between gap-3 cursor-pointer">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-            isOpen ? "bg-white dark:bg-gray-800 shadow-sm" : "bg-gray-100 dark:bg-gray-700"
+            "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform",
+            isOpen ? "bg-white dark:bg-gray-800 shadow-sm scale-105" : "bg-gray-50 dark:bg-gray-700/60"
           )}>
             <span className={v.accentColor}>{v.icon}</span>
           </div>
-          <div className="text-right">
-            <p className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-              {title}
-              {locked && <Lock className="w-3.5 h-3.5 text-amber-500" />}
+          <div className="text-right min-w-0">
+            <p className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="truncate">{title}</span>
+              {locked && <Lock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{subtitle}</p>
           </div>
         </div>
-        <ChevronDown className={cn("w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-300", isOpen && "rotate-180")} />
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          {locked ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              <Lock className="w-3 h-3" />
+              {locale === "ar" ? "باقة Pro" : "Pro Plan"}
+            </span>
+          ) : connected ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {locale === "ar" ? "متصل" : "Connected"}
+              {connectedLabel && (
+                <span className="hidden sm:inline font-mono text-[10px] text-emerald-600 dark:text-emerald-400 max-w-[130px] truncate">
+                  ({connectedLabel})
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+              {locale === "ar" ? "غير متصل" : "Not connected"}
+            </span>
+          )}
+          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-gray-700/50 text-gray-400 transition-transform duration-200", isOpen && "rotate-180")}>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+        </div>
       </button>
 
       {isOpen && (
-        <div className="px-5 pb-5 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {steps.map((step, i) => (
-              <div key={i} className="bg-white/70 dark:bg-gray-800/70 rounded-xl p-3 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-                    "bg-white dark:bg-gray-800 border-2",
-                    v.accentColor.replace("text-", "border-").split(" ")[0],
-                    v.accentColor.split(" ")[0]
-                  )}>{i + 1}</span>
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{step.title}</p>
+        <div className="px-5 pb-5 space-y-5 animate-in fade-in duration-200">
+          {steps && steps.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {steps.map((step, i) => (
+                <div key={i} className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-3 border border-gray-100/80 dark:border-gray-700/50 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                      "bg-white dark:bg-gray-800 border-2",
+                      v.accentColor.replace("text-", "border-").split(" ")[0],
+                      v.accentColor.split(" ")[0]
+                    )}>{i + 1}</span>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{step.title}</p>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 pr-7 leading-relaxed">{step.desc}</p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 pr-8">{step.desc}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* ── رابط المنصة الرسمي ── */}
           {externalLink && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/70 dark:border-gray-700/70 shadow-xs backdrop-blur-sm">
+            <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/70 dark:border-gray-700/70 shadow-xs backdrop-blur-sm">
               <div className="flex items-center gap-2.5">
                 <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-gray-700 shadow-xs", v.accentColor)}>
                   <ExternalLink className="w-4 h-4" />
@@ -140,7 +318,7 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs",
                   "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600",
                   v.accentColor,
                   "hover:shadow hover:-translate-y-0.5"
@@ -152,7 +330,7 @@ function IntegrationCard({ id, title, subtitle, steps, isOpen, onToggle, childre
             </div>
           )}
 
-          <div className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-4 border border-white dark:border-gray-700">
+          <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-4 border border-white dark:border-gray-700 shadow-xs">
             {children}
           </div>
         </div>
@@ -369,6 +547,7 @@ function ShopifyContent({
   webhookUrl, status, onConnect, onRefresh, onSyncWebhooks, loading, syncing,
   isSuperAdmin,
   locale = "ar",
+  onDisconnect,
 }: {
   storeName: string;
   setStoreName: (v: string) => void;
@@ -387,8 +566,9 @@ function ShopifyContent({
   onSyncWebhooks: () => void;
   loading: boolean;
   syncing: boolean;
-  isSuperAdmin: boolean;
+  isSuperAdmin?: boolean;
   locale?: string;
+  onDisconnect?: () => void;
 }) {
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -428,7 +608,10 @@ function ShopifyContent({
   }, [status?.connected]);
 
   async function handleDisconnect() {
-    if (!confirm("هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟")) return;
+    if (onDisconnect) {
+      onDisconnect();
+      return;
+    }
     const r = await fetch("/api/shopify/install", { method: "DELETE" });
     if (r.ok) { toast.success("تم فك الربط"); onRefresh(); }
     else toast.error("فشل فك الربط");
@@ -960,10 +1143,11 @@ interface WooStatus {
   productsAvailable?: number;
 }
 
-function WooCommerceContent({ status, onRefresh, locale }: {
+function WooCommerceContent({ status, onRefresh, locale, onDisconnect }: {
   status: WooStatus | null;
   onRefresh: () => void;
   locale: string;
+  onDisconnect?: () => void;
 }) {
   const isAr = locale === "ar";
   const [storeName, setStoreName] = useState("");
@@ -1020,7 +1204,10 @@ function WooCommerceContent({ status, onRefresh, locale }: {
   }
 
   async function handleDisconnect() {
-    if (!confirm(isAr ? "هتفك ربط المتجر وهيوقف الأتمتة، متأكد؟" : "This will disconnect the store and stop automations. Are you sure?")) return;
+    if (onDisconnect) {
+      onDisconnect();
+      return;
+    }
     const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
     if (r.ok) { toast.success(isAr ? "تم فك الربط" : "Disconnected"); onRefresh(); }
     else toast.error(isAr ? "فشل فك الربط" : "Failed to disconnect");
@@ -1317,10 +1504,6 @@ useSubscription();
   const [claudeApiKey, setClaudeApiKey] = useState("");
   const [claudeLoading, setClaudeLoading] = useState(false);
   const [claudeCopied, setClaudeCopied] = useState<"key" | "config" | null>(null);
-  const [showStoreUpgrade, setShowStoreUpgrade] = useState(false);
-  const [storeUpgradeTitle, setStoreUpgradeTitle] = useState("");
-  const [showClaudeUpgrade, setShowClaudeUpgrade] = useState(false);
-  const [showElevenLabsUpgrade, setShowElevenLabsUpgrade] = useState(false);
   const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
   const [voiceRepliesEnabled, setVoiceRepliesEnabled] = useState(false);
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
@@ -1329,6 +1512,16 @@ useSubscription();
   const [elevenLabsSaving, setElevenLabsSaving] = useState(false);
   const [elevenLabsEditMode, setElevenLabsEditMode] = useState(false);
   const [elevenLabsAgentData, setElevenLabsAgentData] = useState<Record<string, unknown> | null>(null);
+
+  // ── Category, Search, Disconnect & Upgrade UI ──
+  const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [disconnectModal, setDisconnectModal] = useState<{
+    open: boolean; title: string; description: string; loading: boolean; onConfirm: () => Promise<void>;
+  }>({ open: false, title: "", description: "", loading: false, onConfirm: async () => {} });
+  const [upgradeModal, setUpgradeModal] = useState<{
+    open: boolean; title: string; description: string;
+  }>({ open: false, title: "", description: "" });
 
   // ── Load initial data ───────────────────────────────────────────────────────
   const loadShopifyStatus = useCallback(async () => {
@@ -1438,21 +1631,32 @@ useSubscription();
   const getCardLockMessage = (id: CardId) =>
     isClaudeCardLocked(id) ? claudeLockMessage : isElevenLabsCardLocked(id) ? elevenLabsLockMessage : lockMessage;
 
-  const openStoreUpgradeModal = (id: CardId) => {
-    const titles: Record<"shopify" | "easyorders" | "woocommerce", string> = {
-      shopify: "ربط Shopify — باقة Pro+",
-      easyorders: "ربط EasyOrders — باقة Pro+",
-      woocommerce: "ربط WooCommerce — باقة Pro+",
-    };
-    setStoreUpgradeTitle(titles[id as "shopify" | "easyorders" | "woocommerce"]);
-    setShowStoreUpgrade(true);
-  };
-
   const handleCardClick = (id: CardId) => {
     if (isCardLocked(id)) {
-      if (id === "claude") { setShowClaudeUpgrade(true); return; }
-      if (id === "elevenlabs") { setShowElevenLabsUpgrade(true); return; }
-      openStoreUpgradeModal(id);
+      const upgradeDetails: Record<string, { title: string; description: string }> = {
+        shopify: {
+          title: locale === "ar" ? "ربط Shopify — باقة Pro+" : "Shopify — Pro+ Plan",
+          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
+        },
+        easyorders: {
+          title: locale === "ar" ? "ربط EasyOrders — باقة Pro+" : "EasyOrders — Pro+ Plan",
+          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
+        },
+        woocommerce: {
+          title: locale === "ar" ? "ربط WooCommerce — باقة Pro+" : "WooCommerce — Pro+ Plan",
+          description: locale === "ar" ? "ربط المتاجر يحتاج باقة Pro أو أعلى. قم بالترقية لربط متجرك وتفعيل الأتمتة." : "Store integrations require Pro or above. Upgrade to connect and automate.",
+        },
+        claude: {
+          title: "Claude AI — Pro+",
+          description: locale === "ar" ? "Claude AI غير متاح لباقتك الحالية. قم بالترقية للوصول إليه." : "Claude AI requires Pro or above. Upgrade to access it.",
+        },
+        elevenlabs: {
+          title: "ElevenLabs — Pro+",
+          description: locale === "ar" ? "ربط ElevenLabs يحتاج باقة Pro أو أعلى لتفعيل الردود الصوتية." : "ElevenLabs requires Pro or above for voice replies.",
+        },
+      };
+      const d = upgradeDetails[id] ?? upgradeDetails.shopify;
+      setUpgradeModal({ open: true, title: d.title, description: d.description });
       return;
     }
     setOpenCard(prev => prev === id ? null : id);
@@ -1495,36 +1699,45 @@ useSubscription();
 
   const isElevenLabsLinked = Boolean(elevenLabsAgentData?.elevenLabsAgentId && elevenLabsAgentData?.elevenLabsApiKey);
 
-  const handleDisconnectElevenLabs = async () => {
-    const msg = locale === "ar"
-      ? "هتفك ربط ElevenLabs — الردود الصوتية هتتوقف. متأكد؟"
-      : "You are about to disconnect ElevenLabs — voice replies will stop. Sure?";
-    if (!confirm(msg)) return;
-    try {
-      const r = await fetch("/api/ai-agent", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(elevenLabsAgentData ?? {}),
-          elevenLabsEnabled: false,
-          voiceRepliesEnabled: false,
-          elevenLabsApiKey: null,
-          elevenLabsAgentId: null,
-          elevenLabsVoiceId: null,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? "Disconnect failed");
-      setElevenLabsAgentData(d);
-      setElevenLabsEnabled(false);
-      setVoiceRepliesEnabled(false);
-      setElevenLabsApiKey("");
-      setElevenLabsAgentId("");
-      setElevenLabsVoiceId("");
-      toast.success(locale === "ar" ? "تم فك ربط ElevenLabs" : "ElevenLabs disconnected");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not disconnect");
-    }
+  const handleDisconnectElevenLabs = () => {
+    setDisconnectModal({
+      open: true,
+      title: locale === "ar" ? "فك ربط ElevenLabs" : "Disconnect ElevenLabs",
+      description: locale === "ar"
+        ? "الردود الصوتية التلقائية هتتوقف فوراً، والـ Agent مش هيقدر يرد على رسائل واتساب بعد كده."
+        : "Automatic voice replies will stop immediately, and the Agent won't be able to reply to WhatsApp messages.",
+      loading: false,
+      onConfirm: async () => {
+        setDisconnectModal(prev => ({ ...prev, loading: true }));
+        try {
+          const r = await fetch("/api/ai-agent", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...(elevenLabsAgentData ?? {}),
+              elevenLabsEnabled: false,
+              voiceRepliesEnabled: false,
+              elevenLabsApiKey: null,
+              elevenLabsAgentId: null,
+              elevenLabsVoiceId: null,
+            }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error ?? "Disconnect failed");
+          setElevenLabsAgentData(d);
+          setElevenLabsEnabled(false);
+          setVoiceRepliesEnabled(false);
+          setElevenLabsApiKey("");
+          setElevenLabsAgentId("");
+          setElevenLabsVoiceId("");
+          toast.success(locale === "ar" ? "تم فك ربط ElevenLabs" : "ElevenLabs disconnected");
+          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
+        } catch (e: any) {
+          toast.error(e?.message ?? "Could not disconnect");
+          setDisconnectModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -1568,32 +1781,38 @@ useSubscription();
     finally { setWaLoading(false); }
   };
 
-  const handleDisconnectWhatsApp = async () => {
-    const msg = locale === "ar"
-      ? "هتفك ربط Meta — الكامبينز الشغّالة هتتوقف. متأكد؟"
-      : "You are about to disconnect Meta — running campaigns will be stopped. Sure?";
-    if (!confirm(msg)) return;
-    try {
-      const res = await fetch("/api/settings/whatsapp", { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error");
-
-      setWaConnected(false);
-      setWaData(null);
-      window.dispatchEvent(new CustomEvent("refresh-dash"));
-
-      const stopped = data.stoppedCampaigns ?? 0;
-      const queued = data.stoppedQueue ?? 0;
-      const detail = stopped > 0 || queued > 0
-        ? (locale === "ar"
-          ? ` — تم إيقاف ${stopped} حملة و${queued} رسالة معلّقة`
-          : ` — stopped ${stopped} campaign(s) and ${queued} queued message(s)`)
-        : "";
-
-      toast.success((locale === "ar" ? "تم فك الربط" : "Disconnected") + detail);
-    } catch {
-      toast.error(locale === "ar" ? "خطأ في فك الربط" : "Error disconnecting");
-    }
+  const handleDisconnectWhatsApp = () => {
+    setDisconnectModal({
+      open: true,
+      title: locale === "ar" ? "فك ربط Meta / WhatsApp" : "Disconnect Meta / WhatsApp",
+      description: locale === "ar"
+        ? "كل الحملات الشغّالة هتتوقف فوراً، والرسائل المعلّقة مش هتتبعت. لو عندك أتمتة نشطة، تأكد إنك جاهز."
+        : "All running campaigns will stop immediately, and pending messages won't be sent. Make sure you're ready if you have active automations.",
+      loading: false,
+      onConfirm: async () => {
+        setDisconnectModal(prev => ({ ...prev, loading: true }));
+        try {
+          const res = await fetch("/api/settings/whatsapp", { method: "DELETE" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Error");
+          setWaConnected(false);
+          setWaData(null);
+          window.dispatchEvent(new CustomEvent("refresh-dash"));
+          const stopped = data.stoppedCampaigns ?? 0;
+          const queued = data.stoppedQueue ?? 0;
+          const detail = stopped > 0 || queued > 0
+            ? (locale === "ar"
+              ? ` — تم إيقاف ${stopped} حملة و${queued} رسالة معلّقة`
+              : ` — stopped ${stopped} campaign(s) and ${queued} queued message(s)`)
+            : "";
+          toast.success((locale === "ar" ? "تم فك الربط" : "Disconnected") + detail);
+          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
+        } catch {
+          toast.error(locale === "ar" ? "خطأ في فك الربط" : "Error disconnecting");
+          setDisconnectModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEoSync = async () => {
@@ -1632,22 +1851,31 @@ useSubscription();
     finally { setEoSyncing(false); }
   };
 
-  const handleEoDisconnect = async () => {
-    const msg = locale === "ar"
-      ? "هتفك ربط إيزي أوردرز — الأوردرات مش هتتزامن تلقائي بعد كده. متأكد؟"
-      : "You are about to disconnect EasyOrders — orders will stop syncing automatically. Sure?";
-    if (!confirm(msg)) return;
-    try {
-      const r = await fetch("/api/easy-orders/sync", { method: "DELETE" });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? "Error");
-      setEoStatus({ connected: false });
-      setEoApiKey("");
-      setEoStoreName("");
-      toast.success(locale === "ar" ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
-    } catch (e: any) {
-      toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Disconnect failed"));
-    }
+  const handleEoDisconnect = () => {
+    setDisconnectModal({
+      open: true,
+      title: locale === "ar" ? "فك ربط إيزي أوردرز" : "Disconnect EasyOrders",
+      description: locale === "ar"
+        ? "الأوردرات الجديدة مش هتتزامن تلقائياً بعد كده، ورسائل التأكيد التلقائية هتتوقف."
+        : "New orders will stop syncing automatically, and auto-confirmation messages will be paused.",
+      loading: false,
+      onConfirm: async () => {
+        setDisconnectModal(prev => ({ ...prev, loading: true }));
+        try {
+          const r = await fetch("/api/easy-orders/sync", { method: "DELETE" });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error ?? "Error");
+          setEoStatus({ connected: false });
+          setEoApiKey("");
+          setEoStoreName("");
+          toast.success(locale === "ar" ? "تم فك ربط إيزي أوردرز" : "EasyOrders disconnected");
+          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
+        } catch (e: any) {
+          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Disconnect failed"));
+          setDisconnectModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEoSaveSecret = async (type: "orders" | "status_update") => {
@@ -1723,6 +1951,60 @@ useSubscription();
       else toast.warning(d.message);
     } catch { toast.error("خطأ في الاتصال"); }
     finally { setShSyncing(false); }
+  };
+
+  const handleShDisconnect = () => {
+    setDisconnectModal({
+      open: true,
+      title: locale === "ar" ? "فك ربط متجر Shopify" : "Disconnect Shopify Store",
+      description: locale === "ar"
+        ? "سيتم إيقاف مزامنة الطلبات وتحديثات الحالات واستعادة السلات المتروكة تلقائياً لهذا المتجر."
+        : "Order synchronization, status updates, and abandoned cart recovery will be stopped for this store.",
+      loading: false,
+      onConfirm: async () => {
+        setDisconnectModal(prev => ({ ...prev, loading: true }));
+        try {
+          const r = await fetch("/api/shopify/install", { method: "DELETE" });
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.error ?? "Failed to disconnect");
+          }
+          toast.success(locale === "ar" ? "تم فك ربط Shopify" : "Shopify disconnected");
+          loadShopifyStatus();
+          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
+        } catch (e: any) {
+          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
+          setDisconnectModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
+  };
+
+  const handleWooDisconnect = () => {
+    setDisconnectModal({
+      open: true,
+      title: locale === "ar" ? "فك ربط متجر WooCommerce" : "Disconnect WooCommerce Store",
+      description: locale === "ar"
+        ? "سيتم إيقاف مزامنة الطلبات والمنتجات وتحديثات الحالات التلقائية لهذا المتجر."
+        : "Order & product synchronization and automatic status updates will be stopped for this store.",
+      loading: false,
+      onConfirm: async () => {
+        setDisconnectModal(prev => ({ ...prev, loading: true }));
+        try {
+          const r = await fetch("/api/woocommerce/connect", { method: "DELETE" });
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.error ?? "Failed to disconnect");
+          }
+          toast.success(locale === "ar" ? "تم فك ربط WooCommerce" : "WooCommerce disconnected");
+          loadShopifyStatus();
+          setDisconnectModal(prev => ({ ...prev, open: false, loading: false }));
+        } catch (e: any) {
+          toast.error(e?.message ?? (locale === "ar" ? "فشل فك الربط" : "Failed to disconnect"));
+          setDisconnectModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleGenerateApiKey = async () => {
@@ -1850,123 +2132,122 @@ useSubscription();
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
-      {/* ── Claude Upgrade Modal ── */}
-      {showStoreUpgrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setShowStoreUpgrade(false)}>
-          <div
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-orange-200 dark:border-orange-900/50"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
-                <Lock className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 dark:text-white text-sm">{storeUpgradeTitle}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {locale === "ar"
-                    ? "غير متاح للباقة المجانية وباقة Starter"
-                    : "Not available on Free or Starter plans"}
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              {locale === "ar"
-                ? "ربط المتاجر الثلاثة يحتاج باقة Pro أو أعلى. قم بالترقية للاستفادة من الربط والأتمتة مباشرة من الداشبورد."
-                : "Store integrations require Pro or above. Upgrade to connect your store and automate workflows directly from the dashboard."}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowStoreUpgrade(false); window.location.href = "/checkout?plan=pro"; }}
-                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4" /> {locale === "ar" ? "ترقية الآن — 599 ج/شهر" : "Upgrade now — 599 EGP/mo"}
-              </button>
-              <button
-                onClick={() => setShowStoreUpgrade(false)}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-              >
-                {locale === "ar" ? "لاحقًا" : "Later"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Unified Upgrade Modal ── */}
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal(prev => ({ ...prev, open: false }))}
+        title={upgradeModal.title}
+        description={upgradeModal.description}
+        price={locale === "ar" ? "599 ج/شهر" : "599 EGP/mo"}
+        locale={locale}
+      />
 
-      {showClaudeUpgrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setShowClaudeUpgrade(false)}>
-          <div
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-orange-200 dark:border-orange-900/50"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
-                <Lock className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 dark:text-white text-sm">Claude AI — باقة Pro+</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">غير متاح للباقة المجانية وباقة Starter</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه والوصول إليه مباشرة من الشات.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowClaudeUpgrade(false); window.location.href = "/checkout?plan=pro"; }}
-                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4" /> ترقية الآن — 599 ج/شهر
-              </button>
-              <button
-                onClick={() => setShowClaudeUpgrade(false)}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-              >
-                لاحقاً
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showElevenLabsUpgrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowElevenLabsUpgrade(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 border border-purple-200 dark:border-purple-900/50" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center"><Lock className="w-5 h-5 text-purple-500" /></div>
-              <div><p className="font-bold text-gray-900 dark:text-white text-sm">ElevenLabs — Pro+ plan</p><p className="text-xs text-gray-500 dark:text-gray-400">Not available on Free or Starter</p></div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Connect your ElevenLabs voice agent after upgrading to Pro or Enterprise.</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setShowElevenLabsUpgrade(false); window.location.href = "/checkout?plan=pro"; }} className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition"><Zap className="w-4 h-4 inline-block mr-1" /> Upgrade now</button>
-              <button onClick={() => setShowElevenLabsUpgrade(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">Later</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{api.title}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{api.subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="https://youtube.com/YOUR_VIDEO"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="outline" className="gap-2 dark:border-gray-700 dark:text-gray-300">
-              <PlayCircle className="w-4 h-4 text-green-500" />
-              شاهد طريقة الربط
-            </Button>
-          </a>
-        </div>
+      {/* ── Disconnect Confirmation Modal ── */}
+      <DisconnectModal
+        isOpen={disconnectModal.open}
+        onClose={() => setDisconnectModal(prev => ({ ...prev, open: false }))}
+        onConfirm={disconnectModal.onConfirm}
+        title={disconnectModal.title}
+        description={disconnectModal.description}
+        loading={disconnectModal.loading}
+        locale={locale}
+      />
+
+      {/* ── Header ── */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{api.title}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{api.subtitle}</p>
       </div>
 
+      {/* ── Category Pills ── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {CATEGORIES.map(cat => {
+          const activeCount = cat.cardIds.filter(cid => {
+            if (cid === "whatsapp") return waConnected;
+            if (cid === "shopify") return shopifyStatus?.connected;
+            if (cid === "easyorders") return eoStatus?.connected;
+            if (cid === "woocommerce") return wooStatus?.connected;
+            if (cid === "claude") return !!claudeApiKey;
+            if (cid === "elevenlabs") return isElevenLabsLinked;
+            return false;
+          }).length;
+          const isActive = activeCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 border select-none",
+                isActive
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent shadow-sm"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/60"
+              )}
+            >
+              {cat.icon}
+              <span>{locale === "ar" ? cat.labelAr : cat.labelEn}</span>
+              {activeCount > 0 && (
+                <span className={cn(
+                  "min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center",
+                  isActive
+                    ? "bg-emerald-500 text-white"
+                    : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"
+                )}>
+                  {activeCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="relative mb-5">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder={locale === "ar" ? "ابحث عن تكامل... (مثال: Shopify, WhatsApp)" : "Search integrations... (e.g. Shopify, WhatsApp)"}
+          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/90 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 transition"
+          dir={dir}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* ── Cards Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {CARD_DEFS.map(card => (
+        {CARD_DEFS
+          .filter(card => {
+            // Category filter
+            const cat = CATEGORIES.find(c => c.id === activeCategory);
+            if (cat && !cat.cardIds.includes(card.id)) return false;
+            // Search filter
+            if (searchQuery.trim()) {
+              const q = searchQuery.toLowerCase();
+              return card.title.toLowerCase().includes(q) || card.subtitle.toLowerCase().includes(q) || card.id.toLowerCase().includes(q);
+            }
+            return true;
+          })
+          .map(card => {
+          // Determine connected status per card
+          const getConnected = (): { connected: boolean; label?: string } => {
+            if (card.id === "whatsapp") return { connected: waConnected, label: waData?.phoneNumberId };
+            if (card.id === "shopify") return { connected: !!shopifyStatus?.connected, label: shopifyStatus?.storeName };
+            if (card.id === "easyorders") return { connected: !!eoStatus?.connected, label: eoStatus?.storeName };
+            if (card.id === "woocommerce") return { connected: !!wooStatus?.connected, label: wooStatus?.storeName };
+            if (card.id === "claude") return { connected: !!claudeApiKey };
+            if (card.id === "elevenlabs") return { connected: isElevenLabsLinked };
+            return { connected: false };
+          };
+          const cs = getConnected();
+          return (
           <IntegrationCard
             key={card.id}
             {...card}
@@ -1975,6 +2256,8 @@ useSubscription();
             onToggle={() => handleCardClick(card.id)}
             locked={isCardLocked(card.id)}
             lockMessage={getCardLockMessage(card.id)}
+            connected={cs.connected}
+            connectedLabel={cs.label}
           >
             {card.id === "whatsapp" && (
               waJustConnected ? (
@@ -2030,6 +2313,7 @@ useSubscription();
                 onRefresh={loadShopifyStatus}
                 loading={shConnecting}
                 locale={locale}
+                onDisconnect={handleShDisconnect}
               />
             )}
             {card.id === "easyorders" && (
@@ -2047,7 +2331,12 @@ useSubscription();
               />
             )}
             {card.id === "woocommerce" && (
-              <WooCommerceContent status={wooStatus} onRefresh={loadShopifyStatus} locale={locale} />
+              <WooCommerceContent
+                status={wooStatus}
+                onRefresh={loadShopifyStatus}
+                locale={locale}
+                onDisconnect={handleWooDisconnect}
+              />
             )}
             {card.id === "webhook" && (
               <WebhookContent webhookUrl={webhookUrl} verifyToken={verifyToken} hint={api.cards.webhook.hint} locale={locale} />
@@ -2335,7 +2624,8 @@ useSubscription();
               )
             )}
           </IntegrationCard>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

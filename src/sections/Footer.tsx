@@ -5,17 +5,17 @@ import { Mail, Phone, MapPin, Facebook, Instagram } from "lucide-react";
 import { t, tr, type Lang } from "@/lib/translations";
 
 const socialLinks = [
-  { icon: Facebook,  href: "https://www.facebook.com/share/14a5gcBMsdg/",                   label: "Facebook"  },
-  { icon: Instagram, href: "https://www.instagram.com/r0.0_h?igsh=MWJ2NGo3bGlmY2dscQ==",  label: "Instagram" },
+  { icon: Facebook, href: "https://www.facebook.com/share/14a5gcBMsdg/", label: "Facebook" },
+  { icon: Instagram, href: "https://www.instagram.com/r0.0_h?igsh=MWJ2NGo3bGlmY2dscQ==", label: "Instagram" },
 ];
 
 interface FooterProps { lang: Lang }
 
 export default function Footer({ lang }: FooterProps) {
   const isAr = lang === "ar";
-  const f    = t.footer;
+  const f = t.footer;
 
-  const ref            = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -30,14 +30,14 @@ export default function Footer({ lang }: FooterProps) {
   }, []);
 
   const cols = [
-    { title: tr(f.col1, lang), links: f.product   },
-    { title: tr(f.col2, lang), links: f.company   },
+    { title: tr(f.col1, lang), links: f.product },
+    { title: tr(f.col2, lang), links: f.company },
     { title: tr(f.col3, lang), links: f.resources },
   ];
 
   const fadeUp = (delay: number): React.CSSProperties => ({
-    opacity:    visible ? 1 : 0,
-    transform:  visible ? "translateY(0)" : "translateY(20px)",
+    opacity: visible ? 1 : 0,
+    transform: visible ? "translateY(0)" : "translateY(20px)",
     transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
   });
 
@@ -76,14 +76,14 @@ export default function Footer({ lang }: FooterProps) {
             </div>
 
             <p className="text-base leading-relaxed mb-8" style={{ color: "#8fa89a", maxWidth: "320px" }}>
-              {isAr ? "ملوك واتساب API" : "The kings of WhatsApp API"}
+              {isAr ? "Ancient intelligence. Modern impact." : "Ancient intelligence. Modern impact."}
             </p>
 
             <div className="flex flex-col gap-4">
               {[
-                { icon: Mail,   label: "support@aiwni.com", href: "mailto:support@aiwni.com" },
-                { icon: Phone,  label: "+20 1281657907",        href: "tel:+201281657907", ltr: true },
-                { icon: MapPin, label: tr(f.location, lang),   href: "#" },
+                { icon: Mail, label: "support@aiwni.com", href: "mailto:support@aiwni.com" },
+                { icon: Phone, label: "+20 1281657907", href: "tel:+201281657907", ltr: true },
+                { icon: MapPin, label: tr(f.location, lang), href: "#" },
               ].map(({ icon: Icon, label, href, ltr }) => (
                 <a
                   key={label} href={href}
@@ -109,8 +109,8 @@ export default function Footer({ lang }: FooterProps) {
                     <li
                       key={i}
                       style={{
-                        opacity:    visible ? 1 : 0,
-                        transform:  visible ? "translateY(0)" : "translateY(12px)",
+                        opacity: visible ? 1 : 0,
+                        transform: visible ? "translateY(0)" : "translateY(12px)",
                         transition: `opacity 0.5s ease ${180 + ci * 80 + i * 40}ms, transform 0.5s ease ${180 + ci * 80 + i * 40}ms`,
                       }}
                     >
@@ -156,23 +156,23 @@ export default function Footer({ lang }: FooterProps) {
                 style={{
                   background: "#111D16",
                   color: "#6aad8a",
-                  opacity:    visible ? 1 : 0,
-                  transform:  visible ? "translateY(0)" : "translateY(12px)",
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? "translateY(0)" : "translateY(12px)",
                   transition: `background .3s, color .3s, box-shadow .3s, opacity .5s ease ${440 + i * 60}ms, transform .5s ease ${440 + i * 60}ms`,
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background  = "#25D366";
-                  el.style.color       = "#fff";
-                  el.style.boxShadow   = "0 4px 12px rgba(37,211,102,0.3)";
-                  el.style.transform   = "translateY(-4px)";
+                  el.style.background = "#25D366";
+                  el.style.color = "#fff";
+                  el.style.boxShadow = "0 4px 12px rgba(37,211,102,0.3)";
+                  el.style.transform = "translateY(-4px)";
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background  = "#111D16";
-                  el.style.color       = "#6aad8a";
-                  el.style.boxShadow   = "none";
-                  el.style.transform   = "translateY(0)";
+                  el.style.background = "#111D16";
+                  el.style.color = "#6aad8a";
+                  el.style.boxShadow = "none";
+                  el.style.transform = "translateY(0)";
                 }}
               >
                 <social.icon className="w-4 h-4" />
