@@ -10,7 +10,7 @@ import {
   Loader2, CheckCircle, ChevronDown,
   MessageSquare, Webhook, ExternalLink, Shield,
   Database, Link as LinkIcon, Globe, Key, Trash2, Lock,
-  Wifi, WifiOff, AlertTriangle, Search, X,
+  Wifi, WifiOff, AlertTriangle, BookOpen,
   Filter, Bot, Code2, Store,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,19 +55,16 @@ function CopyInput({ value, placeholder }: { value: string; placeholder?: string
 interface CardVisual {
   id: CardId;
   icon: React.ReactNode;
-  accentColor: string;
-  bgLight: string; bgDark: string;
-  borderLight: string; borderDark: string;
 }
 
 const CARD_VISUALS: CardVisual[] = [
-  { id: "whatsapp", icon: <img src="/partners/meta.svg" alt="Meta" className="w-6 h-6 object-contain" />, accentColor: "text-green-600 dark:text-green-400", bgLight: "bg-green-50", bgDark: "dark:bg-green-900/20", borderLight: "border-green-200", borderDark: "dark:border-green-800" },
-  { id: "shopify", icon: <img src="/partners/shopify.svg" alt="Shopify" className="w-6 h-6 object-contain" />, accentColor: "text-blue-600 dark:text-blue-400", bgLight: "bg-blue-50", bgDark: "dark:bg-blue-900/20", borderLight: "border-blue-200", borderDark: "dark:border-blue-800" },
-  { id: "easyorders", icon: <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
-  { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-6 h-6 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
-  { id: "webhook", icon: <Webhook className="w-6 h-6" />, accentColor: "text-gray-600 dark:text-gray-400", bgLight: "bg-gray-50", bgDark: "dark:bg-gray-900/20", borderLight: "border-gray-200", borderDark: "dark:border-gray-800" },
-  { id: "claude", icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-6 h-6 object-contain" />, accentColor: "text-orange-600 dark:text-orange-400", bgLight: "bg-orange-50", bgDark: "dark:bg-orange-900/20", borderLight: "border-orange-200", borderDark: "dark:border-orange-800" },
-  { id: "elevenlabs", icon: <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-7 h-7 object-contain" />, accentColor: "text-purple-600 dark:text-purple-400", bgLight: "bg-purple-50", bgDark: "dark:bg-purple-900/20", borderLight: "border-purple-200", borderDark: "dark:border-purple-800" },
+  { id: "whatsapp", icon: <img src="/partners/meta.svg" alt="Meta" className="w-5 h-5 object-contain" /> },
+  { id: "shopify", icon: <img src="/partners/shopify.svg" alt="Shopify" className="w-5 h-5 object-contain" /> },
+  { id: "easyorders", icon: <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-5 h-5 object-contain" /> },
+  { id: "woocommerce", icon: <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-5 h-5 object-contain" /> },
+  { id: "webhook", icon: <Webhook className="w-5 h-5 text-gray-700 dark:text-gray-300" /> },
+  { id: "claude", icon: <img src="/partners/claude.svg.svg" alt="Claude" className="w-5 h-5 object-contain" /> },
+  { id: "elevenlabs", icon: <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-6 h-6 object-contain" /> },
 ];
 
 // ─── Disconnect Confirmation Modal ──────────────────────────────────────────
@@ -211,7 +208,7 @@ function IntegrationCard({
   id: CardId;
   title: string;
   subtitle: string;
-  steps: { title: string; desc: string }[];
+  steps?: { title: string; desc: string }[];
   isOpen: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -222,24 +219,26 @@ function IntegrationCard({
   connected?: boolean;
   connectedLabel?: string;
 }) {
-  const v = CARD_VISUALS.find(c => c.id === id)!;
+  const [showGuide, setShowGuide] = useState(false);
+  const v = CARD_VISUALS.find(c => c.id === id);
+  const hasGuide = Boolean((steps && steps.length > 0) || externalLink);
+
   return (
     <div className={cn(
-      "rounded-2xl border transition-all duration-300",
+      "rounded-2xl border transition-all duration-300 overflow-hidden",
       isOpen
-        ? `${v.bgLight} ${v.bgDark} ${v.borderLight} ${v.borderDark} shadow-md`
-        : "bg-white dark:bg-gray-800/90 border-gray-200 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm",
-      isOpen && ""
+        ? "bg-white dark:bg-gray-850 border-emerald-500/40 dark:border-emerald-500/40 shadow-sm"
+        : "bg-white dark:bg-gray-850 border-gray-200 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-xs"
     )}>
       <button onClick={onToggle}
         title={locked ? lockMessage : undefined}
-        className="w-full text-right p-5 flex items-center justify-between gap-3 cursor-pointer">
+        className="w-full text-right p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer">
         <div className="flex items-center gap-3.5 min-w-0">
           <div className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform",
-            isOpen ? "bg-white dark:bg-gray-800 shadow-sm scale-105" : "bg-gray-50 dark:bg-gray-700/60"
+            "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/60",
+            isOpen && "scale-105 shadow-xs"
           )}>
-            <span className={v.accentColor}>{v.icon}</span>
+            {v?.icon}
           </div>
           <div className="text-right min-w-0">
             <p className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
@@ -277,60 +276,66 @@ function IntegrationCard({
       </button>
 
       {isOpen && (
-        <div className="px-5 pb-5 space-y-5 animate-in fade-in duration-200">
-          {steps && steps.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {steps.map((step, i) => (
-                <div key={i} className="bg-white/80 dark:bg-gray-800/80 rounded-xl p-3 border border-gray-100/80 dark:border-gray-700/50 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                      "bg-white dark:bg-gray-800 border-2",
-                      v.accentColor.replace("text-", "border-").split(" ")[0],
-                      v.accentColor.split(" ")[0]
-                    )}>{i + 1}</span>
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{step.title}</p>
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 pr-7 leading-relaxed">{step.desc}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── رابط المنصة الرسمي ── */}
-          {externalLink && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-xl bg-white/70 dark:bg-gray-800/70 border border-gray-200/70 dark:border-gray-700/70 shadow-xs backdrop-blur-sm">
-              <div className="flex items-center gap-2.5">
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-gray-700 shadow-xs", v.accentColor)}>
-                  <ExternalLink className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                    {externalLink.label}
-                  </p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {locale === "ar" ? "الانتقال إلى المنصة الرسمية لضبط الإعدادات وجلب المفاتيح" : "Go to official platform settings and get keys"}
-                  </p>
-                </div>
-              </div>
-              <a
-                href={externalLink.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs",
-                  "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600",
-                  v.accentColor,
-                  "hover:shadow hover:-translate-y-0.5"
-                )}
+        <div className="px-4 sm:px-5 pb-5 space-y-4 border-t border-gray-100 dark:border-gray-700/60 pt-4 animate-in fade-in duration-200">
+          {/* ── زر دليل الربط والشرح (Collapsible Guide) ── */}
+          {hasGuide && (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowGuide(prev => !prev)}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-xs font-semibold text-gray-700 dark:text-gray-300 select-none cursor-pointer"
               >
-                <span>{locale === "ar" ? "فتح المنصة في تاب جديد" : "Open in new tab"}</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+                <span className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{locale === "ar" ? "دليل الربط وشرح الخطوات" : "Connection Guide & Setup Steps"}</span>
+                </span>
+                <div className="flex items-center gap-1.5 text-gray-400 text-[11px]">
+                  <span>{showGuide ? (locale === "ar" ? "إخفاء الدليل" : "Hide guide") : (locale === "ar" ? "عرض الدليل" : "View guide")}</span>
+                  <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", showGuide && "rotate-180")} />
+                </div>
+              </button>
+
+              {showGuide && (
+                <div className="p-4 rounded-xl bg-gray-50/70 dark:bg-gray-900/40 border border-gray-200/70 dark:border-gray-700/70 space-y-3 animate-in fade-in duration-200">
+                  {steps && steps.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {steps.map((step, i) => (
+                        <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200/70 dark:border-gray-700/60 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+                              {i + 1}
+                            </span>
+                            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{step.title}</p>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 pr-7 leading-relaxed">{step.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {externalLink && (
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                      <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                        {externalLink.label}
+                      </span>
+                      <a
+                        href={externalLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition"
+                      >
+                        <span>{locale === "ar" ? "فتح المنصة في نافذة جديدة" : "Open platform in new tab"}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="bg-white/90 dark:bg-gray-800/90 rounded-xl p-4 border border-white dark:border-gray-700 shadow-xs">
+          {/* ── نموذج البيانات وزر الربط بالأسفل ── */}
+          <div className="bg-white dark:bg-gray-850 rounded-xl p-4 sm:p-5 border border-gray-200/80 dark:border-gray-700/80 shadow-xs space-y-4">
             {children}
           </div>
         </div>
@@ -359,174 +364,128 @@ function WhatsAppContent({ initialData, loading, onSubmit, labels, connected, on
     setTimeout(() => setCopied(null), 1500);
   };
 
-  // ── Connected state — show credentials like the Portal ──
+  // ── الحالة المربوطة: عرض المعرفات وخيارات التعديل وفك الربط ──
   if (connected && initialData && !showForm) {
     return (
-      <div className="space-y-3">
-        {/* Connected badge */}
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-800/40 flex items-center justify-center flex-shrink-0">
-            <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+      <div className="space-y-3.5">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+          <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+            <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
               {locale === "ar" ? "تم ربط Meta بنجاح ✅" : "Meta connected successfully ✅"}
             </p>
-            <p className="text-[11px] text-green-600/70 dark:text-green-400/60">
-              {locale === "ar" ? "حسابك مربوط ويعمل" : "Your account is connected and active"}
+            <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
+              {locale === "ar" ? "حسابك مربوط ويعمل بكفاءة" : "Your account is active and connected"}
             </p>
           </div>
         </div>
 
-        {/* WABA ID */}
         {initialData.wabaId && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
             <div>
               <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">WABA ID</p>
-              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{initialData.wabaId}</p>
+              <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{initialData.wabaId}</p>
             </div>
             <button
               onClick={() => copyField(initialData.wabaId, "waba")}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-green-500"
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-emerald-600"
             >
-              {copied === "waba" ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied === "waba" ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         )}
 
-        {/* Phone Number ID */}
         {initialData.phoneNumberId && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
             <div>
               <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Phone Number ID</p>
-              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{initialData.phoneNumberId}</p>
+              <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{initialData.phoneNumberId}</p>
             </div>
             <button
               onClick={() => copyField(initialData.phoneNumberId, "phone")}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-green-500"
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-emerald-600"
             >
-              {copied === "phone" ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied === "phone" ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         )}
 
-        {/* Actions */}
+        {/* أزرار التحكم بالأسفل */}
         <div className="flex gap-2 pt-1">
-          <button
+          <Button
+            variant="outline"
             onClick={() => setShowForm(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={onDisconnect}
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-red-200 dark:border-red-800/40 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+            className="gap-2 text-xs font-medium text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20"
           >
             <Trash2 className="w-3.5 h-3.5" />
             {locale === "ar" ? "فك الربط" : "Disconnect"}
-          </button>
-        </div>
-
-        {/* Link to Meta for Developers */}
-        <div className="pt-1 flex items-center justify-center">
-          <a
-            href="https://developers.facebook.com/apps"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 hover:underline font-medium"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            {locale === "ar" ? "إدارة تطبيق واتساب على Meta for Developers" : "Manage WhatsApp App on Meta for Developers"}
-          </a>
+          </Button>
         </div>
       </div>
     );
   }
 
-  // ── Not connected / editing — show the form ──
+  // ── نموذج إدخال البيانات المنظم — زر الربط بالأسفل ──
   return (
-    <div className="space-y-3">
-      {/* Hint when not connected */}
-      {!connected && (
-        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30">
-          <WifiOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            {locale === "ar" ? "Meta مش مربوط — أدخل البيانات عشان تربط" : "Meta is not connected — enter credentials to connect"}
-          </p>
-        </div>
-      )}
-
-      {/* ── رابط منصة Meta للمطورين ── */}
-      <div className="p-2.5 rounded-xl bg-green-50/70 dark:bg-green-900/20 border border-green-200/70 dark:border-green-800/40 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <img src="/partners/meta.svg" alt="Meta" className="w-4 h-4 object-contain" />
-          <span className="text-xs font-medium text-green-800 dark:text-green-300">
-            {locale === "ar" ? "لوحة مطوري Meta (Meta for Developers)" : "Meta for Developers Portal"}
-          </span>
-        </div>
-        <a
-          href="https://developers.facebook.com/apps"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400 font-semibold hover:underline"
-        >
-          <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
-
-      {/* ── زر الربط التلقائي (Embedded Signup) ── */}
-      {onAutoConnectSuccess && (
-        <div className="space-y-3">
-          <EmbeddedSignupButton
-            locale={locale}
-            onSuccess={({ phone_number_id, waba_id }) => {
-              onAutoConnectSuccess(phone_number_id, waba_id);
-            }}
-          />
-
-          {/* ── أو أدخل البيانات يدوياً ── */}
-          <div className="relative flex items-center py-1">
-            <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
-            <span className="mx-3 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
-              {locale === "ar" ? "أو أدخل البيانات يدوياً" : "or enter credentials manually"}
-            </span>
-            <div className="flex-grow border-t border-gray-200 dark:border-gray-700" />
-          </div>
-        </div>
-      )}
-
-      <form id="manual-connect-form" onSubmit={onSubmit} className="space-y-3" autoComplete="off">
+    <div className="space-y-4">
+      <form id="manual-connect-form" onSubmit={onSubmit} className="space-y-3.5" autoComplete="off">
         <div>
-          <Label className="text-xs dark:text-gray-400">Access Token</Label>
+          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Access Token *</Label>
           <Input name="accessToken" id="wa_access_token" defaultValue={initialData?.accessToken || ""} placeholder="EAA..." required
-            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs" dir="ltr" />
         </div>
         <div>
-          <Label className="text-xs dark:text-gray-400">Phone Number ID</Label>
+          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone Number ID *</Label>
           <Input name="phoneNumberId" id="wa_phone_number_id" defaultValue={initialData?.phoneNumberId || ""} placeholder="123456789..." required
-            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs" dir="ltr" />
         </div>
         <div>
-          <Label className="text-xs dark:text-gray-400">WABA ID</Label>
+          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">WABA ID *</Label>
           <Input name="wabaId" id="wa_waba_id" defaultValue={initialData?.wabaId || ""} placeholder="987654321..." required
-            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-700 dark:border-gray-600 font-mono" dir="ltr" />
+            autoComplete="off" spellCheck={false} className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs" dir="ltr" />
         </div>
-        <Button disabled={loading} size="sm" className="w-full gap-2">
-          {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingBtn}</>
-            : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "ربط Meta يدوياً" : "Connect Meta manually"}</>}
-        </Button>
+
+        {/* ── زر الربط بالأسفل ── */}
+        <div className="pt-2 space-y-2.5">
+          <Button disabled={loading} size="default" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs">
+            {loading
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingBtn}</>
+              : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "ربط Meta وحفظ البيانات" : "Connect Meta & Save"}</>}
+          </Button>
+
+          {/* خيار الربط التلقائي بضغطة واحدة */}
+          {onAutoConnectSuccess && (
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+              <EmbeddedSignupButton
+                locale={locale}
+                onSuccess={({ phone_number_id, waba_id }) => {
+                  onAutoConnectSuccess(phone_number_id, waba_id);
+                }}
+              />
+            </div>
+          )}
+
+          {showForm && connected && (
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
+            >
+              {locale === "ar" ? "إلغاء التعديل" : "Cancel"}
+            </button>
+          )}
+        </div>
       </form>
-      {showForm && connected && (
-        <button
-          onClick={() => setShowForm(false)}
-          className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
-        >
-          {locale === "ar" ? "إلغاء" : "Cancel"}
-        </button>
-      )}
     </div>
   );
 }
@@ -618,167 +577,83 @@ function ShopifyContent({
   }
 
   return (
-    <div className="space-y-3">
-      {/* ── رابط منصة Shopify ── */}
-      <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-900/20 border border-blue-200/70 dark:border-blue-800/40 flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <img src="/partners/shopify.svg" alt="Shopify" className="w-4 h-4 object-contain" />
-          <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
-            {locale === "ar" ? "لوحة تحكم وتطوير Shopify" : "Shopify Admin & Dev"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="https://dev.shopify.com/dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 font-semibold hover:underline"
-          >
-            <span>{locale === "ar" ? "لوحة المطورين (Dev)" : "Dev Dashboard"}</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-          <span className="text-gray-300 dark:text-gray-600">|</span>
-          <a
-            href="https://admin.shopify.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:underline"
-          >
-            <span>{locale === "ar" ? "إدارة المتجر (Admin)" : "Store Admin"}</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </div>
-
-      {/* ── متجر مربوط ─────────────────────────────────────────────────────── */}
+    <div className="space-y-4">
+      {/* ── متجر مربوط ── */}
       {status?.connected && !showForm && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20
-                          rounded-lg border border-green-200 dark:border-green-800">
-            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-            <p className="flex-1 text-xs font-medium text-green-700 dark:text-green-300">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 p-3 bg-emerald-50/80 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <p className="flex-1 text-xs font-medium text-emerald-800 dark:text-emerald-300">
               {status.storeName} — متصل ✅
               {status.authMethod && status.authMethod !== "none" && (
-                <span className="ms-1.5 text-[10px] font-normal text-green-600 dark:text-green-400">
+                <span className="ms-1.5 text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
                   ({status.authMethod === "legacy_token" ? "Access Token" : "Client ID/Secret"})
                 </span>
               )}
             </p>
           </div>
-          {/* زر Sync Webhooks للمتاجر المربوطة */}
-          <button
+          {/* زر مزامنة الـ Webhooks */}
+          <Button
+            variant="outline"
             onClick={onSyncWebhooks}
             disabled={syncing}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-                       border border-blue-200 dark:border-blue-800 text-xs font-medium
-                       text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20
-                       disabled:opacity-50 transition"
+            className="w-full gap-2 text-xs font-medium dark:border-gray-700"
           >
             {syncing
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> جاري تسجيل الـ Webhooks...</>
-              : <><RefreshCw className="w-3.5 h-3.5" /> مزامنة الـ Webhooks تلقائياً</>}
-          </button>
+              : <><RefreshCw className="w-3.5 h-3.5 text-emerald-600" /> مزامنة الـ Webhooks تلقائياً</>}
+          </Button>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setShowForm(true)}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-                         border border-gray-200 dark:border-gray-700 text-xs font-medium
-                         text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
             >
               <RefreshCw className="w-3.5 h-3.5" /> تعديل البيانات
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleDisconnect}
-              className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-                         border border-red-200 dark:border-red-800/40 text-xs font-medium
-                         text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+              className="gap-2 text-xs font-medium text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20"
             >
               <Trash2 className="w-3.5 h-3.5" /> فك الربط
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* ── الربط التلقائي (Public App OAuth) — متاح للجميع ── */}
-      {showOAuth && !status?.connected && (
-        <div className="space-y-2 rounded-xl border border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 p-3">
-          <Label className="text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
-            ⚡ {locale === "ar" ? "الربط التلقائي (موصى به)" : "Automatic Connection (Recommended)"}
-          </Label>
-          <Input
-            placeholder="mystore.myshopify.com"
-            value={oauthShop}
-            onChange={e => setOAuthShop(e.target.value)}
-            className="dark:bg-gray-700 dark:border-gray-600 text-left"
-            dir="ltr"
-          />
-          <Button
-            size="sm"
-            onClick={handleOAuthConnect}
-            className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Zap className="w-4 h-4" /> {locale === "ar" ? "ربط تلقائي بضغطة واحدة" : "1-Click Auto Connect"}
-          </Button>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-4">
-            {locale === "ar"
-              ? "هتتوجه لصفحة موافقة Shopify الرسمية وترجع مربوطًا تلقائيًا — من غير نسخ أي توكنات."
-              : "You'll be redirected to official Shopify approval page and connected automatically — without copying any tokens."}
-          </p>
-        </div>
-      )}
-
-      {/* ── زر فتح/طي الربط اليدوي لو الـ OAuth ظاهر ── */}
-      {showOAuth && !status?.connected && (
-        <button
-          type="button"
-          onClick={() => setManualOpen(v => !v)}
-          className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-xs font-semibold text-gray-700 dark:text-gray-300 select-none cursor-pointer"
-        >
-          <span className="flex items-center gap-2">
-            <Key className="w-3.5 h-3.5 text-blue-500" />
-            {locale === "ar" ? "أو اربط يدويًا (Access Token / Client ID)" : "Or connect manually (Access Token / Client ID)"}
-          </span>
-          <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform duration-200", isManualVisible && "rotate-180")} />
-        </button>
-      )}
-
-      {/* ── فورم الربط اليدوي (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
-      {(!status?.connected || showForm) && isManualVisible && (
-        <div className={cn(
-          "space-y-3",
-          showOAuth && "p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-900/20"
-        )}>
+      {/* ── نموذج البيانات (قبل الربط أو أثناء التعديل) ── */}
+      {(!status?.connected || showForm) && (
+        <div className="space-y-3.5">
           <div>
-            <Label className="text-xs dark:text-gray-400">اسم المتجر *</Label>
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">اسم المتجر *</Label>
             <Input
-              placeholder="مثال: متجر العلاء"
+              placeholder="مثال: متجري"
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
               autoComplete="off"
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
             />
           </div>
           <div>
-            <Label className="text-xs dark:text-gray-400">
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
               دومين Shopify *
-              <span className="text-gray-400 font-normal mr-1">(بصيغة متجر.myshopify.com)</span>
+              <span className="text-gray-400 font-normal mr-1">(بصيغة store.myshopify.com)</span>
             </Label>
             <Input
               placeholder="mystore.myshopify.com"
               value={shopDomain}
               onChange={e => setShopDomain(e.target.value)}
               autoComplete="off"
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left"
+              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-left text-xs font-mono"
               dir="ltr"
             />
           </div>
+
           {/* Admin API Access Token */}
           <div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-4 mb-2">
-              اختر <strong>مجموعة واحدة بس</strong>: Access Token (لو عندك Custom App من قبل يناير 2026)، أو Client ID + Client Secret (لو عملت الـ App من Dev Dashboard).
-            </p>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Key className="w-3 h-3 text-orange-500" />
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <Key className="w-3 h-3 text-emerald-600" />
               Admin API Access Token
               <span className="text-gray-400 font-normal mr-1">(للمتاجر القديمة — يبدأ بـ shpat_)</span>
             </Label>
@@ -791,12 +666,8 @@ function ShopifyContent({
                 onChange={e => setAccessToken(e.target.value)}
                 type={showToken ? "text" : "password"}
                 autoComplete="new-password"
-                autoCorrect="off"
                 spellCheck={false}
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
-                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10 font-mono"
+                className="dark:bg-gray-800 dark:border-gray-700 text-left pl-10 font-mono text-xs"
                 dir="ltr"
               />
               <button
@@ -808,113 +679,114 @@ function ShopifyContent({
               </button>
             </div>
           </div>
+
           {/* Client ID + Client Secret (Dev Dashboard) */}
-          <div>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Key className="w-3 h-3 text-blue-500" />
-              Client ID
-              <span className="text-gray-400 font-normal mr-1">(للربط الجديد من Dev Dashboard)</span>
-            </Label>
-            <Input
-              id="shopify-client-id"
-              name="shopify_client_id_custom"
-              placeholder="مثال: 8a1b2c3d4e5f..."
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
-              autoComplete="off"
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600 text-left font-mono"
-              dir="ltr"
-            />
-          </div>
-          <div>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Key className="w-3 h-3 text-blue-500" />
-              Client Secret
-            </Label>
-            <div className="relative mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Key className="w-3 h-3 text-emerald-600" /> Client ID
+              </Label>
               <Input
-                id="shopify-client-secret"
-                name="shopify_client_secret_custom"
-                placeholder="shpss_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                value={clientSecret}
-                onChange={e => setClientSecret(e.target.value)}
-                type={showSecret ? "text" : "password"}
-                autoComplete="new-password"
-                autoCorrect="off"
-                spellCheck={false}
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
-                className="dark:bg-gray-700 dark:border-gray-600 text-left pl-10 font-mono"
+                id="shopify-client-id"
+                name="shopify_client_id_custom"
+                placeholder="Client ID"
+                value={clientId}
+                onChange={e => setClientId(e.target.value)}
+                autoComplete="off"
+                className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-left font-mono text-xs"
                 dir="ltr"
               />
-              <button
-                type="button"
-                onClick={() => setShowSecret(v => !v)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
-            <p className="mt-1 text-[10px] text-gray-400 leading-4">
-              وني بتطلب توكن مؤقت تلقائيًا من بياناتك وبتجدده قبل انتهائه — مش محتاج تعمل حاجة يدويًا.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-800/30">
-              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-4">
-                📋 <strong>متجر قديم (Custom App قبل يناير 2026):</strong>
-                <br />
-                Shopify Admin → Settings → Apps → Develop apps → افتح الـ App بتاعك → <strong>Install app</strong> وانسخ الـ Admin API access token.
-              </p>
-            </div>
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/30">
-              <p className="text-[10px] text-blue-700 dark:text-blue-400 leading-4">
-                📋 <strong>ربط جديد دلوقتي:</strong> روح على dev.shopify.com/dashboard → اعمل App → فعّل الصلاحيات:
-                <strong>read_orders, write_orders, read_checkouts, read_customers, read_products</strong>
+            <div>
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Key className="w-3 h-3 text-emerald-600" /> Client Secret
+              </Label>
+              <div className="relative mt-1">
+                <Input
+                  id="shopify-client-secret"
+                  name="shopify_client_secret_custom"
+                  placeholder="Client Secret"
+                  value={clientSecret}
+                  onChange={e => setClientSecret(e.target.value)}
+                  type={showSecret ? "text" : "password"}
+                  autoComplete="new-password"
+                  spellCheck={false}
+                  className="dark:bg-gray-800 dark:border-gray-700 text-left pl-10 font-mono text-xs"
+                  dir="ltr"
+                />
                 <button
                   type="button"
-                  className="inline-flex items-center gap-0.5 ms-1.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-800/40 hover:bg-blue-200 dark:hover:bg-blue-800/60 text-blue-800 dark:text-blue-300 transition-colors text-[10px] font-medium align-middle"
-                  onClick={() => {
-                    navigator.clipboard.writeText("read_orders, write_orders, read_checkouts, read_customers, read_products");
-                    toast.success("تم نسخ الصلاحيات ✓");
-                  }}
+                  onClick={() => setShowSecret(v => !v)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <Copy className="w-2.5 h-2.5" /> نسخ
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
-                <br />
-                ثبّت الـ App على متجرك → هتلاقي <strong>Client ID</strong> و <strong>Client Secret</strong> في صفحة الـ App — مفيش Access Token هيظهرلك، وده طبيعي.
-              </p>
+              </div>
             </div>
+          </div>
+
+          {/* Webhook URL */}
+          <div>
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-1">
+              <LinkIcon className="w-3 h-3" /> Webhook URL
+              <span className="text-gray-400 font-normal">
+                {status?.connected ? "(للإضافة اليدوية إن احتجت)" : "(يتسجل تلقائياً عند إدخال البيانات)"}
+              </span>
+            </Label>
+            <CopyInput value={webhookUrl} placeholder={webhookUrl ? "" : "جاري التحميل..."} />
+          </div>
+
+          {/* ── زر الربط بالأسفل ── */}
+          <div className="pt-2 space-y-2.5">
+            <Button
+              size="default"
+              onClick={onConnect}
+              disabled={loading || !storeName.trim() || !shopDomain.trim()}
+              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+            >
+              {loading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ والتسجيل...</>
+                : <><ShoppingBag className="w-4 h-4" /> {locale === "ar" ? "ربط المتجر وتسجيل الـ Webhooks" : "Connect Store & Register Webhooks"}</>}
+            </Button>
+
+            {/* الربط التلقائي بضغطة واحدة */}
+            {showOAuth && !status?.connected && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  <Zap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{locale === "ar" ? "أو الربط التلقائي بضغطة واحدة (موصى به)" : "Or 1-Click Auto Connect (Recommended)"}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="mystore.myshopify.com"
+                    value={oauthShop}
+                    onChange={e => setOAuthShop(e.target.value)}
+                    className="dark:bg-gray-800 dark:border-gray-700 text-left text-xs font-mono"
+                    dir="ltr"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleOAuthConnect}
+                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex-shrink-0"
+                  >
+                    <Zap className="w-3.5 h-3.5" /> {locale === "ar" ? "ربط تلقائي" : "Auto Connect"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {showForm && status?.connected && (
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="w-full text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition py-1"
+              >
+                {locale === "ar" ? "إلغاء التعديل" : "Cancel"}
+              </button>
+            )}
           </div>
         </div>
       )}
-
-      {/* ── Webhook URL ───────────────────────────────────────────────────────── */}
-      <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1 mb-1">
-          <LinkIcon className="w-3 h-3" /> Webhook URL
-          <span className="text-gray-400 font-normal">
-            {status?.connected ? "(للإضافة اليدوية إن احتجت)" : "(يتسجل تلقائياً لو أضفت الـ Token)"}
-          </span>
-        </Label>
-        <CopyInput value={webhookUrl} placeholder={webhookUrl ? "" : "جاري التحميل..."} />
-      </div>
-
-      {/* ── زر الحفظ (قبل الربط أو أثناء التعديل) ──────────────────────────────────────── */}
-      {(!status?.connected || showForm) && (
-        <Button
-          size="sm"
-          onClick={onConnect}
-          disabled={loading || !storeName.trim() || !shopDomain.trim()}
-          className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> جاري الحفظ والتسجيل...</>
-            : <><ShoppingBag className="w-4 h-4" /> ربط المتجر وتسجيل الـ Webhooks</>}
-        </Button>
-      )}
-
     </div>
   );
 }
@@ -982,45 +854,28 @@ function EasyOrdersContent({
   );
 
   return (
-    <div className="space-y-3">
-      {/* ── رابط منصة EasyOrders ── */}
-      <div className="p-2.5 rounded-xl bg-orange-50/70 dark:bg-orange-900/20 border border-orange-200/70 dark:border-orange-800/40 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <img src="/partners/easyorder.svg" alt="EasyOrders" className="w-4 h-4 object-contain" />
-          <span className="text-xs font-medium text-orange-800 dark:text-orange-300">
-            {locale === "ar" ? "لوحة تحكم إيزي أوردرز (EasyOrders)" : "EasyOrders Dashboard"}
-          </span>
-        </div>
-        <a
-          href="https://app.easy-orders.net"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-orange-700 dark:text-orange-400 font-semibold hover:underline"
-        >
-          <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
-
+    <div className="space-y-4">
       {status?.connected && (
-        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-          <p className="flex-1 text-xs text-green-700 dark:text-green-300 font-medium">
-            {labels.connectedBadge(status.storeName ?? "", status.totalSynced ?? 0)}
-          </p>
-          <button
-            onClick={onDisconnect}
-            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50
-                       dark:hover:bg-red-900/20 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2.5 p-3 bg-emerald-50/80 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <p className="flex-1 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+              {labels.connectedBadge(status.storeName ?? "", status.totalSynced ?? 0)}
+            </p>
+            <button
+              onClick={onDisconnect}
+              className="text-red-500 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          {webhookBadge(status.webhookOrdersConfigured, labels.webhookOrdersConfiguredBadge, labels.webhookOrdersNotConfiguredBadge)}
+          {webhookBadge(status.webhookStatusUpdateConfigured, labels.webhookStatusConfiguredBadge, labels.webhookStatusNotConfiguredBadge)}
         </div>
       )}
-      {status?.connected && webhookBadge(status.webhookOrdersConfigured, labels.webhookOrdersConfiguredBadge, labels.webhookOrdersNotConfiguredBadge)}
-      {status?.connected && webhookBadge(status.webhookStatusUpdateConfigured, labels.webhookStatusConfiguredBadge, labels.webhookStatusNotConfiguredBadge)}
+
       <div>
-        <Label className="text-xs dark:text-gray-400">{labels.storeLabel}</Label>
+        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">{labels.storeLabel}</Label>
         <Input
           id="easyorders_store_name"
           name="easyorders_store_name"
@@ -1028,107 +883,119 @@ function EasyOrdersContent({
           placeholder={labels.storePlaceholder}
           value={storeName}
           onChange={e => setStoreName(e.target.value)}
-          className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+          className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
         />
       </div>
+
       <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <Shield className="w-3 h-3" /> {labels.apiKeyLabel}
+        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <Shield className="w-3 h-3 text-emerald-600" /> {labels.apiKeyLabel}
         </Label>
         <Input
           id="easyorders_api_key_custom"
           name="easyorders_api_key_custom"
           autoComplete="new-password"
-          autoCorrect="off"
           spellCheck={false}
-          data-lpignore="true"
-          data-1p-ignore="true"
-          data-form-type="other"
           placeholder="eo_live_xxxxxxxxxxxx"
           dir="ltr"
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
           type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
+          className="mt-1 font-mono text-xs dark:bg-gray-800 dark:border-gray-700"
         />
       </div>
-      <Button onClick={onSync} disabled={syncing || !apiKey.trim()} size="sm"
-        className="w-full gap-2 bg-orange-600 hover:bg-orange-700">
-        {syncing
-          ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.syncingBtn}</>
-          : <><Database className="w-4 h-4" /> {labels.syncBtn}</>}
-      </Button>
+
       <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <LinkIcon className="w-3 h-3" /> {labels.webhookLabel}
+        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <LinkIcon className="w-3 h-3 text-emerald-600" /> {labels.webhookLabel}
         </Label>
         <div className="mt-1"><CopyInput value={webhookUrl} placeholder={labels.loading} /></div>
-        <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1">{labels.webhookWarning}</p>
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{labels.webhookWarning}</p>
       </div>
-      {/* EasyOrders بتولّد سِر مختلف لكل Webhook — لازم Webhook منفصل لكل نوع، وسِر منفصل لكل واحد */}
-      <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <Shield className="w-3 h-3" /> {labels.webhookSecretOrdersLabel}
-        </Label>
-        <Input
-          id="easyorders_secret_orders_custom"
-          name="easyorders_secret_orders_custom"
-          autoComplete="new-password"
-          autoCorrect="off"
-          spellCheck={false}
-          data-lpignore="true"
-          data-1p-ignore="true"
-          data-form-type="other"
-          placeholder={labels.webhookSecretPlaceholder}
-          dir="ltr"
-          value={webhookSecretOrders}
-          onChange={e => setWebhookSecretOrders(e.target.value)}
-          type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
-        />
-        <Button onClick={onSaveSecretOrders} disabled={savingSecretOrders || !webhookSecretOrders.trim() || !status?.connected}
-          size="sm" variant="outline" className="w-full gap-2 mt-2">
-          {savingSecretOrders
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
-            : <>{labels.saveSecretBtn}</>}
+
+      {/* Webhook Secrets */}
+      <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div>
+          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <Shield className="w-3 h-3 text-emerald-600" /> {labels.webhookSecretOrdersLabel}
+          </Label>
+          <div className="flex gap-2 mt-1">
+            <Input
+              id="easyorders_secret_orders_custom"
+              name="easyorders_secret_orders_custom"
+              autoComplete="new-password"
+              spellCheck={false}
+              placeholder={labels.webhookSecretPlaceholder}
+              dir="ltr"
+              value={webhookSecretOrders}
+              onChange={e => setWebhookSecretOrders(e.target.value)}
+              type="password"
+              className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 flex-1"
+            />
+            <Button
+              onClick={onSaveSecretOrders}
+              disabled={savingSecretOrders || !webhookSecretOrders.trim() || !status?.connected}
+              size="sm"
+              variant="outline"
+              className="text-xs dark:border-gray-700 flex-shrink-0"
+            >
+              {savingSecretOrders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : labels.saveSecretBtn}
+            </Button>
+          </div>
+          {!status?.connected && (
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
+          )}
+        </div>
+
+        <div>
+          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <Shield className="w-3 h-3 text-emerald-600" /> {labels.webhookSecretStatusUpdateLabel}
+          </Label>
+          <div className="flex gap-2 mt-1">
+            <Input
+              id="easyorders_secret_status_custom"
+              name="easyorders_secret_status_custom"
+              autoComplete="new-password"
+              spellCheck={false}
+              placeholder={labels.webhookSecretPlaceholder}
+              dir="ltr"
+              value={webhookSecretStatusUpdate}
+              onChange={e => setWebhookSecretStatusUpdate(e.target.value)}
+              type="password"
+              className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 flex-1"
+            />
+            <Button
+              onClick={onSaveSecretStatusUpdate}
+              disabled={savingSecretStatusUpdate || !webhookSecretStatusUpdate.trim() || !status?.connected}
+              size="sm"
+              variant="outline"
+              className="text-xs dark:border-gray-700 flex-shrink-0"
+            >
+              {savingSecretStatusUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : labels.saveSecretBtn}
+            </Button>
+          </div>
+          {!status?.connected && (
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── زر الربط والمزامنة بالأسفل ── */}
+      <div className="pt-2 space-y-2">
+        <Button
+          onClick={onSync}
+          disabled={syncing || !apiKey.trim()}
+          size="default"
+          className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+        >
+          {syncing
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.syncingBtn}</>
+            : <><Database className="w-4 h-4" /> {labels.syncBtn}</>}
         </Button>
-        {!status?.connected && (
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
+        {dateStr && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">{labels.lastSync(dateStr)}</p>
         )}
       </div>
-      <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-          <Shield className="w-3 h-3" /> {labels.webhookSecretStatusUpdateLabel}
-        </Label>
-        <Input
-          id="easyorders_secret_status_custom"
-          name="easyorders_secret_status_custom"
-          autoComplete="new-password"
-          autoCorrect="off"
-          spellCheck={false}
-          data-lpignore="true"
-          data-1p-ignore="true"
-          data-form-type="other"
-          placeholder={labels.webhookSecretPlaceholder}
-          dir="ltr"
-          value={webhookSecretStatusUpdate}
-          onChange={e => setWebhookSecretStatusUpdate(e.target.value)}
-          type="password"
-          className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
-        />
-        <Button onClick={onSaveSecretStatusUpdate} disabled={savingSecretStatusUpdate || !webhookSecretStatusUpdate.trim() || !status?.connected}
-          size="sm" variant="outline" className="w-full gap-2 mt-2">
-          {savingSecretStatusUpdate
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> {labels.savingSecretBtn}</>
-            : <>{labels.saveSecretBtn}</>}
-        </Button>
-        {!status?.connected && (
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{labels.connectFirstHint}</p>
-        )}
-      </div>
-      {dateStr && (
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">{labels.lastSync(dateStr)}</p>
-      )}
     </div>
   );
 }
@@ -1232,63 +1099,42 @@ function WooCommerceContent({ status, onRefresh, locale, onDisconnect }: {
     : "";
 
   return (
-    <div className="space-y-3">
-      {/* ── رابط توثيق ودليل WooCommerce ── */}
-      <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-900/20 border border-purple-200/70 dark:border-purple-800/40 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <img src="/partners/woocommerce.svg" alt="WooCommerce" className="w-4 h-4 object-contain" />
-          <span className="text-xs font-medium text-purple-800 dark:text-purple-300">
-            {isAr ? "دليل مفاتيح وتوثيق WooCommerce REST API" : "WooCommerce REST API Docs"}
-          </span>
-        </div>
-        <a
-          href="https://woocommerce.com/document/woocommerce-rest-api/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-purple-700 dark:text-purple-400 font-semibold hover:underline"
-        >
-          <span>{isAr ? "فتح الدليل الرسمي" : "Open Official Guide"}</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
-
+    <div className="space-y-4">
       {/* Connected Badge */}
       {status?.connected && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 p-3 bg-emerald-50/80 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
                 {status.storeName} — {(status.totalSynced ?? 0).toLocaleString(isAr ? "ar-EG" : "en-US")} {isAr ? "طلب مستلم" : "orders received"}
               </p>
-              {dateStr && <p className="text-[10px] text-green-600/70 dark:text-green-400/70">{isAr ? "آخر طلب" : "Last order"}: {dateStr}</p>}
+              {dateStr && <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">{isAr ? "آخر طلب" : "Last order"}: {dateStr}</p>}
             </div>
-            <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <button onClick={handleDisconnect} className="text-red-500 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
 
           {/* Sync Products button for connected stores */}
-          <button
+          <Button
+            variant="outline"
             onClick={handleSyncProducts}
             disabled={syncingProducts}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl
-                       border border-purple-200 dark:border-purple-800 text-xs font-medium
-                       text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20
-                       disabled:opacity-50 transition"
+            className="w-full gap-2 text-xs font-medium dark:border-gray-700"
           >
             {syncingProducts
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {isAr ? "جاري مزامنة المنتجات..." : "Syncing products..."}</>
-              : <><RefreshCw className="w-3.5 h-3.5" /> {isAr ? "مزامنة المنتجات للذكاء الاصطناعي" : "Sync products for AI"}</>}
-          </button>
+              : <><RefreshCw className="w-3.5 h-3.5 text-emerald-600" /> {isAr ? "مزامنة المنتجات للذكاء الاصطناعي" : "Sync products for AI"}</>}
+          </Button>
         </div>
       )}
 
-      {/* ── فورم الربط (قبل الربط فقط) ── */}
+      {/* ── نموذج البيانات ── */}
       {!status?.connected && (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           <div>
-            <Label className="text-xs dark:text-gray-400">{isAr ? "اسم المتجر *" : "Store name *"}</Label>
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">{isAr ? "اسم المتجر *" : "Store name *"}</Label>
             <Input
               id="woo_store_name"
               name="woo_store_name"
@@ -1296,12 +1142,12 @@ function WooCommerceContent({ status, onRefresh, locale, onDisconnect }: {
               placeholder={isAr ? "مثال: متجري" : "E.g. My Store"}
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
             />
           </div>
           <div>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Globe className="w-3 h-3" /> {isAr ? "رابط المتجر *" : "Store URL *"}
+            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <Globe className="w-3 h-3 text-emerald-600" /> {isAr ? "رابط المتجر *" : "Store URL *"}
             </Label>
             <Input
               id="woo_store_url"
@@ -1311,106 +1157,86 @@ function WooCommerceContent({ status, onRefresh, locale, onDisconnect }: {
               dir="ltr"
               value={storeUrl}
               onChange={e => setStoreUrl(e.target.value)}
-              className="mt-1 dark:bg-gray-700 dark:border-gray-600"
+              className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs text-left"
             />
           </div>
-          <div>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Key className="w-3 h-3 text-purple-500" /> Consumer Key *
-            </Label>
-            <Input
-              id="woo_consumer_key_custom"
-              name="woo_consumer_key_custom"
-              autoComplete="new-password"
-              autoCorrect="off"
-              spellCheck={false}
-              data-lpignore="true"
-              data-1p-ignore="true"
-              data-form-type="other"
-              placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              dir="ltr"
-              value={consumerKey}
-              onChange={e => setConsumerKey(e.target.value)}
-              type={showKeys ? "text" : "password"}
-              className="mt-1 font-mono dark:bg-gray-700 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <Label className="text-xs dark:text-gray-400 flex items-center gap-1">
-              <Key className="w-3 h-3 text-purple-500" /> Consumer Secret *
-            </Label>
-            <div className="relative mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Key className="w-3 h-3 text-emerald-600" /> Consumer Key *
+              </Label>
               <Input
-                id="woo_consumer_secret_custom"
-                name="woo_consumer_secret_custom"
+                id="woo_consumer_key_custom"
+                name="woo_consumer_key_custom"
                 autoComplete="new-password"
-                autoCorrect="off"
                 spellCheck={false}
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
-                placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                placeholder="ck_xxxxxxxxxxxxxxxx"
                 dir="ltr"
-                value={consumerSecret}
-                onChange={e => setConsumerSecret(e.target.value)}
+                value={consumerKey}
+                onChange={e => setConsumerKey(e.target.value)}
                 type={showKeys ? "text" : "password"}
-                className="font-mono dark:bg-gray-700 dark:border-gray-600 pl-10"
+                className="mt-1 font-mono text-xs dark:bg-gray-800 dark:border-gray-700"
               />
-              <button
-                type="button"
-                onClick={() => setShowKeys(v => !v)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
-          </div>
-          {/* How to get credentials hint */}
-          <div className="p-2.5 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-800/30">
-            <p className="text-[10px] text-purple-700 dark:text-purple-400 leading-4">
-              📋 <strong>WooCommerce → Settings → Advanced → REST API → Add key</strong>
-              <br />
-              {isAr ? "اختر صلاحيات" : "Choose permissions"}: <strong>Read</strong> ({isAr ? "أو Read/Write لدعم كامل" : "or Read/Write for full support"})
-              <br />
-              {isAr ? "انسخ الـ Consumer Key والـ Consumer Secret" : "Copy the Consumer Key and Consumer Secret"}
-            </p>
+            <div>
+              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Key className="w-3 h-3 text-emerald-600" /> Consumer Secret *
+              </Label>
+              <div className="relative mt-1">
+                <Input
+                  id="woo_consumer_secret_custom"
+                  name="woo_consumer_secret_custom"
+                  autoComplete="new-password"
+                  spellCheck={false}
+                  placeholder="cs_xxxxxxxxxxxxxxxx"
+                  dir="ltr"
+                  value={consumerSecret}
+                  onChange={e => setConsumerSecret(e.target.value)}
+                  type={showKeys ? "text" : "password"}
+                  className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 pl-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKeys(v => !v)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Webhook URL — always visible */}
+      {/* Webhook URL */}
       <div>
-        <Label className="text-xs dark:text-gray-400 flex items-center gap-1 mb-1">
-          <LinkIcon className="w-3 h-3" /> Webhook URL
+        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-1">
+          <LinkIcon className="w-3 h-3 text-emerald-600" /> Webhook URL
           <span className="text-gray-400 font-normal">
             {status?.connected
-              ? (isAr ? "(أضفه يدوياً في WooCommerce)" : "(add manually in WooCommerce)")
-              : (isAr ? "(يظهر بعد الربط)" : "(shown after connection)")}
+              ? (isAr ? "(أضفه يدوياً في إعدادات WooCommerce)" : "(add manually in WooCommerce)")
+              : (isAr ? "(رابط الاستقبال)" : "(receiving URL)")}
           </span>
         </Label>
         <CopyInput value={webhookUrl} placeholder={isAr ? "جاري التحميل..." : "Loading..."} />
-        {status?.connected && (
-          <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1">
-            ⚠️ {isAr
-              ? "افتح WooCommerce → Settings → Advanced → Webhooks → أضف هذا الرابط لحدث \"Order created\" و \"Order updated\""
-              : "Open WooCommerce → Settings → Advanced → Webhooks → Add this URL for \"Order created\" and \"Order updated\""}
-          </p>
-        )}
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
+      {/* ── زر الربط بالأسفل ── */}
       {!status?.connected && (
-        <Button
-          onClick={handleConnect}
-          disabled={loading || !storeName.trim() || !storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()}
-          size="sm"
-          className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
-        >
-          {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> {isAr ? "جاري الربط والتحقق..." : "Connecting & verifying..."}</>
-            : <><Globe className="w-4 h-4" /> {isAr ? "ربط المتجر" : "Connect Store"}</>}
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={handleConnect}
+            disabled={loading || !storeName.trim() || !storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()}
+            size="default"
+            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+          >
+            {loading
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {isAr ? "جاري الربط والتحقق..." : "Connecting & verifying..."}</>
+              : <><Globe className="w-4 h-4" /> {isAr ? "ربط المتجر والتحقق" : "Connect Store & Verify"}</>}
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -1421,25 +1247,7 @@ function WebhookContent({ webhookUrl, verifyToken, hint, locale = "ar" }: {
   webhookUrl: string; verifyToken: string; hint: string; locale?: string;
 }) {
   return (
-    <div className="space-y-3">
-      {/* ── رابط أداة Webhook.site ── */}
-      <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Webhook className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <span className="text-xs font-medium text-gray-800 dark:text-gray-300">
-            {locale === "ar" ? "أداة فحص واختبار الـ Webhooks (Webhook.site)" : "Webhook Testing Tool (Webhook.site)"}
-          </span>
-        </div>
-        <a
-          href="https://webhook.site"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 font-semibold hover:underline"
-        >
-          <span>{locale === "ar" ? "فتح الموقع" : "Open Tool"}</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
+    <div className="space-y-3.5">
       <div>
         <Label className="text-xs text-gray-600 dark:text-gray-400 font-bold">Callback URL</Label>
         <div className="mt-1"><CopyInput value={webhookUrl} /></div>
@@ -1513,9 +1321,8 @@ useSubscription();
   const [elevenLabsEditMode, setElevenLabsEditMode] = useState(false);
   const [elevenLabsAgentData, setElevenLabsAgentData] = useState<Record<string, unknown> | null>(null);
 
-  // ── Category, Search, Disconnect & Upgrade UI ──
+  // ── Category, Disconnect & Upgrade UI ──
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [disconnectModal, setDisconnectModal] = useState<{
     open: boolean; title: string; description: string; loading: boolean; onConfirm: () => Promise<void>;
   }>({ open: false, title: "", description: "", loading: false, onConfirm: async () => {} });
@@ -2200,39 +2007,13 @@ useSubscription();
         })}
       </div>
 
-      {/* ── Search Bar ── */}
-      <div className="relative mb-5">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder={locale === "ar" ? "ابحث عن تكامل... (مثال: Shopify, WhatsApp)" : "Search integrations... (e.g. Shopify, WhatsApp)"}
-          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/90 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 transition"
-          dir={dir}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* ── Cards Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Cards List ── */}
+      <div className="space-y-3.5">
         {CARD_DEFS
           .filter(card => {
             // Category filter
             const cat = CATEGORIES.find(c => c.id === activeCategory);
             if (cat && !cat.cardIds.includes(card.id)) return false;
-            // Search filter
-            if (searchQuery.trim()) {
-              const q = searchQuery.toLowerCase();
-              return card.title.toLowerCase().includes(q) || card.subtitle.toLowerCase().includes(q) || card.id.toLowerCase().includes(q);
-            }
             return true;
           })
           .map(card => {
@@ -2370,7 +2151,7 @@ useSubscription();
                       size="icon"
                       onClick={handleGenerateApiKey}
                       disabled={claudeLoading}
-                      className="bg-orange-500 hover:bg-orange-600 text-white flex-shrink-0"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white flex-shrink-0"
                       title={claudeApiKey ? "تجديد المفتاح" : "إنشاء مفتاح"}
                     >
                       {claudeLoading
@@ -2385,10 +2166,10 @@ useSubscription();
                   )}
                 </div>
 
-                {/* MCP URL — copy-ready endpoint */}
+                {/* MCP URL */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                    <LinkIcon className="w-3 h-3" /> رابط الاتصال (MCP URL)
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <LinkIcon className="w-3 h-3 text-emerald-600" /> رابط الاتصال (MCP URL)
                   </label>
                   <CopyInput
                     value={typeof window !== "undefined"
@@ -2404,11 +2185,11 @@ useSubscription();
                 {/* Config */}
                 {claudeApiKey && (
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <Database className="w-3 h-3" /> إعدادات Claude Desktop (انسخ والصق في MCP Config)
+                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <Database className="w-3 h-3 text-emerald-600" /> إعدادات Claude Desktop (انسخ والصق في MCP Config)
                     </label>
                     <div className="relative">
-                      <pre className="text-xs font-mono bg-gray-950 text-green-400 rounded-xl p-4 overflow-x-auto leading-relaxed" dir="ltr">
+                      <pre className="text-xs font-mono bg-gray-950 text-emerald-400 rounded-xl p-4 overflow-x-auto leading-relaxed" dir="ltr">
                         {`{
   "mcpServers": {
     "wani": {
@@ -2429,27 +2210,16 @@ useSubscription();
                         className="absolute top-2 left-2 text-xs gap-1 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
                       >
                         {claudeCopied === "config"
-                          ? <><CheckCircle2 className="w-3 h-3 text-green-400" /> تم النسخ</>
+                          ? <><CheckCircle2 className="w-3 h-3 text-emerald-400" /> تم النسخ</>
                           : <><Copy className="w-3 h-3" /> نسخ</>}
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {/* Download link */}
-                <a
-                  href="https://claude.ai/download"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  تحميل Claude Desktop
-                </a>
-
-                {/* What can Claude do */}
-                <div className="rounded-xl border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/10 p-4">
-                  <p className="text-xs font-semibold text-orange-700 dark:text-orange-400 mb-2">بعد الربط — تقدر تقول لـ Claude:</p>
+                {/* أمثلة أوامر Claude */}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-4 space-y-2">
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">بعد الربط — تقدر تقول لـ Claude:</p>
                   <ul className="space-y-1">
                     {[
                       "\"اختار جمهور عشوائي واعملي حملة\"",
@@ -2458,8 +2228,8 @@ useSubscription();
                       "\"كام جهة اتصال عندي؟\"",
                       "\"اعملي قالب تسويقي يشد العميل \"",
                     ].map((ex, i) => (
-                      <li key={i} className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
-                        <span className="text-orange-400">›</span> {ex}
+                      <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                        <span className="text-emerald-500 font-bold">›</span> {ex}
                       </li>
                     ))}
                   </ul>
@@ -2468,30 +2238,29 @@ useSubscription();
             )}
             {card.id === "elevenlabs" && (
               isElevenLabsLinked && !elevenLabsEditMode ? (
-                <div className="space-y-3">
-                  {/* Connected badge — نفس شكل حالة الاتصال بتاعة Meta */}
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-800/40 flex items-center justify-center flex-shrink-0">
-                      <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+                      <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-green-700 dark:text-green-300">
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                         {locale === "ar" ? "تم ربط ElevenLabs بنجاح ✅" : "ElevenLabs connected successfully ✅"}
                       </p>
-                      <p className="text-[11px] text-green-600/70 dark:text-green-400/60">
+                      <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
                         {locale === "ar" ? "الـ Agent الصوتي شغّال" : "Your voice agent is active"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
                     <div>
                       <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Agent ID</p>
-                      <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-0.5">{elevenLabsAgentId}</p>
+                      <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{elevenLabsAgentId}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-3">
+                  <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 p-3">
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                       {locale === "ar" ? "الرد الصوتي مفعّل" : "Voice Reply enabled"}
                     </p>
@@ -2514,7 +2283,7 @@ useSubscription();
                           toast.error(e?.message ?? "Could not update");
                         }
                       }}
-                      className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-700")}
+                      className={cn("w-12 h-6 rounded-full p-1 transition-colors", voiceRepliesEnabled ? "bg-emerald-600" : "bg-gray-300 dark:bg-gray-700")}
                       aria-label="Toggle Voice Replies Output"
                     >
                       <span className={cn("block w-4 h-4 rounded-full bg-white transition-transform", voiceRepliesEnabled ? "translate-x-6" : "translate-x-0")} />
@@ -2522,86 +2291,43 @@ useSubscription();
                   </div>
 
                   <div className="flex gap-2 pt-1">
-                    <button
+                    <Button
+                      variant="outline"
                       onClick={() => setElevenLabsEditMode(true)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                      className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={handleDisconnectElevenLabs}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-red-200 dark:border-red-800/40 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                      className="gap-2 text-xs font-medium text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       {locale === "ar" ? "فك الربط" : "Disconnect"}
-                    </button>
-                  </div>
-
-                  {/* ── Link to ElevenLabs ── */}
-                  <div className="pt-1 flex items-center justify-center">
-                    <a
-                      href="https://elevenlabs.io/app/conversational-ai"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      {locale === "ar" ? "إدارة الـ Agent على منصة ElevenLabs" : "Manage Agent on ElevenLabs"}
-                    </a>
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {!isElevenLabsLinked && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30">
-                      <WifiOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <p className="text-xs text-amber-700 dark:text-amber-400">
-                        {locale === "ar" ? "ElevenLabs مش مربوط — أدخل البيانات عشان تربط" : "ElevenLabs is not connected — enter credentials to connect"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* ── رابط منصة ElevenLabs ── */}
-                  <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-900/20 border border-purple-200/70 dark:border-purple-800/40 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <img src="/partners/elevenlabs.svg" alt="ElevenLabs" className="w-4 h-4 object-contain" />
-                      <span className="text-xs font-medium text-purple-800 dark:text-purple-300">
-                        {locale === "ar" ? "منصة ElevenLabs Conversational AI" : "ElevenLabs Conversational AI"}
-                      </span>
-                    </div>
-                    <a
-                      href="https://elevenlabs.io/app/conversational-ai"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-purple-700 dark:text-purple-400 font-semibold hover:underline"
-                    >
-                      <span>{locale === "ar" ? "فتح في تاب جديد" : "Open in new tab"}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-
+                <div className="space-y-3.5">
                   <div>
-                    <Label className="text-xs mb-1 block">ElevenLabs API Key *</Label>
+                    <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">ElevenLabs API Key *</Label>
                     <Input
                       id="elevenlabs_api_key_custom"
                       name="elevenlabs_api_key_custom"
                       type="password"
                       autoComplete="new-password"
-                      autoCorrect="off"
                       spellCheck={false}
-                      data-lpignore="true"
-                      data-1p-ignore="true"
-                      data-form-type="other"
                       value={elevenLabsApiKey}
                       onChange={e => setElevenLabsApiKey(e.target.value)}
                       placeholder="sk_••••••••"
                       dir="ltr"
-                      className="rounded-xl text-xs font-mono"
+                      className="rounded-xl text-xs font-mono dark:bg-gray-800 dark:border-gray-700"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block">Agent ID *</Label>
+                    <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Agent ID *</Label>
                     <Input
                       id="elevenlabs_agent_id_custom"
                       name="elevenlabs_agent_id_custom"
@@ -2610,16 +2336,21 @@ useSubscription();
                       onChange={e => setElevenLabsAgentId(e.target.value)}
                       placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       dir="ltr"
-                      className="rounded-xl text-xs font-mono"
+                      className="rounded-xl text-xs font-mono dark:bg-gray-800 dark:border-gray-700"
                     />
                   </div>
-                  <Button
-                    onClick={async () => { await handleSaveElevenLabs(); setElevenLabsEditMode(false); }}
-                    disabled={elevenLabsSaving}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs py-5"
-                  >
-                    {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (locale === "ar" ? "ربط ElevenLabs" : "Connect ElevenLabs")}
-                  </Button>
+
+                  {/* زر الربط بالأسفل */}
+                  <div className="pt-2">
+                    <Button
+                      onClick={async () => { await handleSaveElevenLabs(); setElevenLabsEditMode(false); }}
+                      disabled={elevenLabsSaving}
+                      size="default"
+                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+                    >
+                      {elevenLabsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> {locale === "ar" ? "حفظ وربط ElevenLabs" : "Save & Connect ElevenLabs"}</>}
+                    </Button>
+                  </div>
                 </div>
               )
             )}
