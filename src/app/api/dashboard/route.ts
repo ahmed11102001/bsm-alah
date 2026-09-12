@@ -57,7 +57,7 @@ export async function GET(_req: NextRequest) {
       }),
       prisma.whatsAppAccount.findUnique({
         where: { userId: ownerId },
-        select: { phoneNumberId: true, wabaId: true },
+        select: { phoneNumberId: true, wabaId: true, tokenStatus: true, tokenExpiresAt: true },
       }),
       prisma.testimonial.count({ where: { userId: ownerId } }),
     ]);

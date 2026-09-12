@@ -16,6 +16,8 @@ export interface WhatsAppIntegrationProps {
   onDisconnect: () => void;
   locale: string;
   onAutoConnectSuccess?: (phone_number_id: string, waba_id: string) => void;
+  /** Token health: ACTIVE | EXPIRING_SOON | EXPIRED | INVALID | UNKNOWN | null */
+  tokenStatus?: string | null;
 }
 
 export function WhatsAppIntegration({
@@ -27,6 +29,7 @@ export function WhatsAppIntegration({
   onDisconnect,
   locale,
   onAutoConnectSuccess,
+  tokenStatus,
 }: WhatsAppIntegrationProps) {
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -42,19 +45,54 @@ export function WhatsAppIntegration({
   if (connected && initialData && !showForm) {
     return (
       <div className="space-y-3.5">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-          <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
-            <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        {/* ── بانر حالة الاتصال حسب tokenStatus ── */}
+        {(tokenStatus === 'INVALID' || tokenStatus === 'EXPIRED') ? (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50/80 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+            <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+              <Wifi className="w-4 h-4 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                {locale === "ar" ? "الاتصال معطوب — أعد الربط فوراً ⚠️" : "Connection broken — Reconnect now ⚠️"}
+              </p>
+              <p className="text-[11px] text-red-600/80 dark:text-red-400/80">
+                {locale === "ar"
+                  ? "التوكن انتهى أو اتلغى. الرسائل والحملات لن تعمل لحد ما تعيد الربط."
+                  : "Token expired or revoked. Messages and campaigns won't work until you reconnect."}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-              {locale === "ar" ? "تم ربط Meta بنجاح ✅" : "Meta connected successfully ✅"}
-            </p>
-            <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
-              {locale === "ar" ? "حسابك مربوط ويعمل بكفاءة" : "Your account is active and connected"}
-            </p>
+        ) : tokenStatus === 'EXPIRING_SOON' ? (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+              <Wifi className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {locale === "ar" ? "التوكن هينتهي قريب — جدّده ⚙️" : "Token expiring soon — Renew it ⚙️"}
+              </p>
+              <p className="text-[11px] text-amber-600/80 dark:text-amber-400/80">
+                {locale === "ar"
+                  ? "أعد الربط قبل ما ينتهي عشان الرسائل ماتوقفش."
+                  : "Reconnect before it expires so messages keep flowing."}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+              <Wifi className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                {locale === "ar" ? "تم ربط Meta بنجاح ✅" : "Meta connected successfully ✅"}
+              </p>
+              <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
+                {locale === "ar" ? "حسابك مربوط ويعمل بكفاءة" : "Your account is active and connected"}
+              </p>
+            </div>
+          </div>
+        )}
 
         {initialData.wabaId && (
           <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">

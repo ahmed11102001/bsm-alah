@@ -20,7 +20,7 @@ import { ElevenLabsIntegration } from "./_components/ElevenLabsIntegration";
 import { WebhookIntegration } from "./_components/WebhookIntegration";
 
 export default function API() {
-  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier, isSuper } = useSubscription();
+  const { dashData, canStore: canUseStoreIntegrations, canUseClaude, planTier, isSuper, metaTokenStatus } = useSubscription();
   const initialData = dashData?.whatsapp;
   const { t, dir, locale } = useLanguage();
   const api = t.api;
@@ -135,10 +135,19 @@ export default function API() {
 
   useEffect(() => {
     if (initialData?.phoneNumberId && initialData?.wabaId) {
+      // waConnected = true حتى لو التوكن معطوب — المعرّفات موجودة (الكارد بيعرض "connected" أو "broken")
       setWaConnected(true);
       setWaData({ phoneNumberId: initialData.phoneNumberId, wabaId: initialData.wabaId });
     }
   }, [initialData]);
+
+  // ── Token Warning for WhatsApp card badge ──
+  const waTokenWarning: 'invalid' | 'expiring' | null =
+    metaTokenStatus === 'INVALID' || metaTokenStatus === 'EXPIRED'
+      ? 'invalid'
+      : metaTokenStatus === 'EXPIRING_SOON'
+        ? 'expiring'
+        : null;
 
   useEffect(() => {
     fetch("/api/me/webhook-config").then(r => r.json()).then(d => setVerifyToken(d.verifyToken ?? "")).catch(() => {});
@@ -772,6 +781,7 @@ export default function API() {
                 lockMessage={getCardLockMessage(card.id)}
                 connected={cs.connected}
                 connectedLabel={cs.label}
+                tokenWarning={card.id === 'whatsapp' ? waTokenWarning : undefined}
               >
                 {card.id === "whatsapp" && (
                   waJustConnected ? (
@@ -795,6 +805,7 @@ export default function API() {
                       connected={waConnected}
                       onDisconnect={handleDisconnectWhatsApp}
                       locale={locale}
+                      tokenStatus={metaTokenStatus}
                       onAutoConnectSuccess={(phone_number_id, waba_id) => {
                         setWaConnected(true);
                         setWaData({ phoneNumberId: phone_number_id, wabaId: waba_id });

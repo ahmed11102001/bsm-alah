@@ -12,7 +12,7 @@ export interface DashboardData {
         role: string; hasPassword?: boolean; hasTestimonial?: boolean;
         onboardingCompleted?: boolean;
     };
-    whatsapp: { phoneNumberId: string; wabaId: string } | null;
+    whatsapp: { phoneNumberId: string; wabaId: string; tokenStatus?: string; tokenExpiresAt?: string | null } | null;
     stats: {
         totalSent: number; totalDelivered: number; totalRead: number;
         totalInbound: number; totalCampaigns: number; totalContacts: number;
@@ -46,6 +46,8 @@ interface SubscriptionContextValue {
     // ── مشتقات جاهزة، نفس الحسابات اللي كانت جوه DashboardInner بالظبط ─────────
     planTier: string;
     hasMetaConnection: boolean;
+    /** حالة التوكن الحقيقية: ACTIVE | EXPIRING_SOON | EXPIRED | INVALID | UNKNOWN | null */
+    metaTokenStatus: string | null;
     canTeam: boolean;
     teamAtMax: boolean;
     campaignAtMax: boolean;
@@ -114,12 +116,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     const planTier = dashData?.plan.plan ?? "free";
 
+    const wa = dashData?.whatsapp;
+    const metaTokenStatus = wa?.tokenStatus ?? null;
+    // الاتصال الحقيقي = المعرّفات موجودة + التوكن مش INVALID ومش EXPIRED
+    const hasMetaConnection = Boolean(
+        wa?.phoneNumberId &&
+        wa?.wabaId &&
+        metaTokenStatus !== "INVALID" &&
+        metaTokenStatus !== "EXPIRED"
+    );
+
     const value: SubscriptionContextValue = {
         dashData,
         loadingDash,
         refreshDash,
         planTier,
-        hasMetaConnection: !!dashData?.whatsapp?.phoneNumberId && !!dashData?.whatsapp?.wabaId,
+        hasMetaConnection,
+        metaTokenStatus,
         canTeam,
         teamAtMax,
         campaignAtMax,

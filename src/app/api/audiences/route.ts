@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { MessageDirection } from "@/types/enums";
 import { acquireContactsLimitLock, checkContactsLimit, getContactsLimitStatus } from "@/lib/plan-guard";
 import { normalizePhone } from "@/lib/phone";
+import { requirePermission } from "@/lib/permissions";
 
 function uid(session: any): string {
   return (session.user.parentId as string | null) ?? (session.user.id as string);
@@ -46,7 +47,8 @@ async function getReturningContactIds(userId: string, since: Date): Promise<stri
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CONTACTS_VIEW");
+  if (denied) return denied;
   const userId = uid(session);
   const { searchParams } = new URL(req.url);
   const audienceId = searchParams.get("audienceId");
@@ -363,7 +365,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+  if (denied) return denied;
   const userId = uid(session);
 
   const body = await req.json();
@@ -490,7 +493,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+  if (denied) return denied;
   const userId = uid(session);
 
   const { id, contacts } = await req.json();
@@ -542,7 +546,8 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  const denied = requirePermission(session, "CONTACTS_MANAGE");
+  if (denied) return denied;
   const userId = uid(session);
 
   const { id } = await req.json();

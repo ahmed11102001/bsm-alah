@@ -19,6 +19,8 @@ export interface IntegrationCardProps {
   locale?: string;
   connected?: boolean;
   connectedLabel?: string;
+  /** 'invalid' = red badge (INVALID/EXPIRED), 'expiring' = amber badge (EXPIRING_SOON) */
+  tokenWarning?: 'invalid' | 'expiring' | null;
 }
 
 export function IntegrationCard({
@@ -35,6 +37,7 @@ export function IntegrationCard({
   locale = "ar",
   connected = false,
   connectedLabel,
+  tokenWarning,
 }: IntegrationCardProps) {
   const [showGuide, setShowGuide] = useState(false);
   const v = CARD_VISUALS.find(c => c.id === id);
@@ -73,6 +76,16 @@ export function IntegrationCard({
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
               <Lock className="w-3 h-3" />
               {locale === "ar" ? "باقة Pro" : "Pro Plan"}
+            </span>
+          ) : connected && tokenWarning === 'invalid' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              {locale === "ar" ? "معطوب — أعد الربط" : "Broken — Reconnect"}
+            </span>
+          ) : connected && tokenWarning === 'expiring' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              {locale === "ar" ? "ينتهي قريباً" : "Expiring soon"}
             </span>
           ) : connected ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
