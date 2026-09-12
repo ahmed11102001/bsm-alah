@@ -521,6 +521,11 @@ model ShopifyStore {
   clientSecret          String?
   cachedAccessToken     String?
   cachedTokenExpiresAt  DateTime?
+  // OAuth expiring offline tokens (شوبيفاي بتفرضهم على كل Public App قبل
+  // 1 يناير 2027) — accessToken هنا لسه هو المستخدم فعليًا، لكن لو الحقلين
+  // دول مليانين يبقى محتاج refresh دوري بدل ما يتفتكر دائم زي legacy_token.
+  refreshToken          String?
+  tokenExpiresAt        DateTime?
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt

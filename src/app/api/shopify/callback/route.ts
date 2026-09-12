@@ -86,8 +86,21 @@ export async function GET(req: NextRequest) {
 
   if (!tokenRes?.ok) return fail("token_exchange_failed");
 
-  const data = (await tokenRes.json().catch(() => ({}))) as { access_token?: unknown };
+  const data = (await tokenRes.json().catch(() => ({}))) as {
+    access_token?: unknown;
+    refresh_token?: unknown;
+    expires_in?: unknown;
+  };
   if (typeof data.access_token !== "string" || !data.access_token) return fail("no_token");
+
+  // شوبيفاي بدأت تدي توكنات OAuth منتهية الصلاحية لبعض الـPublic Apps تدريجيًا
+  // (إلزامي للكل بحلول 1 يناير 2027) — لو الرد فيه expires_in/refresh_token
+  // نخزنهم ونفعّل التجديد التلقائي في shopify-auth.ts. لو مفيش، يبقى لسه
+  // توكن دائم زي زمان (tokenExpiresAt/refreshToken = null) — صفر تغيير.
+  const hasExpiry = typeof data.expires_in === "number" && data.expires_in > 0
+    && typeof data.refresh_token === "string" && data.refresh_token;
+  const tokenExpiresAt = hasExpiry ? new Date(Date.now() + (data.expires_in as number) * 1000) : null;
+  const encryptedRefreshToken = hasExpiry ? encryptToken(data.refresh_token as string) : null;
 
   // ── منع ربط متجر مربوط بحساب آخر (نفس قاعدة install/route.ts) ─────────────
   const existingStore = await prisma.shopifyStore.findFirst({
@@ -104,6 +117,8 @@ export async function GET(req: NextRequest) {
       shop,
       storeName: shop.replace(".myshopify.com", ""),
       accessToken: encryptToken(data.access_token),
+      tokenExpiresAt,
+      refreshToken: encryptedRefreshToken,
       isActive: true,
       updatedAt: new Date(),
     },
@@ -112,6 +127,8 @@ export async function GET(req: NextRequest) {
       shop,
       storeName: shop.replace(".myshopify.com", ""),
       accessToken: encryptToken(data.access_token),
+      tokenExpiresAt,
+      refreshToken: encryptedRefreshToken,
       isActive: true,
     },
   });
@@ -131,7 +148,7 @@ export async function GET(req: NextRequest) {
         const scopeCheck = await verifyShopifyProductScope(shop, resolvedToken);
         if (scopeCheck.hasProductScope) {
           const { inngest } = await import("@/inngest/client");
-          void inngest.send({ name: "product/sync.requested", data: { userId, source: "shopify" } }).catch(() => {});
+          void inngest.send({ name: "product/sync.requested", data: { userId, source: "shopify" } }).catch(() => { });
         }
       }
     }
