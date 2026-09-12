@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import DemoModeBanner from "./_components/DemoModeBanner";
 import { DEMO_NOTIFICATIONS, type DemoNotification } from "./_lib/demo-data";
+import { playNavSound } from "@/lib/sounds";
 import DeviceNotificationModal, { ALL_NOTIFICATION_TYPES_LIST, USER_NOTIFICATION_TYPES_LIST } from "@/components/dashboard/DeviceNotificationModal";
 
 // ─── Theme Toggle (نفس الأصلي بالظبط، مفيش فيه أي fetch) ─────────────────────
@@ -627,6 +628,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             {sidebarItems.map((item) => (
               <Link key={item.id} href={sidebarHref(item.id)}
                 data-sidebar-id={item.id}
+                onClick={() => playNavSound()}
                 title={sidebarCollapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
                   } ${activeSection === item.id
@@ -710,7 +712,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   key={item.id}
                   href={sidebarHref(item.id)}
                   data-sidebar-id={item.id}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    playNavSound();
+                    setMobileMenuOpen(false);
+                  }}
                   className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
                     ? "bg-[#25D366] text-white shadow-sm"
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"

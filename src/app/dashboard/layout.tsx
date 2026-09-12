@@ -35,6 +35,7 @@ import NotificationBell from "@/components/dashboard/NotificationBell";
 import DashboardAssistant from "@/components/dashboard/assistant";
 import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
 import PushNotificationPrompt from "@/components/dashboard/PushNotificationPrompt";
+import { playNavSound } from "@/lib/sounds";
 
 // ─── Theme Toggle ─────────────────────────────────────────────────────────────
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
@@ -397,6 +398,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             key={item.id}
             href={item.href}
             onClick={() => {
+              playNavSound();
               setAccountPanelOpen(false);
               if (closeMobile) setMobileMenuOpen(false);
             }}
@@ -436,6 +438,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {sidebarItems.map((item) => (
             <Link key={item.id} href={sidebarHref(item.id)}
               data-sidebar-id={item.id}
+              onClick={() => playNavSound()}
               title={sidebarCollapsed ? item.label : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
                 } ${activeSection === item.id
@@ -450,6 +453,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {/* Admin is part of navigation — NOT part of Account. */}
           {isSuper && (
             <Link href={sidebarHref("admin")}
+              onClick={() => playNavSound()}
               title={sidebarCollapsed ? t.sidebar.admin : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${sidebarCollapsed ? "justify-center px-0" : ""
                 } ${activeSection === "admin"
@@ -471,7 +475,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             data-sidebar-id="account"
-            onClick={openAccountPanel}
+            onClick={() => {
+              playNavSound();
+              openAccountPanel();
+            }}
             title={sidebarCollapsed ? `${accountLabel} — ${planName}` : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
               } ${accountPanelOpen
@@ -599,7 +606,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 key={item.id}
                 href={sidebarHref(item.id)}
                 data-sidebar-id={item.id}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  playNavSound();
+                  setMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
                   ? "bg-[#25D366] text-white shadow-sm"
                   : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
@@ -613,7 +623,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             {isSuper && (
               <Link
                 href={sidebarHref("admin")}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  playNavSound();
+                  setMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === "admin"
                   ? "bg-red-500 text-white shadow-sm"
                   : "bg-white dark:bg-gray-800 text-red-500"
@@ -629,7 +642,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <div className="px-4 mt-4 mb-6">
             <button
               type="button"
-              onClick={() => setAccountPanelOpen((prev) => !prev)}
+              onClick={() => {
+                playNavSound();
+                setAccountPanelOpen((prev) => !prev);
+              }}
               className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition-all shadow-sm"
             >
               <User className="w-5 h-5 flex-shrink-0" />
