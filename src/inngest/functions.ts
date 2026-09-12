@@ -440,7 +440,7 @@ export const processCampaign = inngest.createFunction(
         }
 
         const setting = await resolveCampaignFollowUpSetting(campaign.userId, campaignId);
-        
+
         if (setting) {
           try {
             await inngest.send({
@@ -616,7 +616,22 @@ export const sendDirectMessage = inngest.createFunction(
             data: { status: MessageStatus.failed, error: result.error },
           });
         }
-        if (!result.ok) throw new Error(result.error); // Inngest هيعيد المحاولة
+
+        // ── Production Audit — البند 🟠5 ────────────────────────────────────
+        // isTokenError = فشل دائم: التوكن اتعلّم إنه INVALID فعلاً في نفس
+        // الخطوة (markWhatsAppTokenInvalidByPhoneNumberId جوه sendWhatsAppMessage)،
+        // فمفيش أي فايدة إن Inngest يعيد المحاولة بنفس التوكن الفاسد — ده كان
+        // بيستهلك retries على الفاضي (وبيأخر استقرار حالة "فشل" النهائية للمستخدم
+        // من غير داعي). الحالة اتسجلت failed فوق بالفعل، فبنعمل return هنا
+        // (مش throw) عشان Inngest يعتبرها انتهت بنجاح — "نجاح" بمعنى "اتعالجت
+        // ووصلنا لقرار نهائي"، مش بمعنى الرسالة اتبعتت.
+        // أي فشل تاني (rate limit 429، خطأ شبكة، خطأ عام من ميتا) لسه بيتعامل
+        // زي الأول (throw) عشان Inngest يعيد المحاولة، لأن ده ممكن يكون مؤقت.
+        if (result.isTokenError) {
+          return { ok: false, retried: false, reason: "token_invalid" };
+        }
+
+        throw new Error(result.error); // Inngest هيعيد المحاولة (فشل مؤقت محتمل)
       }
     });
 

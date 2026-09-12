@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { rateLimit } from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
+import { wasRoleChangedSince } from "@/lib/session-invalidation";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -183,7 +184,15 @@ export const authOptions: NextAuthOptions = {
       const FIVE_MINUTES = 5 * 60 * 1000;
       const lastVerified = (token.isSuperVerifiedAt as number) ?? 0;
 
-      if (Date.now() - lastVerified > FIVE_MINUTES) {
+      // ── فحص فوري (Production Audit — البند 🟠3) ──────────────────────────
+      // بدل ما نستنى انتهاء الـ5 دقائق، بنسأل Redis (عملية سريعة جدًا) هل
+      // حصل تغيير دور لليوزر ده بعد آخر مرة اتأكدنا فيها؟ لو آه، نجبر
+      // refresh فوري من الداتابيز حتى لو لسه مرّش 5 دقائق. لو مفيش Redis
+      // (Dev) أو الفحص فشل، بيرجع false والـcache الزمني العادي تحت بيشتغل
+      // كـSafety Net زي ما كان بالظبط.
+      const roleChangedImmediately = await wasRoleChangedSince(token.id as string, lastVerified);
+
+      if (roleChangedImmediately || Date.now() - lastVerified > FIVE_MINUTES) {
         const freshUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { isSuper: true, role: true, parentId: true, signupMethod: true, onboardingCompleted: true },

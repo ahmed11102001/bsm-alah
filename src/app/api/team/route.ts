@@ -9,6 +9,7 @@ import { requirePermission } from "@/lib/permissions";
 import { generateJoinCode, hashJoinCode, INVITATION_EXPIRY_HOURS } from "@/lib/team-invitations";
 import { sendTeamInviteEmail } from "@/lib/email";
 import { getRequestLocale } from "@/lib/locale-resolver";
+import { markRoleChanged } from "@/lib/session-invalidation";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -51,48 +52,48 @@ export async function GET() {
   const [assignedCounts, replyCounts, invitations] = await Promise.all([
     shouldLoadStats && memberIds.length > 0
       ? prisma.contact.groupBy({
-          by: ["assignedToUserId"],
-          where: {
-            userId: ownerId,
-            assignedToUserId: { in: memberIds },
-            deletedAt: null,
-            isArchived: false,
-          },
-          _count: { id: true },
-        })
+        by: ["assignedToUserId"],
+        where: {
+          userId: ownerId,
+          assignedToUserId: { in: memberIds },
+          deletedAt: null,
+          isArchived: false,
+        },
+        _count: { id: true },
+      })
       : Promise.resolve([]),
     shouldLoadStats && memberIds.length > 0
       ? prisma.message.groupBy({
-          by: ["senderUserId"],
-          where: {
-            senderUserId: { in: memberIds },
-            direction: "outbound",
-            senderType: "human",
-            deletedAt: null,
-          },
-          _count: { id: true },
-        })
+        by: ["senderUserId"],
+        where: {
+          senderUserId: { in: memberIds },
+          direction: "outbound",
+          senderType: "human",
+          deletedAt: null,
+        },
+        _count: { id: true },
+      })
       : Promise.resolve([]),
     role === "OWNER"
       ? prisma.teamInvitation.findMany({
-          where: {
-            inviterId: ownerId,
-            status: "PENDING",
-            expiresAt: { gt: new Date() },
-          },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            status: true,
-            expiresAt: true,
-            lastSentAt: true,
-            sendCount: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: "desc" },
-        })
+        where: {
+          inviterId: ownerId,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          expiresAt: true,
+          lastSentAt: true,
+          sendCount: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
       : Promise.resolve([]),
   ]);
 
@@ -112,9 +113,9 @@ export async function GET() {
         ...member,
         ...(isSelf
           ? {
-              conversationCount: assignedMap.get(member.id) ?? 0,
-              repliesCount: repliesMap.get(member.id) ?? 0,
-            }
+            conversationCount: assignedMap.get(member.id) ?? 0,
+            repliesCount: repliesMap.get(member.id) ?? 0,
+          }
           : {}),
         createdAt: isSelf ? member.createdAt : undefined,
       };
@@ -125,9 +126,9 @@ export async function GET() {
       ...member,
       ...(canViewAllDetails
         ? {
-            conversationCount: assignedMap.get(member.id) ?? 0,
-            repliesCount: repliesMap.get(member.id) ?? 0,
-          }
+          conversationCount: assignedMap.get(member.id) ?? 0,
+          repliesCount: repliesMap.get(member.id) ?? 0,
+        }
         : {}),
     };
   });
@@ -308,6 +309,9 @@ export async function PATCH(req: Request) {
     },
   });
 
+  // ── إجبار جلسة العضو المتأثر تتحقق فورًا بدل استنى الـ5 دقائق (البند 🟠3) ──
+  await markRoleChanged(memberId);
+
   return NextResponse.json({
     success: true,
     message: "تم تحديث دور العضو بنجاح",
@@ -368,6 +372,16 @@ export async function DELETE(req: Request) {
       data: { assignedToUserId: null },
     }),
   ]);
+
+  // ── نفس منطق تغيير الدور: نجبر أي جلسة نشطة للعضو المحذوف تتحقق فورًا ────
+  // ⚠️ ملاحظة مهمة (اكتشفتها أثناء هذا الإصلاح، مش جزء من طلبك الأصلي):
+  // جلسة العضو الحالية (JWT) بترجع فعليًا نفس role/parentId القديمين حتى بعد
+  // الحذف، لأن استعلام freshUser تحت في auth.ts مش بيتحقق من deletedAt خالص.
+  // يعني العلامة دي هتجبر refresh فوري، لكن الـrefresh نفسه لسه مش بيسحب
+  // الصلاحية فعليًا من عضو محذوف — ده يحتاج تعديل منفصل في auth.ts (إضافة
+  // deletedAt للـselect + معالجة صريحة)، وأنا مفضّلتش أعمله من غير ما أنبّهك
+  // لأنه بيغيّر سلوك حساس (احتمال قفل الجلسة بالكامل) ومحتاج اختبار حي.
+  await markRoleChanged(memberId);
 
   return NextResponse.json({ success: true, message: "تم حذف العضو بنجاح" });
 }
