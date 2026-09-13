@@ -258,16 +258,52 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
     return currentThemeConfig.colors[mode].chart;
   }, [currentThemeConfig, isDark]);
 
+  // Temporarily disable all transitions so theme switching is completely instant (⚡)
+  const disableAnimationTemporarily = useCallback(() => {
+    if (typeof document === "undefined") return () => {};
+    const css = document.createElement("style");
+    css.setAttribute("data-theme-transition-lock", "true");
+    css.appendChild(
+      document.createTextNode(
+        `*, *::before, *::after {
+          -webkit-transition: none !important;
+          -moz-transition: none !important;
+          -o-transition: none !important;
+          -ms-transition: none !important;
+          transition: none !important;
+        }`
+      )
+    );
+    document.head.appendChild(css);
+
+    return () => {
+      // Force layout reflow with transitions disabled
+      (() => window.getComputedStyle(document.body))();
+      // Restore normal transitions in the next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            if (document.head.contains(css)) {
+              document.head.removeChild(css);
+            }
+          } catch {}
+        });
+      });
+    };
+  }, []);
+
   const setTheme = useCallback(async (newTheme: DashboardTheme) => {
     if (!VALID_THEMES.includes(newTheme)) return;
 
-    setThemeState(newTheme);
+    const restore = disableAnimationTemporarily();
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
       document.documentElement.setAttribute("data-theme", newTheme);
     } catch {
       // ignore localStorage errors in sandboxed environments
     }
+    setThemeState(newTheme);
+    restore();
 
     // Persist to user settings in background if authenticated
     fetch("/api/me/settings", {
@@ -277,7 +313,7 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
     }).catch((err) => {
       console.warn("[theme] Failed to persist theme to backend:", err);
     });
-  }, []);
+  }, [disableAnimationTemporarily]);
 
   // Sync with user's saved theme from database when they log in / profile loads
   const syncWithUserTheme = useCallback((backendTheme?: string | null) => {
@@ -285,16 +321,18 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
       const valid = backendTheme as DashboardTheme;
       setThemeState((current) => {
         if (current !== valid) {
+          const restore = disableAnimationTemporarily();
           try {
             localStorage.setItem(STORAGE_KEY, valid);
             document.documentElement.setAttribute("data-theme", valid);
           } catch { }
+          restore();
           return valid;
         }
         return current;
       });
     }
-  }, []);
+  }, [disableAnimationTemporarily]);
 
   // Expose sync helper on window for subscription / settings sync
   useEffect(() => {

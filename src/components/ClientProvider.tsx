@@ -12,7 +12,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         attribute="class"
         defaultTheme="system"
         enableSystem
-        disableTransitionOnChange={false}
+        disableTransitionOnChange
       >
         <DashboardThemeProvider>
           {children}
