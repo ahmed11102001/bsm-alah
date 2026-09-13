@@ -1,5 +1,5 @@
-// src/app/dashboard/store/_components/CustomerCard.tsx
-// ─── كارد عرض بيانات عميل واحد ──────────────────────────────────────────────
+﻿// src/app/dashboard/store/_components/CustomerCard.tsx
+// â”€â”€â”€ ÙƒØ§Ø±Ø¯ Ø¹Ø±Ø¶ Ø¨ÙŠØ§Ù†Ø§Øª Ø¹Ù…ÙŠÙ„ ÙˆØ§Ø­Ø¯ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import { useState } from "react";
 import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
@@ -19,15 +19,15 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
 
     const statusKey = customer.lastOrder?.status?.toLowerCase() ?? "";
     const statusClass = STATUS_BADGE[statusKey] ?? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-    const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
+    const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "Ø¹" : "C");
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
 
             {/* Header */}
             <div className="p-4 flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#25D366] font-bold text-sm">{initial}</span>
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary font-bold text-sm">{initial}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-800 dark:text-white truncate">{customer.name}</p>
@@ -48,9 +48,9 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
                         {customer.lastOrder.status ?? "pending"}
                     </span>
                     <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {customer.lastOrder.orderNumber ? `#${customer.lastOrder.orderNumber}` : "—"}
+                        {customer.lastOrder.orderNumber ? `#${customer.lastOrder.orderNumber}` : "â€”"}
                         {customer.lastOrder.total != null
-                            ? ` · ${formatMoney(customer.lastOrder.total, lang, customer.currency)}`
+                            ? ` Â· ${formatMoney(customer.lastOrder.total, lang, customer.currency)}`
                             : ""}
                     </span>
                 </div>
@@ -60,7 +60,7 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
             <div className="px-4 pb-4 flex gap-2">
                 <button
                     onClick={() => onChat(customer.phone)}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20bb5a] active:bg-[#1aaa52] text-white text-xs font-medium py-2.5 rounded-xl transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white text-xs font-medium py-2.5 rounded-xl transition-colors"
                 >
                     <MessageSquare className="w-3.5 h-3.5" />
                     {tr("openChat", lang)}
@@ -83,7 +83,7 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
                         <span>
                             {customer.lastOrder
                                 ? `${tr("lastSync", lang)}: ${formatDate(customer.lastOrder.orderedAt, lang)}`
-                                : (lang === "ar" ? "لا توجد طلبات" : "No orders")}
+                                : (lang === "ar" ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª" : "No orders")}
                         </span>
                     </div>
                 </div>

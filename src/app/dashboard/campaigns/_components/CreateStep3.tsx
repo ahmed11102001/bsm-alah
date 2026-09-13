@@ -27,7 +27,7 @@ export function CreateStep3({
         <div className="grid grid-cols-2 gap-2">
           {(["now", "scheduled"] as const).map(mode => (
             <button key={mode} onClick={() => setSendMode(mode)}
-              className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${sendMode === mode ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400" : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300"}`}>
+              className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${sendMode === mode ? "border-primary bg-primary/10 text-primary" : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300"}`}>
               {mode === "now" ? <><Send className="w-4 h-4" /> {tr("sendNow", lang)}</> : <><Calendar className="w-4 h-4" /> {tr("scheduleLater", lang)}</>}
             </button>
           ))}
@@ -89,7 +89,7 @@ export function CreateStep3({
         <Button variant="outline" className="flex-1 gap-2 dark:border-gray-600 dark:text-gray-300" onClick={onBack}>
           {lang === "ar" ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />} {tr("prev", lang)}
         </Button>
-        <Button className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-2" onClick={onSubmit}
+        <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-2" onClick={onSubmit}
           disabled={submitting || !campaignName.trim() || !selectedTemplate}>
           {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> {tr("launching", lang)}</>
             : sendMode === "now" ? <><Send className="w-4 h-4" /> {tr("sendCampaign", lang)}</>

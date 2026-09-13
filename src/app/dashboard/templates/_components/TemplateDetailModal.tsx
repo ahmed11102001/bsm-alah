@@ -34,8 +34,8 @@ export function TemplateDetailModal({ template, open, onClose, onDelete, lang }:
             <DialogContent className="max-w-lg dark:bg-gray-800 dark:border-gray-700">
                 <DialogHeader>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 dark:bg-[#25D366]/20 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-[#25D366]" />
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div>
                             <DialogTitle className="font-mono text-base dark:text-white">{template.name}</DialogTitle>

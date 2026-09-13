@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-// نُقل من chat/page.tsx
+// Ù†ÙÙ‚Ù„ Ù…Ù† chat/page.tsx
 
 import { Bot, CheckCheck, Clock, Paperclip, Users } from "lucide-react";
 import type { Lang } from "./i18n";
@@ -12,7 +12,7 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
     return (
       <div className="flex justify-center py-12">
         <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
-          لا توجد بيانات للأتمتة
+          Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù„Ù„Ø£ØªÙ…ØªØ©
         </p>
       </div>
     );
@@ -29,9 +29,9 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
           </div>
           <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-[#1f2c34] border-[#2a3942]" : "bg-white border-gray-100"}`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">🚀</span>
+              <span className="text-xl">ðŸš€</span>
               <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>
-                {lang === "ar" ? "بداية الأتمتة" : "Automation Started"}
+                {lang === "ar" ? "Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ø£ØªÙ…ØªØ©" : "Automation Started"}
               </h4>
             </div>
             <p className={`text-xs ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
@@ -42,30 +42,30 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
 
         {messages.map((msg, i) => {
           const isMe = msg.direction === "outbound";
-          // We consider it bot if it has [متابعة ذكية] or if it is an outbound message and the filter is automation (which implies bot messages). Actually msg doesn't have senderType here.
+          // We consider it bot if it has [Ù…ØªØ§Ø¨Ø¹Ø© Ø°ÙƒÙŠØ©] or if it is an outbound message and the filter is automation (which implies bot messages). Actually msg doesn't have senderType here.
           // But we can check content for keywords or just assume if it's from bot in an automated workflow.
-          const isBot = isMe && (msg.content?.includes("[متابعة ذكية]") || msg.content?.includes("[قالب]"));
+          const isBot = isMe && (msg.content?.includes("[Ù…ØªØ§Ø¨Ø¹Ø© Ø°ÙƒÙŠØ©]") || msg.content?.includes("[Ù‚Ø§Ù„Ø¨]"));
           const isCustomer = msg.direction === "inbound";
           
-          let icon = "💬";
-          let title = isMe ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer");
-          let dotColor = isMe ? "bg-[#25d366]" : "bg-gray-400";
+          let icon = "ðŸ’¬";
+          let title = isMe ? (lang === "ar" ? "Ø£Ù†Øª" : "You") : (lang === "ar" ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer");
+          let dotColor = isMe ? "bg-primary" : "bg-gray-400";
           let dotIcon = isMe ? <CheckCheck className="w-3 h-3" /> : <Users className="w-3 h-3" />;
 
           if (isBot) {
-            icon = "🤖";
-            title = lang === "ar" ? "الأتمتة (رد آلي)" : "Automation (Bot)";
+            icon = "ðŸ¤–";
+            title = lang === "ar" ? "Ø§Ù„Ø£ØªÙ…ØªØ© (Ø±Ø¯ Ø¢Ù„ÙŠ)" : "Automation (Bot)";
             dotColor = "bg-amber-500";
             dotIcon = <Bot className="w-3 h-3" />;
           } else if (isCustomer) {
-            icon = "👤";
-            title = lang === "ar" ? "العميل" : "Customer";
+            icon = "ðŸ‘¤";
+            title = lang === "ar" ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer";
             dotColor = "bg-gray-400";
             dotIcon = <Users className="w-3 h-3" />;
           } else if (isMe) {
-            icon = "👨‍💻";
-            title = lang === "ar" ? "تدخل بشري" : "Human Agent";
-            dotColor = "bg-[#25d366]";
+            icon = "ðŸ‘¨â€ðŸ’»";
+            title = lang === "ar" ? "ØªØ¯Ø®Ù„ Ø¨Ø´Ø±ÙŠ" : "Human Agent";
+            dotColor = "bg-primary";
             dotIcon = <CheckCheck className="w-3 h-3" />;
           }
 
@@ -80,18 +80,18 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
                   <div>
                     <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>{title}</h4>
                     <p className={`text-[10px] ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
-                      {dateStr(msg.createdAt, lang)} • {timeStr(msg.createdAt)}
+                      {dateStr(msg.createdAt, lang)} â€¢ {timeStr(msg.createdAt)}
                     </p>
                   </div>
                 </div>
                 {msg.content && (
                   <div className={`text-sm p-3 rounded-lg ${dark ? "bg-[#2a3942] text-[#d1d7db]" : "bg-gray-50 text-gray-700"} whitespace-pre-wrap`}>
-                    {msg.content.replace("[متابعة ذكية] ", "").replace("[قالب] ", "")}
+                    {msg.content.replace("[Ù…ØªØ§Ø¨Ø¹Ø© Ø°ÙƒÙŠØ©] ", "").replace("[Ù‚Ø§Ù„Ø¨] ", "")}
                   </div>
                 )}
                 {msg.mediaUrl && (
                   <div className="mt-2 text-xs text-blue-500 flex items-center gap-1">
-                    <Paperclip className="w-3 h-3" /> {lang === "ar" ? "مرفق" : "Attachment"} ({msg.type})
+                    <Paperclip className="w-3 h-3" /> {lang === "ar" ? "Ù…Ø±ÙÙ‚" : "Attachment"} ({msg.type})
                   </div>
                 )}
               </div>
@@ -106,9 +106,9 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
           </div>
           <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-indigo-900/20 border-indigo-500/30" : "bg-indigo-50 border-indigo-100"}`}>
             <div className="flex items-center gap-2">
-              <span className="text-xl">✅</span>
+              <span className="text-xl">âœ…</span>
               <h4 className={`font-semibold text-sm ${dark ? "text-indigo-300" : "text-indigo-700"}`}>
-                {lang === "ar" ? "نهاية المسار المتاح" : "End of available workflow"}
+                {lang === "ar" ? "Ù†Ù‡Ø§ÙŠØ© Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„Ù…ØªØ§Ø­" : "End of available workflow"}
               </h4>
             </div>
           </div>
@@ -119,4 +119,5 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+

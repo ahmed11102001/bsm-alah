@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // src/app/dashboard/store/page.tsx
-// ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
+// â”€â”€â”€ ØµÙØ­Ø© Ø§Ù„Ù…ØªØ¬Ø± â€” Ø¹Ù…Ù„Ø§Ø¡ + Ø£ØªÙ…ØªØ§Øª + Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ø­Ù…Ù„Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import { useCallback, useEffect, useState } from "react";
 import { ShoppingBag, Zap, Globe, Loader2, Unplug } from "lucide-react";
@@ -14,7 +14,7 @@ import type { Lang, StoreData } from "./_components/types";
 import { tr } from "./_components/constants";
 import { StoreTab } from "./_components/StoreTab";
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface StoreProps {
   onOpenChat?: (phone: string) => void;
@@ -51,7 +51,7 @@ export default function Store({ onOpenChat }: StoreProps) {
 
   useEffect(() => { loadStore(); }, [loadStore]);
 
-  // تحديث دوري صامت كل 20 ثانية عشان حالة ربط المتجر تتحدث لوحدها
+  // ØªØ­Ø¯ÙŠØ« Ø¯ÙˆØ±ÙŠ ØµØ§Ù…Øª ÙƒÙ„ 20 Ø«Ø§Ù†ÙŠØ© Ø¹Ø´Ø§Ù† Ø­Ø§Ù„Ø© Ø±Ø¨Ø· Ø§Ù„Ù…ØªØ¬Ø± ØªØªØ­Ø¯Ø« Ù„ÙˆØ­Ø¯Ù‡Ø§
   useEffect(() => {
     const id = setInterval(() => loadStore(true), 20_000);
     return () => clearInterval(id);
@@ -90,12 +90,12 @@ export default function Store({ onOpenChat }: StoreProps) {
     }
   };
 
-  // ── Loading ──────────────────────────────────────────────────────────────
+  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (loading) {
     return <CardsGridSkeleton count={3} />;
   }
 
-  // ── No Store ─────────────────────────────────────────────────────────────
+  // â”€â”€ No Store â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const hasStore = storeData?.shopify || storeData?.easyorders || storeData?.woocommerce;
   if (!hasStore) {
     return (
@@ -119,7 +119,7 @@ export default function Store({ onOpenChat }: StoreProps) {
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
 
-      {/* ── Page Header ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ Page Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
@@ -132,14 +132,14 @@ export default function Store({ onOpenChat }: StoreProps) {
                 {tr("disconnected", lang)}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
                 {tr("connected", lang)}
               </span>
             )}
             <span className="text-xs text-gray-400">
               {activeStore?.source === "shopify" ? "Shopify"
-                : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
+                : activeStore?.source === "easyorders" ? (lang === "ar" ? "Ø¥ÙŠØ²ÙŠ Ø£ÙˆØ±Ø¯Ø±Ø²" : "EasyOrders")
                   : "WooCommerce"}
             </span>
           </div>
@@ -161,7 +161,7 @@ export default function Store({ onOpenChat }: StoreProps) {
         )}
       </div>
 
-      {/* ── Tabs (لو في متجرين) ────────────────────────────────────────────── */}
+      {/* â”€â”€ Tabs (Ù„Ùˆ ÙÙŠ Ù…ØªØ¬Ø±ÙŠÙ†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {hasBoth && (
         <div className="flex gap-1.5 mb-6 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl w-fit">
           {(["shopify", "easyorders", "woocommerce"] as const).map((src) => {
@@ -174,7 +174,7 @@ export default function Store({ onOpenChat }: StoreProps) {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-[10px] text-sm font-medium transition-all",
                   activeTab === src
-                    ? "bg-white dark:bg-gray-800 text-[#25D366] shadow-sm"
+                    ? "bg-white dark:bg-gray-800 text-primary shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 )}
               >
@@ -190,7 +190,7 @@ export default function Store({ onOpenChat }: StoreProps) {
         </div>
       )}
 
-      {/* ── Tab Content ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ Tab Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeStore && (
         <StoreTab
           store={activeStore}

@@ -81,7 +81,7 @@ export function CreateStep2({
         <Button variant="outline" className="flex-1 gap-2 dark:border-gray-600 dark:text-gray-300" onClick={onBack}>
           {lang === "ar" ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />} {tr("prev", lang)}
         </Button>
-        <Button className="flex-1 bg-green-500 hover:bg-green-600 text-white gap-2" onClick={onNext} disabled={!selectedTemplate}>
+        <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-2" onClick={onNext} disabled={!selectedTemplate}>
           {tr("nextSettings", lang)} {lang === "ar" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </Button>
       </div>

@@ -1,4 +1,4 @@
-// src/app/dashboard/admin/_components/PaymentsTab.tsx
+﻿// src/app/dashboard/admin/_components/PaymentsTab.tsx
 "use client";
 import { ListRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
@@ -42,19 +42,19 @@ const STATUS_BADGES: Record<
   { labelAr: string; labelEn: string; className: string; icon: any }
 > = {
   PENDING: {
-    labelAr: "قيد المراجعة",
+    labelAr: "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©",
     labelEn: "Pending",
     className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
     icon: Clock,
   },
   APPROVED: {
-    labelAr: "مؤكّد",
+    labelAr: "Ù…Ø¤ÙƒÙ‘Ø¯",
     labelEn: "Approved",
     className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
     icon: CheckCircle2,
   },
   REJECTED: {
-    labelAr: "مرفوض",
+    labelAr: "Ù…Ø±ÙÙˆØ¶",
     labelEn: "Rejected",
     className: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800",
     icon: XCircle,
@@ -62,17 +62,17 @@ const STATUS_BADGES: Record<
 };
 
 const TYPE_LABELS: Record<string, { ar: string; en: string }> = {
-  subscription: { ar: "اشتراك", en: "Subscription" },
-  token_package: { ar: "باقة توكن", en: "Token Package" },
-  mcp_addon: { ar: "إضافة Claude", en: "Claude Addon" },
-  developer_owner_plan: { ar: "باقة أونر (مطوّر)", en: "Owner Plan (Developer)" },
+  subscription: { ar: "Ø§Ø´ØªØ±Ø§Ùƒ", en: "Subscription" },
+  token_package: { ar: "Ø¨Ø§Ù‚Ø© ØªÙˆÙƒÙ†", en: "Token Package" },
+  mcp_addon: { ar: "Ø¥Ø¶Ø§ÙØ© Claude", en: "Claude Addon" },
+  developer_owner_plan: { ar: "Ø¨Ø§Ù‚Ø© Ø£ÙˆÙ†Ø± (Ù…Ø·ÙˆÙ‘Ø±)", en: "Owner Plan (Developer)" },
 };
 
 function formatDate(d: string | null, locale: string): string {
-  if (!d) return "—";
+  if (!d) return "â€”";
   try {
     const date = new Date(d);
-    if (isNaN(date.getTime())) return "—";
+    if (isNaN(date.getTime())) return "â€”";
     return date.toLocaleString(locale === "ar" ? "ar-EG" : "en-US", {
       timeZone: "Africa/Cairo",
       day: "2-digit",
@@ -82,7 +82,7 @@ function formatDate(d: string | null, locale: string): string {
       minute: "2-digit",
     });
   } catch {
-    return "—";
+    return "â€”";
   }
 }
 
@@ -109,14 +109,14 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
       const res = await fetch(`/api/admin/payments?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || (isAr ? "تعذر تحميل المدفوعات" : "Failed to load payments"));
+        setError(data.error || (isAr ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª" : "Failed to load payments"));
         return;
       }
       setRequests(data.requests ?? []);
       setCounts(data.counts ?? { PENDING: 0, APPROVED: 0, REJECTED: 0 });
       onPendingCountChange?.(data.counts?.PENDING ?? 0);
     } catch {
-      setError(isAr ? "تعذر تحميل المدفوعات" : "Failed to load payments");
+      setError(isAr ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª" : "Failed to load payments");
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
   }, [fetchRequests]);
 
   async function handleAction(id: string, action: "approve" | "reject") {
-    if (action === "reject" && !confirm(isAr ? "متأكد إنك عايز ترفض طلب الدفع ده؟" : "Reject this payment request?")) {
+    if (action === "reject" && !confirm(isAr ? "Ù…ØªØ£ÙƒØ¯ Ø¥Ù†Ùƒ Ø¹Ø§ÙŠØ² ØªØ±ÙØ¶ Ø·Ù„Ø¨ Ø§Ù„Ø¯ÙØ¹ Ø¯Ù‡ØŸ" : "Reject this payment request?")) {
       return;
     }
     setActingId(id);
@@ -142,31 +142,31 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || (isAr ? "حدث خطأ" : "Something went wrong"));
+        alert(data.error || (isAr ? "Ø­Ø¯Ø« Ø®Ø·Ø£" : "Something went wrong"));
         return;
       }
       await fetchRequests();
     } catch {
-      alert(isAr ? "حدث خطأ أثناء تنفيذ الطلب" : "Something went wrong");
+      alert(isAr ? "Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªÙ†ÙÙŠØ° Ø§Ù„Ø·Ù„Ø¨" : "Something went wrong");
     } finally {
       setActingId(null);
     }
   }
 
   const filterTabs: { id: string; labelAr: string; labelEn: string; count?: number }[] = [
-    { id: "PENDING", labelAr: "قيد المراجعة", labelEn: "Pending", count: counts.PENDING },
-    { id: "APPROVED", labelAr: "مؤكّدة", labelEn: "Approved", count: counts.APPROVED },
-    { id: "REJECTED", labelAr: "مرفوضة", labelEn: "Rejected", count: counts.REJECTED },
-    { id: "all", labelAr: "الكل", labelEn: "All" },
+    { id: "PENDING", labelAr: "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©", labelEn: "Pending", count: counts.PENDING },
+    { id: "APPROVED", labelAr: "Ù…Ø¤ÙƒÙ‘Ø¯Ø©", labelEn: "Approved", count: counts.APPROVED },
+    { id: "REJECTED", labelAr: "Ù…Ø±ÙÙˆØ¶Ø©", labelEn: "Rejected", count: counts.REJECTED },
+    { id: "all", labelAr: "Ø§Ù„ÙƒÙ„", labelEn: "All" },
   ];
 
   return (
     <div dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Wallet className="w-5 h-5 text-[#25D366]" />
+          <Wallet className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isAr ? "المدفوعات" : "Payments"}
+            {isAr ? "Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª" : "Payments"}
           </h2>
         </div>
         <button
@@ -174,7 +174,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
           className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          {isAr ? "تحديث" : "Refresh"}
+          {isAr ? "ØªØ­Ø¯ÙŠØ«" : "Refresh"}
         </button>
       </div>
 
@@ -185,7 +185,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
             onClick={() => setStatusFilter(tab.id)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               statusFilter === tab.id
-                ? "bg-[#25D366] text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:text-gray-800"
             }`}
           >
@@ -202,8 +202,8 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "بحث بالاسم أو الإيميل..." : "Search name or email..."}
-            className="w-full ps-8 pe-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:border-[#25D366]"
+            placeholder={isAr ? "Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„..." : "Search name or email..."}
+            className="w-full ps-8 pe-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary"
           />
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
       ) : requests.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
           <Wallet className="w-10 h-10 mb-2 opacity-40" />
-          <p className="text-sm">{isAr ? "لا توجد طلبات دفع" : "No payment requests"}</p>
+          <p className="text-sm">{isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ø¯ÙØ¹" : "No payment requests"}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -230,8 +230,8 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
             const isExpanded = expandedId === r.id;
             const isDeveloperRequest = Boolean(r.developerUserId);
             const displayName = r.user?.name
-              ?? (r.developerUser ? `${r.developerUser.firstName} ${r.developerUser.lastName}`.trim() || r.developerUser.email : "—");
-            const displayEmail = r.user?.email ?? r.developerUser?.email ?? "—";
+              ?? (r.developerUser ? `${r.developerUser.firstName} ${r.developerUser.lastName}`.trim() || r.developerUser.email : "â€”");
+            const displayEmail = r.user?.email ?? r.developerUser?.email ?? "â€”";
             const displayPhone = r.user?.phone ?? r.developerUser?.phone ?? null;
 
             return (
@@ -251,11 +251,11 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                       {displayName}
                       {isDeveloperRequest && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800">
-                          {isAr ? "مطوّر" : "Developer"}
+                          {isAr ? "Ù…Ø·ÙˆÙ‘Ø±" : "Developer"}
                         </span>
                       )}
                       {isDeveloperRequest && r.developerProject && (
-                        <span className="text-[11px] font-normal text-gray-500">— {r.developerProject.name}</span>
+                        <span className="text-[11px] font-normal text-gray-500">â€” {r.developerProject.name}</span>
                       )}
                     </p>
                     <p className="text-xs text-gray-400 truncate">{displayEmail}</p>
@@ -279,24 +279,24 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                   <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-4 bg-gray-50/60 dark:bg-gray-900/20 space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                       <div>
-                        <p className="text-gray-400 mb-0.5">{isAr ? "النوع" : "Type"}</p>
+                        <p className="text-gray-400 mb-0.5">{isAr ? "Ø§Ù„Ù†ÙˆØ¹" : "Type"}</p>
                         <p className="font-bold text-gray-800 dark:text-gray-200">{isAr ? typeLabel.ar : typeLabel.en}</p>
                       </div>
                       {isDeveloperRequest && r.developerProject && (
                         <div>
-                          <p className="text-gray-400 mb-0.5">{isAr ? "المشروع" : "Project"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "Ø§Ù„Ù…Ø´Ø±ÙˆØ¹" : "Project"}</p>
                           <p className="font-bold text-gray-800 dark:text-gray-200">{r.developerProject.name}</p>
                         </div>
                       )}
                       {r.cycle && (
                         <div>
-                          <p className="text-gray-400 mb-0.5">{isAr ? "دورة الفوترة" : "Billing cycle"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "Ø¯ÙˆØ±Ø© Ø§Ù„ÙÙˆØªØ±Ø©" : "Billing cycle"}</p>
                           <p className="font-bold text-gray-800 dark:text-gray-200">{r.cycle}</p>
                         </div>
                       )}
                       {r.paymentMethod && (
                         <div>
-                          <p className="text-gray-400 mb-0.5">{isAr ? "طريقة الدفع" : "Payment method"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹" : "Payment method"}</p>
                           <p className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
                             <CreditCard className="w-3.5 h-3.5" />
                             {r.paymentMethod === "instapay" ? "InstaPay" : r.paymentMethod === "etisalat" ? "Etisalat Cash" : r.paymentMethod}
@@ -304,24 +304,24 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                         </div>
                       )}
                       <div>
-                        <p className="text-gray-400 mb-0.5">{isAr ? "رقم الهاتف" : "Phone"}</p>
-                        <p className="font-bold text-gray-800 dark:text-gray-200" dir="ltr">{displayPhone || "—"}</p>
+                        <p className="text-gray-400 mb-0.5">{isAr ? "Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ" : "Phone"}</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-200" dir="ltr">{displayPhone || "â€”"}</p>
                       </div>
                       {r.reviewedAt && (
                         <div>
-                          <p className="text-gray-400 mb-0.5">{isAr ? "تمت المراجعة" : "Reviewed"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "ØªÙ…Øª Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©" : "Reviewed"}</p>
                           <p className="font-bold text-gray-800 dark:text-gray-200">{formatDate(r.reviewedAt, locale)}</p>
                         </div>
                       )}
                       {r.reviewedBy && (
                         <div>
-                          <p className="text-gray-400 mb-0.5">{isAr ? "بواسطة" : "By"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "Ø¨ÙˆØ§Ø³Ø·Ø©" : "By"}</p>
                           <p className="font-bold text-gray-800 dark:text-gray-200">{r.reviewedBy.name || r.reviewedBy.email}</p>
                         </div>
                       )}
                       {r.rejectionReason && (
                         <div className="col-span-2">
-                          <p className="text-gray-400 mb-0.5">{isAr ? "سبب الرفض" : "Rejection reason"}</p>
+                          <p className="text-gray-400 mb-0.5">{isAr ? "Ø³Ø¨Ø¨ Ø§Ù„Ø±ÙØ¶" : "Rejection reason"}</p>
                           <p className="font-bold text-rose-600">{r.rejectionReason}</p>
                         </div>
                       )}
@@ -332,17 +332,17 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                         <input
                           value={rejectReason[r.id] || ""}
                           onChange={(e) => setRejectReason((s) => ({ ...s, [r.id]: e.target.value }))}
-                          placeholder={isAr ? "سبب الرفض (اختياري)" : "Rejection reason (optional)"}
-                          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-xs focus:outline-none focus:border-[#25D366]"
+                          placeholder={isAr ? "Ø³Ø¨Ø¨ Ø§Ù„Ø±ÙØ¶ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)" : "Rejection reason (optional)"}
+                          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-xs focus:outline-none focus:border-primary"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleAction(r.id, "approve")}
                             disabled={actingId === r.id}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white bg-[#25D366] hover:bg-[#1fb85a] disabled:opacity-50 transition"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white bg-primary hover:bg-[#1fb85a] disabled:opacity-50 transition"
                           >
                             {actingId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            {isAr ? "تأكيد الدفع" : "Confirm payment"}
+                            {isAr ? "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¯ÙØ¹" : "Confirm payment"}
                           </button>
                           <button
                             onClick={() => handleAction(r.id, "reject")}
@@ -350,7 +350,7 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
                             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 disabled:opacity-50 transition"
                           >
                             {actingId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-                            {isAr ? "رفض الدفع" : "Reject payment"}
+                            {isAr ? "Ø±ÙØ¶ Ø§Ù„Ø¯ÙØ¹" : "Reject payment"}
                           </button>
                         </div>
                       </div>
@@ -365,3 +365,4 @@ export default function PaymentsTab({ locale, dir, onPendingCountChange }: Payme
     </div>
   );
 }
+

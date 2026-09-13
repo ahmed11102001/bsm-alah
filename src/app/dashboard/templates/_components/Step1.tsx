@@ -83,10 +83,10 @@ export function Step1({ form, setForm, lang, onNext, onCancel }: {
                                     className={`w-full text-start rounded-xl border-2 p-4 transition-all
                     ${isAuth ? "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" : "hover:shadow-sm"}
                     ${!isAuth && form.category === cat.key
-                                            ? "border-[#25D366] bg-[#25D366]/5 dark:bg-[#25D366]/10 ring-1 ring-[#25D366]/30"
-                                            : !isAuth ? "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800" : ""
-                                        }`}
-                                >
+                        ? "border-primary bg-primary/5 dark:bg-primary/10 ring-1 ring-primary/30"
+                        : !isAuth ? "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800" : ""
+                    }`}
+                >
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${cat.key === "MARKETING" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" :
                                         cat.key === "UTILITY" ? "bg-blue-100   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400" :
                                             "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
@@ -130,7 +130,7 @@ export function Step1({ form, setForm, lang, onNext, onCancel }: {
                             onClick={() => setForm({ ...form, language: l.code })}
                             className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all
                 ${form.language === l.code
-                                    ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366] dark:text-[#25D366]"
+                                    ? "border-primary bg-primary/10 text-primary"
                                     : "border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500"
                                 }`}
                         >
@@ -142,7 +142,7 @@ export function Step1({ form, setForm, lang, onNext, onCancel }: {
 
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
                 <Button variant="outline" onClick={onCancel} className="dark:border-gray-600 dark:text-gray-300">{t.cancel}</Button>
-                <Button className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-2"
+                <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                     onClick={() => { if (validate()) onNext(); }}>
                     {t.next} <ChevronLeft className="w-4 h-4" />
                 </Button>

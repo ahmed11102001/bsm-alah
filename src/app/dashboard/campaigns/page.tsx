@@ -28,7 +28,7 @@ import { CreateStep2 } from "./_components/CreateStep2";
 import { CreateStep3 } from "./_components/CreateStep3";
 import type { Lang, Template, Campaign, AudienceContact, AudienceOption } from "./_components/types";
 
-// ─── Main Component ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Campaigns() {
   const { campaignAtMax: atLimit, hasMetaConnection: whatsappConnected } = useSubscription();
   const router = useRouter();
@@ -39,7 +39,7 @@ export default function Campaigns() {
   const [total, setTotal] = useState(0);
   const [loadingList, setLoadingList] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  // ضغط سعة التنفيذ من الباك إند — لشريط الشفافية عند وجود منتظرين
+  // Ø¶ØºØ· Ø³Ø¹Ø© Ø§Ù„ØªÙ†ÙÙŠØ° Ù…Ù† Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ â€” Ù„Ø´Ø±ÙŠØ· Ø§Ù„Ø´ÙØ§ÙÙŠØ© Ø¹Ù†Ø¯ ÙˆØ¬ÙˆØ¯ Ù…Ù†ØªØ¸Ø±ÙŠÙ†
   const [queueInfo, setQueueInfo] = useState<{
     globalActive: number; globalLimit: number; queuedWaiting: number;
   } | null>(null);
@@ -60,7 +60,7 @@ export default function Campaigns() {
   const [sendMode, setSendMode] = useState<"now" | "scheduled">("now");
   const [scheduledAt, setScheduledAt] = useState("");
 
-  // ── Dynamic template variables ───────────────────────────────────────────
+  // â”€â”€ Dynamic template variables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [templateVarValues, setTemplateVarValues] = useState<Record<string, string>>({});
@@ -69,7 +69,7 @@ export default function Campaigns() {
   const [detailsCampaign, setDetailsCampaign] = useState<Campaign | null>(null);
   const [metaPrompt, setMetaPrompt] = useState<string | null>(null);
 
-  // ── Parse selected template components ──────────────────────────────────
+  // â”€â”€ Parse selected template components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const parsedTemplate = useTemplateParser(
     selectedTemplate ? (selectedTemplate as any).components ?? null : null
   );
@@ -86,7 +86,7 @@ export default function Campaigns() {
       const data = await res.json();
       const list: Campaign[] = Array.isArray(data) ? data : (data.campaigns ?? data.data ?? []);
 
-      // ── Fetch read counts from messages API ──────────────────────────────
+      // â”€â”€ Fetch read counts from messages API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // WhatsApp marks messages "read" in the chat; merge that count here
       try {
         const msgRes = await fetch("/api/messages?status=read&limit=1000");
@@ -98,14 +98,14 @@ export default function Campaigns() {
           for (const m of messages) {
             if (m.campaignId) readMap[m.campaignId] = (readMap[m.campaignId] ?? 0) + 1;
           }
-          // Merge into campaign list — take max of API value vs message count
+          // Merge into campaign list â€” take max of API value vs message count
           for (const c of list) {
             if (readMap[c.id] && readMap[c.id] > c.readCount) {
               c.readCount = readMap[c.id];
             }
           }
         }
-      } catch {/* silent — fallback to API value */ }
+      } catch {/* silent â€” fallback to API value */ }
 
       setCampaigns(list);
       setTotal(data.total ?? list.length);
@@ -125,8 +125,8 @@ export default function Campaigns() {
       const res = await fetch("/api/templates");
       const data = await res.json();
       const list: Template[] = Array.isArray(data) ? data : (data.data ?? []);
-      // قوالب الحساب المتصل حاليًا فقط — المثبوت لحساب آخر مخفي هنا ومرفوض
-      // في الباك إند حتى لو أُرسل id يدويًا (isCurrentAccount من GET).
+      // Ù‚ÙˆØ§Ù„Ø¨ Ø§Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ØªØµÙ„ Ø­Ø§Ù„ÙŠÙ‹Ø§ ÙÙ‚Ø· â€” Ø§Ù„Ù…Ø«Ø¨ÙˆØª Ù„Ø­Ø³Ø§Ø¨ Ø¢Ø®Ø± Ù…Ø®ÙÙŠ Ù‡Ù†Ø§ ÙˆÙ…Ø±ÙÙˆØ¶
+      // ÙÙŠ Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ Ø­ØªÙ‰ Ù„Ùˆ Ø£ÙØ±Ø³Ù„ id ÙŠØ¯ÙˆÙŠÙ‹Ø§ (isCurrentAccount Ù…Ù† GET).
       const scoped = list.filter((t: any) => t.isCurrentAccount !== false);
       const approved = scoped.filter(t => ["approved", "APPROVED"].includes(t.status ?? ""));
       setTemplates(approved);
@@ -153,8 +153,8 @@ export default function Campaigns() {
     return () => clearInterval(id);
   }, [hasRunning, loadCampaigns]);
 
-  // تحديث دوري صامت كل 20 ثانية حتى لو مفيش حملة شغالة دلوقتي
-  // (عشان أرقام delivered/read تتحدث لوحدها من غير ريفريش يدوي)
+  // ØªØ­Ø¯ÙŠØ« Ø¯ÙˆØ±ÙŠ ØµØ§Ù…Øª ÙƒÙ„ 20 Ø«Ø§Ù†ÙŠØ© Ø­ØªÙ‰ Ù„Ùˆ Ù…ÙÙŠØ´ Ø­Ù…Ù„Ø© Ø´ØºØ§Ù„Ø© Ø¯Ù„ÙˆÙ‚ØªÙŠ
+  // (Ø¹Ø´Ø§Ù† Ø£Ø±Ù‚Ø§Ù… delivered/read ØªØªØ­Ø¯Ø« Ù„ÙˆØ­Ø¯Ù‡Ø§ Ù…Ù† ØºÙŠØ± Ø±ÙŠÙØ±ÙŠØ´ ÙŠØ¯ÙˆÙŠ)
   useEffect(() => {
     const id = setInterval(() => loadCampaigns(true), 20_000);
     return () => clearInterval(id);
@@ -184,7 +184,7 @@ export default function Campaigns() {
       const ws = wb.worksheets[0];
       if (!ws) { toast.error(tr("errNoSheets", lang)); return; }
 
-      // ── Extract headers from first row ──────────────────────────────────
+      // â”€â”€ Extract headers from first row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const headers: string[] = [];
       const firstRow = ws.getRow(1);
       (Array.isArray(firstRow.values) ? firstRow.values : []).forEach((cell, idx) => {
@@ -192,7 +192,7 @@ export default function Campaigns() {
         if (cell != null && String(cell).trim()) headers.push(String(cell).trim());
       });
 
-      // ── Extract all rows as objects ──────────────────────────────────────
+      // â”€â”€ Extract all rows as objects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const rows: Record<string, any>[] = [];
       const extracted: string[] = [];
       ws.eachRow((row, rowIdx) => {
@@ -217,7 +217,7 @@ export default function Campaigns() {
       setAvailableColumns(headers);
       setAudienceSource("excel");
       setTemplateVarValues({}); // reset mapping when new file loaded
-      toast.success(`${lang === "ar" ? "تم استخراج" : "Extracted"} ${extracted.length} ${lang === "ar" ? "رقم صالح" : "valid numbers"}`);
+      toast.success(`${lang === "ar" ? "ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬" : "Extracted"} ${extracted.length} ${lang === "ar" ? "Ø±Ù‚Ù… ØµØ§Ù„Ø­" : "valid numbers"}`);
     } catch { toast.error(tr("errReadFile", lang)); }
   };
 
@@ -233,7 +233,7 @@ export default function Campaigns() {
       if (extracted.length === 0) { toast.error(tr("errNoValidNumbers", lang)); return; }
       setNumbers([...new Set([...numbers, ...extracted])]);
 
-      // ── Extract field names from first contact for variable mapping ────
+      // â”€â”€ Extract field names from first contact for variable mapping â”€â”€â”€â”€
       if (contacts.length > 0) {
         const fields = Object.keys(contacts[0]).filter(k => k !== "phone" && k !== "id");
         // Store contacts as rows (with phone included) for mapping
@@ -244,7 +244,7 @@ export default function Campaigns() {
         setTemplateVarValues({});
       }
 
-      toast.success(`${lang === "ar" ? "تم استيراد" : "Imported"} ${extracted.length} ${lang === "ar" ? "رقم" : "numbers"}`);
+      toast.success(`${lang === "ar" ? "ØªÙ… Ø§Ø³ØªÙŠØ±Ø§Ø¯" : "Imported"} ${extracted.length} ${lang === "ar" ? "Ø±Ù‚Ù…" : "numbers"}`);
     } catch (err: any) { toast.error(err.message); }
     finally { setImportingAudience(false); }
   };
@@ -260,7 +260,7 @@ export default function Campaigns() {
     setSubmitting(true);
     const tid = toast.loading(tr("creatingCampaign", lang));
     try {
-      // ── Build templateVars: resolve per-row mapping OR use static values ──
+      // â”€â”€ Build templateVars: resolve per-row mapping OR use static values â”€â”€
       let resolvedTemplateVars: any = null;
 
       const hasMapping = availableColumns.length > 0 && parsedRows.length > 0;
@@ -271,7 +271,7 @@ export default function Campaigns() {
           // Build a recipients array: [{ phone, templateVars }]
           // Each row contributes its own variable values based on the column mapping
           const phoneColGuess = availableColumns.find(c =>
-            ["phone", "mobile", "هاتف", "رقم", "tel"].includes(c.toLowerCase())
+            ["phone", "mobile", "Ù‡Ø§ØªÙ", "Ø±Ù‚Ù…", "tel"].includes(c.toLowerCase())
           ) ?? availableColumns[0];
 
           const recipientVars: Record<string, any>[] = parsedRows.map(row => {
@@ -325,14 +325,14 @@ export default function Campaigns() {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
           toast.dismiss(tid);
-          // رسالة الباك إند نفسها توضح الانتظار ("تم وضع الحملة في قائمة الانتظار") —
-          // لا نستبدلها برسالة عامة حتى يعرف اليوزر أن حملته لم تُنسَ.
-          toast.success(data.message ?? (data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅"));
+          // Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ Ù†ÙØ³Ù‡Ø§ ØªÙˆØ¶Ø­ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± ("ØªÙ… ÙˆØ¶Ø¹ Ø§Ù„Ø­Ù…Ù„Ø© ÙÙŠ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±") â€”
+          // Ù„Ø§ Ù†Ø³ØªØ¨Ø¯Ù„Ù‡Ø§ Ø¨Ø±Ø³Ø§Ù„Ø© Ø¹Ø§Ù…Ø© Ø­ØªÙ‰ ÙŠØ¹Ø±Ù Ø§Ù„ÙŠÙˆØ²Ø± Ø£Ù† Ø­Ù…Ù„ØªÙ‡ Ù„Ù… ØªÙÙ†Ø³ÙŽ.
+          toast.success(data.message ?? (data.scheduled ? "ØªÙ… Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø­Ù…Ù„Ø© âœ…" : "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ù…Ù„Ø© âœ…"));
           window.dispatchEvent(new Event("trigger-review-prompt"));
           setDialogOpen(false); resetDialog(); await loadCampaigns();
           return;
         } else {
-          // No rows → static values only (same for everyone)
+          // No rows â†’ static values only (same for everyone)
           const vars: any = { header: [], body: [], buttons: [] };
           for (let i = 1; i <= (parsedTemplate?.headerVariablesCount ?? 0); i++) {
             const v = templateVarValues[`header_${i}`] ?? "";
@@ -367,8 +367,8 @@ export default function Campaigns() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || tr("errCreateCampaign", lang));
       toast.dismiss(tid);
-      // نفس مبدأ الفرع أعلاه: رسالة الباك إند توضح الانتظار — لا نستبدلها.
-      toast.success(data.message ?? (data.scheduled ? "تم جدولة الحملة ✅" : "تم إنشاء الحملة ✅"));
+      // Ù†ÙØ³ Ù…Ø¨Ø¯Ø£ Ø§Ù„ÙØ±Ø¹ Ø£Ø¹Ù„Ø§Ù‡: Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ ØªÙˆØ¶Ø­ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± â€” Ù„Ø§ Ù†Ø³ØªØ¨Ø¯Ù„Ù‡Ø§.
+      toast.success(data.message ?? (data.scheduled ? "ØªÙ… Ø¬Ø¯ÙˆÙ„Ø© Ø§Ù„Ø­Ù…Ù„Ø© âœ…" : "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ù…Ù„Ø© âœ…"));
       window.dispatchEvent(new Event("trigger-review-prompt"));
       setDialogOpen(false); resetDialog(); await loadCampaigns();
     } catch (err: any) { toast.dismiss(tid); toast.error(err.message); }
@@ -390,7 +390,7 @@ export default function Campaigns() {
     const min48 = 48 * 60 * 60 * 1000;
     if (elapsed < min48) {
       const h = Math.ceil((min48 - elapsed) / 3_600_000);
-      toast.error(`${tr("repeatAfter48", lang)} — ${h} ${tr("hoursLeft", lang)}`);
+      toast.error(`${tr("repeatAfter48", lang)} â€” ${h} ${tr("hoursLeft", lang)}`);
       return;
     }
     const tid = toast.loading(tr("repeating", lang));
@@ -403,16 +403,16 @@ export default function Campaigns() {
   };
 
   // Summary stats
-  // deliveredCount في الـ DB = رسائل وصلت بدون ما تتقرأ
-  // readCount = رسائل اتقرأت (وبالتأكيد وصلت)
-  // معدل التوصيل الحقيقي = deliveredCount + readCount
+  // deliveredCount ÙÙŠ Ø§Ù„Ù€ DB = Ø±Ø³Ø§Ø¦Ù„ ÙˆØµÙ„Øª Ø¨Ø¯ÙˆÙ† Ù…Ø§ ØªØªÙ‚Ø±Ø£
+  // readCount = Ø±Ø³Ø§Ø¦Ù„ Ø§ØªÙ‚Ø±Ø£Øª (ÙˆØ¨Ø§Ù„ØªØ£ÙƒÙŠØ¯ ÙˆØµÙ„Øª)
+  // Ù…Ø¹Ø¯Ù„ Ø§Ù„ØªÙˆØµÙŠÙ„ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ = deliveredCount + readCount
   const totalSent = campaigns.reduce((a, c) => a + c.sentCount, 0);
   const totalDelivered = campaigns.reduce((a, c) => a + c.deliveredCount + c.readCount, 0);
   const totalRead = campaigns.reduce((a, c) => a + c.readCount, 0);
 
-  // Design pilot: أسقطنا draft فقط (حالة عابرة — الـenqueue يتم في نفس الطلب).
-  // أُعيدت queued عمدًا: هي حالة "بانتظار سعة الإرسال" (Inngest: 5 عامة / 2 لكل
-  // يوزر) — اليوزر يحتاج يراها ويفلتر عليها ليعرف أن حملته لم تُنسَ.
+  // Design pilot: Ø£Ø³Ù‚Ø·Ù†Ø§ draft ÙÙ‚Ø· (Ø­Ø§Ù„Ø© Ø¹Ø§Ø¨Ø±Ø© â€” Ø§Ù„Ù€enqueue ÙŠØªÙ… ÙÙŠ Ù†ÙØ³ Ø§Ù„Ø·Ù„Ø¨).
+  // Ø£ÙØ¹ÙŠØ¯Øª queued Ø¹Ù…Ø¯Ù‹Ø§: Ù‡ÙŠ Ø­Ø§Ù„Ø© "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø³Ø¹Ø© Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" (Inngest: 5 Ø¹Ø§Ù…Ø© / 2 Ù„ÙƒÙ„
+  // ÙŠÙˆØ²Ø±) â€” Ø§Ù„ÙŠÙˆØ²Ø± ÙŠØ­ØªØ§Ø¬ ÙŠØ±Ø§Ù‡Ø§ ÙˆÙŠÙÙ„ØªØ± Ø¹Ù„ÙŠÙ‡Ø§ Ù„ÙŠØ¹Ø±Ù Ø£Ù† Ø­Ù…Ù„ØªÙ‡ Ù„Ù… ØªÙÙ†Ø³ÙŽ.
   const STATUS_FILTERS = [
     { value: "all", label: tr("filterAll", lang) },
     { value: "running", label: tr("filterRunning", lang) },
@@ -426,25 +426,25 @@ export default function Campaigns() {
     toast.custom(() => (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          وصلت الحد الأقصى للحملات هذا الشهر
+          ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø­Ù…Ù„Ø§Øª Ù‡Ø°Ø§ Ø§Ù„Ø´Ù‡Ø±
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          رقّي الباقة لإرسال حملات غير محدودة.
+          Ø±Ù‚Ù‘ÙŠ Ø§Ù„Ø¨Ø§Ù‚Ø© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø­Ù…Ù„Ø§Øª ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯Ø©.
         </p>
         <button
           onClick={() => { toast.dismiss(); router.push("/checkout"); }}
-          className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg transition-colors"
+          className="mt-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg transition-colors"
         >
-          ترقية الباقة ←
+          ØªØ±Ù‚ÙŠØ© Ø§Ù„Ø¨Ø§Ù‚Ø© â†
         </button>
       </div>
     ), { duration: 6000 });
   }
 
   function showMetaConnectToast() {
-    // Design pilot: المودال يكفي — window.alert الأصلي محذوف (تجربة مزعجة)
+    // Design pilot: Ø§Ù„Ù…ÙˆØ¯Ø§Ù„ ÙŠÙƒÙÙŠ â€” window.alert Ø§Ù„Ø£ØµÙ„ÙŠ Ù…Ø­Ø°ÙˆÙ (ØªØ¬Ø±Ø¨Ø© Ù…Ø²Ø¹Ø¬Ø©)
     const message = lang === "ar"
-      ? "اربط رقمك بميتا علشان تعمل حملة"
+      ? "Ø§Ø±Ø¨Ø· Ø±Ù‚Ù…Ùƒ Ø¨Ù…ÙŠØªØ§ Ø¹Ù„Ø´Ø§Ù† ØªØ¹Ù…Ù„ Ø­Ù…Ù„Ø©"
       : "Connect your Meta number to create a campaign.";
     setMetaPrompt(message);
     window.setTimeout(() => setMetaPrompt(null), 3500);
@@ -468,11 +468,11 @@ export default function Campaigns() {
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
-              <MessageSquare className="w-5 h-5 text-[#25D366]" />
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-5 h-5 text-primary" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
-              {lang === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
+              {lang === "ar" ? "Ù„Ø§Ø²Ù… ØªØ±Ø¨Ø· Ù…ÙŠØªØ§ Ø£ÙˆÙ„Ø§Ù‹" : "Meta connection required"}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               {metaPrompt}
@@ -480,9 +480,9 @@ export default function Campaigns() {
             <button
               type="button"
               onClick={() => setMetaPrompt(null)}
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#075E54] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064944] transition-colors"
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              {lang === "ar" ? "حسنًا" : "OK"}
+              {lang === "ar" ? "Ø­Ø³Ù†Ù‹Ø§" : "OK"}
             </button>
           </div>
         </div>
@@ -496,18 +496,18 @@ export default function Campaigns() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => loadCampaigns()}
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-green-600 hover:border-green-300 transition">
+            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-primary hover:border-primary/40 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
           <Button
             onClick={openCampaignDialog}
             className={campaignLimitActive
               ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
-              : "bg-green-500 hover:bg-green-600 text-white shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+              : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm gap-2 flex-1 sm:flex-none justify-center"
             }
           >
             <Plus className="w-4 h-4" />
-            {campaignLimitActive ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
+            {campaignLimitActive ? (lang === "ar" ? "ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰" : "Limit reached") : tr("newCampaign", lang)}
           </Button>
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function Campaigns() {
           {[
             { label: tr("totalCampaigns", lang), value: total, icon: <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-gray-600 dark:text-gray-300", bg: "bg-gray-50 dark:bg-gray-800" },
             { label: tr("totalSent", lang), value: totalSent, icon: <Send className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/20" },
-            { label: tr("totalDelivered", lang), value: totalDelivered, icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-900/20" },
+            { label: tr("totalDelivered", lang), value: totalDelivered, icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-primary", bg: "bg-primary/10 dark:bg-primary/15" },
             { label: tr("totalRead", lang), value: totalRead, icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
           ].map(s => (
             <div key={s.label} className={`${s.bg} rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3`}>
@@ -543,15 +543,15 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* ── شريط شفافية السعة — يظهر فقط عند وجود حملات منتظرة ─────────── */}
-      {/* الأرقام من الباك إند (نفس حدود Inngest) لا من الحالة المحلية */}
+      {/* â”€â”€ Ø´Ø±ÙŠØ· Ø´ÙØ§ÙÙŠØ© Ø§Ù„Ø³Ø¹Ø© â€” ÙŠØ¸Ù‡Ø± ÙÙ‚Ø· Ø¹Ù†Ø¯ ÙˆØ¬ÙˆØ¯ Ø­Ù…Ù„Ø§Øª Ù…Ù†ØªØ¸Ø±Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Ø§Ù„Ø£Ø±Ù‚Ø§Ù… Ù…Ù† Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ (Ù†ÙØ³ Ø­Ø¯ÙˆØ¯ Inngest) Ù„Ø§ Ù…Ù† Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø­Ù„ÙŠØ© */}
       {queueInfo && queueInfo.queuedWaiting > 0 && (
         <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-xl px-3.5 py-2.5 mb-4">
           <Clock className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
           <span>
             {lang === "ar"
-              ? `${queueInfo.queuedWaiting} في قائمة الانتظار — سعة التنفيذ مشغولة (${queueInfo.globalActive}/${queueInfo.globalLimit}) وستبدأ تلقائيًا`
-              : `${queueInfo.queuedWaiting} waiting — execution capacity busy (${queueInfo.globalActive}/${queueInfo.globalLimit}), auto-starting`}
+              ? `${queueInfo.queuedWaiting} ÙÙŠ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± â€” Ø³Ø¹Ø© Ø§Ù„ØªÙ†ÙÙŠØ° Ù…Ø´ØºÙˆÙ„Ø© (${queueInfo.globalActive}/${queueInfo.globalLimit}) ÙˆØ³ØªØ¨Ø¯Ø£ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§`
+              : `${queueInfo.queuedWaiting} waiting â€” execution capacity busy (${queueInfo.globalActive}/${queueInfo.globalLimit}), auto-starting`}
           </span>
         </div>
       )}
@@ -560,7 +560,7 @@ export default function Campaigns() {
       <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 flex-nowrap scrollbar-hide">        {STATUS_FILTERS.map(f => (
           <button key={f.value} onClick={() => setFilterStatus(f.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0
-              ${filterStatus === f.value ? "bg-green-500 text-white" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"}`}>
+              ${filterStatus === f.value ? "bg-primary/10 text-primary border border-primary/20" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"}`}>
             {f.label}
           </button>
         ))}
@@ -579,7 +579,7 @@ export default function Campaigns() {
           </h3>
           <p className="text-gray-400 text-sm mb-6 max-w-xs">{tr("noCampaignsDesc", lang)}</p>
           {filterStatus === "all" && (
-            <Button onClick={openCampaignDialog} className="bg-green-500 hover:bg-green-600 text-white gap-2">
+            <Button onClick={openCampaignDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
               <Plus className="w-4 h-4" /> {tr("startFirst", lang)}
             </Button>
           )}
@@ -597,7 +597,7 @@ export default function Campaigns() {
                 onRepeat={() => handleRepeat(c)}
                 onDetails={() => setDetailsCampaign(c)}
                 repeatBlocked={blocked}
-                repeatBlockedNote={blocked ? `${tr("repeatAfter48", lang)} — ${hoursLeft} ${tr("hoursLeft", lang)}` : ""}
+                repeatBlockedNote={blocked ? `${tr("repeatAfter48", lang)} â€” ${hoursLeft} ${tr("hoursLeft", lang)}` : ""}
               />
             );
           })}

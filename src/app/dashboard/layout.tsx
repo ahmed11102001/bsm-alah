@@ -38,7 +38,7 @@ import ReviewPrompt from "@/components/dashboard/ReviewPrompt";
 import PushNotificationPrompt from "@/components/dashboard/PushNotificationPrompt";
 import { playNavSound } from "@/lib/sounds";
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Theme Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
@@ -65,14 +65,14 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
   );
 }
 
-// ─── Language Toggle ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Language Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LanguageToggle({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLanguage();
   const toggle = () => setLocale(locale === "ar" ? "en" : "ar");
-  const label = locale === "ar" ? "EN" : "ع";
+  const label = locale === "ar" ? "EN" : "Ø¹";
 
   if (compact) return (
-    <button onClick={toggle} title={locale === "ar" ? "Switch to English" : "تبديل للعربية"}
+    <button onClick={toggle} title={locale === "ar" ? "Switch to English" : "ØªØ¨Ø¯ÙŠÙ„ Ù„Ù„Ø¹Ø±Ø¨ÙŠØ©"}
       className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors flex items-center justify-center gap-1">
       <Languages className="w-4 h-4" />
       <span className="text-xs font-bold leading-none">{label}</span>
@@ -83,12 +83,12 @@ function LanguageToggle({ compact = false }: { compact?: boolean }) {
     <button onClick={toggle}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
       <Languages className="w-4 h-4" />
-      <span>{locale === "ar" ? "English" : "العربية"}</span>
+      <span>{locale === "ar" ? "English" : "Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©"}</span>
     </button>
   );
 }
 
-// ─── Settings moved to /dashboard/settings page ────────────────────────────────
+// â”€â”€â”€ Settings moved to /dashboard/settings page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChange }: {
   locale: string;
@@ -113,8 +113,8 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
         <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
           <img src="/partners/claude.svg.svg" alt="Claude" className="w-5 h-5 object-contain" />
         </div>
-        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
-          <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full">
+          <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-40" />
         </span>
       </button>
 
@@ -128,24 +128,24 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
               </div>
               <div>
                 <p className="text-sm font-bold text-white">Claude AI</p>
-                <p className="text-[11px] text-orange-100">{locale === "ar" ? "مربوط ويعمل ✓" : "Connected & active ✓"}</p>
+                <p className="text-[11px] text-orange-100">{locale === "ar" ? "Ù…Ø±Ø¨ÙˆØ· ÙˆÙŠØ¹Ù…Ù„ âœ“" : "Connected & active âœ“"}</p>
               </div>
             </div>
 
             <div className="p-3 space-y-1.5">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">
-                {locale === "ar" ? "قول لـ Claude في Desktop App:" : "Tell Claude in Desktop App:"}
+                {locale === "ar" ? "Ù‚ÙˆÙ„ Ù„Ù€ Claude ÙÙŠ Desktop App:" : "Tell Claude in Desktop App:"}
               </p>
               {(locale === "ar" ? [
-                { icon: "📊", text: "\"اعملي تقرير عن آخر حملة\"" },
-                { icon: "🚀", text: "\"أنشئ حملة على قائمة VIP\"" },
-                { icon: "💬", text: "\"فيه كام رسالة واردة؟\"" },
-                { icon: "👥", text: "\"اعرضلي قوائم الجمهور\"" },
+                { icon: "ðŸ“Š", text: "\"Ø§Ø¹Ù…Ù„ÙŠ ØªÙ‚Ø±ÙŠØ± Ø¹Ù† Ø¢Ø®Ø± Ø­Ù…Ù„Ø©\"" },
+                { icon: "ðŸš€", text: "\"Ø£Ù†Ø´Ø¦ Ø­Ù…Ù„Ø© Ø¹Ù„Ù‰ Ù‚Ø§Ø¦Ù…Ø© VIP\"" },
+                { icon: "ðŸ’¬", text: "\"ÙÙŠÙ‡ ÙƒØ§Ù… Ø±Ø³Ø§Ù„Ø© ÙˆØ§Ø±Ø¯Ø©ØŸ\"" },
+                { icon: "ðŸ‘¥", text: "\"Ø§Ø¹Ø±Ø¶Ù„ÙŠ Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„Ø¬Ù…Ù‡ÙˆØ±\"" },
               ] : [
-                { icon: "📊", text: "\"Give me a report on the last campaign\"" },
-                { icon: "🚀", text: "\"Create a campaign for VIP list\"" },
-                { icon: "💬", text: "\"How many unread messages?\"" },
-                { icon: "👥", text: "\"Show me my contact lists\"" },
+                { icon: "ðŸ“Š", text: "\"Give me a report on the last campaign\"" },
+                { icon: "ðŸš€", text: "\"Create a campaign for VIP list\"" },
+                { icon: "ðŸ’¬", text: "\"How many unread messages?\"" },
+                { icon: "ðŸ‘¥", text: "\"Show me my contact lists\"" },
               ]).map((cmd, i) => (
                 <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800">
                   <span className="text-sm flex-shrink-0">{cmd.icon}</span>
@@ -159,11 +159,11 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
                 onClick={() => { setShowMenu(false); onNavigate("api"); }}
                 className="text-xs text-orange-500 hover:text-orange-600 font-medium"
               >
-                {locale === "ar" ? "إدارة الربط" : "Manage connection"}
+                {locale === "ar" ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±Ø¨Ø·" : "Manage connection"}
               </button>
               <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                {locale === "ar" ? "نشط" : "Active"}
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/10" />
+                {locale === "ar" ? "Ù†Ø´Ø·" : "Active"}
               </span>
             </div>
           </div>
@@ -172,7 +172,7 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
     </div>
   );
 }
-// ─── Dashboard Shell (Sidebar + Topbar + Mobile Menu) ────────────────────────
+// â”€â”€â”€ Dashboard Shell (Sidebar + Topbar + Mobile Menu) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const { canUseClaude } = useSubscription();
@@ -210,35 +210,35 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     setAccountPanelOpen(false);
   }, [pathname]);
 
-  // ── CHAT_ONLY مالوش Dashboard home — يدخل على الشات مباشرة دايمًا ──────────
-  // (فيه كمان guard مطابق على مستوى الـ server في middleware.ts)
+  // â”€â”€ CHAT_ONLY Ù…Ø§Ù„ÙˆØ´ Dashboard home â€” ÙŠØ¯Ø®Ù„ Ø¹Ù„Ù‰ Ø§Ù„Ø´Ø§Øª Ù…Ø¨Ø§Ø´Ø±Ø© Ø¯Ø§ÙŠÙ…Ù‹Ø§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // (ÙÙŠÙ‡ ÙƒÙ…Ø§Ù† guard Ù…Ø·Ø§Ø¨Ù‚ Ø¹Ù„Ù‰ Ù…Ø³ØªÙˆÙ‰ Ø§Ù„Ù€ server ÙÙŠ middleware.ts)
   useEffect(() => {
     if (session?.user?.role === "CHAT_ONLY" && pathname === "/dashboard") {
       router.replace("/dashboard/chat");
     }
   }, [session?.user?.role, pathname, router]);
 
-  // ── نتيجة ربط Shopify التلقائي (OAuth callback) — toast مرة واحدة وتنظيف الـURL ──
-  // مقروءة من window.location عمدًا (بدل useSearchParams) لتفادي Suspense boundary.
+  // â”€â”€ Ù†ØªÙŠØ¬Ø© Ø±Ø¨Ø· Shopify Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠ (OAuth callback) â€” toast Ù…Ø±Ø© ÙˆØ§Ø­Ø¯Ø© ÙˆØªÙ†Ø¸ÙŠÙ Ø§Ù„Ù€URL â”€â”€
+  // Ù…Ù‚Ø±ÙˆØ¡Ø© Ù…Ù† window.location Ø¹Ù…Ø¯Ù‹Ø§ (Ø¨Ø¯Ù„ useSearchParams) Ù„ØªÙØ§Ø¯ÙŠ Suspense boundary.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("shopify_connected");
     const err = params.get("shopify_error");
     if (!connected && !err) return;
     if (connected) {
-      toast.success("تم ربط متجر Shopify تلقائيًا ✅");
+      toast.success("ØªÙ… Ø±Ø¨Ø· Ù…ØªØ¬Ø± Shopify ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ âœ…");
     } else {
       const messages: Record<string, string> = {
-        missing_params: "ناقص بيانات الرجوع من Shopify — حاول تاني",
-        invalid_shop: "دومين المتجر غير صالح",
-        invalid_state: "انتهت صلاحية جلسة الربط — حاول تاني",
-        user_not_found: "الحساب غير موجود",
-        token_exchange_failed: "فشل استبدال الكود بتوكن — حاول تاني",
-        no_token: "Shopify مرجعش توكن — حاول تاني",
-        shop_taken: "المتجر مربوط بحساب آخر بالفعل",
-        oauth_not_configured: "الربط التلقائي غير مفعّل حاليًا",
+        missing_params: "Ù†Ø§Ù‚Øµ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±Ø¬ÙˆØ¹ Ù…Ù† Shopify â€” Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ",
+        invalid_shop: "Ø¯ÙˆÙ…ÙŠÙ† Ø§Ù„Ù…ØªØ¬Ø± ØºÙŠØ± ØµØ§Ù„Ø­",
+        invalid_state: "Ø§Ù†ØªÙ‡Øª ØµÙ„Ø§Ø­ÙŠØ© Ø¬Ù„Ø³Ø© Ø§Ù„Ø±Ø¨Ø· â€” Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ",
+        user_not_found: "Ø§Ù„Ø­Ø³Ø§Ø¨ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯",
+        token_exchange_failed: "ÙØ´Ù„ Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ø§Ù„ÙƒÙˆØ¯ Ø¨ØªÙˆÙƒÙ† â€” Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ",
+        no_token: "Shopify Ù…Ø±Ø¬Ø¹Ø´ ØªÙˆÙƒÙ† â€” Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ",
+        shop_taken: "Ø§Ù„Ù…ØªØ¬Ø± Ù…Ø±Ø¨ÙˆØ· Ø¨Ø­Ø³Ø§Ø¨ Ø¢Ø®Ø± Ø¨Ø§Ù„ÙØ¹Ù„",
+        oauth_not_configured: "Ø§Ù„Ø±Ø¨Ø· Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠ ØºÙŠØ± Ù…ÙØ¹Ù‘Ù„ Ø­Ø§Ù„ÙŠÙ‹Ø§",
       };
-      toast.error(messages[err ?? ""] ?? "فشل الربط التلقائي — حاول تاني");
+      toast.error(messages[err ?? ""] ?? "ÙØ´Ù„ Ø§Ù„Ø±Ø¨Ø· Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠ â€” Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ");
     }
     params.delete("shopify_connected");
     params.delete("shopify_error");
@@ -272,13 +272,13 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     };
   }, [accountPanelOpen]);
 
-  const accountLabel = locale === "ar" ? "الحساب" : "Account";
+  const accountLabel = locale === "ar" ? "Ø§Ù„Ø­Ø³Ø§Ø¨" : "Account";
   const openAccountPanel = () => {
     if (sidebarCollapsed) setSidebarCollapsed(false);
     setAccountPanelOpen((prev) => !prev);
   };
 
-  // "/dashboard" → "home", "/dashboard/campaigns" → "campaigns" ... إلخ
+  // "/dashboard" â†’ "home", "/dashboard/campaigns" â†’ "campaigns" ... Ø¥Ù„Ø®
   const activeSection = pathname === "/dashboard" ? "home" : (pathname.split("/")[2] ?? "home");
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -331,9 +331,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     setActiveTopPanel(open ? "assistant" : null);
   };
 
-  // نفس التنقل البرمجي القديم (كان window event / setActiveSection) بقى router.push حقيقي
+  // Ù†ÙØ³ Ø§Ù„ØªÙ†Ù‚Ù„ Ø§Ù„Ø¨Ø±Ù…Ø¬ÙŠ Ø§Ù„Ù‚Ø¯ÙŠÙ… (ÙƒØ§Ù† window event / setActiveSection) Ø¨Ù‚Ù‰ router.push Ø­Ù‚ÙŠÙ‚ÙŠ
   const navigateTo = (section: string) => {
-    if (section === "account") return; // Account is a popup menu, not its own page — nothing to route to.
+    if (section === "account") return; // Account is a popup menu, not its own page â€” nothing to route to.
     router.push(sidebarHref(section));
   };
 
@@ -350,9 +350,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     label: t.sidebar[item.id as keyof typeof t.sidebar],
   }));
 
-  const displayName = dashData?.user.name ?? session?.user?.name ?? (locale === "ar" ? "المستخدم" : "User");
+  const displayName = dashData?.user.name ?? session?.user?.name ?? (locale === "ar" ? "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…" : "User");
   const initials = displayName.slice(0, 2).toUpperCase();
-  const planName = dashData?.plan.planName ?? "—";
+  const planName = dashData?.plan.planName ?? "â€”";
   const planColor = PLAN_COLORS[dashData?.plan.plan ?? "free"];
 
   // Account popup links are permission-driven. They intentionally do NOT belong
@@ -372,7 +372,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       href: "/dashboard/usage",
       permission: "USAGE_VIEW",
       icon: CreditCard,
-      labelAr: "الاستهلاك",
+      labelAr: "Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ",
       labelEn: "Usage",
     },
     {
@@ -380,7 +380,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       href: "/strategies?from=dashboard",
       permission: "STRATEGIES_VIEW",
       icon: Sparkles,
-      labelAr: "الاستراتيجيات",
+      labelAr: "Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ§Øª",
       labelEn: "Strategies",
     },
     {
@@ -423,18 +423,18 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex transition-colors duration-200" dir={dir}>
 
-      {/* ── Desktop Sidebar ── */}
+      {/* â”€â”€ Desktop Sidebar â”€â”€ */}
       <aside className={`bg-sidebar border-sidebar-border text-sidebar-foreground fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
         } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
         <div className={`h-16 flex items-center border-b border-sidebar-border flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
           }`}>
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
               <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
             </div>
             {!sidebarCollapsed && (
               <span className="text-lg font-bold truncate">
-                {locale === "ar" ? "وني" : "WANI"}
+                {locale === "ar" ? "ÙˆÙ†ÙŠ" : "WANI"}
               </span>
             )}
           </div>
@@ -458,7 +458,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
 
-          {/* Admin is part of navigation — NOT part of Account. */}
+          {/* Admin is part of navigation â€” NOT part of Account. */}
           {isSuper && (
             <Link href={sidebarHref("admin")}
               onClick={() => playNavSound()}
@@ -474,7 +474,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Fixed Account section — the ONLY item below the divider. */}
+        {/* Fixed Account section â€” the ONLY item below the divider. */}
         <div
           ref={accountMenuRef}
           className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${sidebarCollapsed ? "p-2" : "p-3"
@@ -487,10 +487,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               playNavSound();
               openAccountPanel();
             }}
-            title={sidebarCollapsed ? `${accountLabel} — ${planName}` : undefined}
+            title={sidebarCollapsed ? `${accountLabel} â€” ${planName}` : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
               } ${accountPanelOpen
-                ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
+                ? "bg-primary/10 text-primary font-semibold"
                 : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
               }`}
           >
@@ -513,7 +513,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               <ChevronDown
                 className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${
                   accountPanelOpen
-                    ? "rotate-180 text-[#25D366]"
+                    ? "rotate-180 text-primary"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               />
@@ -528,7 +528,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
             >
               <div className="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {initials}
                   </div>
                   <div className="min-w-0">
@@ -550,7 +550,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <Settings className="w-4 h-4 flex-shrink-0" />
-                <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+                <span>{locale === "ar" ? "Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª" : "Settings"}</span>
               </button>
 
               <LanguageToggle />
@@ -572,7 +572,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
       </aside>
 
-      {/* ── Mobile Full-Screen Menu ── */}
+      {/* â”€â”€ Mobile Full-Screen Menu â”€â”€ */}
       {mobileMenuOpen && (
         <div
           dir={dir}
@@ -581,24 +581,24 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {/* Top bar */}
           <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden">
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
                 <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
               </div>
               <span className="text-base font-bold">
-                {locale === "ar" ? "وني" : "WANI"}
+                {locale === "ar" ? "ÙˆÙ†ÙŠ" : "WANI"}
               </span>
             </div>
             <button
               onClick={() => setMobileMenuOpen(false)}
               className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl leading-none"
             >
-              ✕
+              âœ•
             </button>
           </div>
 
           {/* User info */}
           <div className="flex items-center gap-3 mx-4 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-            <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold flex-shrink-0">
+            <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
@@ -619,7 +619,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
-                  ? "bg-[#25D366] text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
                   }`}
               >
@@ -669,7 +669,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               <ChevronDown
                 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
                   accountPanelOpen
-                    ? "rotate-180 text-[#25D366]"
+                    ? "rotate-180 text-primary"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               />
@@ -689,7 +689,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
                 >
                   <Settings className="w-4 h-4" />
-                  <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
+                  <span>{locale === "ar" ? "Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª" : "Settings"}</span>
                 </button>
                 <LanguageToggle />
                 <ThemeToggle />
@@ -707,7 +707,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* ── Main ── */}
+      {/* â”€â”€ Main â”€â”€ */}
       <main className={`flex-1 min-w-0 transition-all duration-300 ${dir === "rtl"
         ? (sidebarCollapsed ? "lg:mr-20" : "lg:mr-64")
         : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
@@ -715,7 +715,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <header className="h-14 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
 
-          {/* Hamburger — mobile only */}
+          {/* Hamburger â€” mobile only */}
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="lg:hidden p-2 rounded-xl hover:bg-muted/60 text-muted-foreground transition-colors"
@@ -732,7 +732,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <button
             onClick={toggleSidebar}
             className="hidden lg:flex items-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
+            title={sidebarCollapsed ? (locale === "ar" ? "ØªÙˆØ³ÙŠØ¹ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©" : "Expand sidebar") : (locale === "ar" ? "Ø·ÙŠ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©" : "Collapse sidebar")}
           >
             {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
           </button>

@@ -21,7 +21,7 @@ import {
   PartnerCardTemplate, type PartnerCardContent,
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 
-// ─── Overview widgets data shape (from /api/dashboard/overview) ──────────────
+// â”€â”€â”€ Overview widgets data shape (from /api/dashboard/overview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface OverviewData {
   range: "7d" | "30d" | "90d";
   campaignBreakdown: { draft: number; scheduled: number; running: number; completed: number; failed: number };
@@ -42,14 +42,14 @@ const STATUS_BADGE_CLS: Record<string, string> = {
   needs_human: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
   human_active: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
 };
-// ── Design pilot: حالة المحادثة بأيقونة واضحة — 🤖 AI يتولى / 🟡 تحتاجك / 🔵 بشري نشط ──
+// â”€â”€ Design pilot: Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ø¨Ø£ÙŠÙ‚ÙˆÙ†Ø© ÙˆØ§Ø¶Ø­Ø© â€” ðŸ¤– AI ÙŠØªÙˆÙ„Ù‰ / ðŸŸ¡ ØªØ­ØªØ§Ø¬Ùƒ / ðŸ”µ Ø¨Ø´Ø±ÙŠ Ù†Ø´Ø· â”€â”€
 const STATUS_EMOJI: Record<string, string> = {
-  auto: "🤖",
-  needs_human: "🟡",
-  human_active: "🔵",
+  auto: "ðŸ¤–",
+  needs_human: "ðŸŸ¡",
+  human_active: "ðŸ”µ",
 };
 
-// ─── Egypt WhatsApp Conversation Pricing (USD) — same source as /reports/cost ──
+// â”€â”€â”€ Egypt WhatsApp Conversation Pricing (USD) â€” same source as /reports/cost â”€â”€
 const EG_PRICES: Record<string, number> = {
   MARKETING: 0.0125,
   UTILITY: 0.004,
@@ -61,8 +61,8 @@ function templateMsgCost(count: number, category: string): number {
   return count * price;
 }
 
-// ─── WANI Partner — الكارت بقى متحكَّم فيه من /dashboard/wani-partner (أدمن بس).
-// الـ Array ده بقى Fallback بس: بيتعرض لو لسه محدش ضاف أي كارت من الصفحة ─────
+// â”€â”€â”€ WANI Partner â€” Ø§Ù„ÙƒØ§Ø±Øª Ø¨Ù‚Ù‰ Ù…ØªØ­ÙƒÙŽÙ‘Ù… ÙÙŠÙ‡ Ù…Ù† /dashboard/wani-partner (Ø£Ø¯Ù…Ù† Ø¨Ø³).
+// Ø§Ù„Ù€ Array Ø¯Ù‡ Ø¨Ù‚Ù‰ Fallback Ø¨Ø³: Ø¨ÙŠØªØ¹Ø±Ø¶ Ù„Ùˆ Ù„Ø³Ù‡ Ù…Ø­Ø¯Ø´ Ø¶Ø§Ù Ø£ÙŠ ÙƒØ§Ø±Øª Ù…Ù† Ø§Ù„ØµÙØ­Ø© â”€â”€â”€â”€â”€
 const WANI_FEATURES: {
   icon: typeof Bot;
   title: { ar: string; en: string };
@@ -70,25 +70,25 @@ const WANI_FEATURES: {
 }[] = [
     {
       icon: Bot,
-      title: { ar: "وكيل واني الذكي 🤖", en: "WANI AI Agent 🤖" },
+      title: { ar: "ÙˆÙƒÙŠÙ„ ÙˆØ§Ù†ÙŠ Ø§Ù„Ø°ÙƒÙŠ ðŸ¤–", en: "WANI AI Agent ðŸ¤–" },
       desc: {
-        ar: "بيرد على استفسارات عملائك ويقفل البيع لوحده على واتساب، على مدار الساعة.",
+        ar: "Ø¨ÙŠØ±Ø¯ Ø¹Ù„Ù‰ Ø§Ø³ØªÙØ³Ø§Ø±Ø§Øª Ø¹Ù…Ù„Ø§Ø¦Ùƒ ÙˆÙŠÙ‚ÙÙ„ Ø§Ù„Ø¨ÙŠØ¹ Ù„ÙˆØ­Ø¯Ù‡ Ø¹Ù„Ù‰ ÙˆØ§ØªØ³Ø§Ø¨ØŒ Ø¹Ù„Ù‰ Ù…Ø¯Ø§Ø± Ø§Ù„Ø³Ø§Ø¹Ø©.",
         en: "Answers your customers and closes sales on WhatsApp, around the clock.",
       },
     },
     {
       icon: Zap,
-      title: { ar: "أتمتة المتجر ⚡", en: "Store Automation ⚡" },
+      title: { ar: "Ø£ØªÙ…ØªØ© Ø§Ù„Ù…ØªØ¬Ø± âš¡", en: "Store Automation âš¡" },
       desc: {
-        ar: "تأكيد الطلبات ومتابعة الشحن بتتبعت أوتوماتيك من غير ما تلمس حاجة.",
+        ar: "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª ÙˆÙ…ØªØ§Ø¨Ø¹Ø© Ø§Ù„Ø´Ø­Ù† Ø¨ØªØªØ¨Ø¹Øª Ø£ÙˆØªÙˆÙ…Ø§ØªÙŠÙƒ Ù…Ù† ØºÙŠØ± Ù…Ø§ ØªÙ„Ù…Ø³ Ø­Ø§Ø¬Ø©.",
         en: "Order confirmations and shipping updates sent automatically.",
       },
     },
     {
       icon: Send,
-      title: { ar: "حملات واتساب 📢", en: "WhatsApp Campaigns 📢" },
+      title: { ar: "Ø­Ù…Ù„Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨ ðŸ“¢", en: "WhatsApp Campaigns ðŸ“¢" },
       desc: {
-        ar: "وصّل عرضك لآلاف العملاء بضغطة واحدة، مع تقارير لحظية.",
+        ar: "ÙˆØµÙ‘Ù„ Ø¹Ø±Ø¶Ùƒ Ù„Ø¢Ù„Ø§Ù Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø¨Ø¶ØºØ·Ø© ÙˆØ§Ø­Ø¯Ø©ØŒ Ù…Ø¹ ØªÙ‚Ø§Ø±ÙŠØ± Ù„Ø­Ø¸ÙŠØ©.",
         en: "Reach thousands of customers with one click, with live reporting.",
       },
     },
@@ -101,7 +101,7 @@ interface DbPartnerCard extends PartnerCardContent {
 
 function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   const [index, setIndex] = useState(0);
-  // null = لسه بيحمّل، [] = محدش عمل كارت من /dashboard/wani-partner لسه
+  // null = Ù„Ø³Ù‡ Ø¨ÙŠØ­Ù…Ù‘Ù„ØŒ [] = Ù…Ø­Ø¯Ø´ Ø¹Ù…Ù„ ÙƒØ§Ø±Øª Ù…Ù† /dashboard/wani-partner Ù„Ø³Ù‡
   const [dbCards, setDbCards] = useState<DbPartnerCard[] | null>(null);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
     return () => clearInterval(id);
   }, [total]);
 
-  // ── محتوى مُتحكَّم فيه من /dashboard/wani-partner (5 تيمبلت مختلفة) ──
+  // â”€â”€ Ù…Ø­ØªÙˆÙ‰ Ù…ÙØªØ­ÙƒÙŽÙ‘Ù… ÙÙŠÙ‡ Ù…Ù† /dashboard/wani-partner (5 ØªÙŠÙ…Ø¨Ù„Øª Ù…Ø®ØªÙ„ÙØ©) â”€â”€
   if (useDbCards) {
     const card = dbCards![index % dbCards!.length];
     return (
@@ -134,7 +134,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
     );
   }
 
-  // ── Fallback (default): يعرض مميزات وني نفسها بالتدوير لحد ما يتضاف كارت ──
+  // â”€â”€ Fallback (default): ÙŠØ¹Ø±Ø¶ Ù…Ù…ÙŠØ²Ø§Øª ÙˆÙ†ÙŠ Ù†ÙØ³Ù‡Ø§ Ø¨Ø§Ù„ØªØ¯ÙˆÙŠØ± Ù„Ø­Ø¯ Ù…Ø§ ÙŠØªØ¶Ø§Ù ÙƒØ§Ø±Øª â”€â”€
   const feature = WANI_FEATURES[index % WANI_FEATURES.length];
   const Icon = feature.icon;
 
@@ -177,11 +177,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   const planTier = data.plan.plan;
   const hasAiAgent = data.plan.limits.aiAgent;
   const isProPlan = planTier === "pro";
-  const firstName = (user.name ?? "").split(" ")[0] || (locale === "ar" ? "مرحباً" : "there");
+  const firstName = (user.name ?? "").split(" ")[0] || (locale === "ar" ? "Ù…Ø±Ø­Ø¨Ø§Ù‹" : "there");
   const numFmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
 
-  // ─── Overview widgets (Automation / Conversations) ───
+  // â”€â”€â”€ Overview widgets (Automation / Conversations) â”€â”€â”€
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
 
@@ -196,7 +196,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
     return () => { cancelled = true; };
   }, []);
 
-  // ─── Template Cost breakdown (Marketing vs Service) — real data from campaigns ──
+  // â”€â”€â”€ Template Cost breakdown (Marketing vs Service) â€” real data from campaigns â”€â”€
   const [templateCost, setTemplateCost] = useState<{ marketing: number; service: number } | null>(null);
   const [loadingCost, setLoadingCost] = useState(true);
 
@@ -237,19 +237,19 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
   const kpis = [
     { label: h.kpi.totalSent, value: stats.totalSent, sub: undefined, icon: <Send className="w-5 h-5 text-blue-600" />, bg: "bg-blue-50 dark:bg-blue-900/20", trend: stats.totalSent > 0 ? "up" : null },
-    { label: h.kpi.delivered, value: stats.totalSent + stats.totalInbound, sub: undefined, icon: <CheckCircle className="w-5 h-5 text-green-600" />, bg: "bg-green-50 dark:bg-green-900/20", trend: "up" },
+    { label: h.kpi.delivered, value: stats.totalSent + stats.totalInbound, sub: undefined, icon: <CheckCircle className="w-5 h-5 text-primary" />, bg: "bg-primary/10 dark:bg-primary/15", trend: "up" },
     { label: h.kpi.totalReplies, value: stats.totalInbound, sub: h.kpi.replyRate(stats.replyRate), icon: <MessageSquare className="w-5 h-5 text-purple-600" />, bg: "bg-purple-50 dark:bg-purple-900/20", trend: stats.totalInbound > 0 ? "up" : null },
   ] as const;
 
   const cb = overview?.campaignBreakdown;
   const campaignTotal = cb ? cb.running + cb.scheduled + cb.completed + cb.draft + cb.failed : stats.totalCampaigns;
-  // ── إجمالي غير المقروء لشارة هيدر كارت المحادثات ──
+  // â”€â”€ Ø¥Ø¬Ù…Ø§Ù„ÙŠ ØºÙŠØ± Ø§Ù„Ù…Ù‚Ø±ÙˆØ¡ Ù„Ø´Ø§Ø±Ø© Ù‡ÙŠØ¯Ø± ÙƒØ§Ø±Øª Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª â”€â”€
   const totalUnread = (overview?.recentConversations ?? []).reduce((s, c) => s + (c.unreadCount || 0), 0);
 
   const campaignLimitActive = whatsappConnected && campaignAtLimit;
   const showMetaConnectPrompt = () => {
     const message = locale === "ar"
-      ? "اربط رقمك بميتا علشان تعمل حملة"
+      ? "Ø§Ø±Ø¨Ø· Ø±Ù‚Ù…Ùƒ Ø¨Ù…ÙŠØªØ§ Ø¹Ù„Ø´Ø§Ù† ØªØ¹Ù…Ù„ Ø­Ù…Ù„Ø©"
       : "Connect your Meta number to create a campaign.";
     window.alert(message);
     setMetaPrompt(message);
@@ -259,16 +259,16 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
     toast.custom(() => (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          وصلت الحد الأقصى للحملات هذا الشهر
+          ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø­Ù…Ù„Ø§Øª Ù‡Ø°Ø§ Ø§Ù„Ø´Ù‡Ø±
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          رقّي الباقة لإرسال حملات غير محدودة.
+          Ø±Ù‚Ù‘ÙŠ Ø§Ù„Ø¨Ø§Ù‚Ø© Ù„Ø¥Ø±Ø³Ø§Ù„ Ø­Ù…Ù„Ø§Øª ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯Ø©.
         </p>
         <button
           onClick={() => { toast.dismiss(); router.push("/checkout"); }}
-          className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg transition-colors"
+          className="mt-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg transition-colors"
         >
-          ترقية الباقة ←
+          ØªØ±Ù‚ÙŠØ© Ø§Ù„Ø¨Ø§Ù‚Ø© â†
         </button>
       </div>
     ), { duration: 6000 });
@@ -287,7 +287,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               <MessageSquare className="w-5 h-5 text-primary" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
-              {locale === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
+              {locale === "ar" ? "Ù„Ø§Ø²Ù… ØªØ±Ø¨Ø· Ù…ÙŠØªØ§ Ø£ÙˆÙ„Ø§Ù‹" : "Meta connection required"}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               {metaPrompt}
@@ -297,13 +297,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               onClick={() => setMetaPrompt(null)}
               className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              {locale === "ar" ? "حسنًا" : "OK"}
+              {locale === "ar" ? "Ø­Ø³Ù†Ù‹Ø§" : "OK"}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
@@ -321,12 +321,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               onCreateCampaign();
             }}
           >
-            <Plus className="w-4 h-4" /> {campaignLimitActive ? (locale === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : h.newCampaign}
+            <Plus className="w-4 h-4" /> {campaignLimitActive ? (locale === "ar" ? "ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰" : "Limit reached") : h.newCampaign}
           </Button>
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
+      {/* â”€â”€ KPI Cards â”€â”€ */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         {kpis.map((k) => (
           <Card key={k.label} className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
@@ -350,14 +350,14 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         ))}
 
-        {/* كارت الحملات المصغّر مدمج كشرائح في هيدر "الحملات الأخيرة" بالأسفل */}
+        {/* ÙƒØ§Ø±Øª Ø§Ù„Ø­Ù…Ù„Ø§Øª Ø§Ù„Ù…ØµØºÙ‘Ø± Ù…Ø¯Ù…Ø¬ ÙƒØ´Ø±Ø§Ø¦Ø­ ÙÙŠ Ù‡ÙŠØ¯Ø± "Ø§Ù„Ø­Ù…Ù„Ø§Øª Ø§Ù„Ø£Ø®ÙŠØ±Ø©" Ø¨Ø§Ù„Ø£Ø³ÙÙ„ */}
       </div>
 
-      {/* ── Wani AI Agent + WANI Partner ── */}
+      {/* â”€â”€ Wani AI Agent + WANI Partner â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <WaniPartnerCard locale={locale as "ar" | "en"} />
 
-        {/* ── Recent Conversations — elevated to top row: WhatsApp-first product ── */}
+        {/* â”€â”€ Recent Conversations â€” elevated to top row: WhatsApp-first product â”€â”€ */}
         <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <div className="flex items-center gap-2 min-w-0">
@@ -398,7 +398,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                           {STATUS_EMOJI[c.status]} {ov.conversations.status[c.status]}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate ${c.unread ? "font-medium text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{c.lastMessage || "—"}</p>
+                      <p className={`text-[11px] truncate ${c.unread ? "font-medium text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{c.lastMessage || "â€”"}</p>
                     </div>
                     <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0">
                       {(c.unreadCount || 0) > 0 && (
@@ -416,7 +416,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      {/* ── Automation Performance + Recent Conversations + Template Cost ── */}
+      {/* â”€â”€ Automation Performance + Recent Conversations + Template Cost â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
@@ -467,7 +467,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </CardContent>
         </Card>
 
-        {/* ── Wani AI Agent — moved down here; upsell hook kept intact ── */}
+        {/* â”€â”€ Wani AI Agent â€” moved down here; upsell hook kept intact â”€â”€ */}
         {hasAiAgent ? (
           <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
             <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
@@ -540,7 +540,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           </Card>
         )}
 
-        {/* ── Template Cost (Marketing vs Service) ── */}
+        {/* â”€â”€ Template Cost (Marketing vs Service) â”€â”€ */}
         <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div className="flex items-center gap-2.5">
@@ -618,7 +618,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </Card>
       </div>
 
-      {/* ── Recent Campaigns ── */}
+      {/* â”€â”€ Recent Campaigns â”€â”€ */}
       <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
           <div className="flex items-center gap-2 min-w-0">
@@ -719,7 +719,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 }
 
 
-// ─── Home Page (route: /dashboard) ────────────────────────────────────────────
+// â”€â”€â”€ Home Page (route: /dashboard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function DashboardHomePage() {
   const router = useRouter();
   const { dashData, loadingDash, campaignAtMax, hasMetaConnection } = useSubscription();
@@ -740,3 +740,4 @@ export default function DashboardHomePage() {
     />
   );
 }
+

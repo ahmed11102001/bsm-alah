@@ -24,8 +24,8 @@ export function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBl
 
         {/* ── Header row ── */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
-            <Megaphone className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-primary" />
           </div>
 
           <div className="min-w-0 flex-1">
@@ -55,7 +55,7 @@ export function CampaignCard({ campaign, onDelete, onRepeat, onDetails, repeatBl
             <button
               onClick={onRepeat}
               disabled={repeatBlocked}
-              className={`p-1.5 rounded-lg transition ${repeatBlocked ? "text-gray-200 dark:text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"}`}
+              className={`p-1.5 rounded-lg transition ${repeatBlocked ? "text-gray-200 dark:text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-primary hover:bg-primary/10"}`}
             >
               <RefreshCw className="w-4 h-4" />
             </button>

@@ -62,7 +62,7 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
         };
         // لم يُرسل بعد
         return {
-            cls: "bg-[#25D366] hover:bg-[#1fb956] text-white shadow-sm hover:shadow-md",
+            cls: "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md",
             content: loading
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 : (lang === "ar" ? "إرسال للمراجعة" : "Send for Review"),
@@ -72,12 +72,12 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
     return (
         <div
             className="group relative bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700
-          rounded-xl p-4 hover:shadow-md hover:border-[#25D366]/40 dark:hover:border-[#25D366]/30
+          rounded-xl p-4 hover:shadow-md hover:border-primary/40 dark:hover:border-primary/30
         transition-all duration-200 cursor-pointer"
             onClick={onView}
         >
             {/* Wani badge */}
-            <div className="absolute -top-2 left-4 flex items-center gap-1 bg-gradient-to-r from-[#25D366] to-[#1fb956]
+            <div className="absolute -top-2 left-4 flex items-center gap-1 bg-primary
         text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                 <Zap className="w-2.5 h-2.5" /> Wani Ready
             </div>
@@ -128,7 +128,7 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
                 {!isApproved && (
                     <button
                         onClick={e => { e.stopPropagation(); onCustomize(template); }}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-[#25D366] hover:text-[#25D366] dark:hover:border-[#25D366] dark:hover:text-[#25D366] flex items-center justify-center gap-1.5 transition-all bg-white dark:bg-gray-800"
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary dark:hover:border-primary dark:hover:text-primary flex items-center justify-center gap-1.5 transition-all bg-white dark:bg-gray-800"
                     >
                         <Pencil className="w-3 h-3" />
                         {(tw as any)?.customize ?? (lang === 'ar' ? 'تخصيص' : 'Customize')}

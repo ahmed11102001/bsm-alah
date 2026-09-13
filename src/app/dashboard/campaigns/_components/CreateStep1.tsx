@@ -22,8 +22,8 @@ export function CreateStep1({
     <div className="space-y-5">
       <div>
         <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">{tr("uploadExcel", lang)}</Label>
-        <label htmlFor="excel-input" className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl p-8 cursor-pointer hover:border-green-400 hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all">
-          <FileSpreadsheet className="w-10 h-10 text-green-500" />
+        <label htmlFor="excel-input" className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl p-8 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+          <FileSpreadsheet className="w-10 h-10 text-primary" />
           <span className="font-medium text-gray-700 dark:text-gray-300">{tr("dragHere", lang)}</span>
           <span className="text-xs text-gray-400">.xlsx / .xls</span>
           <input id="excel-input" type="file" accept=".xlsx,.xls" className="hidden" onChange={onExcelChange} />
@@ -50,9 +50,9 @@ export function CreateStep1({
         </div>
       </div>
       {numbers.length > 0 && (
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
+        <div className="bg-primary/10 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-green-800 dark:text-green-300 flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
               <Users className="w-4 h-4" /> {numbers.length.toLocaleString()} {tr("numbers", lang)}
             </span>
             <button onClick={() => setNumbers([])} className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1">
@@ -61,7 +61,7 @@ export function CreateStep1({
           </div>
           <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
             {numbers.slice(0, 15).map((n, i) => (
-              <span key={i} className="inline-flex items-center gap-1 bg-white dark:bg-gray-700 text-xs px-2 py-1 rounded-lg border border-green-200 dark:border-green-800 text-gray-700 dark:text-gray-300">
+              <span key={i} className="inline-flex items-center gap-1 bg-white dark:bg-gray-700 text-xs px-2 py-1 rounded-lg border border-primary/20 text-gray-700 dark:text-gray-300">
                 {n}
                 <button onClick={() => setNumbers(numbers.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
               </span>
@@ -71,7 +71,7 @@ export function CreateStep1({
         </div>
       )}
       <Button onClick={() => { if (!numbers.length) { toast.error(tr("errAddNumbersFirst", lang)); return; } onNext(); }}
-        className="w-full bg-green-500 hover:bg-green-600 text-white gap-2" disabled={numbers.length === 0}>
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2" disabled={numbers.length === 0}>
         {tr("nextTemplate", lang)} {lang === "ar" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
       </Button>
     </div>

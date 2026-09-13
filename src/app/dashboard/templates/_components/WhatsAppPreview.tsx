@@ -1,4 +1,4 @@
-import {
+﻿import {
     Smartphone, MessageSquare, Image, Video, Paperclip, ExternalLink, Phone, CheckCheck,
 } from "lucide-react";
 import { T } from "./i18n";
@@ -39,12 +39,12 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                 {/* Screen */}
                 <div className="bg-[#e5ddd5] dark:bg-[#0a1014] rounded-[2rem] overflow-hidden" style={{ minHeight: 380 }}>
                     {/* WhatsApp Header bar */}
-                    <div className="bg-[#075E54] px-3 py-2.5 flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
+                    <div className="bg-primary px-3 py-2.5 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                             <MessageSquare className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <p className="text-white text-xs font-semibold leading-none">متجرك</p>
+                            <p className="text-white text-xs font-semibold leading-none">Ù…ØªØ¬Ø±Ùƒ</p>
                             <p className="text-green-200 text-[10px]">Business Account</p>
                         </div>
                     </div>
@@ -94,10 +94,10 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                                 {form.buttons.length > 0 && (
                                     <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
                                         {form.buttons.map((btn, i) => (
-                                            <button key={i} className="w-full text-xs text-[#0d9488] dark:text-[#25D366] py-2 flex items-center justify-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <button key={i} className="w-full text-xs text-[#0d9488] dark:text-primary py-2 flex items-center justify-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                                 {btn.type === "url" && <ExternalLink className="w-3 h-3" />}
                                                 {btn.type === "phone" && <Phone className="w-3 h-3" />}
-                                                {btn.text || "زر"}
+                                                {btn.text || "Ø²Ø±"}
                                             </button>
                                         ))}
                                     </div>
@@ -106,7 +106,7 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                         ) : (
                             <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-600">
                                 <Smartphone className="w-10 h-10 mb-2 opacity-40" />
-                                <p className="text-xs text-center opacity-60">ابدأ بكتابة الرسالة<br />لترى المعاينة</p>
+                                <p className="text-xs text-center opacity-60">Ø§Ø¨Ø¯Ø£ Ø¨ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©<br />Ù„ØªØ±Ù‰ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©</p>
                             </div>
                         )}
                     </div>

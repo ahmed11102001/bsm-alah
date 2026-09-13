@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,7 +15,7 @@ type Conversation = {
   lastMessage: { content: string | null; type: string; createdAt: string; direction: string } | null;
 };
 
-const inputClass = "h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-white outline-none focus:border-[#25D366] focus:ring-2 focus:ring-[#25D366]/20";
+const inputClass = "h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export default function ConversationAssignmentManager() {
   const { dir, locale } = useLanguage();
@@ -53,7 +53,7 @@ export default function ConversationAssignmentManager() {
       setRows(d.conversations ?? []);
       setTotal(d.pagination?.total ?? 0);
       setTotalPages(Math.max(1, d.pagination?.totalPages ?? 1));
-    } catch (e: any) { toast.error(e.message ?? (ar ? "تعذر تحميل المحادثات" : "Could not load conversations")); }
+    } catch (e: any) { toast.error(e.message ?? (ar ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "Could not load conversations")); }
     finally { setLoading(false); }
   }, [page, pageSize, search, assignment, assigneeId, status, date, ar]);
 
@@ -78,9 +78,9 @@ export default function ConversationAssignmentManager() {
     try {
       const r = await fetch("/api/chat/assignments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contactIds: [...selected], assignedToUserId }) });
       const d = await r.json(); if (!r.ok) throw new Error(d.error);
-      toast.success(assignedToUserId ? `${d.count} ${ar ? "محادثة تم تعيينها" : "conversations assigned"}` : `${d.count} ${ar ? "محادثة أصبحت غير معينة" : "conversations unassigned"}`);
+      toast.success(assignedToUserId ? `${d.count} ${ar ? "Ù…Ø­Ø§Ø¯Ø«Ø© ØªÙ… ØªØ¹ÙŠÙŠÙ†Ù‡Ø§" : "conversations assigned"}` : `${d.count} ${ar ? "Ù…Ø­Ø§Ø¯Ø«Ø© Ø£ØµØ¨Ø­Øª ØºÙŠØ± Ù…Ø¹ÙŠÙ†Ø©" : "conversations unassigned"}`);
       setSelected(new Set()); await fetchRows();
-    } catch (e: any) { toast.error(e.message ?? (ar ? "فشل تحديث التعيينات" : "Failed to update assignments")); }
+    } catch (e: any) { toast.error(e.message ?? (ar ? "ÙØ´Ù„ ØªØ­Ø¯ÙŠØ« Ø§Ù„ØªØ¹ÙŠÙŠÙ†Ø§Øª" : "Failed to update assignments")); }
     finally { setBusy(false); }
   };
 
@@ -90,38 +90,39 @@ export default function ConversationAssignmentManager() {
       const d = await r.json(); if (!r.ok) throw new Error(d.error);
       const member = members.find(m => m.id === assignedToUserId) ?? null;
       setRows(prev => prev.map(row => row.id === contactId ? { ...row, assignedToUserId, assignedTo: member ? { id: member.id, name: member.name, email: member.email } : null } : row));
-      toast.success(ar ? "تم تحديث المسؤول" : "Assignment updated");
-    } catch (e: any) { toast.error(e.message ?? (ar ? "تعذر تحديث المسؤول" : "Could not update assignment")); }
+      toast.success(ar ? "ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø³Ø¤ÙˆÙ„" : "Assignment updated");
+    } catch (e: any) { toast.error(e.message ?? (ar ? "ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø³Ø¤ÙˆÙ„" : "Could not update assignment")); }
   };
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto" dir={dir}>
-      <button onClick={() => router.push("/dashboard/team")} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#075E54] dark:hover:text-[#25D366] mb-5">
-        <ArrowLeft className={`w-4 h-4 ${dir === "rtl" ? "rotate-180" : ""}`} /> {ar ? "العودة للفريق" : "Back to Team"}
+      <button onClick={() => router.push("/dashboard/team")} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary dark:hover:text-primary mb-5">
+        <ArrowLeft className={`w-4 h-4 ${dir === "rtl" ? "rotate-180" : ""}`} /> {ar ? "Ø§Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„ÙØ±ÙŠÙ‚" : "Back to Team"}
       </button>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
-        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">{ar ? "إدارة تعيين المحادثات" : "Conversation Assignment"}</h1><p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{ar ? "إدارة مسؤول كل محادثة من مكان واحد" : "Manage which team member handles each conversation."}</p></div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">{total} {ar ? "محادثة" : "conversations"}</div>
+        <div><h1 className="text-2xl font-bold text-gray-900 dark:text-white">{ar ? "Ø¥Ø¯Ø§Ø±Ø© ØªØ¹ÙŠÙŠÙ† Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "Conversation Assignment"}</h1><p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{ar ? "Ø¥Ø¯Ø§Ø±Ø© Ù…Ø³Ø¤ÙˆÙ„ ÙƒÙ„ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ù† Ù…ÙƒØ§Ù† ÙˆØ§Ø­Ø¯" : "Manage which team member handles each conversation."}</p></div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{total} {ar ? "Ù…Ø­Ø§Ø¯Ø«Ø©" : "conversations"}</div>
       </div>
 
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm mb-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="relative md:col-span-2"><Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder={ar ? "ابحث بالاسم أو الرقم" : "Search conversations..."} className={`${inputClass} w-full pl-9`} /></div>
-          <select value={assignment} onChange={e => setAssignment(e.target.value)} className={inputClass}><option value="all">{ar ? "كل التعيينات" : "All assignments"}</option><option value="unassigned">{ar ? "غير معينة" : "Unassigned"}</option><option value="assigned">{ar ? "معينة" : "Assigned"}</option></select>
-          <select value={assigneeId} onChange={e => { setAssigneeId(e.target.value); setAssignment(e.target.value ? "all" : assignment); }} className={inputClass}><option value="">{ar ? "كل الأعضاء" : "All team members"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select>
-          <select value={status} onChange={e => setStatus(e.target.value)} className={inputClass}><option value="all">{ar ? "كل الحالات" : "All statuses"}</option><option value="unread">{ar ? "غير مقروءة" : "Unread"}</option><option value="replied">{ar ? "تم الرد عليها" : "Replied"}</option><option value="active">{ar ? "نشطة" : "Active"}</option><option value="archived">{ar ? "مؤرشفة" : "Archived"}</option></select>
-          <select value={date} onChange={e => setDate(e.target.value)} className={inputClass}><option value="all">{ar ? "كل التواريخ" : "All dates"}</option><option value="today">{ar ? "اليوم" : "Today"}</option><option value="7d">{ar ? "آخر 7 أيام" : "Last 7 days"}</option><option value="30d">{ar ? "آخر 30 يومًا" : "Last 30 days"}</option></select>
-          <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className={inputClass}><option value="20">20 / {ar ? "صفحة" : "page"}</option><option value="50">50 / {ar ? "صفحة" : "page"}</option><option value="100">100 / {ar ? "صفحة" : "page"}</option></select>
+          <div className="relative md:col-span-2"><Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder={ar ? "Ø§Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ø±Ù‚Ù…" : "Search conversations..."} className={`${inputClass} w-full pl-9`} /></div>
+          <select value={assignment} onChange={e => setAssignment(e.target.value)} className={inputClass}><option value="all">{ar ? "ÙƒÙ„ Ø§Ù„ØªØ¹ÙŠÙŠÙ†Ø§Øª" : "All assignments"}</option><option value="unassigned">{ar ? "ØºÙŠØ± Ù…Ø¹ÙŠÙ†Ø©" : "Unassigned"}</option><option value="assigned">{ar ? "Ù…Ø¹ÙŠÙ†Ø©" : "Assigned"}</option></select>
+          <select value={assigneeId} onChange={e => { setAssigneeId(e.target.value); setAssignment(e.target.value ? "all" : assignment); }} className={inputClass}><option value="">{ar ? "ÙƒÙ„ Ø§Ù„Ø£Ø¹Ø¶Ø§Ø¡" : "All team members"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select>
+          <select value={status} onChange={e => setStatus(e.target.value)} className={inputClass}><option value="all">{ar ? "ÙƒÙ„ Ø§Ù„Ø­Ø§Ù„Ø§Øª" : "All statuses"}</option><option value="unread">{ar ? "ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡Ø©" : "Unread"}</option><option value="replied">{ar ? "ØªÙ… Ø§Ù„Ø±Ø¯ Ø¹Ù„ÙŠÙ‡Ø§" : "Replied"}</option><option value="active">{ar ? "Ù†Ø´Ø·Ø©" : "Active"}</option><option value="archived">{ar ? "Ù…Ø¤Ø±Ø´ÙØ©" : "Archived"}</option></select>
+          <select value={date} onChange={e => setDate(e.target.value)} className={inputClass}><option value="all">{ar ? "ÙƒÙ„ Ø§Ù„ØªÙˆØ§Ø±ÙŠØ®" : "All dates"}</option><option value="today">{ar ? "Ø§Ù„ÙŠÙˆÙ…" : "Today"}</option><option value="7d">{ar ? "Ø¢Ø®Ø± 7 Ø£ÙŠØ§Ù…" : "Last 7 days"}</option><option value="30d">{ar ? "Ø¢Ø®Ø± 30 ÙŠÙˆÙ…Ù‹Ø§" : "Last 30 days"}</option></select>
+          <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))} className={inputClass}><option value="20">20 / {ar ? "ØµÙØ­Ø©" : "page"}</option><option value="50">50 / {ar ? "ØµÙØ­Ø©" : "page"}</option><option value="100">100 / {ar ? "ØµÙØ­Ø©" : "page"}</option></select>
         </div>
       </div>
 
-      {selectedCount > 0 && <div className="sticky top-2 z-20 bg-[#075E54] text-white rounded-xl p-3 mb-3 flex flex-wrap items-center gap-3 shadow-lg"><span className="font-semibold text-sm">{ar ? `تم تحديد ${selectedCount}` : `Selected: ${selectedCount}`}</span><span className="text-xs opacity-80">{ar ? "من النتائج الحالية" : "from current results"}</span><select disabled={busy} value={assigneeId} onChange={e => setAssigneeId(e.target.value)} className="h-9 rounded-lg px-2 text-sm text-gray-900"><option value="">{ar ? "اختر عضوًا" : "Select team member"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select><button disabled={busy || !selectedMember} onClick={() => bulkUpdate(assigneeId)} className="h-9 px-3 rounded-lg bg-[#25D366] disabled:opacity-50 text-sm font-semibold">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : ar ? "تعيين" : "Assign"}</button><button disabled={busy} onClick={() => bulkUpdate(null)} className="h-9 px-3 rounded-lg bg-white/15 hover:bg-white/25 disabled:opacity-50 text-sm">{ar ? "إلغاء التعيين" : "Unassign"}</button><button onClick={() => setSelected(new Set())} className="ml-auto p-1"><X className="w-4 h-4" /></button></div>}
+      {selectedCount > 0 && <div className="sticky top-2 z-20 bg-primary text-primary-foreground rounded-xl p-3 mb-3 flex flex-wrap items-center gap-3 shadow-lg"><span className="font-semibold text-sm">{ar ? `ØªÙ… ØªØ­Ø¯ÙŠØ¯ ${selectedCount}` : `Selected: ${selectedCount}`}</span><span className="text-xs opacity-80">{ar ? "Ù…Ù† Ø§Ù„Ù†ØªØ§Ø¦Ø¬ Ø§Ù„Ø­Ø§Ù„ÙŠØ©" : "from current results"}</span><select disabled={busy} value={assigneeId} onChange={e => setAssigneeId(e.target.value)} className="h-9 rounded-lg px-2 text-sm text-gray-900"><option value="">{ar ? "Ø§Ø®ØªØ± Ø¹Ø¶ÙˆÙ‹Ø§" : "Select team member"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select><button disabled={busy || !selectedMember} onClick={() => bulkUpdate(assigneeId)} className="h-9 px-3 rounded-lg bg-primary disabled:opacity-50 text-sm font-semibold">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : ar ? "ØªØ¹ÙŠÙŠÙ†" : "Assign"}</button><button disabled={busy} onClick={() => bulkUpdate(null)} className="h-9 px-3 rounded-lg bg-white/15 hover:bg-white/25 disabled:opacity-50 text-sm">{ar ? "Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¹ÙŠÙŠÙ†" : "Unassign"}</button><button onClick={() => setSelected(new Set())} className="ml-auto p-1"><X className="w-4 h-4" /></button></div>}
 
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[36px_minmax(180px,1.3fr)_minmax(160px,2fr)_minmax(150px,1fr)] gap-3 items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/70 border-b border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label={ar ? "تحديد الكل" : "Select all visible"} /><span>{ar ? "العميل" : "Customer"}</span><span>{ar ? "آخر رسالة" : "Last message"}</span><span>{ar ? "المسؤول" : "Assigned to"}</span></div>
-        {loading ? <TableRowsSkeleton rows={6} cols={2} /> : rows.length === 0 ? <div className="py-16 text-center text-sm text-gray-400"><Users className="w-9 h-9 mx-auto mb-2 opacity-40" />{search ? (ar ? "لا توجد نتائج للبحث" : "No conversations match your search") : assignment === "unassigned" ? (ar ? "لا توجد محادثات غير معينة" : "No unassigned conversations") : (ar ? "لا توجد محادثات" : "No conversations found")}</div> : rows.map(row => <div key={row.id} className="grid grid-cols-[36px_minmax(180px,1.3fr)_minmax(160px,2fr)_minmax(150px,1fr)] gap-3 items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50/70 dark:hover:bg-gray-800/40"><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} /><div className="min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{row.name || row.phone}</p><p className="text-xs text-gray-400 truncate">{row.phone}</p></div><div className="min-w-0"><p className="text-sm text-gray-700 dark:text-gray-300 truncate">{row.lastMessage?.content || (row.lastMessage ? `[${row.lastMessage.type}]` : "—")}</p><p className="text-[11px] text-gray-400">{row.lastMessageAt ? new Date(row.lastMessageAt).toLocaleString(ar ? "ar-EG" : "en-US") : "—"}{row.unreadCount > 0 && <span className="ml-2 text-[#25D366]">{row.unreadCount} unread</span>}</p></div><select value={row.assignedToUserId ?? ""} onChange={e => quickAssign(row.id, e.target.value || null)} className="h-9 max-w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 text-xs text-gray-900 dark:text-white"><option value="">{ar ? "غير معينة" : "Unassigned"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select></div>)}
+        <div className="grid grid-cols-[36px_minmax(180px,1.3fr)_minmax(160px,2fr)_minmax(150px,1fr)] gap-3 items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/70 border-b border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label={ar ? "ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„" : "Select all visible"} /><span>{ar ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer"}</span><span>{ar ? "Ø¢Ø®Ø± Ø±Ø³Ø§Ù„Ø©" : "Last message"}</span><span>{ar ? "Ø§Ù„Ù…Ø³Ø¤ÙˆÙ„" : "Assigned to"}</span></div>
+        {loading ? <TableRowsSkeleton rows={6} cols={2} /> : rows.length === 0 ? <div className="py-16 text-center text-sm text-gray-400"><Users className="w-9 h-9 mx-auto mb-2 opacity-40" />{search ? (ar ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù„Ù„Ø¨Ø­Ø«" : "No conversations match your search") : assignment === "unassigned" ? (ar ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø­Ø§Ø¯Ø«Ø§Øª ØºÙŠØ± Ù…Ø¹ÙŠÙ†Ø©" : "No unassigned conversations") : (ar ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "No conversations found")}</div> : rows.map(row => <div key={row.id} className="grid grid-cols-[36px_minmax(180px,1.3fr)_minmax(160px,2fr)_minmax(150px,1fr)] gap-3 items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50/70 dark:hover:bg-gray-800/40"><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} /><div className="min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{row.name || row.phone}</p><p className="text-xs text-gray-400 truncate">{row.phone}</p></div><div className="min-w-0"><p className="text-sm text-gray-700 dark:text-gray-300 truncate">{row.lastMessage?.content || (row.lastMessage ? `[${row.lastMessage.type}]` : "â€”")}</p><p className="text-[11px] text-gray-400">{row.lastMessageAt ? new Date(row.lastMessageAt).toLocaleString(ar ? "ar-EG" : "en-US") : "â€”"}{row.unreadCount > 0 && <span className="ml-2 text-primary">{row.unreadCount} unread</span>}</p></div><select value={row.assignedToUserId ?? ""} onChange={e => quickAssign(row.id, e.target.value || null)} className="h-9 max-w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 text-xs text-gray-900 dark:text-white"><option value="">{ar ? "ØºÙŠØ± Ù…Ø¹ÙŠÙ†Ø©" : "Unassigned"}</option>{members.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}</select></div>)}
       </div>
-      <div className="flex items-center justify-between mt-4"><span className="text-xs text-gray-500 dark:text-gray-400">{ar ? `صفحة ${page} من ${totalPages}` : `Page ${page} of ${totalPages}`}</span><div className="flex items-center gap-2"><button disabled={page <= 1 || loading} onClick={() => { setPage(p => p - 1); setSelected(new Set()); }} className="p-2 rounded-lg border disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button><button disabled={page >= totalPages || loading} onClick={() => { setPage(p => p + 1); setSelected(new Set()); }} className="p-2 rounded-lg border disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button></div></div>
+      <div className="flex items-center justify-between mt-4"><span className="text-xs text-gray-500 dark:text-gray-400">{ar ? `ØµÙØ­Ø© ${page} Ù…Ù† ${totalPages}` : `Page ${page} of ${totalPages}`}</span><div className="flex items-center gap-2"><button disabled={page <= 1 || loading} onClick={() => { setPage(p => p - 1); setSelected(new Set()); }} className="p-2 rounded-lg border disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button><button disabled={page >= totalPages || loading} onClick={() => { setPage(p => p + 1); setSelected(new Set()); }} className="p-2 rounded-lg border disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button></div></div>
     </div>
   );
 }
+

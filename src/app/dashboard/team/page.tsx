@@ -56,12 +56,12 @@ const ROLE_CFG = {
   FULL_ACCESS: {
     icon: ShieldCheck,
     pill: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    avatar: "from-[#075E54] to-[#064944]",
+    avatar: "from-primary to-primary/80",
   },
   CHAT_ONLY: {
     icon: MessageSquare,
     pill: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    avatar: "from-[#075E54] to-[#064944]",
+    avatar: "from-primary to-primary/80",
   },
 } as const;
 
@@ -87,11 +87,11 @@ function timeAgo(dateStr: string, locale: "ar" | "en") {
     return `${Math.floor(hours / 24)}d ago`;
   }
 
-  if (minutes < 1) return "الآن";
-  if (minutes < 60) return `منذ ${minutes} دقيقة`;
+  if (minutes < 1) return "Ø§Ù„Ø¢Ù†";
+  if (minutes < 60) return `Ù…Ù†Ø° ${minutes} Ø¯Ù‚ÙŠÙ‚Ø©`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `منذ ${hours} ساعة`;
-  return `منذ ${Math.floor(hours / 24)} يوم`;
+  if (hours < 24) return `Ù…Ù†Ø° ${hours} Ø³Ø§Ø¹Ø©`;
+  return `Ù…Ù†Ø° ${Math.floor(hours / 24)} ÙŠÙˆÙ…`;
 }
 
 function MemberCard({
@@ -126,7 +126,7 @@ function MemberCard({
     ? new Date(member.createdAt).toLocaleDateString(
       locale === "ar" ? "ar-EG" : "en-US"
     )
-    : "—";
+    : "â€”";
 
   return (
     <div className="group bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 flex flex-col gap-3.5 hover:shadow-md transition-all">
@@ -139,7 +139,7 @@ function MemberCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
-            <span>{member.name || "—"}</span>
+            <span>{member.name || "â€”"}</span>
             {isSelf && (
               <span className="text-[10px] text-gray-400 font-normal">
                 {tm.self}
@@ -174,14 +174,14 @@ function MemberCard({
         </span>
 
         {isAdmin ? (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#075E54] dark:text-[#25D366] bg-green-50 dark:bg-green-950/30 px-2 py-1 rounded-md">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2 py-1 rounded-md">
             <MessageSquare className="w-3 h-3" />
-            {locale === "ar" ? "كل المحادثات" : "All conversations"}
+            {locale === "ar" ? "ÙƒÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "All conversations"}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 px-2 py-0.5 rounded-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {tm.activeStatus || "نشط"}
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            {tm.activeStatus || "Ù†Ø´Ø·"}
           </span>
         )}
       </div>
@@ -216,16 +216,16 @@ function MemberCard({
               <p className="text-[10px] text-gray-500 text-center">
                 {isAdmin
                   ? locale === "ar"
-                    ? "الوصول"
+                    ? "Ø§Ù„ÙˆØµÙˆÙ„"
                     : "Access"
                   : locale === "ar"
-                    ? "محادثات مسموح لك بالرد عليها"
+                    ? "Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù…Ø³Ù…ÙˆØ­ Ù„Ùƒ Ø¨Ø§Ù„Ø±Ø¯ Ø¹Ù„ÙŠÙ‡Ø§"
                     : "Reply-eligible Chats"}
               </p>
               <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
                 {isAdmin
                   ? locale === "ar"
-                    ? "الكل"
+                    ? "Ø§Ù„ÙƒÙ„"
                     : "All"
                   : member.conversationCount}
               </p>
@@ -233,7 +233,7 @@ function MemberCard({
 
             <div className="flex flex-col items-center gap-1 p-2 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
               <p className="text-[10px] text-gray-500 text-center">
-                {locale === "ar" ? "ردودي" : "My Replies"}
+                {locale === "ar" ? "Ø±Ø¯ÙˆØ¯ÙŠ" : "My Replies"}
               </p>
               <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
                 {member.repliesCount}
@@ -242,7 +242,7 @@ function MemberCard({
 
             <div className="flex flex-col items-center gap-1 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
               <p className="text-[10px] text-gray-500 text-center">
-                {locale === "ar" ? "تاريخ الانضمام" : "Joined"}
+                {locale === "ar" ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…" : "Joined"}
               </p>
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 text-center">
                 {formattedDate}
@@ -283,7 +283,7 @@ function InvitationCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-            {invitation.name || "—"}
+            {invitation.name || "â€”"}
           </p>
           <p className="text-[11px] text-gray-400 truncate" dir="ltr">
             {invitation.email}
@@ -317,7 +317,7 @@ function InvitationCard({
           <button
             onClick={() => onResend(invitation.id)}
             disabled={resending || cancelling}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[#075E54] bg-green-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-primary bg-primary/10 disabled:opacity-50"
           >
             <RotateCw className={`w-3 h-3 ${resending ? "animate-spin" : ""}`} />
             {tm.resendBtn}
@@ -368,19 +368,19 @@ export default function TeamPage() {
           dir="rtl"
         >
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            وصلت الحد الأقصى للأعضاء في باقتك
+            ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø£Ø¹Ø¶Ø§Ø¡ ÙÙŠ Ø¨Ø§Ù‚ØªÙƒ
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            رقّي الباقة لإضافة المزيد من أعضاء الفريق.
+            Ø±Ù‚Ù‘ÙŠ Ø§Ù„Ø¨Ø§Ù‚Ø© Ù„Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø²ÙŠØ¯ Ù…Ù† Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„ÙØ±ÙŠÙ‚.
           </p>
           <button
             onClick={() => {
               toast.dismiss();
               router.push("/checkout");
             }}
-            className="mt-1 text-xs font-semibold text-white bg-[#075E54] hover:bg-[#064944] px-4 py-2 rounded-lg"
+            className="mt-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg"
           >
-            ترقية الباقة ←
+            ØªØ±Ù‚ÙŠØ© Ø§Ù„Ø¨Ø§Ù‚Ø© â†
           </button>
         </div>
       ),
@@ -415,7 +415,7 @@ export default function TeamPage() {
     fetchTeam();
   }, []);
 
-  // تحديث دوري صامت كل 20 ثانية عشان حالة الدعوات والأعضاء تتحدث لوحدها
+  // ØªØ­Ø¯ÙŠØ« Ø¯ÙˆØ±ÙŠ ØµØ§Ù…Øª ÙƒÙ„ 20 Ø«Ø§Ù†ÙŠØ© Ø¹Ø´Ø§Ù† Ø­Ø§Ù„Ø© Ø§Ù„Ø¯Ø¹ÙˆØ§Øª ÙˆØ§Ù„Ø£Ø¹Ø¶Ø§Ø¡ ØªØªØ­Ø¯Ø« Ù„ÙˆØ­Ø¯Ù‡Ø§
   useEffect(() => {
     const id = setInterval(() => fetchTeam(true), 20_000);
     return () => clearInterval(id);
@@ -457,7 +457,7 @@ export default function TeamPage() {
           <p className="text-xs opacity-90">
             {tm.addForm.addSuccessDesc
               ? tm.addForm.addSuccessDesc(email)
-              : `أرسلنا كود الانضمام إلى البريد الإلكتروني ${email}`}
+              : `Ø£Ø±Ø³Ù„Ù†Ø§ ÙƒÙˆØ¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… Ø¥Ù„Ù‰ Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ ${email}`}
           </p>
         </div>
       );
@@ -600,16 +600,16 @@ export default function TeamPage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               onClick={() => router.push("/dashboard/team/conversations")}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#075E54] hover:bg-[#064944] text-white text-sm font-semibold transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors shadow-sm"
             >
               <MessageSquare className="w-4 h-4" />
-              {locale === "ar" ? "إدارة المحادثات وتعيينها" : "Manage & Assign Conversations"}
+              {locale === "ar" ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ÙˆØªØ¹ÙŠÙŠÙ†Ù‡Ø§" : "Manage & Assign Conversations"}
             </button>
 
             {currentRole === "FULL_ACCESS" && (
-              <span className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-green-50 dark:bg-green-950/30 text-[#075E54] dark:text-[#25D366] text-xs font-semibold border border-green-100 dark:border-green-900/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
-                {locale === "ar" ? "كل المحادثات مفتوحة" : "All conversations are open"}
+              <span className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary/10 dark:bg-primary/15 text-primary text-xs font-semibold border border-primary/20 dark:border-primary/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                {locale === "ar" ? "ÙƒÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù…ÙØªÙˆØ­Ø©" : "All conversations are open"}
               </span>
             )}
           </div>
@@ -622,7 +622,7 @@ export default function TeamPage() {
           className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-8 shadow-sm"
         >
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
-            <UserPlus className="w-4 h-4 text-[#25D366]" />
+            <UserPlus className="w-4 h-4 text-primary" />
             {tm.addForm.title}
           </p>
 
@@ -634,7 +634,7 @@ export default function TeamPage() {
               <input
                 name="name"
                 placeholder={tm.addForm.namePlaceholder}
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#25D366]/40"
+                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
 
@@ -647,7 +647,7 @@ export default function TeamPage() {
                 type="email"
                 placeholder="email@company.com"
                 required
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#25D366]/40"
+                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
 
@@ -657,7 +657,7 @@ export default function TeamPage() {
               </label>
               <select
                 name="role"
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#25D366]/40"
+                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <option value="CHAT_ONLY">{tm.addForm.roleAgent}</option>
                 <option value="FULL_ACCESS">{tm.addForm.roleAdmin}</option>
@@ -669,7 +669,7 @@ export default function TeamPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-[#25D366] hover:bg-[#1fb956] text-white disabled:opacity-50"
+              className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -689,7 +689,7 @@ export default function TeamPage() {
             className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             <UserPlus className="w-4 h-4" />
-            {locale === "ar" ? "وصلت الحد الأقصى للأعضاء" : "Member limit reached"}
+            {locale === "ar" ? "ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø£Ø¹Ø¶Ø§Ø¡" : "Member limit reached"}
           </button>
         </div>
       )}
@@ -702,7 +702,7 @@ export default function TeamPage() {
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {locale === "ar"
-              ? "متاحة من باقة Go فما فوق"
+              ? "Ù…ØªØ§Ø­Ø© Ù…Ù† Ø¨Ø§Ù‚Ø© Go ÙÙ…Ø§ ÙÙˆÙ‚"
               : "Available on Go plan and above"}
           </p>
         </div>
@@ -715,8 +715,8 @@ export default function TeamPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#075E54] dark:text-[#25D366]" />
-                <span>{tm.membersSectionTitle || "أعضاء الفريق"}</span>
+                <Users className="w-4 h-4 text-primary" />
+                <span>{tm.membersSectionTitle || "Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„ÙØ±ÙŠÙ‚"}</span>
                 <span className="text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
                   {members.length}
                 </span>
@@ -738,7 +738,7 @@ export default function TeamPage() {
                     member.role === "CHAT_ONLY" &&
                     (isOwner || currentRole === "FULL_ACCESS") &&
                     !isMemberSelf;
-                  // Only the Owner can demote an Admin back to Chat-only —
+                  // Only the Owner can demote an Admin back to Chat-only â€”
                   // an Admin can never demote another Admin (or themselves).
                   const canDemote =
                     member.role === "FULL_ACCESS" && isOwner && !isMemberSelf;
@@ -771,13 +771,13 @@ export default function TeamPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <MailCheck className="w-4 h-4 text-amber-500" />
-                  <span>{tm.pendingSectionTitle || "الدعوات المعلقة"}</span>
+                  <span>{tm.pendingSectionTitle || "Ø§Ù„Ø¯Ø¹ÙˆØ§Øª Ø§Ù„Ù…Ø¹Ù„Ù‚Ø©"}</span>
                   <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                     {invitations.length}
                   </span>
                 </h2>
                 <p className="text-xs text-gray-400 hidden sm:block">
-                  {tm.pendingSubtitle || "دعوات تم إرسالها وفي انتظار قبول العضو"}
+                  {tm.pendingSubtitle || "Ø¯Ø¹ÙˆØ§Øª ØªÙ… Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§ ÙˆÙÙŠ Ø§Ù†ØªØ¸Ø§Ø± Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ø¹Ø¶Ùˆ"}
                 </p>
               </div>
 

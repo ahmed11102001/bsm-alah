@@ -1,4 +1,4 @@
-// src/app/dashboard/admin/_components/ProtectionClaimsTab.tsx
+﻿// src/app/dashboard/admin/_components/ProtectionClaimsTab.tsx
 "use client";
 import { DetailPanelSkeleton, TableRowsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
@@ -100,28 +100,28 @@ interface ProtectionClaimsTabProps {
 
 const STATUS_BADGES: Record<string, { labelAr: string; labelEn: string; bg: string; text: string; icon: any }> = {
   NEEDS_REVIEW: {
-    labelAr: "يحتاج مراجعة",
+    labelAr: "ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©",
     labelEn: "Needs Review",
     bg: "bg-amber-100 dark:bg-amber-900/30",
     text: "text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
     icon: Clock,
   },
   ELIGIBLE: {
-    labelAr: "مستحق للضمان",
+    labelAr: "Ù…Ø³ØªØ­Ù‚ Ù„Ù„Ø¶Ù…Ø§Ù†",
     labelEn: "Eligible",
     bg: "bg-emerald-100 dark:bg-emerald-900/30",
     text: "text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
     icon: CheckCircle2,
   },
   NOT_ELIGIBLE: {
-    labelAr: "غير مستحق",
+    labelAr: "ØºÙŠØ± Ù…Ø³ØªØ­Ù‚",
     labelEn: "Not Eligible",
     bg: "bg-rose-100 dark:bg-rose-900/30",
     text: "text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800",
     icon: XCircle,
   },
   PENDING_EVIDENCE: {
-    labelAr: "بانتظار أدلة",
+    labelAr: "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø£Ø¯Ù„Ø©",
     labelEn: "Pending Evidence",
     bg: "bg-purple-100 dark:bg-purple-900/30",
     text: "text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
@@ -130,18 +130,18 @@ const STATUS_BADGES: Record<string, { labelAr: string; labelEn: string; bg: stri
 };
 
 const BAN_STATUS_LABELS: Record<string, { ar: string; en: string; color: string }> = {
-  CUSTOMER_REPORTED: { ar: "بلاغ عميل", en: "Customer Reported", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
-  EVIDENCE_PROVIDED: { ar: "تم تقديم أدلة", en: "Evidence Provided", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
-  VERIFIED: { ar: "تم التحقق", en: "Verified", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-  NOT_VERIFIED: { ar: "لم يتم التحقق", en: "Not Verified", color: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300" },
+  CUSTOMER_REPORTED: { ar: "Ø¨Ù„Ø§Øº Ø¹Ù…ÙŠÙ„", en: "Customer Reported", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+  EVIDENCE_PROVIDED: { ar: "ØªÙ… ØªÙ‚Ø¯ÙŠÙ… Ø£Ø¯Ù„Ø©", en: "Evidence Provided", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
+  VERIFIED: { ar: "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚", en: "Verified", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  NOT_VERIFIED: { ar: "Ù„Ù… ÙŠØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚", en: "Not Verified", color: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300" },
 };
 
 const EVIDENCE_TYPE_LABELS: Record<string, { ar: string; en: string }> = {
-  BAN_SCREENSHOT: { ar: "لقطة شاشة الحظر", en: "Meta Ban Screenshot" },
-  META_RESTRICTION: { ar: "دليل تقييد Meta", en: "Meta Restriction Evidence" },
-  OPT_IN_PROOF: { ar: "إثبات الموافقة", en: "Opt-in Evidence" },
-  NO_EXTERNAL_PROVIDER_DECLARATION: { ar: "إقرار عدم استخدام مزود آخر", en: "No External Provider Declaration" },
-  OTHER: { ar: "أدلة أخرى", en: "Other Supporting Evidence" },
+  BAN_SCREENSHOT: { ar: "Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ø§Ù„Ø­Ø¸Ø±", en: "Meta Ban Screenshot" },
+  META_RESTRICTION: { ar: "Ø¯Ù„ÙŠÙ„ ØªÙ‚ÙŠÙŠØ¯ Meta", en: "Meta Restriction Evidence" },
+  OPT_IN_PROOF: { ar: "Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©", en: "Opt-in Evidence" },
+  NO_EXTERNAL_PROVIDER_DECLARATION: { ar: "Ø¥Ù‚Ø±Ø§Ø± Ø¹Ø¯Ù… Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù…Ø²ÙˆØ¯ Ø¢Ø®Ø±", en: "No External Provider Declaration" },
+  OTHER: { ar: "Ø£Ø¯Ù„Ø© Ø£Ø®Ø±Ù‰", en: "Other Supporting Evidence" },
 };
 
 /** Safely format a date string, never show "Invalid Date" */
@@ -365,11 +365,11 @@ export default function ProtectionClaimsTab({
     setDecisionSuccess(null);
 
     if (decisionStatus === "NOT_ELIGIBLE" && !decisionReason.trim()) {
-      setDecisionError(isAr ? "سبب القرار إجباري عند رفض الطلب." : "Decision reason is required when rejecting a claim.");
+      setDecisionError(isAr ? "Ø³Ø¨Ø¨ Ø§Ù„Ù‚Ø±Ø§Ø± Ø¥Ø¬Ø¨Ø§Ø±ÙŠ Ø¹Ù†Ø¯ Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨." : "Decision reason is required when rejecting a claim.");
       return;
     }
 
-    // Check for UNKNOWN/NEEDS_EVIDENCE on approval → show confirmation
+    // Check for UNKNOWN/NEEDS_EVIDENCE on approval â†’ show confirmation
     if (decisionStatus === "ELIGIBLE" && !confirmed) {
       const snapshot: EvidenceSnapshot | null = selectedClaim?.evidenceSnapshot;
       if (snapshot?.checklist) {
@@ -413,18 +413,18 @@ export default function ProtectionClaimsTab({
       if (res.ok) {
         setDecisionSuccess(
           isAr
-            ? "تم تسجيل قرار المشرف بنجاح (المبلغ المستحق قيد المعالجة الإدارية)."
+            ? "ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ù‚Ø±Ø§Ø± Ø§Ù„Ù…Ø´Ø±Ù Ø¨Ù†Ø¬Ø§Ø­ (Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø³ØªØ­Ù‚ Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠØ©)."
             : "Admin decision saved successfully (Refund approved pending administrative processing)."
         );
         await fetchClaimDetails(selectedClaimId);
         await fetchClaims();
       } else {
         const d = await res.json();
-        setDecisionError(d.error || (isAr ? "حدث خطأ أثناء حفظ القرار" : "Error saving decision"));
+        setDecisionError(d.error || (isAr ? "Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø­ÙØ¸ Ø§Ù„Ù‚Ø±Ø§Ø±" : "Error saving decision"));
       }
     } catch (err) {
       console.error("Failed to save decision:", err);
-      setDecisionError(isAr ? "خطأ في الاتصال بالخادم" : "Server connection error");
+      setDecisionError(isAr ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…" : "Server connection error");
     } finally {
       setSavingDecision(false);
     }
@@ -548,11 +548,11 @@ export default function ProtectionClaimsTab({
   // Create new claim handler
   const handleCreateClaim = async () => {
     if (!selectedAccount) {
-      setCreateError(isAr ? "يرجى اختيار حساب WhatsApp مسجل أولاً" : "Please select a registered WhatsApp account");
+      setCreateError(isAr ? "ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø­Ø³Ø§Ø¨ WhatsApp Ù…Ø³Ø¬Ù„ Ø£ÙˆÙ„Ø§Ù‹" : "Please select a registered WhatsApp account");
       return;
     }
     if (!banDateInput) {
-      setCreateError(isAr ? "يرجى تحديد تاريخ ووقت الحظر" : "Please specify ban date and time");
+      setCreateError(isAr ? "ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ ØªØ§Ø±ÙŠØ® ÙˆÙˆÙ‚Øª Ø§Ù„Ø­Ø¸Ø±" : "Please specify ban date and time");
       return;
     }
 
@@ -584,11 +584,11 @@ export default function ProtectionClaimsTab({
         }
       } else {
         const d = await res.json();
-        setCreateError(d.error || (isAr ? "فشل إنشاء الطلب" : "Failed to create claim"));
+        setCreateError(d.error || (isAr ? "ÙØ´Ù„ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø·Ù„Ø¨" : "Failed to create claim"));
       }
     } catch (err) {
       console.error("Failed to create claim:", err);
-      setCreateError(isAr ? "خطأ في الاتصال بالخادم" : "Server error");
+      setCreateError(isAr ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…" : "Server error");
     } finally {
       setCreatingClaim(false);
     }
@@ -599,7 +599,7 @@ export default function ProtectionClaimsTab({
   const handleDeleteClaim = async (claimId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const confirmMsg = isAr
-      ? "هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء."
+      ? "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ø·Ù„Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŸ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù† Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡."
       : "Are you sure you want to permanently delete this protection claim from the database? This action cannot be undone.";
     if (!window.confirm(confirmMsg)) return;
 
@@ -622,24 +622,24 @@ export default function ProtectionClaimsTab({
         }
       } else {
         const d = await res.json();
-        alert(d.error || (isAr ? "فشل حذف الطلب" : "Failed to delete claim"));
+        alert(d.error || (isAr ? "ÙØ´Ù„ Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨" : "Failed to delete claim"));
       }
     } catch (err) {
       console.error("Failed to delete claim:", err);
-      alert(isAr ? "خطأ في الاتصال بالخادم" : "Server error");
+      alert(isAr ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…" : "Server error");
     } finally {
       setDeletingClaimId(null);
     }
   };
 
   const inp =
-    "w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#25D366] bg-white transition";
+    "w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary bg-white transition";
   const btn =
-    "flex items-center justify-center gap-2 bg-[#25D366] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#20b557] transition disabled:opacity-50 shadow-sm";
+    "flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 shadow-sm";
 
-  // ═══════════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // DETAIL VIEW
-  // ═══════════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   if (selectedClaimId) {
     if (loadingDetail) {
       return <DetailPanelSkeleton />;
@@ -648,9 +648,9 @@ export default function ProtectionClaimsTab({
     if (!selectedClaim) {
       return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center">
-          <p className="text-gray-500">{isAr ? "لم يتم العثور على الطلب" : "Claim not found"}</p>
-          <button onClick={() => setSelectedClaimId(null)} className="mt-4 text-sm text-[#25D366] underline">
-            {isAr ? "العودة للقائمة" : "Back to claims"}
+          <p className="text-gray-500">{isAr ? "Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ø·Ù„Ø¨" : "Claim not found"}</p>
+          <button onClick={() => setSelectedClaimId(null)} className="mt-4 text-sm text-primary underline">
+            {isAr ? "Ø§Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©" : "Back to claims"}
           </button>
         </div>
       );
@@ -667,7 +667,7 @@ export default function ProtectionClaimsTab({
 
     return (
       <div className="space-y-6">
-        {/* ── Confirmation Dialog for Approve with UNKNOWN ── */}
+        {/* â”€â”€ Confirmation Dialog for Approve with UNKNOWN â”€â”€ */}
         {showConfirmApprove && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowConfirmApprove(false)}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
@@ -676,12 +676,12 @@ export default function ProtectionClaimsTab({
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm">
-                  {isAr ? "تأكيد الموافقة على الاسترداد" : "Confirm Refund Approval"}
+                  {isAr ? "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯" : "Confirm Refund Approval"}
                 </h3>
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
                 {isAr
-                  ? "بعض فحوصات الالتزام ما زالت تحتاج تحقق يدوي:"
+                  ? "Ø¨Ø¹Ø¶ ÙØ­ÙˆØµØ§Øª Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ù…Ø§ Ø²Ø§Ù„Øª ØªØ­ØªØ§Ø¬ ØªØ­Ù‚Ù‚ ÙŠØ¯ÙˆÙŠ:"
                   : "Some compliance checks still require manual verification:"}
               </p>
               <div className="space-y-1.5 mb-4">
@@ -697,18 +697,18 @@ export default function ProtectionClaimsTab({
               </div>
               {snapshot?.systemAssessment === "NEEDS_REVIEW" && (
                 <p className="text-xs text-amber-700 dark:text-amber-300 mb-4 font-semibold">
-                  {isAr ? "تقييم النظام الحالي: NEEDS REVIEW 🟡" : "System assessment is currently: NEEDS REVIEW 🟡"}
+                  {isAr ? "ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø­Ø§Ù„ÙŠ: NEEDS REVIEW ðŸŸ¡" : "System assessment is currently: NEEDS REVIEW ðŸŸ¡"}
                 </p>
               )}
               <p className="text-xs text-gray-500 mb-4">
-                {isAr ? "هل أنت متأكد أنك تريد الموافقة على هذا الاسترداد؟" : "Are you sure you want to approve this refund?"}
+                {isAr ? "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ø£Ù†Ùƒ ØªØ±ÙŠØ¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯ØŸ" : "Are you sure you want to approve this refund?"}
               </p>
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setShowConfirmApprove(false)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  {isAr ? "إلغاء" : "Cancel"}
+                  {isAr ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                 </button>
                 <button
                   onClick={() => handleSaveDecision(true)}
@@ -716,7 +716,7 @@ export default function ProtectionClaimsTab({
                   className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {savingDecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {isAr ? "تأكيد الموافقة على الاسترداد" : "Confirm Approve Refund"}
+                  {isAr ? "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯" : "Confirm Approve Refund"}
                 </button>
               </div>
             </div>
@@ -732,14 +732,14 @@ export default function ProtectionClaimsTab({
                 setSelectedClaim(null);
               }}
               className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition text-gray-600 dark:text-gray-300"
-              title={isAr ? "رجوع" : "Back"}
+              title={isAr ? "Ø±Ø¬ÙˆØ¹" : "Back"}
             >
               <ArrowLeft className={`w-5 h-5 ${isAr ? "rotate-180" : ""}`} />
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {isAr ? `طلب حماية رقم #${selectedClaim.id.slice(-6).toUpperCase()}` : `Protection Claim #${selectedClaim.id.slice(-6).toUpperCase()}`}
+                  {isAr ? `Ø·Ù„Ø¨ Ø­Ù…Ø§ÙŠØ© Ø±Ù‚Ù… #${selectedClaim.id.slice(-6).toUpperCase()}` : `Protection Claim #${selectedClaim.id.slice(-6).toUpperCase()}`}
                 </h2>
                 <span
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${currentStatusBadge.bg} ${currentStatusBadge.text}`}
@@ -750,14 +750,14 @@ export default function ProtectionClaimsTab({
                 {selectedClaim.refundStatus === "APPROVED_PENDING_PROCESSING" && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
                     <DollarSign className="w-3 h-3" />
-                    {isAr ? "مستحق - بانتظار الصرف" : "Refund Approved - Processing"}
+                    {isAr ? "Ù…Ø³ØªØ­Ù‚ - Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„ØµØ±Ù" : "Refund Approved - Processing"}
                   </span>
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {isAr ? "تاريخ البلاغ:" : "Reported:"} {formatDate(selectedClaim.reportedAt, locale)}
-                {" • "}
-                {isAr ? "تاريخ الحظر المدّعى:" : "Claimed ban date:"} {formatDate(selectedClaim.banDetectedAt, locale)}
+                {isAr ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¨Ù„Ø§Øº:" : "Reported:"} {formatDate(selectedClaim.reportedAt, locale)}
+                {" â€¢ "}
+                {isAr ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ø¯Ù‘Ø¹Ù‰:" : "Claimed ban date:"} {formatDate(selectedClaim.banDetectedAt, locale)}
               </p>
             </div>
           </div>
@@ -769,54 +769,54 @@ export default function ProtectionClaimsTab({
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${runningAudit ? "animate-spin" : ""}`} />
-              {runningAudit ? (isAr ? "جاري الفحص..." : "Running Audit...") : (isAr ? "إعادة تشغيل Protection Audit" : "Run Protection Audit")}
+              {runningAudit ? (isAr ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„ÙØ­Øµ..." : "Running Audit...") : (isAr ? "Ø¥Ø¹Ø§Ø¯Ø© ØªØ´ØºÙŠÙ„ Protection Audit" : "Run Protection Audit")}
             </button>
             <button
               onClick={() => handleDeleteClaim(selectedClaim.id)}
               disabled={deletingClaimId === selectedClaim.id}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-800 transition disabled:opacity-50"
-              title={isAr ? "حذف الطلب نهائياً" : "Delete Claim"}
+              title={isAr ? "Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "Delete Claim"}
             >
               {deletingClaimId === selectedClaim.id ? (
                 <Loader2 className="w-4 h-4 animate-spin text-red-500" />
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
-              {isAr ? "حذف الطلب" : "Delete Claim"}
+              {isAr ? "Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨" : "Delete Claim"}
             </button>
           </div>
         </div>
 
-        {/* ── Key Summary Bar: Status, Ban, Assessment, Refund ── */}
+        {/* â”€â”€ Key Summary Bar: Status, Ban, Assessment, Refund â”€â”€ */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
-            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "حالة الطلب" : "Claim Status"}</span>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨" : "Claim Status"}</span>
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${currentStatusBadge.bg} ${currentStatusBadge.text}`}>
               <StatusIcon className="w-3 h-3" />
               {isAr ? currentStatusBadge.labelAr : currentStatusBadge.labelEn}
             </span>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
-            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "حالة الحظر" : "Ban Status"}</span>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±" : "Ban Status"}</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${banStatusInfo.color}`}>
               {isAr ? banStatusInfo.ar : banStatusInfo.en}
             </span>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
-            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "تقييم النظام" : "Assessment"}</span>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù†Ø¸Ø§Ù…" : "Assessment"}</span>
             <span className={`text-xs font-extrabold ${
               snapshot?.systemAssessment === "ELIGIBLE" ? "text-emerald-600" :
               snapshot?.systemAssessment === "NOT_ELIGIBLE" ? "text-rose-600" : "text-amber-600"
             }`}>
-              {snapshot?.systemAssessment || "—"}
+              {snapshot?.systemAssessment || "â€”"}
             </span>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
-            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "المبلغ المحسوب" : "Calculated Refund"}</span>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø­Ø³ÙˆØ¨" : "Calculated Refund"}</span>
             <span className="text-sm font-black text-emerald-600">{effectiveRefund} {selectedClaim.currency || "EGP"}</span>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-center">
-            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "الأيام المتبقية" : "Days Remaining"}</span>
+            <span className="text-[10px] font-bold uppercase text-gray-400 block mb-1">{isAr ? "Ø§Ù„Ø£ÙŠØ§Ù… Ø§Ù„Ù…ØªØ¨Ù‚ÙŠØ©" : "Days Remaining"}</span>
             <span className="text-sm font-bold text-gray-900 dark:text-white">{liveRefund?.remainingDays ?? 0}</span>
           </div>
         </div>
@@ -825,18 +825,18 @@ export default function ProtectionClaimsTab({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              <UserIcon className="w-4 h-4 text-[#25D366]" />
-              {isAr ? "بيانات العميل" : "Customer Information"}
+              <UserIcon className="w-4 h-4 text-primary" />
+              {isAr ? "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer Information"}
             </div>
-            <p className="font-semibold text-sm text-gray-900 dark:text-white">{selectedClaim.user?.name || "بدون اسم"}</p>
+            <p className="font-semibold text-sm text-gray-900 dark:text-white">{selectedClaim.user?.name || "Ø¨Ø¯ÙˆÙ† Ø§Ø³Ù…"}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{selectedClaim.user?.email}</p>
             {selectedClaim.user?.brandName && (
               <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-medium">
-                {isAr ? "النشاط:" : "Brand:"} {selectedClaim.user.brandName}
+                {isAr ? "Ø§Ù„Ù†Ø´Ø§Ø·:" : "Brand:"} {selectedClaim.user.brandName}
               </p>
             )}
             <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
-              <span className="text-gray-400">{isAr ? "الباقة:" : "Plan:"}</span>
+              <span className="text-gray-400">{isAr ? "Ø§Ù„Ø¨Ø§Ù‚Ø©:" : "Plan:"}</span>
               <span className="font-bold text-gray-700 dark:text-gray-300 uppercase">
                 {selectedClaim.user?.subscription?.plan || "Free"}
               </span>
@@ -846,13 +846,13 @@ export default function ProtectionClaimsTab({
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
               <Phone className="w-4 h-4 text-blue-500" />
-              {isAr ? "حساب WhatsApp" : "WhatsApp Account"}
+              {isAr ? "Ø­Ø³Ø§Ø¨ WhatsApp" : "WhatsApp Account"}
             </div>
             <p className="font-mono text-sm text-gray-900 dark:text-white dir-ltr">{selectedClaim.phoneNumber}</p>
             <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5">WABA ID: {selectedClaim.whatsappAccount?.wabaId}</p>
             <p className="text-[11px] text-gray-400 font-mono truncate">Phone ID: {selectedClaim.whatsappAccount?.phoneNumberId}</p>
             <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
-              <span className="text-gray-400">{isAr ? "حالة التوكن:" : "Token Status:"}</span>
+              <span className="text-gray-400">{isAr ? "Ø­Ø§Ù„Ø© Ø§Ù„ØªÙˆÙƒÙ†:" : "Token Status:"}</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {selectedClaim.whatsappAccount?.tokenStatus || "UNKNOWN"}
               </span>
@@ -864,7 +864,7 @@ export default function ProtectionClaimsTab({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                 <ShieldAlert className="w-4 h-4 text-amber-500" />
-                {isAr ? "حالة الحظر" : "Ban Verification Status"}
+                {isAr ? "Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±" : "Ban Verification Status"}
               </div>
             </div>
             <div className="mb-2">
@@ -873,7 +873,7 @@ export default function ProtectionClaimsTab({
               </span>
             </div>
             <p className="text-[11px] text-gray-500 mb-2">
-              {isAr ? "تاريخ الحظر المدّعى:" : "Claimed Ban Date:"}{" "}
+              {isAr ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ø¯Ù‘Ø¹Ù‰:" : "Claimed Ban Date:"}{" "}
               <span className="font-mono font-semibold">{formatDate(selectedClaim.banDetectedAt, locale)}</span>
             </p>
             <select
@@ -894,13 +894,13 @@ export default function ProtectionClaimsTab({
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 flex gap-3 text-xs text-amber-900 dark:text-amber-200">
             <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
             <div>
-              <p className="font-bold">{isAr ? "ملاحظات وتفاصيل العميل:" : "Customer Notes & Claim Details:"}</p>
+              <p className="font-bold">{isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø§Øª ÙˆØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¹Ù…ÙŠÙ„:" : "Customer Notes & Claim Details:"}</p>
               <p className="mt-1 whitespace-pre-wrap">{selectedClaim.customerNotes}</p>
             </div>
           </div>
         )}
 
-        {/* ── System Assessment Recommendation Banner ── */}
+        {/* â”€â”€ System Assessment Recommendation Banner â”€â”€ */}
         {snapshot && (
           <div
             className={`rounded-2xl p-5 border shadow-sm ${
@@ -933,22 +933,22 @@ export default function ProtectionClaimsTab({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      {isAr ? "تقييم النظام الآلي" : "System Assessment"}
+                      {isAr ? "ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø¢Ù„ÙŠ" : "System Assessment"}
                     </span>
                     <span className="text-base font-extrabold uppercase">
                       {snapshot.systemAssessment === "ELIGIBLE"
-                        ? isAr ? "مستحق للضمان 🟢" : "ELIGIBLE 🟢"
+                        ? isAr ? "Ù…Ø³ØªØ­Ù‚ Ù„Ù„Ø¶Ù…Ø§Ù† ðŸŸ¢" : "ELIGIBLE ðŸŸ¢"
                         : snapshot.systemAssessment === "NOT_ELIGIBLE"
-                        ? isAr ? "غير مستحق 🔴" : "NOT ELIGIBLE 🔴"
-                        : isAr ? "يحتاج مراجعة بشرية 🟡" : "NEEDS REVIEW 🟡"}
+                        ? isAr ? "ØºÙŠØ± Ù…Ø³ØªØ­Ù‚ ðŸ”´" : "NOT ELIGIBLE ðŸ”´"
+                        : isAr ? "ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø¨Ø´Ø±ÙŠØ© ðŸŸ¡" : "NEEDS REVIEW ðŸŸ¡"}
                     </span>
                   </div>
                   <p className="text-xs mt-1 font-medium">{snapshot.assessmentSummary}</p>
                   {/* Audit Period */}
                   {snapshot.auditPeriod && (
                     <p className="text-[11px] mt-1 opacity-75">
-                      {isAr ? "فترة الفحص:" : "Audit period:"}{" "}
-                      {formatShortDate(snapshot.auditPeriod.from, locale)} → {formatShortDate(snapshot.auditPeriod.to, locale)}
+                      {isAr ? "ÙØªØ±Ø© Ø§Ù„ÙØ­Øµ:" : "Audit period:"}{" "}
+                      {formatShortDate(snapshot.auditPeriod.from, locale)} â†’ {formatShortDate(snapshot.auditPeriod.to, locale)}
                     </p>
                   )}
                 </div>
@@ -956,26 +956,26 @@ export default function ProtectionClaimsTab({
 
               <div className="text-[11px] bg-white/60 dark:bg-gray-900/60 p-2.5 rounded-xl border border-black/5 dark:border-white/5 sm:max-w-xs">
                 <span className="font-bold block text-gray-800 dark:text-gray-200 mb-0.5">
-                  {isAr ? "⚠️ تنبيه للمشرف:" : "⚠️ Admin Notice:"}
+                  {isAr ? "âš ï¸ ØªÙ†Ø¨ÙŠÙ‡ Ù„Ù„Ù…Ø´Ø±Ù:" : "âš ï¸ Admin Notice:"}
                 </span>
                 {isAr
-                  ? "تقييم النظام هو توصية آلية مبنية على سجلات Wani. القرار المالي النهائي يعود للمشرف الإداري."
+                  ? "ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù†Ø¸Ø§Ù… Ù‡Ùˆ ØªÙˆØµÙŠØ© Ø¢Ù„ÙŠØ© Ù…Ø¨Ù†ÙŠØ© Ø¹Ù„Ù‰ Ø³Ø¬Ù„Ø§Øª Wani. Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ù…Ø§Ù„ÙŠ Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ ÙŠØ¹ÙˆØ¯ Ù„Ù„Ù…Ø´Ø±Ù Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ."
                   : "System Assessment is an automated recommendation. The Super Admin makes the final binding decision."}
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Compliance Checklist ── */}
+        {/* â”€â”€ Compliance Checklist â”€â”€ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-[#25D366]" />
-              {isAr ? "قائمة تدقيق الالتزام والضمان (Compliance Checklist)" : "Guarantee Compliance Checklist"}
+              <CheckSquare className="w-4 h-4 text-primary" />
+              {isAr ? "Ù‚Ø§Ø¦Ù…Ø© ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… ÙˆØ§Ù„Ø¶Ù…Ø§Ù† (Compliance Checklist)" : "Guarantee Compliance Checklist"}
             </h3>
             {snapshot && (
               <span className="text-[11px] text-gray-400">
-                {isAr ? "فُحص في:" : "Audited at:"} {formatDate(snapshot.auditedAt, locale)}
+                {isAr ? "ÙÙØ­Øµ ÙÙŠ:" : "Audited at:"} {formatDate(snapshot.auditedAt, locale)}
               </span>
             )}
           </div>
@@ -1031,36 +1031,36 @@ export default function ProtectionClaimsTab({
           </div>
         </div>
 
-        {/* ── Sending Limits & Activity Summary ── */}
+        {/* â”€â”€ Sending Limits & Activity Summary â”€â”€ */}
         {snapshot && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
               <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                 <Send className="w-4 h-4 text-indigo-500" />
-                {isAr ? "ملخص نشاط الإرسال (Activity Summary)" : "Sending Activity Summary"}
+                {isAr ? "Ù…Ù„Ø®Øµ Ù†Ø´Ø§Ø· Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ (Activity Summary)" : "Sending Activity Summary"}
               </h4>
               <div className="space-y-2 text-xs">
                 {snapshot.auditPeriod && (
                   <div className="p-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 font-mono text-[11px]">
-                    {isAr ? "فترة التحليل:" : "Audit period:"}{" "}
-                    {formatShortDate(snapshot.auditPeriod.from, locale)} → {formatShortDate(snapshot.auditPeriod.to, locale)}
+                    {isAr ? "ÙØªØ±Ø© Ø§Ù„ØªØ­Ù„ÙŠÙ„:" : "Audit period:"}{" "}
+                    {formatShortDate(snapshot.auditPeriod.from, locale)} â†’ {formatShortDate(snapshot.auditPeriod.to, locale)}
                   </div>
                 )}
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "إجمالي الرسائل الصادرة:" : "Total Outbound:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„ØµØ§Ø¯Ø±Ø©:" : "Total Outbound:"}</span>
                   <span className="font-bold text-gray-900 dark:text-white">{snapshot.waniActivity?.totalOutboundCount ?? 0}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "آخر 24 ساعة قبل الحظر:" : "Last 24h Before Ban:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ø¢Ø®Ø± 24 Ø³Ø§Ø¹Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø­Ø¸Ø±:" : "Last 24h Before Ban:"}</span>
                   <span className="font-bold text-gray-900 dark:text-white">{snapshot.waniActivity?.last24hOutboundCount ?? 0}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "آخر رسالة صادرة:" : "Last Outbound:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ø¢Ø®Ø± Ø±Ø³Ø§Ù„Ø© ØµØ§Ø¯Ø±Ø©:" : "Last Outbound:"}</span>
                   <span className="font-semibold text-gray-700 dark:text-gray-300">{formatDate(snapshot.waniActivity?.lastOutboundAt, locale)}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-gray-500">{isAr ? "Messaging Tier:" : "Messaging Tier:"}</span>
-                  <span className="font-bold text-gray-900 dark:text-white">{snapshot.sendingLimits?.tier ?? "—"}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{snapshot.sendingLimits?.tier ?? "â€”"}</span>
                 </div>
               </div>
             </div>
@@ -1068,23 +1068,23 @@ export default function ProtectionClaimsTab({
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
               <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-indigo-500" />
-                {isAr ? "تحليل نافذة الـ 24 ساعة (24h Window Audit)" : "24h Window Dynamic Audit"}
+                {isAr ? "ØªØ­Ù„ÙŠÙ„ Ù†Ø§ÙØ°Ø© Ø§Ù„Ù€ 24 Ø³Ø§Ø¹Ø© (24h Window Audit)" : "24h Window Dynamic Audit"}
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "الرسائل المفحوصة قبل الحظر:" : "Evaluated Outbound Messages:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…ÙØ­ÙˆØµØ© Ù‚Ø¨Ù„ Ø§Ù„Ø­Ø¸Ø±:" : "Evaluated Outbound Messages:"}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{snapshot.twentyFourHourWindow.evaluatedCount}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "داخل نافذة الـ 24 ساعة:" : "Within 24h of Inbound:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ø¯Ø§Ø®Ù„ Ù†Ø§ÙØ°Ø© Ø§Ù„Ù€ 24 Ø³Ø§Ø¹Ø©:" : "Within 24h of Inbound:"}</span>
                   <span className="font-semibold text-emerald-600">{snapshot.twentyFourHourWindow.insideWindowCount}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-gray-500">{isAr ? "قوالب معتمدة خارج النافذة:" : "Approved Templates Outside 24h:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯Ø© Ø®Ø§Ø±Ø¬ Ø§Ù„Ù†Ø§ÙØ°Ø©:" : "Approved Templates Outside 24h:"}</span>
                   <span className="font-semibold text-blue-600">{snapshot.twentyFourHourWindow.templatesOutsideWindowCount}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-gray-500">{isAr ? "مخالفات رسائل عادية خارج النافذة:" : "Freeform Violations Outside 24h:"}</span>
+                  <span className="text-gray-500">{isAr ? "Ù…Ø®Ø§Ù„ÙØ§Øª Ø±Ø³Ø§Ø¦Ù„ Ø¹Ø§Ø¯ÙŠØ© Ø®Ø§Ø±Ø¬ Ø§Ù„Ù†Ø§ÙØ°Ø©:" : "Freeform Violations Outside 24h:"}</span>
                   <span className={`font-bold ${snapshot.twentyFourHourWindow.violationsCount > 0 ? "text-rose-600" : "text-gray-600 dark:text-gray-400"}`}>
                     {snapshot.twentyFourHourWindow.violationsCount}
                   </span>
@@ -1094,22 +1094,22 @@ export default function ProtectionClaimsTab({
           </div>
         )}
 
-        {/* ── Template Compliance ── */}
+        {/* â”€â”€ Template Compliance â”€â”€ */}
         {snapshot && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4 text-purple-500" />
-              {isAr ? "قوالب Meta المسجلة (Templates Compliance)" : "Meta Template Compliance"}
+              {isAr ? "Ù‚ÙˆØ§Ù„Ø¨ Meta Ø§Ù„Ù…Ø³Ø¬Ù„Ø© (Templates Compliance)" : "Meta Template Compliance"}
             </h4>
             {snapshot.templateCompliance.templatesFound.length === 0 ? (
-              <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "لا توجد قوالب مسجلة لهذا الحساب" : "No templates registered"}</p>
+              <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø³Ø¬Ù„Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø­Ø³Ø§Ø¨" : "No templates registered"}</p>
             ) : (
               <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                 {snapshot.templateCompliance.templatesFound.map((tpl, i) => (
                   <div key={i} className="flex items-center justify-between text-[11px] p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">{tpl.name}</p>
-                      <p className="text-[10px] text-gray-400 font-mono">{tpl.category} • {tpl.language}</p>
+                      <p className="text-[10px] text-gray-400 font-mono">{tpl.category} â€¢ {tpl.language}</p>
                     </div>
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
@@ -1127,15 +1127,15 @@ export default function ProtectionClaimsTab({
           </div>
         )}
 
-        {/* ── Message Timeline (Enriched) ── */}
+        {/* â”€â”€ Message Timeline (Enriched) â”€â”€ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-500" />
-            {isAr ? "سجل الرسائل الزمني قبل الحظر (Message Timeline)" : "Message Timeline (Prior to Ban)"}
+            {isAr ? "Ø³Ø¬Ù„ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ø²Ù…Ù†ÙŠ Ù‚Ø¨Ù„ Ø§Ù„Ø­Ø¸Ø± (Message Timeline)" : "Message Timeline (Prior to Ban)"}
           </h3>
 
           {timelineMessages.length === 0 ? (
-            <p className="text-xs text-gray-400 py-6 text-center">{isAr ? "لا توجد رسائل مسجلة قبل تاريخ الحظر" : "No messages found prior to ban"}</p>
+            <p className="text-xs text-gray-400 py-6 text-center">{isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±Ø³Ø§Ø¦Ù„ Ù…Ø³Ø¬Ù„Ø© Ù‚Ø¨Ù„ ØªØ§Ø±ÙŠØ® Ø§Ù„Ø­Ø¸Ø±" : "No messages found prior to ban"}</p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {timelineMessages.map((msg: any) => (
@@ -1174,7 +1174,7 @@ export default function ProtectionClaimsTab({
 
                         {/* Source info */}
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                          <span className="font-semibold">{isAr ? "المصدر:" : "Source:"}</span>{" "}
+                          <span className="font-semibold">{isAr ? "Ø§Ù„Ù…ØµØ¯Ø±:" : "Source:"}</span>{" "}
                           <span className={`font-medium ${msg.source?.includes("Campaign") ? "text-emerald-600" : msg.source?.includes("Automation") ? "text-purple-600" : "text-gray-500"}`}>
                             {msg.source || "Unknown"}
                           </span>
@@ -1191,8 +1191,8 @@ export default function ProtectionClaimsTab({
                         {msg.automationName && (
                           <div className="mt-1 text-[10px] text-purple-600 dark:text-purple-400">
                             <span className="font-bold">Automation:</span> {msg.automationName}
-                            {msg.automationTriggerType && <> • Trigger: {msg.automationTriggerType}</>}
-                            {msg.automationReplyType && <> • Reply: {msg.automationReplyType}</>}
+                            {msg.automationTriggerType && <> â€¢ Trigger: {msg.automationTriggerType}</>}
+                            {msg.automationReplyType && <> â€¢ Reply: {msg.automationReplyType}</>}
                           </div>
                         )}
 
@@ -1206,7 +1206,7 @@ export default function ProtectionClaimsTab({
                         {/* Contact & Window info */}
                         {msg.contactPhone && (
                           <p className="text-[10px] text-gray-400 font-mono">
-                            {msg.contactPhone} {msg.hoursSinceLastInbound !== null && `(Δ ${msg.hoursSinceLastInbound}h)`}
+                            {msg.contactPhone} {msg.hoursSinceLastInbound !== null && `(Î” ${msg.hoursSinceLastInbound}h)`}
                           </p>
                         )}
                       </div>
@@ -1237,15 +1237,15 @@ export default function ProtectionClaimsTab({
           )}
         </div>
 
-        {/* ── Campaigns & Automations Summaries ── */}
+        {/* â”€â”€ Campaigns & Automations Summaries â”€â”€ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
               <Send className="w-4 h-4 text-emerald-500" />
-              {isAr ? "نشاط الحملات القريبة من الحظر" : "Recent Campaigns (Pre-ban)"}
+              {isAr ? "Ù†Ø´Ø§Ø· Ø§Ù„Ø­Ù…Ù„Ø§Øª Ø§Ù„Ù‚Ø±ÙŠØ¨Ø© Ù…Ù† Ø§Ù„Ø­Ø¸Ø±" : "Recent Campaigns (Pre-ban)"}
             </h4>
             {recentCampaigns.length === 0 ? (
-              <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "لا توجد حملات مسجلة" : "No campaigns found"}</p>
+              <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ù…Ù„Ø§Øª Ù…Ø³Ø¬Ù„Ø©" : "No campaigns found"}</p>
             ) : (
               <div className="space-y-1.5">
                 {recentCampaigns.map((c: any) => (
@@ -1256,7 +1256,7 @@ export default function ProtectionClaimsTab({
                     </div>
                     <div className="text-[11px] text-end font-mono">
                       <span className="text-emerald-600">{c.sentCount} sent</span>
-                      {" • "}
+                      {" â€¢ "}
                       <span className="text-rose-500">{c.failedCount} failed</span>
                     </div>
                   </div>
@@ -1268,10 +1268,10 @@ export default function ProtectionClaimsTab({
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-500" />
-              {isAr ? "نشاط الأتمتة (Automations)" : "Active Automations"}
+              {isAr ? "Ù†Ø´Ø§Ø· Ø§Ù„Ø£ØªÙ…ØªØ© (Automations)" : "Active Automations"}
             </h4>
             {automations.length === 0 ? (
-              <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "لا توجد قواعد أتمتة" : "No automations found"}</p>
+              <p className="text-xs text-gray-400 py-3 text-center">{isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ø¹Ø¯ Ø£ØªÙ…ØªØ©" : "No automations found"}</p>
             ) : (
               <div className="space-y-1.5">
                 {automations.map((a: any) => (
@@ -1279,20 +1279,20 @@ export default function ProtectionClaimsTab({
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-semibold text-gray-900 dark:text-white">{a.name}</p>
-                        <p className="text-[10px] text-gray-400">{a.triggerType} → {a.replyType}</p>
+                        <p className="text-[10px] text-gray-400">{a.triggerType} â†’ {a.replyType}</p>
                       </div>
                       <span className="text-[11px] font-mono text-gray-500">
-                        {a.interactionCount} {isAr ? "تفاعل" : "triggers"}
+                        {a.interactionCount} {isAr ? "ØªÙØ§Ø¹Ù„" : "triggers"}
                       </span>
                     </div>
                     {a.matchedMessagesCount > 0 && (
                       <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-mono">
-                        {a.matchedMessagesCount} {isAr ? "رسالة مرتبطة" : "linked messages"}
+                        {a.matchedMessagesCount} {isAr ? "Ø±Ø³Ø§Ù„Ø© Ù…Ø±ØªØ¨Ø·Ø©" : "linked messages"}
                       </p>
                     )}
                     {a.lastTriggeredAt && (
                       <p className="text-[10px] text-gray-400 mt-0.5">
-                        {isAr ? "آخر تفعيل:" : "Last triggered:"} {formatDate(a.lastTriggeredAt, locale)}
+                        {isAr ? "Ø¢Ø®Ø± ØªÙØ¹ÙŠÙ„:" : "Last triggered:"} {formatDate(a.lastTriggeredAt, locale)}
                       </p>
                     )}
                   </div>
@@ -1302,19 +1302,19 @@ export default function ProtectionClaimsTab({
           </div>
         </div>
 
-        {/* ── Customer Evidence Section ── */}
+        {/* â”€â”€ Customer Evidence Section â”€â”€ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-500" />
-              {isAr ? "أدلة العميل (Customer Evidence)" : "Customer Evidence"}
+              {isAr ? "Ø£Ø¯Ù„Ø© Ø§Ù„Ø¹Ù…ÙŠÙ„ (Customer Evidence)" : "Customer Evidence"}
             </h3>
             <button
               onClick={() => setShowEvidenceForm(!showEvidenceForm)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:hover:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition"
             >
               <Upload className="w-3.5 h-3.5" />
-              {isAr ? "إضافة دليل" : "Add Evidence"}
+              {isAr ? "Ø¥Ø¶Ø§ÙØ© Ø¯Ù„ÙŠÙ„" : "Add Evidence"}
             </button>
           </div>
 
@@ -1322,7 +1322,7 @@ export default function ProtectionClaimsTab({
             <div className="mb-4 p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl space-y-3">
               <div>
                 <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                  {isAr ? "نوع الدليل:" : "Evidence Type:"}
+                  {isAr ? "Ù†ÙˆØ¹ Ø§Ù„Ø¯Ù„ÙŠÙ„:" : "Evidence Type:"}
                 </label>
                 <select value={evidenceType} onChange={(e) => setEvidenceType(e.target.value)} className={inp + " text-xs"}>
                   {Object.entries(EVIDENCE_TYPE_LABELS).map(([val, label]) => (
@@ -1332,7 +1332,7 @@ export default function ProtectionClaimsTab({
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                  {isAr ? "ملف (اختياري):" : "File (optional):"}
+                  {isAr ? "Ù…Ù„Ù (Ø§Ø®ØªÙŠØ§Ø±ÙŠ):" : "File (optional):"}
                 </label>
                 <input
                   type="file"
@@ -1344,30 +1344,30 @@ export default function ProtectionClaimsTab({
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                  {isAr ? "ملاحظة:" : "Note:"}
+                  {isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø©:" : "Note:"}
                 </label>
                 <input
                   type="text"
                   value={evidenceNote}
                   onChange={(e) => setEvidenceNote(e.target.value)}
-                  placeholder={isAr ? "ملاحظة حول الدليل..." : "Note about this evidence..."}
+                  placeholder={isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø© Ø­ÙˆÙ„ Ø§Ù„Ø¯Ù„ÙŠÙ„..." : "Note about this evidence..."}
                   className={inp}
                 />
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setShowEvidenceForm(false)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
-                  {isAr ? "إلغاء" : "Cancel"}
+                  {isAr ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                 </button>
                 <button onClick={handleEvidenceSubmit} disabled={uploadingEvidence} className={btn + " text-xs py-1.5"}>
                   {uploadingEvidence ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {isAr ? "رفع" : "Upload"}
+                  {isAr ? "Ø±ÙØ¹" : "Upload"}
                 </button>
               </div>
             </div>
           )}
 
           {evidenceFiles.length === 0 ? (
-            <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "لم يتم تقديم أدلة بعد" : "No evidence provided yet"}</p>
+            <p className="text-xs text-gray-400 py-4 text-center">{isAr ? "Ù„Ù… ÙŠØªÙ… ØªÙ‚Ø¯ÙŠÙ… Ø£Ø¯Ù„Ø© Ø¨Ø¹Ø¯" : "No evidence provided yet"}</p>
           ) : (
             <div className="space-y-2">
               {evidenceFiles.map((ev: any) => {
@@ -1381,7 +1381,7 @@ export default function ProtectionClaimsTab({
                     </div>
                     {ev.url && (
                       <a href={ev.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline text-[11px]">
-                        <ExternalLink className="w-3 h-3" /> {isAr ? "عرض" : "View"}
+                        <ExternalLink className="w-3 h-3" /> {isAr ? "Ø¹Ø±Ø¶" : "View"}
                       </a>
                     )}
                   </div>
@@ -1391,42 +1391,42 @@ export default function ProtectionClaimsTab({
           )}
         </div>
 
-        {/* ── Refund Calculation Breakdown ── */}
+        {/* â”€â”€ Refund Calculation Breakdown â”€â”€ */}
         {liveRefund && (
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-indigo-600" />
-                {isAr ? "حساب قيمة الاسترداد النسبي (Prorated Refund)" : "Prorated Refund Calculation"}
+                {isAr ? "Ø­Ø³Ø§Ø¨ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯ Ø§Ù„Ù†Ø³Ø¨ÙŠ (Prorated Refund)" : "Prorated Refund Calculation"}
               </h3>
               <button
                 onClick={() => setShowOverride(!showOverride)}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white/80 dark:bg-gray-800/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 transition"
               >
                 <Edit3 className="w-3 h-3" />
-                {isAr ? "تعديل يدوي" : "Override"}
+                {isAr ? "ØªØ¹Ø¯ÙŠÙ„ ÙŠØ¯ÙˆÙŠ" : "Override"}
               </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "الباقة وسعرها:" : "Plan & Price:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "Ø§Ù„Ø¨Ø§Ù‚Ø© ÙˆØ³Ø¹Ø±Ù‡Ø§:" : "Plan & Price:"}</span>
                 <span className="font-bold text-gray-900 dark:text-white">{liveRefund.plan} ({liveRefund.monthlyPrice} {liveRefund.currency})</span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "فترة الاشتراك:" : "Cycle:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "ÙØªØ±Ø© Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ:" : "Cycle:"}</span>
                 <span className="font-semibold text-gray-700 dark:text-gray-300">
-                  {formatShortDate(liveRefund.subscriptionStart, locale)} → {formatShortDate(liveRefund.subscriptionEnd, locale)}
+                  {formatShortDate(liveRefund.subscriptionStart, locale)} â†’ {formatShortDate(liveRefund.subscriptionEnd, locale)}
                 </span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "مستهلك / متبقي:" : "Used / Remaining:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "Ù…Ø³ØªÙ‡Ù„Ùƒ / Ù…ØªØ¨Ù‚ÙŠ:" : "Used / Remaining:"}</span>
                 <span className="font-semibold text-gray-700 dark:text-gray-300">
                   {liveRefund.usedDays}d / <span className="font-bold text-emerald-600">{liveRefund.remainingDays}d</span>
                 </span>
               </div>
               <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
-                <span className="text-gray-400 block mb-1">{isAr ? "المبلغ المحسوب:" : "Calculated Refund:"}</span>
+                <span className="text-gray-400 block mb-1">{isAr ? "Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø­Ø³ÙˆØ¨:" : "Calculated Refund:"}</span>
                 <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
                   {liveRefund.calculatedRefund} {liveRefund.currency}
                 </span>
@@ -1437,15 +1437,15 @@ export default function ProtectionClaimsTab({
             {selectedClaim.overrideRefund != null && (
               <div className="mt-3 p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs">
                 <p className="font-bold text-amber-800 dark:text-amber-300">
-                  {isAr ? "تعديل يدوي نافذ:" : "Active Override:"}
+                  {isAr ? "ØªØ¹Ø¯ÙŠÙ„ ÙŠØ¯ÙˆÙŠ Ù†Ø§ÙØ°:" : "Active Override:"}
                 </p>
                 <p>
-                  <span className="text-gray-500">{isAr ? "الأصلي:" : "Original:"}</span>{" "}
-                  <span className="line-through">{liveRefund.calculatedRefund} {liveRefund.currency}</span>{" → "}
+                  <span className="text-gray-500">{isAr ? "Ø§Ù„Ø£ØµÙ„ÙŠ:" : "Original:"}</span>{" "}
+                  <span className="line-through">{liveRefund.calculatedRefund} {liveRefund.currency}</span>{" â†’ "}
                   <span className="font-black text-amber-700 dark:text-amber-300">{selectedClaim.overrideRefund} {selectedClaim.currency}</span>
                 </p>
                 {selectedClaim.overrideReason && (
-                  <p className="text-gray-500 mt-0.5">{isAr ? "السبب:" : "Reason:"} {selectedClaim.overrideReason}</p>
+                  <p className="text-gray-500 mt-0.5">{isAr ? "Ø§Ù„Ø³Ø¨Ø¨:" : "Reason:"} {selectedClaim.overrideReason}</p>
                 )}
               </div>
             )}
@@ -1454,25 +1454,25 @@ export default function ProtectionClaimsTab({
             {showOverride && (
               <div className="mt-3 p-4 bg-white/90 dark:bg-gray-800/90 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-3">
                 <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                  {isAr ? "تعديل المبلغ يدوياً (Override Refund)" : "Override Refund Amount"}
+                  {isAr ? "ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø¨Ù„Øº ÙŠØ¯ÙˆÙŠØ§Ù‹ (Override Refund)" : "Override Refund Amount"}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                      {isAr ? "المبلغ الجديد (EGP):" : "New Amount (EGP):"}
+                      {isAr ? "Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ø¬Ø¯ÙŠØ¯ (EGP):" : "New Amount (EGP):"}
                     </label>
                     <input type="number" step="0.01" min="0" value={overrideAmount} onChange={(e) => setOverrideAmount(e.target.value)} className={inp} />
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                      {isAr ? "سبب التعديل (إجباري):" : "Override Reason (required):"} <span className="text-rose-500">*</span>
+                      {isAr ? "Ø³Ø¨Ø¨ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ (Ø¥Ø¬Ø¨Ø§Ø±ÙŠ):" : "Override Reason (required):"} <span className="text-rose-500">*</span>
                     </label>
-                    <input type="text" value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder={isAr ? "مثال: تعديل إداري معتمد..." : "e.g. Manual adjustment approved..."} className={inp} />
+                    <input type="text" value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder={isAr ? "Ù…Ø«Ø§Ù„: ØªØ¹Ø¯ÙŠÙ„ Ø¥Ø¯Ø§Ø±ÙŠ Ù…Ø¹ØªÙ…Ø¯..." : "e.g. Manual adjustment approved..."} className={inp} />
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <button onClick={() => setShowOverride(false)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
-                    {isAr ? "إلغاء" : "Cancel"}
+                    {isAr ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                   </button>
                   <button
                     onClick={handleOverrideSubmit}
@@ -1480,7 +1480,7 @@ export default function ProtectionClaimsTab({
                     className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 transition"
                   >
                     {savingOverride ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                    {isAr ? "تطبيق التعديل" : "Apply Override"}
+                    {isAr ? "ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„" : "Apply Override"}
                   </button>
                 </div>
               </div>
@@ -1488,11 +1488,11 @@ export default function ProtectionClaimsTab({
           </div>
         )}
 
-        {/* ── Admin Decision Form ── */}
+        {/* â”€â”€ Admin Decision Form â”€â”€ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <h3 className="font-bold text-base text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-[#25D366]" />
-            {isAr ? "قرار المشرف الإداري (Admin Decision)" : "Admin Decision & Guarantee Processing"}
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            {isAr ? "Ù‚Ø±Ø§Ø± Ø§Ù„Ù…Ø´Ø±Ù Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ (Admin Decision)" : "Admin Decision & Guarantee Processing"}
           </h3>
 
           {decisionSuccess && (
@@ -1513,25 +1513,25 @@ export default function ProtectionClaimsTab({
             {/* Decision Status Selector */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 block">
-                {isAr ? "القرار الإداري:" : "Decision:"}
+                {isAr ? "Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ:" : "Decision:"}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {[
                   {
                     id: "ELIGIBLE",
-                    labelAr: "موافقة على الاسترداد (Approve Refund)",
+                    labelAr: "Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯ (Approve Refund)",
                     labelEn: "Approve Refund",
                     activeClass: "bg-emerald-600 text-white border-emerald-600",
                   },
                   {
                     id: "PENDING_EVIDENCE",
-                    labelAr: "طلب أدلة إضافية (Request Evidence)",
+                    labelAr: "Ø·Ù„Ø¨ Ø£Ø¯Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ© (Request Evidence)",
                     labelEn: "Request More Evidence",
                     activeClass: "bg-purple-600 text-white border-purple-600",
                   },
                   {
                     id: "NOT_ELIGIBLE",
-                    labelAr: "رفض الطلب (Reject Claim)",
+                    labelAr: "Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨ (Reject Claim)",
                     labelEn: "Reject Claim",
                     activeClass: "bg-rose-600 text-white border-rose-600",
                   },
@@ -1556,13 +1556,13 @@ export default function ProtectionClaimsTab({
             {decisionStatus === "PENDING_EVIDENCE" && (
               <div>
                 <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                  {isAr ? "الأدلة المطلوبة:" : "Evidence Requested:"}
+                  {isAr ? "Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©:" : "Evidence Requested:"}
                 </label>
                 <textarea
                   value={evidenceRequested}
                   onChange={(e) => setEvidenceRequested(e.target.value)}
                   rows={2}
-                  placeholder={isAr ? "مثال: يرجى إرسال لقطة شاشة لحالة الحظر من Meta..." : "e.g. Please provide a screenshot of the ban status from Meta..."}
+                  placeholder={isAr ? "Ù…Ø«Ø§Ù„: ÙŠØ±Ø¬Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± Ù…Ù† Meta..." : "e.g. Please provide a screenshot of the ban status from Meta..."}
                   className={inp}
                 />
               </div>
@@ -1571,7 +1571,7 @@ export default function ProtectionClaimsTab({
             {/* Decision Reason (Mandatory when Rejecting) */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "سبب القرار (إجباري عند الرفض):" : "Decision Reason (Mandatory if Rejecting):"}{" "}
+                {isAr ? "Ø³Ø¨Ø¨ Ø§Ù„Ù‚Ø±Ø§Ø± (Ø¥Ø¬Ø¨Ø§Ø±ÙŠ Ø¹Ù†Ø¯ Ø§Ù„Ø±ÙØ¶):" : "Decision Reason (Mandatory if Rejecting):"}{" "}
                 {decisionStatus === "NOT_ELIGIBLE" && <span className="text-rose-500">*</span>}
               </label>
               <input
@@ -1580,7 +1580,7 @@ export default function ProtectionClaimsTab({
                 onChange={(e) => setDecisionReason(e.target.value)}
                 placeholder={
                   isAr
-                    ? "مثلاً: تم إرسال رسائل ترويجية خارج نافذة الـ 24 ساعة بدون قوالب معتمدة"
+                    ? "Ù…Ø«Ù„Ø§Ù‹: ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ø¦Ù„ ØªØ±ÙˆÙŠØ¬ÙŠØ© Ø®Ø§Ø±Ø¬ Ù†Ø§ÙØ°Ø© Ø§Ù„Ù€ 24 Ø³Ø§Ø¹Ø© Ø¨Ø¯ÙˆÙ† Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯Ø©"
                     : "e.g. Non-template outbound messages were sent outside 24h window"
                 }
                 className={inp}
@@ -1590,13 +1590,13 @@ export default function ProtectionClaimsTab({
             {/* Admin Notes */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "ملاحظات إدارية داخلية (اختياري):" : "Internal Admin Notes (Optional):"}
+                {isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¯Ø§Ø±ÙŠØ© Ø¯Ø§Ø®Ù„ÙŠØ© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ):" : "Internal Admin Notes (Optional):"}
               </label>
               <textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={2}
-                placeholder={isAr ? "ملاحظات مرجعية للمشرفين..." : "Internal notes for review..."}
+                placeholder={isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ù…Ø±Ø¬Ø¹ÙŠØ© Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ†..." : "Internal notes for review..."}
                 className={inp}
               />
             </div>
@@ -1613,17 +1613,17 @@ export default function ProtectionClaimsTab({
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                {isAr ? "حفظ القرار الإداري" : "Submit Decision"}
+                {isAr ? "Ø­ÙØ¸ Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ" : "Submit Decision"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* ── Audit Trail Log ── */}
+        {/* â”€â”€ Audit Trail Log â”€â”€ */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
           <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-500" />
-            {isAr ? "سجل تدقيق الإجراءات (Protection Audit Log)" : "Audit Trail History"}
+            {isAr ? "Ø³Ø¬Ù„ ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª (Protection Audit Log)" : "Audit Trail History"}
           </h3>
 
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -1634,7 +1634,7 @@ export default function ProtectionClaimsTab({
                     <span className="font-bold text-gray-900 dark:text-white">{log.action}</span>
                     {log.result && <span className="text-gray-500 ml-2 font-mono">[{log.result}]</span>}
                     <p className="text-[10px] text-gray-400 mt-0.5">
-                      {isAr ? "بواسطة:" : "By:"} {log.adminUser?.name || log.adminUser?.email || "Admin"}
+                      {isAr ? "Ø¨ÙˆØ§Ø³Ø·Ø©:" : "By:"} {log.adminUser?.name || log.adminUser?.email || "Admin"}
                     </p>
                   </div>
                   <span className="text-[11px] text-gray-400 font-mono shrink-0">
@@ -1651,7 +1651,7 @@ export default function ProtectionClaimsTab({
                       <p><span className="font-semibold">Amount:</span> {log.details.refundAmount} EGP</p>
                     )}
                     {log.details.oldAmount != null && (
-                      <p><span className="font-semibold">Override:</span> {log.details.oldAmount} → {log.details.newAmount}</p>
+                      <p><span className="font-semibold">Override:</span> {log.details.oldAmount} â†’ {log.details.newAmount}</p>
                     )}
                     {log.details.reason && log.action === "REFUND_OVERRIDE" && (
                       <p><span className="font-semibold">Reason:</span> {log.details.reason}</p>
@@ -1675,9 +1675,9 @@ export default function ProtectionClaimsTab({
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // LIST VIEW
-  // ═══════════════════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   return (
     <div className="space-y-6">
       {/* Create Modal */}
@@ -1685,8 +1685,8 @@ export default function ProtectionClaimsTab({
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-6 animate-in fade-in-50">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
-              <Plus className="w-5 h-5 text-[#25D366]" />
-              {isAr ? "إنشاء طلب فحص ضمان جديد (Create Protection Claim)" : "Create New Protection Claim"}
+              <Plus className="w-5 h-5 text-primary" />
+              {isAr ? "Ø¥Ù†Ø´Ø§Ø¡ Ø·Ù„Ø¨ ÙØ­Øµ Ø¶Ù…Ø§Ù† Ø¬Ø¯ÙŠØ¯ (Create Protection Claim)" : "Create New Protection Claim"}
             </h2>
             <button
               onClick={() => {
@@ -1710,14 +1710,14 @@ export default function ProtectionClaimsTab({
             {/* Account Search & Select */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "البحث عن حساب WhatsApp (بالإيميل، الهاتف، أو Account ID): *" : "Search WhatsApp Account (by email, phone, or Account ID): *"}
+                {isAr ? "Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ø­Ø³Ø§Ø¨ WhatsApp (Ø¨Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ØŒ Ø§Ù„Ù‡Ø§ØªÙØŒ Ø£Ùˆ Account ID): *" : "Search WhatsApp Account (by email, phone, or Account ID): *"}
               </label>
               <div className="relative">
                 <input
                   type="text"
                   value={searchAccountQuery}
                   onChange={(e) => setSearchAccountQuery(e.target.value)}
-                  placeholder={isAr ? "اكتب للبحث عن حساب مسجل..." : "Type to search registered accounts..."}
+                  placeholder={isAr ? "Ø§ÙƒØªØ¨ Ù„Ù„Ø¨Ø­Ø« Ø¹Ù† Ø­Ø³Ø§Ø¨ Ù…Ø³Ø¬Ù„..." : "Type to search registered accounts..."}
                   className={inp}
                 />
                 {searchingAccounts && (
@@ -1738,8 +1738,8 @@ export default function ProtectionClaimsTab({
                       className="w-full p-2.5 text-start hover:bg-gray-50 dark:hover:bg-gray-700/60 transition text-xs flex justify-between items-center"
                     >
                       <div>
-                        <p className="font-bold text-gray-900 dark:text-white">{acc.user.name || "بدون اسم"} ({acc.user.email})</p>
-                        <p className="text-[10px] text-gray-400 font-mono">Phone ID: {acc.phoneNumberId} • WABA: {acc.wabaId}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{acc.user.name || "Ø¨Ø¯ÙˆÙ† Ø§Ø³Ù…"} ({acc.user.email})</p>
+                        <p className="text-[10px] text-gray-400 font-mono">Phone ID: {acc.phoneNumberId} â€¢ WABA: {acc.wabaId}</p>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">
                         {acc.user.subscription?.plan || "Free"}
@@ -1753,10 +1753,10 @@ export default function ProtectionClaimsTab({
                 <div className="mt-2 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs flex items-center justify-between">
                   <div>
                     <span className="font-bold text-emerald-900 dark:text-emerald-300">
-                      ✓ {isAr ? "الحساب المحدد:" : "Selected Account:"}
+                      âœ“ {isAr ? "Ø§Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ø­Ø¯Ø¯:" : "Selected Account:"}
                     </span>{" "}
                     <span className="text-gray-800 dark:text-gray-200">
-                      {selectedAccount.user.email} — {selectedAccount.phoneNumberId}
+                      {selectedAccount.user.email} â€” {selectedAccount.phoneNumberId}
                     </span>
                   </div>
                   <button
@@ -1767,7 +1767,7 @@ export default function ProtectionClaimsTab({
                     }}
                     className="text-xs text-rose-600 hover:underline"
                   >
-                    {isAr ? "تغيير" : "Change"}
+                    {isAr ? "ØªØºÙŠÙŠØ±" : "Change"}
                   </button>
                 </div>
               )}
@@ -1776,7 +1776,7 @@ export default function ProtectionClaimsTab({
             {/* Ban Date and Time */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "تاريخ ووقت الحظر المدّعى: *" : "Claimed Ban Date & Time: *"}
+                {isAr ? "ØªØ§Ø±ÙŠØ® ÙˆÙˆÙ‚Øª Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ø¯Ù‘Ø¹Ù‰: *" : "Claimed Ban Date & Time: *"}
               </label>
               <input
                 type="datetime-local"
@@ -1789,13 +1789,13 @@ export default function ProtectionClaimsTab({
             {/* Customer Notes */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "تفاصيل وبلاغ العميل:" : "Customer Notes & Reported Context:"}
+                {isAr ? "ØªÙØ§ØµÙŠÙ„ ÙˆØ¨Ù„Ø§Øº Ø§Ù„Ø¹Ù…ÙŠÙ„:" : "Customer Notes & Reported Context:"}
               </label>
               <textarea
                 value={customerNotesInput}
                 onChange={(e) => setCustomerNotesInput(e.target.value)}
                 rows={2}
-                placeholder={isAr ? "تفاصيل ما ذكره العميل حول وقت الحظر وطريقة الاستخدام..." : "Context provided by the customer..."}
+                placeholder={isAr ? "ØªÙØ§ØµÙŠÙ„ Ù…Ø§ Ø°ÙƒØ±Ù‡ Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø­ÙˆÙ„ ÙˆÙ‚Øª Ø§Ù„Ø­Ø¸Ø± ÙˆØ·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…..." : "Context provided by the customer..."}
                 className={inp}
               />
             </div>
@@ -1803,13 +1803,13 @@ export default function ProtectionClaimsTab({
             {/* Admin Notes */}
             <div>
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 block">
-                {isAr ? "ملاحظات إدارية أولية:" : "Initial Admin Notes:"}
+                {isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¯Ø§Ø±ÙŠØ© Ø£ÙˆÙ„ÙŠØ©:" : "Initial Admin Notes:"}
               </label>
               <input
                 type="text"
                 value={adminNotesInput}
                 onChange={(e) => setAdminNotesInput(e.target.value)}
-                placeholder={isAr ? "ملاحظات للمشرفين..." : "Notes for reviewers..."}
+                placeholder={isAr ? "Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ†..." : "Notes for reviewers..."}
                 className={inp}
               />
             </div>
@@ -1820,7 +1820,7 @@ export default function ProtectionClaimsTab({
                 onClick={() => setShowCreateModal(false)}
                 className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                {isAr ? "إلغاء" : "Cancel"}
+                {isAr ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
               </button>
               <button
                 type="button"
@@ -1833,7 +1833,7 @@ export default function ProtectionClaimsTab({
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                {isAr ? "إنشاء وبدء الفحص الآلي" : "Create & Run Audit"}
+                {isAr ? "Ø¥Ù†Ø´Ø§Ø¡ ÙˆØ¨Ø¯Ø¡ Ø§Ù„ÙØ­Øµ Ø§Ù„Ø¢Ù„ÙŠ" : "Create & Run Audit"}
               </button>
             </div>
           </div>
@@ -1846,18 +1846,18 @@ export default function ProtectionClaimsTab({
           {/* Status Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {[
-              { id: "all", labelAr: "الكل", labelEn: "All" },
-              { id: "NEEDS_REVIEW", labelAr: "يحتاج مراجعة", labelEn: "Needs Review" },
-              { id: "ELIGIBLE", labelAr: "مستحق للضمان", labelEn: "Eligible" },
-              { id: "NOT_ELIGIBLE", labelAr: "غير مستحق", labelEn: "Not Eligible" },
-              { id: "PENDING_EVIDENCE", labelAr: "بانتظار أدلة", labelEn: "Pending Evidence" },
+              { id: "all", labelAr: "Ø§Ù„ÙƒÙ„", labelEn: "All" },
+              { id: "NEEDS_REVIEW", labelAr: "ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©", labelEn: "Needs Review" },
+              { id: "ELIGIBLE", labelAr: "Ù…Ø³ØªØ­Ù‚ Ù„Ù„Ø¶Ù…Ø§Ù†", labelEn: "Eligible" },
+              { id: "NOT_ELIGIBLE", labelAr: "ØºÙŠØ± Ù…Ø³ØªØ­Ù‚", labelEn: "Not Eligible" },
+              { id: "PENDING_EVIDENCE", labelAr: "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø£Ø¯Ù„Ø©", labelEn: "Pending Evidence" },
             ].map((f) => (
               <button
                 key={f.id}
                 onClick={() => setStatusFilter(f.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                   statusFilter === f.id
-                    ? "bg-[#25D366] text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               >
@@ -1871,7 +1871,7 @@ export default function ProtectionClaimsTab({
             className={btn}
           >
             <Plus className="w-4 h-4" />
-            {isAr ? "إنشاء Claim جديد" : "New Protection Claim"}
+            {isAr ? "Ø¥Ù†Ø´Ø§Ø¡ Claim Ø¬Ø¯ÙŠØ¯" : "New Protection Claim"}
           </button>
         </div>
 
@@ -1881,7 +1881,7 @@ export default function ProtectionClaimsTab({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isAr ? "بحث برقم الهاتف، الإيميل، أو Claim ID..." : "Search by phone, email, or Claim ID..."}
+              placeholder={isAr ? "Ø¨Ø­Ø« Ø¨Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙØŒ Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ØŒ Ø£Ùˆ Claim ID..." : "Search by phone, email, or Claim ID..."}
               className={inp}
             />
             <Search className="w-4 h-4 absolute top-3 end-3 text-gray-400 pointer-events-none" />
@@ -1889,7 +1889,7 @@ export default function ProtectionClaimsTab({
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <span className="text-xs text-gray-500">
-              {totalCount} {isAr ? "طلب مسجل" : "claims total"}
+              {totalCount} {isAr ? "Ø·Ù„Ø¨ Ù…Ø³Ø¬Ù„" : "claims total"}
             </span>
 
             <select
@@ -1897,9 +1897,9 @@ export default function ProtectionClaimsTab({
               onChange={(e) => setSortBy(e.target.value as any)}
               className={inp + " w-auto text-xs py-1.5 cursor-pointer"}
             >
-              <option value="newest">{isAr ? "الأحدث أولاً" : "Newest First"}</option>
-              <option value="oldest">{isAr ? "الأقدم أولاً" : "Oldest First"}</option>
-              <option value="highest_refund">{isAr ? "الأعلى استرداداً" : "Highest Refund"}</option>
+              <option value="newest">{isAr ? "Ø§Ù„Ø£Ø­Ø¯Ø« Ø£ÙˆÙ„Ø§Ù‹" : "Newest First"}</option>
+              <option value="oldest">{isAr ? "Ø§Ù„Ø£Ù‚Ø¯Ù… Ø£ÙˆÙ„Ø§Ù‹" : "Oldest First"}</option>
+              <option value="highest_refund">{isAr ? "Ø§Ù„Ø£Ø¹Ù„Ù‰ Ø§Ø³ØªØ±Ø¯Ø§Ø¯Ø§Ù‹" : "Highest Refund"}</option>
             </select>
           </div>
         </div>
@@ -1913,10 +1913,10 @@ export default function ProtectionClaimsTab({
           <div className="text-center py-16 px-4">
             <Shield className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {isAr ? "لا توجد طلبات حماية مطابقة" : "No protection claims found"}
+              {isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ø­Ù…Ø§ÙŠØ© Ù…Ø·Ø§Ø¨Ù‚Ø©" : "No protection claims found"}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              {isAr ? "يمكنك إنشاء طلب جديد باستخدام الزر أعلاه." : "You can create a new claim using the button above."}
+              {isAr ? "ÙŠÙ…ÙƒÙ†Ùƒ Ø¥Ù†Ø´Ø§Ø¡ Ø·Ù„Ø¨ Ø¬Ø¯ÙŠØ¯ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø²Ø± Ø£Ø¹Ù„Ø§Ù‡." : "You can create a new claim using the button above."}
             </p>
           </div>
         ) : (
@@ -1924,14 +1924,14 @@ export default function ProtectionClaimsTab({
             <table className="w-full text-xs text-start">
               <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase font-semibold">
                 <tr>
-                  <th className="px-4 py-3 text-start">{isAr ? "الطلب" : "Claim"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "العميل" : "Customer"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "رقم الهاتف" : "Phone"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "تاريخ الحظر" : "Ban Date"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "الحالة" : "Status"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "الاسترداد" : "Refund"}</th>
-                  <th className="px-4 py-3 text-start">{isAr ? "المراجع" : "Reviewer"}</th>
-                  <th className="px-4 py-3 text-end">{isAr ? "الإجراء" : "Action"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø§Ù„Ø·Ù„Ø¨" : "Claim"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ" : "Phone"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø­Ø¸Ø±" : "Ban Date"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø§Ù„Ø­Ø§Ù„Ø©" : "Status"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø§Ù„Ø§Ø³ØªØ±Ø¯Ø§Ø¯" : "Refund"}</th>
+                  <th className="px-4 py-3 text-start">{isAr ? "Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹" : "Reviewer"}</th>
+                  <th className="px-4 py-3 text-end">{isAr ? "Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡" : "Action"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1948,7 +1948,7 @@ export default function ProtectionClaimsTab({
                         #{claim.id.slice(-6).toUpperCase()}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-gray-900 dark:text-white">{claim.user?.name || "بدون اسم"}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{claim.user?.name || "Ø¨Ø¯ÙˆÙ† Ø§Ø³Ù…"}</p>
                         <p className="text-[11px] text-gray-400">{claim.user?.email}</p>
                       </td>
                       <td className="px-4 py-3 font-mono text-gray-700 dark:text-gray-300 dir-ltr text-start">
@@ -1980,13 +1980,13 @@ export default function ProtectionClaimsTab({
                             }}
                             className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 rounded-lg text-xs font-semibold transition"
                           >
-                            {isAr ? "مراجعة وفحص" : "Review"}
+                            {isAr ? "Ù…Ø±Ø§Ø¬Ø¹Ø© ÙˆÙØ­Øµ" : "Review"}
                           </button>
                           <button
                             onClick={(e) => handleDeleteClaim(claim.id, e)}
                             disabled={deletingClaimId === claim.id}
                             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
-                            title={isAr ? "حذف الطلب نهائياً" : "Delete claim"}
+                            title={isAr ? "Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "Delete claim"}
                           >
                             {deletingClaimId === claim.id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
@@ -2007,3 +2007,4 @@ export default function ProtectionClaimsTab({
     </div>
   );
 }
+

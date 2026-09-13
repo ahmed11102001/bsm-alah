@@ -204,7 +204,7 @@ export default function TemplatesPage() {
             {t.waniLibraryBtn}
           </button>
           <Button onClick={() => { setView("create"); setStep(1); setForm(defaultForm); setSubmitSuccess(false); }}
-            className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-2 shadow-sm">
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm">
             <Plus className="w-4 h-4" /> {t.newTemplate}
           </Button>
         </div>
@@ -290,7 +290,7 @@ export default function TemplatesPage() {
                     <tr key={tpl.id} onClick={() => setDetailTpl(tpl)}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors cursor-pointer group">
                       <td className="px-4 py-3.5">
-                        <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#25D366] transition-colors">
+                        <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
                           {tpl.name}
                         </span>
                         {(tpl.isCurrentAccount === false) ? (
@@ -361,7 +361,7 @@ export default function TemplatesPage() {
       {/* Store templates */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
             <Package className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -492,13 +492,13 @@ export default function TemplatesPage() {
         {[{ n: 1, label: t.step1 }, { n: 2, label: t.step2 }].map((s, i) => (
           <div key={s.n} className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all
-              ${step === s.n ? "bg-[#25D366] text-white" : step > s.n ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
+              ${step === s.n ? "bg-primary text-primary-foreground" : step > s.n ? "bg-primary/15 text-primary" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
               {step > s.n ? <CheckCheck className="w-3.5 h-3.5" /> : s.n}
             </div>
             <span className={`text-sm font-medium ${step === s.n ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"}`}>
               {s.label}
             </span>
-            {i < 1 && <div className={`h-0.5 w-12 mx-1 ${step > 1 ? "bg-[#25D366]" : "bg-gray-200 dark:bg-gray-700"}`} />}
+            {i < 1 && <div className={`h-0.5 w-12 mx-1 ${step > 1 ? "bg-primary" : "bg-gray-200 dark:bg-gray-700"}`} />}
           </div>
         ))}
       </div>

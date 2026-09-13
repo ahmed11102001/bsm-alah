@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { playSendSound } from "@/lib/sounds";
 
-// ─── i18n ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ i18n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import { t, type Lang } from "./_components/i18n";
 import type { Audience, Template, Contact, LastMsg, Conversation, Message, FilterType } from "./_components/types";
 import { avatarColor, initials, mediaSrc, linkify, timeStr, dateStr } from "./_components/utils";
@@ -38,15 +38,15 @@ export default function ChatPage() {
   const dark = resolvedTheme === "dark";
   const lang: Lang = locale === "en" ? "en" : "ar";
 
-  // عضو CHAT_ONLY (رد المحادثات فقط) — الـBackend بيمنعه من delete/addToAudience/
-  // toggleVoiceAgent/toggleTextAi (PATCH /api/chat)، فمينفعش الـUI يعرضله
-  // أزرار هيضغط عليها وتفشل. نفس الحدود بالظبط بتاعة PATCH_ACTION_PERMISSIONS.
+  // Ø¹Ø¶Ùˆ CHAT_ONLY (Ø±Ø¯ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ÙÙ‚Ø·) â€” Ø§Ù„Ù€Backend Ø¨ÙŠÙ…Ù†Ø¹Ù‡ Ù…Ù† delete/addToAudience/
+  // toggleVoiceAgent/toggleTextAi (PATCH /api/chat)ØŒ ÙÙ…ÙŠÙ†ÙØ¹Ø´ Ø§Ù„Ù€UI ÙŠØ¹Ø±Ø¶Ù„Ù‡
+  // Ø£Ø²Ø±Ø§Ø± Ù‡ÙŠØ¶ØºØ· Ø¹Ù„ÙŠÙ‡Ø§ ÙˆØªÙØ´Ù„. Ù†ÙØ³ Ø§Ù„Ø­Ø¯ÙˆØ¯ Ø¨Ø§Ù„Ø¸Ø¨Ø· Ø¨ØªØ§Ø¹Ø© PATCH_ACTION_PERMISSIONS.
   const isChatOnly = authSession?.user?.role === "CHAT_ONLY";
 
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
-  const [searchInput, setSearchInput] = useState("");   // قيمة خانة البحث الفورية (للعرض)
-  const [search, setSearch] = useState("");             // القيمة المؤجلة (debounced) اللي بتتبعت للسيرفر
+  const [searchInput, setSearchInput] = useState("");   // Ù‚ÙŠÙ…Ø© Ø®Ø§Ù†Ø© Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ÙÙˆØ±ÙŠØ© (Ù„Ù„Ø¹Ø±Ø¶)
+  const [search, setSearch] = useState("");             // Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¤Ø¬Ù„Ø© (debounced) Ø§Ù„Ù„ÙŠ Ø¨ØªØªØ¨Ø¹Øª Ù„Ù„Ø³ÙŠØ±ÙØ±
   const [filter, setFilter] = useState<FilterType>("all");
 
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -80,7 +80,7 @@ export default function ChatPage() {
   const messageRequestInFlight = useRef(false);
   const pendingScroll = useRef<"initial" | "new" | null>(null);
   const [hasNewMsgs, setHasNewMsgs] = useState(false);
-  // ── البحث داخل المحادثة المفتوحة ──────────────────────────────────────────
+  // â”€â”€ Ø§Ù„Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ù…ÙØªÙˆØ­Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [msgSearchOpen, setMsgSearchOpen] = useState(false);
   const [msgQuery, setMsgQuery] = useState("");
   const [msgMatchIdx, setMsgMatchIdx] = useState(0);
@@ -97,7 +97,7 @@ export default function ChatPage() {
   const [globalTextEnabled, setGlobalTextEnabled] = useState(true);
   const [globalVoiceEnabled, setGlobalVoiceEnabled] = useState(false);
 
-  // ── حساب إذا كانت المحادثة منتهية الـ 24 ساعة ─────────────────────
+  // â”€â”€ Ø­Ø³Ø§Ø¨ Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ù†ØªÙ‡ÙŠØ© Ø§Ù„Ù€ 24 Ø³Ø§Ø¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const isExpired = useMemo(() => {
     if (!selected) return false;
     const lastInbound = messages.slice().reverse().find(m => m.direction === "inbound");
@@ -105,14 +105,14 @@ export default function ChatPage() {
     return (Date.now() - new Date(lastInbound.createdAt).getTime()) > 24 * 60 * 60 * 1000;
   }, [selected, messages]);
 
-  // ── نسخة حيّة من المحددة (قائمة المحادثات تتحدث بالـpolling) ───────────────
-  // تُستخدم لإشارة "AI يجهز ردًا" لحظيًا دون انتظار إعادة الاختيار.
+  // â”€â”€ Ù†Ø³Ø®Ø© Ø­ÙŠÙ‘Ø© Ù…Ù† Ø§Ù„Ù…Ø­Ø¯Ø¯Ø© (Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ØªØªØ­Ø¯Ø« Ø¨Ø§Ù„Ù€polling) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ØªÙØ³ØªØ®Ø¯Ù… Ù„Ø¥Ø´Ø§Ø±Ø© "AI ÙŠØ¬Ù‡Ø² Ø±Ø¯Ù‹Ø§" Ù„Ø­Ø¸ÙŠÙ‹Ø§ Ø¯ÙˆÙ† Ø§Ù†ØªØ¸Ø§Ø± Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø§Ø®ØªÙŠØ§Ø±.
   const selectedLive = selected
     ? (convs.find(c => c.contact.id === selected.contact.id) ?? selected)
     : null;
   const showAiPreparing = !!selectedLive?.aiPreparing;
 
-  // ── نتائج البحث داخل المحادثة + التنقل بينها ──────────────────────────────
+  // â”€â”€ Ù†ØªØ§Ø¦Ø¬ Ø§Ù„Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© + Ø§Ù„ØªÙ†Ù‚Ù„ Ø¨ÙŠÙ†Ù‡Ø§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const msgMatches = useMemo(() => {
     const q = msgQuery.trim().toLowerCase();
     if (!msgSearchOpen || !q) return [] as string[];
@@ -134,7 +134,7 @@ export default function ChatPage() {
     });
   }, [msgMatches]);
 
-  // آخر نتيجة تُعرض تلقائيًا عند تغيّر الاستعلام أو المحادثة
+  // Ø¢Ø®Ø± Ù†ØªÙŠØ¬Ø© ØªÙØ¹Ø±Ø¶ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø¹Ù†Ø¯ ØªØºÙŠÙ‘Ø± Ø§Ù„Ø§Ø³ØªØ¹Ù„Ø§Ù… Ø£Ùˆ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©
   useEffect(() => {
     if (msgMatches.length > 0) {
       setMsgMatchIdx(msgMatches.length - 1);
@@ -146,7 +146,7 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgQuery, selected?.contact.id]);
 
-  // تصفير البحث عند تبديل المحادثة
+  // ØªØµÙÙŠØ± Ø§Ù„Ø¨Ø­Ø« Ø¹Ù†Ø¯ ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©
   useEffect(() => {
     setMsgSearchOpen(false);
     setMsgQuery("");
@@ -154,7 +154,7 @@ export default function ChatPage() {
   }, [selected?.contact.id]);
 
 
-  // ── Theme classes ────────────────────────────────────────────────
+  // â”€â”€ Theme classes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const bg = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
   const sidebarBg = dark ? "bg-[#1f2c34]" : "bg-white";
   const headerBg = dark ? "bg-[#202c33]" : "bg-[#f0f2f5]";
@@ -168,7 +168,7 @@ export default function ChatPage() {
   const selectedRow = dark ? "bg-[#2a3942]" : "bg-[#e8f5e9]";
   const msgAreaBg = dark ? "#0b141a" : "#f0f2f5";
 
-  // ── Fetch helpers ────────────────────────────────────────────────
+  // â”€â”€ Fetch helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchConvs = useCallback(async () => {
     try {
       const q = new URLSearchParams({ type: "conversations", filter, search });
@@ -189,7 +189,7 @@ export default function ChatPage() {
   }, [filter, search]);
 
   const fetchMsgs = useCallback(async (contactId: string, initial = false) => {
-    // لا نسمح بتداخل polling requests؛ النتيجة القديمة لا يجب أن تكتب فوق الأحدث.
+    // Ù„Ø§ Ù†Ø³Ù…Ø­ Ø¨ØªØ¯Ø§Ø®Ù„ polling requestsØ› Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© Ù„Ø§ ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒØªØ¨ ÙÙˆÙ‚ Ø§Ù„Ø£Ø­Ø¯Ø«.
     if (messageRequestInFlight.current && !initial) return;
     const requestId = ++messageRequestId.current;
     if (initial) messageRequestRef.current?.abort();
@@ -206,7 +206,7 @@ export default function ChatPage() {
       const newMsgs: Message[] = d.messages ?? [];
       if (requestId !== messageRequestId.current || controller.signal.aborted) return;
 
-      // حفظ الـ scroll position قبل أي update
+      // Ø­ÙØ¸ Ø§Ù„Ù€ scroll position Ù‚Ø¨Ù„ Ø£ÙŠ update
       const el = msgAreaRef.current;
       const prevScrollTop = el?.scrollTop ?? 0;
       const prevScrollH = el?.scrollHeight ?? 0;
@@ -226,10 +226,10 @@ export default function ChatPage() {
         c.contact.id === contactId ? { ...c, unreadCount: 0 } : c
       ));
 
-      // لو المستخدم مش في الأسفل (بيقرأ رسايل قديمة) → رجّع نفس الـ position
+      // Ù„Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø´ ÙÙŠ Ø§Ù„Ø£Ø³ÙÙ„ (Ø¨ÙŠÙ‚Ø±Ø£ Ø±Ø³Ø§ÙŠÙ„ Ù‚Ø¯ÙŠÙ…Ø©) â†’ Ø±Ø¬Ù‘Ø¹ Ù†ÙØ³ Ø§Ù„Ù€ position
       const hasNewMessages = newMsgs.length > previousCount;
       if (!wasAtBottom && !initial && hasNewMessages && el) {
-        // لو في رسايل جديدة فعلاً → أظهر indicator
+        // Ù„Ùˆ ÙÙŠ Ø±Ø³Ø§ÙŠÙ„ Ø¬Ø¯ÙŠØ¯Ø© ÙØ¹Ù„Ø§Ù‹ â†’ Ø£Ø¸Ù‡Ø± indicator
         setHasNewMsgs(true);
         requestAnimationFrame(() => {
           el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollH);
@@ -240,7 +240,7 @@ export default function ChatPage() {
       if (initial) pendingScroll.current = "initial";
       else if (wasAtBottom && hasNewMessages) pendingScroll.current = "new";
     } catch (error) {
-      // إلغاء طلب قديم عند تبديل المحادثة متوقع ولا يجب أن يغيّر واجهة المستخدم.
+      // Ø¥Ù„ØºØ§Ø¡ Ø·Ù„Ø¨ Ù‚Ø¯ÙŠÙ… Ø¹Ù†Ø¯ ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ù…ØªÙˆÙ‚Ø¹ ÙˆÙ„Ø§ ÙŠØ¬Ø¨ Ø£Ù† ÙŠØºÙŠÙ‘Ø± ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         console.warn("Failed to refresh chat messages", error);
       }
@@ -255,7 +255,7 @@ export default function ChatPage() {
   const selectConv = useCallback((conv: Conversation, mode: "chat" | "timeline" = "chat") => {
     setSelected(conv);
     setChatViewMode(mode);
-    isInitialLoad.current = true;   // ← أول فتح للمحادثة → scroll للأسفل
+    isInitialLoad.current = true;   // â† Ø£ÙˆÙ„ ÙØªØ­ Ù„Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â†’ scroll Ù„Ù„Ø£Ø³ÙÙ„
     isAtBottom.current = true;
     messagesRef.current = [];
     setMessages([]);
@@ -287,9 +287,9 @@ export default function ChatPage() {
       const r = await fetch("/api/chat/assignment", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contactId: selected.contact.id, assignedToUserId }) });
       const d = await r.json(); if (!r.ok) throw new Error(d.error);
       setConvs(prev => prev.map(c => c.contact.id === selected.contact.id ? { ...c, contact: { ...c.contact, assignedToUserId, assignedTo: member ? { id: member.id, name: member.name } : null } } : c));
-      toast.success(lang === "ar" ? "تم تحديث مسؤول المحادثة" : "Conversation assignment updated");
+      toast.success(lang === "ar" ? "ØªÙ… ØªØ­Ø¯ÙŠØ« Ù…Ø³Ø¤ÙˆÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©" : "Conversation assignment updated");
     } catch (e: any) {
-      setSelected(previous); toast.error(e.message ?? (lang === "ar" ? "تعذر تحديث التعيين" : "Could not update assignment"));
+      setSelected(previous); toast.error(e.message ?? (lang === "ar" ? "ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« Ø§Ù„ØªØ¹ÙŠÙŠÙ†" : "Could not update assignment"));
     } finally { setAssignmentLoading(false); }
   };
 
@@ -306,9 +306,9 @@ export default function ChatPage() {
     setAudiences(Array.isArray(d) ? d : []);
   }, []);
 
-  // ── Debounce لخانة البحث ─────────────────────────────────────────
-  // search (اللي بيتبعت فعليًا للسيرفر) بيتحدث بعد توقف المستخدم عن
-  // الكتابة بـ 400ms، بدل ما يعمل fetch مع كل حرف.
+  // â”€â”€ Debounce Ù„Ø®Ø§Ù†Ø© Ø§Ù„Ø¨Ø­Ø« â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // search (Ø§Ù„Ù„ÙŠ Ø¨ÙŠØªØ¨Ø¹Øª ÙØ¹Ù„ÙŠÙ‹Ø§ Ù„Ù„Ø³ÙŠØ±ÙØ±) Ø¨ÙŠØªØ­Ø¯Ø« Ø¨Ø¹Ø¯ ØªÙˆÙ‚Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ù†
+  // Ø§Ù„ÙƒØªØ§Ø¨Ø© Ø¨Ù€ 400msØŒ Ø¨Ø¯Ù„ Ù…Ø§ ÙŠØ¹Ù…Ù„ fetch Ù…Ø¹ ÙƒÙ„ Ø­Ø±Ù.
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput), 400);
     return () => clearTimeout(id);
@@ -322,8 +322,8 @@ export default function ChatPage() {
     };
   }, [fetchConvs, fetchTemplates, fetchAudiences]);
 
-  // ── Deep-link من كارت الهوم: ?contact=<id> يفتح المحادثة تلقائيًا ──────────
-  // يُستهلك مرة واحدة ثم يُمسح من الـURL حتى لا يُعاد الفتح مع كل تحديث قائمة.
+  // â”€â”€ Deep-link Ù…Ù† ÙƒØ§Ø±Øª Ø§Ù„Ù‡ÙˆÙ…: ?contact=<id> ÙŠÙØªØ­ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ÙŠÙØ³ØªÙ‡Ù„Ùƒ Ù…Ø±Ø© ÙˆØ§Ø­Ø¯Ø© Ø«Ù… ÙŠÙÙ…Ø³Ø­ Ù…Ù† Ø§Ù„Ù€URL Ø­ØªÙ‰ Ù„Ø§ ÙŠÙØ¹Ø§Ø¯ Ø§Ù„ÙØªØ­ Ù…Ø¹ ÙƒÙ„ ØªØ­Ø¯ÙŠØ« Ù‚Ø§Ø¦Ù…Ø©.
   const deepLinked = useRef(false);
   useEffect(() => {
     if (deepLinked.current || convs.length === 0) return;
@@ -338,12 +338,12 @@ export default function ChatPage() {
     window.history.replaceState(null, "", url.toString());
   }, [convs, selectConv]);
 
-  // ── بولينج دوري لقائمة المحادثات (sidebar) ─────────────────────────
-  // عشان الـ unread badges والمحادثات الجديدة تتحدث live حتى لو مفيش
-  // محادثة مفتوحة، أو المستخدم مش بيغيّر filter/search.
+  // â”€â”€ Ø¨ÙˆÙ„ÙŠÙ†Ø¬ Ø¯ÙˆØ±ÙŠ Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª (sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ø¹Ø´Ø§Ù† Ø§Ù„Ù€ unread badges ÙˆØ§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© ØªØªØ­Ø¯Ø« live Ø­ØªÙ‰ Ù„Ùˆ Ù…ÙÙŠØ´
+  // Ù…Ø­Ø§Ø¯Ø«Ø© Ù…ÙØªÙˆØ­Ø©ØŒ Ø£Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø´ Ø¨ÙŠØºÙŠÙ‘Ø± filter/search.
   useEffect(() => {
     const convsPollId = setInterval(() => {
-      // متستناش fetchConvs لو الصفحة في الخلفية (tab مش ظاهر) — وفّر طلبات لا داعي لها
+      // Ù…ØªØ³ØªÙ†Ø§Ø´ fetchConvs Ù„Ùˆ Ø§Ù„ØµÙØ­Ø© ÙÙŠ Ø§Ù„Ø®Ù„ÙÙŠØ© (tab Ù…Ø´ Ø¸Ø§Ù‡Ø±) â€” ÙˆÙÙ‘Ø± Ø·Ù„Ø¨Ø§Øª Ù„Ø§ Ø¯Ø§Ø¹ÙŠ Ù„Ù‡Ø§
       if (document.visibilityState === "visible") {
         fetchConvs();
       }
@@ -351,11 +351,11 @@ export default function ChatPage() {
     return () => clearInterval(convsPollId);
   }, [fetchConvs]);
 
-  // ── Smart scroll — ينزل للأسفل بس في 3 حالات ─────────────────────
+  // â”€â”€ Smart scroll â€” ÙŠÙ†Ø²Ù„ Ù„Ù„Ø£Ø³ÙÙ„ Ø¨Ø³ ÙÙŠ 3 Ø­Ø§Ù„Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (messages.length === 0) return;
 
-    // حالة 1: أول تحميل للمحادثة → scroll فوري بدون animation
+    // Ø­Ø§Ù„Ø© 1: Ø£ÙˆÙ„ ØªØ­Ù…ÙŠÙ„ Ù„Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â†’ scroll ÙÙˆØ±ÙŠ Ø¨Ø¯ÙˆÙ† animation
     if (isInitialLoad.current || pendingScroll.current === "initial") {
       endRef.current?.scrollIntoView({ behavior: "auto" });
       isInitialLoad.current = false;
@@ -363,19 +363,19 @@ export default function ChatPage() {
       return;
     }
 
-    // حالة 2: المستخدم في الأسفل → scroll smooth للرسائل الجديدة
-    // حالة 3: المستخدم بيقرأ من فوق → لا تحرك إيه (fetchMsgs هيرجع الـ position)
+    // Ø­Ø§Ù„Ø© 2: Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ø§Ù„Ø£Ø³ÙÙ„ â†’ scroll smooth Ù„Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
+    // Ø­Ø§Ù„Ø© 3: Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨ÙŠÙ‚Ø±Ø£ Ù…Ù† ÙÙˆÙ‚ â†’ Ù„Ø§ ØªØ­Ø±Ùƒ Ø¥ÙŠÙ‡ (fetchMsgs Ù‡ÙŠØ±Ø¬Ø¹ Ø§Ù„Ù€ position)
     if (pendingScroll.current === "new" && isAtBottom.current) {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     pendingScroll.current = null;
   }, [messages]);
 
-  // ── Actions ──────────────────────────────────────────────────────
+  // â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sendText = async () => {
     if (!text.trim() || !selected || sending) return;
     const body = text; setText(""); setSending(true);
-    isAtBottom.current = true; // بعد الإرسال نزل للأسفل
+    isAtBottom.current = true; // Ø¨Ø¹Ø¯ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ù†Ø²Ù„ Ù„Ù„Ø£Ø³ÙÙ„
     try {
       const r = await fetch("/api/chat", {
         method: "POST",
@@ -391,8 +391,8 @@ export default function ChatPage() {
 
   const copyMessage = async (msg: Message) => {
     if (!msg.content) return;
-    try { await navigator.clipboard.writeText(msg.content); toast.success(lang === "ar" ? "تم نسخ الرسالة" : "Message copied"); }
-    catch { toast.error(lang === "ar" ? "تعذر نسخ الرسالة" : "Could not copy message"); }
+    try { await navigator.clipboard.writeText(msg.content); toast.success(lang === "ar" ? "ØªÙ… Ù†Ø³Ø® Ø§Ù„Ø±Ø³Ø§Ù„Ø©" : "Message copied"); }
+    catch { toast.error(lang === "ar" ? "ØªØ¹Ø°Ø± Ù†Ø³Ø® Ø§Ù„Ø±Ø³Ø§Ù„Ø©" : "Could not copy message"); }
   };
 
   const openForward = (msg: Message) => {
@@ -406,8 +406,8 @@ export default function ChatPage() {
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "forward", sourceMessageId: forwarding.id, targetContactId: forwardTarget.contact.id }) });
       const d = await r.json(); if (!r.ok) throw new Error(d.error);
-      toast.success(lang === "ar" ? "تمت إعادة توجيه الرسالة" : "Message forwarded"); setForwarding(null);
-    } catch (e: any) { toast.error(e.message ?? (lang === "ar" ? "تعذر إعادة التوجيه" : "Forward failed")); }
+      toast.success(lang === "ar" ? "ØªÙ…Øª Ø¥Ø¹Ø§Ø¯Ø© ØªÙˆØ¬ÙŠÙ‡ Ø§Ù„Ø±Ø³Ø§Ù„Ø©" : "Message forwarded"); setForwarding(null);
+    } catch (e: any) { toast.error(e.message ?? (lang === "ar" ? "ØªØ¹Ø°Ø± Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙˆØ¬ÙŠÙ‡" : "Forward failed")); }
     finally { setForwardingBusy(false); }
   };
 
@@ -456,7 +456,7 @@ export default function ChatPage() {
         const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "send", contactId: selected.contact.id, type: "text", content: `📍 Location: https://maps.google.com/?q=${lat},${lng}` }),
+          body: JSON.stringify({ action: "send", contactId: selected.contact.id, type: "text", content: `ðŸ“ Location: https://maps.google.com/?q=${lat},${lng}` }),
         });
         if (!r.ok) throw new Error();
         toast.success(t[lang].locationSent);
@@ -472,7 +472,7 @@ export default function ChatPage() {
     if (!canSendMedia) {
       toast.error(
         lang === "ar"
-          ? "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+          ? "Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ØµÙˆØ± ÙˆØ§Ù„Ù…Ù„ÙØ§Øª Ù…ØªØ§Ø­ ÙÙŠ Ø¨Ø§Ù‚Ø© Go ÙˆÙ…Ø§ ÙÙˆÙ‚Ù‡Ø§. ÙŠØ±Ø¬Ù‰ ØªØ±Ù‚ÙŠØ© Ø¨Ø§Ù‚ØªÙƒ."
           : "Sending images and files requires Go plan or higher. Please upgrade."
       );
       return;
@@ -496,7 +496,7 @@ export default function ChatPage() {
     if (!canSendMedia) {
       toast.error(
         lang === "ar"
-          ? "تسجيل وإرسال الرسائل الصوتية متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+          ? "ØªØ³Ø¬ÙŠÙ„ ÙˆØ¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„ØµÙˆØªÙŠØ© Ù…ØªØ§Ø­ ÙÙŠ Ø¨Ø§Ù‚Ø© Go ÙˆÙ…Ø§ ÙÙˆÙ‚Ù‡Ø§. ÙŠØ±Ø¬Ù‰ ØªØ±Ù‚ÙŠØ© Ø¨Ø§Ù‚ØªÙƒ."
           : "Voice messages require Go plan or higher. Please upgrade."
       );
       return;
@@ -559,7 +559,7 @@ export default function ChatPage() {
 
   const toggleVoiceAgent = async (contactId: string, enable: boolean) => {
     if (!globalVoiceEnabled && enable) {
-      toast.error(lang === "ar" ? "فعّل الردود الصوتية في إعدادات الربط (ElevenLabs) أولاً" : "Enable Voice Replies in Integrations (ElevenLabs) first");
+      toast.error(lang === "ar" ? "ÙØ¹Ù‘Ù„ Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„ØµÙˆØªÙŠØ© ÙÙŠ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø±Ø¨Ø· (ElevenLabs) Ø£ÙˆÙ„Ø§Ù‹" : "Enable Voice Replies in Integrations (ElevenLabs) first");
       return;
     }
     try {
@@ -581,7 +581,7 @@ export default function ChatPage() {
 
   const toggleTextAi = async (contactId: string, enable: boolean) => {
     if (!globalTextEnabled && enable) {
-      toast.error(lang === "ar" ? "الردود النصية معطلة في إعدادات الـ AI Agent" : "Text replies are disabled in AI Agent settings");
+      toast.error(lang === "ar" ? "Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„Ù†ØµÙŠØ© Ù…Ø¹Ø·Ù„Ø© ÙÙŠ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù€ AI Agent" : "Text replies are disabled in AI Agent settings");
       return;
     }
     try {
@@ -619,9 +619,9 @@ export default function ChatPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // فلترة فورية محلية باستخدام searchInput (مش search المؤجلة) — بتدي إحساس
-  // فوري للمستخدم وهو بيكتب لحد ما نتيجة البحث الفعلية من السيرفر توصل
-  // (بعد الـ debounce). البحث الحقيقي ضد كل قاعدة البيانات بيحصل في fetchConvs.
+  // ÙÙ„ØªØ±Ø© ÙÙˆØ±ÙŠØ© Ù…Ø­Ù„ÙŠØ© Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… searchInput (Ù…Ø´ search Ø§Ù„Ù…Ø¤Ø¬Ù„Ø©) â€” Ø¨ØªØ¯ÙŠ Ø¥Ø­Ø³Ø§Ø³
+  // ÙÙˆØ±ÙŠ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙˆÙ‡Ùˆ Ø¨ÙŠÙƒØªØ¨ Ù„Ø­Ø¯ Ù…Ø§ Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ÙØ¹Ù„ÙŠØ© Ù…Ù† Ø§Ù„Ø³ÙŠØ±ÙØ± ØªÙˆØµÙ„
+  // (Ø¨Ø¹Ø¯ Ø§Ù„Ù€ debounce). Ø§Ù„Ø¨Ø­Ø« Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ Ø¶Ø¯ ÙƒÙ„ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø¨ÙŠØ­ØµÙ„ ÙÙŠ fetchConvs.
   const filteredConvs = useMemo(() => {
     const q = searchInput.trim().toLowerCase();
     if (!q) return convs;
@@ -637,13 +637,13 @@ export default function ChatPage() {
     { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500", locked: !canSendMedia },
   ];
 
-  // ─────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div
       className={`flex h-[calc(100vh-64px)] ${bg} overflow-hidden relative`}
       style={{ direction: dir }}
     >
-      {/* ══════════ SIDEBAR ══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â•â•â• */}
       {/* On mobile: hidden when chat is open */}
       <aside className={`
         ${sidebarBg} flex flex-col min-h-0 border-r ${border}
@@ -652,12 +652,12 @@ export default function ChatPage() {
         ${mobileShowChat ? "hidden sm:flex" : "flex"}
       `}>
 
-        {/* Top bar — search + theme/lang toggles */}
+        {/* Top bar â€” search + theme/lang toggles */}
         <div className={`px-3 pt-3 pb-2 ${sidebarBg} border-b ${borderLight}`}>
           {/* Controls row */}
           <div className="flex items-center justify-between mb-2.5">
             <span className={`text-base font-semibold ${textMain}`}>
-              {lang === "ar" ? "المحادثات" : "Chats"}
+              {lang === "ar" ? "Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "Chats"}
             </span>
             <div className="flex items-center gap-1.5">
             </div>
@@ -681,13 +681,13 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Filters — Design pilot: AI والأتمتة ضمن أول 4، المؤرشف آخرًا، بلا today */}
+        {/* Filters â€” Design pilot: AI ÙˆØ§Ù„Ø£ØªÙ…ØªØ© Ø¶Ù…Ù† Ø£ÙˆÙ„ 4ØŒ Ø§Ù„Ù…Ø¤Ø±Ø´Ù Ø¢Ø®Ø±Ù‹Ø§ØŒ Ø¨Ù„Ø§ today */}
         <div className={`flex gap-1.5 px-3 py-2 border-b ${borderLight} overflow-x-auto scrollbar-hide`}>
           {(["all", "unread"] as FilterType[]).map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
-                ? "bg-[#25d366] text-white"
+                ? "bg-primary text-primary-foreground"
                 : dark
                   ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -695,7 +695,7 @@ export default function ChatPage() {
               {t[lang][f]}
             </button>
           ))}
-          {/* AI Replied — فلتر مستقل بتصميم مميز */}
+          {/* AI Replied â€” ÙÙ„ØªØ± Ù…Ø³ØªÙ‚Ù„ Ø¨ØªØµÙ…ÙŠÙ… Ù…Ù…ÙŠØ² */}
           <button
             onClick={() => setFilter("ai_replied")}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "ai_replied"
@@ -707,7 +707,7 @@ export default function ChatPage() {
             <Bot className="w-3 h-3" />
             {t[lang].ai_replied}
           </button>
-          {/* Automation — فلتر جديد للأتمتة */}
+          {/* Automation â€” ÙÙ„ØªØ± Ø¬Ø¯ÙŠØ¯ Ù„Ù„Ø£ØªÙ…ØªØ© */}
           <button
             onClick={() => setFilter("automation")}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "automation"
@@ -723,7 +723,7 @@ export default function ChatPage() {
             <button key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
-                ? "bg-[#25d366] text-white"
+                ? "bg-primary text-primary-foreground"
                 : dark
                   ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -743,7 +743,7 @@ export default function ChatPage() {
               <p className={`text-sm mb-1 ${textSub}`}>{t[lang].noConvs}</p>
               <p className={`text-xs mb-5 ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>{t[lang].noConvsHint}</p>
               <Button size="sm"
-                className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-1.5"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
                 onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
                 <Megaphone className="w-4 h-4" /> {t[lang].startCampaign}
               </Button>
@@ -770,7 +770,7 @@ export default function ChatPage() {
                     <span className={`text-sm truncate ${isUnread ? "font-bold" : "font-medium"} ${textMain}`}>
                       {conv.contact.name ?? conv.contact.phone}
                     </span>
-                    <span className={`text-[11px] flex-shrink-0 mx-2 ${isUnread ? "text-[#25d366] font-medium" : textSub}`}>
+                    <span className={`text-[11px] flex-shrink-0 mx-2 ${isUnread ? "text-primary font-medium" : textSub}`}>
                       {conv.lastMessageAt ? dateStr(conv.lastMessageAt, lang) : ""}
                     </span>
                   </div>
@@ -787,7 +787,7 @@ export default function ChatPage() {
                     </p>
                     <div className="flex items-center gap-1">
                       {isUnread ? (
-                        <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-[#25d366] text-white text-[10px] flex items-center justify-center font-bold`}>
+                        <span className={`flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold`}>
                           {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                         </span>
                       ) : <span className="w-2" />}
@@ -800,7 +800,7 @@ export default function ChatPage() {
                           className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border ${dark ? "bg-[#233138] border-amber-500/30 text-amber-400 hover:bg-[#2a3942]" : "bg-white border-amber-200 text-amber-600 hover:bg-amber-50"}`}
                         >
                           <Clock className="w-3 h-3" />
-                          مسار الأتمتة
+                          Ù…Ø³Ø§Ø± Ø§Ù„Ø£ØªÙ…ØªØ©
                         </button>
                       )}
                     </div>
@@ -812,7 +812,7 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      {/* ══════════ CHAT PANEL ══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â• CHAT PANEL â•â•â•â•â•â•â•â•â•â• */}
       <main className={`
         flex-1 flex flex-col relative overflow-hidden
         ${!mobileShowChat ? "hidden sm:flex" : "flex"}
@@ -838,7 +838,7 @@ export default function ChatPage() {
                   <p className={`text-xs ${textSub}`}>{selected.contact.phone}</p>
                 </div>
                 <div className="hidden md:flex items-center gap-1.5 ml-3">
-                  <span className={`text-[11px] ${textSub}`}>{lang === "ar" ? "مسؤول المحادثة" : "Assigned to"}</span>
+                  <span className={`text-[11px] ${textSub}`}>{lang === "ar" ? "Ù…Ø³Ø¤ÙˆÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©" : "Assigned to"}</span>
                   {canAssign ? (
                     <select
                       value={selected.contact.assignedToUserId ?? ""}
@@ -846,11 +846,11 @@ export default function ChatPage() {
                       onChange={e => updateAssignment(e.target.value || null)}
                       className={`max-w-[150px] rounded-lg border px-2 py-1 text-xs outline-none ${inputBg} ${textMain} ${border} disabled:opacity-60`}
                     >
-                      <option value="">{lang === "ar" ? "غير معيّنة" : "Unassigned"}</option>
+                      <option value="">{lang === "ar" ? "ØºÙŠØ± Ù…Ø¹ÙŠÙ‘Ù†Ø©" : "Unassigned"}</option>
                       {assignmentMembers.map(member => <option key={member.id} value={member.id}>{member.name || member.email}</option>)}
                     </select>
                   ) : (
-                    <span className={`text-xs font-medium ${textMain}`}>{selected.contact.assignedTo?.name || (lang === "ar" ? "غير معيّنة" : "Unassigned")}</span>
+                    <span className={`text-xs font-medium ${textMain}`}>{selected.contact.assignedTo?.name || (lang === "ar" ? "ØºÙŠØ± Ù…Ø¹ÙŠÙ‘Ù†Ø©" : "Unassigned")}</span>
                   )}
                 </div>
               </div>
@@ -860,12 +860,12 @@ export default function ChatPage() {
                   <>
                     <button
                       onClick={() => toggleTextAi(selected.contact.id, !selected.textAiEnabled)}
-                      title={!globalTextEnabled ? (lang === "ar" ? "الردود النصية معطلة في الإعدادات" : "Text Replies disabled in settings") : undefined}
+                      title={!globalTextEnabled ? (lang === "ar" ? "Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„Ù†ØµÙŠØ© Ù…Ø¹Ø·Ù„Ø© ÙÙŠ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª" : "Text Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                         ${!globalTextEnabled
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
                           : selected.textAiEnabled !== false
-                          ? "bg-[#25d366] text-white shadow-[0_0_12px_rgba(37,211,102,0.5)]"
+                          ? "bg-primary text-primary-foreground shadow-[0_0_12px_rgba(0,0,0,0.3)]"
                           : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                     >
                       <Bot className="w-3.5 h-3.5" />
@@ -873,7 +873,7 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => toggleVoiceAgent(selected.contact.id, !selected.voiceAgentEnabled)}
-                      title={!globalVoiceEnabled ? (lang === "ar" ? "الردود الصوتية معطلة في الإعدادات" : "Voice Replies disabled in settings") : undefined}
+                      title={!globalVoiceEnabled ? (lang === "ar" ? "Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„ØµÙˆØªÙŠØ© Ù…Ø¹Ø·Ù„Ø© ÙÙŠ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª" : "Voice Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                         ${!globalVoiceEnabled
                           ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
@@ -888,8 +888,8 @@ export default function ChatPage() {
                 )}
                 <button
                   onClick={() => { setMsgSearchOpen(v => !v); }}
-                  title={lang === "ar" ? "بحث في المحادثة" : "Search in conversation"}
-                  className={`p-2 rounded-full transition-colors ${msgSearchOpen ? "text-[#25d366] bg-[#25d366]/10" : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                  title={lang === "ar" ? "Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©" : "Search in conversation"}
+                  className={`p-2 rounded-full transition-colors ${msgSearchOpen ? "text-primary bg-primary/10" : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -941,7 +941,7 @@ export default function ChatPage() {
               </div>
             </header>
 
-            {/* ── البحث داخل المحادثة ─────────────────────────────────────── */}
+            {/* â”€â”€ Ø§Ù„Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             {msgSearchOpen && (
               <div className={`px-3 py-2 border-b ${borderLight} flex items-center gap-1.5 ${headerBg}`}>
                 <Search className="w-4 h-4 flex-shrink-0 text-gray-400" />
@@ -952,7 +952,7 @@ export default function ChatPage() {
                     if (e.key === "Enter") jumpToMatch(msgMatchIdx + (e.shiftKey ? -1 : 1));
                     if (e.key === "Escape") { setMsgSearchOpen(false); setMsgQuery(""); }
                   }}
-                  placeholder={lang === "ar" ? "ابحث في الرسائل…" : "Search messages…"}
+                  placeholder={lang === "ar" ? "Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„â€¦" : "Search messagesâ€¦"}
                   autoFocus
                   className={`flex-1 min-w-0 bg-transparent outline-none text-sm ${textMain} placeholder:text-gray-400`}
                 />
@@ -964,7 +964,7 @@ export default function ChatPage() {
                 <button
                   onClick={() => jumpToMatch(msgMatchIdx - 1)}
                   disabled={msgMatches.length === 0}
-                  aria-label={lang === "ar" ? "السابق" : "Previous"}
+                  aria-label={lang === "ar" ? "Ø§Ù„Ø³Ø§Ø¨Ù‚" : "Previous"}
                   className="p-1 rounded-full text-gray-400 hover:text-gray-600 disabled:opacity-30"
                 >
                   <ChevronUp className="w-4 h-4" />
@@ -972,14 +972,14 @@ export default function ChatPage() {
                 <button
                   onClick={() => jumpToMatch(msgMatchIdx + 1)}
                   disabled={msgMatches.length === 0}
-                  aria-label={lang === "ar" ? "التالي" : "Next"}
+                  aria-label={lang === "ar" ? "Ø§Ù„ØªØ§Ù„ÙŠ" : "Next"}
                   className="p-1 rounded-full text-gray-400 hover:text-gray-600 disabled:opacity-30"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => { setMsgSearchOpen(false); setMsgQuery(""); }}
-                  aria-label={lang === "ar" ? "إغلاق البحث" : "Close search"}
+                  aria-label={lang === "ar" ? "Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø¨Ø­Ø«" : "Close search"}
                   className="p-1 rounded-full text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-4 h-4" />
@@ -987,20 +987,20 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* ── AI يجهز ردًا — إشارة حقيقية من الباك إند (debounce مجدول) ── */}
+            {/* â”€â”€ AI ÙŠØ¬Ù‡Ø² Ø±Ø¯Ù‹Ø§ â€” Ø¥Ø´Ø§Ø±Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ© Ù…Ù† Ø§Ù„Ø¨Ø§Ùƒ Ø¥Ù†Ø¯ (debounce Ù…Ø¬Ø¯ÙˆÙ„) â”€â”€ */}
             {showAiPreparing && (
               <div className={`px-3 py-1.5 border-b ${borderLight} flex items-center gap-2`}>
                 <span className="flex gap-1" aria-hidden>
                   {[0, 1, 2].map(i => (
                     <span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-[#25d366] animate-bounce"
+                      className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
                       style={{ animationDelay: `${i * 150}ms` }}
                     />
                   ))}
                 </span>
                 <span className={`text-xs ${textSub}`}>
-                  {lang === "ar" ? "الوكيل الذكي يجهز ردًا…" : "AI is preparing a reply…"}
+                  {lang === "ar" ? "Ø§Ù„ÙˆÙƒÙŠÙ„ Ø§Ù„Ø°ÙƒÙŠ ÙŠØ¬Ù‡Ø² Ø±Ø¯Ù‹Ø§â€¦" : "AI is preparing a replyâ€¦"}
                 </span>
               </div>
             )}
@@ -1023,15 +1023,15 @@ export default function ChatPage() {
             {isExpired && (
               <div className={`px-3 py-2 border-b ${dark ? "bg-red-900/20 border-red-900/50 text-red-200" : "bg-red-50 border-red-100 text-red-700"}`}>
                 <div className="flex items-start gap-2">
-                  <span className="mt-0.5 text-lg leading-none">⚠️</span>
+                  <span className="mt-0.5 text-lg leading-none">âš ï¸</span>
                   <div className="text-sm">
                     <p className="font-semibold">
-                      {lang === "ar" ? "محادثة عدا عليها 24 ساعة بدون رد" : "Conversation expired (24h+ with no reply)"}
+                      {lang === "ar" ? "Ù…Ø­Ø§Ø¯Ø«Ø© Ø¹Ø¯Ø§ Ø¹Ù„ÙŠÙ‡Ø§ 24 Ø³Ø§Ø¹Ø© Ø¨Ø¯ÙˆÙ† Ø±Ø¯" : "Conversation expired (24h+ with no reply)"}
                     </p>
                     <p className="opacity-90 mt-0.5">
                       {lang === "ar"
-                        ? "لو بعت رسالة عادية دلوقتي الواتساب هيحظرك. ابعت قالب من علامة الدبوس (📎) ف الشات، اختار قوالب، وابعت القالب المناسب."
-                        : "Sending a regular message will get you blocked. Tap the attachment icon (📎), choose templates, and send an approved template."}
+                        ? "Ù„Ùˆ Ø¨Ø¹Øª Ø±Ø³Ø§Ù„Ø© Ø¹Ø§Ø¯ÙŠØ© Ø¯Ù„ÙˆÙ‚ØªÙŠ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ Ù‡ÙŠØ­Ø¸Ø±Ùƒ. Ø§Ø¨Ø¹Øª Ù‚Ø§Ù„Ø¨ Ù…Ù† Ø¹Ù„Ø§Ù…Ø© Ø§Ù„Ø¯Ø¨ÙˆØ³ (ðŸ“Ž) Ù Ø§Ù„Ø´Ø§ØªØŒ Ø§Ø®ØªØ§Ø± Ù‚ÙˆØ§Ù„Ø¨ØŒ ÙˆØ§Ø¨Ø¹Øª Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨."
+                        : "Sending a regular message will get you blocked. Tap the attachment icon (ðŸ“Ž), choose templates, and send an approved template."}
                     </p>
                   </div>
                 </div>
@@ -1068,7 +1068,7 @@ export default function ChatPage() {
                   {messages.map((msg, i) => {
                     const showDate = i === 0 || dateStr(messages[i - 1].createdAt, lang) !== dateStr(msg.createdAt, lang);
                     return (
-                      <div key={msg.id} id={`message-${msg.id}`} className={activeMatchId === msg.id ? "rounded-xl ring-2 ring-[#25d366] ring-offset-1" : ""}>
+                      <div key={msg.id} id={`message-${msg.id}`} className={activeMatchId === msg.id ? "rounded-xl ring-2 ring-primary ring-offset-1" : ""}>
                         {showDate && (
                           <div className="flex justify-center my-3">
                             <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
@@ -1082,7 +1082,7 @@ export default function ChatPage() {
                     );
                   })}
                   <div ref={endRef} />
-                  {/* ── New messages indicator ── */}
+                  {/* â”€â”€ New messages indicator â”€â”€ */}
                   {hasNewMsgs && (
                     <div className="sticky bottom-3 flex justify-center z-10 pointer-events-none">
                       <button
@@ -1091,10 +1091,9 @@ export default function ChatPage() {
                           setHasNewMsgs(false);
                           isAtBottom.current = true;
                         }}
-                        className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-lg transition-all"
-                        style={{ background: dark ? "#005c4b" : "#25D366", color: "#fff" }}
+                        className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-lg transition-all bg-primary text-primary-foreground"
                       >
-                        ↓ رسائل جديدة
+                        â†“ Ø±Ø³Ø§Ø¦Ù„ Ø¬Ø¯ÙŠØ¯Ø©
                       </button>
                     </div>
                   )}
@@ -1125,9 +1124,9 @@ export default function ChatPage() {
             {/* Input bar */}
             {replyingTo && (
               <div className={`${headerBg} border-t ${border} px-3 py-2 flex items-center gap-2`}>
-                <Reply className="w-4 h-4 text-[#25d366]" />
-                <div className="min-w-0 flex-1 border-l-2 border-[#25d366] pl-2">
-                  <p className={`text-xs font-semibold ${textMain}`}>{replyingTo.direction === "outbound" ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer")}</p>
+                <Reply className="w-4 h-4 text-primary" />
+                <div className="min-w-0 flex-1 border-l-2 border-primary pl-2">
+                  <p className={`text-xs font-semibold ${textMain}`}>{replyingTo.direction === "outbound" ? (lang === "ar" ? "Ø£Ù†Øª" : "You") : (lang === "ar" ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer")}</p>
                   <p className={`text-xs truncate ${textSub}`}>{replyingTo.content || replyingTo.type}</p>
                 </div>
                 <button onClick={() => setReplyingTo(null)} className={textSub}><X className="w-4 h-4" /></button>
@@ -1158,7 +1157,7 @@ export default function ChatPage() {
                               e.preventDefault();
                               toast.error(
                                 lang === "ar"
-                                  ? "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
+                                  ? "Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ØµÙˆØ± ÙˆØ§Ù„Ù…Ù„ÙØ§Øª Ù…ØªØ§Ø­ ÙÙŠ Ø¨Ø§Ù‚Ø© Go ÙˆÙ…Ø§ ÙÙˆÙ‚Ù‡Ø§. ÙŠØ±Ø¬Ù‰ ØªØ±Ù‚ÙŠØ© Ø¨Ø§Ù‚ØªÙƒ."
                                   : "Sending images and files requires Go plan or higher. Please upgrade."
                               );
                               return;
@@ -1200,7 +1199,7 @@ export default function ChatPage() {
                     })}
                     <button onClick={() => { sendLocation(); setShowAttach(false); }}
                       className={`flex items-center gap-3 px-4 py-3 w-full transition-colors ${hoverRow}`}>
-                      <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white flex-shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0">
                         <MapPin className="w-4 h-4" />
                       </span>
                       <span className={`text-sm ${textMain}`}>{t[lang].locationLabel}</span>
@@ -1237,7 +1236,7 @@ export default function ChatPage() {
                       </button>
                     </div>
                     <div className="grid grid-cols-7 sm:grid-cols-8 gap-1 max-h-44 overflow-y-auto">
-                      {["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🫣", "🤭", "🤫", "🤥", "😶", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "💀", "☠️", "👻", "👽", "🤖", "💩", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "👍", "👎", "👏", "🙌", "🤝", "🙏", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🤚", "🖐", "✋", "🖖", "💪", "🔥", "⭐", "✨", "💥", "💫", "🎉", "🎊", "🎈"].map(em => (
+                      {["ðŸ˜€", "ðŸ˜ƒ", "ðŸ˜„", "ðŸ˜", "ðŸ˜†", "ðŸ˜…", "ðŸ˜‚", "ðŸ¤£", "ðŸ˜Š", "ðŸ˜‡", "ðŸ™‚", "ðŸ™ƒ", "ðŸ˜‰", "ðŸ˜Œ", "ðŸ˜", "ðŸ¥°", "ðŸ˜˜", "ðŸ˜—", "ðŸ˜™", "ðŸ˜š", "ðŸ˜‹", "ðŸ˜›", "ðŸ˜", "ðŸ˜œ", "ðŸ¤ª", "ðŸ¤¨", "ðŸ§", "ðŸ¤“", "ðŸ˜Ž", "ðŸ¥¸", "ðŸ¤©", "ðŸ¥³", "ðŸ˜", "ðŸ˜’", "ðŸ˜ž", "ðŸ˜”", "ðŸ˜Ÿ", "ðŸ˜•", "ðŸ™", "â˜¹ï¸", "ðŸ˜£", "ðŸ˜–", "ðŸ˜«", "ðŸ˜©", "ðŸ¥º", "ðŸ˜¢", "ðŸ˜­", "ðŸ˜¤", "ðŸ˜ ", "ðŸ˜¡", "ðŸ¤¬", "ðŸ¤¯", "ðŸ˜³", "ðŸ¥µ", "ðŸ¥¶", "ðŸ˜±", "ðŸ˜¨", "ðŸ˜°", "ðŸ˜¥", "ðŸ˜“", "ðŸ¤—", "ðŸ¤”", "ðŸ«£", "ðŸ¤­", "ðŸ¤«", "ðŸ¤¥", "ðŸ˜¶", "ðŸ˜‘", "ðŸ˜¬", "ðŸ™„", "ðŸ˜¯", "ðŸ˜¦", "ðŸ˜§", "ðŸ˜®", "ðŸ˜²", "ðŸ¥±", "ðŸ˜´", "ðŸ¤¤", "ðŸ˜ª", "ðŸ˜µ", "ðŸ¤", "ðŸ¥´", "ðŸ¤¢", "ðŸ¤®", "ðŸ¤§", "ðŸ˜·", "ðŸ¤’", "ðŸ¤•", "ðŸ¤‘", "ðŸ¤ ", "ðŸ˜ˆ", "ðŸ‘¿", "ðŸ‘¹", "ðŸ‘º", "ðŸ’€", "â˜ ï¸", "ðŸ‘»", "ðŸ‘½", "ðŸ¤–", "ðŸ’©", "â¤ï¸", "ðŸ§¡", "ðŸ’›", "ðŸ’š", "ðŸ’™", "ðŸ’œ", "ðŸ–¤", "ðŸ¤", "ðŸ’”", "â£ï¸", "ðŸ’•", "ðŸ’ž", "ðŸ’“", "ðŸ’—", "ðŸ’–", "ðŸ’˜", "ðŸ’", "ðŸ’Ÿ", "ðŸ‘", "ðŸ‘Ž", "ðŸ‘", "ðŸ™Œ", "ðŸ¤", "ðŸ™", "âœŒï¸", "ðŸ¤ž", "ðŸ¤Ÿ", "ðŸ¤˜", "ðŸ¤™", "ðŸ‘‹", "ðŸ¤š", "ðŸ–", "âœ‹", "ðŸ––", "ðŸ’ª", "ðŸ”¥", "â­", "âœ¨", "ðŸ’¥", "ðŸ’«", "ðŸŽ‰", "ðŸŽŠ", "ðŸŽˆ"].map(em => (
                         <button key={em} onClick={() => setText(t => t + em)}
                           className={`text-xl rounded-lg p-0.5 transition-colors ${dark ? "hover:bg-[#2a3942]" : "hover:bg-gray-100"}`}>
                           {em}
@@ -1269,14 +1268,14 @@ export default function ChatPage() {
               {/* Send or Mic */}
               {text.trim() ? (
                 <button onClick={sendText} disabled={sending}
-                  className="w-10 h-10 rounded-full bg-[#25d366] flex items-center justify-center
-                    text-white flex-shrink-0 hover:bg-[#20bb5a] transition-colors disabled:opacity-50">
+                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center
+                    text-primary-foreground flex-shrink-0 hover:bg-primary/90 transition-colors disabled:opacity-50">
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               ) : (
                 <button onClick={toggleRecord}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 transition-all
-                    ${recording ? "bg-red-500 animate-pulse" : "bg-[#25d366] hover:bg-[#20bb5a]"}`}>
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground flex-shrink-0 transition-all
+                    ${recording ? "bg-red-500 animate-pulse" : "bg-primary hover:bg-primary/90"}`}>
                   {recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </button>
               )}
@@ -1288,12 +1287,12 @@ export default function ChatPage() {
             <div className="text-center max-w-xs px-6">
               <div className={`w-24 h-24 rounded-full shadow-sm flex items-center justify-center mx-auto mb-6
                 ${dark ? "bg-[#1f2c34]" : "bg-white"}`}>
-                <MessageSquare className="w-12 h-12 text-[#25d366]" />
+                <MessageSquare className="w-12 h-12 text-primary" />
               </div>
               <h2 className={`text-xl font-light mb-2 ${textMain}`}>{t[lang].pickConv}</h2>
               <p className={`text-sm mb-6 leading-relaxed ${textSub}`}>{t[lang].pickConvHint}</p>
               {filteredConvs.length === 0 && (
-                <Button className="bg-[#25d366] hover:bg-[#20bb5a] text-white gap-2"
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                   onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
                   <Megaphone className="w-4 h-4" /> {t[lang].startCampaign}
                 </Button>
@@ -1305,20 +1304,20 @@ export default function ChatPage() {
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setForwarding(null)}>
             <div className={`${sidebarBg} rounded-2xl shadow-2xl w-full max-w-md p-4`} onClick={e => e.stopPropagation()} dir={dir}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
+                <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "Ø¥Ø¹Ø§Ø¯Ø© ØªÙˆØ¬ÙŠÙ‡ Ø§Ù„Ø±Ø³Ø§Ù„Ø©" : "Forward message"}</h3>
                 <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
               </div>
               <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
-              {/* توضيح نافذة 24 ساعة */}
+              {/* ØªÙˆØ¶ÙŠØ­ Ù†Ø§ÙØ°Ø© 24 Ø³Ø§Ø¹Ø© */}
               <div className={`rounded-lg px-3 py-2 mb-2 text-xs flex items-center gap-2 ${dark ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`}>
                 <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{lang === "ar" ? "المحادثات داخل نافذة 24 ساعة فقط" : "Only conversations within the 24h window"}</span>
+                <span>{lang === "ar" ? "Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ø¯Ø§Ø®Ù„ Ù†Ø§ÙØ°Ø© 24 Ø³Ø§Ø¹Ø© ÙÙ‚Ø·" : "Only conversations within the 24h window"}</span>
               </div>
-              <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "ابحث بالاسم أو الرقم" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
+              <input value={forwardSearch} onChange={e => setForwardSearch(e.target.value)} placeholder={lang === "ar" ? "Ø§Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ø±Ù‚Ù…" : "Search by name or phone"} className={`w-full rounded-lg border px-3 py-2 text-sm mb-2 outline-none ${inputBg} ${textMain} ${border}`} />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).length === 0 ? (
                   <div className={`text-center py-6 text-sm ${textSub}`}>
-                    {lang === "ar" ? "لا توجد محادثات نشطة داخل نافذة 24 ساعة" : "No active conversations within the 24h window"}
+                    {lang === "ar" ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù†Ø´Ø·Ø© Ø¯Ø§Ø®Ù„ Ù†Ø§ÙØ°Ø© 24 Ø³Ø§Ø¹Ø©" : "No active conversations within the 24h window"}
                   </div>
                 ) : (
                   forwardTargets.filter(c => c.contact.id !== selected?.contact.id && `${c.contact.name ?? ""} ${c.contact.phone}`.toLowerCase().includes(forwardSearch.toLowerCase())).map(c => (
@@ -1328,7 +1327,7 @@ export default function ChatPage() {
                   ))
                 )}
               </div>
-              <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-[#25d366] text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "إرسال" : "Send")}</button>
+              <button disabled={!forwardTarget || forwardingBusy} onClick={submitForward} className="w-full mt-3 rounded-lg bg-primary text-white py-2 disabled:opacity-50">{forwardingBusy ? "..." : (lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„" : "Send")}</button>
             </div>
           </div>
         )}

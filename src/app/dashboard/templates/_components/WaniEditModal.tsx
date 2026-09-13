@@ -91,8 +91,8 @@ export function WaniEditModal({ template, open, onClose, onSendCustomized, lang 
                 <DialogHeader>
                     <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#25D366]/10 dark:bg-[#25D366]/20 flex items-center justify-center flex-shrink-0">
-                                <Pencil className="w-5 h-5 text-[#25D366]" />
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <Pencil className="w-5 h-5 text-primary" />
                             </div>
                             <div>
                                 <DialogTitle className="font-mono text-base dark:text-white">{tw.title}</DialogTitle>
@@ -149,7 +149,7 @@ export function WaniEditModal({ template, open, onClose, onSendCustomized, lang 
                                     {lang === "ar" ? "نص الرسالة" : "Message Body"}
                                 </Label>
                                 <button onClick={handleReset}
-                                    className="text-[11px] text-gray-400 hover:text-[#25D366] flex items-center gap-1 transition-colors">
+                                    className="text-[11px] text-gray-400 hover:text-primary flex items-center gap-1 transition-colors">
                                     <RefreshCw className="w-3 h-3" /> {tw.resetBtn}
                                 </button>
                             </div>
@@ -187,7 +187,7 @@ export function WaniEditModal({ template, open, onClose, onSendCustomized, lang 
                                     <button key={v.num}
                                         onClick={() => { setBody(b => b + `{{${v.num}}}`); setVarError(false); }}
                                         title={lang === "ar" ? `إدراج ${v.meaning_ar}` : `Insert ${v.meaning_en}`}
-                                        className="text-[10px] font-mono bg-gray-100 dark:bg-gray-700 hover:bg-[#25D366]/10 hover:text-[#25D366] text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 transition-colors">
+                                        className="text-[10px] font-mono bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 hover:text-primary text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 transition-colors">
                                         + {`{{${v.num}}}`}
                                     </button>
                                 ))}
@@ -255,7 +255,7 @@ export function WaniEditModal({ template, open, onClose, onSendCustomized, lang 
                     <Button
                         onClick={handleSend}
                         disabled={varError || sending}
-                        className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-2 disabled:opacity-60">
+                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 disabled:opacity-60">
                         {sending
                             ? <><Loader2 className="w-4 h-4 animate-spin" /> {lang === "ar" ? "جاري الإرسال..." : "Sending..."}</>
                             : <><Sparkles className="w-4 h-4" /> {tw.saveAndSend}</>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -11,26 +11,26 @@ import {
 } from "lucide-react";
 import { FormSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
-// ─── WhatsApp Profile Management Sub-view ─────────────────────────────────────
+// â”€â”€â”€ WhatsApp Profile Management Sub-view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const VERTICAL_OPTIONS = [
-  { value: "AUTOMOTIVE", ar: "سيارات", en: "Automotive" },
-  { value: "BEAUTY", ar: "تجميل", en: "Beauty" },
-  { value: "APPAREL", ar: "ملابس", en: "Apparel" },
-  { value: "EDU", ar: "تعليم", en: "Education" },
-  { value: "ENTERTAIN", ar: "ترفيه", en: "Entertainment" },
-  { value: "EVENT_PLAN", ar: "تنظيم فعاليات", en: "Event Planning" },
-  { value: "FINANCE", ar: "مالية", en: "Finance" },
-  { value: "GROCERY", ar: "بقالة", en: "Grocery" },
-  { value: "GOVT", ar: "حكومة", en: "Government" },
-  { value: "HOTEL", ar: "فنادق", en: "Hotel" },
-  { value: "HEALTH", ar: "صحة", en: "Health" },
-  { value: "NONPROFIT", ar: "غير ربحي", en: "Non-Profit" },
-  { value: "PROF_SERVICES", ar: "خدمات مهنية", en: "Professional Services" },
-  { value: "RETAIL", ar: "تجزئة", en: "Retail" },
-  { value: "TRAVEL", ar: "سفر", en: "Travel" },
-  { value: "RESTAURANT", ar: "مطعم", en: "Restaurant" },
-  { value: "NOT_A_BIZ", ar: "ليس نشاط تجاري", en: "Not a Business" },
-  { value: "OTHER", ar: "أخرى", en: "Other" },
+  { value: "AUTOMOTIVE", ar: "Ø³ÙŠØ§Ø±Ø§Øª", en: "Automotive" },
+  { value: "BEAUTY", ar: "ØªØ¬Ù…ÙŠÙ„", en: "Beauty" },
+  { value: "APPAREL", ar: "Ù…Ù„Ø§Ø¨Ø³", en: "Apparel" },
+  { value: "EDU", ar: "ØªØ¹Ù„ÙŠÙ…", en: "Education" },
+  { value: "ENTERTAIN", ar: "ØªØ±ÙÙŠÙ‡", en: "Entertainment" },
+  { value: "EVENT_PLAN", ar: "ØªÙ†Ø¸ÙŠÙ… ÙØ¹Ø§Ù„ÙŠØ§Øª", en: "Event Planning" },
+  { value: "FINANCE", ar: "Ù…Ø§Ù„ÙŠØ©", en: "Finance" },
+  { value: "GROCERY", ar: "Ø¨Ù‚Ø§Ù„Ø©", en: "Grocery" },
+  { value: "GOVT", ar: "Ø­ÙƒÙˆÙ…Ø©", en: "Government" },
+  { value: "HOTEL", ar: "ÙÙ†Ø§Ø¯Ù‚", en: "Hotel" },
+  { value: "HEALTH", ar: "ØµØ­Ø©", en: "Health" },
+  { value: "NONPROFIT", ar: "ØºÙŠØ± Ø±Ø¨Ø­ÙŠ", en: "Non-Profit" },
+  { value: "PROF_SERVICES", ar: "Ø®Ø¯Ù…Ø§Øª Ù…Ù‡Ù†ÙŠØ©", en: "Professional Services" },
+  { value: "RETAIL", ar: "ØªØ¬Ø²Ø¦Ø©", en: "Retail" },
+  { value: "TRAVEL", ar: "Ø³ÙØ±", en: "Travel" },
+  { value: "RESTAURANT", ar: "Ù…Ø·Ø¹Ù…", en: "Restaurant" },
+  { value: "NOT_A_BIZ", ar: "Ù„ÙŠØ³ Ù†Ø´Ø§Ø· ØªØ¬Ø§Ø±ÙŠ", en: "Not a Business" },
+  { value: "OTHER", ar: "Ø£Ø®Ø±Ù‰", en: "Other" },
 ];
 
 export default function WhatsAppProfileView({ onBack, locale, dir }: {
@@ -84,7 +84,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast.error(locale === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجا" : "Image must be under 5MB");
+      toast.error(locale === "ar" ? "Ø­Ø¬Ù… Ø§Ù„ØµÙˆØ±Ø© ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† Ø£Ù‚Ù„ Ù…Ù† 5 Ù…ÙŠØ¬Ø§" : "Image must be under 5MB");
       return;
     }
     const reader = new FileReader();
@@ -119,7 +119,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Failed");
-      toast.success(locale === "ar" ? "تم تحديث بروفايل واتساب بنجاح" : "WhatsApp profile updated successfully");
+      toast.success(locale === "ar" ? "ØªÙ… ØªØ­Ø¯ÙŠØ« Ø¨Ø±ÙˆÙØ§ÙŠÙ„ ÙˆØ§ØªØ³Ø§Ø¨ Ø¨Ù†Ø¬Ø§Ø­" : "WhatsApp profile updated successfully");
       // Refresh pic if uploaded
       if (newPhotoBase64) {
         setProfilePicUrl(newPhotoPreview);
@@ -144,18 +144,18 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#25D366] transition-colors group">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors group">
         <BackArrow className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        {locale === "ar" ? "رجوع" : "Back"}
+        {locale === "ar" ? "Ø±Ø¬ÙˆØ¹" : "Back"}
       </button>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* ── Edit Form ── */}
+        {/* â”€â”€ Edit Form â”€â”€ */}
         <div className="flex-1 space-y-4 min-w-0">
           {/* Photo */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50">
             <div className="relative group">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 ring-2 ring-[#25D366]/30">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 ring-2 ring-primary/30">
                 {currentPic ? (
                   <img src={currentPic} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
@@ -171,13 +171,13 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                {locale === "ar" ? "صورة الملف الشخصي" : "Profile Picture"}
+                {locale === "ar" ? "ØµÙˆØ±Ø© Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ" : "Profile Picture"}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {locale === "ar" ? "JPG أو PNG • أقصى حجم 5 ميجا" : "JPG or PNG • Max 5MB"}
+                {locale === "ar" ? "JPG Ø£Ùˆ PNG â€¢ Ø£Ù‚ØµÙ‰ Ø­Ø¬Ù… 5 Ù…ÙŠØ¬Ø§" : "JPG or PNG â€¢ Max 5MB"}
               </p>
-              <label className="text-xs text-[#25D366] hover:underline cursor-pointer mt-1 inline-block font-medium">
-                {locale === "ar" ? "تغيير الصورة" : "Change Photo"}
+              <label className="text-xs text-primary hover:underline cursor-pointer mt-1 inline-block font-medium">
+                {locale === "ar" ? "ØªØºÙŠÙŠØ± Ø§Ù„ØµÙˆØ±Ø©" : "Change Photo"}
                 <input type="file" accept="image/jpeg,image/png" onChange={handlePhotoChange} className="hidden" />
               </label>
             </div>
@@ -188,7 +188,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                {locale === "ar" ? "اسم النشاط (معتمد من ميتا)" : "Business Name (verified by Meta)"}
+                {locale === "ar" ? "Ø§Ø³Ù… Ø§Ù„Ù†Ø´Ø§Ø· (Ù…Ø¹ØªÙ…Ø¯ Ù…Ù† Ù…ÙŠØªØ§)" : "Business Name (verified by Meta)"}
               </Label>
               <Input value={verifiedName} disabled className="text-sm rounded-xl bg-gray-50 dark:bg-gray-800 cursor-not-allowed" />
             </div>
@@ -196,10 +196,10 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
 
           {/* About */}
           <div className="space-y-1.5">
-            <Label className="text-sm">{locale === "ar" ? "الوصف / About" : "About"}</Label>
+            <Label className="text-sm">{locale === "ar" ? "Ø§Ù„ÙˆØµÙ / About" : "About"}</Label>
             <div className="relative">
               <Input value={about} onChange={e => setAbout(e.target.value)} maxLength={139}
-                placeholder={locale === "ar" ? "وصف مختصر لنشاطك" : "Brief description"}
+                placeholder={locale === "ar" ? "ÙˆØµÙ Ù…Ø®ØªØµØ± Ù„Ù†Ø´Ø§Ø·Ùƒ" : "Brief description"}
                 className="text-sm rounded-xl" />
               <span className="absolute left-2 top-2.5 text-[10px] text-gray-300">{about.length}/139</span>
             </div>
@@ -207,17 +207,17 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label className="text-sm">{locale === "ar" ? "وصف تفصيلي" : "Description"}</Label>
+            <Label className="text-sm">{locale === "ar" ? "ÙˆØµÙ ØªÙØµÙŠÙ„ÙŠ" : "Description"}</Label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={512}
-              placeholder={locale === "ar" ? "وصف تفصيلي لنشاطك التجاري" : "Detailed business description"}
-              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2 min-h-[70px] resize-none focus:outline-none focus:ring-2 focus:ring-[#25D366]/40" />
+              placeholder={locale === "ar" ? "ÙˆØµÙ ØªÙØµÙŠÙ„ÙŠ Ù„Ù†Ø´Ø§Ø·Ùƒ Ø§Ù„ØªØ¬Ø§Ø±ÙŠ" : "Detailed business description"}
+              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2 min-h-[70px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
 
           {/* Vertical / Category */}
           <div className="space-y-1.5">
-            <Label className="text-sm">{locale === "ar" ? "التصنيف" : "Category"}</Label>
+            <Label className="text-sm">{locale === "ar" ? "Ø§Ù„ØªØµÙ†ÙŠÙ" : "Category"}</Label>
             <select value={vertical} onChange={e => setVertical(e.target.value)}
-              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#25D366]/40">
+              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30">
               {VERTICAL_OPTIONS.map(v => (
                 <option key={v.value} value={v.value}>{locale === "ar" ? v.ar : v.en}</option>
               ))}
@@ -228,10 +228,10 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
           <div className="space-y-1.5">
             <Label className="text-sm flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-gray-400" />
-              {locale === "ar" ? "العنوان" : "Address"}
+              {locale === "ar" ? "Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" : "Address"}
             </Label>
             <Input value={address} onChange={e => setAddress(e.target.value)} maxLength={256}
-              placeholder={locale === "ar" ? "عنوان النشاط التجاري" : "Business address"}
+              placeholder={locale === "ar" ? "Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ù†Ø´Ø§Ø· Ø§Ù„ØªØ¬Ø§Ø±ÙŠ" : "Business address"}
               className="text-sm rounded-xl" />
           </div>
 
@@ -239,7 +239,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
           <div className="space-y-1.5">
             <Label className="text-sm flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-gray-400" />
-              {locale === "ar" ? "البريد الإلكتروني" : "Email"}
+              {locale === "ar" ? "Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" : "Email"}
             </Label>
             <Input type="email" value={email} onChange={e => setEmail(e.target.value)} dir="ltr"
               placeholder="business@example.com"
@@ -250,7 +250,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
           <div className="space-y-1.5">
             <Label className="text-sm flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-gray-400" />
-              {locale === "ar" ? "الموقع الإلكتروني" : "Website"}
+              {locale === "ar" ? "Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ" : "Website"}
             </Label>
             <Input type="url" value={website} onChange={e => setWebsite(e.target.value)} dir="ltr"
               placeholder="https://example.com"
@@ -259,21 +259,21 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
 
           {/* Save */}
           <Button onClick={handleSave} disabled={saving}
-            className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+            className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl">
             {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-            {locale === "ar" ? "حفظ التغييرات" : "Save Changes"}
+            {locale === "ar" ? "Ø­ÙØ¸ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª" : "Save Changes"}
           </Button>
         </div>
 
-        {/* ── Live Preview (visible on lg+) ── */}
+        {/* â”€â”€ Live Preview (visible on lg+) â”€â”€ */}
         <div className="hidden lg:block w-[220px] flex-shrink-0">
           <div className="sticky top-0 space-y-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
-              {locale === "ar" ? "معاينة البروفايل" : "Profile Preview"}
+              {locale === "ar" ? "Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ø¨Ø±ÙˆÙØ§ÙŠÙ„" : "Profile Preview"}
             </p>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
               {/* Header bg */}
-              <div className="h-16 bg-gradient-to-br from-[#25D366] to-[#128C7E]" />
+              <div className="h-16 bg-gradient-to-br from-primary to-[#128C7E]" />
               {/* Photo */}
               <div className="flex justify-center -mt-8">
                 <div className="w-16 h-16 rounded-full border-3 border-white dark:border-gray-900 overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-md">
@@ -288,7 +288,7 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
               </div>
               {/* Info */}
               <div className="px-3 pt-2 pb-4 text-center space-y-1.5">
-                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{verifiedName || "—"}</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{verifiedName || "â€”"}</p>
                 {displayPhone && <p className="text-[11px] text-gray-400" dir="ltr">{displayPhone}</p>}
                 {about && <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug line-clamp-2">{about}</p>}
                 <div className="pt-2 space-y-1 text-[10px] text-gray-400">
@@ -315,8 +315,8 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
                       qualityRating === "YELLOW" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                       "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                     }`}>
-                      {qualityRating === "GREEN" ? "✓ " : qualityRating === "YELLOW" ? "⚠ " : "✗ "}
-                      {locale === "ar" ? "جودة الرقم" : "Quality"}: {qualityRating}
+                      {qualityRating === "GREEN" ? "âœ“ " : qualityRating === "YELLOW" ? "âš  " : "âœ— "}
+                      {locale === "ar" ? "Ø¬ÙˆØ¯Ø© Ø§Ù„Ø±Ù‚Ù…" : "Quality"}: {qualityRating}
                     </span>
                   </div>
                 )}
@@ -328,3 +328,5 @@ export default function WhatsAppProfileView({ onBack, locale, dir }: {
     </div>
   );
 }
+
+

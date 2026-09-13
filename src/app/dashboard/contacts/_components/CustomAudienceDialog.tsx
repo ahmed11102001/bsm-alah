@@ -58,7 +58,7 @@ export function CustomAudienceDialog({
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1 dark:border-gray-600 dark:text-gray-300"
               onClick={() => onOpenChange(false)}>{ct.customDialog.cancelBtn}</Button>
-            <Button className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5"
+            <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
               onClick={onSave} disabled={custSaving || !custName.trim() || !custInput.trim()}>
               {custSaving && <Loader2 className="w-4 h-4 animate-spin" />}
               {ct.customDialog.saveBtn}

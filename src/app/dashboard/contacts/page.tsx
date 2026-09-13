@@ -264,7 +264,7 @@ export default function Contacts() {
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
       <div className="mb-6">
-        <p className="text-xs font-semibold text-[#25D366] uppercase tracking-[0.2em] mb-2">
+        <p className="text-xs font-semibold text-primary uppercase tracking-[0.2em] mb-2">
           {ct.title}
         </p>
         <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white">
@@ -321,7 +321,7 @@ export default function Contacts() {
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5 text-sm">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-sm">
                 <Plus className="w-4 h-4" /> {locale === "ar" ? "إضافة جمهور" : "Add Audience"} <ChevronDown className="w-4 h-4 opacity-80" />
               </Button>
             </DropdownMenuTrigger>
@@ -372,7 +372,7 @@ export default function Contacts() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={syncGoogle} disabled={googleSyncing} className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-1"><RefreshCw className={`w-3.5 h-3.5 ${googleSyncing ? "animate-spin" : ""}`} />{locale === "ar" ? "مزامنة الآن" : "Sync now"}</Button>
+                <Button size="sm" onClick={syncGoogle} disabled={googleSyncing} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1"><RefreshCw className={`w-3.5 h-3.5 ${googleSyncing ? "animate-spin" : ""}`} />{locale === "ar" ? "مزامنة الآن" : "Sync now"}</Button>
                 <Button size="sm" variant="outline" onClick={() => setShowGoogle(true)}>{locale === "ar" ? "تغيير المصدر" : "Change source"}</Button>
                 <Button size="sm" variant="ghost" onClick={disconnectGoogle} className="text-red-500"><Unplug className="w-3.5 h-3.5" /></Button>
               </div>
@@ -452,7 +452,7 @@ export default function Contacts() {
               </div>
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">{ct.empty.title}</h3>
               <p className="text-gray-400 dark:text-gray-500 text-sm mb-6 max-w-xs">{ct.empty.subtitle}</p>
-              <Button className="bg-[#25D366] hover:bg-[#1fb956] text-white gap-2" onClick={() => setShowAdd(true)}>
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2" onClick={() => setShowAdd(true)}>
                 <Plus className="w-4 h-4" /> {ct.empty.btn}
               </Button>
             </div>

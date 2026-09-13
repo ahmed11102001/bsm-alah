@@ -1,4 +1,4 @@
-import { MessageSquare, ExternalLink, Phone, CheckCheck } from "lucide-react";
+﻿import { MessageSquare, ExternalLink, Phone, CheckCheck } from "lucide-react";
 import type { TemplateButton } from "./types";
 
 export function MiniWhatsAppPreview({ body, footer, buttons, exampleVars }: {
@@ -26,11 +26,11 @@ export function MiniWhatsAppPreview({ body, footer, buttons, exampleVars }: {
 
     return (
         <div className="bg-[#e5ddd5] dark:bg-[#0a1014] rounded-2xl overflow-hidden shadow-inner">
-            <div className="bg-[#075E54] px-3 py-2 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
+            <div className="bg-primary px-3 py-2 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                     <MessageSquare className="w-3 h-3 text-white" />
                 </div>
-                <p className="text-white text-[11px] font-semibold">متجرك · Business Account</p>
+                <p className="text-white text-[11px] font-semibold">Ù…ØªØ¬Ø±Ùƒ Â· Business Account</p>
             </div>
             <div className="p-3">
                 <div className="bg-white dark:bg-[#202c33] rounded-lg rounded-tl-none shadow-sm max-w-[85%] overflow-hidden">
@@ -54,10 +54,10 @@ export function MiniWhatsAppPreview({ body, footer, buttons, exampleVars }: {
                     {buttons.length > 0 && (
                         <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
                             {buttons.map((btn, i) => (
-                                <div key={i} className="text-[10px] text-[#0d9488] dark:text-[#25D366] py-1.5 flex items-center justify-center gap-1">
+                                <div key={i} className="text-[10px] text-[#0d9488] dark:text-primary py-1.5 flex items-center justify-center gap-1">
                                     {btn.type === "url" && <ExternalLink className="w-2.5 h-2.5" />}
                                     {btn.type === "phone" && <Phone className="w-2.5 h-2.5" />}
-                                    {btn.text || "زر"}
+                                    {btn.text || "Ø²Ø±"}
                                 </div>
                             ))}
                         </div>

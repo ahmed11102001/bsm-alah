@@ -66,7 +66,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                             onClick={() => setForm({ ...form, headerType: h })}
                             className={`py-1.5 rounded-lg text-xs font-medium border transition-all
                 ${form.headerType === h
-                                    ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
+                                    ? "border-primary bg-primary/10 text-primary"
                                     : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300"
                                 }`}
                         >
@@ -99,7 +99,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
             <div>
                 <div className="flex items-center justify-between mb-1.5">
                     <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.body}</Label>
-                    <button onClick={addVar} className="text-xs text-[#25D366] hover:text-[#1fb956] font-medium flex items-center gap-1">
+                    <button onClick={addVar} className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
                         <Plus className="w-3.5 h-3.5" /> {t.addVar}
                     </button>
                 </div>
@@ -159,7 +159,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                 <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.buttons}</Label>
                     {form.buttons.length < 3 && (
-                        <button onClick={addButton} className="text-xs text-[#25D366] hover:text-[#1fb956] font-medium flex items-center gap-1">
+                        <button onClick={addButton} className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
                             <Plus className="w-3.5 h-3.5" /> {t.addButton}
                         </button>
                     )}
@@ -173,7 +173,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                                         <button key={bt}
                                             onClick={() => updateButton(i, "type", bt)}
                                             className={`text-[11px] px-2 py-1 rounded-lg font-medium border transition-all
-                        ${btn.type === bt ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]" : "border-gray-200 dark:border-gray-500 text-gray-500 dark:text-gray-400"}`}
+                        ${btn.type === bt ? "border-primary bg-primary/10 text-primary" : "border-gray-200 dark:border-gray-500 text-gray-500 dark:text-gray-400"}`}
                                         >{t.btnTypes[bt]}</button>
                                     ))}
                                 </div>
@@ -208,7 +208,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                 <Button
                     onClick={() => { if (validate()) onSubmit(false); }}
                     disabled={submitting}
-                    className="flex-1 bg-[#25D366] hover:bg-[#1fb956] text-white gap-1.5">
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5">
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {t.submitReview}
                 </Button>

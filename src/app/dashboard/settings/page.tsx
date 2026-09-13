@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -25,7 +25,7 @@ function SectionHeader({ icon, title, desc, index }: {
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-2xl bg-[#25D366]/10 dark:bg-[#25D366]/15 text-[#25D366] flex items-center justify-center flex-shrink-0">
+      <span className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
         {icon}
       </span>
       <div className="flex-1 min-w-0">
@@ -60,10 +60,10 @@ export default function SettingsPage() {
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confPw, setConfPw] = useState("");
-  // local state لـ hasPassword عشان الـ UI يتحدث فوراً بعد إنشاء كلمة المرور
+  // local state Ù„Ù€ hasPassword Ø¹Ø´Ø§Ù† Ø§Ù„Ù€ UI ÙŠØªØ­Ø¯Ø« ÙÙˆØ±Ø§Ù‹ Ø¨Ø¹Ø¯ Ø¥Ù†Ø´Ø§Ø¡ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±
   const [hasPassword, setHasPassword] = useState(data?.user.hasPassword ?? false);
 
-  // لما data يتغير (مثلاً بعد fetchDash) — sync الـ state
+  // Ù„Ù…Ø§ data ÙŠØªØºÙŠØ± (Ù…Ø«Ù„Ø§Ù‹ Ø¨Ø¹Ø¯ fetchDash) â€” sync Ø§Ù„Ù€ state
   useEffect(() => {
     setHasPassword(data?.user.hasPassword ?? false);
   }, [data?.user.hasPassword]);
@@ -104,7 +104,7 @@ export default function SettingsPage() {
       onSaved();
       if (type === "password") { setCurPw(""); setNewPw(""); setConfPw(""); }
       if (type === "create_password") {
-        // حدّث الـ UI فوراً بدون ما نستنى fetchDash
+        // Ø­Ø¯Ù‘Ø« Ø§Ù„Ù€ UI ÙÙˆØ±Ø§Ù‹ Ø¨Ø¯ÙˆÙ† Ù…Ø§ Ù†Ø³ØªÙ†Ù‰ fetchDash
         setHasPassword(true);
         setNewPw(""); setConfPw("");
       }
@@ -114,7 +114,7 @@ export default function SettingsPage() {
 
   const revealWhatsAppCredentials = async () => {
     if (!whatsappRevealPassword) {
-      toast.error(locale === "ar" ? "أدخل كلمة المرور أولاً" : "Enter your password first");
+      toast.error(locale === "ar" ? "Ø£Ø¯Ø®Ù„ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø£ÙˆÙ„Ø§Ù‹" : "Enter your password first");
       return;
     }
 
@@ -127,7 +127,7 @@ export default function SettingsPage() {
       });
       const d = await r.json();
 
-      if (!r.ok) throw new Error(d.error || (locale === "ar" ? "تعذر إظهار البيانات" : "Unable to reveal credentials"));
+      if (!r.ok) throw new Error(d.error || (locale === "ar" ? "ØªØ¹Ø°Ø± Ø¥Ø¸Ù‡Ø§Ø± Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª" : "Unable to reveal credentials"));
 
       setWhatsappToken(d.accessToken ?? "");
       setShowWhatsappToken(true);
@@ -144,9 +144,9 @@ export default function SettingsPage() {
     if (!value) return;
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(locale === "ar" ? "تم النسخ" : "Copied");
+      toast.success(locale === "ar" ? "ØªÙ… Ø§Ù„Ù†Ø³Ø®" : "Copied");
     } catch {
-      toast.error(locale === "ar" ? "تعذر النسخ" : "Copy failed");
+      toast.error(locale === "ar" ? "ØªØ¹Ø°Ø± Ø§Ù„Ù†Ø³Ø®" : "Copy failed");
     }
   };
 
@@ -160,9 +160,9 @@ export default function SettingsPage() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      toast.success(locale === "ar" ? "تم حذف الحساب" : "Account deleted");
-      // احذف الحساب فعليًا هيمسح الاشتراك من الداتابيز أصلاً (cascade)، لكن
-      // نلغي اشتراك الـPush من المتصفح كمان عشان الـendpoint يبقى منتهي تمامًا
+      toast.success(locale === "ar" ? "ØªÙ… Ø­Ø°Ù Ø§Ù„Ø­Ø³Ø§Ø¨" : "Account deleted");
+      // Ø§Ø­Ø°Ù Ø§Ù„Ø­Ø³Ø§Ø¨ ÙØ¹Ù„ÙŠÙ‹Ø§ Ù‡ÙŠÙ…Ø³Ø­ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø§ØªØ§Ø¨ÙŠØ² Ø£ØµÙ„Ø§Ù‹ (cascade)ØŒ Ù„ÙƒÙ†
+      // Ù†Ù„ØºÙŠ Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ù€Push Ù…Ù† Ø§Ù„Ù…ØªØµÙØ­ ÙƒÙ…Ø§Ù† Ø¹Ø´Ø§Ù† Ø§Ù„Ù€endpoint ÙŠØ¨Ù‚Ù‰ Ù…Ù†ØªÙ‡ÙŠ ØªÙ…Ø§Ù…Ù‹Ø§
       await signOutWithPushCleanup(signOut, { redirect: false });
       router.replace("/");
       router.refresh();
@@ -182,9 +182,9 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8 pb-12 max-w-4xl" dir={dir}>
-      {/* ── Page Header ── */}
+      {/* â”€â”€ Page Header â”€â”€ */}
       <div className="flex items-center gap-3">
-        <span className="w-12 h-12 rounded-2xl bg-[#25D366]/10 dark:bg-[#25D366]/15 text-[#25D366] flex items-center justify-center flex-shrink-0">
+        <span className="w-12 h-12 rounded-2xl bg-primary/10 dark:bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
           <Settings className="w-6 h-6" />
         </span>
         <div>
@@ -193,26 +193,26 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ═══════════════ الجزء الأول: إعدادات المستخدم ═══════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Ø§Ù„Ø¬Ø²Ø¡ Ø§Ù„Ø£ÙˆÙ„: Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <section className="space-y-4">
         <SectionHeader
           icon={<User className="w-5 h-5" />}
-          title={locale === "ar" ? "إعدادات المستخدم" : "User Settings"}
-          desc={locale === "ar" ? "بياناتك الشخصية وكلمة المرور وإدارة الحساب" : "Your personal data, password and account management"}
+          title={locale === "ar" ? "Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…" : "User Settings"}
+          desc={locale === "ar" ? "Ø¨ÙŠØ§Ù†Ø§ØªÙƒ Ø§Ù„Ø´Ø®ØµÙŠØ© ÙˆÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ÙˆØ¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø­Ø³Ø§Ø¨" : "Your personal data, password and account management"}
           index="01"
         />
 
-        {/* ── Appearance / المظهر ── */}
+        {/* â”€â”€ Appearance / Ø§Ù„Ù…Ø¸Ù‡Ø± â”€â”€ */}
         <AppearanceSettings />
 
-        {/* ── Profile Card ── */}
+        {/* â”€â”€ Profile Card â”€â”€ */}
         <Card>
           <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl mb-5">
-            <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {(data.user.name ?? data.user.email).slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{data.user.name ?? "—"}</p>
+              <p className="font-semibold text-sm truncate">{data.user.name ?? "â€”"}</p>
               <p className="text-xs text-gray-400 truncate">{data.user.email}</p>
             </div>
           </div>
@@ -251,25 +251,25 @@ export default function SettingsPage() {
 
           {/* Save Profile */}
           <Button onClick={() => save("profile", { name, phone })} disabled={saving}
-            className="w-full sm:w-auto sm:px-10 mt-5 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+            className="w-full sm:w-auto sm:px-10 mt-5 bg-primary hover:bg-primary/90 text-white rounded-xl">
             {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
             {s.profile.saveBtn}
           </Button>
         </Card>
 
-        {/* ── Password Card ── */}
+        {/* â”€â”€ Password Card â”€â”€ */}
         <Card>
           <p className="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 mb-4">
-            <Lock className="w-4 h-4 text-[#25D366]" />
+            <Lock className="w-4 h-4 text-primary" />
             {hasPassword
-              ? (locale === "ar" ? "تغيير كلمة المرور" : "Change Password")
-              : (locale === "ar" ? "إنشاء كلمة مرور" : "Create Password")}
+              ? (locale === "ar" ? "ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±" : "Change Password")
+              : (locale === "ar" ? "Ø¥Ù†Ø´Ø§Ø¡ ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ±" : "Create Password")}
           </p>
 
           {!hasPassword ? (
             <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-3 mb-4">
               <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                {locale === "ar" ? "حسابك مرتبط بـ Google فقط. يمكنك إنشاء كلمة مرور لتسجيل الدخول بالإيميل أيضاً." : "Your account is linked to Google. Create a password to also log in with email."}
+                {locale === "ar" ? "Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø±ØªØ¨Ø· Ø¨Ù€ Google ÙÙ‚Ø·. ÙŠÙ…ÙƒÙ†Ùƒ Ø¥Ù†Ø´Ø§Ø¡ ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ± Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ Ø£ÙŠØ¶Ø§Ù‹." : "Your account is linked to Google. Create a password to also log in with email."}
               </p>
             </div>
           ) : (
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                 <div className="flex gap-1 mt-1">
                   {[4, 6, 8, 10].map((threshold, i) => (
                     <div key={i} className={`h-1 flex-1 rounded-full ${newPw.length >= threshold
-                      ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
+                      ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-primary/10"
                       : "bg-gray-200 dark:bg-gray-700"
                       }`} />
                   ))}
@@ -315,49 +315,49 @@ export default function SettingsPage() {
           <Button
             onClick={() => { if (newPw !== confPw) { toast.error(s.password.mismatch); return; } save(hasPassword ? "password" : "create_password", hasPassword ? { currentPassword: curPw, newPassword: newPw } : { newPassword: newPw }); }}
             disabled={saving || (hasPassword && !curPw) || !newPw || newPw !== confPw}
-            className="w-full sm:w-auto sm:px-10 mt-5 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl">
+            className="w-full sm:w-auto sm:px-10 mt-5 bg-primary hover:bg-primary/90 text-white rounded-xl">
             {saving && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-            {hasPassword ? s.password.changeBtn : (locale === "ar" ? "إنشاء كلمة المرور" : "Create Password")}
+            {hasPassword ? s.password.changeBtn : (locale === "ar" ? "Ø¥Ù†Ø´Ø§Ø¡ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±" : "Create Password")}
           </Button>
         </Card>
 
-        {/* ── Danger Zone ── */}
+        {/* â”€â”€ Danger Zone â”€â”€ */}
         <Card className="border-red-200/70 dark:border-red-900/40">
           {!showDeleteConfirm ? (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
               <div>
                 <p className="text-sm font-bold text-red-600 dark:text-red-400">
-                  {locale === "ar" ? "حذف الحساب نهائياً" : "Delete Account Permanently"}
+                  {locale === "ar" ? "Ø­Ø°Ù Ø§Ù„Ø­Ø³Ø§Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "Delete Account Permanently"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {locale === "ar" ? "حذف كل بياناتك ولا يمكن التراجع عنه" : "Deletes all your data and cannot be undone"}
+                  {locale === "ar" ? "Ø­Ø°Ù ÙƒÙ„ Ø¨ÙŠØ§Ù†Ø§ØªÙƒ ÙˆÙ„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù†Ù‡" : "Deletes all your data and cannot be undone"}
                 </p>
               </div>
               <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} className="rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 border-none shadow-none sm:w-auto w-full">
-                {locale === "ar" ? "حذف الحساب نهائياً" : "Delete Account Permanently"}
+                {locale === "ar" ? "Ø­Ø°Ù Ø§Ù„Ø­Ø³Ø§Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "Delete Account Permanently"}
               </Button>
             </div>
           ) : (
             <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-2xl p-4 space-y-3 text-red-800 dark:text-red-300">
-              <p className="text-sm font-bold flex items-center gap-1.5"><Shield className="w-4 h-4" /> {locale === "ar" ? "⚠️ حذف الحساب نهائياً" : "⚠️ Permanent Deletion"}</p>
+              <p className="text-sm font-bold flex items-center gap-1.5"><Shield className="w-4 h-4" /> {locale === "ar" ? "âš ï¸ Ø­Ø°Ù Ø§Ù„Ø­Ø³Ø§Ø¨ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "âš ï¸ Permanent Deletion"}</p>
               <p className="text-xs leading-relaxed">
-                {locale === "ar" ? "سيتم حذف جميع حملاتك، جهات الاتصال، القوالب، بيانات الاشتراك، وربط الواتساب. هذا الإجراء لا يمكن التراجع عنه." : "All your campaigns, contacts, templates, subscription data, and WhatsApp connection will be deleted. This action cannot be undone."}
+                {locale === "ar" ? "Ø³ÙŠØªÙ… Ø­Ø°Ù Ø¬Ù…ÙŠØ¹ Ø­Ù…Ù„Ø§ØªÙƒØŒ Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„ØŒ Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨ØŒ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§Ø´ØªØ±Ø§ÙƒØŒ ÙˆØ±Ø¨Ø· Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨. Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù†Ù‡." : "All your campaigns, contacts, templates, subscription data, and WhatsApp connection will be deleted. This action cannot be undone."}
               </p>
 
               {hasPassword && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{locale === "ar" ? "أدخل كلمة المرور للتأكيد:" : "Enter password to confirm:"}</Label>
+                  <Label className="text-xs">{locale === "ar" ? "Ø£Ø¯Ø®Ù„ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ù„Ù„ØªØ£ÙƒÙŠØ¯:" : "Enter password to confirm:"}</Label>
                   <Input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} className="text-sm rounded-xl bg-white dark:bg-gray-800 border-red-200 dark:border-red-800" />
                 </div>
               )}
 
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)} className="flex-1 rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  {locale === "ar" ? "إلغاء" : "Cancel"}
+                  {locale === "ar" ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={deleteAccount} disabled={deleting || (hasPassword && !deletePw)} className="flex-1 rounded-xl">
                   {deleting && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-                  {locale === "ar" ? "نعم، احذف حسابي" : "Yes, delete my account"}
+                  {locale === "ar" ? "Ù†Ø¹Ù…ØŒ Ø§Ø­Ø°Ù Ø­Ø³Ø§Ø¨ÙŠ" : "Yes, delete my account"}
                 </Button>
               </div>
             </div>
@@ -365,12 +365,12 @@ export default function SettingsPage() {
         </Card>
       </section>
 
-      {/* ═══════════════ الجزء الثاني: إعدادات حساب الواتساب ═══════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• Ø§Ù„Ø¬Ø²Ø¡ Ø§Ù„Ø«Ø§Ù†ÙŠ: Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <section className="space-y-4">
         <SectionHeader
           icon={<MessageCircle className="w-5 h-5" />}
-          title={locale === "ar" ? "إعدادات حساب الواتساب" : "WhatsApp Account Settings"}
-          desc={locale === "ar" ? "الربط وبيانات الاعتماد وبروفايل النشاط التجاري" : "Connection, credentials and business profile"}
+          title={locale === "ar" ? "Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨" : "WhatsApp Account Settings"}
+          desc={locale === "ar" ? "Ø§Ù„Ø±Ø¨Ø· ÙˆØ¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯ ÙˆØ¨Ø±ÙˆÙØ§ÙŠÙ„ Ø§Ù„Ù†Ø´Ø§Ø· Ø§Ù„ØªØ¬Ø§Ø±ÙŠ" : "Connection, credentials and business profile"}
           index="02"
         />
 
@@ -386,11 +386,11 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                      {locale === "ar" ? "حساب واتساب المرتبط" : "Connected WhatsApp account"}
+                      {locale === "ar" ? "Ø­Ø³Ø§Ø¨ ÙˆØ§ØªØ³Ø§Ø¨ Ø§Ù„Ù…Ø±ØªØ¨Ø·" : "Connected WhatsApp account"}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {locale === "ar"
-                        ? "بيانات الربط الخاصة بحسابك على WhatsApp Business."
+                        ? "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±Ø¨Ø· Ø§Ù„Ø®Ø§ØµØ© Ø¨Ø­Ø³Ø§Ø¨Ùƒ Ø¹Ù„Ù‰ WhatsApp Business."
                         : "Connection details for your WhatsApp Business account."}
                     </p>
                   </div>
@@ -399,8 +399,8 @@ export default function SettingsPage() {
                     : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                     }`}>
                     {data.whatsapp
-                      ? (locale === "ar" ? "متصل" : "Connected")
-                      : (locale === "ar" ? "غير متصل" : "Not connected")}
+                      ? (locale === "ar" ? "Ù…ØªØµÙ„" : "Connected")
+                      : (locale === "ar" ? "ØºÙŠØ± Ù…ØªØµÙ„" : "Not connected")}
                   </span>
                 </div>
 
@@ -408,21 +408,21 @@ export default function SettingsPage() {
                   <Button
                     onClick={() => setShowWaProfileView(true)}
                     variant="outline"
-                    className="w-full sm:w-auto sm:px-8 mt-4 rounded-xl border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/5 hover:border-[#25D366]/50 font-bold gap-2 py-5 transition-all"
+                    className="w-full sm:w-auto sm:px-8 mt-4 rounded-xl border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 font-bold gap-2 py-5 transition-all"
                   >
                     <User className="w-4 h-4" />
-                    {locale === "ar" ? "إدارة بروفايل واتساب" : "Manage WhatsApp Profile"}
+                    {locale === "ar" ? "Ø¥Ø¯Ø§Ø±Ø© Ø¨Ø±ÙˆÙØ§ÙŠÙ„ ÙˆØ§ØªØ³Ø§Ø¨" : "Manage WhatsApp Profile"}
                   </Button>
                 )}
 
                 {!data.whatsapp && (
                   <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-5 text-center mt-4">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      {locale === "ar" ? "لا يوجد حساب واتساب مرتبط" : "No WhatsApp account connected"}
+                      {locale === "ar" ? "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø­Ø³Ø§Ø¨ ÙˆØ§ØªØ³Ø§Ø¨ Ù…Ø±ØªØ¨Ø·" : "No WhatsApp account connected"}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {locale === "ar"
-                        ? "قم بربط WhatsApp Business من إعدادات التكامل."
+                        ? "Ù‚Ù… Ø¨Ø±Ø¨Ø· WhatsApp Business Ù…Ù† Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„ØªÙƒØ§Ù…Ù„."
                         : "Connect WhatsApp Business from the integrations settings."}
                     </p>
                   </div>
@@ -432,7 +432,7 @@ export default function SettingsPage() {
               {data.whatsapp && (
                 <Card>
                   <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">
-                    {locale === "ar" ? "بيانات الاعتماد" : "Credentials"}
+                    {locale === "ar" ? "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯" : "Credentials"}
                   </p>
                   {/* Credentials */}
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -449,7 +449,7 @@ export default function SettingsPage() {
                           variant="outline"
                           onClick={() => copyText(data.whatsapp!.phoneNumberId)}
                           className="w-11 flex-shrink-0 rounded-xl px-0"
-                          title={locale === "ar" ? "نسخ" : "Copy"}
+                          title={locale === "ar" ? "Ù†Ø³Ø®" : "Copy"}
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                           variant="outline"
                           onClick={() => copyText(data.whatsapp!.wabaId)}
                           className="w-11 flex-shrink-0 rounded-xl px-0"
-                          title={locale === "ar" ? "نسخ" : "Copy"}
+                          title={locale === "ar" ? "Ù†Ø³Ø®" : "Copy"}
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
@@ -483,7 +483,7 @@ export default function SettingsPage() {
                       <div className="relative flex-1">
                         <Input
                           type={showWhatsappToken ? "text" : "password"}
-                          value={whatsappToken || "••••••••••••••••••••••••••••••••"}
+                          value={whatsappToken || "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"}
                           readOnly
                           className="text-sm rounded-xl pr-11"
                         />
@@ -511,7 +511,7 @@ export default function SettingsPage() {
                         disabled={!whatsappToken}
                         onClick={() => copyText(whatsappToken)}
                         className="w-11 flex-shrink-0 rounded-xl px-0"
-                        title={locale === "ar" ? "نسخ" : "Copy"}
+                        title={locale === "ar" ? "Ù†Ø³Ø®" : "Copy"}
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
@@ -522,14 +522,14 @@ export default function SettingsPage() {
                     <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/10 p-4 space-y-3 mt-4">
                       <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                         {locale === "ar"
-                          ? "لأمان حسابك، أدخل كلمة مرور حساب WANI لإظهار Access Token."
+                          ? "Ù„Ø£Ù…Ø§Ù† Ø­Ø³Ø§Ø¨ÙƒØŒ Ø£Ø¯Ø®Ù„ ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ± Ø­Ø³Ø§Ø¨ WANI Ù„Ø¥Ø¸Ù‡Ø§Ø± Access Token."
                           : "For security, enter your WANI account password to reveal the Access Token."}
                       </p>
                       <Input
                         type="password"
                         value={whatsappRevealPassword}
                         onChange={e => setWhatsappRevealPassword(e.target.value)}
-                        placeholder={locale === "ar" ? "كلمة المرور" : "Account password"}
+                        placeholder={locale === "ar" ? "ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±" : "Account password"}
                         className="text-sm rounded-xl bg-white dark:bg-gray-900"
                         onKeyDown={e => {
                           if (e.key === "Enter") revealWhatsAppCredentials();
@@ -545,16 +545,16 @@ export default function SettingsPage() {
                           }}
                           className="flex-1 rounded-xl"
                         >
-                          {locale === "ar" ? "إلغاء" : "Cancel"}
+                          {locale === "ar" ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                         </Button>
                         <Button
                           type="button"
                           onClick={revealWhatsAppCredentials}
                           disabled={revealingWhatsapp || !whatsappRevealPassword}
-                          className="flex-1 rounded-xl bg-[#25D366] hover:bg-[#20bb5a] text-white"
+                          className="flex-1 rounded-xl bg-primary hover:bg-primary/90 text-white"
                         >
                           {revealingWhatsapp && <Loader2 className="w-4 h-4 animate-spin ml-1" />}
-                          {locale === "ar" ? "إظهار" : "Reveal"}
+                          {locale === "ar" ? "Ø¥Ø¸Ù‡Ø§Ø±" : "Reveal"}
                         </Button>
                       </div>
                     </div>
@@ -562,7 +562,7 @@ export default function SettingsPage() {
 
                   <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-4">
                     {locale === "ar"
-                      ? "هذه البيانات متاحة للمالك فقط. الـ Access Token لا يتم إرساله للواجهة إلا بعد التحقق من كلمة المرور."
+                      ? "Ù‡Ø°Ù‡ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù…ØªØ§Ø­Ø© Ù„Ù„Ù…Ø§Ù„Ùƒ ÙÙ‚Ø·. Ø§Ù„Ù€ Access Token Ù„Ø§ ÙŠØªÙ… Ø¥Ø±Ø³Ø§Ù„Ù‡ Ù„Ù„ÙˆØ§Ø¬Ù‡Ø© Ø¥Ù„Ø§ Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±."
                       : "These credentials are available to the owner only. The Access Token is never sent to the browser until the account password is verified."}
                   </div>
                 </Card>
@@ -575,7 +575,7 @@ export default function SettingsPage() {
               <Lock className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm">
                 {locale === "ar"
-                  ? "إعدادات حساب الواتساب متاحة لمالك الحساب فقط."
+                  ? "Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø­Ø³Ø§Ø¨ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ Ù…ØªØ§Ø­Ø© Ù„Ù…Ø§Ù„Ùƒ Ø§Ù„Ø­Ø³Ø§Ø¨ ÙÙ‚Ø·."
                   : "WhatsApp account settings are available to the account owner only."}
               </p>
             </div>
@@ -585,3 +585,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+

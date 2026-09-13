@@ -43,7 +43,7 @@ export const adminItem = { icon: Shield, id: "admin" };
 export const PLAN_COLORS: Record<string, string> = {
     free: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
     starter: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    pro: "bg-[#25D366]/10 text-[#25D366]",
+    pro: "bg-primary/10 text-primary",
     enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 

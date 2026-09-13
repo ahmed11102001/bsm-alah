@@ -1,5 +1,5 @@
 // src/app/dashboard/store/_components/PromoSendModal.tsx
-// ─── مودال إرسال عرض لعملاء المتجر ──────────────────────────────────────────
+// â”€â”€â”€ Ù…ÙˆØ¯Ø§Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø±Ø¶ Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø± â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import { useState } from "react";
 import {
@@ -60,7 +60,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
 
     async function handleSend() {
         if (selected.size === 0) {
-            toast.error(lang === "ar" ? "اختر عميلاً واحداً على الأقل" : "Select at least one customer");
+            toast.error(lang === "ar" ? "Ø§Ø®ØªØ± Ø¹Ù…ÙŠÙ„Ø§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„" : "Select at least one customer");
             return;
         }
         setSending(true);
@@ -72,18 +72,18 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
             });
             const d: { success?: boolean; sent?: number; failed?: number; error?: string } = await r.json();
             if (!r.ok) {
-                toast.error(d.error ?? (lang === "ar" ? "فشل الإرسال" : "Send failed"));
+                toast.error(d.error ?? (lang === "ar" ? "ÙØ´Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Send failed"));
                 return;
             }
             setResult({ sent: d.sent ?? 0, failed: d.failed ?? 0 });
             onSent?.(d.sent ?? 0);
             toast.success(
                 lang === "ar"
-                    ? `✅ تم إرسال ${d.sent} رسالة${(d.failed ?? 0) > 0 ? ` — فشل ${d.failed}` : ""}`
-                    : `✅ Sent ${d.sent}${(d.failed ?? 0) > 0 ? ` — failed ${d.failed}` : ""}`
+                    ? `âœ… ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ${d.sent} Ø±Ø³Ø§Ù„Ø©${(d.failed ?? 0) > 0 ? ` â€” ÙØ´Ù„ ${d.failed}` : ""}`
+                    : `âœ… Sent ${d.sent}${(d.failed ?? 0) > 0 ? ` â€” failed ${d.failed}` : ""}`
             );
         } catch {
-            toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
+            toast.error(lang === "ar" ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„" : "Connection error");
         } finally {
             setSending(false);
         }
@@ -104,12 +104,12 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                     <div>
                         <p className="font-bold text-gray-800 dark:text-white">
-                            🎁 {lang === "ar" ? "إرسال عرض لعملاء المتجر" : "Send promo to store customers"}
+                            ðŸŽ {lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø±Ø¶ Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø±" : "Send promo to store customers"}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                             {selected.size > 0
-                                ? `${selected.size.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${lang === "ar" ? "عميل مختار" : "selected"}`
-                                : lang === "ar" ? "اختر العملاء اللي هتبعتلهم" : "Choose which customers to send to"}
+                                ? `${selected.size.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${lang === "ar" ? "Ø¹Ù…ÙŠÙ„ Ù…Ø®ØªØ§Ø±" : "selected"}`
+                                : lang === "ar" ? "Ø§Ø®ØªØ± Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù„ÙŠ Ù‡ØªØ¨Ø¹ØªÙ„Ù‡Ù…" : "Choose which customers to send to"}
                         </p>
                     </div>
                     <button
@@ -122,12 +122,12 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
 
                 {/* Result banner */}
                 {result && (
-                    <div className="mx-5 mt-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex items-center gap-2 flex-shrink-0">
-                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                        <p className="text-sm text-green-700 dark:text-green-400">
+                    <div className="mx-5 mt-4 p-3 rounded-xl bg-primary/10 flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                        <p className="text-sm text-primary">
                             {lang === "ar"
-                                ? `تم إرسال ${result.sent} رسالة${result.failed > 0 ? ` — فشل ${result.failed}` : " بنجاح"}`
-                                : `Sent ${result.sent}${result.failed > 0 ? ` — failed ${result.failed}` : " successfully"}`}
+                                ? `ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ${result.sent} Ø±Ø³Ø§Ù„Ø©${result.failed > 0 ? ` â€” ÙØ´Ù„ ${result.failed}` : " Ø¨Ù†Ø¬Ø§Ø­"}`
+                                : `Sent ${result.sent}${result.failed > 0 ? ` â€” failed ${result.failed}` : " successfully"}`}
                         </p>
                     </div>
                 )}
@@ -139,22 +139,22 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={lang === "ar" ? "بحث باسم أو رقم..." : "Search by name or number..."}
-                            className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]/30"
+                            placeholder={lang === "ar" ? "Ø¨Ø­Ø« Ø¨Ø§Ø³Ù… Ø£Ùˆ Ø±Ù‚Ù…..." : "Search by name or number..."}
+                            className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30"
                         />
                     </div>
 
                     {filtered.length > 0 && (
                         <button
                             onClick={toggleAll}
-                            className="flex items-center gap-2 text-sm text-[#25D366] hover:underline"
+                            className="flex items-center gap-2 text-sm text-primary hover:underline"
                         >
                             {allSelected
                                 ? <CheckSquare className="w-4 h-4" />
                                 : <Square className="w-4 h-4" />}
                             {allSelected
-                                ? (lang === "ar" ? "إلغاء تحديد الكل" : "Deselect all")
-                                : (lang === "ar" ? "تحديد الكل" : "Select all")}
+                                ? (lang === "ar" ? "Ø¥Ù„ØºØ§Ø¡ ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„" : "Deselect all")
+                                : (lang === "ar" ? "ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„" : "Select all")}
                             <span className="text-gray-400 text-xs">({filtered.length})</span>
                         </button>
                     )}
@@ -166,7 +166,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         <div className="flex flex-col items-center py-10 text-center">
                             <Users className="w-10 h-10 text-gray-200 dark:text-gray-600 mb-2" />
                             <p className="text-sm text-gray-400">
-                                {lang === "ar" ? "لا يوجد عملاء مطابقون" : "No matching customers"}
+                                {lang === "ar" ? "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¹Ù…Ù„Ø§Ø¡ Ù…Ø·Ø§Ø¨Ù‚ÙˆÙ†" : "No matching customers"}
                             </p>
                         </div>
                     ) : (
@@ -179,21 +179,21 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                                     className={cn(
                                         "w-full flex items-center gap-3 p-3 rounded-xl border text-right transition-all",
                                         isChecked
-                                            ? "border-[#25D366]/40 bg-[#25D366]/5 dark:bg-[#25D366]/10"
+                                            ? "border-primary/40 bg-primary/5 dark:bg-primary/10"
                                             : "border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 bg-white dark:bg-gray-800"
                                     )}
                                 >
                                     <div className={cn(
                                         "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
                                         isChecked
-                                            ? "border-[#25D366] bg-[#25D366]"
+                                            ? "border-primary bg-primary"
                                             : "border-gray-300 dark:border-gray-600"
                                     )}>
-                                        {isChecked && <CheckCircle className="w-3 h-3 text-white" />}
+                                        {isChecked && <CheckCircle className="w-3 h-3 text-primary-foreground" />}
                                     </div>
 
-                                    <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-[#25D366]">
-                                        {c.name.trim().charAt(0).toUpperCase() || "ع"}
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-primary">
+                                        {c.name.trim().charAt(0).toUpperCase() || "Ø¹"}
                                     </div>
 
                                     <div className="flex-1 min-w-0 text-right">
@@ -202,7 +202,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                                     </div>
 
                                     <div className="text-right flex-shrink-0">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.ordersCount} {lang === "ar" ? "طلب" : "orders"}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.ordersCount} {lang === "ar" ? "Ø·Ù„Ø¨" : "orders"}</p>
                                     </div>
                                 </button>
                             );
@@ -216,20 +216,20 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         onClick={onClose}
                         className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                        {lang === "ar" ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
                     </button>
 
                     <button
                         onClick={handleSend}
                         disabled={sending || selected.size === 0}
-                        className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#25D366] text-white text-sm font-medium hover:bg-[#1fba59] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-[#1fba59] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {sending
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <Send className="w-4 h-4" />}
                         {sending
-                            ? (lang === "ar" ? "جاري الإرسال..." : "Sending...")
-                            : `${lang === "ar" ? "إرسال لـ" : "Send to"} ${selected.size > 0 ? selected.size : ""} ${lang === "ar" ? "عميل" : "customers"}`}
+                            ? (lang === "ar" ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„..." : "Sending...")
+                            : `${lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„ Ù„Ù€" : "Send to"} ${selected.size > 0 ? selected.size : ""} ${lang === "ar" ? "Ø¹Ù…ÙŠÙ„" : "customers"}`}
                     </button>
                 </div>
             </div>
