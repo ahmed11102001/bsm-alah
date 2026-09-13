@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLanguage } from "@/lib/language-context";
+import { useDashboardTheme } from "@/lib/theme-context";
 import {
   type Overview, type CustomerRow, type TeamRow,
   TODAY, MONTH_AGO, HOURS, pageText,
@@ -32,6 +33,7 @@ import {
 
 export default function ReportsOverviewPage() {
   const { locale } = useLanguage();
+  const { chartColors, isDark } = useDashboardTheme();
   const numberLocale = locale === "ar" ? "ar-EG" : "en-US";
   const dateLocale = locale === "ar" ? "ar-EG" : "en-US";
   const router = useRouter();
@@ -183,7 +185,7 @@ export default function ReportsOverviewPage() {
           </div>
           <Button
             size="sm"
-            className="bg-green-500 hover:bg-green-600 text-white gap-1.5"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
             onClick={() => {
               if (tab === "overview") fetchOverview();
               if (tab === "customers") fetchCustomers();
@@ -195,7 +197,7 @@ export default function ReportsOverviewPage() {
           {pageText[locale].quickRanges.map((r: { label: string; days: number }) => (
             <button
               key={r.days}
-              className="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 hover:underline"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary hover:underline"
               onClick={() => {
                 setFrom(new Date(Date.now() - r.days * 86400_000).toISOString().slice(0, 10));
                 setTo(TODAY);
@@ -249,9 +251,9 @@ export default function ReportsOverviewPage() {
                             labelFormatter={(l) => `${pageText[locale].charts.dayLabel} ${l}`}
                           />
                           {/* بيوم واحد بس مفيش نقطتين ترسم بينهم خط، فبنظهر نقطة واضحة بدل ما الرسم يبان فاضي */}
-                          <Line type="monotone" dataKey="sent" stroke="#2563eb" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#2563eb", strokeWidth: 0 } : false} name="sent" />
-                          <Line type="monotone" dataKey="delivered" stroke="#16a34a" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#16a34a", strokeWidth: 0 } : false} name="delivered" />
-                          <Line type="monotone" dataKey="received" stroke="#9333ea" strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: "#9333ea", strokeWidth: 0 } : false} name="received" />
+                          <Line type="monotone" dataKey="sent" stroke={chartColors[1] || "#2563eb"} strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: chartColors[1] || "#2563eb", strokeWidth: 0 } : false} name="sent" />
+                          <Line type="monotone" dataKey="delivered" stroke={chartColors[0] || "#16a34a"} strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: chartColors[0] || "#16a34a", strokeWidth: 0 } : false} name="delivered" />
+                          <Line type="monotone" dataKey="received" stroke={chartColors[2] || "#9333ea"} strokeWidth={2} dot={overview.daily.length <= 1 ? { r: 4, fill: chartColors[2] || "#9333ea", strokeWidth: 0 } : false} name="received" />
                         </LineChart>
                       </ResponsiveContainer>
                       {overview.daily.length <= 1 && (
@@ -260,9 +262,9 @@ export default function ReportsOverviewPage() {
                     </>
                   )}
                   <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-600 inline-block" /> {pageText[locale].charts.campaignsLegendSent}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-green-600 inline-block" /> {pageText[locale].charts.campaignsLegendDelivered}</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-purple-600 inline-block" /> {pageText[locale].charts.campaignsLegendReceived}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[1] || "#2563eb" }} /> {pageText[locale].charts.campaignsLegendSent}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[0] || "#16a34a" }} /> {pageText[locale].charts.campaignsLegendDelivered}</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[2] || "#9333ea" }} /> {pageText[locale].charts.campaignsLegendReceived}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -291,7 +293,7 @@ export default function ReportsOverviewPage() {
                           {hourlyData.map((entry, i) => (
                             <Cell
                               key={i}
-                              fill={entry.cnt === maxHour.cnt && entry.cnt > 0 ? "#22c55e" : "#d1fae5"}
+                              fill={entry.cnt === maxHour.cnt && entry.cnt > 0 ? (chartColors[0] || "#22c55e") : (isDark ? "rgba(255,255,255,0.1)" : `${chartColors[0] || "#22c55e"}33`)}
                             />
                           ))}
                         </Bar>

@@ -10,7 +10,7 @@ export interface DashboardData {
     user: {
         id: string; name: string | null; email: string; phone: string | null;
         role: string; hasPassword?: boolean; hasTestimonial?: boolean;
-        onboardingCompleted?: boolean;
+        onboardingCompleted?: boolean; theme?: string;
     };
     whatsapp: { phoneNumberId: string; wabaId: string; tokenStatus?: string; tokenExpiresAt?: string | null } | null;
     stats: {

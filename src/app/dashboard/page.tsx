@@ -16,6 +16,7 @@ import {
   PieChart as PieChartIcon, Lock, Sparkles,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer as PieResponsiveContainer } from "recharts";
+import { useDashboardTheme } from "@/lib/theme-context";
 import {
   PartnerCardTemplate, type PartnerCardContent,
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
@@ -138,15 +139,15 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   const Icon = feature.icon;
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 bg-gradient-to-br from-[#25D366]/5 via-white to-white dark:from-[#25D366]/10 dark:via-gray-800/40 dark:to-gray-800/40">
+    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 bg-gradient-to-br from-primary/5 via-white to-white dark:from-primary/10 dark:via-gray-800/40 dark:to-gray-800/40">
       <CardContent className="p-0 h-full">
         <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
           <div key={`icon-${index}`}
-            className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-[#25D366]/20 flex items-center justify-center flex-shrink-0 shadow-sm animate-in fade-in zoom-in-95 duration-500">
-            <Icon className="w-7 h-7 text-[#25D366]" />
+            className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+            <Icon className="w-7 h-7 text-primary" />
           </div>
           <div key={`text-${index}`} className="flex-1 min-w-0 text-center sm:text-start animate-in fade-in slide-in-from-bottom-1 duration-500">
-            <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-[#25D366] bg-[#25D366]/10 px-2 py-0.5 rounded-full mb-1.5">
+            <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1.5">
               WANI Partner
             </span>
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{feature.title[locale]}</h3>
@@ -154,7 +155,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
           </div>
           <div className="hidden sm:flex flex-col gap-1.5 flex-shrink-0">
             {WANI_FEATURES.map((_, i) => (
-              <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-[#25D366]" : "bg-gray-200 dark:bg-gray-600"}`} />
+              <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-primary" : "bg-gray-200 dark:bg-gray-600"}`} />
             ))}
           </div>
         </div>
@@ -168,6 +169,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 }) {
   const router = useRouter();
   const { t, locale, dir } = useLanguage();
+  const { chartColors, isDark } = useDashboardTheme();
   const h = t.home;
   const ov = h.overview;
   const [metaPrompt, setMetaPrompt] = useState<string | null>(null);
@@ -281,8 +283,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
           <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center mx-auto mb-3">
-              <MessageSquare className="w-5 h-5 text-[#25D366]" />
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-5 h-5 text-primary" />
             </div>
             <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
               {locale === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
@@ -293,7 +295,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <button
               type="button"
               onClick={() => setMetaPrompt(null)}
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#075E54] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064944] transition-colors"
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               {locale === "ar" ? "حسنًا" : "OK"}
             </button>
@@ -312,7 +314,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             size="sm"
             className={campaignLimitActive
               ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
-              : "bg-[#25D366] hover:bg-[#20bb5a] text-white gap-1.5 text-sm w-full sm:w-auto justify-center"}
+              : "bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-sm w-full sm:w-auto justify-center"}
             onClick={() => {
               if (!whatsappConnected) return showMetaConnectPrompt();
               if (campaignAtLimit) return showCampaignLimitToast();
@@ -361,12 +363,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <div className="flex items-center gap-2 min-w-0">
               <CardTitle className="text-base font-bold flex-shrink-0">{ov.conversations.title}</CardTitle>
               {totalUnread > 0 && (
-                <span className="text-[10px] font-bold text-white bg-[#25D366] rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-primary-foreground bg-primary rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center flex-shrink-0">
                   {numFmt(totalUnread)}
                 </span>
               )}
             </div>
-            <button onClick={() => router.push("/dashboard/chat")} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => router.push("/dashboard/chat")} className="text-xs text-primary hover:underline flex items-center gap-1 flex-shrink-0">
               {ov.conversations.viewAll} <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </CardHeader>
@@ -400,7 +402,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                     </div>
                     <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0">
                       {(c.unreadCount || 0) > 0 && (
-                        <span className="text-[10px] font-bold text-white bg-[#25D366] rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-primary-foreground bg-primary rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
                           {numFmt(c.unreadCount)}
                         </span>
                       )}
@@ -419,7 +421,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.automation.title}</CardTitle>
-            <button onClick={() => router.push("/dashboard/automation")} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => router.push("/dashboard/automation")} className="text-xs text-primary hover:underline flex items-center gap-1 flex-shrink-0">
               {h.campaigns.viewAll} <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </CardHeader>
@@ -547,7 +549,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               </div>
               <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
             </div>
-            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-[#25D366] hover:underline flex-shrink-0">
+            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-primary hover:underline flex-shrink-0">
               {ov.templateCost.reports}
             </button>
           </CardHeader>
@@ -580,8 +582,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                         endAngle={-270}
                         stroke="none"
                       >
-                        <Cell fill="#22c55e" />
-                        <Cell fill="#4f6ef7" />
+                        <Cell fill={chartColors[0] || "#16a34a"} />
+                        <Cell fill={chartColors[1] || "#0ea5e9"} />
                       </Pie>
                     </PieChart>
                   </PieResponsiveContainer>
@@ -593,7 +595,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
                     <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] flex-shrink-0" />
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: chartColors[0] || "#16a34a" }} />
                       {ov.templateCost.marketing}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -602,7 +604,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   </div>
                   <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
                     <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#4f6ef7] flex-shrink-0" />
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: chartColors[1] || "#0ea5e9" }} />
                       {ov.templateCost.service}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -630,7 +632,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               </span>
             )}
           </div>
-          <button onClick={onCreateCampaign} className="text-xs text-[#25D366] hover:underline flex items-center gap-1 flex-shrink-0">
+          <button onClick={onCreateCampaign} className="text-xs text-primary hover:underline flex items-center gap-1 flex-shrink-0">
             {h.campaigns.viewAll} <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         </CardHeader>
@@ -639,7 +641,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <div className="text-center py-12 text-gray-400">
               <Send className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p className="text-sm">{h.campaigns.empty}</p>
-              <button onClick={onCreateCampaign} className="mt-3 text-xs text-[#25D366] hover:underline">{h.campaigns.startFirst}</button>
+              <button onClick={onCreateCampaign} className="mt-3 text-xs text-primary hover:underline">{h.campaigns.startFirst}</button>
             </div>
           ) : (
             <>

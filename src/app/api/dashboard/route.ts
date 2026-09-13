@@ -66,6 +66,7 @@ export async function GET(_req: NextRequest) {
           onboardingCompleted: true,
           emailVerified: true,
           welcomeEmailSentAt: true,
+          theme: true,
         },
       }),
       prisma.whatsAppAccount.findUnique({
@@ -126,6 +127,7 @@ export async function GET(_req: NextRequest) {
         hasPassword: !!userRecord.password,
         onboardingCompleted: userRecord.onboardingCompleted ?? false,
         hasTestimonial: testimonialCount > 0,
+        theme: userRecord.theme ?? "wani",
       },
       whatsapp: session.user.role === "CHAT_ONLY" ? null : whatsappAccount,
       stats: {

@@ -1,0 +1,402 @@
+/* src/styles/themes.css */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Professional Wani Dashboard Theme Tokens
+   Themes: Wani (Default) | Ocean | Emerald | Violet | Slate
+   Supports: Light Mode and Dark Mode per theme
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. WANI (Default) — Light ── */
+:root,
+[data-theme="wani"] {
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 142.1 76.2% 36.3%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 142.1 76.2% 30%;
+  --secondary: 210 20% 95%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 20% 95%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 142.1 65% 95%;
+  --accent-foreground: 142.1 76.2% 28%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --input-bg: 0 0% 100%;
+  --ring: 142.1 76.2% 36.3%;
+  --radius: 0.75rem;
+
+  --success: 161 94% 30%;
+  --success-foreground: 0 0% 98%;
+  --warning: 32 95% 44%;
+  --warning-foreground: 0 0% 98%;
+  --info: 221 83% 53%;
+  --info-foreground: 0 0% 98%;
+
+  --sidebar-bg: 0 0% 100%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-foreground: 222 47% 20%;
+  --sidebar-active-bg: 142.1 70% 94%;
+  --sidebar-active-fg: 142.1 76.2% 26%;
+
+  --chart-1: 142.1 76.2% 36.3%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 262 83% 58%;
+  --chart-4: 38 92% 50%;
+  --chart-5: 350 89% 60%;
+}
+
+/* ── 1. WANI (Default) — Dark ── */
+.dark,
+[data-theme="wani"].dark,
+.dark [data-theme="wani"] {
+  --background: 224 71% 4%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 8%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 142.1 70% 45%;
+  --primary-foreground: 224 71% 4%;
+  --primary-hover: 142.1 70% 40%;
+  --secondary: 217 33% 14%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 142.1 40% 15%;
+  --accent-foreground: 142.1 70% 65%;
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --input-bg: 222 47% 10%;
+  --ring: 142.1 70% 45%;
+
+  --success: 160 80% 45%;
+  --success-foreground: 0 0% 98%;
+  --warning: 43 96% 56%;
+  --warning-foreground: 240 10% 3.9%;
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  --sidebar-bg: 222 47% 7%;
+  --sidebar-border: 217 33% 15%;
+  --sidebar-foreground: 210 40% 90%;
+  --sidebar-active-bg: 142.1 50% 16%;
+  --sidebar-active-fg: 142.1 70% 65%;
+
+  --chart-1: 142.1 70% 50%;
+  --chart-2: 199 89% 55%;
+  --chart-3: 262 83% 68%;
+  --chart-4: 38 92% 58%;
+  --chart-5: 350 89% 65%;
+}
+
+/* ── 2. OCEAN — Light ── */
+[data-theme="ocean"] {
+  --background: 204 33% 97%;
+  --foreground: 215 30% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 30% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 30% 12%;
+  --primary: 200 98% 39%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 200 98% 32%;
+  --secondary: 204 25% 92%;
+  --secondary-foreground: 215 30% 12%;
+  --muted: 204 25% 92%;
+  --muted-foreground: 210 20% 46%;
+  --accent: 200 85% 94%;
+  --accent-foreground: 200 98% 30%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 201 30% 88%;
+  --input: 201 30% 88%;
+  --input-bg: 0 0% 100%;
+  --ring: 200 98% 39%;
+
+  --sidebar-bg: 204 30% 98.5%;
+  --sidebar-border: 201 30% 88%;
+  --sidebar-foreground: 215 30% 18%;
+  --sidebar-active-bg: 200 85% 93%;
+  --sidebar-active-fg: 200 98% 32%;
+
+  --chart-1: 200 98% 39%;
+  --chart-2: 188 86% 43%;
+  --chart-3: 221 83% 53%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 38 92% 50%;
+}
+
+/* ── 2. OCEAN — Dark ── */
+[data-theme="ocean"].dark,
+.dark[data-theme="ocean"],
+.dark [data-theme="ocean"] {
+  --background: 215 35% 7%;
+  --foreground: 205 40% 96%;
+  --card: 215 30% 11%;
+  --card-foreground: 205 40% 96%;
+  --popover: 215 30% 11%;
+  --popover-foreground: 205 40% 96%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 215 35% 7%;
+  --primary-hover: 199 89% 42%;
+  --secondary: 215 25% 18%;
+  --secondary-foreground: 205 40% 96%;
+  --muted: 215 25% 18%;
+  --muted-foreground: 210 20% 65%;
+  --accent: 200 50% 18%;
+  --accent-foreground: 199 89% 65%;
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 25% 19%;
+  --input: 215 25% 19%;
+  --input-bg: 215 30% 13%;
+  --ring: 199 89% 48%;
+
+  --sidebar-bg: 215 32% 9%;
+  --sidebar-border: 215 25% 16%;
+  --sidebar-foreground: 205 40% 90%;
+  --sidebar-active-bg: 200 50% 18%;
+  --sidebar-active-fg: 199 89% 65%;
+
+  --chart-1: 199 89% 55%;
+  --chart-2: 188 86% 53%;
+  --chart-3: 221 83% 65%;
+  --chart-4: 160 84% 50%;
+  --chart-5: 38 92% 58%;
+}
+
+/* ── 3. EMERALD — Light ── */
+[data-theme="emerald"] {
+  --background: 150 20% 98%;
+  --foreground: 165 30% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 165 30% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 165 30% 11%;
+  --primary: 160 84% 35%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 160 84% 28%;
+  --secondary: 150 18% 93%;
+  --secondary-foreground: 165 30% 11%;
+  --muted: 150 18% 93%;
+  --muted-foreground: 160 14% 44%;
+  --accent: 160 60% 93%;
+  --accent-foreground: 160 84% 26%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 152 22% 89%;
+  --input: 152 22% 89%;
+  --input-bg: 0 0% 100%;
+  --ring: 160 84% 35%;
+
+  --sidebar-bg: 150 18% 98.5%;
+  --sidebar-border: 152 22% 89%;
+  --sidebar-foreground: 165 30% 18%;
+  --sidebar-active-bg: 160 60% 92%;
+  --sidebar-active-fg: 160 84% 28%;
+
+  --chart-1: 160 84% 35%;
+  --chart-2: 142 71% 45%;
+  --chart-3: 173 80% 40%;
+  --chart-4: 45 93% 47%;
+  --chart-5: 200 85% 45%;
+}
+
+/* ── 3. EMERALD — Dark ── */
+[data-theme="emerald"].dark,
+.dark[data-theme="emerald"],
+.dark [data-theme="emerald"] {
+  --background: 165 35% 6%;
+  --foreground: 150 30% 96%;
+  --card: 165 30% 10%;
+  --card-foreground: 150 30% 96%;
+  --popover: 165 30% 10%;
+  --popover-foreground: 150 30% 96%;
+  --primary: 160 70% 44%;
+  --primary-foreground: 165 35% 6%;
+  --primary-hover: 160 70% 38%;
+  --secondary: 165 22% 16%;
+  --secondary-foreground: 150 30% 96%;
+  --muted: 165 22% 16%;
+  --muted-foreground: 160 15% 65%;
+  --accent: 160 45% 17%;
+  --accent-foreground: 160 70% 65%;
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 165 22% 18%;
+  --input: 165 22% 18%;
+  --input-bg: 165 30% 12%;
+  --ring: 160 70% 44%;
+
+  --sidebar-bg: 165 32% 8%;
+  --sidebar-border: 165 22% 15%;
+  --sidebar-foreground: 150 30% 90%;
+  --sidebar-active-bg: 160 45% 16%;
+  --sidebar-active-fg: 160 70% 65%;
+
+  --chart-1: 160 70% 50%;
+  --chart-2: 142 71% 55%;
+  --chart-3: 173 80% 50%;
+  --chart-4: 45 93% 58%;
+  --chart-5: 200 85% 55%;
+}
+
+/* ── 4. VIOLET — Light ── */
+[data-theme="violet"] {
+  --background: 270 25% 98%;
+  --foreground: 265 35% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 265 35% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 265 35% 12%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 262 83% 50%;
+  --secondary: 270 20% 93%;
+  --secondary-foreground: 265 35% 12%;
+  --muted: 270 20% 93%;
+  --muted-foreground: 265 14% 48%;
+  --accent: 262 70% 94%;
+  --accent-foreground: 262 83% 45%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 265 25% 90%;
+  --input: 265 25% 90%;
+  --input-bg: 0 0% 100%;
+  --ring: 262 83% 58%;
+
+  --sidebar-bg: 270 20% 98.5%;
+  --sidebar-border: 265 25% 90%;
+  --sidebar-foreground: 265 35% 18%;
+  --sidebar-active-bg: 262 70% 94%;
+  --sidebar-active-fg: 262 83% 48%;
+
+  --chart-1: 262 83% 58%;
+  --chart-2: 290 70% 52%;
+  --chart-3: 330 81% 60%;
+  --chart-4: 220 85% 57%;
+  --chart-5: 38 92% 50%;
+}
+
+/* ── 4. VIOLET — Dark ── */
+[data-theme="violet"].dark,
+.dark[data-theme="violet"],
+.dark [data-theme="violet"] {
+  --background: 265 35% 7%;
+  --foreground: 260 30% 97%;
+  --card: 265 30% 11%;
+  --card-foreground: 260 30% 97%;
+  --popover: 265 30% 11%;
+  --popover-foreground: 260 30% 97%;
+  --primary: 262 83% 68%;
+  --primary-foreground: 265 35% 7%;
+  --primary-hover: 262 83% 60%;
+  --secondary: 265 22% 17%;
+  --secondary-foreground: 260 30% 97%;
+  --muted: 265 22% 17%;
+  --muted-foreground: 265 18% 66%;
+  --accent: 262 45% 20%;
+  --accent-foreground: 262 83% 75%;
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 265 22% 20%;
+  --input: 265 22% 20%;
+  --input-bg: 265 30% 13%;
+  --ring: 262 83% 68%;
+
+  --sidebar-bg: 265 32% 9%;
+  --sidebar-border: 265 22% 16%;
+  --sidebar-foreground: 260 30% 90%;
+  --sidebar-active-bg: 262 45% 19%;
+  --sidebar-active-fg: 262 83% 75%;
+
+  --chart-1: 262 83% 68%;
+  --chart-2: 290 70% 65%;
+  --chart-3: 330 81% 68%;
+  --chart-4: 220 85% 68%;
+  --chart-5: 38 92% 62%;
+}
+
+/* ── 5. SLATE — Light ── */
+[data-theme="slate"] {
+  --background: 215 16% 96%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 222 47% 25%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 222 47% 18%;
+  --secondary: 215 16% 90%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 215 16% 90%;
+  --muted-foreground: 215 16% 42%;
+  --accent: 215 20% 91%;
+  --accent-foreground: 222 47% 15%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 16% 86%;
+  --input: 215 16% 86%;
+  --input-bg: 0 0% 100%;
+  --ring: 222 47% 25%;
+
+  --sidebar-bg: 215 18% 97.5%;
+  --sidebar-border: 215 16% 86%;
+  --sidebar-foreground: 222 47% 20%;
+  --sidebar-active-bg: 215 20% 90%;
+  --sidebar-active-fg: 222 47% 15%;
+
+  --chart-1: 222 47% 35%;
+  --chart-2: 215 16% 47%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 142 71% 45%;
+  --chart-5: 38 92% 50%;
+}
+
+/* ── 5. SLATE — Dark ── */
+[data-theme="slate"].dark,
+.dark[data-theme="slate"],
+.dark [data-theme="slate"] {
+  --background: 222 20% 7%;
+  --foreground: 210 30% 96%;
+  --card: 222 18% 11%;
+  --card-foreground: 210 30% 96%;
+  --popover: 222 18% 11%;
+  --popover-foreground: 210 30% 96%;
+  --primary: 210 40% 90%;
+  --primary-foreground: 222 47% 11%;
+  --primary-hover: 210 40% 98%;
+  --secondary: 222 16% 17%;
+  --secondary-foreground: 210 30% 96%;
+  --muted: 222 16% 17%;
+  --muted-foreground: 215 15% 62%;
+  --accent: 222 15% 18%;
+  --accent-foreground: 210 30% 98%;
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 222 15% 19%;
+  --input: 222 15% 19%;
+  --input-bg: 222 18% 13%;
+  --ring: 210 40% 90%;
+
+  --sidebar-bg: 222 19% 9%;
+  --sidebar-border: 222 15% 16%;
+  --sidebar-foreground: 210 30% 90%;
+  --sidebar-active-bg: 222 16% 18%;
+  --sidebar-active-fg: 210 30% 98%;
+
+  --chart-1: 215 20% 75%;
+  --chart-2: 215 15% 60%;
+  --chart-3: 199 89% 60%;
+  --chart-4: 142 71% 55%;
+  --chart-5: 38 92% 58%;
+}

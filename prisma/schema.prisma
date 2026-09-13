@@ -17,6 +17,7 @@ model User {
   image                    String?
   emailVerified            DateTime?
   welcomeEmailSentAt       DateTime?
+  theme                    String?                   @default("wani")
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   apiKey                   String?                   @unique

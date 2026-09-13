@@ -140,7 +140,14 @@ export const SettingsBrandSchema = z.object({
   workingHours: z.string().trim().max(500).optional(),
   aiTone: z.enum(VALID_TONES).optional().default("friendly"),
 });
-export type SettingsBrandInput = z.infer<typeof SettingsBrandSchema>;
+export const VALID_THEMES = ["wani", "ocean", "emerald", "violet", "slate"] as const;
+export type DashboardTheme = (typeof VALID_THEMES)[number];
+
+export const SettingsAppearanceSchema = z.object({
+  type: z.literal("appearance"),
+  theme: z.enum(VALID_THEMES),
+});
+export type SettingsAppearanceInput = z.infer<typeof SettingsAppearanceSchema>;
 
 export const SettingsPatchSchema = z.discriminatedUnion("type", [
   SettingsProfileSchema,
@@ -148,6 +155,7 @@ export const SettingsPatchSchema = z.discriminatedUnion("type", [
   SettingsCreatePasswordSchema,
   SettingsWhatsAppSchema,
   SettingsBrandSchema,
+  SettingsAppearanceSchema,
 ]);
 export type SettingsPatchInput = z.infer<typeof SettingsPatchSchema>;
 

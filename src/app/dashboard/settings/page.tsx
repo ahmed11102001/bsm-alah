@@ -18,6 +18,7 @@ import {
   PageHeaderSkeleton, FormSkeleton,
 } from "@/components/dashboard/DashboardSkeletons";
 import WhatsAppProfileView from "./_components/WhatsAppProfileView";
+import AppearanceSettings from "./_components/AppearanceSettings";
 
 function SectionHeader({ icon, title, desc, index }: {
   icon: React.ReactNode; title: string; desc: string; index: string;
@@ -200,6 +201,9 @@ export default function SettingsPage() {
           desc={locale === "ar" ? "بياناتك الشخصية وكلمة المرور وإدارة الحساب" : "Your personal data, password and account management"}
           index="01"
         />
+
+        {/* ── Appearance / المظهر ── */}
+        <AppearanceSettings />
 
         {/* ── Profile Card ── */}
         <Card>

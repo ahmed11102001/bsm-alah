@@ -21,7 +21,7 @@ export async function GET() {
   const [user, whatsapp, agent] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true },
+      select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true, theme: true },
     }),
     isOwner
       ? prisma.whatsAppAccount.findUnique({
@@ -55,6 +55,7 @@ export async function GET() {
     image: user.image,
     role: user.role,
     hasPassword: !!user.password,
+    theme: user.theme ?? "wani",
   } : null;
 
   return NextResponse.json({ user: userResponse, whatsapp, brand });
@@ -178,6 +179,16 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, brand: { ...agent, aiTone: agent.tone } });
+  }
+
+  if (body.type === "appearance") {
+    const { theme } = body;
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { theme },
+      select: { id: true, theme: true },
+    });
+    return NextResponse.json({ success: true, user: updated });
   }
 
   return NextResponse.json({ error: "type غير معروف" }, { status: 400 });

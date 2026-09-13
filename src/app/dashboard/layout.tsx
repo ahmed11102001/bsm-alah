@@ -11,6 +11,7 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { SubscriptionProvider, useSubscription, type DashboardData } from "@/lib/dashboard-context";
+import { useDashboardTheme } from "@/lib/theme-context";
 import {
   visibleSidebarIds, adminItem, PLAN_COLORS, sidebarHref,
 } from "@/app/dashboard/_shared";
@@ -191,12 +192,19 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   const { t, dir, locale } = useLanguage();
   const { dashData, loadingDash, refreshDash, hasMetaConnection, isSuper } = useSubscription();
+  const { setTheme: setAppTheme, theme: currentTheme } = useDashboardTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (dashData?.user?.theme && dashData.user.theme !== currentTheme) {
+      setAppTheme(dashData.user.theme as any);
+    }
+  }, [dashData?.user?.theme, currentTheme, setAppTheme]);
 
   useEffect(() => {
     setAccountPanelOpen(false);
@@ -413,12 +421,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200" dir={dir}>
+    <div className="min-h-screen bg-background text-foreground flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
+      <aside className={`bg-sidebar border-sidebar-border text-sidebar-foreground fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
         } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
-        <div className={`h-16 flex items-center border-b border-gray-100 dark:border-gray-700 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
+        <div className={`h-16 flex items-center border-b border-sidebar-border flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
           }`}>
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-[#25D366] flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -442,8 +450,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               title={sidebarCollapsed ? item.label : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
                 } ${activeSection === item.id
-                  ? "bg-[#25D366]/10 text-[#25D366] font-semibold"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-sidebar-foreground/75 hover:bg-muted/60 hover:text-sidebar-foreground"
                 }`}>
               <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
               {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
@@ -705,12 +713,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         : (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64")
         }`}>
         {/* Header */}
-        <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
+        <header className="h-14 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-colors duration-200">
 
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+            className="lg:hidden p-2 rounded-xl hover:bg-muted/60 text-muted-foreground transition-colors"
             aria-label="Open menu"
           >
             <div className="flex flex-col gap-[5px]">
@@ -723,7 +731,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {/* Desktop Toggle Button in Topbar */}
           <button
             onClick={toggleSidebar}
-            className="hidden lg:flex items-center p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="hidden lg:flex items-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             title={sidebarCollapsed ? (locale === "ar" ? "توسيع القائمة" : "Expand sidebar") : (locale === "ar" ? "طي القائمة" : "Collapse sidebar")}
           >
             {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
