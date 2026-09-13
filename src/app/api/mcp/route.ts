@@ -786,7 +786,7 @@ export async function POST(req: NextRequest) {
           error: {
             code: -32003,
             message: guard.code === "FEATURE_LOCKED"
-              ? "❌ ميزة Claude AI تتطلب باقة Professional أو أعلى. قم بالترقية من الداشبورد."
+              ? "❌ ميزة Claude AI تتطلب باقة Pro أو أعلى. قم بالترقية من الداشبورد."
               : `⚠️ انتهت أوامر Claude الشهرية. يمكنك شراء 100 أمر إضافي بـ 99 جنيه من الداشبورد.`,
             data: { code: guard.code, requiredPlan: guard.requiredPlan, limit: guard.limit, used: guard.used },
           },

@@ -185,10 +185,10 @@ The refund covers the unused remaining portion of the paid monthly subscription 
     title: { ar: "الخطط والدفع", en: "Plans & Payment" },
     content: {
       ar: `**الخطط المتاحة:**
-— خطة مجانية: 100 جهة اتصال، 3 حملات، مستخدم واحد
-— خطة Starter: 249 جنيه/شهر — 2,000 جهة اتصال، 50 حملة
-— خطة Professional: 599 جنيه/شهر — 15,000 جهة اتصال، حملات غير محدودة
-— خطة Enterprise: 1199 جنيه/شهر — جهات اتصال غير محدودة، حملات غير محدودة
+— خطة Free: 100 جهة اتصال، 3 حملات، مستخدم واحد
+— خطة Go: 249 جنيه/شهر — 2,500 جهة اتصال، 50 حملة
+— خطة Pro: 599 جنيه/شهر — 25,000 جهة اتصال، حملات غير محدودة
+— خطة Max: 999 جنيه/شهر — جهات اتصال غير محدودة، حملات غير محدودة
 
 قد تختلف الحدود والمزايا التفصيلية، وتخضع بشكل نهائي للحدود الموضحة فعليًا داخل لوحة تحكم Wani وقت الاشتراك.
 
@@ -201,9 +201,9 @@ The refund covers the unused remaining portion of the paid monthly subscription 
 في حال فشل عملية الدفع، يجوز تعليق بعض الميزات المدفوعة أو تحويل الحساب إلى وضع محدود، وفق السياسة المعمول بها.`,
       en: `**Available plans:**
 — Free plan: 100 contacts, 3 campaigns, 1 user
-— Starter plan: 249 EGP/month — 2,000 contacts, 50 campaigns
-— Professional plan: 599 EGP/month — 15,000 contacts, unlimited campaigns
-— Enterprise plan: 1199 EGP/month — unlimited contacts, unlimited campaigns
+— Go plan: 249 EGP/month — 2,500 contacts, 50 campaigns
+— Pro plan: 599 EGP/month — 25,000 contacts, unlimited campaigns
+— Max plan: 999 EGP/month — unlimited contacts, unlimited campaigns
 
 Detailed limits and features may vary and are ultimately governed by the limits shown to you inside the Wani dashboard at the time of subscription.
 

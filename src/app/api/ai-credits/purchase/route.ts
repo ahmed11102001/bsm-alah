@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   if (!sub || sub.plan !== "enterprise")
     return NextResponse.json(
-      { error: "هذه الميزة متاحة لمشتركي Enterprise فقط" },
+      { error: "هذه الميزة متاحة لمشتركي Max فقط" },
       { status: 403 }
     );
 

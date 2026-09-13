@@ -276,7 +276,7 @@ export default function DemoTeamPage() {
                 <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => toast.error(locale === "ar" ? "إضافة أعضاء الفريق متاحة من باقة Starter فما فوق. قم بالترقية أولاً." : "Adding team members is available on Starter plan and above. Please upgrade first.")}
+                    onClick={() => toast.error(locale === "ar" ? "إضافة أعضاء الفريق متاحة من باقة Go فما فوق. قم بالترقية أولاً." : "Adding team members is available on Go plan and above. Please upgrade first.")}
                     className="bg-white dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm cursor-not-allowed opacity-80"
                     title={locale === "ar" ? "الميزة مقفولة - تتطلب ترقية الباقة" : "Locked feature - requires plan upgrade"}
                 >
@@ -285,7 +285,7 @@ export default function DemoTeamPage() {
                         {tm.addForm.title}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                        {locale === "ar" ? "متاحة من باقة Starter فما فوق" : "Available on Starter plan and above"}
+                        {locale === "ar" ? "متاحة من باقة Go فما فوق" : "Available on Go plan and above"}
                     </p>
                 </div>
             )}

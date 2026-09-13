@@ -192,12 +192,12 @@ export default function WaniPartnerPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
             <LockKeyhole className="h-8 w-8" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("ميزة WANI Partner متاحة لباقة Enterprise", "WANI Partner is available on Enterprise")}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("ميزة WANI Partner متاحة لباقة Max", "WANI Partner is available on Max")}</h2>
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-gray-600 dark:text-gray-300">
-            {t("صمّم كروت شراكة وني واعرضها داخل داشبورد العملاء بعد الترقية إلى باقة Enterprise.", "Create WANI Partner cards and showcase them across customer dashboards by upgrading to Enterprise.")}
+            {t("صمّم كروت شراكة وني واعرضها داخل داشبورد العملاء بعد الترقية إلى باقة Max.", "Create WANI Partner cards and showcase them across customer dashboards by upgrading to Max.")}
           </p>
-          <Link href="/checkout?plan=enterprise" className={btn + " mx-auto mt-6 w-fit"}>
-            <Sparkles className="h-4 w-4" /> {t("الترقية إلى Enterprise", "Upgrade to Enterprise")}
+          <Link href="/checkout?plan=max" className={btn + " mx-auto mt-6 w-fit"}>
+            <Sparkles className="h-4 w-4" /> {t("الترقية إلى Max", "Upgrade to Max")}
           </Link>
         </div>
       ) : cards === undefined ? (

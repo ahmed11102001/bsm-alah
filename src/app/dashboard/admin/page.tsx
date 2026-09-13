@@ -1005,9 +1005,9 @@ export default function AdminPage() {
                       onChange={e => setCouponForm(f => ({ ...f, forPlan: e.target.value as typeof couponForm.forPlan }))}
                       className={inp + " cursor-pointer"}>
                       <option value="">{adm.coupons.fields.forPlanAll}</option>
-                      <option value="starter">Starter</option>
+                      <option value="starter">Go</option>
                       <option value="pro">Pro</option>
-                      <option value="enterprise">Enterprise</option>
+                      <option value="enterprise">Max</option>
                     </select>
                   </div>
                 </div>
@@ -1040,7 +1040,7 @@ export default function AdminPage() {
                         <td className="py-3 px-4">
                           {c.forPlan ? (
                             <span className="text-xs px-2 py-1 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
-                              {{ starter: "Starter", pro: "Pro", enterprise: "Enterprise" }[c.forPlan] ?? c.forPlan}
+                              {{ starter: "Go", pro: "Pro", enterprise: "Max" }[c.forPlan] ?? c.forPlan}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400">{adm.coupons.fields.forPlanAll}</span>

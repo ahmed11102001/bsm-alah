@@ -95,7 +95,7 @@ export function UpgradeModal({
               </span>
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {locale === "ar" ? "هذه الميزة متوفرة للباقات المتقدمة" : "Available on Pro and Enterprise plans"}
+              {locale === "ar" ? "هذه الميزة متوفرة للباقات المتقدمة" : "Available on Pro and Max plans"}
             </p>
           </div>
         </div>

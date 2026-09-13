@@ -308,13 +308,13 @@ export default function Automation() {
 
   const aiLockMsg = tx(
     lang,
-    "تبويب الذكاء الاصطناعي متاح فقط في باقة Enterprise. قم بترقية الباقة.",
-    "AI tab is available only on Enterprise plan. Please upgrade."
+    "تبويب الذكاء الاصطناعي متاح فقط في باقة Max. قم بترقية الباقة.",
+    "AI tab is available only on Max plan. Please upgrade."
   );
   const proLockMsg = tx(
     lang,
-    "الميزة متاحة من باقة Professional فما فوق. قم بترقية الباقة.",
-    "This feature is available on Professional plan and above. Please upgrade."
+    "الميزة متاحة من باقة Pro فما فوق. قم بترقية الباقة.",
+    "This feature is available on Pro plan and above. Please upgrade."
   );
   const showLockToast = (msg: string) => {
     toast.dismiss("plan-lock");

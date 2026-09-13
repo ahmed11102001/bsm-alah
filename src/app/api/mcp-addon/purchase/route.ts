@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   if (!sub || sub.plan === "starter" || sub.plan === "free")
     return NextResponse.json(
-      { error: "هذه الميزة متاحة لمشتركي Professional وما فوقها" },
+      { error: "هذه الميزة متاحة لمشتركي Pro وما فوقها" },
       { status: 403 }
     );
 

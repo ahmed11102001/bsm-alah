@@ -596,7 +596,7 @@ export default function RetargetingCinematic() {
                         <div style={{ display: "flex", gap: "34px", justifyContent: "center", flexWrap: "wrap" }}>
                             <div>
                                 <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)" }}>{t("Plan required", "الباقة المطلوبة")}</div>
-                                <div style={{ fontSize: "16px", fontWeight: 800, color: "#f0f0f0", marginTop: "5px" }}>{t("Professional & up", "Professional فأعلى")}</div>
+                                <div style={{ fontSize: "16px", fontWeight: 800, color: "#f0f0f0", marginTop: "5px" }}>{t("Pro & up", "Pro فأعلى")}</div>
                             </div>
                             <div>
                                 <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)" }}>{t("Integration required", "التكامل المطلوب")}</div>

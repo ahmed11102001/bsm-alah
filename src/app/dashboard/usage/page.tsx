@@ -321,7 +321,7 @@ function WaniAiUpgradeCard({ locale }: { locale: string }) {
             <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{locale === "ar" ? " جنيه/شهر" : " EGP/mo"}</span>
           </div>
           <button
-            onClick={() => window.location.href = `/checkout?plan=enterprise`}
+            onClick={() => window.location.href = `/checkout?plan=max`}
             className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center gap-2 shadow-sm"
           >
             <Sparkles className="w-4 h-4" />

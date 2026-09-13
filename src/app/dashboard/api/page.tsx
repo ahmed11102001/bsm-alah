@@ -185,8 +185,8 @@ export default function API() {
 
   // ── Plan Lock Messages ──
   const lockMessage = locale === "ar"
-    ? "ربط المتاجر متاح من باقة Professional فما فوق. قم بترقية الباقة."
-    : "Store integrations are available on Professional plan and above. Please upgrade.";
+    ? "ربط المتاجر متاح من باقة Pro فما فوق. قم بترقية الباقة."
+    : "Store integrations are available on Pro plan and above. Please upgrade.";
   const claudeLockMessage = locale === "ar"
     ? "Claude AI غير مناسب لباقتك الحالية. قم بالترقية للاستفادة منه."
     : "Claude AI is available on Pro plan and above. Please upgrade.";

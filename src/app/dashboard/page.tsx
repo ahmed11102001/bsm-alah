@@ -500,7 +500,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.proHook}</p>
               <button
-                onClick={() => router.push("/checkout?plan=enterprise")}
+                onClick={() => router.push("/checkout?plan=max")}
                 className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
               >
                 <Sparkles className="w-4 h-4" />
@@ -527,7 +527,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   {ov.aiAgentCard.lowerCtaPro}
                 </button>
                 <button
-                  onClick={() => router.push("/checkout?plan=enterprise")}
+                  onClick={() => router.push("/checkout?plan=max")}
                   className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
                 >
                   <Sparkles className="w-4 h-4" />

@@ -77,7 +77,7 @@ export const DEMO_NOTIFICATIONS: DemoNotification[] = [
   {
     id: "n-9", type: "SUBSCRIPTION_SUCCESS", isRead: true, createdAt: minAgo(1400),
     title: { ar: "🎉 تم تفعيل الباقة بنجاح", en: "🎉 Subscription activated successfully" },
-    body: { ar: "تم تفعيل باقة (Enterprise) الخاصة بك بنجاح. استمتع بميزات وني!", en: "Your (Enterprise) plan has been activated successfully. Enjoy WANI features!" },
+    body: { ar: "تم تفعيل باقة (Max) الخاصة بك بنجاح. استمتع بميزات وني!", en: "Your (Max) plan has been activated successfully. Enjoy WANI features!" },
   },
   {
     id: "n-10", type: "NEW_MESSAGE", isRead: true, createdAt: minAgo(18),
@@ -97,12 +97,12 @@ export const DEMO_NOTIFICATIONS: DemoNotification[] = [
   {
     id: "n-13", type: "SUBSCRIPTION_EXPIRING", isRead: true, createdAt: minAgo(4000),
     title: { ar: "⚠️ باقتك ستنتهي قريباً", en: "⚠️ Subscription expiring soon" },
-    body: { ar: "باقتك (Enterprise) ستنتهي بعد 7 أيام. يرجى التجديد لتجنب توقف الخدمة.", en: "Your (Enterprise) plan expires in 7 days. Please renew to avoid service interruption." },
+    body: { ar: "باقتك (Max) ستنتهي بعد 7 أيام. يرجى التجديد لتجنب توقف الخدمة.", en: "Your (Max) plan expires in 7 days. Please renew to avoid service interruption." },
   },
   {
     id: "n-14", type: "PAYMENT_FAILED", isRead: true, createdAt: minAgo(5200),
     title: { ar: "❌ فشل عملية الدفع", en: "❌ Payment failed" },
-    body: { ar: "لم نتمكن من تجديد باقة (Enterprise). يرجى التحقق من طريقة الدفع الخاصة بك.", en: "We couldn't renew your (Enterprise) plan. Please check your payment method." },
+    body: { ar: "لم نتمكن من تجديد باقة (Max). يرجى التحقق من طريقة الدفع الخاصة بك.", en: "We couldn't renew your (Max) plan. Please check your payment method." },
   },
   {
     id: "n-15", type: "STORE_AUTO_FAILED", isRead: true, createdAt: minAgo(6100),
@@ -144,7 +144,7 @@ export const DEMO_DASHBOARD_DATA: DashboardData = {
   },
   plan: {
     plan: "enterprise",
-    planName: "Enterprise",
+    planName: "Max",
     status: "active",
     limits: {
       contacts: -1,

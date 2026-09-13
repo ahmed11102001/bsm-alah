@@ -422,7 +422,7 @@ export async function checkEnterpriseAccess(ownerId: string): Promise<GuardResul
   return {
     allowed: false,
     code: "FEATURE_LOCKED",
-    message: `ميزة WANI Partner متاحة في باقة Enterprise فقط. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
+    message: `ميزة WANI Partner متاحة في باقة Max فقط. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
     plan,
     requiredPlan: "enterprise",
   };
@@ -498,7 +498,7 @@ export async function checkMCPCommandsLimit(ownerId: string): Promise<GuardResul
   if (limit === 0) return {
     allowed: false,
     code: "FEATURE_LOCKED",
-    message: `ميزة Claude AI متاحة في باقة Professional وما فوقها. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
+    message: `ميزة Claude AI متاحة في باقة Pro وما فوقها. باقتك الحالية هي ${PLAN_NAMES[plan]}.`,
     plan,
     requiredPlan: "pro",
   };
@@ -524,7 +524,7 @@ export async function checkMCPCommandsLimit(ownerId: string): Promise<GuardResul
     return {
       allowed: false,
       code: "LIMIT_REACHED",
-      message: `استهلكت كل أوامر Claude المتاحة هذا الشهر (${limit} أمر). قم بالترقية للـ Enterprise للحصول على أوامر غير محدودة.`,
+      message: `استهلكت كل أوامر Claude المتاحة هذا الشهر (${limit} أمر). قم بالترقية لباقة Max للحصول على أوامر غير محدودة.`,
       plan,
       requiredPlan: "enterprise",
       limit,

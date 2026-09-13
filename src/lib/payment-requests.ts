@@ -97,7 +97,7 @@ async function resolvePurchase(
       select: { plan: true },
     });
     if (!sub || sub.plan !== "enterprise") {
-      throw new ManualPaymentError("باقات التوكن الإضافية متاحة لمشتركي Enterprise فقط", 403);
+      throw new ManualPaymentError("باقات التوكن الإضافية متاحة لمشتركي Max فقط", 403);
     }
     const pkg = TOKEN_PACKAGES.find((p) => p.id === input.packageId);
     if (!pkg) throw new ManualPaymentError("حزمة التوكن غير صالحة");
@@ -118,7 +118,7 @@ async function resolvePurchase(
     });
     if (!sub || sub.plan === "free" || sub.plan === "starter") {
       throw new ManualPaymentError(
-        "إضافة Claude غير المحدودة متاحة لمشتركي Professional وما فوقها",
+        "إضافة Claude غير المحدودة متاحة لمشتركي Pro وما فوقها",
         403
       );
     }

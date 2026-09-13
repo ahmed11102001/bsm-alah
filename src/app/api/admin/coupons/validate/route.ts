@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
   // ── plan restriction ──────────────────────────────────────────────────────
   if (coupon.forPlan && planSlug && coupon.forPlan !== planSlug) {
     const planNames: Record<string, string> = {
-      starter:    "Starter",
+      starter:    "Go",
       pro:        "Pro",
-      enterprise: "Enterprise",
+      enterprise: "Max",
     };
     return NextResponse.json({
       valid: false,

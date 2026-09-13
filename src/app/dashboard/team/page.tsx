@@ -702,8 +702,8 @@ export default function TeamPage() {
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {locale === "ar"
-              ? "متاحة من باقة Starter فما فوق"
-              : "Available on Starter plan and above"}
+              ? "متاحة من باقة Go فما فوق"
+              : "Available on Go plan and above"}
           </p>
         </div>
       )}
