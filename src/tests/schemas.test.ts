@@ -82,12 +82,13 @@ describe("Schemas Module", () => {
   });
 
   describe("OnboardingSchema", () => {
-    it("رقم صحيح (يبدأ بـ 2 و 12 رقم) يعدي", () => {
+    it("رقم صحيح (دولي أو مصري محلي) يعدي", () => {
       expect(OnboardingSchema.safeParse({ phone: "201012345678" }).success).toBe(true);
+      expect(OnboardingSchema.safeParse({ phone: "01012345678" }).success).toBe(true);
     });
 
-    it("رقم غلط (مش بيبدأ بـ 2 أو أقل من 12 رقم) يترفض", () => {
-      expect(OnboardingSchema.safeParse({ phone: "01012345678" }).success).toBe(false); // مفيش مفتاح 2
+    it("رقم غلط أو قصير يترفض", () => {
+      expect(OnboardingSchema.safeParse({ phone: "invalid-phone" }).success).toBe(false);
       expect(OnboardingSchema.safeParse({ phone: "2010" }).success).toBe(false); // قصير
     });
   });

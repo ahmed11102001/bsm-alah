@@ -232,8 +232,7 @@ describe("Referral Service Lifecycle & Security", () => {
     expect(prisma.referralReward.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          baseRate: new Prisma.Decimal(0.25),
-          appliedRate: new Prisma.Decimal(0.25),
+          rate: new Prisma.Decimal(0.25),
           baseAmount: new Prisma.Decimal(599),
           rewardAmount: new Prisma.Decimal(149.75),
         }),

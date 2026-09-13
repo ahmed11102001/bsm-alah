@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { processInteractiveButtonClick } from "@/lib/interactive-menu";
 
-describe("Integration: Interactive Menu Button Processing (Real DB)", () => {
+describe("Integration: Interactive Menu Button Processing (Real DB)", { timeout: 30000 }, () => {
   let userId: string;
   let contactId: string;
   let waAccountId: string;

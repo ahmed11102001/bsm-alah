@@ -35,7 +35,7 @@ vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 import { GET, POST, PATCH, DELETE } from "@/app/api/audiences/route";
 import { NextRequest } from "next/server";
 
-const SESSION = { user: { id: "user-1" } };
+const SESSION = { user: { id: "user-1", role: "OWNER" } };
 
 function makeGetReq(params: Record<string, string> = {}): NextRequest {
   const url = new URL("https://app.example.com/api/audiences");

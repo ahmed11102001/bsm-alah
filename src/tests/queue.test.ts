@@ -445,7 +445,7 @@ describe("enqueueCampaign", () => {
     );
   });
 
-  it("بعد الإضافة بيعمل campaign.update بـ status=running", async () => {
+  it("بعد الإضافة بيعمل campaign.update بـ status=queued", async () => {
     await enqueueCampaign({
       campaignId: "camp_1", userId: "user_1",
       numbers: ["201011111111"],
@@ -455,7 +455,7 @@ describe("enqueueCampaign", () => {
 
     expect(mockPrisma.campaign.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: CampaignStatus.running }),
+        data: expect.objectContaining({ status: CampaignStatus.queued }),
       })
     );
   });

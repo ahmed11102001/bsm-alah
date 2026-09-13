@@ -60,8 +60,9 @@ export function getReferralRate({
   }
 
   const baseRate = COMMISSION_BASE_RATES[cleanPlan as Exclude<PlanTier, "free">];
-  const bonusRate = Math.min(count * REFERRAL_BONUS_STEP, MAX_COMMISSION_RATE - baseRate);
-  const finalRate = Math.min(baseRate + bonusRate, MAX_COMMISSION_RATE);
+  const rawBonus = Math.min(count * REFERRAL_BONUS_STEP, MAX_COMMISSION_RATE - baseRate);
+  const bonusRate = Math.round(rawBonus * 10000) / 10000;
+  const finalRate = Math.round(Math.min(baseRate + bonusRate, MAX_COMMISSION_RATE) * 10000) / 10000;
 
   return {
     eligible: true,

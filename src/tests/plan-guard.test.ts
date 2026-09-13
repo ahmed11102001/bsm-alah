@@ -128,14 +128,14 @@ describe("checkContactsLimit", () => {
     expect(result.allowed).toBe(true);
   });
 
-  it("starter plan — 2000 contacts limit", async () => {
+  it("starter plan — 2500 contacts limit", async () => {
     mockPrisma.subscription.findUnique.mockResolvedValue(makeSub("starter"));
-    mockPrisma.contact.count.mockResolvedValue(1999);
+    mockPrisma.contact.count.mockResolvedValue(2499);
 
     const okResult = await checkContactsLimit("user_1", 1);
     expect(okResult.allowed).toBe(true);
 
-    mockPrisma.contact.count.mockResolvedValue(2000);
+    mockPrisma.contact.count.mockResolvedValue(2500);
     const failResult = await checkContactsLimit("user_1", 1);
     expect(failResult.allowed).toBe(false);
   });

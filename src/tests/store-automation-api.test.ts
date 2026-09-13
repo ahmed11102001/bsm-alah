@@ -6,7 +6,9 @@ import { UserRole, PlanTier } from "@/types/enums";
 
 // Mock the external WhatsApp API call so we don't actually send real messages
 vi.mock("@/lib/whatsapp-api", () => ({
-  sendWhatsAppMessage: vi.fn().mockResolvedValue({ ok: true, whatsappMsgId: "msg-123" }),
+  sendWhatsAppMessage: vi.fn().mockImplementation(() =>
+    Promise.resolve({ ok: true, whatsappMsgId: `msg-api-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })
+  ),
 }));
 
 describe("Integration: Store Automation Idempotency (Real DB)", () => {
@@ -71,7 +73,7 @@ describe("Integration: Store Automation Idempotency (Real DB)", () => {
     const store = await prisma.shopifyStore.create({
       data: {
         userId: testUserId,
-        shop: "test-store.myshopify.com",
+        shop: `test-store-api-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.myshopify.com`,
         storeName: "Test Store",
         accessToken: "test-token",
       },
@@ -150,5 +152,5 @@ describe("Integration: Store Automation Idempotency (Real DB)", () => {
     // المفترض واحدة تنجح والتانية ترجع already_shipped_or_in_progress
     const successes = [res1.sent, res2.sent].filter(Boolean).length;
     expect(successes).toBe(1);
-  });
+  }, 30000);
 });

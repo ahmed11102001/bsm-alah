@@ -31,6 +31,7 @@ const mockCrypto = vi.hoisted(() => ({
 vi.mock("@/lib/crypto", () => mockCrypto);
 
 import { GET, POST, DELETE } from "@/app/api/templates/route";
+import { createTemplateForUser } from "@/lib/templates-actions";
 
 function makeReq(body?: object, headers: Record<string, string> = {}): Request {
   return new Request("https://app.example.com/api/templates", {
@@ -186,11 +187,13 @@ describe("POST /api/templates", () => {
     );
   });
 
-  it("MCP internal call (بدون جلسة next-auth) بيتعرف من الهيدرز", async () => {
-    const res = await POST(makeReq(
-      { name: "t", body: "hi", category: "MARKETING", draft: true },
-      { "x-mcp-internal": "true", "x-mcp-user-id": "mcp-owner-1" },
-    ));
+  it("createTemplateForUser (مباشرة لـ MCP بدون جلسة HTTP) بيتعرف على المالك وينشئ القالب", async () => {
+    const res = await createTemplateForUser("mcp-owner-1", {
+      name: "t",
+      body: "hi",
+      category: "MARKETING",
+      draft: true,
+    });
 
     expect(res.status).toBe(200);
     expect(mockPrisma.template.create).toHaveBeenCalledWith(

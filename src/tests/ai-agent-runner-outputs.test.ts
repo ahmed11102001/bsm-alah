@@ -61,6 +61,11 @@ vi.mock("@/lib/elevenlabs", () => ({
   uploadAudioToCloudinary: (...args: any[]) => mockUploadAudioToCloudinary(...args),
 }));
 
+const mockRunConvaiVoiceReply = vi.fn();
+vi.mock("@/lib/elevenlabs-convai-runner", () => ({
+  runConvaiVoiceReply: (...args: any[]) => mockRunConvaiVoiceReply(...args),
+}));
+
 // Global fetch mock for Meta Graph API
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -113,6 +118,12 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
       audioBuffer: Buffer.from("fake-audio"),
     });
 
+    mockRunConvaiVoiceReply.mockResolvedValue({
+      ok: true,
+      audioBuffer: Buffer.from("fake-audio"),
+      textReply: "سعر المنتج 500 جنيه.",
+    });
+
     mockUploadAudioToCloudinary.mockResolvedValue("https://res.cloudinary.com/demo/audio.mp3");
   });
 
@@ -134,7 +145,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
 
     expect(result.sent).toBe(true);
     expect(mockGetAIReply).toHaveBeenCalledTimes(1);
-    expect(mockGenerateVoiceReply).not.toHaveBeenCalled();
+    expect(mockRunConvaiVoiceReply).not.toHaveBeenCalled();
 
     // Verify WhatsApp fetch was called with type=text
     const textCall = mockFetch.mock.calls.find((c) => {
@@ -154,6 +165,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
       voiceRepliesEnabled: true,
       elevenLabsEnabled: true,
       elevenLabsApiKey: "xi-api-key",
+      elevenLabsAgentId: "agent_abc",
       elevenLabsVoiceId: "voice_abc",
     });
 
@@ -164,14 +176,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
     });
 
     expect(result.sent).toBe(true);
-    expect(mockGetAIReply).toHaveBeenCalledTimes(1);
-    expect(mockGenerateVoiceReply).toHaveBeenCalledTimes(1);
-    expect(mockGenerateVoiceReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        textReply: "سعر المنتج 500 جنيه.",
-        voiceId: "voice_abc",
-      })
-    );
+    expect(mockRunConvaiVoiceReply).toHaveBeenCalledTimes(1);
 
     // Verify NO type=text was sent
     const textCall = mockFetch.mock.calls.find((c) => {
@@ -196,6 +201,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
       voiceRepliesEnabled: true,
       elevenLabsEnabled: true,
       elevenLabsApiKey: "xi-api-key",
+      elevenLabsAgentId: "agent_abc",
       elevenLabsVoiceId: "voice_abc",
     });
 
@@ -207,12 +213,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
 
     expect(result.sent).toBe(true);
     expect(mockGetAIReply).toHaveBeenCalledTimes(1);
-    expect(mockGenerateVoiceReply).toHaveBeenCalledTimes(1);
-    expect(mockGenerateVoiceReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        textReply: "سعر المنتج 500 جنيه.",
-      })
-    );
+    expect(mockRunConvaiVoiceReply).toHaveBeenCalledTimes(1);
 
     // Both text and audio sent
     const textCall = mockFetch.mock.calls.find((c) => {
@@ -238,6 +239,10 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
     });
 
     mockGenerateVoiceReply.mockResolvedValue({
+      ok: false,
+      error: "ElevenLabs 500 error",
+    });
+    mockRunConvaiVoiceReply.mockResolvedValue({
       ok: false,
       error: "ElevenLabs 500 error",
     });
@@ -278,6 +283,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
 
     expect(result.sent).toBe(true);
     expect(mockGenerateVoiceReply).not.toHaveBeenCalled();
+    expect(mockRunConvaiVoiceReply).not.toHaveBeenCalled();
     const audioCall = mockFetch.mock.calls.find((c) => {
       const body = JSON.parse(c[1]?.body || "{}");
       return body.type === "audio";
@@ -303,6 +309,7 @@ describe("AI Agent Runner Output Channels (Text & Voice)", () => {
 
     expect(result.sent).toBe(true);
     expect(mockGenerateVoiceReply).not.toHaveBeenCalled();
+    expect(mockRunConvaiVoiceReply).not.toHaveBeenCalled();
     const audioCall = mockFetch.mock.calls.find((c) => {
       const body = JSON.parse(c[1]?.body || "{}");
       return body.type === "audio";

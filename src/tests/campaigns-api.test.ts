@@ -9,6 +9,19 @@ const mockGetServerSession = vi.hoisted(() => vi.fn());
 vi.mock("next-auth", () => ({ getServerSession: mockGetServerSession }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 
+// ─── mock permissions — الراوت بقى يستخدم requirePermission ──────────────────
+vi.mock("@/lib/permissions", () => ({
+  requirePermission: (session: any, _perm: string) => {
+    if (!session?.user?.id) {
+      const { NextResponse } = require("next/server");
+      return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    }
+    return null; // allow
+  },
+  hasPermission: () => true,
+  PERMISSIONS: {},
+}));
+
 const mockPrisma = vi.hoisted(() => ({
   campaign: {
     findMany: vi.fn(), count: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn(),
@@ -47,10 +60,18 @@ vi.mock("@/inngest/client", () => mockInngest);
 
 vi.mock("@/lib/crypto", () => ({ decryptToken: vi.fn((v: string) => v) }));
 
+// ─── mock campaign-queue — الراوت و campaigns-actions بيستخدموه ──────────────
+vi.mock("@/lib/campaign-queue", () => ({
+  getCampaignQueuePressure: vi.fn().mockResolvedValue({
+    globalActive: 0, userActive: 0, globalLimit: 10, userLimit: 3,
+    queuedWaiting: 0, startsImmediately: true,
+  }),
+}));
+
 import { GET, POST, DELETE } from "@/app/api/campaigns/route";
 import { NextRequest } from "next/server";
 
-const SESSION = { user: { id: "user-1" } };
+const SESSION = { user: { id: "user-1", role: "OWNER" } };
 
 function makeGetReq(params: Record<string, string> = {}): NextRequest {
   const url = new URL("https://app.example.com/api/campaigns");
@@ -267,7 +288,10 @@ describe("POST /api/campaigns — إنشاء حملة (handleCreate)", () => {
   });
 });
 
-describe("POST /api/campaigns — MCP internal bypass", () => {
+describe("POST /api/campaigns — MCP internal bypass (legacy flags ignored)", () => {
+  // ─── ملاحظة: الراوت الجديد شال منطق _mcpInternal بالكامل ونقله لـ campaigns-actions
+  // دلوقتي POST دايمًا بيعدي من session-based auth عن طريق requirePermission.
+  // _mcpInternal flags في الـ body بتتاهل — الراوت مبيقرأهاش خالص.
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetServerSession.mockReset();
@@ -279,25 +303,25 @@ describe("POST /api/campaigns — MCP internal bypass", () => {
     mockEnqueueCampaign.mockResolvedValue({ queued: 1 });
   });
 
-  it("mcpOwnerId مش موجود في الداتابيز → 401 من غير next-auth خالص", async () => {
-    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+  it("من غير جلسة next-auth → 401 حتى لو فيه _mcpInternal", async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
     const res = await POST(makeReq("POST", {
       _mcpInternal: true, _mcpOwnerId: "ghost-user",
       name: "x", templateName: "wani_promo", numbers: ["201012345678"],
     }));
     expect(res.status).toBe(401);
-    expect(mockGetServerSession).not.toHaveBeenCalled();
   });
 
-  it("mcpOwnerId صحيح → بينفذ handleCreate من غير جلسة next-auth", async () => {
-    mockPrisma.user.findUnique.mockResolvedValueOnce({ id: "mcp-owner-1" });
+  it("جلسة صحيحة + _mcpInternal → بيشتغل عادي بالـ session userId مش _mcpOwnerId", async () => {
+    mockGetServerSession.mockResolvedValueOnce(SESSION);
     const res = await POST(makeReq("POST", {
       _mcpInternal: true, _mcpOwnerId: "mcp-owner-1",
       name: "x", templateName: "wani_promo", numbers: ["201012345678"],
     }));
     expect(res.status).toBe(200);
+    // userId من الـ session مش من _mcpOwnerId
     expect(mockPrisma.campaign.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ userId: "mcp-owner-1" }) })
+      expect.objectContaining({ data: expect.objectContaining({ userId: "user-1" }) })
     );
   });
 });

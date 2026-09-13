@@ -31,7 +31,7 @@ function makeReq(params: Record<string, string> = {}): NextRequest {
   return new NextRequest(url);
 }
 
-const SESSION = { user: { id: "user-1" } };
+const SESSION = { user: { id: "user-1", role: "OWNER" } };
 
 // ── قيم افتراضية سليمة لكل نداءات prisma عشان مسار الـ happy path ما يتكسرش ──
 function setupHappyDefaults() {
@@ -55,6 +55,7 @@ describe("GET /api/reports/store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetServerSession.mockReset();
+    mockGetServerSession.mockResolvedValue(SESSION);
     setupHappyDefaults();
   });
 
@@ -72,7 +73,7 @@ describe("GET /api/reports/store", () => {
   });
 
   it("حساب فرعي (parentId) → بيستخدم الـ parentId في كل الاستعلامات", async () => {
-    mockGetServerSession.mockResolvedValueOnce({ user: { id: "sub-1", parentId: "owner-9" } });
+    mockGetServerSession.mockResolvedValueOnce({ user: { id: "sub-1", parentId: "owner-9", role: "OWNER" } });
     await GET(makeReq());
 
     expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
