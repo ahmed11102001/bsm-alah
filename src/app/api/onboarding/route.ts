@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   await prisma.user.updateMany({
     where: { id: session.user.id },
-    data:  { phone: cleaned, onboardingCompleted: true },
+    data:  { phone: cleaned, onboardingCompleted: true, welcomeEmailSentAt: new Date() },
   });
 
   // ── إرسال إيميل الترحيب بالعميل بعد إدخال رقمه بنجاح ودخوله الداشبورد ──────

@@ -262,7 +262,13 @@ export async function proxy(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     if (!token && isDashboard) {
-      return applyHeaders(NextResponse.redirect(new URL(`/${currentLocale}`, req.url)), nonce, req, currentLocale);
+      // زي /checkout بالظبط: بدل ما نسيب الزائر واقف على اللاندينج من غير أي
+      // تنبيه (وده اللي بيخلي الـPWA المثبت حاسس إنه "فتح الموقع" لما الجلسة
+      // تنتهي)، نفتحله مودال تسجيل الدخول فورًا ونرجّعه لـ/dashboard بعد النجاح.
+      const url = new URL(`/${currentLocale}`, req.url);
+      url.searchParams.set("openLogin", "1");
+      url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
+      return applyHeaders(NextResponse.redirect(url), nonce, req, currentLocale);
     }
 
     if (!token && isCheckout) {

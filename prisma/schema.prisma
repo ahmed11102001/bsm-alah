@@ -16,6 +16,7 @@ model User {
   password                 String?
   image                    String?
   emailVerified            DateTime?
+  welcomeEmailSentAt       DateTime?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   apiKey                   String?                   @unique

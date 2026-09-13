@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MessageDirection, MessageStatus, CampaignStatus } from "@/types/enums";
 import { getPlanStatus } from "@/lib/plan-guard";
+import { sendWelcomeEmail } from "@/lib/email";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 function resolveOwnerId(session: any): string {
   if (session.user.role === "OWNER") return session.user.id as string;
@@ -53,7 +55,18 @@ export async function GET(_req: NextRequest) {
       getPlanStatus(ownerId),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, phone: true, image: true, role: true, password: true, onboardingCompleted: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          image: true,
+          role: true,
+          password: true,
+          onboardingCompleted: true,
+          emailVerified: true,
+          welcomeEmailSentAt: true,
+        },
       }),
       prisma.whatsAppAccount.findUnique({
         where: { userId: ownerId },
@@ -63,6 +76,23 @@ export async function GET(_req: NextRequest) {
     ]);
 
     if (!userRecord) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+
+    // ── إرسال إيميل الترحيب بالعميل اليدوي بعد تأكيد إيميله ودخوله الداشبورد لأول مرة ──
+    if (userRecord.emailVerified && !userRecord.welcomeEmailSentAt && userRecord.email && userRecord.role === "OWNER") {
+      const updated = await prisma.user.updateMany({
+        where: { id: userRecord.id, welcomeEmailSentAt: null },
+        data: { welcomeEmailSentAt: new Date() },
+      });
+      if (updated.count > 0) {
+        const locale = getRequestLocale(_req);
+        sendWelcomeEmail(userRecord.email, userRecord.name, locale).catch((err) => {
+          console.error(
+            "[dashboard] Welcome email delivery failed:",
+            err instanceof Error ? err.message : err
+          );
+        });
+      }
+    }
 
     const recentCampaignIds = recentCampaigns.map(c => c.id);
     const [recentDeliveredCounts, recentReadCounts] = await Promise.all([

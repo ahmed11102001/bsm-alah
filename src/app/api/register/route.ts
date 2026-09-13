@@ -7,7 +7,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
 import { RegisterSchema, parseInput } from "@/lib/schemas";
 import crypto from "crypto";
-import { sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
+import { sendVerificationEmail } from "@/lib/email";
 import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function POST(req: Request) {
@@ -104,16 +104,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Welcome email is best-effort: signup and verification must not fail because
-    // the optional welcome message could not be delivered.
-    try {
-      await sendWelcomeEmail(user.email, user.name, locale);
-    } catch (welcomeError) {
-      console.error(
-        "[register] welcome email delivery failed",
-        welcomeError instanceof Error ? welcomeError.message : welcomeError
-      );
-    }
 
     // ── ربط الإحالة (Referral Attribution) إذا كان المستخدم قادمًا من رابط إحالة ──
     // ── + نقل Ads click IDs (Meta fbc / OpenAI oppref) للـ Conversions API ──
