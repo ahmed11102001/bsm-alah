@@ -20,21 +20,39 @@ export default function AppearanceSettings() {
   const { locale, dir } = useLanguage();
   const { theme: activeTheme, setTheme, currentThemeConfig, isDark } = useDashboardTheme();
   const [open, setOpen] = useState(false);
+  // اختيار محلي مؤقت — منفصل تمامًا عن الثيم المطبّق فعليًا على الداشبورد.
+  // بيتحرك فورًا مع كل ضغطة (زي راديو بسيط)، من غير أي استدعاء شبكة أو
+  // context خارجي، فمفيه أي تأخير أو تضارب. التطبيق الفعلي (setTheme +
+  // الرسالة) بيحصل بس لما المستخدم يدوس "تأكيد".
+  const [pendingTheme, setPendingTheme] = useState<DashboardThemeDefinition["id"]>(activeTheme);
+  const [applying, setApplying] = useState(false);
 
   const isRtl = dir === "rtl" || locale === "ar";
   const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
+  const hasPendingChange = pendingTheme !== activeTheme;
 
-  const handleSelectTheme = (themeId: DashboardThemeDefinition["id"]) => {
-    if (themeId === activeTheme) return;
-    // Instant switch without animation delay or loading spinners
-    setTheme(themeId);
-    const targetTheme = DASHBOARD_THEMES.find((t) => t.id === themeId);
-    const themeName = targetTheme ? (targetTheme.name[locale as "ar" | "en"] ?? targetTheme.name.ar) : themeId;
-    toast.success(
-      locale === "ar"
-        ? `تم تفعيل مظهر "${themeName}" بنجاح ✨`
-        : `Switched to "${themeName}" theme ✨`
-    );
+  const handleOpenChange = (next: boolean) => {
+    // كل ما نفتح المودال، نبدأ من الثيم الحقيقي المطبّق — مش من أي اختيار
+    // سابق اتسكر المودال من غير تأكيد.
+    if (next) setPendingTheme(activeTheme);
+    setOpen(next);
+  };
+
+  const handleConfirm = async () => {
+    if (!hasPendingChange || applying) return;
+    setApplying(true);
+    try {
+      await setTheme(pendingTheme);
+      const targetTheme = DASHBOARD_THEMES.find((t) => t.id === pendingTheme);
+      const themeName = targetTheme ? (targetTheme.name[locale as "ar" | "en"] ?? targetTheme.name.ar) : pendingTheme;
+      toast.success(
+        locale === "ar"
+          ? `تم تفعيل مظهر "${themeName}" بنجاح ✨`
+          : `Switched to "${themeName}" theme ✨`
+      );
+    } finally {
+      setApplying(false);
+    }
   };
 
   const activeMode = isDark ? "dark" : "light";
@@ -82,7 +100,7 @@ export default function AppearanceSettings() {
             ))}
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -131,7 +149,7 @@ export default function AppearanceSettings() {
               {/* Theme selection grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3" role="radiogroup" aria-label="Dashboard themes">
                 {DASHBOARD_THEMES.map((themeDef) => {
-                  const isSelected = activeTheme === themeDef.id;
+                  const isSelected = pendingTheme === themeDef.id;
                   const palette = themeDef.colors[activeMode];
                   const name = themeDef.name[locale as "ar" | "en"] ?? themeDef.name.ar;
                   const desc = themeDef.description[locale as "ar" | "en"] ?? themeDef.description.ar;
@@ -143,18 +161,17 @@ export default function AppearanceSettings() {
                       role="radio"
                       aria-checked={isSelected}
                       tabIndex={0}
-                      onClick={() => handleSelectTheme(themeDef.id)}
+                      onClick={() => setPendingTheme(themeDef.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleSelectTheme(themeDef.id);
+                          setPendingTheme(themeDef.id);
                         }
                       }}
-                      className={`group relative rounded-2xl border p-3 transition-all cursor-pointer select-none text-start flex flex-col justify-between ${
-                        isSelected
+                      className={`group relative rounded-2xl border p-3 transition-all cursor-pointer select-none text-start flex flex-col justify-between ${isSelected
                           ? "border-primary bg-primary/5 ring-2 ring-primary/40 shadow-sm"
                           : "border-gray-200/80 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-primary/40 hover:bg-gray-100/60 dark:hover:bg-gray-800/80"
-                      }`}
+                        }`}
                     >
                       {/* Top row: Name + Badge / Check */}
                       <div className="flex items-center justify-between gap-1.5 mb-2">
@@ -171,7 +188,7 @@ export default function AppearanceSettings() {
                         {isSelected ? (
                           <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shadow-xs">
                             <Check className="w-3 h-3 stroke-[3]" />
-                            {locale === "ar" ? "المحدد" : "Active"}
+                            {locale === "ar" ? "المحدد" : "Selected"}
                           </span>
                         ) : (
                           <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
@@ -245,16 +262,41 @@ export default function AppearanceSettings() {
               </div>
 
               {/* Modal footer */}
-              <div className="pt-2 flex justify-end">
-                <DialogClose asChild>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-5 text-xs font-semibold"
-                  >
-                    {locale === "ar" ? "إغلاق" : "Done"}
-                  </Button>
-                </DialogClose>
+              <div className="pt-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  {hasPendingChange
+                    ? (locale === "ar" ? "التغيير لسه مطبقش" : "Not applied yet")
+                    : ""}
+                </span>
+                <div className="flex items-center gap-2">
+                  <DialogClose asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl px-4 text-xs font-semibold border-gray-200 dark:border-gray-700"
+                    >
+                      {locale === "ar" ? "إغلاق" : "Close"}
+                    </Button>
+                  </DialogClose>
+                  {hasPendingChange && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleConfirm}
+                      disabled={applying}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-5 text-xs font-semibold gap-1.5"
+                    >
+                      {applying ? (
+                        locale === "ar" ? "جارٍ التطبيق..." : "Applying..."
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          {locale === "ar" ? "تأكيد التغيير" : "Confirm change"}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </DialogContent>
           </Dialog>
