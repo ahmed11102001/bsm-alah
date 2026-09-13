@@ -1,5 +1,5 @@
 ﻿// src/app/dashboard/store/_components/CustomerCard.tsx
-// â”€â”€â”€ ÙƒØ§Ø±Ø¯ Ø¹Ø±Ø¶ Ø¨ÙŠØ§Ù†Ø§Øª Ø¹Ù…ÙŠÙ„ ÙˆØ§Ø­Ø¯ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── كارد عرض بيانات عميل واحد ──────────────────────────────────────────────
 
 import { useState } from "react";
 import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
@@ -19,7 +19,7 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
 
     const statusKey = customer.lastOrder?.status?.toLowerCase() ?? "";
     const statusClass = STATUS_BADGE[statusKey] ?? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-    const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "Ø¹" : "C");
+    const initial = customer.name.trim().charAt(0).toUpperCase() || (lang === "ar" ? "ع" : "C");
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -48,9 +48,9 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
                         {customer.lastOrder.status ?? "pending"}
                     </span>
                     <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {customer.lastOrder.orderNumber ? `#${customer.lastOrder.orderNumber}` : "â€”"}
+                        {customer.lastOrder.orderNumber ? `#${customer.lastOrder.orderNumber}` : "—"}
                         {customer.lastOrder.total != null
-                            ? ` Â· ${formatMoney(customer.lastOrder.total, lang, customer.currency)}`
+                            ? ` · ${formatMoney(customer.lastOrder.total, lang, customer.currency)}`
                             : ""}
                     </span>
                 </div>
@@ -83,7 +83,7 @@ export function CustomerCard({ customer, onChat, lang }: CustomerCardProps) {
                         <span>
                             {customer.lastOrder
                                 ? `${tr("lastSync", lang)}: ${formatDate(customer.lastOrder.orderedAt, lang)}`
-                                : (lang === "ar" ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª" : "No orders")}
+                                : (lang === "ar" ? "لا توجد طلبات" : "No orders")}
                         </span>
                     </div>
                 </div>

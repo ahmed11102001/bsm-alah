@@ -44,7 +44,7 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                             <MessageSquare className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <p className="text-white text-xs font-semibold leading-none">Ù…ØªØ¬Ø±Ùƒ</p>
+                            <p className="text-white text-xs font-semibold leading-none">متجرك</p>
                             <p className="text-green-200 text-[10px]">Business Account</p>
                         </div>
                     </div>
@@ -97,7 +97,7 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                                             <button key={i} className="w-full text-xs text-[#0d9488] dark:text-primary py-2 flex items-center justify-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                                 {btn.type === "url" && <ExternalLink className="w-3 h-3" />}
                                                 {btn.type === "phone" && <Phone className="w-3 h-3" />}
-                                                {btn.text || "Ø²Ø±"}
+                                                {btn.text || "زر"}
                                             </button>
                                         ))}
                                     </div>
@@ -106,7 +106,7 @@ export function WhatsAppPreview({ form, lang }: { form: FormState; lang: Lang })
                         ) : (
                             <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-600">
                                 <Smartphone className="w-10 h-10 mb-2 opacity-40" />
-                                <p className="text-xs text-center opacity-60">Ø§Ø¨Ø¯Ø£ Ø¨ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø©<br />Ù„ØªØ±Ù‰ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©</p>
+                                <p className="text-xs text-center opacity-60">ابدأ بكتابة الرسالة<br />لترى المعاينة</p>
                             </div>
                         )}
                     </div>

@@ -30,7 +30,7 @@ export function MiniWhatsAppPreview({ body, footer, buttons, exampleVars }: {
                 <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                     <MessageSquare className="w-3 h-3 text-white" />
                 </div>
-                <p className="text-white text-[11px] font-semibold">Ù…ØªØ¬Ø±Ùƒ Â· Business Account</p>
+                <p className="text-white text-[11px] font-semibold">متجرك · Business Account</p>
             </div>
             <div className="p-3">
                 <div className="bg-white dark:bg-[#202c33] rounded-lg rounded-tl-none shadow-sm max-w-[85%] overflow-hidden">
@@ -57,7 +57,7 @@ export function MiniWhatsAppPreview({ body, footer, buttons, exampleVars }: {
                                 <div key={i} className="text-[10px] text-[#0d9488] dark:text-primary py-1.5 flex items-center justify-center gap-1">
                                     {btn.type === "url" && <ExternalLink className="w-2.5 h-2.5" />}
                                     {btn.type === "phone" && <Phone className="w-2.5 h-2.5" />}
-                                    {btn.text || "Ø²Ø±"}
+                                    {btn.text || "زر"}
                                 </div>
                             ))}
                         </div>

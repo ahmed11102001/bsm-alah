@@ -87,11 +87,11 @@ function timeAgo(dateStr: string, locale: "ar" | "en") {
     return `${Math.floor(hours / 24)}d ago`;
   }
 
-  if (minutes < 1) return "Ø§Ù„Ø¢Ù†";
-  if (minutes < 60) return `Ù…Ù†Ø° ${minutes} Ø¯Ù‚ÙŠÙ‚Ø©`;
+  if (minutes < 1) return "الآن";
+  if (minutes < 60) return `منذ ${minutes} دقيقة`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Ù…Ù†Ø° ${hours} Ø³Ø§Ø¹Ø©`;
-  return `Ù…Ù†Ø° ${Math.floor(hours / 24)} ÙŠÙˆÙ…`;
+  if (hours < 24) return `منذ ${hours} ساعة`;
+  return `منذ ${Math.floor(hours / 24)} يوم`;
 }
 
 function MemberCard({
@@ -126,7 +126,7 @@ function MemberCard({
     ? new Date(member.createdAt).toLocaleDateString(
       locale === "ar" ? "ar-EG" : "en-US"
     )
-    : "â€”";
+    : "—";
 
   return (
     <div className="group bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 flex flex-col gap-3.5 hover:shadow-md transition-all">
@@ -139,7 +139,7 @@ function MemberCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
-            <span>{member.name || "â€”"}</span>
+            <span>{member.name || "—"}</span>
             {isSelf && (
               <span className="text-[10px] text-gray-400 font-normal">
                 {tm.self}
@@ -176,12 +176,12 @@ function MemberCard({
         {isAdmin ? (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2 py-1 rounded-md">
             <MessageSquare className="w-3 h-3" />
-            {locale === "ar" ? "ÙƒÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª" : "All conversations"}
+            {locale === "ar" ? "كل المحادثات" : "All conversations"}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            {tm.activeStatus || "Ù†Ø´Ø·"}
+            {tm.activeStatus || "نشط"}
           </span>
         )}
       </div>
@@ -216,16 +216,16 @@ function MemberCard({
               <p className="text-[10px] text-gray-500 text-center">
                 {isAdmin
                   ? locale === "ar"
-                    ? "Ø§Ù„ÙˆØµÙˆÙ„"
+                    ? "الوصول"
                     : "Access"
                   : locale === "ar"
-                    ? "Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù…Ø³Ù…ÙˆØ­ Ù„Ùƒ Ø¨Ø§Ù„Ø±Ø¯ Ø¹Ù„ÙŠÙ‡Ø§"
+                    ? "محادثات مسموح لك بالرد عليها"
                     : "Reply-eligible Chats"}
               </p>
               <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
                 {isAdmin
                   ? locale === "ar"
-                    ? "Ø§Ù„ÙƒÙ„"
+                    ? "الكل"
                     : "All"
                   : member.conversationCount}
               </p>
@@ -233,7 +233,7 @@ function MemberCard({
 
             <div className="flex flex-col items-center gap-1 p-2 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
               <p className="text-[10px] text-gray-500 text-center">
-                {locale === "ar" ? "Ø±Ø¯ÙˆØ¯ÙŠ" : "My Replies"}
+                {locale === "ar" ? "ردودي" : "My Replies"}
               </p>
               <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
                 {member.repliesCount}
@@ -242,7 +242,7 @@ function MemberCard({
 
             <div className="flex flex-col items-center gap-1 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
               <p className="text-[10px] text-gray-500 text-center">
-                {locale === "ar" ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…" : "Joined"}
+                {locale === "ar" ? "تاريخ الانضمام" : "Joined"}
               </p>
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 text-center">
                 {formattedDate}
@@ -283,7 +283,7 @@ function InvitationCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-            {invitation.name || "â€”"}
+            {invitation.name || "—"}
           </p>
           <p className="text-[11px] text-gray-400 truncate" dir="ltr">
             {invitation.email}
@@ -368,10 +368,10 @@ export default function TeamPage() {
           dir="rtl"
         >
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø£Ø¹Ø¶Ø§Ø¡ ÙÙŠ Ø¨Ø§Ù‚ØªÙƒ
+            وصلت الحد الأقصى للأعضاء في باقتك
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Ø±Ù‚Ù‘ÙŠ Ø§Ù„Ø¨Ø§Ù‚Ø© Ù„Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø²ÙŠØ¯ Ù…Ù† Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„ÙØ±ÙŠÙ‚.
+            رقّي الباقة لإضافة المزيد من أعضاء الفريق.
           </p>
           <button
             onClick={() => {
@@ -380,7 +380,7 @@ export default function TeamPage() {
             }}
             className="mt-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg"
           >
-            ØªØ±Ù‚ÙŠØ© Ø§Ù„Ø¨Ø§Ù‚Ø© â†
+            ترقية الباقة ←
           </button>
         </div>
       ),
@@ -415,7 +415,7 @@ export default function TeamPage() {
     fetchTeam();
   }, []);
 
-  // ØªØ­Ø¯ÙŠØ« Ø¯ÙˆØ±ÙŠ ØµØ§Ù…Øª ÙƒÙ„ 20 Ø«Ø§Ù†ÙŠØ© Ø¹Ø´Ø§Ù† Ø­Ø§Ù„Ø© Ø§Ù„Ø¯Ø¹ÙˆØ§Øª ÙˆØ§Ù„Ø£Ø¹Ø¶Ø§Ø¡ ØªØªØ­Ø¯Ø« Ù„ÙˆØ­Ø¯Ù‡Ø§
+  // تحديث دوري صامت كل 20 ثانية عشان حالة الدعوات والأعضاء تتحدث لوحدها
   useEffect(() => {
     const id = setInterval(() => fetchTeam(true), 20_000);
     return () => clearInterval(id);
@@ -457,7 +457,7 @@ export default function TeamPage() {
           <p className="text-xs opacity-90">
             {tm.addForm.addSuccessDesc
               ? tm.addForm.addSuccessDesc(email)
-              : `Ø£Ø±Ø³Ù„Ù†Ø§ ÙƒÙˆØ¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… Ø¥Ù„Ù‰ Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ ${email}`}
+              : `أرسلنا كود الانضمام إلى البريد الإلكتروني ${email}`}
           </p>
         </div>
       );
@@ -603,13 +603,13 @@ export default function TeamPage() {
               className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors shadow-sm"
             >
               <MessageSquare className="w-4 h-4" />
-              {locale === "ar" ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ÙˆØªØ¹ÙŠÙŠÙ†Ù‡Ø§" : "Manage & Assign Conversations"}
+              {locale === "ar" ? "إدارة المحادثات وتعيينها" : "Manage & Assign Conversations"}
             </button>
 
             {currentRole === "FULL_ACCESS" && (
               <span className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary/10 dark:bg-primary/15 text-primary text-xs font-semibold border border-primary/20 dark:border-primary/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                {locale === "ar" ? "ÙƒÙ„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª Ù…ÙØªÙˆØ­Ø©" : "All conversations are open"}
+                {locale === "ar" ? "كل المحادثات مفتوحة" : "All conversations are open"}
               </span>
             )}
           </div>
@@ -689,7 +689,7 @@ export default function TeamPage() {
             className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             <UserPlus className="w-4 h-4" />
-            {locale === "ar" ? "ÙˆØµÙ„Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø£Ø¹Ø¶Ø§Ø¡" : "Member limit reached"}
+            {locale === "ar" ? "وصلت الحد الأقصى للأعضاء" : "Member limit reached"}
           </button>
         </div>
       )}
@@ -702,7 +702,7 @@ export default function TeamPage() {
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {locale === "ar"
-              ? "Ù…ØªØ§Ø­Ø© Ù…Ù† Ø¨Ø§Ù‚Ø© Go ÙÙ…Ø§ ÙÙˆÙ‚"
+              ? "متاحة من باقة Go فما فوق"
               : "Available on Go plan and above"}
           </p>
         </div>
@@ -716,7 +716,7 @@ export default function TeamPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary" />
-                <span>{tm.membersSectionTitle || "Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„ÙØ±ÙŠÙ‚"}</span>
+                <span>{tm.membersSectionTitle || "أعضاء الفريق"}</span>
                 <span className="text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
                   {members.length}
                 </span>
@@ -738,7 +738,7 @@ export default function TeamPage() {
                     member.role === "CHAT_ONLY" &&
                     (isOwner || currentRole === "FULL_ACCESS") &&
                     !isMemberSelf;
-                  // Only the Owner can demote an Admin back to Chat-only â€”
+                  // Only the Owner can demote an Admin back to Chat-only —
                   // an Admin can never demote another Admin (or themselves).
                   const canDemote =
                     member.role === "FULL_ACCESS" && isOwner && !isMemberSelf;
@@ -771,13 +771,13 @@ export default function TeamPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <MailCheck className="w-4 h-4 text-amber-500" />
-                  <span>{tm.pendingSectionTitle || "Ø§Ù„Ø¯Ø¹ÙˆØ§Øª Ø§Ù„Ù…Ø¹Ù„Ù‚Ø©"}</span>
+                  <span>{tm.pendingSectionTitle || "الدعوات المعلقة"}</span>
                   <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                     {invitations.length}
                   </span>
                 </h2>
                 <p className="text-xs text-gray-400 hidden sm:block">
-                  {tm.pendingSubtitle || "Ø¯Ø¹ÙˆØ§Øª ØªÙ… Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§ ÙˆÙÙŠ Ø§Ù†ØªØ¸Ø§Ø± Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ø¹Ø¶Ùˆ"}
+                  {tm.pendingSubtitle || "دعوات تم إرسالها وفي انتظار قبول العضو"}
                 </p>
               </div>
 

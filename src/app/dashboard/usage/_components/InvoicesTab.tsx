@@ -32,10 +32,10 @@ interface SubscriptionInfo {
 }
 
 function formatDate(d: string | null, locale: string): string {
-    if (!d) return "â€”";
+    if (!d) return "—";
     try {
         const date = new Date(d);
-        if (isNaN(date.getTime())) return "â€”";
+        if (isNaN(date.getTime())) return "—";
         return date.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
             timeZone: "Africa/Cairo",
             day: "2-digit",
@@ -43,14 +43,14 @@ function formatDate(d: string | null, locale: string): string {
             year: "numeric",
         });
     } catch {
-        return "â€”";
+        return "—";
     }
 }
 
 const TYPE_LABELS: Record<string, { ar: string; en: string }> = {
-    subscription: { ar: "Ø§Ø´ØªØ±Ø§Ùƒ", en: "Subscription" },
-    token_package: { ar: "Ø¨Ø§Ù‚Ø© ØªÙˆÙƒÙ†", en: "Token Package" },
-    mcp_addon: { ar: "Ø¥Ø¶Ø§ÙØ© Claude", en: "Claude Addon" },
+    subscription: { ar: "اشتراك", en: "Subscription" },
+    token_package: { ar: "باقة توكن", en: "Token Package" },
+    mcp_addon: { ar: "إضافة Claude", en: "Claude Addon" },
 };
 
 export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl" | "ltr" }) {
@@ -69,13 +69,13 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
             const res = await fetch("/api/payment/my-requests");
             const data = await res.json();
             if (!res.ok) {
-                setError(data.error || (isAr ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙÙˆØ§ØªÙŠØ±" : "Failed to load invoices"));
+                setError(data.error || (isAr ? "تعذر تحميل الفواتير" : "Failed to load invoices"));
                 return;
             }
             setRequests(data.requests ?? []);
             setSubscription(data.subscription ?? null);
         } catch {
-            setError(isAr ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙÙˆØ§ØªÙŠØ±" : "Failed to load invoices");
+            setError(isAr ? "تعذر تحميل الفواتير" : "Failed to load invoices");
         } finally {
             setLoading(false);
         }
@@ -85,9 +85,9 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
         fetchInvoices();
     }, [fetchInvoices]);
 
-    // â”€â”€ Ø£ÙˆÙ„ ÙØ§ØªÙˆØ±Ø© Ø§Ø´ØªØ±Ø§Ùƒ APPROVED Ù‡ÙŠ Ø£Ø­Ø¯Ø« Ø­Ø§Ù„Ø© Ø§Ø´ØªØ±Ø§Ùƒ ÙØ¹Ù„ÙŠØ© (Ø§Ù„Ø¨Ø§Ù‚ÙŠ ØªØ§Ø±ÙŠØ® Ø³Ø§Ø¨Ù‚
-    // Ø§Ù†Ø³Ø­Ø¨/Ø§ØªØ¬Ø¯Ø¯) â€” Ø¯ÙŠ Ø§Ù„ÙˆØ­ÙŠØ¯Ø© Ø§Ù„Ù„ÙŠ Ø¨Ù†Ø¹Ø±Ø¶ Ø¹Ù„ÙŠÙ‡Ø§ ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ Ù…Ù†
-    // Subscription Ù†ÙØ³Ù‡ (Single Source of Truth)ØŒ Ù…Ø´ Ù…Ù† Ø§Ù„ÙØ§ØªÙˆØ±Ø©.
+    // ── أول فاتورة اشتراك APPROVED هي أحدث حالة اشتراك فعلية (الباقي تاريخ سابق
+    // انسحب/اتجدد) — دي الوحيدة اللي بنعرض عليها تاريخ الانتهاء الحقيقي من
+    // Subscription نفسه (Single Source of Truth)، مش من الفاتورة.
     const latestApprovedSubscriptionId = requests.find(
         (r) => r.type === "subscription" && r.status === "APPROVED"
     )?.id;
@@ -101,7 +101,7 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
         const showsAsExpired = r.id === latestApprovedSubscriptionId && isCurrentSubscriptionExpired;
         if (showsAsExpired) {
             return {
-                label: isAr ? "Ù…Ù†ØªÙ‡ÙŠØ©" : "Expired",
+                label: isAr ? "منتهية" : "Expired",
                 className: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-600",
                 icon: AlertCircle,
             };
@@ -109,19 +109,19 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
         switch (r.status) {
             case "PENDING":
                 return {
-                    label: isAr ? "Ù…Ø¹Ù„Ù‚Ø©" : "Pending",
+                    label: isAr ? "معلقة" : "Pending",
                     className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
                     icon: Clock,
                 };
             case "APPROVED":
                 return {
-                    label: isAr ? "Ù…Ù‚Ø¨ÙˆÙ„Ø© / Ù…Ø¯ÙÙˆØ¹Ø©" : "Approved / Paid",
+                    label: isAr ? "مقبولة / مدفوعة" : "Approved / Paid",
                     className: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/20 dark:text-primary dark:border-primary/30",
                     icon: CheckCircle2,
                 };
             default: // REJECTED
                 return {
-                    label: isAr ? "Ù…Ø±ÙÙˆØ¶Ø©" : "Rejected",
+                    label: isAr ? "مرفوضة" : "Rejected",
                     className: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800",
                     icon: XCircle,
                 };
@@ -134,7 +134,7 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
                 <div className="flex items-center gap-2">
                     <Receipt className="w-5 h-5 text-primary" />
                     <h2 className="text-base font-bold text-gray-900 dark:text-white">
-                        {isAr ? "Ø§Ù„ÙÙˆØ§ØªÙŠØ±" : "Invoices"}
+                        {isAr ? "الفواتير" : "Invoices"}
                     </h2>
                 </div>
                 <button
@@ -142,7 +142,7 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
                     className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                    {isAr ? "ØªØ­Ø¯ÙŠØ«" : "Refresh"}
+                    {isAr ? "تحديث" : "Refresh"}
                 </button>
             </div>
 
@@ -158,14 +158,14 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                     <Receipt className="w-10 h-10 mb-3 text-gray-300 dark:text-gray-600" />
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-                        {isAr ? "Ù„Ø§ ØªÙˆØ¬Ø¯ ÙÙˆØ§ØªÙŠØ± Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†" : "No invoices yet"}
+                        {isAr ? "لا توجد فواتير حتى الآن" : "No invoices yet"}
                     </p>
                     <button
                         onClick={() => router.push("/checkout")}
                         className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition"
                     >
                         <Sparkles className="w-4 h-4" />
-                        {isAr ? "Ø§Ø´ØªØ±Ùƒ Ø§Ù„Ø¢Ù†" : "Subscribe now"}
+                        {isAr ? "اشترك الآن" : "Subscribe now"}
                     </button>
                 </div>
             ) : (
@@ -204,7 +204,7 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 pt-2.5 border-t border-gray-50 dark:border-gray-700/60 text-xs text-gray-400">
-                                    <span>{isAr ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø·Ù„Ø¨" : "Requested"}: {formatDate(r.createdAt, locale)}</span>
+                                    <span>{isAr ? "تاريخ الطلب" : "Requested"}: {formatDate(r.createdAt, locale)}</span>
                                     {r.paymentMethod && (
                                         <span className="flex items-center gap-1">
                                             <CreditCard className="w-3 h-3" />
@@ -213,14 +213,14 @@ export default function InvoicesTab({ locale, dir }: { locale: string; dir: "rtl
                                     )}
                                     {showsExpiryDate && (
                                         <span className="font-semibold text-primary">
-                                            {isAr ? "ÙŠÙ†ØªÙ‡ÙŠ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ ÙÙŠ" : "Subscription ends on"}: {formatDate(subscription!.currentPeriodEnd, locale)}
+                                            {isAr ? "ينتهي الاشتراك في" : "Subscription ends on"}: {formatDate(subscription!.currentPeriodEnd, locale)}
                                         </span>
                                     )}
                                 </div>
 
                                 {r.status === "REJECTED" && r.rejectionReason && (
                                     <div className="mt-2 pt-2 border-t border-gray-50 dark:border-gray-700/60 text-xs">
-                                        <span className="text-gray-400">{isAr ? "Ø³Ø¨Ø¨ Ø§Ù„Ø±ÙØ¶" : "Rejection reason"}: </span>
+                                        <span className="text-gray-400">{isAr ? "سبب الرفض" : "Rejection reason"}: </span>
                                         <span className="font-semibold text-rose-600 dark:text-rose-400">{r.rejectionReason}</span>
                                     </div>
                                 )}

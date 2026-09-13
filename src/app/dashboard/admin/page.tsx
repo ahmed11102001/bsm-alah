@@ -19,7 +19,7 @@ import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
 import PaymentsTab from "./_components/PaymentsTab";
 import ArticleMarkdown from "@/components/ArticleMarkdown";
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────────────────────
 const PLANS = ["free", "starter", "pro", "enterprise"] as const;
 type Plan = typeof PLANS[number];
 
@@ -85,11 +85,11 @@ function toSlug(title: string) {
     .slice(0, 80);
 }
 
-// â”€â”€â”€ Shared input class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Shared input class ───────────────────────────────────────────────────────
 const inp = "w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary bg-white";
 const btn = "flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50";
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -233,7 +233,7 @@ export default function AdminPage() {
     setLoadingL(false);
   };
 
-  // â”€â”€ Protection Claims: Ø¹Ø¯Ø¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„ØªÙŠ ØªØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Protection Claims: عدد الطلبات التي تحتاج مراجعة ──────────────────
   const fetchProtectionClaimsCount = async () => {
     try {
       const r = await fetch("/api/admin/protection-claims?status=NEEDS_REVIEW");
@@ -244,7 +244,7 @@ export default function AdminPage() {
     } catch {}
   };
 
-  // â”€â”€ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª: Ø¹Ø¯Ø¯ Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ù„ÙŠ Ù„Ø³Ù‡ Ù…Ø­ØªØ§Ø¬Ø© Ù…Ø±Ø§Ø¬Ø¹Ø© (PENDING) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── المدفوعات: عدد طلبات الدفع اللي لسه محتاجة مراجعة (PENDING) ────────────
   const fetchPendingPaymentsCount = async () => {
     try {
       const r = await fetch("/api/admin/payments?status=PENDING");
@@ -255,7 +255,7 @@ export default function AdminPage() {
     } catch {}
   };
 
-  // â”€â”€ WANI Partner: Ù…Ø±Ø§Ø¬Ø¹Ø© ÙƒØ±ÙˆØª Ø§Ù„ÙŠÙˆØ²Ø±Ø² â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── WANI Partner: مراجعة كروت اليوزرز ──────────────────────────────────────
   const fetchWaniCards = async () => {
     setLoadingWani(true);
     const r = await fetch("/api/admin/wani-partner");
@@ -288,7 +288,7 @@ export default function AdminPage() {
   };
 
   const handleWaniDelete = async (id: string) => {
-    if (!confirm(locale === "ar" ? "Ù…ØªØ£ÙƒØ¯ Ø¥Ù†Ùƒ Ø¹Ø§ÙŠØ² ØªÙ…Ø³Ø­ Ø§Ù„ÙƒØ§Ø±Øª Ø¯Ù‡ØŸ" : "Delete this card?")) return;
+    if (!confirm(locale === "ar" ? "متأكد إنك عايز تمسح الكارت ده؟" : "Delete this card?")) return;
     setWaniActionId(id);
     await fetch("/api/admin/wani-partner", {
       method: "DELETE",
@@ -351,7 +351,7 @@ export default function AdminPage() {
     if (r.ok) {
       const { config } = await r.json();
       setBotConfig(config);
-      setBotMsg(botActive ? adm.leads.bot.activeStatus + " âœ…" : adm.leads.bot.inactiveStatus);
+      setBotMsg(botActive ? adm.leads.bot.activeStatus + " ✅" : adm.leads.bot.inactiveStatus);
     }
   };
 
@@ -392,7 +392,7 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, testimonialsTab]);
 
-  // â”€â”€ user actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── user actions ──────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!form.email || !form.password) return;
     setSaving(true);
@@ -421,7 +421,7 @@ export default function AdminPage() {
   };
   const handleDelete = async (userId: string, email: string) => {
     const confirmMsg = locale === "ar"
-      ? `Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… "${email}" Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŸ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù† Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.`
+      ? `هل أنت متأكد من حذف المستخدم "${email}" نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
       : `Are you sure you want to permanently delete user "${email}" from the database? This action cannot be undone.`;
     if (!confirm(confirmMsg)) return;
     setDeleting(userId);
@@ -429,7 +429,7 @@ export default function AdminPage() {
     setDeleting(null);
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      alert(d.error || (locale === "ar" ? "ÙØ´Ù„ Ø­Ø°Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…" : "Failed to delete user"));
+      alert(d.error || (locale === "ar" ? "فشل حذف المستخدم" : "Failed to delete user"));
     }
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
@@ -456,7 +456,7 @@ export default function AdminPage() {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
 
-  // â”€â”€ testimonial actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── testimonial actions ───────────────────────────────────────────────────
   const handleTestimonialAction = async (id: string, action: "approve" | "reject") => {
     setActionT(id);
     await fetch("/api/admin/testimonials", {
@@ -466,7 +466,7 @@ export default function AdminPage() {
     setActionT(null); fetchTestimonials(testimonialsTab);
   };
 
-  // â”€â”€ coupon actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── coupon actions ────────────────────────────────────────────────────────
   const handleCreateCoupon = async () => {
     if (!couponForm.discountValue) return;
     setSavingC(true);
@@ -498,7 +498,7 @@ export default function AdminPage() {
     fetchCoupons();
   };
 
-  // â”€â”€ article actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── article actions ───────────────────────────────────────────────────────
   const openNewArticle = () => {
     setEditArticleId(null); setArticleForm(blankArticle);
     setShowArticleF(true); setArticlePreview(false);
@@ -556,7 +556,7 @@ export default function AdminPage() {
 
   const handleDeleteLead = async (id: string, name: string) => {
     const confirmMsg = locale === "ar"
-      ? `Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ø§Ù„Ù€ Lead "${name}" Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŸ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù† Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.`
+      ? `هل أنت متأكد من حذف الـ Lead "${name}" نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
       : `Are you sure you want to permanently delete lead "${name}" from the database? This action cannot be undone.`;
     if (!confirm(confirmMsg)) return;
 
@@ -568,11 +568,11 @@ export default function AdminPage() {
         setLeadTotal(prev => Math.max(0, prev - 1));
       } else {
         const d = await r.json().catch(() => ({}));
-        alert(d.error || (locale === "ar" ? "ÙØ´Ù„ Ø­Ø°Ù Ø§Ù„Ù€ Lead" : "Failed to delete lead"));
+        alert(d.error || (locale === "ar" ? "فشل حذف الـ Lead" : "Failed to delete lead"));
       }
     } catch (err) {
       console.error("Failed to delete lead:", err);
-      alert(locale === "ar" ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…" : "Server error");
+      alert(locale === "ar" ? "خطأ في الاتصال بالخادم" : "Server error");
     } finally {
       setDeletingLead(null);
     }
@@ -606,7 +606,7 @@ export default function AdminPage() {
             {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
             {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
             {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
-            {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "Ø·Ù„Ø¨ Ø­Ù…Ø§ÙŠØ© Ø¬Ø¯ÙŠØ¯" : "New Claim"}</button>}
+            {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "طلب حماية جديد" : "New Claim"}</button>}
           </div>
         </div>
 
@@ -618,9 +618,9 @@ export default function AdminPage() {
             { id: "coupons",           label: adm.tabs.coupons,      icon: Ticket             },
             { id: "articles",          label: adm.tabs.articles,     icon: FileText           },
             { id: "leads",             label: adm.leads.tab,         icon: Target             },
-            { id: "wani-partner",      label: locale === "ar" ? "Ø´Ø±ÙƒØ§Ø¡ ÙˆØ§Ù†ÙŠ" : "WANI Partner", icon: Handshake },
+            { id: "wani-partner",      label: locale === "ar" ? "شركاء واني" : "WANI Partner", icon: Handshake },
             { id: "protection-claims", label: "Protection Claims",   icon: ShieldCheck        },
-            { id: "payments",          label: locale === "ar" ? "Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª" : "Payments", icon: Wallet },
+            { id: "payments",          label: locale === "ar" ? "المدفوعات" : "Payments", icon: Wallet },
           ] as { id: Tab; label: string; icon: any }[]).map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id); setShowArticleF(false); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -648,7 +648,7 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* â•â• USERS â•â• */}
+        {/* ══ USERS ══ */}
         {activeTab === "users" && (<>
           {showForm && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6 shadow-sm">
@@ -690,10 +690,10 @@ export default function AdminPage() {
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {totalUsers} {totalUsers === 1 ? "Ù…Ø³ØªØ®Ø¯Ù…" : "Ù…Ø³ØªØ®Ø¯Ù…"}
-                  {userSearch && ` â€” "${userSearch}"`}
+                  {totalUsers} {totalUsers === 1 ? "مستخدم" : "مستخدم"}
+                  {userSearch && ` — "${userSearch}"`}
                 </p>
-                {/* toggle Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø­Ø°ÙˆÙÙŠÙ† */}
+                {/* toggle عرض المحذوفين */}
                 <button
                   onClick={() => { setShowDeleted(v => !v); setCursors([null]); setPageIdx(0); }}
                   className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-medium transition ${
@@ -703,7 +703,7 @@ export default function AdminPage() {
                   }`}
                 >
                   <Trash2 className="w-3 h-3" />
-                  {showDeleted ? "Ø¹Ø±Ø¶ Ø§Ù„Ù€ active" : "Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø­Ø°ÙˆÙÙŠÙ†"}
+                  {showDeleted ? "عرض الـ active" : "عرض المحذوفين"}
                 </button>
               </div>
               <input
@@ -713,7 +713,7 @@ export default function AdminPage() {
                   setCursors([null]);
                   setPageIdx(0);
                 }}
-                placeholder="Ø§Ø¨Ø­Ø« Ø¨Ø§Ù„Ø¥ÙŠÙ…ÙŠÙ„ Ø£Ùˆ Ø§Ù„Ø§Ø³Ù…..."
+                placeholder="ابحث بالإيميل أو الاسم..."
                 className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-white w-56"
               />
             </div>
@@ -734,7 +734,7 @@ export default function AdminPage() {
                     <tr key={user.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
                       <td className="px-6 py-4">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.name || "â€”"}
+                          {user.name || "—"}
                           {user.isSuper && <span className="mr-2 text-xs text-red-500 font-bold">{adm.users.superBadge}</span>}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500">{user.email}</p>
@@ -757,13 +757,13 @@ export default function AdminPage() {
                               {(PLAN_LABELS as any)[user.subscription?.plan ?? "free"]}
                             </span>
                           )}
-                          {/* Beta badge â€” internal only, Ù…Ø´ Ø¬Ø²Ø¡ Ù…Ù† plan dropdown */}
+                          {/* Beta badge — internal only, مش جزء من plan dropdown */}
                           {user.subscription?.isBetaUser && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              Î² Beta
+                              β Beta
                             </span>
                           )}
-                          {/* AI tokens display â€” enterprise ÙÙ‚Ø· */}
+                          {/* AI tokens display — enterprise فقط */}
                           {user.subscription?.plan === "enterprise" && (
                             <div className="mt-1 w-full">
                               {tokenBonusId === user.id ? (
@@ -773,9 +773,9 @@ export default function AdminPage() {
                                     onChange={e => setTokenBonusAmt(e.target.value)}
                                     className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary"
                                   >
-                                    <option value="500000">+500K ØªÙˆÙƒÙ†</option>
-                                    <option value="1000000">+1M ØªÙˆÙƒÙ†</option>
-                                    <option value="2000000">+2M ØªÙˆÙƒÙ†</option>
+                                    <option value="500000">+500K توكن</option>
+                                    <option value="1000000">+1M توكن</option>
+                                    <option value="2000000">+2M توكن</option>
                                   </select>
                                   <button onClick={() => handleAddTokenBonus(user.id)} disabled={savingToken}
                                     className="text-green-600 hover:text-green-500">
@@ -819,32 +819,32 @@ export default function AdminPage() {
                               });
                               fetchUsers(cursors[pageIdx], userSearch, showDeleted);
                             }}
-                            title={user.subscription?.isBetaUser ? "Ø¥Ù„ØºØ§Ø¡ Beta" : "ØªÙØ¹ÙŠÙ„ Beta"}
+                            title={user.subscription?.isBetaUser ? "إلغاء Beta" : "تفعيل Beta"}
                             className={`text-xs px-2 py-0.5 rounded-full border font-medium transition ${
                               user.subscription?.isBetaUser
                                 ? "border-emerald-400 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                                 : "border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 dark:border-gray-600"
                             }`}
                           >
-                            Î²
+                            β
                           </button>
-                          {/* edit plan â€” Ù…Ø´ Ù…ÙˆØ¬ÙˆØ¯ ÙÙŠ ÙˆØ¶Ø¹ Ø§Ù„Ù…Ø­Ø°ÙˆÙÙŠÙ† */}
+                          {/* edit plan — مش موجود في وضع المحذوفين */}
                           {!showDeleted && (
                             <button onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
                               className="text-gray-400 hover:text-blue-600 transition" title={adm.users.editPlanTitle}>
                               <Pencil className="w-4 h-4" />
                             </button>
                           )}
-                          {/* soft delete Ø£Ùˆ restore Ø­Ø³Ø¨ Ø§Ù„ÙˆØ¶Ø¹ */}
+                          {/* soft delete أو restore حسب الوضع */}
                           {!user.isSuper && (
                             showDeleted ? (
                               <button onClick={() => handleRestore(user.id)} disabled={restoring === user.id}
-                                className="text-gray-400 hover:text-emerald-600 transition" title="Ø§Ø³ØªØ±Ø¬Ø§Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…">
+                                className="text-gray-400 hover:text-emerald-600 transition" title="استرجاع المستخدم">
                                 {restoring === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                               </button>
                             ) : (
                               <button onClick={() => handleDelete(user.id, user.email)} disabled={deleting === user.id}
-                                className="text-gray-400 hover:text-red-500 transition" title="Ø­Ø°Ù Ù†Ø§Ø¹Ù…">
+                                className="text-gray-400 hover:text-red-500 transition" title="حذف ناعم">
                                 {deleting === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                               </button>
                             )
@@ -865,10 +865,10 @@ export default function AdminPage() {
                   disabled={pageIdx === 0}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  â† Ø§Ù„Ø³Ø§Ø¨Ù‚
+                  ← السابق
                 </button>
                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                  ØµÙØ­Ø© {pageIdx + 1}
+                  صفحة {pageIdx + 1}
                 </span>
                 <button
                   onClick={() => {
@@ -884,14 +884,14 @@ export default function AdminPage() {
                   disabled={!nextCursor}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  Ø§Ù„ØªØ§Ù„ÙŠ â†’
+                  التالي →
                 </button>
               </div>
             )}
           </div>
         </>)}
 
-        {/* â•â• TESTIMONIALS â•â• */}
+        {/* ══ TESTIMONIALS ══ */}
         {activeTab === "testimonials" && (
           <div>
             <div className="flex gap-2 mb-4">
@@ -955,7 +955,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* â•â• COUPONS â•â• */}
+        {/* ══ COUPONS ══ */}
         {activeTab === "coupons" && (
           <div>
             {showCouponF && (
@@ -1048,7 +1048,7 @@ export default function AdminPage() {
                         </td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{c.usedCount} / {c.maxUses}</td>
                         <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
-                          {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString(dateLocale) : "â€”"}
+                          {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString(dateLocale) : "—"}
                         </td>
                         <td className="py-3 px-4">
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${c.active ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}>
@@ -1071,7 +1071,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* â•â• ARTICLES â•â• */}
+        {/* ══ ARTICLES ══ */}
         {activeTab === "articles" && (
           <div>
             {showArticleF && (
@@ -1113,7 +1113,7 @@ export default function AdminPage() {
                     <div>
                       <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
                         {adm.articles.fields.slugLabel}
-                        <span className="font-normal text-gray-400 dark:text-gray-500 mr-1">â€” /articles/{articleForm.slug || "..."}</span>
+                        <span className="font-normal text-gray-400 dark:text-gray-500 mr-1">— /articles/{articleForm.slug || "..."}</span>
                       </label>
                       <input value={articleForm.slug} placeholder={adm.articles.fields.slugPh} dir="ltr"
                         onChange={e => setArticleForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") }))}
@@ -1150,13 +1150,13 @@ export default function AdminPage() {
                         onChange={e => setArticleForm(f => ({ ...f, content: e.target.value }))}
                         className={inp + " resize-y leading-relaxed font-mono"} />
                       <div className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/40 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700/60 leading-relaxed">
-                        <span className="font-semibold text-gray-700 dark:text-gray-300">ðŸ’¡ ÙŠØ¯Ø¹Ù… Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ØªÙ†Ø³ÙŠÙ‚ Markdown ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø¯Ø§Ø®Ù„ÙŠØ©:</span>
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">💡 يدعم المحتوى تنسيق Markdown والروابط الداخلية:</span>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                          <span>Ø±Ø§Ø¨Ø· Ø¯Ø§Ø®Ù„ÙŠ: <code className="text-primary font-mono">[Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ§Øª Ø§Ù„ØªØ³ÙˆÙŠÙ‚](/strategies)</code></span>
-                          <span>Ø±Ø§Ø¨Ø· Ø®Ø§Ø±Ø¬ÙŠ: <code className="text-primary font-mono">[Meta](https://meta.com)</code></span>
-                          <span>Ø¹Ù†Ø§ÙˆÙŠÙ†: <code className="font-mono"># H1</code> | <code className="font-mono">## H2</code></span>
-                          <span>Ø®Ø· Ø¹Ø±ÙŠØ¶: <code className="font-mono">**Ù†Øµ Ø¹Ø±ÙŠØ¶**</code></span>
-                          <span>Ù‚ÙˆØ§Ø¦Ù…: <code className="font-mono">- Ø¹Ù†ØµØ±</code></span>
+                          <span>رابط داخلي: <code className="text-primary font-mono">[استراتيجيات التسويق](/strategies)</code></span>
+                          <span>رابط خارجي: <code className="text-primary font-mono">[Meta](https://meta.com)</code></span>
+                          <span>عناوين: <code className="font-mono"># H1</code> | <code className="font-mono">## H2</code></span>
+                          <span>خط عريض: <code className="font-mono">**نص عريض**</code></span>
+                          <span>قوائم: <code className="font-mono">- عنصر</code></span>
                         </div>
                       </div>
                     </div>
@@ -1269,10 +1269,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* â•â• LEADS â•â• */}
+        {/* ══ LEADS ══ */}
         {activeTab === "leads" && (
           <div>
-            {/* â”€â”€ Lead Bot Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* ── Lead Bot Panel ─────────────────────────────────────────── */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mb-5 overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -1327,7 +1327,7 @@ export default function AdminPage() {
                           onChange={e => setBotSelectedTpl(e.target.value)}
                           className={inp + " cursor-pointer"}
                         >
-                          <option value="">â€” {adm.leads.bot.selectTemplate} â€”</option>
+                          <option value="">— {adm.leads.bot.selectTemplate} —</option>
                           {botTemplates.map(t => (
                             <option key={t.id} value={t.name}>{t.name}</option>
                           ))}
@@ -1509,7 +1509,7 @@ export default function AdminPage() {
                                 onClick={() => handleDeleteLead(lead.id, lead.name)}
                                 disabled={deletingLead === lead.id}
                                 className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50"
-                                title={locale === "ar" ? "Ø­Ø°Ù Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹" : "Delete"}
+                                title={locale === "ar" ? "حذف نهائياً" : "Delete"}
                               >
                                 {deletingLead === lead.id ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
@@ -1530,7 +1530,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* â•â• WANI PARTNER â•â• */}
+        {/* ══ WANI PARTNER ══ */}
         {activeTab === "wani-partner" && (
           <div>
             {loadingWani ? (
@@ -1539,16 +1539,16 @@ export default function AdminPage() {
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-16 text-center">
                 <Handshake className="w-10 h-10 text-gray-200 dark:text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400 dark:text-gray-500 text-sm">
-                  {locale === "ar" ? "Ù…Ø­Ø¯Ø´ Ø¹Ù…Ù„ ÙƒØ§Ø±Øª Ù„Ø³Ù‡" : "No cards submitted yet"}
+                  {locale === "ar" ? "محدش عمل كارت لسه" : "No cards submitted yet"}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {waniCards.map((card) => {
                   const statusMeta = {
-                    pending:  { icon: Clock,        color: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",     label: locale === "ar" ? "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©" : "Pending" },
-                    approved: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800", label: locale === "ar" ? "Ù…Ø¹ØªÙ…Ø¯" : "Approved" },
-                    rejected: { icon: XCircle,      color: "text-red-600 dark:text-red-400",        bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",             label: locale === "ar" ? "Ù…Ø±ÙÙˆØ¶" : "Rejected" },
+                    pending:  { icon: Clock,        color: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",     label: locale === "ar" ? "قيد المراجعة" : "Pending" },
+                    approved: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800", label: locale === "ar" ? "معتمد" : "Approved" },
+                    rejected: { icon: XCircle,      color: "text-red-600 dark:text-red-400",        bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",             label: locale === "ar" ? "مرفوض" : "Rejected" },
                   }[card.status];
                   const StatusIcon = statusMeta.icon;
                   const approvedSorted = waniCards.filter(c => c.status === "approved").sort((a, b) => a.order - b.order);
@@ -1562,7 +1562,7 @@ export default function AdminPage() {
                         {!card.active && card.status === "approved" && (
                           <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
                             <span className="text-white text-xs font-semibold px-2.5 py-1 rounded-full bg-black/40 border border-white/20">
-                              {locale === "ar" ? "Ù…ØªÙˆÙ‚Ù Ù…Ù† Ø§Ù„ÙŠÙˆØ²Ø±" : "Paused by user"}
+                              {locale === "ar" ? "متوقف من اليوزر" : "Paused by user"}
                             </span>
                           </div>
                         )}
@@ -1573,7 +1573,7 @@ export default function AdminPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{card.title}</p>
                             <p className="text-xs text-gray-400 truncate">
-                              {card.user.brandName || card.user.name || card.user.email} Â·{" "}
+                              {card.user.brandName || card.user.name || card.user.email} ·{" "}
                               {PARTNER_TEMPLATES.find(m => m.id === card.template)?.name[locale as "ar" | "en"]}
                             </p>
                           </div>
@@ -1591,18 +1591,18 @@ export default function AdminPage() {
                             <input
                               value={rejectReason}
                               onChange={e => setRejectReason(e.target.value)}
-                              placeholder={locale === "ar" ? "Ø³Ø¨Ø¨ Ø§Ù„Ø±ÙØ¶ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)" : "Rejection reason (optional)"}
+                              placeholder={locale === "ar" ? "سبب الرفض (اختياري)" : "Rejection reason (optional)"}
                               className={inp}
                             />
                             <div className="flex items-center gap-2">
                               <button onClick={() => handleWaniRejectSubmit(card.id)} disabled={busy}
                                 className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 transition disabled:opacity-50">
                                 {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                                {locale === "ar" ? "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø±ÙØ¶" : "Confirm reject"}
+                                {locale === "ar" ? "تأكيد الرفض" : "Confirm reject"}
                               </button>
                               <button onClick={() => { setRejectingId(null); setRejectReason(""); }}
                                 className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2">
-                                {locale === "ar" ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
+                                {locale === "ar" ? "إلغاء" : "Cancel"}
                               </button>
                             </div>
                           </div>
@@ -1613,31 +1613,31 @@ export default function AdminPage() {
                                 <button onClick={() => handleWaniApprove(card.id)} disabled={busy}
                                   className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary/90 transition disabled:opacity-50">
                                   {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                  {locale === "ar" ? "Ù‚Ø¨ÙˆÙ„" : "Approve"}
+                                  {locale === "ar" ? "قبول" : "Approve"}
                                 </button>
                               )}
                               {card.status !== "rejected" && (
                                 <button onClick={() => { setRejectingId(card.id); setRejectReason(""); }} disabled={busy}
                                   className="flex items-center gap-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-50">
                                   <X className="w-3.5 h-3.5" />
-                                  {locale === "ar" ? "Ø±ÙØ¶" : "Reject"}
+                                  {locale === "ar" ? "رفض" : "Reject"}
                                 </button>
                               )}
                               {card.status === "approved" && (
                                 <>
                                   <button onClick={() => handleWaniMove(card, -1)} disabled={approvedIdx <= 0}
-                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "Ù„Ø£Ø¹Ù„Ù‰" : "Up"}>
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "لأعلى" : "Up"}>
                                     <ArrowUp className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={() => handleWaniMove(card, 1)} disabled={approvedIdx === -1 || approvedIdx === approvedSorted.length - 1}
-                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "Ù„Ø£Ø³ÙÙ„" : "Down"}>
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title={locale === "ar" ? "لأسفل" : "Down"}>
                                     <ArrowDown className="w-3.5 h-3.5" />
                                   </button>
                                 </>
                               )}
                             </div>
                             <button onClick={() => handleWaniDelete(card.id)} disabled={busy}
-                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 disabled:opacity-50" title={locale === "ar" ? "Ø­Ø°Ù" : "Delete"}>
+                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 disabled:opacity-50" title={locale === "ar" ? "حذف" : "Delete"}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1651,7 +1651,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* â•â• PROTECTION CLAIMS â•â• */}
+        {/* ══ PROTECTION CLAIMS ══ */}
         {activeTab === "protection-claims" && (
           <ProtectionClaimsTab
             locale={locale}
@@ -1662,7 +1662,7 @@ export default function AdminPage() {
           />
         )}
 
-        {/* â•â• Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª â•â• */}
+        {/* ══ المدفوعات ══ */}
         {activeTab === "payments" && (
           <PaymentsTab
             locale={locale}

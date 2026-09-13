@@ -1,5 +1,5 @@
 ﻿// src/app/dashboard/store/_components/AutomationCard.tsx
-// â”€â”€â”€ ÙƒØ§Ø±Ø¯ Ø£ØªÙ…ØªØ© ÙˆØ§Ø­Ø¯Ø© (ØªØ£ÙƒÙŠØ¯ Ø£ÙˆØ±Ø¯Ø± / Ø´Ø­Ù† / Ø¹Ø±ÙˆØ¶ / Ø³Ù„Ø© Ù…Ù‡Ø¬ÙˆØ±Ø©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── كارد أتمتة واحدة (تأكيد أوردر / شحن / عروض / سلة مهجورة) ───────────────
 
 import { useState } from "react";
 import {
@@ -16,14 +16,14 @@ import { DelayPickerModal } from "./DelayPickerModal";
 
 export interface AutomationCardProps {
   automation: AutomationItem;
-  templates: AutomationTemplate[];  // Ù„Ù„Ù€ promo ÙÙ‚Ø·
+  templates: AutomationTemplate[];  // للـ promo فقط
   onSave: (type: StoreAutomationType, isEnabled: boolean, templateId: string | null, delayMinutes?: number) => Promise<void>;
   lang: Lang;
   storeSource?: "shopify" | "easyorders" | "woocommerce";
   customers?: Customer[];
 }
 
-// â”€â”€ Ù…ÙƒÙˆÙ‘Ù† Ø¹Ø±Ø¶ Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ (Ù„Ù„Ø£ØªÙ…ØªØ§Øª Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠØ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── مكوّن عرض القالب المخصص (للأتمتات التلقائية) ──────────────────────────────
 function DedicatedTemplateStatus({
   dedicatedTemplate,
   expectedName,
@@ -37,11 +37,11 @@ function DedicatedTemplateStatus({
     return (
       <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
         <p className="font-medium mb-0.5">
-          {lang === "ar" ? "âš ï¸ Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯" : "âš ï¸ Dedicated template missing"}
+          {lang === "ar" ? "⚠️ القالب المخصص غير موجود" : "⚠️ Dedicated template missing"}
         </p>
         <p className="opacity-80">
           {lang === "ar"
-            ? <>Ø£Ù†Ø´Ø¦ Ù‚Ø§Ù„Ø¨Ø§Ù‹ Ø¨Ø§Ø³Ù…: <span className="font-mono font-bold">"{expectedName}"</span> Ø«Ù… Ø²Ø§Ù…Ù†Ù‡ Ù…Ù† ØµÙØ­Ø© Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨</>
+            ? <>أنشئ قالباً باسم: <span className="font-mono font-bold">"{expectedName}"</span> ثم زامنه من صفحة القوالب</>
             : <>Create a Meta template named: <span className="font-mono font-bold">"{expectedName}"</span> then sync it from Templates page</>
           }
         </p>
@@ -53,10 +53,10 @@ function DedicatedTemplateStatus({
   const isApproved = status === "approved";
 
   const statusConfig: Record<string, { bg: string; text: string; label: { ar: string; en: string }; icon: string }> = {
-    approved: { bg: "bg-primary/10", text: "text-green-700 dark:text-green-400", label: { ar: "Ù…Ø¹ØªÙ…Ø¯ âœ“", en: "Approved âœ“" }, icon: "âœ“" },
-    pending: { bg: "bg-yellow-50 dark:bg-yellow-900/10", text: "text-yellow-700 dark:text-yellow-400", label: { ar: "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©", en: "Under Review" }, icon: "â³" },
-    rejected: { bg: "bg-red-50 dark:bg-red-900/10", text: "text-red-700 dark:text-red-400", label: { ar: "Ù…Ø±ÙÙˆØ¶", en: "Rejected" }, icon: "âœ•" },
-    submitted: { bg: "bg-blue-50 dark:bg-blue-900/10", text: "text-blue-700 dark:text-blue-400", label: { ar: "ØªÙ… Ø§Ù„Ø¥Ø±Ø³Ø§Ù„", en: "Submitted" }, icon: "ðŸ“¤" },
+    approved: { bg: "bg-primary/10", text: "text-green-700 dark:text-green-400", label: { ar: "معتمد ✓", en: "Approved ✓" }, icon: "✓" },
+    pending: { bg: "bg-yellow-50 dark:bg-yellow-900/10", text: "text-yellow-700 dark:text-yellow-400", label: { ar: "قيد المراجعة", en: "Under Review" }, icon: "⏳" },
+    rejected: { bg: "bg-red-50 dark:bg-red-900/10", text: "text-red-700 dark:text-red-400", label: { ar: "مرفوض", en: "Rejected" }, icon: "✕" },
+    submitted: { bg: "bg-blue-50 dark:bg-blue-900/10", text: "text-blue-700 dark:text-blue-400", label: { ar: "تم الإرسال", en: "Submitted" }, icon: "📤" },
   };
 
   const cfg = statusConfig[status] ?? statusConfig["pending"];
@@ -81,7 +81,7 @@ function DedicatedTemplateStatus({
         </div>
         {!isApproved && (
           <span className="text-[10px] text-gray-400 flex-shrink-0">
-            {lang === "ar" ? "Ø§Ù†ØªØ¸Ø± Ø§Ø¹ØªÙ…Ø§Ø¯ Ù…ÙŠØªØ§" : "Awaiting Meta approval"}
+            {lang === "ar" ? "انتظر اعتماد ميتا" : "Awaiting Meta approval"}
           </span>
         )}
       </div>
@@ -101,33 +101,33 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
   const label = meta.label[lang];
   const desc = meta.desc[lang];
 
-  // cart_abandon ØªØ´ØªØºÙ„ Ø¨Ø³ Ù…Ø¹ Shopify
+  // cart_abandon تشتغل بس مع Shopify
   const isShopifyOnly = meta.shopifyOnly === true;
   const isUnsupported = isShopifyOnly && storeSource !== "shopify";
 
-  // Ù‡Ù„ Ù‡Ø°Ù‡ Ø£ØªÙ…ØªØ© Ù„Ù‡Ø§ Ù‚Ø§Ù„Ø¨ Ù…Ø®ØµØµ Ø«Ø§Ø¨ØªØŸ
+  // هل هذه أتمتة لها قالب مخصص ثابت؟
   const isDedicated = meta.isDedicated === true;
 
-  // Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ ÙˆØ­Ø§Ù„ØªÙ‡
+  // القالب المخصص وحالته
   const dedicatedTemplate = automation.dedicatedTemplate ?? null;
   const dedicatedName = isDedicated ? DEDICATED_TEMPLATE_NAMES[automation.type] ?? "" : "";
   const dedicatedIsApproved = dedicatedTemplate?.status?.toLowerCase() === "approved";
 
-  // Ù‡Ù„ ÙŠÙ…ÙƒÙ† ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø£ØªÙ…ØªØ©ØŸ
+  // هل يمكن تفعيل الأتمتة؟
   const canToggle = isDedicated
-    ? dedicatedIsApproved && !isUnsupported  // ÙÙ‚Ø· Ù„Ùˆ Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ Ù…Ø¹ØªÙ…Ø¯
-    : !!templateId && !isUnsupported;        // promo: Ù„Ø§Ø²Ù… ÙŠØ®ØªØ§Ø± Ù‚Ø§Ù„Ø¨
+    ? dedicatedIsApproved && !isUnsupported  // فقط لو القالب المخصص معتمد
+    : !!templateId && !isUnsupported;        // promo: لازم يختار قالب
 
   async function handleToggle() {
     if (isUnsupported || !canToggle) {
       if (isDedicated && !dedicatedIsApproved) {
         toast.error(
           lang === "ar"
-            ? "Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªÙØ¹ÙŠÙ„ â€” Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ Ù„Ù… ÙŠÙØ¹ØªÙ…Ø¯ Ø¨Ø¹Ø¯ Ù…Ù† Ù…ÙŠØªØ§"
-            : "Cannot enable â€” dedicated template not approved by Meta yet"
+            ? "لا يمكن التفعيل — القالب المخصص لم يُعتمد بعد من ميتا"
+            : "Cannot enable — dedicated template not approved by Meta yet"
         );
       } else if (!isDedicated && !templateId) {
-        toast.error(lang === "ar" ? "Ø§Ø®ØªØ± Ù‚Ø§Ù„Ø¨Ø§Ù‹ Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø£ÙˆÙ„Ø§Ù‹" : "Choose a template first");
+        toast.error(lang === "ar" ? "اختر قالباً من القائمة أولاً" : "Choose a template first");
       }
       return;
     }
@@ -156,16 +156,16 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
   }
 
   function getDelayLabel(minutes: number): string {
-    if (minutes === 0) return lang === "ar" ? "âš¡ Ø¥Ø±Ø³Ø§Ù„ ÙÙˆØ±ÙŠ" : "âš¡ Immediate send";
-    if (minutes === 15) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 15 Ø¯Ù‚ÙŠÙ‚Ø©" : "â±ï¸ After 15 minutes";
-    if (minutes === 30) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 30 Ø¯Ù‚ÙŠÙ‚Ø©" : "â±ï¸ After 30 minutes";
-    if (minutes === 60) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ Ø³Ø§Ø¹Ø©" : "â±ï¸ After 1 hour";
-    if (minutes === 120) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ Ø³Ø§Ø¹ØªÙŠÙ†" : "â±ï¸ After 2 hours";
-    if (minutes === 180) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 3 Ø³Ø§Ø¹Ø§Øª" : "â±ï¸ After 3 hours";
-    if (minutes === 360) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 6 Ø³Ø§Ø¹Ø§Øª" : "â±ï¸ After 6 hours";
-    if (minutes === 720) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 12 Ø³Ø§Ø¹Ø©" : "â±ï¸ After 12 hours";
-    if (minutes === 1440) return lang === "ar" ? "â±ï¸ Ø¨Ø¹Ø¯ 24 Ø³Ø§Ø¹Ø©" : "â±ï¸ After 24 hours";
-    return lang === "ar" ? `â±ï¸ Ø¨Ø¹Ø¯ ${minutes} Ø¯Ù‚ÙŠÙ‚Ø©` : `â±ï¸ After ${minutes} minutes`;
+    if (minutes === 0) return lang === "ar" ? "⚡ إرسال فوري" : "⚡ Immediate send";
+    if (minutes === 15) return lang === "ar" ? "⏱️ بعد 15 دقيقة" : "⏱️ After 15 minutes";
+    if (minutes === 30) return lang === "ar" ? "⏱️ بعد 30 دقيقة" : "⏱️ After 30 minutes";
+    if (minutes === 60) return lang === "ar" ? "⏱️ بعد ساعة" : "⏱️ After 1 hour";
+    if (minutes === 120) return lang === "ar" ? "⏱️ بعد ساعتين" : "⏱️ After 2 hours";
+    if (minutes === 180) return lang === "ar" ? "⏱️ بعد 3 ساعات" : "⏱️ After 3 hours";
+    if (minutes === 360) return lang === "ar" ? "⏱️ بعد 6 ساعات" : "⏱️ After 6 hours";
+    if (minutes === 720) return lang === "ar" ? "⏱️ بعد 12 ساعة" : "⏱️ After 12 hours";
+    if (minutes === 1440) return lang === "ar" ? "⏱️ بعد 24 ساعة" : "⏱️ After 24 hours";
+    return lang === "ar" ? `⏱️ بعد ${minutes} دقيقة` : `⏱️ After ${minutes} minutes`;
   }
 
   async function handleTemplateChange(tid: string) {
@@ -182,7 +182,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
   const totalSent = (automation.sentCount ?? 0) + promoSentAdj;
 
   function formatLastSent(iso: string | null): string {
-    if (!iso) return lang === "ar" ? "Ù„Ù… ÙŠÙØ±Ø³Ù„ Ø¨Ø¹Ø¯" : "Not sent yet";
+    if (!iso) return lang === "ar" ? "لم يُرسل بعد" : "Not sent yet";
     const d = new Date(iso);
     return d.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", {
       day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
@@ -199,7 +199,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
         isUnsupported && "opacity-70"
       )}>
 
-        {/* Badge: Shopify ÙÙ‚Ø· */}
+        {/* Badge: Shopify فقط */}
         {isShopifyOnly && (
           <span className={cn(
             "absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full font-medium",
@@ -207,7 +207,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
               ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
               : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
           )}>
-            {storeSource === "shopify" ? "Shopify âœ“" : (lang === "ar" ? "Shopify ÙÙ‚Ø·" : "Shopify only")}
+            {storeSource === "shopify" ? "Shopify ✓" : (lang === "ar" ? "Shopify فقط" : "Shopify only")}
           </span>
         )}
 
@@ -225,13 +225,13 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
             disabled={saving || isUnsupported || (isDedicated && !dedicatedIsApproved)}
             title={
               isDedicated && !dedicatedIsApproved
-                ? (lang === "ar" ? "Ø§Ù†ØªØ¸Ø± Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù‚Ø§Ù„Ø¨ Ù…Ù† Ù…ÙŠØªØ§" : "Awaiting template approval from Meta")
+                ? (lang === "ar" ? "انتظر اعتماد القالب من ميتا" : "Awaiting template approval from Meta")
                 : undefined
             }
             className="flex-shrink-0 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={enabled
-              ? (lang === "ar" ? "Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø£ØªÙ…ØªØ©" : "Disable automation")
-              : (lang === "ar" ? "ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø£ØªÙ…ØªØ©" : "Enable automation")}
+              ? (lang === "ar" ? "إيقاف الأتمتة" : "Disable automation")
+              : (lang === "ar" ? "تفعيل الأتمتة" : "Enable automation")}
           >
             {saving
               ? <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -242,19 +242,19 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
           </button>
         </div>
 
-        {/* Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…ØªØ§Ø¬Ø± ØºÙŠØ± Ø§Ù„Ù…Ø¯Ø¹ÙˆÙ…Ø© */}
+        {/* رسالة المتاجر غير المدعومة */}
         {isUnsupported ? (
           <div className="rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 px-3 py-2.5 text-xs text-orange-700 dark:text-orange-400">
             {lang === "ar"
-              ? "âš ï¸ Ù‡Ø°Ù‡ Ø§Ù„Ø£ØªÙ…ØªØ© Ù…ØªØ§Ø­Ø© ÙÙ‚Ø· Ù„Ù…ØªØ§Ø¬Ø± Shopify â€” ÙŠØ³ØªÙ„Ø²Ù… webhook Ø§Ù„Ø³Ù„Ø© Ø§Ù„Ù…Ù‡Ø¬ÙˆØ±Ø©"
-              : "âš ï¸ This automation is available for Shopify stores only â€” requires abandoned checkout webhook"}
+              ? "⚠️ هذه الأتمتة متاحة فقط لمتاجر Shopify — يستلزم webhook السلة المهجورة"
+              : "⚠️ This automation is available for Shopify stores only — requires abandoned checkout webhook"}
           </div>
         ) : isDedicated ? (
-          /* â”€â”€ Ø§Ù„Ø£ØªÙ…ØªØ§Øª Ø°Ø§Øª Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ Ø§Ù„Ø«Ø§Ø¨Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+          /* ── الأتمتات ذات القالب المخصص الثابت ────────────────────────────── */
           <>
             <div className="mb-3">
               <label className="text-[11px] text-gray-400 mb-1.5 block">
-                {lang === "ar" ? "Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø®ØµØµ" : "Dedicated template"}
+                {lang === "ar" ? "القالب المخصص" : "Dedicated template"}
               </label>
               <DedicatedTemplateStatus
                 dedicatedTemplate={dedicatedTemplate}
@@ -263,14 +263,14 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
               />
             </div>
 
-            {/* Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ */}
+            {/* إحصائيات الإرسال */}
             <div className="space-y-1.5">
               {totalSent > 0 && (
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
                     {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                    {lang === "ar" ? "Ø±Ø³Ø§Ù„Ø© Ø£ÙØ±Ø³Ù„Øª" : "messages sent"}
+                    {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
                   </span>
                 </div>
               )}
@@ -279,7 +279,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
                   <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
                     {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                    {lang === "ar" ? "ÙØ´Ù„" : "failed"}
+                    {lang === "ar" ? "فشل" : "failed"}
                   </span>
                 </div>
               )}
@@ -287,7 +287,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
-                    {lang === "ar" ? "Ø¢Ø®Ø± Ø¥Ø±Ø³Ø§Ù„:" : "Last sent:"}{" "}
+                    {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
                     {formatLastSent(automation.lastSentAt)}
                   </span>
                 </div>
@@ -295,38 +295,38 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
             </div>
           </>
         ) : (
-          /* â”€â”€ Ø§Ù„Ø¹Ø±ÙˆØ¶ (promo): Ø§Ø®ØªÙŠØ§Ø± Ø­Ø± Ù…Ù† Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨ Ø§Ù„Ù…Ø¹ØªÙ…Ø¯Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+          /* ── العروض (promo): اختيار حر من القوالب المعتمدة ─────────────────── */
           <>
             <div>
               <label className="text-[11px] text-gray-400 mb-1.5 block">
-                {lang === "ar" ? "Ø§Ù„Ù‚Ø§Ù„Ø¨ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…" : "Used template"}
+                {lang === "ar" ? "القالب المستخدم" : "Used template"}
               </label>
               <select
                 value={templateId}
                 onChange={(e) => handleTemplateChange(e.target.value)}
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm px-3 py-2.5 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value="">{lang === "ar" ? "â€” Ø§Ø®ØªØ± Ù‚Ø§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯ â€”" : "â€” Choose approved template â€”"}</option>
+                <option value="">{lang === "ar" ? "— اختر قالب معتمد —" : "— Choose approved template —"}</option>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
               {templates.length === 0 && (
                 <p className="text-[10px] text-orange-500 mt-1.5">
-                  {lang === "ar" ? "âš ï¸ Ù„Ø§ ØªÙˆØ¬Ø¯ Ù‚ÙˆØ§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯Ø© â€” Ø§Ø°Ù‡Ø¨ Ù„ØµÙØ­Ø© Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨" : "âš ï¸ No approved templates â€” go to Templates page"}
+                  {lang === "ar" ? "⚠️ لا توجد قوالب معتمدة — اذهب لصفحة القوالب" : "⚠️ No approved templates — go to Templates page"}
                 </p>
               )}
             </div>
 
-            {/* Ø²Ø± Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø¹Ø±ÙˆØ¶ */}
+            {/* زر إرسال العروض */}
             <button
               onClick={() => {
                 if (!enabled || !templateId) {
-                  toast.error(lang === "ar" ? "ÙØ¹Ù‘Ù„ Ø§Ù„Ø£ØªÙ…ØªØ© ÙˆØ§Ø®ØªØ± Ù‚Ø§Ù„Ø¨Ø§Ù‹ Ø£ÙˆÙ„Ø§Ù‹" : "Enable automation and choose a template first");
+                  toast.error(lang === "ar" ? "فعّل الأتمتة واختر قالباً أولاً" : "Enable automation and choose a template first");
                   return;
                 }
                 if (customers.length === 0) {
-                  toast.error(lang === "ar" ? "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¹Ù…Ù„Ø§Ø¡ ÙÙŠ Ø§Ù„Ù…ØªØ¬Ø±" : "No store customers found");
+                  toast.error(lang === "ar" ? "لا يوجد عملاء في المتجر" : "No store customers found");
                   return;
                 }
                 setShowPromo(true);
@@ -339,7 +339,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
               )}
             >
               <Send className="w-4 h-4" />
-              {lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„ Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø±" : "Send to store customers"}
+              {lang === "ar" ? "إرسال لعملاء المتجر" : "Send to store customers"}
               {customers.length > 0 && (
                 <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
                   {customers.length}
@@ -347,14 +347,14 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
               )}
             </button>
 
-            {/* Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ */}
+            {/* إحصائيات الإرسال */}
             <div className="mt-3 space-y-1.5">
               {totalSent > 0 && (
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
                     {totalSent.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                    {lang === "ar" ? "Ø±Ø³Ø§Ù„Ø© Ø£ÙØ±Ø³Ù„Øª" : "messages sent"}
+                    {lang === "ar" ? "رسالة أُرسلت" : "messages sent"}
                   </span>
                 </div>
               )}
@@ -363,7 +363,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
                   <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
                     {(automation.failedCount ?? 0).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                    {lang === "ar" ? "ÙØ´Ù„" : "failed"}
+                    {lang === "ar" ? "فشل" : "failed"}
                   </span>
                 </div>
               )}
@@ -371,7 +371,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
                   <span className="text-[11px] text-gray-400">
-                    {lang === "ar" ? "Ø¢Ø®Ø± Ø¥Ø±Ø³Ø§Ù„:" : "Last sent:"}{" "}
+                    {lang === "ar" ? "آخر إرسال:" : "Last sent:"}{" "}
                     {formatLastSent(automation.lastSentAt)}
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
         {enabled && (
           <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700/60 pt-3 mt-4">
             <span className="text-[11px] text-gray-400">
-              {lang === "ar" ? "ÙˆÙ‚Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„:" : "Send time:"}
+              {lang === "ar" ? "وقت الإرسال:" : "Send time:"}
             </span>
             <button
               onClick={() => setShowDelayModal(true)}
@@ -391,7 +391,7 @@ export function AutomationCard({ automation, templates, onSave, lang, storeSourc
             >
               {getDelayLabel(automation.delayMinutes ?? 0)}
               <span className="text-[9px] font-bold bg-primary/10 px-1.5 py-0.5 rounded-md">
-                {lang === "ar" ? "ØªØ¹Ø¯ÙŠÙ„" : "Edit"}
+                {lang === "ar" ? "تعديل" : "Edit"}
               </span>
             </button>
           </div>

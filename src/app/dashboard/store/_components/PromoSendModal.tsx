@@ -1,5 +1,5 @@
 // src/app/dashboard/store/_components/PromoSendModal.tsx
-// â”€â”€â”€ Ù…ÙˆØ¯Ø§Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø±Ø¶ Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø± â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── مودال إرسال عرض لعملاء المتجر ──────────────────────────────────────────
 
 import { useState } from "react";
 import {
@@ -60,7 +60,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
 
     async function handleSend() {
         if (selected.size === 0) {
-            toast.error(lang === "ar" ? "Ø§Ø®ØªØ± Ø¹Ù…ÙŠÙ„Ø§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„" : "Select at least one customer");
+            toast.error(lang === "ar" ? "اختر عميلاً واحداً على الأقل" : "Select at least one customer");
             return;
         }
         setSending(true);
@@ -72,18 +72,18 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
             });
             const d: { success?: boolean; sent?: number; failed?: number; error?: string } = await r.json();
             if (!r.ok) {
-                toast.error(d.error ?? (lang === "ar" ? "ÙØ´Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„" : "Send failed"));
+                toast.error(d.error ?? (lang === "ar" ? "فشل الإرسال" : "Send failed"));
                 return;
             }
             setResult({ sent: d.sent ?? 0, failed: d.failed ?? 0 });
             onSent?.(d.sent ?? 0);
             toast.success(
                 lang === "ar"
-                    ? `âœ… ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ${d.sent} Ø±Ø³Ø§Ù„Ø©${(d.failed ?? 0) > 0 ? ` â€” ÙØ´Ù„ ${d.failed}` : ""}`
-                    : `âœ… Sent ${d.sent}${(d.failed ?? 0) > 0 ? ` â€” failed ${d.failed}` : ""}`
+                    ? `✅ تم إرسال ${d.sent} رسالة${(d.failed ?? 0) > 0 ? ` — فشل ${d.failed}` : ""}`
+                    : `✅ Sent ${d.sent}${(d.failed ?? 0) > 0 ? ` — failed ${d.failed}` : ""}`
             );
         } catch {
-            toast.error(lang === "ar" ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„" : "Connection error");
+            toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
         } finally {
             setSending(false);
         }
@@ -104,12 +104,12 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                     <div>
                         <p className="font-bold text-gray-800 dark:text-white">
-                            ðŸŽ {lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø±Ø¶ Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø±" : "Send promo to store customers"}
+                            🎁 {lang === "ar" ? "إرسال عرض لعملاء المتجر" : "Send promo to store customers"}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                             {selected.size > 0
-                                ? `${selected.size.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${lang === "ar" ? "Ø¹Ù…ÙŠÙ„ Ù…Ø®ØªØ§Ø±" : "selected"}`
-                                : lang === "ar" ? "Ø§Ø®ØªØ± Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù„ÙŠ Ù‡ØªØ¨Ø¹ØªÙ„Ù‡Ù…" : "Choose which customers to send to"}
+                                ? `${selected.size.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${lang === "ar" ? "عميل مختار" : "selected"}`
+                                : lang === "ar" ? "اختر العملاء اللي هتبعتلهم" : "Choose which customers to send to"}
                         </p>
                     </div>
                     <button
@@ -126,8 +126,8 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
                         <p className="text-sm text-primary">
                             {lang === "ar"
-                                ? `ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ${result.sent} Ø±Ø³Ø§Ù„Ø©${result.failed > 0 ? ` â€” ÙØ´Ù„ ${result.failed}` : " Ø¨Ù†Ø¬Ø§Ø­"}`
-                                : `Sent ${result.sent}${result.failed > 0 ? ` â€” failed ${result.failed}` : " successfully"}`}
+                                ? `تم إرسال ${result.sent} رسالة${result.failed > 0 ? ` — فشل ${result.failed}` : " بنجاح"}`
+                                : `Sent ${result.sent}${result.failed > 0 ? ` — failed ${result.failed}` : " successfully"}`}
                         </p>
                     </div>
                 )}
@@ -139,7 +139,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={lang === "ar" ? "Ø¨Ø­Ø« Ø¨Ø§Ø³Ù… Ø£Ùˆ Ø±Ù‚Ù…..." : "Search by name or number..."}
+                            placeholder={lang === "ar" ? "بحث باسم أو رقم..." : "Search by name or number..."}
                             className="w-full pr-9 pl-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30"
                         />
                     </div>
@@ -153,8 +153,8 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                                 ? <CheckSquare className="w-4 h-4" />
                                 : <Square className="w-4 h-4" />}
                             {allSelected
-                                ? (lang === "ar" ? "Ø¥Ù„ØºØ§Ø¡ ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„" : "Deselect all")
-                                : (lang === "ar" ? "ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„" : "Select all")}
+                                ? (lang === "ar" ? "إلغاء تحديد الكل" : "Deselect all")
+                                : (lang === "ar" ? "تحديد الكل" : "Select all")}
                             <span className="text-gray-400 text-xs">({filtered.length})</span>
                         </button>
                     )}
@@ -166,7 +166,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         <div className="flex flex-col items-center py-10 text-center">
                             <Users className="w-10 h-10 text-gray-200 dark:text-gray-600 mb-2" />
                             <p className="text-sm text-gray-400">
-                                {lang === "ar" ? "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¹Ù…Ù„Ø§Ø¡ Ù…Ø·Ø§Ø¨Ù‚ÙˆÙ†" : "No matching customers"}
+                                {lang === "ar" ? "لا يوجد عملاء مطابقون" : "No matching customers"}
                             </p>
                         </div>
                     ) : (
@@ -193,7 +193,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                                     </div>
 
                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-primary">
-                                        {c.name.trim().charAt(0).toUpperCase() || "Ø¹"}
+                                        {c.name.trim().charAt(0).toUpperCase() || "ع"}
                                     </div>
 
                                     <div className="flex-1 min-w-0 text-right">
@@ -202,7 +202,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                                     </div>
 
                                     <div className="text-right flex-shrink-0">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.ordersCount} {lang === "ar" ? "Ø·Ù„Ø¨" : "orders"}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.ordersCount} {lang === "ar" ? "طلب" : "orders"}</p>
                                     </div>
                                 </button>
                             );
@@ -216,7 +216,7 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                         onClick={onClose}
                         className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                        {lang === "ar" ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
+                        {lang === "ar" ? "إلغاء" : "Cancel"}
                     </button>
 
                     <button
@@ -228,8 +228,8 @@ export function PromoSendModal({ source, customers, onClose, lang, onSent }: Pro
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <Send className="w-4 h-4" />}
                         {sending
-                            ? (lang === "ar" ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„..." : "Sending...")
-                            : `${lang === "ar" ? "Ø¥Ø±Ø³Ø§Ù„ Ù„Ù€" : "Send to"} ${selected.size > 0 ? selected.size : ""} ${lang === "ar" ? "Ø¹Ù…ÙŠÙ„" : "customers"}`}
+                            ? (lang === "ar" ? "جاري الإرسال..." : "Sending...")
+                            : `${lang === "ar" ? "إرسال لـ" : "Send to"} ${selected.size > 0 ? selected.size : ""} ${lang === "ar" ? "عميل" : "customers"}`}
                     </button>
                 </div>
             </div>

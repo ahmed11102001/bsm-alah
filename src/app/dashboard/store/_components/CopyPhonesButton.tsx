@@ -1,5 +1,5 @@
 ﻿// src/app/dashboard/store/_components/CopyPhonesButton.tsx
-// â”€â”€â”€ Ø²Ø± Ù†Ø³Ø® Ø£Ø±Ù‚Ø§Ù… Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── زر نسخ أرقام العملاء ───────────────────────────────────────────────────
 
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
@@ -12,7 +12,7 @@ export function CopyPhonesButton({ customers, lang }: { customers: Customer[]; l
 
     function handleCopy() {
         if (customers.length === 0) {
-            toast.error(lang === "ar" ? "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¹Ù…Ù„Ø§Ø¡ Ù„Ù„Ù†Ø³Ø®" : "No customers to copy");
+            toast.error(lang === "ar" ? "لا يوجد عملاء للنسخ" : "No customers to copy");
             return;
         }
         const text = customers.map((c) => c.phone).join("\n");
@@ -20,19 +20,19 @@ export function CopyPhonesButton({ customers, lang }: { customers: Customer[]; l
             setCopied(true);
             toast.success(
                 lang === "ar"
-                    ? `âœ… ØªÙ… Ù†Ø³Ø® ${customers.length} Ø±Ù‚Ù…`
-                    : `âœ… Copied ${customers.length} numbers`
+                    ? `✅ تم نسخ ${customers.length} رقم`
+                    : `✅ Copied ${customers.length} numbers`
             );
             setTimeout(() => setCopied(false), 2000);
         }).catch(() => {
-            toast.error(lang === "ar" ? "ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ù†Ø³Ø®" : "Copy failed");
+            toast.error(lang === "ar" ? "تعذّر النسخ" : "Copy failed");
         });
     }
 
     return (
         <button
             onClick={handleCopy}
-            title={lang === "ar" ? "Ù†Ø³Ø® Ø£Ø±Ù‚Ø§Ù… Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡" : "Copy customer phones"}
+            title={lang === "ar" ? "نسخ أرقام العملاء" : "Copy customer phones"}
             className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all",
                 copied
@@ -43,7 +43,7 @@ export function CopyPhonesButton({ customers, lang }: { customers: Customer[]; l
             {copied
                 ? <Check className="w-3.5 h-3.5" />
                 : <Copy className="w-3.5 h-3.5" />}
-            {lang === "ar" ? "Ù†Ø³Ø® Ø§Ù„Ø£Ø±Ù‚Ø§Ù…" : "Copy numbers"}
+            {lang === "ar" ? "نسخ الأرقام" : "Copy numbers"}
         </button>
     );
 }

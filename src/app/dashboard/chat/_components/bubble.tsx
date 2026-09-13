@@ -1,6 +1,6 @@
 ﻿"use client";
 
-// Ù†ÙÙ‚Ù„ Ù…Ù† chat/page.tsx
+// نُقل من chat/page.tsx
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,10 +11,10 @@ import type { Message } from "./types";
 import { mediaSrc, linkify, timeStr } from "./utils";
 import { MsgTick } from "./masgtic";
 
-const QUICK_REACTIONS = ["â¤ï¸", "ðŸ˜‚", "ðŸ˜®", "ðŸ˜¢", "ðŸ™", "ðŸ‘"];
+const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 
-// â”€â”€â”€ ØªÙ…ÙŠÙŠØ² Ù†Øµ Ø§Ù„Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© â€” ÙŠÙØ³ØªØ®Ø¯Ù… Ø¹Ù†Ø¯ Ø§Ù„Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// ÙŠØ±Ø¬Ø¹ null Ù„Ùˆ Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªØ·Ø§Ø¨Ù‚ (Ù„Ù†Ø³Ù‚Ø· Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø£ØµÙ„ÙŠ linkify).
+// ─── تمييز نص البحث داخل الرسالة — يُستخدم عند البحث داخل المحادثة ──────────
+// يرجع null لو لا يوجد تطابق (لنسقط على العرض الأصلي linkify).
 function highlightText(text: string, query: string): React.ReactNode | null {
   const q = query.trim();
   if (!q) return null;
@@ -41,7 +41,7 @@ function highlightText(text: string, query: string): React.ReactNode | null {
   return <>{parts}</>;
 }
 
-// â”€â”€â”€ Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Bubble ───────────────────────────────────────────────────────────────────
 export function Bubble({
   msg, contactId, onReact, onReply, onCopy, onForward, onQuoteClick, lang, dark, highlight,
 }: {
@@ -118,7 +118,7 @@ export function Bubble({
               </button>
             ))}
             <button onClick={e => { e.stopPropagation(); setShowReactions(false); }}
-              className="text-gray-400 hover:text-gray-600 text-xs mr-1">âœ•</button>
+              className="text-gray-400 hover:text-gray-600 text-xs mr-1">✕</button>
           </div>
         )}
 
@@ -126,8 +126,8 @@ export function Bubble({
           <>
             <button
               type="button"
-              aria-label={lang === "ar" ? "Ø§Ù„Ù…Ø²ÙŠØ¯" : "More"}
-              title={lang === "ar" ? "Ø§Ù„Ù…Ø²ÙŠØ¯" : "More"}
+              aria-label={lang === "ar" ? "المزيد" : "More"}
+              title={lang === "ar" ? "المزيد" : "More"}
               onClick={e => {
                 e.stopPropagation();
                 setShowActions(p => !p);
@@ -148,14 +148,14 @@ export function Bubble({
                 } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}
                 onClick={e => e.stopPropagation()}
               >
-                {onReply && <button type="button" aria-label={lang === "ar" ? "Ø±Ø¯" : "Reply"} title={lang === "ar" ? "Ø±Ø¯" : "Reply"} onClick={() => { setShowActions(false); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
-                {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "Ù†Ø³Ø®" : "Copy"} title={lang === "ar" ? "Ù†Ø³Ø®" : "Copy"} onClick={() => { setShowActions(false); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
-                {onForward && <button type="button" aria-label={lang === "ar" ? "Ø¥Ø¹Ø§Ø¯Ø© ØªÙˆØ¬ÙŠÙ‡" : "Forward"} title={lang === "ar" ? "Ø¥Ø¹Ø§Ø¯Ø© ØªÙˆØ¬ÙŠÙ‡" : "Forward"} onClick={() => { setShowActions(false); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
+                {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={() => { setShowActions(false); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}
+                {onCopy && msg.content && <button type="button" aria-label={lang === "ar" ? "نسخ" : "Copy"} title={lang === "ar" ? "نسخ" : "Copy"} onClick={() => { setShowActions(false); onCopy(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Copy className="w-4 h-4" /></button>}
+                {onForward && <button type="button" aria-label={lang === "ar" ? "إعادة توجيه" : "Forward"} title={lang === "ar" ? "إعادة توجيه" : "Forward"} onClick={() => { setShowActions(false); onForward(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Forward className="w-4 h-4" /></button>}
                 {isAiMessage && (
                   <button
                     type="button"
-                    aria-label={lang === "ar" ? "ØªØ¯Ø±ÙŠØ¨ Ø§Ù„Ø¥ÙŠØ¬Ù†Øª / ØªØµØ­ÙŠØ­ Ø§Ù„Ø±Ø¯" : "Train Agent / Correct Reply"}
-                    title={lang === "ar" ? "ØªØ¯Ø±ÙŠØ¨ Ø§Ù„Ø¥ÙŠØ¬Ù†Øª / ØªØµØ­ÙŠØ­ Ø§Ù„Ø±Ø¯" : "Train Agent / Correct Reply"}
+                    aria-label={lang === "ar" ? "تدريب الإيجنت / تصحيح الرد" : "Train Agent / Correct Reply"}
+                    title={lang === "ar" ? "تدريب الإيجنت / تصحيح الرد" : "Train Agent / Correct Reply"}
                     onClick={() => {
                       setShowActions(false);
                       const targetContactId = contactId || msg.contactId || "";
@@ -179,8 +179,8 @@ export function Bubble({
         >
           {msg.replyTo && (
             <button type="button" onClick={e => { e.stopPropagation(); onQuoteClick?.(msg.replyTo!.id); }} className={`w-full text-left mb-2 border-l-4 rounded px-2 py-1 text-xs ${dark ? "bg-black/20 border-primary text-gray-300" : "bg-black/5 border-primary text-gray-600"}`}>
-              <span className="font-semibold block">{msg.replyTo.direction === "outbound" ? (lang === "ar" ? "Ø£Ù†Øª" : "You") : (lang === "ar" ? "Ø§Ù„Ø¹Ù…ÙŠÙ„" : "Customer")}</span>
-              <span className="line-clamp-2">{msg.replyTo.content || (lang === "ar" ? `Ù…Ø±ÙÙ‚ ${msg.replyTo.type}` : `${msg.replyTo.type} attachment`)}</span>
+              <span className="font-semibold block">{msg.replyTo.direction === "outbound" ? (lang === "ar" ? "أنت" : "You") : (lang === "ar" ? "العميل" : "Customer")}</span>
+              <span className="line-clamp-2">{msg.replyTo.content || (lang === "ar" ? `مرفق ${msg.replyTo.type}` : `${msg.replyTo.type} attachment`)}</span>
           </button>
           )}
           {msg.type === "image" && resolvedMediaSrc && (
@@ -212,7 +212,7 @@ export function Bubble({
                   />
                 </div>
               )}
-              {/* Thumbnail â€” click to open lightbox */}
+              {/* Thumbnail — click to open lightbox */}
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); setLightboxOpen(true); }}
@@ -220,7 +220,7 @@ export function Bubble({
               >
                 <img src={resolvedMediaSrc} alt="" className="rounded-lg mb-1 max-w-full max-h-60 object-cover cursor-zoom-in" />
               </button>
-              {/* Save button â€” downloads via blob */}
+              {/* Save button — downloads via blob */}
               <button
                 type="button"
                 onClick={handleSaveImage}

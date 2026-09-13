@@ -18,9 +18,9 @@ import {
 import ReferralProgramCard from "@/components/dashboard/ReferralProgramCard";
 import InvoicesTab from "./_components/InvoicesTab";
 
-// â”€â”€â”€ ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¨Ø§Ù‚Ø§Øª Ø¹Ø´Ø§Ù† Ù†Ø­Ø¯Ø¯ "Ø§Ù„Ø¨Ø§Ù‚Ø© Ø§Ù„Ù„ÙŠ Ø¨Ø¹Ø¯Ù‡Ø§" Ù„Ø²Ø± Ø§Ù„ØªØ±Ù‚ÙŠØ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Ù…Ù„Ø­ÙˆØ¸Ø©: "free" Ù…Ø´ Ù…ÙˆØ¬ÙˆØ¯Ø© ÙÙŠ SUBSCRIPTION_PLANS (Ù…Ø´ Ø¨Ø§Ù‚Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø´Ø±Ø§Ø¡)ØŒ
-// ÙØ¨Ù†ØªØ¹Ø§Ù…Ù„ Ù…Ø¹ ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¨Ø§Ù‚Ø§Øª ÙƒÙ€strings Ø¹Ø§Ø¯ÙŠØ© Ù‡Ù†Ø§ØŒ Ù…Ø´ PlanSlug Ù…Ø¨Ø§Ø´Ø±Ø©.
+// ─── ترتيب الباقات عشان نحدد "الباقة اللي بعدها" لزر الترقية ────────────────
+// ملحوظة: "free" مش موجودة في SUBSCRIPTION_PLANS (مش باقة قابلة للشراء)،
+// فبنتعامل مع ترتيب الباقات كـstrings عادية هنا، مش PlanSlug مباشرة.
 const PLAN_ORDER = ["free", "starter", "pro", "enterprise"] as const;
 function nextPlanSlug(current: string): PlanSlug {
   const idx = PLAN_ORDER.indexOf(current as (typeof PLAN_ORDER)[number]);
@@ -28,7 +28,7 @@ function nextPlanSlug(current: string): PlanSlug {
   return PLAN_ORDER[idx + 1] as PlanSlug;
 }
 
-// â”€â”€â”€ PlanCard Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── PlanCard Component ──────────────────────────────────────────────────────
 function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   const { t, locale } = useLanguage();
   const router = useRouter();
@@ -58,8 +58,8 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
               <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-1.5">
                 <Calendar className="w-3 h-3" />
                 {plan.status === "active"
-                  ? (locale === "ar" ? "ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ " : "Renews on ")
-                  : (locale === "ar" ? "Ø§Ù†ØªÙ‡Ù‰ ÙÙŠ " : "Expired on ")}
+                  ? (locale === "ar" ? "ينتهي في " : "Renews on ")
+                  : (locale === "ar" ? "انتهى في " : "Expired on ")}
                 <span className="font-semibold text-gray-500 dark:text-gray-300">
                   {new Date(plan.currentPeriodEnd).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
                     timeZone: "Africa/Cairo", day: "2-digit", month: "short", year: "numeric",
@@ -117,7 +117,7 @@ function PlanCard({ plan }: { plan: DashboardData["plan"] }) {
   );
 }
 
-// â”€â”€â”€ WANI AI Enterprise Token Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── WANI AI Enterprise Token Card ───────────────────────────────────────────
 function EnterpriseTokenCard({ data }: { data: DashboardData }) {
   const { t, locale } = useLanguage();
   const ai = t.home.ai;
@@ -149,7 +149,7 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
         </div>
         {isUnlimitedQuota ? (
           <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary">
-            {locale === "ar" ? "ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯ (Admin / Beta)" : "Unlimited (Admin / Beta)"}
+            {locale === "ar" ? "غير محدود (Admin / Beta)" : "Unlimited (Admin / Beta)"}
           </span>
         ) : pct >= 80 ? (
           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pct >= 95 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
@@ -161,9 +161,9 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
       <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
         <div>
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-            <span>{locale === "ar" ? "Ù…Ø³ØªØ®Ø¯Ù…" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
+            <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmtK(used)}</span></span>
             <span className="font-semibold text-gray-700 dark:text-gray-300">
-              {isUnlimitedQuota ? (locale === "ar" ? "ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯" : "Unlimited") : `${fmtK(monthly)} ${locale === "ar" ? "ØªÙˆÙƒÙ†/Ø´Ù‡Ø±" : "tokens/mo"}`}
+              {isUnlimitedQuota ? (locale === "ar" ? "غير محدود" : "Unlimited") : `${fmtK(monthly)} ${locale === "ar" ? "توكن/شهر" : "tokens/mo"}`}
             </span>
           </div>
           <Progress
@@ -187,13 +187,13 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
           </div>
           <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
             <p className="text-base font-bold text-primary">
-              {isUnlimitedQuota ? (locale === "ar" ? "ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯" : "Unlimited") : fmtK(Math.max(0, monthly - used))}
+              {isUnlimitedQuota ? (locale === "ar" ? "غير محدود" : "Unlimited") : fmtK(Math.max(0, monthly - used))}
             </p>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.remainingPlan}</p>
           </div>
           <div className={`rounded-xl p-3 text-center border ${bonus > 0 ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" : "bg-white dark:bg-gray-800/60 border-gray-100 dark:border-gray-700"}`}>
             <p className={`text-base font-bold ${bonus > 0 ? "text-purple-600 dark:text-purple-400" : "text-gray-300 dark:text-gray-600"}`}>
-              {bonus > 0 ? fmtK(bonus) : "â€”"}
+              {bonus > 0 ? fmtK(bonus) : "—"}
             </p>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{ai.bonusBalance}</p>
           </div>
@@ -203,7 +203,7 @@ function EnterpriseTokenCard({ data }: { data: DashboardData }) {
   );
 }
 
-// â”€â”€â”€ Claude MCP Usage Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Claude MCP Usage Card ───────────────────────────────────────────────────
 function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
   const { locale } = useLanguage();
   const [activeTab, setActiveTab] = useState<"usage" | "buy">("usage");
@@ -224,7 +224,7 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
           </div>
           <div>
             <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">Claude AI</CardTitle>
-            <p className="text-[11px] text-gray-400">{locale === "ar" ? "ÙŠØªØ¬Ø¯Ø¯ Ø£ÙˆÙ„ ÙƒÙ„ Ø´Ù‡Ø±" : "Resets monthly"}</p>
+            <p className="text-[11px] text-gray-400">{locale === "ar" ? "يتجدد أول كل شهر" : "Resets monthly"}</p>
           </div>
         </div>
         {!isEnt && (
@@ -232,7 +232,7 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
             {(["usage", "buy"] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
-                {tab === "usage" ? (locale === "ar" ? "Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ" : "Usage") : (locale === "ar" ? "ØªØ±Ù‚ÙŠØ©" : "Upgrade")}
+                {tab === "usage" ? (locale === "ar" ? "الاستهلاك" : "Usage") : (locale === "ar" ? "ترقية" : "Upgrade")}
               </button>
             ))}
           </div>
@@ -244,9 +244,9 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
           <div className="space-y-3">
             <div>
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                <span>{locale === "ar" ? "Ù…Ø³ØªØ®Ø¯Ù…" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
+                <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-200">{mcpUsed}</span></span>
                 <span className="font-semibold text-gray-700 dark:text-gray-200">
-                  {isUnlimitedMcp ? (locale === "ar" ? "ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯ âˆž" : "Unlimited âˆž") : `${mcpLimit} ${locale === "ar" ? "Ø£Ù…Ø±/Ø´Ù‡Ø±" : "cmds/mo"}`}
+                  {isUnlimitedMcp ? (locale === "ar" ? "غير محدود ∞" : "Unlimited ∞") : `${mcpLimit} ${locale === "ar" ? "أمر/شهر" : "cmds/mo"}`}
                 </span>
               </div>
               {!isUnlimitedMcp && (
@@ -256,27 +256,27 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-gray-900 dark:text-white">{mcpUsed}</p>
-                <p className="text-[10px] text-gray-400">{locale === "ar" ? "Ù…Ø³ØªØ®Ø¯Ù…" : "Used"}</p>
+                <p className="text-[10px] text-gray-400">{locale === "ar" ? "مستخدم" : "Used"}</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{isUnlimitedMcp ? "âˆž" : Math.max(0, mcpLimit - mcpUsed)}</p>
-                <p className="text-[10px] text-gray-400">{locale === "ar" ? "Ù…ØªØ¨Ù‚ÙŠ" : "Remaining"}</p>
+                <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{isUnlimitedMcp ? "∞" : Math.max(0, mcpLimit - mcpUsed)}</p>
+                <p className="text-[10px] text-gray-400">{locale === "ar" ? "متبقي" : "Remaining"}</p>
               </div>
             </div>
           </div>
         ) : (
           <div className="space-y-3 pt-1">
             <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-xl p-4 text-center">
-              <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " Ø¬Ù†ÙŠÙ‡" : " EGP"}</span></p>
-              <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯ âˆž" : "Unlimited Claude âˆž"}</p>
-              <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "Ø£ÙˆØ§Ù…Ø± Claude ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯Ø© Ù„Ø´Ù‡Ø± ÙƒØ§Ù…Ù„" : "Unlimited Claude commands for a month"}</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white">99<span className="text-sm font-medium text-gray-500 mr-1">{locale === "ar" ? " جنيه" : " EGP"}</span></p>
+              <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1">{locale === "ar" ? "Claude غير محدود ∞" : "Unlimited Claude ∞"}</p>
+              <p className="text-xs text-gray-400 mt-1">{locale === "ar" ? "أوامر Claude غير محدودة لشهر كامل" : "Unlimited Claude commands for a month"}</p>
             </div>
             <button
               onClick={() => window.location.href = "/checkout?packageId=mcp_addon_unlimited"}
               className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
             >
               <Sparkles className="w-4 h-4" />
-              {locale === "ar" ? "Ø§Ø´ØªØ±Ù Ø£ÙˆØ§Ù…Ø± ØºÙŠØ± Ù…Ø­Ø¯ÙˆØ¯Ø© â€” 99 Ø¬/Ø´Ù‡Ø±" : "Buy Unlimited Commands â€” 99 EGP/mo"}
+              {locale === "ar" ? "اشترِ أوامر غير محدودة — 99 ج/شهر" : "Buy Unlimited Commands — 99 EGP/mo"}
             </button>
           </div>
         )}
@@ -285,7 +285,7 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
   );
 }
 
-// â”€â”€â”€ Non-Enterprise WANI AI Upgrade Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Non-Enterprise WANI AI Upgrade Card ──────────────────────────────────────
 function WaniAiUpgradeCard({ locale }: { locale: string }) {
   const { t } = useLanguage();
   const ai = t.home.ai;
@@ -304,7 +304,7 @@ function WaniAiUpgradeCard({ locale }: { locale: string }) {
         </div>
         <div className="grid grid-cols-1 gap-1.5">
           {(locale === "ar"
-            ? ["Ø±Ø¯ÙˆØ¯ ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ", "1 Ù…Ù„ÙŠÙˆÙ† ØªÙˆÙƒÙ† Ø´Ù‡Ø±ÙŠØ§Ù‹", "ÙŠØ¯Ø¹Ù… ChatGPT Ùˆ Gemini", "Ø¥Ù…ÙƒØ§Ù†ÙŠØ© Ø´Ø±Ø§Ø¡ ØªÙˆÙƒÙ† Ø¥Ø¶Ø§ÙÙŠØ©"]
+            ? ["ردود تلقائية بالذكاء الاصطناعي", "1 مليون توكن شهرياً", "يدعم ChatGPT و Gemini", "إمكانية شراء توكن إضافية"]
             : ["Automatic AI replies", "1M tokens per month", "ChatGPT & Gemini support", "Buy extra tokens anytime"]
           ).map((f, i) => (
             <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
@@ -318,7 +318,7 @@ function WaniAiUpgradeCard({ locale }: { locale: string }) {
         <div className="flex items-center justify-between pt-1">
           <div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">{SUBSCRIPTION_PLANS.enterprise.monthly}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{locale === "ar" ? " Ø¬Ù†ÙŠÙ‡/Ø´Ù‡Ø±" : " EGP/mo"}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{locale === "ar" ? " جنيه/شهر" : " EGP/mo"}</span>
           </div>
           <button
             onClick={() => window.location.href = `/checkout?plan=max`}
@@ -333,7 +333,7 @@ function WaniAiUpgradeCard({ locale }: { locale: string }) {
   );
 }
 
-// â”€â”€â”€ Non-Pro/Ent Claude Upgrade Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Non-Pro/Ent Claude Upgrade Card ──────────────────────────────────────────
 function ClaudeUpgradeCard({ locale }: { locale: string }) {
   return (
     <Card className="border border-primary/20 dark:border-primary/10 shadow-sm bg-gradient-to-br from-primary/5 to-white dark:from-primary/5 dark:to-gray-900">
@@ -344,16 +344,16 @@ function ClaudeUpgradeCard({ locale }: { locale: string }) {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {locale === "ar" ? "ðŸ¤– ØªØ­ÙƒÙ‘Ù… ÙÙŠ ÙˆÙ†ÙŠ Ø¨Ø§Ù„ÙƒÙ„Ø§Ù… Ù…Ø¹ Claude" : "ðŸ¤– Control WANI by talking to Claude"}
+              {locale === "ar" ? "🤖 تحكّم في وني بالكلام مع Claude" : "🤖 Control WANI by talking to Claude"}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-              {locale === "ar" ? "Ù‚ÙˆÙ„ Ù„Ù€ Claude: Ø§Ø¹Ù…Ù„ Ø­Ù…Ù„Ø© Ù„Ø¹Ù…Ù„Ø§Ø¦ÙŠ â€” ÙˆÙ‡Ùˆ ÙŠØªÙ†ÙØ°Ù‡Ø§ ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹." : "Tell Claude to create campaigns or reports â€” it executes automatically."}
+              {locale === "ar" ? "قول لـ Claude: اعمل حملة لعملائي — وهو يتنفذها تلقائياً." : "Tell Claude to create campaigns or reports — it executes automatically."}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {(locale === "ar"
-            ? ["Ø¥Ù†Ø´Ø§Ø¡ Ø­Ù…Ù„Ø§Øª Ø¨Ø£Ù…Ø± ÙˆØ§Ø­Ø¯", "ØªÙ‚Ø§Ø±ÙŠØ± ÙÙˆØ±ÙŠØ©", "Ø¥Ø¯Ø§Ø±Ø© Ø¬Ù‡Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„", "50 Ø£Ù…Ø±/Ø´Ù‡Ø± ÙÙŠ Pro"]
+            ? ["إنشاء حملات بأمر واحد", "تقارير فورية", "إدارة جهات الاتصال", "50 أمر/شهر في Pro"]
             : ["Create campaigns in one command", "Instant reports", "Manage contacts", "50 cmds/mo in Pro"]
           ).map((f, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
@@ -369,14 +369,14 @@ function ClaudeUpgradeCard({ locale }: { locale: string }) {
           className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm active:scale-[.98]"
         >
           <Sparkles className="w-4 h-4" />
-          {locale === "ar" ? "ØªØ±Ù‚Ù‘Ù‰ ÙˆØ§Ø¨Ø¯Ø£ Ù…Ø¹ Claude" : "Upgrade to use Claude"}
+          {locale === "ar" ? "ترقّى وابدأ مع Claude" : "Upgrade to use Claude"}
         </button>
       </CardContent>
     </Card>
   );
 }
 
-// â”€â”€â”€ Usage Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Usage Page ───────────────────────────────────────────────────────────────
 export default function UsagePage() {
   const { dashData, loadingDash } = useSubscription();
   const { locale, dir } = useLanguage();
@@ -395,17 +395,17 @@ export default function UsagePage() {
 
   return (
     <div dir={dir} className="space-y-6">
-      {/* â”€â”€ Page Header â”€â”€ */}
+      {/* ── Page Header ── */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center shadow-md">
           <BarChart3 className="w-5 h-5 text-white" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {locale === "ar" ? "Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ ÙˆØ§Ù„ØªÙˆÙƒÙ†Ø²" : "Usage & Tokens"}
+            {locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {locale === "ar" ? "ØªØªØ¨Ø¹ Ø§Ø³ØªÙ‡Ù„Ø§ÙƒÙƒ Ù…Ù† ØªÙˆÙƒÙ†Ø² Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ" : "Track your AI token usage"}
+            {locale === "ar" ? "تتبع استهلاكك من توكنز الذكاء الاصطناعي" : "Track your AI token usage"}
           </p>
         </div>
       </div>
@@ -414,19 +414,19 @@ export default function UsagePage() {
         <TabsList className="w-full mb-2 h-auto min-h-10 gap-1 overflow-x-auto justify-start">
           <TabsTrigger value="usage" className="flex-1 min-w-[7rem] text-xs gap-1.5">
             <BarChart3 className="w-3.5 h-3.5" />
-            {locale === "ar" ? "Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ" : "Usage"}
+            {locale === "ar" ? "الاستهلاك" : "Usage"}
           </TabsTrigger>
           <TabsTrigger value="invoices" className="flex-1 min-w-[7rem] text-xs gap-1.5">
             <Receipt className="w-3.5 h-3.5" />
-            {locale === "ar" ? "Ø§Ù„ÙÙˆØ§ØªÙŠØ±" : "Invoices"}
+            {locale === "ar" ? "الفواتير" : "Invoices"}
           </TabsTrigger>
           <TabsTrigger value="referral" className="flex-1 min-w-[7rem] text-xs gap-1.5">
             <Gift className="w-3.5 h-3.5" />
-            {locale === "ar" ? "Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø§Ù„Ø¥Ø­Ø§Ù„Ø©" : "Referral Program"}
+            {locale === "ar" ? "برنامج الإحالة" : "Referral Program"}
           </TabsTrigger>
         </TabsList>
 
-        {/* â”€â”€ ØªØ§Ø¨ Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ â”€â”€ */}
+        {/* ── تاب الاستهلاك ── */}
         <TabsContent value="usage" className="space-y-6">
           <PlanCard plan={dashData.plan} />
 
@@ -443,7 +443,7 @@ export default function UsagePage() {
           )}
         </TabsContent>
 
-        {/* â”€â”€ ØªØ§Ø¨ Ø§Ù„ÙÙˆØ§ØªÙŠØ± â”€â”€ */}
+        {/* ── تاب الفواتير ── */}
         <TabsContent value="invoices">
           <Card className="border border-gray-100 dark:border-gray-700 shadow-sm">
             <CardContent className="p-4 sm:p-6">
@@ -452,7 +452,7 @@ export default function UsagePage() {
           </Card>
         </TabsContent>
 
-        {/* â”€â”€ ØªØ§Ø¨ Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø§Ù„Ø¥Ø­Ø§Ù„Ø© â”€â”€ */}
+        {/* ── تاب برنامج الإحالة ── */}
         <TabsContent value="referral">
           <ReferralProgramCard
             isFreePlan={dashData.plan.plan === "free" || dashData.plan.status !== "active"}

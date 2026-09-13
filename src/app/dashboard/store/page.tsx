@@ -2,7 +2,7 @@
 import { CardsGridSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 // src/app/dashboard/store/page.tsx
-// â”€â”€â”€ ØµÙØ­Ø© Ø§Ù„Ù…ØªØ¬Ø± â€” Ø¹Ù…Ù„Ø§Ø¡ + Ø£ØªÙ…ØªØ§Øª + Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ø­Ù…Ù„Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── صفحة المتجر — عملاء + أتمتات + إيرادات الحملات ─────────────────────────
 
 import { useCallback, useEffect, useState } from "react";
 import { ShoppingBag, Zap, Globe, Loader2, Unplug } from "lucide-react";
@@ -14,7 +14,7 @@ import type { Lang, StoreData } from "./_components/types";
 import { tr } from "./_components/constants";
 import { StoreTab } from "./_components/StoreTab";
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 interface StoreProps {
   onOpenChat?: (phone: string) => void;
@@ -51,7 +51,7 @@ export default function Store({ onOpenChat }: StoreProps) {
 
   useEffect(() => { loadStore(); }, [loadStore]);
 
-  // ØªØ­Ø¯ÙŠØ« Ø¯ÙˆØ±ÙŠ ØµØ§Ù…Øª ÙƒÙ„ 20 Ø«Ø§Ù†ÙŠØ© Ø¹Ø´Ø§Ù† Ø­Ø§Ù„Ø© Ø±Ø¨Ø· Ø§Ù„Ù…ØªØ¬Ø± ØªØªØ­Ø¯Ø« Ù„ÙˆØ­Ø¯Ù‡Ø§
+  // تحديث دوري صامت كل 20 ثانية عشان حالة ربط المتجر تتحدث لوحدها
   useEffect(() => {
     const id = setInterval(() => loadStore(true), 20_000);
     return () => clearInterval(id);
@@ -90,12 +90,12 @@ export default function Store({ onOpenChat }: StoreProps) {
     }
   };
 
-  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return <CardsGridSkeleton count={3} />;
   }
 
-  // â”€â”€ No Store â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── No Store ─────────────────────────────────────────────────────────────
   const hasStore = storeData?.shopify || storeData?.easyorders || storeData?.woocommerce;
   if (!hasStore) {
     return (
@@ -119,7 +119,7 @@ export default function Store({ onOpenChat }: StoreProps) {
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
 
-      {/* â”€â”€ Page Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Page Header ───────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
@@ -139,7 +139,7 @@ export default function Store({ onOpenChat }: StoreProps) {
             )}
             <span className="text-xs text-gray-400">
               {activeStore?.source === "shopify" ? "Shopify"
-                : activeStore?.source === "easyorders" ? (lang === "ar" ? "Ø¥ÙŠØ²ÙŠ Ø£ÙˆØ±Ø¯Ø±Ø²" : "EasyOrders")
+                : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
                   : "WooCommerce"}
             </span>
           </div>
@@ -161,7 +161,7 @@ export default function Store({ onOpenChat }: StoreProps) {
         )}
       </div>
 
-      {/* â”€â”€ Tabs (Ù„Ùˆ ÙÙŠ Ù…ØªØ¬Ø±ÙŠÙ†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Tabs (لو في متجرين) ────────────────────────────────────────────── */}
       {hasBoth && (
         <div className="flex gap-1.5 mb-6 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl w-fit">
           {(["shopify", "easyorders", "woocommerce"] as const).map((src) => {
@@ -190,7 +190,7 @@ export default function Store({ onOpenChat }: StoreProps) {
         </div>
       )}
 
-      {/* â”€â”€ Tab Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Tab Content ───────────────────────────────────────────────────── */}
       {activeStore && (
         <StoreTab
           store={activeStore}

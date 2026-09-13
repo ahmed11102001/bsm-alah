@@ -1,5 +1,5 @@
 ﻿// src/app/dashboard/store/_components/StoreTab.tsx
-// â”€â”€â”€ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„ÙƒØ§Ù…Ù„ Ù„ÙƒÙ„ Ù…ØªØ¬Ø± (KPIs + Ø£ØªÙ…ØªØ§Øª + Ø¹Ù…Ù„Ø§Ø¡) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── المحتوى الكامل لكل متجر (KPIs + أتمتات + عملاء) ────────────────────────
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -36,9 +36,9 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   const [templates, setTemplates] = useState<AutomationTemplate[]>([]);
   const [loadingA, setLoadingA] = useState(true);
 
-  // â”€â”€ ØªØ¨ÙˆÙŠØ¨Ø§ Ø§Ù„Ø¹Ù…Ù„ Ø§Ù„ÙŠÙˆÙ…ÙŠ/Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯ â€” Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ØŒ ÙˆØ§Ù„Ø£ØªÙ…ØªØ© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ â”€â”€â”€â”€
-  // Ù„Ùˆ Ù„Ù… ØªÙÙØ¹Ù‘Ù„ Ø£ÙŠ Ø£ØªÙ…ØªØ© Ø¨Ø¹Ø¯ (Ø¥Ø¹Ø¯Ø§Ø¯ Ø£ÙˆÙ„ Ù…Ø±Ø©). Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ÙŠÙˆØ²Ø± Ù„Ø§ ÙŠÙØªØ¬Ø§ÙˆÙŽØ² Ø£Ø¨Ø¯Ù‹Ø§.
-  // Ù…Ù„Ø§Ø­Ø¸Ø© ØªÙ†ÙÙŠØ°: Ø§Ù„ØªØ¨ÙˆÙŠØ¨ Ø¹Ø¨Ø± hidden (Ù„Ø§ Ø¥Ù„ØºØ§Ø¡ mount) â€” Ø§Ù„ÙƒØ±ÙˆØª Ø¨Ù„Ø§ effects.
+  // ── تبويبا العمل اليومي/الإعداد — العملاء افتراضيًا، والأتمتة تلقائيًا ────
+  // لو لم تُفعّل أي أتمتة بعد (إعداد أول مرة). اختيار اليوزر لا يُتجاوَز أبدًا.
+  // ملاحظة تنفيذ: التبويب عبر hidden (لا إلغاء mount) — الكروت بلا effects.
   const [storeTab, setStoreTab] = useState<"customers" | "automations">("customers");
   const tabTouched = useRef(false);
   const pickTab = (t: "customers" | "automations") => {
@@ -48,7 +48,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
 
   const [syncing, setSyncing] = useState(false);
 
-  // â”€â”€ Fetch Customers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch Customers ─────────────────────────────────────────────────────
   const fetchCustomers = useCallback(async (p: number, q: string) => {
     setLoadingC(true);
     try {
@@ -62,13 +62,13 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
       setHasMore(d.hasMore);
       setPage(p);
     } catch {
-      toast.error(lang === "ar" ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡" : "Failed to load customers");
+      toast.error(lang === "ar" ? "تعذر تحميل بيانات العملاء" : "Failed to load customers");
     } finally {
       setLoadingC(false);
     }
   }, [store.source]);
 
-  // â”€â”€ Fetch Automations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Fetch Automations ───────────────────────────────────────────────────
   const fetchAutomations = useCallback(async () => {
     setLoadingA(true);
     try {
@@ -82,7 +82,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         setStoreTab("automations");
       }
     } catch {
-      toast.error(lang === "ar" ? "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ automations" : "Failed to load automations");
+      toast.error(lang === "ar" ? "تعذر تحميل automations" : "Failed to load automations");
     } finally {
       setLoadingA(false);
     }
@@ -104,7 +104,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
     return () => clearTimeout(timer);
   }, [search, fetchCustomers]);
 
-  // â”€â”€ Save Automation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Save Automation ─────────────────────────────────────────────────────
   async function handleSaveAutomation(
     type: StoreAutomationType,
     isEnabled: boolean,
@@ -120,11 +120,11 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
       const d: { success?: boolean; error?: string; automation?: AutomationItem } = await r.json();
 
       if (!r.ok) {
-        toast.error(d.error ?? (lang === "ar" ? "ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„Ø£ØªÙ…ØªØ©" : "Failed to save automation"));
+        toast.error(d.error ?? (lang === "ar" ? "فشل حفظ الأتمتة" : "Failed to save automation"));
         return;
       }
 
-      toast.success(isEnabled ? (lang === "ar" ? "âœ… ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø£ØªÙ…ØªØ©" : "âœ… Automation enabled") : (lang === "ar" ? "ØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø£ØªÙ…ØªØ©" : "Automation disabled"));
+      toast.success(isEnabled ? (lang === "ar" ? "✅ تم تفعيل الأتمتة" : "✅ Automation enabled") : (lang === "ar" ? "تم إيقاف الأتمتة" : "Automation disabled"));
 
       setAutomations((prev) =>
         prev.map((a) =>
@@ -140,14 +140,14 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         )
       );
     } catch {
-      toast.error(lang === "ar" ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„" : "Connection error");
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
     }
   }
 
-  // â”€â”€ Manual Sync (EasyOrders only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Ù…Ù„Ø§Ø­Ø¸Ø©: Ø§Ù„Ù€ Public API Ø§Ù„Ø­Ø§Ù„ÙŠ Ù„Ù€ EasyOrders Ù„Ø§ ÙŠÙˆÙØ± Ø³Ø­Ø¨ ÙƒÙ„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø¯ÙØ¹Ø©
-  // ÙˆØ§Ø­Ø¯Ø©ØŒ ÙØ§Ù„Ø·Ù„Ø¨Ø§Øª Ø¨ØªÙˆØµÙ„ Ø­ØµØ±ÙŠÙ‹Ø§ Ø¹Ø¨Ø± Ø§Ù„Ù€ Webhook. Ø§Ù„Ø²Ø±Ø§Ø± Ø¯Ù‡ Ø¨Ù‚Ù‰ Ø¨ÙŠØ¹ÙŠØ¯ Ù…Ø²Ø§Ù…Ù†Ø©
-  // Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø¨Ø¯Ù„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª.
+  // ── Manual Sync (EasyOrders only) ───────────────────────────────────────
+  // ملاحظة: الـ Public API الحالي لـ EasyOrders لا يوفر سحب كل الطلبات دفعة
+  // واحدة، فالطلبات بتوصل حصريًا عبر الـ Webhook. الزرار ده بقى بيعيد مزامنة
+  // المنتجات بدل الطلبات.
   async function handleSync() {
     setSyncing(true);
     try {
@@ -159,24 +159,24 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
       const d: { success?: boolean; productsSynced?: number; productSyncError?: string | null; error?: string } = await r.json();
 
       if (!r.ok) {
-        toast.error(d.error ?? (lang === "ar" ? "ÙØ´Ù„Øª Ø§Ù„Ù…Ø²Ø§Ù…Ù†Ø©" : "Sync failed"));
+        toast.error(d.error ?? (lang === "ar" ? "فشلت المزامنة" : "Sync failed"));
         return;
       }
 
       if (d.productSyncError) {
         toast.error(
-          lang === "ar" ? `ØªÙ…Øª Ø§Ù„Ù…Ø²Ø§Ù…Ù†Ø© Ø§Ù„Ø¬Ø²Ø¦ÙŠØ©: ${d.productSyncError}` : `Partial sync: ${d.productSyncError}`
+          lang === "ar" ? `تمت المزامنة الجزئية: ${d.productSyncError}` : `Partial sync: ${d.productSyncError}`
         );
       } else {
         toast.success(
-          `${lang === "ar" ? "âœ… ØªÙ…Øª Ù…Ø²Ø§Ù…Ù†Ø©" : "âœ… Synced"} ${d.productsSynced ?? 0} ${lang === "ar" ? "Ù…Ù†ØªØ¬" : "products"}`
+          `${lang === "ar" ? "✅ تمت مزامنة" : "✅ Synced"} ${d.productsSynced ?? 0} ${lang === "ar" ? "منتج" : "products"}`
         );
       }
-      // Ø¥Ø¹Ø§Ø¯Ø© ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø¨Ø¹Ø¯ Ø§Ù„Ù…Ø²Ø§Ù…Ù†Ø©
+      // إعادة تحميل العملاء بعد المزامنة
       await fetchCustomers(1, search);
 
     } catch {
-      toast.error(lang === "ar" ? "Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„" : "Connection error");
+      toast.error(lang === "ar" ? "خطأ في الاتصال" : "Connection error");
     } finally {
       setSyncing(false);
     }
@@ -185,7 +185,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   return (
     <div className="space-y-8">
 
-      {/* â”€â”€ KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── KPIs ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
           icon={<Package className="w-5 h-5 text-blue-600" />}
@@ -209,13 +209,13 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         <KpiCard
           icon={<RefreshCw className="w-5 h-5 text-orange-500" />}
           label={tr("lastSync", lang)}
-          value={store.lastSyncAt ? formatDate(store.lastSyncAt, lang) : "â€”"}
+          value={store.lastSyncAt ? formatDate(store.lastSyncAt, lang) : "—"}
           sub={store.totalSynced ? `${store.totalSynced.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} ${tr("savedOrders", lang)}` : undefined}
           color="bg-orange-50 dark:bg-orange-900/20"
         />
       </div>
 
-      {/* â”€â”€ ØªØ¨ÙˆÙŠØ¨Ø§ Ø§Ù„Ø¹Ù…Ù„ Ø§Ù„ÙŠÙˆÙ…ÙŠ / Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── تبويبا العمل اليومي / الإعداد ─────────────────────────────────── */}
       <div className="flex gap-1.5 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl w-fit">
         <TabButton
           active={storeTab === "customers"}
@@ -235,7 +235,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         />
       </div>
 
-      {/* â”€â”€ Automations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Automations ───────────────────────────────────────────────────── */}
       <section className={storeTab === "automations" ? "" : "hidden"}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
@@ -269,7 +269,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         )}
       </section>
 
-      {/* â”€â”€ Customers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Customers ─────────────────────────────────────────────────────── */}
       <section className={storeTab === "customers" ? "" : "hidden"}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <h2 className="text-base font-bold text-gray-800 dark:text-white">
@@ -279,14 +279,14 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
             </span>
           </h2>
 
-          {/* Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ù†Ø³Ø® ÙˆØ§Ù„ØªØµØ¯ÙŠØ± */}
+          {/* أزرار النسخ والتصدير */}
           <div className="flex items-center gap-2">
             <CopyPhonesButton customers={customers} lang={lang} />
             <ExportExcelButton source={store.source} search={search} lang={lang} />
           </div>
         </div>
 
-        {/* Ø¨Ø­Ø« */}
+        {/* بحث */}
         <div className="relative mb-4 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
@@ -333,7 +333,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         )}
       </section>
 
-      {/* â”€â”€ Contact List Banner â€” ØªØ®Øµ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Contact List Banner — تخص العملاء ───────────────────────────────── */}
       <div className={cn(
         "bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center gap-4",
         storeTab === "customers" ? "" : "hidden"
@@ -343,7 +343,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-800 dark:text-white">
-            {tr("listTitle", lang)} "{lang === "ar" ? `Ø¹Ù…Ù„Ø§Ø¡ ${store.storeName}` : `${store.storeName} customers`}"
+            {tr("listTitle", lang)} "{lang === "ar" ? `عملاء ${store.storeName}` : `${store.storeName} customers`}"
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
             {store.totalCustomers.toLocaleString(lang === "ar" ? "ar-EG" : "en-US")} {tr("syncedContacts", lang)}
@@ -358,7 +358,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </button>
       </div>
 
-      {/* â”€â”€ EasyOrders Manual Sync â€” ØµÙŠØ§Ù†Ø©ØŒ Ù…Ø¹ Ø§Ù„Ø£ØªÙ…ØªØ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── EasyOrders Manual Sync — صيانة، مع الأتمتة ──────────────────────── */}
       {storeTab === "automations" && store.source === "easyorders" && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex items-center justify-between gap-4">
           <div>
@@ -376,7 +376,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
         </div>
       )}
 
-      {/* â”€â”€ WooCommerce Webhook Info â€” Ø¥Ø¹Ø¯Ø§Ø¯ØŒ Ù…Ø¹ Ø§Ù„Ø£ØªÙ…ØªØ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── WooCommerce Webhook Info — إعداد، مع الأتمتة ───────────────────── */}
       {storeTab === "automations" && store.source === "woocommerce" && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
@@ -401,7 +401,7 @@ export function StoreTab({ store, onOpenChat, lang }: StoreTabProps) {
   );
 }
 
-// â”€â”€â”€ Ø²Ø±Ø§Ø± ØªØ¨ÙˆÙŠØ¨ Ø¯Ø§Ø®Ù„ÙŠ Ø¨Ø¹Ø¯Ù‘Ø§Ø¯ â€” Ù†ÙØ³ Ù„ØºØ© ØªØ¨ÙˆÙŠØ¨Ø§Øª Ø§Ù„Ù…Ù†ØµØ§Øª Ø£Ø¹Ù„Ù‰ Ø§Ù„ØµÙØ­Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── زرار تبويب داخلي بعدّاد — نفس لغة تبويبات المنصات أعلى الصفحة ──────────
 function TabButton({ active, onClick, icon, label, count, lang }: {
   active: boolean;
   onClick: () => void;

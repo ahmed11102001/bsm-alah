@@ -1,13 +1,13 @@
 ﻿"use client";
 
-// â”€â”€ PartnerCardTemplates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// 5 ØªØµØ§Ù…ÙŠÙ…/Ø­Ø±ÙƒØ§Øª Ù…Ø®ØªÙ„ÙØ© Ù„ÙƒØ§Ø±Øª "WANI Partner". ÙƒÙ„ ØªØµÙ…ÙŠÙ… Ø¨ÙŠØ­Ø¯Ø¯:
-//  - ØªÙˆØ²ÙŠØ¹ Ø§Ù„Ù†Øµ (Ø§Ø³Ù… Ø§Ù„Ø¨Ø±Ø§Ù†Ø¯ / Ø§Ù„Ø¹Ù†ÙˆØ§Ù† / Ø§Ù„Ø¬Ù…Ù„Ø© / Ø§Ù„Ø²Ø±) Ø¹Ù„Ù‰ Ù…Ø³Ø§Ø­Ø© Ø§Ù„ÙƒØ§Ø±Øª
-//  - Ù„ÙˆÙ† Ø§Ù„Ù‡ÙˆÙŠØ© (accent)
-//  - Ø­Ø±ÙƒØ© Ø§Ù„Ø¯Ø®ÙˆÙ„ (Entrance animation) Ù„ÙƒÙ„ Ø¹Ù†ØµØ± Ù„Ù…Ø§ Ø§Ù„ÙƒØ§Ø±Øª ÙŠØªØºÙŠÙ‘Ø±
-// Ø§Ù„Ø®Ù„ÙÙŠØ© Ø¯Ø§ÙŠÙ…Ø§Ù‹ ØµÙˆØ±Ø© ÙˆØ§Ø­Ø¯Ø© ØªØ§Ø®Ø¯ Ù…Ø³Ø§Ø­Ø© Ø§Ù„ÙƒØ§Ø±Øª ÙƒÙ„Ù‡ + Overlay ØªØ¯Ø±Ù‘Ø¬ÙŠ Ù„Ù„Ù€ legibility.
-// Ù†ÙØ³ Ø§Ù„Ù…ÙƒÙˆÙ‘Ù† Ø¯Ù‡ Ø¨ÙŠØªØ³ØªØ®Ø¯Ù… ÙÙŠ ØµÙØ­Ø© Ø§Ù„ØªØ­ÙƒÙ… (/dashboard/wani-partner) Ù„Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©
-// ÙˆÙÙŠ ÙƒØ§Ø±Øª Ø§Ù„Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ (src/app/dashboard/page.tsx).
+// ── PartnerCardTemplates ────────────────────────────────────────────────────
+// 5 تصاميم/حركات مختلفة لكارت "WANI Partner". كل تصميم بيحدد:
+//  - توزيع النص (اسم البراند / العنوان / الجملة / الزر) على مساحة الكارت
+//  - لون الهوية (accent)
+//  - حركة الدخول (Entrance animation) لكل عنصر لما الكارت يتغيّر
+// الخلفية دايماً صورة واحدة تاخد مساحة الكارت كله + Overlay تدرّجي للـ legibility.
+// نفس المكوّن ده بيتستخدم في صفحة التحكم (/dashboard/wani-partner) للمعاينة
+// وفي كارت الداشبورد الحقيقي (src/app/dashboard/page.tsx).
 
 export interface PartnerCardContent {
   brandName: string;
@@ -29,32 +29,32 @@ export const PARTNER_TEMPLATES: PartnerTemplateMeta[] = [
   {
     id: 1,
     accent: "hsl(var(--primary))",
-    name: { ar: "Ø³ÙŠÙ†Ù…Ø§Ø¦ÙŠ", en: "Cinematic" },
-    desc: { ar: "Ø§Ù„Ø¹Ù†ÙˆØ§Ù† ÙˆØ§Ù„Ø¬Ù…Ù„Ø© ØªØ­Øª ÙÙŠ Ø§Ù„Ø´Ù…Ø§Ù„ØŒ Ø§Ù„Ø²Ø± ØªØ­Øª ÙÙŠ Ø§Ù„ÙŠÙ…ÙŠÙ†", en: "Title & tagline bottom-left, button bottom-right" },
+    name: { ar: "سينمائي", en: "Cinematic" },
+    desc: { ar: "العنوان والجملة تحت في الشمال، الزر تحت في اليمين", en: "Title & tagline bottom-left, button bottom-right" },
   },
   {
     id: 2,
     accent: "#3b82f6",
-    name: { ar: "Ù‚Ø·Ø±ÙŠ", en: "Diagonal" },
-    desc: { ar: "Ø§Ù„Ø¹Ù†ÙˆØ§Ù† ÙÙŠ Ø§Ù„Ù†ØµØŒ Ø§Ù„Ø¨Ø±Ø§Ù†Ø¯ ÙÙˆÙ‚ØŒ Ø§Ù„Ø²Ø± ØªØ­Øª", en: "Title centered, brand top, button bottom" },
+    name: { ar: "قطري", en: "Diagonal" },
+    desc: { ar: "العنوان في النص، البراند فوق، الزر تحت", en: "Title centered, brand top, button bottom" },
   },
   {
     id: 3,
     accent: "#f2b84a",
-    name: { ar: "Ø£Ø±ÙƒØ§Ù†", en: "Corners" },
-    desc: { ar: "ÙƒÙ„ Ø¹Ù†ØµØ± ÙÙŠ Ø±ÙƒÙ† Ù…Ø®ØªÙ„Ù Ù…Ù† Ø§Ù„ÙƒØ§Ø±Øª", en: "Each element in a different corner" },
+    name: { ar: "أركان", en: "Corners" },
+    desc: { ar: "كل عنصر في ركن مختلف من الكارت", en: "Each element in a different corner" },
   },
   {
     id: 4,
     accent: "#a78bfa",
-    name: { ar: "Ù…Ø±ÙƒØ²ÙŠ", en: "Centered" },
-    desc: { ar: "ÙƒÙ„ Ø­Ø§Ø¬Ø© ÙÙŠ Ø§Ù„Ù†ØµØŒ Ù…ØªØ±Ø§ØµØ© Ø±Ø£Ø³ÙŠØ§Ù‹", en: "Everything centered, stacked vertically" },
+    name: { ar: "مركزي", en: "Centered" },
+    desc: { ar: "كل حاجة في النص، متراصة رأسياً", en: "Everything centered, stacked vertically" },
   },
   {
     id: 5,
     accent: "#fb7185",
-    name: { ar: "Ù…Ø¬Ù„Ø©", en: "Magazine" },
-    desc: { ar: "Ø§Ù„Ø¹Ù†ÙˆØ§Ù† ÙÙˆÙ‚ Ø§Ù„Ø´Ù…Ø§Ù„ØŒ Ø§Ù„Ø¬Ù…Ù„Ø© ÙÙˆÙ‚ Ø§Ù„ÙŠÙ…ÙŠÙ†", en: "Title top-left, tagline top-right" },
+    name: { ar: "مجلة", en: "Magazine" },
+    desc: { ar: "العنوان فوق الشمال، الجملة فوق اليمين", en: "Title top-left, tagline top-right" },
   },
 ];
 
@@ -77,7 +77,7 @@ export function PartnerCardTemplate({
   template: number;
   content: PartnerCardContent;
   interactive?: boolean;
-  /** ØºÙŠÙ‘Ø±Ù‡ ÙƒÙ„ Ù…Ø§ ØªØªØºÙŠØ± Ø§Ù„Ø´Ø±ÙŠØ­Ø© Ø¹Ø´Ø§Ù† Ø§Ù„Ø­Ø±ÙƒØ© ØªØªØ¹Ø§Ø¯ */
+  /** غيّره كل ما تتغير الشريحة عشان الحركة تتعاد */
   animKey?: string | number;
 }) {
   const meta = PARTNER_TEMPLATES.find((t) => t.id === template) ?? PARTNER_TEMPLATES[0];
@@ -95,13 +95,13 @@ export function PartnerCardTemplate({
 
   return (
     <div key={animKey} className="relative w-full h-full overflow-hidden">
-      {/* Ø§Ù„Ø®Ù„ÙÙŠØ© â€” Ø§Ù„ØµÙˆØ±Ø© ÙƒØ§Ù…Ù„Ø© + overlay */}
+      {/* الخلفية — الصورة كاملة + overlay */}
       <div
         className="absolute inset-0 bg-cover bg-center animate-in fade-in zoom-in-105 duration-700 ease-out"
         style={{ backgroundImage: `url(${image})` }}
       />
 
-      {/* â”€â”€ Template 1: Cinematic â€” Ù†Øµ ØªØ­Øª Ø´Ù…Ø§Ù„ØŒ Ø²Ø±Ø§Ø± ØªØ­Øª ÙŠÙ…ÙŠÙ† â”€â”€ */}
+      {/* ── Template 1: Cinematic — نص تحت شمال، زرار تحت يمين ── */}
       {template === 1 && (
         <>
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)" }} />
@@ -120,7 +120,7 @@ export function PartnerCardTemplate({
         </>
       )}
 
-      {/* â”€â”€ Template 2: Diagonal â€” Ø¨Ø±Ø§Ù†Ø¯ ÙÙˆÙ‚ØŒ Ø¹Ù†ÙˆØ§Ù† ÙÙŠ Ø§Ù„Ù†ØµØŒ Ø²Ø±Ø§Ø± ØªØ­Øª â”€â”€ */}
+      {/* ── Template 2: Diagonal — براند فوق، عنوان في النص، زرار تحت ── */}
       {template === 2 && (
         <>
           <div className="absolute inset-0" style={{ background: `linear-gradient(115deg, rgba(0,0,0,0.75) 15%, rgba(0,0,0,0.15) 60%)` }} />
@@ -139,7 +139,7 @@ export function PartnerCardTemplate({
         </>
       )}
 
-      {/* â”€â”€ Template 3: Corners â€” ÙƒÙ„ Ø¹Ù†ØµØ± ÙÙŠ Ø±ÙƒÙ† â”€â”€ */}
+      {/* ── Template 3: Corners — كل عنصر في ركن ── */}
       {template === 3 && (
         <>
           <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.7) 100%)" }} />
@@ -158,7 +158,7 @@ export function PartnerCardTemplate({
         </>
       )}
 
-      {/* â”€â”€ Template 4: Centered â€” ÙƒÙ„ Ø­Ø§Ø¬Ø© ÙÙŠ Ø§Ù„Ù†Øµ â”€â”€ */}
+      {/* ── Template 4: Centered — كل حاجة في النص ── */}
       {template === 4 && (
         <>
           <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 85%)" }} />
@@ -179,7 +179,7 @@ export function PartnerCardTemplate({
         </>
       )}
 
-      {/* â”€â”€ Template 5: Magazine â€” Ø¹Ù†ÙˆØ§Ù† ÙÙˆÙ‚ Ø´Ù…Ø§Ù„ØŒ Ø¬Ù…Ù„Ø© ÙÙˆÙ‚ ÙŠÙ…ÙŠÙ†ØŒ Ø¨Ø±Ø§Ù†Ø¯ ÙˆØ²Ø±Ø§Ø± ØªØ­Øª â”€â”€ */}
+      {/* ── Template 5: Magazine — عنوان فوق شمال، جملة فوق يمين، براند وزرار تحت ── */}
       {template === 5 && (
         <>
           <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.72) 0%, transparent 45%, transparent 60%, rgba(0,0,0,0.78) 100%)" }} />

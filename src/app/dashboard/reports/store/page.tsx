@@ -64,11 +64,11 @@ export default function ReportsStorePage() {
       <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500 dark:text-gray-400">Ù…Ù†</Label>
+            <Label className="text-xs text-gray-500 dark:text-gray-400">من</Label>
             <Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="w-36 text-sm" />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500 dark:text-gray-400">Ø¥Ù„Ù‰</Label>
+            <Label className="text-xs text-gray-500 dark:text-gray-400">إلى</Label>
             <Input type="date" value={to} min={from} max={TODAY} onChange={(e) => setTo(e.target.value)} className="w-36 text-sm" />
           </div>
           <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5" onClick={fetchStoreReport}>
@@ -90,7 +90,7 @@ export default function ReportsStorePage() {
           ) : (
             <div className="space-y-6">
 
-              {/* â”€â”€ Connected Stores â”€â”€ */}
+              {/* ── Connected Stores ── */}
               {storeReport.stores.length > 0 && (
                 <div className="flex flex-wrap gap-3 mb-2">
                   {storeReport.stores.map((s) => (
@@ -113,7 +113,7 @@ export default function ReportsStorePage() {
                 </div>
               )}
 
-              {/* â”€â”€ KPIs â”€â”€ */}
+              {/* ── KPIs ── */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
@@ -195,7 +195,7 @@ export default function ReportsStorePage() {
                 </Card>
               </div>
 
-              {/* â”€â”€ Revenue Attribution â€” Campaign Bar â”€â”€ */}
+              {/* ── Revenue Attribution — Campaign Bar ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Campaign Revenue Share Visual */}
@@ -209,7 +209,7 @@ export default function ReportsStorePage() {
                   <CardContent>
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500 dark:text-gray-400">{locale === "ar" ? "Ø­Ù…Ù„Ø§Øª ÙˆØ§ØªØ³Ø§Ø¨" : "WhatsApp Campaigns"}</span>
+                        <span className="text-gray-500 dark:text-gray-400">{locale === "ar" ? "حملات واتساب" : "WhatsApp Campaigns"}</span>
                         <span className="font-bold text-primary">{storeReport.summary.campaignRevenueShare}%</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
@@ -220,10 +220,10 @@ export default function ReportsStorePage() {
                       </div>
                       <div className="flex justify-between mt-2 text-xs text-gray-400">
                         <span>
-                          {locale === "ar" ? "Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ø­Ù…Ù„Ø§Øª:" : "Campaign revenue:"} {formatNumber(storeReport.summary.totalCampaignRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
+                          {locale === "ar" ? "إيرادات الحملات:" : "Campaign revenue:"} {formatNumber(storeReport.summary.totalCampaignRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
                         </span>
                         <span>
-                          {locale === "ar" ? "Ø¥Ø¬Ù…Ø§Ù„ÙŠ:" : "Total:"} {formatNumber(storeReport.summary.totalRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
+                          {locale === "ar" ? "إجمالي:" : "Total:"} {formatNumber(storeReport.summary.totalRevenue, numberLocale, { maximumFractionDigits: 0 })} EGP
                         </span>
                       </div>
                     </div>
@@ -242,8 +242,8 @@ export default function ReportsStorePage() {
                             cancelled: "bg-red-400",
                           };
                           const labels: Record<string, string> = {
-                            pending: locale === "ar" ? "Ø§Ù†ØªØ¸Ø§Ø±" : "Pending", fulfilled: locale === "ar" ? "Ù…ÙƒØªÙ…Ù„" : "Fulfilled",
-                            shipped: locale === "ar" ? "ØªÙ… Ø§Ù„Ø´Ø­Ù†" : "Shipped", cancelled: locale === "ar" ? "Ù…Ù„ØºÙŠ" : "Cancelled",
+                            pending: locale === "ar" ? "انتظار" : "Pending", fulfilled: locale === "ar" ? "مكتمل" : "Fulfilled",
+                            shipped: locale === "ar" ? "تم الشحن" : "Shipped", cancelled: locale === "ar" ? "ملغي" : "Cancelled",
                           };
                           return (
                             <div key={s.status}>
@@ -303,13 +303,13 @@ export default function ReportsStorePage() {
                 </Card>
               </div>
 
-              {/* â”€â”€ Revenue Attribution per Campaign â”€â”€ */}
+              {/* ── Revenue Attribution per Campaign ── */}
               {storeReport.campaignRevenue.length > 0 && (
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <ArrowUpRight className="w-4 h-4 text-primary" />
-                      {locale === "ar" ? "Revenue Attribution â€” Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ù†Ø³ÙˆØ¨Ø© Ù„Ù„Ø­Ù…Ù„Ø§Øª" : "Revenue Attribution"}
+                      {locale === "ar" ? "Revenue Attribution — الإيرادات المنسوبة للحملات" : "Revenue Attribution"}
                     </CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {pageText[locale].store.whatsappCampaignRevenueHint}
@@ -320,12 +320,12 @@ export default function ReportsStorePage() {
                       <thead>
                         <tr className="border-b border-gray-100 text-xs text-gray-400">
                           <th className="text-right py-2 pr-2">{pageText[locale].logs.campaign}</th>
-                          <th className="text-center py-2">{locale === "ar" ? "Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯ Ø§Ù„Ù…Ù†Ø³ÙˆØ¨" : "Attributed Revenue"}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "الإيراد المنسوب" : "Attributed Revenue"}</th>
                           <th className="text-center py-2">{pageText[locale].charts.orders}</th>
                           <th className="text-center py-2">{pageText[locale].logs.sent}</th>
                           <th className="text-center py-2">{pageText[locale].logs.read}</th>
-                          <th className="text-center py-2">{locale === "ar" ? "Ù…Ø¹Ø¯Ù„ Ø§Ù„ØªØ­ÙˆÙŠÙ„" : "Conversion Rate"}</th>
-                          <th className="text-center py-2">{locale === "ar" ? "Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯/Ø±Ø³Ø§Ù„Ø©" : "Rev/Message"}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "معدل التحويل" : "Conversion Rate"}</th>
+                          <th className="text-center py-2">{locale === "ar" ? "الإيراد/رسالة" : "Rev/Message"}</th>
                           <th className="text-right py-2 pl-2">{pageText[locale].store.date}</th>
                         </tr>
                       </thead>
@@ -366,7 +366,7 @@ export default function ReportsStorePage() {
                               <td className="py-3 pl-2 text-right text-xs text-gray-400">
                                 {c.completedAt
                                   ? formatDate(c.completedAt, dateLocale, { day: "numeric", month: "short" })
-                                  : "â€”"}
+                                  : "—"}
                               </td>
                             </tr>
                           );
@@ -383,12 +383,12 @@ export default function ReportsStorePage() {
                           <XAxis type="number" tick={{ fontSize: 10 }}
                             tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100}
-                            tickFormatter={(v) => v.length > 14 ? v.slice(0, 14) + "â€¦" : v} />
+                            tickFormatter={(v) => v.length > 14 ? v.slice(0, 14) + "…" : v} />
                           <Tooltip
                             formatter={(value: any) => {
                               const num = typeof value === "number" ? value : Number(value);
                               return !isNaN(num)
-                                ? [`${formatNumber(num, numberLocale)} EGP`, locale === "ar" ? "Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯" : "Revenue"]
+                                ? [`${formatNumber(num, numberLocale)} EGP`, locale === "ar" ? "الإيراد" : "Revenue"]
                                 : ["", ""];
                             }}
                           />
@@ -406,7 +406,7 @@ export default function ReportsStorePage() {
                 </Card>
               )}
 
-              {/* â”€â”€ Top Customers â”€â”€ */}
+              {/* ── Top Customers ── */}
               {storeReport.topCustomers.length > 0 && (
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
                   <CardHeader className="pb-2">
@@ -423,7 +423,7 @@ export default function ReportsStorePage() {
                           <th className="text-right py-2">{pageText[locale].store.customer}</th>
                           <th className="text-center py-2">{pageText[locale].store.phone}</th>
                           <th className="text-center py-2">{pageText[locale].charts.orders}</th>
-                          <th className="text-left py-2 pl-2">{locale === "ar" ? "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¥Ù†ÙØ§Ù‚" : "Total Spent"}</th>
+                          <th className="text-left py-2 pl-2">{locale === "ar" ? "إجمالي الإنفاق" : "Total Spent"}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -431,7 +431,7 @@ export default function ReportsStorePage() {
                           <tr key={c.phone} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                             <td className="py-3 pr-2 text-gray-400 text-xs">{i + 1}</td>
                             <td className="py-3">
-                              <div className="font-medium text-gray-800">{c.name ?? "â€”"}</div>
+                              <div className="font-medium text-gray-800">{c.name ?? "—"}</div>
                             </td>
                             <td className="py-3 text-center text-gray-500 dark:text-gray-400 text-xs font-mono">{c.phone}</td>
                             <td className="py-3 text-center">
@@ -450,7 +450,7 @@ export default function ReportsStorePage() {
                 </Card>
               )}
 
-              {/* â”€â”€ Confirmed/Cancelled Orders â”€â”€ */}
+              {/* ── Confirmed/Cancelled Orders ── */}
               {storeReport.confirmedOrders && (
                 <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mt-6">
                   <CardHeader className="pb-2 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -493,14 +493,14 @@ export default function ReportsStorePage() {
                             {storeReport.confirmedOrders.map((o) => (
                               <tr key={o.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-800 transition-colors">
                                 <td className="py-3 px-4 text-gray-600 font-mono text-xs">{o.orderNumber || o.externalId}</td>
-                                <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{o.customerName || "â€”"}</td>
+                                <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{o.customerName || "—"}</td>
                                 <td className="py-3 px-4 text-center text-gray-500 dark:text-gray-400 text-xs font-mono" dir="ltr">{o.customerPhone}</td>
                                 <td className="py-3 px-4 text-center">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${o.status === "confirmed" ? "bg-green-100 text-green-700" :
                                       o.status === "cancelled" ? "bg-red-100 text-red-700" :
                                         "bg-gray-100 text-gray-600"
                                     }`}>
-                                    {o.status === "confirmed" ? (locale === "ar" ? "Ù…Ø¤ÙƒØ¯" : "Confirmed") : o.status === "cancelled" ? (locale === "ar" ? "Ù…Ù„ØºÙ‰" : "Cancelled") : o.status}
+                                    {o.status === "confirmed" ? (locale === "ar" ? "مؤكد" : "Confirmed") : o.status === "cancelled" ? (locale === "ar" ? "ملغى" : "Cancelled") : o.status}
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-left font-bold text-green-600 text-xs">
@@ -517,7 +517,7 @@ export default function ReportsStorePage() {
                         {/* Pagination */}
                         <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
                           <div>
-                            {locale === "ar" ? "Ø¥Ø¬Ù…Ø§Ù„ÙŠ:" : "Total:"} <span className="font-medium text-gray-800 dark:text-gray-200">{formatNumber(storeReport.confirmedOrdersTotal, numberLocale)}</span> {locale === "ar" ? "Ø£ÙˆØ±Ø¯Ø±" : "orders"}
+                            {locale === "ar" ? "إجمالي:" : "Total:"} <span className="font-medium text-gray-800 dark:text-gray-200">{formatNumber(storeReport.confirmedOrdersTotal, numberLocale)}</span> {locale === "ar" ? "أوردر" : "orders"}
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
