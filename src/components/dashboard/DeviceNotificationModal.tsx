@@ -4,6 +4,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import {
   X,
@@ -428,6 +429,16 @@ export default function DeviceNotificationModal({
     });
   }, [availableNotifications, activeCategory, searchQuery, isAr]);
 
+  // ── قفل سكرول الصفحة أثناء فتح النافذة ────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isAllSelected =
@@ -467,15 +478,21 @@ export default function DeviceNotificationModal({
     onClose();
   };
 
-  return (
+  // ── Portal على body: الـ fixed هنا كان يُحسب بالنسبة لأقرب ancestor
+  // متحول (transform/filter في الـ layout) بدل الـ viewport — فكانت النافذة
+  // تظهر مقصوصة خارج الشاشة. الـ portal يضمن تموضعاً صحيحاً دائماً.
+  // الـ overlay قابل للسكرول (overflow-y-auto) + الحوار m-auto: على الشاشات
+  // القصيرة النافذة تتسكرول بدل ما تتقص.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] overflow-y-auto p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 flex"
       dir={isAr ? "rtl" : "ltr"}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl h-[calc(100dvh-2rem)] max-h-[760px] bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl m-auto h-[calc(100dvh-2rem)] max-h-[760px] min-h-[420px] bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Top Gradient Bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366] flex-shrink-0" />
 
@@ -690,6 +707,7 @@ export default function DeviceNotificationModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
