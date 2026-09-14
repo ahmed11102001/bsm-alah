@@ -129,7 +129,7 @@ function MemberCard({
     : "—";
 
   return (
-    <div className="group bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 flex flex-col gap-3.5 hover:shadow-md transition-all">
+    <div className="group bg-card border border-border rounded-2xl p-4 flex flex-col gap-3.5 hover:shadow-md transition-all">
       <div className="flex items-center gap-3">
         <div
           className={`w-10 h-10 rounded-full bg-gradient-to-br ${cfg.avatar} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}
@@ -138,16 +138,16 @@ function MemberCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1.5">
             <span>{member.name || "—"}</span>
             {isSelf && (
-              <span className="text-[10px] text-gray-400 font-normal">
+              <span className="text-[10px] text-muted-foreground font-normal">
                 {tm.self}
               </span>
             )}
           </p>
           <p
-            className="text-[11px] text-gray-400 dark:text-gray-500 truncate mt-0.5"
+            className="text-[11px] text-muted-foreground truncate mt-0.5"
             dir="ltr"
           >
             {member.email}
@@ -165,7 +165,7 @@ function MemberCard({
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-1 border-t border-gray-50 dark:border-gray-700/50">
+      <div className="flex items-center justify-between pt-1 border-t border-border/80">
         <span
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.pill}`}
         >

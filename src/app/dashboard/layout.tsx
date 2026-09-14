@@ -73,7 +73,7 @@ function LanguageToggle({ compact = false }: { compact?: boolean }) {
 
   if (compact) return (
     <button onClick={toggle} title={locale === "ar" ? "Switch to English" : "تبديل للعربية"}
-      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors flex items-center justify-center gap-1">
+      className="p-2 rounded-xl hover:bg-muted/60 text-muted-foreground transition-colors flex items-center justify-center gap-1">
       <Languages className="w-4 h-4" />
       <span className="text-xs font-bold leading-none">{label}</span>
     </button>
@@ -81,7 +81,7 @@ function LanguageToggle({ compact = false }: { compact?: boolean }) {
 
   return (
     <button onClick={toggle}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-foreground/80 hover:bg-muted/60 transition-all text-sm">
       <Languages className="w-4 h-4" />
       <span>{locale === "ar" ? "English" : "العربية"}</span>
     </button>
@@ -147,14 +147,14 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
                 { icon: "💬", text: "\"How many unread messages?\"" },
                 { icon: "👥", text: "\"Show me my contact lists\"" },
               ]).map((cmd, i) => (
-                <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-xl bg-muted/50">
                   <span className="text-sm flex-shrink-0">{cmd.icon}</span>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-300 font-mono leading-snug">{cmd.text}</p>
+                  <p className="text-[11px] text-foreground/80 font-mono leading-snug">{cmd.text}</p>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5 flex items-center justify-between">
+            <div className="border-t border-border px-3 py-2.5 flex items-center justify-between">
               <button
                 onClick={() => { setShowMenu(false); onNavigate("api"); }}
                 className="text-xs text-orange-500 hover:text-orange-600 font-medium"

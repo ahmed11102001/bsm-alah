@@ -424,11 +424,11 @@ export default function Campaigns() {
 
   function showLimitToast() {
     toast.custom(() => (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+      <div className="bg-popover border border-border rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
+        <p className="text-sm font-semibold text-foreground">
           وصلت الحد الأقصى للحملات هذا الشهر
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           رقّي الباقة لإرسال حملات غير محدودة.
         </p>
         <button
@@ -467,14 +467,14 @@ export default function Campaigns() {
     <div className="max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
-          <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
+          <div className="max-w-md w-full rounded-2xl border border-border bg-popover shadow-2xl p-5 text-center">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
+            <p className="text-base font-bold text-foreground mb-1">
               {lang === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-foreground/80 leading-relaxed">
               {metaPrompt}
             </p>
             <button

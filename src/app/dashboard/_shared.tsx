@@ -41,18 +41,18 @@ export function sidebarHref(id: string) {
 export const adminItem = { icon: Shield, id: "admin" };
 
 export const PLAN_COLORS: Record<string, string> = {
-    free: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-    starter: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    free: "bg-muted text-muted-foreground",
+    starter: "bg-info/10 text-info dark:bg-info/10 dark:text-info",
     pro: "bg-primary/10 text-primary",
-    enterprise: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+    enterprise: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
 };
 
 export const STATUS_BADGE: Record<string, string> = {
-    completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-    running: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    scheduled: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-    failed: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-    draft: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+    completed: "bg-success/10 text-success dark:bg-success/20 dark:text-success",
+    running: "bg-info/10 text-info dark:bg-info/20 dark:text-info",
+    scheduled: "bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning",
+    failed: "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive",
+    draft: "bg-muted text-muted-foreground",
 };
 
 export function limitLabel(n: number) { return n === -1 ? "∞" : n.toLocaleString(); }

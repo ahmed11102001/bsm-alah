@@ -371,7 +371,7 @@ export default function NotificationBell({
       {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+        className="relative p-2 rounded-xl text-muted-foreground hover:bg-muted/60 transition"
         title={lang === "ar" ? "الإشعارات" : "Notifications"}
       >
         <Bell className="w-5 h-5" />
@@ -385,15 +385,15 @@ export default function NotificationBell({
       {/* Dropdown Panel — Works on Desktop & Mobile */}
       {open && (
         <div
-          className={`fixed inset-x-4 top-16 w-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 z-50 flex flex-col max-h-[calc(100vh-5rem)] md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-96 md:max-h-[32rem] overflow-hidden ${
+          className={`fixed inset-x-4 top-16 w-auto bg-popover rounded-3xl shadow-2xl border border-border z-50 flex flex-col max-h-[calc(100vh-5rem)] md:absolute md:inset-x-auto md:top-[calc(100%+10px)] md:w-96 md:max-h-[32rem] overflow-hidden ${
             lang === "ar" ? "md:left-0 md:right-auto" : "md:right-0 md:left-auto"
           }`}
         >
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3.5 border-b border-border bg-popover">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              <Bell className="w-4 h-4 text-foreground/80" />
+              <span className="text-sm font-semibold text-foreground">
                 {lang === "ar" ? "الإشعارات" : "Notifications"}
               </span>
               {unread > 0 && (
@@ -415,7 +415,7 @@ export default function NotificationBell({
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted/60 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -423,11 +423,11 @@ export default function NotificationBell({
           </div>
 
           {/* List Container */}
-          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/40">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/80">
             {loading && notifs.length === 0 ? (
               <ChatListSkeleton rows={3} />
             ) : notifs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-14 text-gray-400 dark:text-gray-500">
+              <div className="flex flex-col items-center justify-center py-14 text-muted-foreground">
                 <Bell className="w-9 h-9 mb-2 opacity-25" />
                 <p className="text-sm">
                   {lang === "ar" ? "مفيش إشعارات" : "No notifications"}
@@ -438,10 +438,10 @@ export default function NotificationBell({
                 <div
                   key={notif.id}
                   onClick={() => handleClick(notif)}
-                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 transition ${
+                  className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition ${
                     !notif.isRead
-                      ? "bg-blue-50/40 dark:bg-blue-950/20"
-                      : "bg-white dark:bg-gray-900"
+                      ? "bg-primary/5"
+                      : "bg-popover"
                   }`}
                 >
                   {/* Icon */}
@@ -458,16 +458,16 @@ export default function NotificationBell({
                     <p
                       className={`break-words text-sm leading-snug ${
                         !notif.isRead
-                          ? "font-semibold text-gray-900 dark:text-white"
-                          : "font-medium text-gray-700 dark:text-gray-300"
+                          ? "font-semibold text-foreground"
+                          : "font-medium text-foreground/80"
                       }`}
                     >
                       {t(notif.title, lang)}
                     </p>
-                    <p className="break-words text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                    <p className="break-words text-xs text-muted-foreground mt-0.5 leading-snug">
                       {t(notif.body, lang)}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-1">
+                    <p className="text-[10px] text-muted-foreground/80 mt-1">
                       {timeAgo(notif.createdAt, lang)}
                     </p>
                   </div>
@@ -483,7 +483,7 @@ export default function NotificationBell({
 
           {/* Footer (Device Push Settings & Preferences Button) — Always visible on Desktop and Phone */}
           {pushSupported && (
-            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/95 dark:bg-gray-800/90 flex items-center justify-between gap-3">
+            <div className="flex-shrink-0 px-4 py-3 border-t border-border bg-muted/40 flex items-center justify-between gap-3">
               {/* Clickable Device Notifications Button */}
               <button
                 type="button"

@@ -29,11 +29,11 @@ function SectionHeader({ icon, title, desc, index }: {
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-base font-bold text-foreground flex items-center gap-2">
           {title}
-          <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600">{index}</span>
+          <span className="text-[10px] font-bold text-muted-foreground/70">{index}</span>
         </h2>
-        <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
       </div>
     </div>
   );
@@ -41,7 +41,7 @@ function SectionHeader({ icon, title, desc, index }: {
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 rounded-3xl p-5 sm:p-6 shadow-sm ${className}`}>
+    <div className={`bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -207,13 +207,13 @@ export default function SettingsPage() {
 
         {/* ── Profile Card ── */}
         <Card>
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl mb-5">
+          <div className="flex items-center gap-3 p-3 bg-muted/60 rounded-2xl mb-5">
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {(data.user.name ?? data.user.email).slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{data.user.name ?? "—"}</p>
-              <p className="text-xs text-gray-400 truncate">{data.user.email}</p>
+              <p className="font-semibold text-sm truncate text-foreground">{data.user.name ?? "—"}</p>
+              <p className="text-xs text-muted-foreground truncate">{data.user.email}</p>
             </div>
           </div>
 
@@ -244,9 +244,9 @@ export default function SettingsPage() {
             <div className="relative">
               <Mail className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
               <Input value={data.user.email} disabled
-                className="pr-9 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 cursor-not-allowed" />
+                className="pr-9 text-sm rounded-xl bg-muted cursor-not-allowed" />
             </div>
-            <p className="text-xs text-gray-400">{s.profile.emailHint}</p>
+            <p className="text-xs text-muted-foreground">{s.profile.emailHint}</p>
           </div>
 
           {/* Save Profile */}

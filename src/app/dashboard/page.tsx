@@ -126,7 +126,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   if (useDbCards) {
     const card = dbCards![index % dbCards!.length];
     return (
-      <Card className="h-full border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
+      <Card className="h-full border border-border bg-card shadow-sm overflow-hidden lg:col-span-2 p-0 gap-0">
         <CardContent className="p-0 h-full min-h-[240px] relative">
           <PartnerCardTemplate template={card.template} content={card} animKey={card.id} />
         </CardContent>
@@ -139,19 +139,19 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
   const Icon = feature.icon;
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2 bg-gradient-to-br from-primary/5 via-white to-white dark:from-primary/10 dark:via-gray-800/40 dark:to-gray-800/40">
+    <Card className="border border-border shadow-sm overflow-hidden lg:col-span-2 bg-gradient-to-br from-primary/5 via-card to-card">
       <CardContent className="p-0 h-full">
         <div className="flex flex-col sm:flex-row items-center gap-5 h-full px-5 sm:px-6 py-6">
           <div key={`icon-${index}`}
-            className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+            className="w-16 h-16 rounded-2xl bg-card border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-sm animate-in fade-in zoom-in-95 duration-500">
             <Icon className="w-7 h-7 text-primary" />
           </div>
           <div key={`text-${index}`} className="flex-1 min-w-0 text-center sm:text-start animate-in fade-in slide-in-from-bottom-1 duration-500">
             <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1.5">
               WANI Partner
             </span>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{feature.title[locale]}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{feature.desc[locale]}</p>
+            <h3 className="text-base font-bold text-foreground">{feature.title[locale]}</h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{feature.desc[locale]}</p>
           </div>
           <div className="hidden sm:flex flex-col gap-1.5 flex-shrink-0">
             {WANI_FEATURES.map((_, i) => (
@@ -257,11 +257,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
   };
   const showCampaignLimitToast = () => {
     toast.custom(() => (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+      <div className="bg-popover border border-border rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]" dir="rtl">
+        <p className="text-sm font-semibold text-foreground">
           وصلت الحد الأقصى للحملات هذا الشهر
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           رقّي الباقة لإرسال حملات غير محدودة.
         </p>
         <button
@@ -282,14 +282,14 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
     <div dir={dir}>
       {metaPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[2px] px-4">
-          <div className="max-w-md w-full rounded-2xl border border-white/20 bg-white dark:bg-gray-900 shadow-2xl p-5 text-center">
+          <div className="max-w-md w-full rounded-2xl border border-border bg-popover shadow-2xl p-5 text-center">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
               <MessageSquare className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
+            <p className="text-base font-bold text-foreground mb-1">
               {locale === "ar" ? "لازم تربط ميتا أولاً" : "Meta connection required"}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-foreground/80 leading-relaxed">
               {metaPrompt}
             </p>
             <button
@@ -329,12 +329,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         {kpis.map((k) => (
-          <Card key={k.label} className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+          <Card key={k.label} className="border border-border bg-card shadow-sm">
             <CardContent className="p-3 sm:p-5">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 leading-tight">{k.label}</p>
-                  <p className="text-xl font-bold leading-none">{numFmt(k.value)}</p>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground mb-1 leading-tight">{k.label}</p>
+                  <p className="text-xl font-bold leading-none text-foreground">{numFmt(k.value)}</p>
                   {k.sub && (
                     <p className={`text-[10px] sm:text-xs mt-1.5 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-gray-400"}`}>
                       {k.trend === "up" && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
