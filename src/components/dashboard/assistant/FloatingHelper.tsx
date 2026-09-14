@@ -11,7 +11,7 @@ interface Props {
   ctx:       RuleContext;
   locale:    "ar" | "en";
   onDismiss: (id: string) => void;
-  onAction:  (target: string, type: "navigate" | "link") => void;
+  onAction:  (target: string, type: "navigate" | "link" | "action") => void;
   mountId?:  string;
   isOpen?:   boolean;
   onOpenChange?: (open: boolean) => void;
@@ -38,7 +38,7 @@ function RuleRow({
   rule, ctx, locale, onDismiss, onAction,
 }: {
   rule: AssistantRule; ctx: RuleContext; locale: "ar" | "en";
-  onDismiss: (id: string) => void; onAction: (t: string, type: "navigate"|"link") => void;
+  onDismiss: (id: string) => void; onAction: (t: string, type: "navigate"|"link"|"action") => void;
 }) {
   const [showTip, setShowTip] = useState(false);
   const t       = T[locale];
@@ -81,6 +81,15 @@ function RuleRow({
               className="mt-2 text-[#25D366] text-[11px] font-semibold flex items-center gap-0.5 hover:opacity-80 transition"
             >
               {rule.action.label[locale]}
+              <ChevronRight className="w-3 h-3" style={{ transform: locale === "ar" ? "rotate(180deg)" : "none" }} />
+            </button>
+          )}
+          {rule.secondaryAction && (
+            <button
+              onClick={() => { onAction(rule.secondaryAction!.target, rule.secondaryAction!.type); }}
+              className="mt-1.5 text-gray-400 dark:text-gray-500 text-[11px] font-medium flex items-center gap-0.5 hover:text-gray-600 dark:hover:text-gray-300 transition"
+            >
+              {rule.secondaryAction.label[locale]}
               <ChevronRight className="w-3 h-3" style={{ transform: locale === "ar" ? "rotate(180deg)" : "none" }} />
             </button>
           )}

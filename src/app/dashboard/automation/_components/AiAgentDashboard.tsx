@@ -220,6 +220,14 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
     maxSuggestedProducts: 1,
   });
   const [productStats, setProductStats] = useState<ProductStats>({ total: 0 });
+  // Agent Beta Access: Gemini فقط أثناء البيتا — نقفل اختيار OpenAI في الـ UI
+  const [betaOnly, setBetaOnly] = useState(false);
+  useEffect(() => {
+    fetch("/api/agent-beta/status")
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => setBetaOnly(data?.active === true && !data?.isEnterprise))
+      .catch(() => {});
+  }, []);
   const [products, setProducts] = useState<UnifiedProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productFilter, setProductFilter] = useState<"all" | "store" | "manual">("all");
@@ -903,13 +911,22 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             </h3>
             <div>
               <Label className="text-xs mb-1 block">{isAr ? "مزوّد الذكاء الاصطناعي" : "AI Provider"}</Label>
-              <Select value={agent.provider} onValueChange={v => saveAgentSettings({ provider: v as "gemini" | "openai" })}>
+              <Select
+                value={betaOnly ? "gemini" : agent.provider}
+                disabled={betaOnly}
+                onValueChange={v => saveAgentSettings({ provider: v as "gemini" | "openai" })}
+              >
                 <SelectTrigger className="rounded-xl text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
-                  <SelectItem value="openai">ChatGPT GPT-4o mini</SelectItem>
+                  <SelectItem value="openai" disabled={betaOnly}>ChatGPT GPT-4o mini{betaOnly ? (isAr ? " (غير متاح في التجربة)" : " (not in trial)") : ""}</SelectItem>
                 </SelectContent>
               </Select>
+              {betaOnly && (
+                <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-1">
+                  {isAr ? "🤖 تجربة Agent Beta تعمل على Gemini فقط." : "🤖 Agent Beta trial runs on Gemini only."}
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-xs mb-1 block">{isAr ? "لهجة الرد" : "Reply tone"}</Label>

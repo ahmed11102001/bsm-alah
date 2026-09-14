@@ -11,7 +11,7 @@ import prisma from "@/lib/prisma";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { decryptToken } from "@/lib/crypto";
-import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyWhatsAppTokenExpired, notifyWhatsAppTokenInvalid, notifyAiTokensLow } from "@/lib/notifications";
+import { notifySubscriptionExpiring, notifyWhatsAppTokenExpiring, notifyWhatsAppTokenExpired, notifyWhatsAppTokenInvalid, notifyAiTokensLow, notifyAgentBetaExpiring, notifyAgentBetaLowTokens, notifyAgentBetaEnded } from "@/lib/notifications";
 import { checkWhatsAppAccountToken, WhatsAppTokenStatus, TokenCheckUnavailableError } from "@/lib/whatsapp-token";
 
 // ─── Constants (string literals بدل enum لتجنب مشاكل prisma generate) ────────
@@ -608,5 +608,105 @@ export const aiTokensLowCheck = inngest.createFunction(
     });
 
     return { processed };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cron 7: agentBetaExpiryDaily
+// يومياً الساعة 10 صباحاً (Cairo): تنبيهات Agent Beta Access
+// - متبقي يومين / يوم واحد → تنبيه اقتراب الانتهاء
+// - متبقي <= 5K توكن → تنبيه انخفاض التوكنز
+// - انتهت (مدة أو توكنز) → تنبيه انتهاء مرة واحدة + CTA ترقية Max
+// ملحوظة: القفل نفسه lazy في plan-guard (getAgentBetaStatus) — الكرون للتنبيهات فقط.
+// ═══════════════════════════════════════════════════════════════════════════════
+export const agentBetaExpiryDaily = inngest.createFunction(
+  {
+    id: "automation-agent-beta-expiry-daily",
+    retries: 1,
+    triggers: [{ cron: "0 8 * * *" }], // 8 UTC = 10 Cairo
+  },
+  async ({ step }) => {
+    const now = new Date();
+    const subs = await step.run("get-agent-beta-subs", async () => {
+      return await prisma.subscription.findMany({
+        where: {
+          agentBetaConsumed: true,
+          agentBetaStartedAt: { not: null },
+          agentBetaEndsAt: { not: null },
+          plan: { not: "enterprise" },
+        },
+        select: {
+          userId: true,
+          agentBetaStartedAt: true,
+          agentBetaEndsAt: true,
+          agentBetaTokensLimit: true,
+          agentBetaTokensUsed: true,
+          agentBetaExpiredNotifiedAt: true,
+        },
+      });
+    });
+
+    let expiring = 0;
+    let lowTokens = 0;
+    let ended = 0;
+
+    await step.run("send-agent-beta-notifications", async () => {
+      for (const sub of subs) {
+        const endsAt = new Date(sub.agentBetaEndsAt as unknown as Date);
+        const limit = sub.agentBetaTokensLimit ?? 30000;
+        const used = sub.agentBetaTokensUsed ?? 0;
+        const remaining = Math.max(0, limit - used);
+        const tokensExhausted = used >= limit;
+        const timeExpired = now >= endsAt;
+
+        // انتهت → مرة واحدة فقط
+        if ((tokensExhausted || timeExpired) && !sub.agentBetaExpiredNotifiedAt) {
+          const claim = await prisma.subscription.updateMany({
+            where: { userId: sub.userId, agentBetaExpiredNotifiedAt: null },
+            data: { agentBetaExpiredNotifiedAt: now },
+          });
+          if (claim.count) {
+            await notifyAgentBetaEnded(sub.userId, tokensExhausted ? "tokens_exhausted" : "expired");
+            ended++;
+          }
+          continue;
+        }
+        if (tokensExhausted || timeExpired) continue;
+
+        // اقتراب الانتهاء: يومين أو أقل
+        const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+        if (daysLeft <= 2 && daysLeft >= 0) {
+          const recent = await prisma.notification.findFirst({
+            where: {
+              userId: sub.userId,
+              type: "SUBSCRIPTION_EXPIRING",
+              createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
+              // @ts-ignore — فلترة JSON غير مدعومة بدقة هنا، نكتفي بالحد الزمني
+            },
+          });
+          if (!recent) {
+            await notifyAgentBetaExpiring(sub.userId, Math.max(0, daysLeft));
+            expiring++;
+          }
+        }
+
+        // انخفاض التوكنز: <= 5K
+        if (remaining <= 5000 && remaining > 0) {
+          const recentLow = await prisma.notification.findFirst({
+            where: {
+              userId: sub.userId,
+              type: "AI_TOKENS_LOW",
+              createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
+            },
+          });
+          if (!recentLow) {
+            await notifyAgentBetaLowTokens(sub.userId, remaining);
+            lowTokens++;
+          }
+        }
+      }
+    });
+
+    return { processed: subs.length, expiring, lowTokens, ended };
   }
 );

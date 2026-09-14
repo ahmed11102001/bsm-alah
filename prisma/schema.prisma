@@ -132,6 +132,14 @@ model Subscription {
   updatedAt                DateTime           @updatedAt
   expiryWarningSentAt      DateTime?
   aiTokensBonusExpiresAt   DateTime?
+  // ── Agent Beta Access: تجربة إيجنت وني 5 أيام / 30K توكن (Gemini فقط) ──
+  // تُفعَّل من المساعد الذكي لعملاء Free/Go/Pro، لمرة واحدة، بدون تغيير الباقة.
+  agentBetaStartedAt       DateTime?
+  agentBetaEndsAt          DateTime?
+  agentBetaTokensLimit     Int                @default(30000)
+  agentBetaTokensUsed      Int                @default(0)
+  agentBetaConsumed        Boolean            @default(false)
+  agentBetaExpiredNotifiedAt DateTime?
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])

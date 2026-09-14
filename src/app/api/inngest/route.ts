@@ -26,6 +26,7 @@ import {
   ownerPlanRenewalCheck,
   whatsappTokenExpiryCheck,
   aiTokensLowCheck,
+  agentBetaExpiryDaily,
 } from "@/inngest/automation-cron-functions";
 import {
   scheduleShippingFollowUpFn,
@@ -73,6 +74,7 @@ const inngestHandler = serve({
     subscriptionExpiryWarning,
     whatsappTokenExpiryCheck,
     aiTokensLowCheck,
+    agentBetaExpiryDaily,
     productSyncCron,
     productSyncOnDemand,
     websiteCrawlOnDemand,

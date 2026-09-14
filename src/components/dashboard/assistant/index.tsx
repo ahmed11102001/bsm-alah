@@ -31,6 +31,15 @@ interface Props {
 
 const DISMISSED_KEY = (uid: string) => `wp_assistant_dismissed_${uid}`;
 
+// planName المعروض ("Free"/"Go"/"Pro"/"Max") → tier داخلي للمقارنة
+function planNameToTier(planName: string): string {
+  const p = (planName ?? "").toLowerCase();
+  if (p.includes("max") || p === "enterprise") return "enterprise";
+  if (p.includes("pro") || p === "pro") return "pro";
+  if (p.includes("go") || p === "starter") return "starter";
+  return "free";
+}
+
 export default function DashboardAssistant({
   userId, role, locale, activeSection,
   whatsappConnected, totalContacts, deliveryRate, planStatus, planName,
@@ -41,7 +50,9 @@ export default function DashboardAssistant({
   const [showTour,     setShowTour]     = useState(false);
   const [dismissed,    setDismissed]    = useState<Record<string, number>>({});
   const [assistCtx,    setAssistCtx]    = useState<Partial<RuleContext>>({});
+  const [betaCtx,      setBetaCtx]      = useState<Partial<RuleContext>>({});
   const [activeRules,  setActiveRules]  = useState<AssistantRule[]>([]);
+  const [activatingBeta, setActivatingBeta] = useState(false);
   const [isMobile,     setIsMobile]     = useState<boolean | null>(null);
 
   // ── تحميل الـ dismissed state من localStorage ────────────────────────────
@@ -87,6 +98,21 @@ export default function DashboardAssistant({
         lastCampaignDelivery: data.lastCampaignDelivery ?? undefined,
       }))
       .catch(() => {});
+    // ── حالة Agent Beta Access (لغير Max) — تُستخدم في rules البيتا ──
+    fetch("/api/agent-beta/status")
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        setBetaCtx({
+          agentBetaActive:    data.active ?? false,
+          agentBetaConsumed:  data.consumed ?? false,
+          agentBetaEligible:  data.eligible ?? false,
+          agentBetaDaysLeft:  data.daysLeft ?? 0,
+          agentBetaRemaining: data.remaining ?? 0,
+          agentBetaReason:    data.reason ?? "inactive",
+        });
+      })
+      .catch(() => {});
   }, [activeSection]); // نعيد الجلب لما يغير الصفحة
 
   // ── بناء الـ context الكامل ─────────────────────────────────────────────
@@ -96,10 +122,18 @@ export default function DashboardAssistant({
     deliveryRate,
     planStatus,
     planName,
+    planTier: planNameToTier(planName),
+    role,
     expiredChats:         assistCtx.expiredChats        ?? 0,
     automationCount:      assistCtx.automationCount     ?? 0,
     lastCampaignStatus:   assistCtx.lastCampaignStatus,
     lastCampaignDelivery: assistCtx.lastCampaignDelivery,
+    agentBetaActive:      betaCtx.agentBetaActive,
+    agentBetaConsumed:    betaCtx.agentBetaConsumed,
+    agentBetaEligible:    betaCtx.agentBetaEligible,
+    agentBetaDaysLeft:    betaCtx.agentBetaDaysLeft,
+    agentBetaRemaining:   betaCtx.agentBetaRemaining,
+    agentBetaReason:      betaCtx.agentBetaReason,
   };
 
   // ── تقييم الـ rules لما يتغير context أو صفحة ──────────────────────────
@@ -116,7 +150,7 @@ export default function DashboardAssistant({
     });
     setActiveRules(active);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, dismissed, assistCtx, whatsappConnected, totalContacts, deliveryRate, role]);
+  }, [activeSection, dismissed, assistCtx, betaCtx, whatsappConnected, totalContacts, deliveryRate, role, planName, planStatus]);
 
   // ── Dismiss rule ────────────────────────────────────────────────────────
   const handleDismiss = useCallback((id: string) => {
@@ -126,10 +160,38 @@ export default function DashboardAssistant({
   }, [dismissed, userId]);
 
   // ── Action handler ──────────────────────────────────────────────────────
-  const handleAction = useCallback((target: string, type: "navigate" | "link") => {
+  const handleAction = useCallback(async (target: string, type: "navigate" | "link" | "action") => {
     if (type === "link") { window.open(target, "_blank"); return; }
+    if (type === "navigate") { onNavigate(target); return; }
+    // ── custom actions ──
+    if (target === "activate_agent_beta") {
+      if (activatingBeta) return;
+      setActivatingBeta(true);
+      try {
+        const r = await fetch("/api/agent-beta/activate", { method: "POST" });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error ?? "activation_failed");
+        // حدّث حالة البيتا فوراً + حدّث الداشبورد (يفتح تاب الأتمتة)
+        setBetaCtx({
+          agentBetaActive: true,
+          agentBetaConsumed: true,
+          agentBetaEligible: false,
+          agentBetaDaysLeft: 5,
+          agentBetaRemaining: data?.beta?.remaining ?? 30000,
+          agentBetaReason: "active",
+        });
+        window.dispatchEvent(new CustomEvent("refresh-dash"));
+        onNavigate("automation");
+      } catch (e: any) {
+        const { toast } = await import("sonner");
+        toast.error(e?.message ?? (locale === "ar" ? "تعذر التفعيل" : "Activation failed"));
+      } finally {
+        setActivatingBeta(false);
+      }
+      return;
+    }
     onNavigate(target);
-  }, [onNavigate]);
+  }, [onNavigate, activatingBeta, locale]);
 
   // ── Start tour from welcome banner ─────────────────────────────────────
   const handleStartTour = useCallback(() => {

@@ -17,11 +17,20 @@ export interface RuleContext {
   deliveryRate:        number;   // 0-100
   planStatus:          string;   // "active" | "trialing" | "past_due" | ...
   planName:            string;
+  planTier?:           string;   // "free" | "starter" | "pro" | "enterprise"
+  role?:               string;   // "OWNER" | "FULL_ACCESS" | "CHAT_ONLY"
   // بيانات الـ assistant API
   expiredChats:        number;   // conversations عدت 24h
   automationCount:     number;   // عدد الـ automation rules
   lastCampaignStatus?: string;   // "completed" | "failed" | ...
   lastCampaignDelivery?: number; // نسبة delivery آخر campaign
+  // ── Agent Beta Access (تُملأ من /api/agent-beta/status) ──
+  agentBetaActive?:     boolean;
+  agentBetaConsumed?:   boolean;
+  agentBetaEligible?:   boolean;
+  agentBetaDaysLeft?:   number;
+  agentBetaRemaining?:  number;
+  agentBetaReason?:     string;
 }
 
 // ── شكل كل Rule ─────────────────────────────────────────────────────────────
@@ -39,13 +48,13 @@ export interface AssistantRule {
   tip?:          Record<"ar" | "en", string | ((ctx: RuleContext) => string)>;  // نصيحة إضافية
   action?: {
     label:  Record<"ar" | "en", string>;
-    target: string;               // section id أو URL
-    type:   "navigate" | "link";
+    target: string;               // section id أو URL أو action-id
+    type:   "navigate" | "link" | "action";
   };
   secondaryAction?: {
     label:  Record<"ar" | "en", string>;
     target: string;
-    type:   "navigate" | "link";
+    type:   "navigate" | "link" | "action";
   };
 }
 
@@ -152,6 +161,93 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     title:   { ar: "❌ آخر حملة فشلت",                  en: "❌ Last Campaign Failed"            },
     message: { ar: "آخر حملة بعتها فشلت — ممكن يكون بسبب مشكلة في الواتساب API أو الـ template.", en: "Your last campaign failed — this may be due to a WhatsApp API issue or template problem." },
     action:  { label: { ar: "مشاهدة التفاصيل", en: "View Details" }, target: "campaigns", type: "navigate" },
+  },
+
+  // ── 🤖 INFO: Agent Beta Access — دعوة التفعيل (Free/Go/Pro فقط) ─────────
+  // التفعيل بزر من المساعد — العداد يبدأ من لحظة الضغط، لمرة واحدة.
+  {
+    id:            "agent_beta_access",
+    pages:         ["*"],
+    severity:      "info",
+    displayAs:     "card",
+    cooldownHours: 0,
+    condition:     ctx => ctx.role !== "CHAT_ONLY"
+      && ctx.planTier !== "enterprise"
+      && ctx.agentBetaEligible === true
+      && ctx.agentBetaActive !== true,
+    title:   { ar: "🤖 جرّب إيجنت وني مجاناً — Agent Beta Access", en: "🤖 Try Wani Agent free — Agent Beta Access" },
+    message: {
+      ar: "اتفتح لك تجربة إيجنت وني (Gemini) لمدة 5 أيام وبحد 30K توكن — بدون ما تغيّر باقتك. دوس تفعيل والعداد يبدأ.",
+      en: "You got a Wani agent (Gemini) trial: 5 days, 30K tokens — no plan change. Activate and the timer starts.",
+    },
+    tip: {
+      ar: "التجربة بتفتح تاب الأتمتة (جزء الإيجنت) وتفاصيل الاستهلاك — وبعد ما تخلص إعداداتك بتفضل محفوظة.",
+      en: "The trial opens the Automation tab (agent part) and usage details — your settings stay saved after it ends.",
+    },
+    action:  { label: { ar: "تفعيل Agent Beta Access", en: "Activate Agent Beta Access" }, target: "activate_agent_beta", type: "action" },
+    secondaryAction: { label: { ar: "شوف الأتمتة", en: "View Automation" }, target: "automation", type: "navigate" },
+  },
+
+  // ── ⏳ WARNING: البيتا قرّبت تخلص (يومين أو أقل) ────────────────────────
+  {
+    id:            "agent_beta_expiring",
+    pages:         ["*"],
+    severity:      "warning",
+    displayAs:     "banner",
+    cooldownHours: 12,
+    condition:     ctx => ctx.agentBetaActive === true
+      && (ctx.agentBetaDaysLeft ?? 99) <= 2,
+    title:   {
+      ar: (ctx: RuleContext) => `⏳ تجربة الإيجنت قرّبت تخلص — متبقي ${ctx.agentBetaDaysLeft ?? 0} ${((ctx.agentBetaDaysLeft ?? 0) === 1) ? "يوم" : "أيام"}`,
+      en: (ctx: RuleContext) => `⏳ Agent trial expiring — ${ctx.agentBetaDaysLeft ?? 0} day(s) left`,
+    },
+    message: {
+      ar: (ctx: RuleContext) => `متبقي ${(ctx.agentBetaRemaining ?? 0).toLocaleString("ar-EG")} توكن — رقِّ إلى Max عشان تكمل بدون توقف.`,
+      en: (ctx: RuleContext) => `${(ctx.agentBetaRemaining ?? 0).toLocaleString("en-US")} tokens left — upgrade to Max to continue.`,
+    },
+    shortTitle:   { ar: "⏳ البيتا قرّبت تخلص", en: "⏳ Beta expiring" },
+    shortMessage: { ar: "رقِّ إلى Max عشان تكمل.", en: "Upgrade to Max to continue." },
+    action:  { label: { ar: "الترقية إلى Max", en: "Upgrade to Max" }, target: "/checkout?plan=max", type: "link" },
+  },
+
+  // ── ⚠️ WARNING: توكنز البيتا قرّبت تخلص ────────────────────────────────
+  {
+    id:            "agent_beta_low_tokens",
+    pages:         ["*"],
+    severity:      "warning",
+    displayAs:     "banner",
+    cooldownHours: 12,
+    condition:     ctx => ctx.agentBetaActive === true && (ctx.agentBetaRemaining ?? 999999) <= 5000,
+    title:   { ar: "⚠️ توكنز التجربة قرّبت تخلص", en: "⚠️ Trial tokens running low" },
+    message: {
+      ar: (ctx: RuleContext) => `متبقي ${(ctx.agentBetaRemaining ?? 0).toLocaleString("ar-EG")} توكن بس من الـ 30K — رقِّ إلى Max عشان تكمل.`,
+      en: (ctx: RuleContext) => `Only ${(ctx.agentBetaRemaining ?? 0).toLocaleString("en-US")} of 30K tokens left — upgrade to Max.`,
+    },
+    shortTitle:   { ar: "⚠️ التوكنز قرّبت تخلص", en: "⚠️ Tokens low" },
+    shortMessage: { ar: "متبقي أقل من 5K توكن.", en: "Less than 5K tokens left." },
+    action:  { label: { ar: "الترقية إلى Max", en: "Upgrade to Max" }, target: "/checkout?plan=max", type: "link" },
+  },
+
+  // ── 🔒 CRITICAL: البيتا انتهت (مدة أو توكنز) ───────────────────────────
+  {
+    id:            "agent_beta_ended",
+    pages:         ["automation", "home", "reports"],
+    severity:      "warning",
+    displayAs:     "banner",
+    cooldownHours: 24,
+    condition:     ctx => ctx.role !== "CHAT_ONLY"
+      && ctx.planTier !== "enterprise"
+      && ctx.agentBetaConsumed === true
+      && ctx.agentBetaActive !== true
+      && (ctx.agentBetaReason === "expired" || ctx.agentBetaReason === "tokens_exhausted"),
+    title:   { ar: "🔒 انتهت Agent Beta Access", en: "🔒 Agent Beta Access ended" },
+    message: {
+      ar: "إعدادات الإيجنت بتاعتك محفوظة — رقِّ إلى Max عشان تفتحها تاني وتكمل.",
+      en: "Your agent settings are saved — upgrade to Max to reopen and continue.",
+    },
+    shortTitle:   { ar: "🔒 انتهت التجربة", en: "🔒 Trial ended" },
+    shortMessage: { ar: "إعداداتك محفوظة — رقِّ إلى Max.", en: "Settings saved — upgrade to Max." },
+    action:  { label: { ar: "الترقية إلى Max", en: "Upgrade to Max" }, target: "/checkout?plan=max", type: "link" },
   },
 
 ];

@@ -285,6 +285,75 @@ function ClaudeMcpUsageCard({ data }: { data: DashboardData }) {
   );
 }
 
+// ─── Agent Beta Access Card (5 أيام / 30K توكن — Gemini فقط) ───────────────
+function AgentBetaCard({ beta, locale }: { beta: any; locale: string }) {
+  const used = beta?.used ?? 0;
+  const limit = beta?.limit ?? 30000;
+  const remaining = beta?.remaining ?? Math.max(0, limit - used);
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const daysLeft = beta?.daysLeft ?? 0;
+  const active = beta?.active === true;
+  const endedReason = beta?.reason;
+  const fmt = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
+
+  return (
+    <Card className="border border-purple-200 dark:border-purple-900/40 shadow-sm bg-gradient-to-br from-purple-50/70 to-white dark:from-purple-950/20 dark:to-gray-900">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-sm font-bold text-gray-900 dark:text-white">
+              {locale === "ar" ? "🤖 تجربة إيجنت وني — Agent Beta" : "🤖 Wani Agent Trial — Agent Beta"}
+            </CardTitle>
+            <p className="text-[11px] text-gray-400">
+              {active
+                ? (locale === "ar" ? `سارية — متبقي ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} • Gemini فقط` : `Active — ${daysLeft} day(s) left • Gemini only`)
+                : endedReason === "tokens_exhausted"
+                  ? (locale === "ar" ? "انتهت التوكنز (30K)" : "Tokens exhausted (30K)")
+                  : (locale === "ar" ? "انتهت المدة (5 أيام)" : "Expired (5 days)")}
+            </p>
+          </div>
+        </div>
+        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${active ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"}`}>
+          {active ? `${pct}%` : (locale === "ar" ? "انتهت" : "Ended")}
+        </span>
+      </CardHeader>
+      <CardContent className="px-4 sm:px-5 pb-5 space-y-4">
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+            <span>{locale === "ar" ? "مستخدم" : "Used"}: <span className="font-semibold text-gray-700 dark:text-gray-300">{fmt(used)}</span></span>
+            <span className="font-semibold text-gray-700 dark:text-gray-300">{fmt(limit)} {locale === "ar" ? "توكن" : "tokens"}</span>
+          </div>
+          <Progress value={pct} className={`h-2.5 rounded-full ${pct >= 90 ? "[&>div]:bg-red-500" : pct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-purple-500"}`} />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+            <p className="text-base font-bold text-gray-900 dark:text-white">{fmt(used)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{locale === "ar" ? "مستخدم" : "Used"}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+            <p className="text-base font-bold text-purple-600 dark:text-purple-400">{fmt(remaining)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{locale === "ar" ? "متبقي" : "Remaining"}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800/60 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-700">
+            <p className="text-base font-bold text-gray-900 dark:text-white">{active ? daysLeft : "0"}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{locale === "ar" ? "أيام متبقية" : "Days left"}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => window.location.href = "/checkout?plan=max"}
+          className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm active:scale-[.98]"
+        >
+          <Sparkles className="w-4 h-4" />
+          {locale === "ar" ? "الترقية إلى Max للمتابعة بدون توقف" : "Upgrade to Max to continue"}
+        </button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Non-Enterprise WANI AI Upgrade Card ──────────────────────────────────────
 function WaniAiUpgradeCard({ locale }: { locale: string }) {
   const { t } = useLanguage();
@@ -432,6 +501,11 @@ export default function UsagePage() {
 
           {isEnterprise ? (
             <EnterpriseTokenCard data={dashData} />
+          ) : (dashData.plan as any)?.agentBeta?.consumed ? (
+            <>
+              <AgentBetaCard beta={(dashData.plan as any).agentBeta} locale={locale} />
+              <WaniAiUpgradeCard locale={locale} />
+            </>
           ) : (
             <WaniAiUpgradeCard locale={locale} />
           )}

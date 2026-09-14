@@ -163,6 +163,159 @@ async function isBetaBypass(ownerId: string): Promise<boolean> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Agent Beta Access — تجربة إيجنت وني 5 أيام / 30K توكن (Gemini فقط)
+// ─────────────────────────────────────────────────────────────────────────────
+// القواعد:
+// - لعملاء Free/Go/Pro فقط (Max يمتلك الـ Agent أصلاً فلا يدخل).
+// - لمرة واحدة فقط (agentBetaConsumed) — التفعيل بزر من المساعد الذكي.
+// - العداد يبدأ من لحظة الضغط على التفعيل، لا من ظهور التنبيه.
+// - الباقة الأصلية بكل حدودها تظل كما هي — الاستثناء الوحيد هو aiAgent.
+// - 5 أيام OR 30K توكن — أيهما الأول.
+// ═══════════════════════════════════════════════════════════════════════════════
+export const AGENT_BETA_DAYS = 5;
+export const AGENT_BETA_TOKENS = 30_000;
+const AGENT_BETA_MS = AGENT_BETA_DAYS * 24 * 60 * 60 * 1000;
+
+export type AgentBetaStatus = {
+  active: boolean;
+  consumed: boolean;
+  reason: "inactive" | "active" | "expired" | "tokens_exhausted" | "is_enterprise" | "no_subscription";
+  startedAt: Date | null;
+  endsAt: Date | null;
+  limit: number;
+  used: number;
+  remaining: number;
+  daysLeft: number;
+};
+
+export async function getAgentBetaStatus(ownerId: string): Promise<AgentBetaStatus> {
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: {
+      plan: true,
+      agentBetaStartedAt: true,
+      agentBetaEndsAt: true,
+      agentBetaTokensLimit: true,
+      agentBetaTokensUsed: true,
+      agentBetaConsumed: true,
+    },
+  });
+  if (!sub) {
+    return {
+      active: false, consumed: false, reason: "no_subscription",
+      startedAt: null, endsAt: null,
+      limit: AGENT_BETA_TOKENS, used: 0, remaining: AGENT_BETA_TOKENS, daysLeft: 0,
+    };
+  }
+  // Max يمتلك الـ Agent أصلاً — لا يدخل البيتا
+  if ((sub.plan as string) === "enterprise") {
+    return {
+      active: false, consumed: sub.agentBetaConsumed, reason: "is_enterprise",
+      startedAt: sub.agentBetaStartedAt, endsAt: sub.agentBetaEndsAt,
+      limit: sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS,
+      used: sub.agentBetaTokensUsed ?? 0,
+      remaining: Math.max(0, (sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS) - (sub.agentBetaTokensUsed ?? 0)),
+      daysLeft: 0,
+    };
+  }
+  if (!sub.agentBetaConsumed || !sub.agentBetaStartedAt || !sub.agentBetaEndsAt) {
+    return {
+      active: false, consumed: sub.agentBetaConsumed, reason: "inactive",
+      startedAt: sub.agentBetaStartedAt, endsAt: sub.agentBetaEndsAt,
+      limit: sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS,
+      used: sub.agentBetaTokensUsed ?? 0,
+      remaining: (sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS) - (sub.agentBetaTokensUsed ?? 0),
+      daysLeft: 0,
+    };
+  }
+  const now = new Date();
+  const limit = sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS;
+  const used = sub.agentBetaTokensUsed ?? 0;
+  if (used >= limit) {
+    return {
+      active: false, consumed: true, reason: "tokens_exhausted",
+      startedAt: sub.agentBetaStartedAt, endsAt: sub.agentBetaEndsAt,
+      limit, used, remaining: 0, daysLeft: 0,
+    };
+  }
+  if (now >= new Date(sub.agentBetaEndsAt)) {
+    return {
+      active: false, consumed: true, reason: "expired",
+      startedAt: sub.agentBetaStartedAt, endsAt: sub.agentBetaEndsAt,
+      limit, used, remaining: Math.max(0, limit - used), daysLeft: 0,
+    };
+  }
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((new Date(sub.agentBetaEndsAt).getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  );
+  return {
+    active: true, consumed: true, reason: "active",
+    startedAt: sub.agentBetaStartedAt, endsAt: sub.agentBetaEndsAt,
+    limit, used, remaining: Math.max(0, limit - used), daysLeft,
+  };
+}
+
+/** هل البيتا سارية الآن؟ (تُستخدم لفتح aiAgent فقط — باقي الحدود لا تتأثر) */
+export async function isAgentBetaActive(ownerId: string): Promise<boolean> {
+  // السوبر أدمن والبيتا الداخلي مفتوح لهم كل شيء أصلاً عبر isBetaBypass
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return true;
+  return (await getAgentBetaStatus(ownerId)).active;
+}
+
+/**
+ * تفعيل Agent Beta Access — لحظة بداية الـ 5 أيام.
+ * تُستدعى مرة واحدة من زر المساعد الذكي. ترجع false لو غير مؤهل.
+ */
+export async function activateAgentBeta(ownerId: string): Promise<{ ok: boolean; reason: string; endsAt?: Date }> {
+  if (await isSuperAdmin(ownerId)) return { ok: false, reason: "is_super_admin" };
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: {
+      plan: true, agentBetaConsumed: true,
+      agentBetaStartedAt: true, agentBetaEndsAt: true,
+      agentBetaTokensUsed: true, agentBetaTokensLimit: true,
+    },
+  });
+  // Max يمتلك الـ Agent أصلاً
+  const plan = (sub?.plan as string) ?? "free";
+  if (plan === "enterprise") return { ok: false, reason: "is_enterprise" };
+  // لمرة واحدة فقط
+  if (sub?.agentBetaConsumed) {
+    // لو سارية فعلاً ارجع نهايتها الحالية بدل خطأ
+    if (sub.agentBetaEndsAt && new Date(sub.agentBetaEndsAt) > new Date() &&
+        (sub.agentBetaTokensUsed ?? 0) < (sub.agentBetaTokensLimit ?? AGENT_BETA_TOKENS)) {
+      return { ok: true, reason: "already_active", endsAt: sub.agentBetaEndsAt };
+    }
+    return { ok: false, reason: "already_consumed" };
+  }
+  const now = new Date();
+  const endsAt = new Date(now.getTime() + AGENT_BETA_MS);
+  await prisma.subscription.upsert({
+    where: { userId: ownerId },
+    update: {
+      agentBetaStartedAt: now,
+      agentBetaEndsAt: endsAt,
+      agentBetaTokensLimit: AGENT_BETA_TOKENS,
+      agentBetaTokensUsed: 0,
+      agentBetaConsumed: true,
+      agentBetaExpiredNotifiedAt: null,
+    },
+    create: {
+      userId: ownerId, plan: "free", status: "active",
+      periodResetAt: now, campaignsUsedThisMonth: 0,
+      aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0,
+      agentBetaStartedAt: now,
+      agentBetaEndsAt: endsAt,
+      agentBetaTokensLimit: AGENT_BETA_TOKENS,
+      agentBetaTokensUsed: 0,
+      agentBetaConsumed: true,
+    },
+  });
+  return { ok: true, reason: "activated", endsAt };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 1. checkContactsLimit — قبل إضافة جهة اتصال أو جمهور
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function checkContactsLimit(
@@ -401,6 +554,33 @@ export async function checkFeature(
 
   if (PLANS[plan][feature]) return { allowed: true };
 
+  // ── Agent Beta Access: يفتح aiAgent فقط (واجهة الأتمتة/الإعدادات) ──
+  // باقي المميزات تظل مقفولة حسب الباقة الأصلية.
+  if (feature === "aiAgent") {
+    const beta = await getAgentBetaStatus(ownerId);
+    if (beta.active) return { allowed: true };
+    if (beta.reason === "tokens_exhausted") {
+      return {
+        allowed: false,
+        code: "LIMIT_REACHED",
+        message: "انتهت توكنز تجربة Agent Beta Access (30K). رقِّ إلى باقة Max لمتابعة استخدام إيجنت وني.",
+        plan,
+        requiredPlan: "enterprise",
+        limit: beta.limit,
+        used: beta.used,
+      };
+    }
+    if (beta.reason === "expired") {
+      return {
+        allowed: false,
+        code: "FEATURE_LOCKED",
+        message: "انتهت مدة Agent Beta Access (5 أيام). رقِّ إلى باقة Max لمتابعة استخدام إيجنت وني.",
+        plan,
+        requiredPlan: "enterprise",
+      };
+    }
+  }
+
   const required = FEATURE_REQUIRED_PLAN[feature];
 
   return {
@@ -433,6 +613,18 @@ function nextPlan(current: PlanTier): PlanTier | undefined {
   const order: PlanTier[] = ["free", "starter", "pro", "enterprise"];
   const idx = order.indexOf(current);
   return idx < order.length - 1 ? order[idx + 1] : undefined;
+}
+
+/** هل يمكن عرض بيانات Agent Beta في صفحة الاستهلاك/الأتمتة؟ (سارية أو مستهلكة) */
+export async function canViewAgentBeta(ownerId: string): Promise<boolean> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return true;
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: { plan: true, agentBetaConsumed: true },
+  });
+  if (!sub) return false;
+  if ((sub.plan as string) === "enterprise") return true;
+  return sub.agentBetaConsumed === true;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -475,6 +667,9 @@ export async function getPlanStatus(ownerId: string) {
     isExpired: isSubscriptionExpired,         // ← للـ UI يعرض banner "اشتراكك انتهى"
     currentPeriodEnd: sub?.currentPeriodEnd ?? null,
     limits,
+    // ── Agent Beta Access (تُقرأ من الداشبورد/الأتمتة/المساعد) ──
+    // ملحوظة: الباقة وحدودها لا تتغير — البيتا تفتح aiAgent فقط.
+    agentBeta: await getAgentBetaStatus(ownerId),
     usage: {
       contacts: totalContacts,
       teamMembers: teamCount + pendingInvites + 1,
@@ -587,7 +782,26 @@ export async function checkAITokensLimit(
   const plan = getEffectivePlan(sub);
   const monthlyLimit = PLANS[plan].aiTokensPerMonth;
 
-  if (monthlyLimit === 0)
+  // ── Agent Beta Access: عداد معزول 30K — لا يخصم من أي رصيد آخر ──
+  // لو الباقة نفسها فيها AI (enterprise) نستخدم مسار الباقة العادي.
+  // لو الباقة مفيهاش AI (free/go/pro) لكن البيتا سارية → نتحقق من عداد البيتا فقط.
+  if (monthlyLimit === 0) {
+    const beta = await getAgentBetaStatus(ownerId);
+    if (beta.active) {
+      if (beta.remaining < estimatedTokens) {
+        await notifyPlanLimitReached(ownerId, "aiTokens");
+        return {
+          allowed: false,
+          code: "LIMIT_REACHED",
+          message: `انتهت توكنز تجربة Agent Beta Access (${beta.limit.toLocaleString("ar-EG")} توكن). رقِّ إلى باقة Max لمتابعة استخدام إيجنت وني.`,
+          plan,
+          requiredPlan: "enterprise",
+          limit: beta.limit,
+          used: beta.used,
+        };
+      }
+      return { allowed: true };
+    }
     return {
       allowed: false,
       code: "FEATURE_LOCKED",
@@ -595,6 +809,7 @@ export async function checkAITokensLimit(
       plan,
       requiredPlan: "enterprise",
     };
+  }
 
   const fullSub = await prisma.subscription.findUnique({
     where: { userId: ownerId },
@@ -684,6 +899,22 @@ export async function incrementAITokens(ownerId: string, tokens: number): Promis
     const sub = await getSubscription(ownerId);
     const plan = getEffectivePlan(sub);
     const monthlyLimit = PLANS[plan].aiTokensPerMonth;
+
+    // ── Agent Beta Access: الخصم من عداد البيتا المعزول فقط ──
+    // لا يخصم من أي AI allowance آخر. لو رقّى لـ Max أثناء البيتا،
+    // المسار العادي للباقة هو المستخدم (monthlyLimit > 0) والبيتا تُتجاهل.
+    if (monthlyLimit === 0) {
+      const beta = await getAgentBetaStatus(ownerId);
+      if (beta.active) {
+        // ذري بسيط + cap دفاعي: لا يتجاوز الليميت بصمت عند السباق
+        await prisma.subscription.updateMany({
+          where: { userId: ownerId, agentBetaTokensUsed: { lt: beta.limit } },
+          data: { agentBetaTokensUsed: { increment: tokens } },
+        });
+        console.log(`[AI-TOKENS] userId=${ownerId} tokensUsed=${tokens} agentBetaUsage=${beta.used + tokens} bypassLimit=false beta=true`);
+        return;
+      }
+    }
 
     if (isBypass || isUnlimited(monthlyLimit)) {
       // Atomic increment for bypass/unlimited users - usage is tracked without deducting bonus or enforcing limits

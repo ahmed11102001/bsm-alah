@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
-import { checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
+import { checkAITokensLimit, incrementAITokens, getAgentBetaStatus } from "@/lib/plan-guard";
 import { uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import { runConvaiVoiceReply, type ConvaiContextMessage } from "@/lib/elevenlabs-convai-runner";
 import {
@@ -114,20 +114,34 @@ export async function runAIAgentReply(
   // Text Reply: مفعل إذا كان مفعل عاماً ولم يعطله المستخدم لهذا الـ Contact
   let isTextOutEnabled = (agent.textRepliesEnabled ?? true) && (contact.textAiEnabled !== false);
 
-  // 1. Integration: هل تكامل ElevenLabs مربوط ومفعل بالمفتاح؟
+  // ── Agent Beta Access: Gemini فقط + بدون صوت (enforcement في الـ runtime) ──
+  // حتى لو اليوزر كان مسجّل provider=openai أو مفعل ElevenLabs قبل البيتا،
+  // أثناء البيتا السارية لغير Max: نجبر النص على gemini ونقفل الصوت تماماً.
+  // (الحفظ في PUT يُجبر أيضاً — ده خط دفاع ثانٍ لو الداتا قديمة).
+  let effectiveProvider = agent.provider as "gemini" | "openai";
+  let isVoiceOutEnabled: boolean;
+  {
+    const betaRt = await getAgentBetaStatus(userId).catch(() => null);
+    const isBetaOnlyRt = betaRt?.active === true;
+    if (isBetaOnlyRt) effectiveProvider = "gemini";
+    const voiceApiKeyRt = agent.elevenLabsApiKey
+      ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
+      : null;
+    const eleConnectedRt = Boolean(agent.elevenLabsEnabled && voiceApiKeyRt?.trim());
+    const voiceOutWantedRt = Boolean(agent.voiceRepliesEnabled);
+    isVoiceOutEnabled = isBetaOnlyRt
+      ? false
+      : (eleConnectedRt && voiceOutWantedRt && !contact.voiceOptOut);
+  }
+
+  // 1. Integration: مفتاح الصوت (يُستخدم لاحقاً في قناة Convai — مقفولة أثناء البيتا)
   const voiceApiKey = agent.elevenLabsApiKey
     ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
     : null;
-  const isElevenLabsConnected = Boolean(agent.elevenLabsEnabled && voiceApiKey?.trim());
 
-  // 2. Output Decision: هل الرد الصوتي مفعّل كقناة إخراج للـ AI Agent؟
-  const isVoiceOutputEnabled = Boolean(agent.voiceRepliesEnabled);
-
-  // Voice Out ينفذ فقط إذا: التكامل مربوط + الرد الصوتي مفعّل + المحادثة لم تلغِ الصوت (Opt-out)
   // ملحوظة مهمة: الرد الصوتي (ElevenLabs Convai) قناة مستقلة تماماً عن Wani AI —
   // بيتحاسب على حساب ElevenLabs بتاع العميل نفسه، مش من توكنز Wani — فمينفعش
-  // فحص حصة توكنز Wani يمنعه أو يأثر عليه.
-  const isVoiceOutEnabled = isElevenLabsConnected && isVoiceOutputEnabled && !contact.voiceOptOut;
+  // فحص حصة توكنز Wani يمنعه أو يأثر عليه. (أثناء Agent Beta: isVoiceOutEnabled=false إجبارياً).
 
   // فحص حصة الـ AI Tokens (Plan Guard) — بيأثر على قناة النص بس (اللي بتستخدم Wani AI فعلياً)
   if (isTextOutEnabled) {
@@ -332,7 +346,7 @@ export async function runAIAgentReply(
         : undefined,
       guardrails: guardrails ?? undefined,
     },
-    agent.provider as "gemini" | "openai"
+    effectiveProvider
   );
 
   if (!textResult.ok) {
@@ -623,7 +637,7 @@ export async function runAIAgentReply(
   }
 
   console.log(
-    `[AI-AGENT] ✓ Sent debounced AI reply to ${from} via "${agent.provider}" (text: ${Boolean(sentWhatsappId)}, voice: ${Boolean(sentVoiceWhatsappId)})`
+    `[AI-AGENT] ✓ Sent debounced AI reply to ${from} via "${effectiveProvider}" (text: ${Boolean(sentWhatsappId)}, voice: ${Boolean(sentVoiceWhatsappId)})`
   );
   return { sent: true, whatsappMsgId: finalWhatsappMsgId };
 }

@@ -9,7 +9,7 @@ interface Props {
   ctx:       RuleContext;
   locale:    "ar" | "en";
   onDismiss: (id: string) => void;
-  onAction:  (target: string, type: "navigate" | "link") => void;
+  onAction:  (target: string, type: "navigate" | "link" | "action") => void;
 }
 
 const STYLES: Record<Severity, {

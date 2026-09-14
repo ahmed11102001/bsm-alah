@@ -269,7 +269,7 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, showKeyword = true, allRul
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Automation() {
-  const { planTier } = useSubscription();
+  const { planTier, dashData } = useSubscription();
   const { locale, dir } = useLanguage();
   const lang: Lang = locale === "en" ? "en" : "ar";
   const [activeTab, setActiveTab] = useState<"automation" | "ai">("automation");
@@ -303,13 +303,21 @@ export default function Automation() {
   });
   const [launchingAb, setLaunchingAb] = useState(false);
   const isEnterprise = planTier === "enterprise";
+  // Agent Beta Access يفتح تاب الـ AI (جزء الإيجنت) لغير Max أثناء سريانها
+  const agentBeta = (dashData?.plan as any)?.agentBeta;
+  const betaActive = agentBeta?.active === true;
+  const canUseAi = isEnterprise || betaActive;
   const isProOrAbove = planTier === "pro" || planTier === "enterprise";
   const isFree = planTier === "free";
 
   const aiLockMsg = tx(
     lang,
-    "تبويب الذكاء الاصطناعي متاح فقط في باقة Max. قم بترقية الباقة.",
-    "AI tab is available only on Max plan. Please upgrade."
+    betaActive
+      ? "تجربة Agent Beta Access انتهت. رقِّ إلى Max للمتابعة."
+      : "تبويب الذكاء الاصطناعي متاح فقط في باقة Max. قم بترقية الباقة.",
+    betaActive
+      ? "Agent Beta Access ended. Upgrade to Max to continue."
+      : "AI tab is available only on Max plan. Please upgrade."
   );
   const proLockMsg = tx(
     lang,
@@ -962,27 +970,43 @@ export default function Automation() {
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
 
+      {/* Agent Beta Access banner — ساري فقط لغير Max أثناء البيتا */}
+      {betaActive && (
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-white dark:from-purple-950/30 dark:to-gray-900 px-4 py-3">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-600 text-white">Agent Beta</span>
+          <p className="text-xs text-gray-600 dark:text-gray-300 flex-1 min-w-[12rem]">
+            {tx(lang,
+              `تجربة الإيجنت سارية — متبقي ${agentBeta?.daysLeft ?? 0} ${((agentBeta?.daysLeft ?? 0) === 1) ? "يوم" : "أيام"} و ${(agentBeta?.remaining ?? 0).toLocaleString("ar-EG")} توكن (Gemini فقط).`,
+              `Agent trial active — ${agentBeta?.daysLeft ?? 0} day(s) and ${(agentBeta?.remaining ?? 0).toLocaleString("en-US")} tokens left (Gemini only).`)}
+          </p>
+          <a href="/checkout?plan=max"
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition">
+            {tx(lang, "الترقية إلى Max", "Upgrade to Max")}
+          </a>
+        </div>
+      )}
+
       {/* Main Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 mb-8 w-fit">
         {(["automation", "ai"] as const).map(tab => (
           <button
             key={tab}
             onClick={() => {
-              if (tab === "ai" && !isEnterprise) {
+              if (tab === "ai" && !canUseAi) {
                 showLockToast(aiLockMsg);
                 return;
               }
               setActiveTab(tab);
             }}
             onPointerDown={() => {
-              if (tab === "ai" && !isEnterprise) showLockToast(aiLockMsg);
+              if (tab === "ai" && !canUseAi) showLockToast(aiLockMsg);
             }}
             onMouseEnter={() => {
-              if (tab === "ai" && !isEnterprise) showLockToast(aiLockMsg);
+              if (tab === "ai" && !canUseAi) showLockToast(aiLockMsg);
             }}
-            title={tab === "ai" && !isEnterprise ? aiLockMsg : undefined}
+            title={tab === "ai" && !canUseAi ? aiLockMsg : undefined}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
-              ${tab === "ai" && !isEnterprise
+              ${tab === "ai" && !canUseAi
                 ? "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70"
                 : activeTab === tab
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
@@ -999,7 +1023,8 @@ export default function Automation() {
               />
             )}
             {tab === "automation" ? tx(lang, "الأتمتة", "Automation") : tx(lang, "AI وني", "AI Wani")}
-            {tab === "ai" && !isEnterprise && <span className="text-[10px]">🔒</span>}
+            {tab === "ai" && !canUseAi && <span className="text-[10px]">🔒</span>}
+            {tab === "ai" && canUseAi && !isEnterprise && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600">Beta</span>}
             {tab === "ai" && agent.isEnabled && <span className="w-2 h-2 rounded-full bg-primary" />}
           </button>
         ))}

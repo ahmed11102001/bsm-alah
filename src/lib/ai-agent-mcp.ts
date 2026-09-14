@@ -129,7 +129,10 @@ export async function updateAiAgentSettingsForMcp(
 
   const merged: AiAgentPublicSettings = {
     isEnabled: input.is_enabled ?? current.isEnabled,
-    provider: input.provider ?? current.provider,
+    // Agent Beta Access: Gemini فقط أثناء البيتا
+    provider: ((await import("@/lib/plan-guard").then(m => m.getAgentBetaStatus(userId)).catch(() => null))?.active
+      ? "gemini"
+      : (input.provider ?? current.provider)) as "gemini" | "openai",
     brandName: input.brand_name ?? current.brandName,
     businessDesc: input.business_description ?? current.businessDesc,
     productsInfo: input.products_info ?? current.productsInfo,

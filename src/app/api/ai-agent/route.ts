@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { AIProvider } from "@/types/enums";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { checkFeature, guardResponse, getAgentBetaStatus } from "@/lib/plan-guard";
 import { encryptToken } from "@/lib/crypto";
 import { requirePermission } from "@/lib/permissions";
 
@@ -111,6 +111,22 @@ export async function PUT(req: NextRequest) {
     const providerEnum: AIProvider =
       provider === "openai" ? AIProvider.openai : AIProvider.gemini;
 
+    const resolvedVoiceRepliesEnabled =
+      typeof voiceRepliesEnabled === "boolean"
+        ? voiceRepliesEnabled
+        : typeof elevenLabsEnabled === "boolean"
+        ? elevenLabsEnabled
+        : false;
+
+    // ── Agent Beta Access: Gemini فقط + بدون صوت ──────────────────────
+    // العميل في البيتا (Free/Go/Pro) يُجبر على gemini حتى لو بعت openai،
+    // والصوت (ElevenLabs) مقفول تماماً أثناء البيتا لتفادي التكلفة.
+    const beta = await getAgentBetaStatus(userId);
+    const isBetaOnly = beta.active;
+    const forcedProviderEnum = isBetaOnly ? AIProvider.gemini : providerEnum;
+    const forcedElevenLabsEnabled = isBetaOnly ? false : (typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : resolvedVoiceRepliesEnabled);
+    const forcedVoiceRepliesEnabled = isBetaOnly ? false : resolvedVoiceRepliesEnabled;
+
     const existing = await prisma.aIAgent.findUnique({ where: { userId }, select: { elevenLabsApiKey: true } });
     const isMaskedApiKey = /^•+$/.test(apiKeyTrim);
     const encryptedApiKey = isMaskedApiKey
@@ -126,16 +142,10 @@ export async function PUT(req: NextRequest) {
         ? 3
         : null;
 
-    const resolvedVoiceRepliesEnabled =
-      typeof voiceRepliesEnabled === "boolean"
-        ? voiceRepliesEnabled
-        : typeof elevenLabsEnabled === "boolean"
-        ? elevenLabsEnabled
-        : false;
-
     // ── Validation: الرد الصوتي الجديد بيكلم عقل الـ Convai Agent مباشرة،
     // يبقى Agent ID بقى إجباري لو الـ Voice Reply مفعّل (مش اختياري زي زمان)
-    if (resolvedVoiceRepliesEnabled && !agentIdTrim) {
+    // (أثناء البيتا الصوت مجبر false فالتحقق يُتجاوز تلقائياً)
+    if (forcedVoiceRepliesEnabled && !agentIdTrim) {
       return NextResponse.json(
         {
           error:
@@ -147,7 +157,7 @@ export async function PUT(req: NextRequest) {
 
     const payload = {
       isEnabled: typeof isEnabled === "boolean" ? isEnabled : false,
-      provider:  providerEnum,
+      provider:  forcedProviderEnum,
       brandName:        String(brandName ?? ""),
       businessDesc:     String(businessDesc ?? ""),
       productsInfo:     String(productsInfo ?? ""),
@@ -164,8 +174,8 @@ export async function PUT(req: NextRequest) {
       textRepliesEnabled:
         typeof textRepliesEnabled === "boolean" ? textRepliesEnabled : true,
       elevenLabsEnabled:
-        typeof elevenLabsEnabled === "boolean" ? elevenLabsEnabled : resolvedVoiceRepliesEnabled,
-      voiceRepliesEnabled: resolvedVoiceRepliesEnabled,
+        forcedElevenLabsEnabled,
+      voiceRepliesEnabled: forcedVoiceRepliesEnabled,
       elevenLabsApiKey:  encryptedApiKey,
       elevenLabsAgentId: agentIdTrim || null,
       elevenLabsVoiceId: typeof elevenLabsVoiceId === "string" ? elevenLabsVoiceId.trim() || null : null,

@@ -29,6 +29,12 @@ export interface DashboardData {
             storeIntegration: boolean; aiAgent: boolean;
         };
         usage: { contacts: number; teamMembers: number; campaignsThisMonth: number };
+        agentBeta?: {
+            active: boolean; consumed: boolean;
+            reason: string;
+            startedAt: string | null; endsAt: string | null;
+            limit: number; used: number; remaining: number; daysLeft: number;
+        } | null;
     };
     recentCampaigns: {
         id: string; name: string; status: string;
@@ -137,7 +143,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         teamAtMax,
         campaignAtMax,
         canStore: planLimits?.storeIntegration ?? false,
-        canAI: planLimits?.aiAgent ?? false,
+        // Agent Beta Access يفتح الـ AI لغير Max أثناء سريانها
+        canAI: (planLimits?.aiAgent ?? false) || (dashData?.plan.agentBeta?.active ?? false),
         canMedia: planLimits?.mediaMessages ?? false,
         canUseClaude: planAtLeast(planTier as PlanTier, "pro"),
         isSuper: !!session?.user?.isSuper,
