@@ -5,17 +5,44 @@ import { useTheme as useNextTheme } from "next-themes";
 import { type DashboardTheme, VALID_THEMES } from "./schemas";
 
 export interface ThemeColors {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
   primary: string;
+  primaryForeground: string;
   primaryHover: string;
   secondary: string;
+  secondaryForeground: string;
+  muted: string;
+  mutedForeground: string;
   accent: string;
-  pageBg: string;
-  cardBg: string;
-  sidebarBg: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
   border: string;
-  text: string;
-  mutedText: string;
+  input: string;
+  inputBackground: string;
+  ring: string;
+  sidebarBackground: string;
+  sidebarForeground: string;
+  sidebarBorder: string;
+  sidebarActiveBackground: string;
+  sidebarActiveForeground: string;
+  success: string;
+  successForeground: string;
+  warning: string;
+  warningForeground: string;
+  info: string;
+  infoForeground: string;
   chart: string[];
+  pageBg?: string;
+  cardBg?: string;
+  sidebarBg?: string;
+  text?: string;
+  mutedText?: string;
 }
 
 export interface DashboardThemeDefinition {
@@ -31,6 +58,47 @@ export interface DashboardThemeDefinition {
   };
 }
 
+const createThemePalette = (mode: "light" | "dark", primary: string, primaryHover: string, secondary: string, accent: string, background: string, card: string, sidebar: string, border: string, foreground: string, mutedForeground: string, chart: string[], primaryForeground = "#ffffff") => ({
+  background,
+  foreground,
+  card,
+  cardForeground: foreground,
+  popover: card,
+  popoverForeground: foreground,
+  primary,
+  primaryForeground,
+  primaryHover,
+  secondary,
+  secondaryForeground: foreground,
+  muted: mode === "light" ? "#f8fafc" : "#1e293b",
+  mutedForeground: mutedForeground,
+  accent,
+  accentForeground: primary,
+  destructive: "#ef4444",
+  destructiveForeground: "#ffffff",
+  border,
+  input: border,
+  inputBackground: card,
+  ring: primary,
+  sidebarBackground: sidebar,
+  sidebarForeground: foreground,
+  sidebarBorder: border,
+  sidebarActiveBackground: accent,
+  sidebarActiveForeground: primary,
+  success: mode === "light" ? "#15803d" : "#4ade80",
+  successForeground: "#f8fafc",
+  warning: mode === "light" ? "#d97706" : "#fbbf24",
+  warningForeground: "#111827",
+  info: mode === "light" ? "#2563eb" : "#60a5fa",
+  infoForeground: "#f8fafc",
+  chart,
+  pageBg: background,
+  cardBg: card,
+  sidebarBg: sidebar,
+  text: foreground,
+  mutedText: mutedForeground,
+});
+
 export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
   {
     id: "wani",
@@ -40,32 +108,8 @@ export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
     primaryColor: "#16a34a",
     swatches: ["#16a34a", "#22c55e", "#f8fafc", "#0f172a"],
     colors: {
-      light: {
-        primary: "#16a34a",
-        primaryHover: "#15803d",
-        secondary: "#f1f5f9",
-        accent: "#dcfce7",
-        pageBg: "#f8fafc",
-        cardBg: "#ffffff",
-        sidebarBg: "#ffffff",
-        border: "#e2e8f0",
-        text: "#0f172a",
-        mutedText: "#64748b",
-        chart: ["#16a34a", "#0ea5e9", "#8b5cf6", "#f59e0b", "#ef4444"],
-      },
-      dark: {
-        primary: "#22c55e",
-        primaryHover: "#16a34a",
-        secondary: "#1e293b",
-        accent: "#14532d",
-        pageBg: "#020617",
-        cardBg: "#0b0f19",
-        sidebarBg: "#080c14",
-        border: "#1e293b",
-        text: "#f8fafc",
-        mutedText: "#94a3b8",
-        chart: ["#22c55e", "#38bdf8", "#a78bfa", "#fbbf24", "#f87171"],
-      },
+      light: createThemePalette("light", "#16a34a", "#15803d", "#f1f5f9", "#dcfce7", "#f8fafc", "#ffffff", "#ffffff", "#e2e8f0", "#0f172a", "#64748b", ["#16a34a", "#0ea5e9", "#8b5cf6", "#f59e0b", "#ef4444"]),
+      dark: createThemePalette("dark", "#22c55e", "#16a34a", "#1e293b", "#14532d", "#020617", "#0b0f19", "#080c14", "#1e293b", "#f8fafc", "#94a3b8", ["#22c55e", "#38bdf8", "#a78bfa", "#fbbf24", "#f87171"]),
     },
   },
   {
@@ -76,32 +120,8 @@ export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
     primaryColor: "#0284c7",
     swatches: ["#0284c7", "#38bdf8", "#f0f9ff", "#0f2137"],
     colors: {
-      light: {
-        primary: "#0284c7",
-        primaryHover: "#0369a1",
-        secondary: "#e0f2fe",
-        accent: "#bae6fd",
-        pageBg: "#f0f7fc",
-        cardBg: "#ffffff",
-        sidebarBg: "#fcfdff",
-        border: "#bae6fd",
-        text: "#0c4a6e",
-        mutedText: "#0369a1",
-        chart: ["#0284c7", "#06b6d4", "#3b82f6", "#10b981", "#f59e0b"],
-      },
-      dark: {
-        primary: "#0ea5e9",
-        primaryHover: "#0284c7",
-        secondary: "#0c4a6e",
-        accent: "#075985",
-        pageBg: "#070d16",
-        cardBg: "#0d1726",
-        sidebarBg: "#09111c",
-        border: "#16283d",
-        text: "#f0f9ff",
-        mutedText: "#7dd3fc",
-        chart: ["#38bdf8", "#22d3ee", "#60a5fa", "#34d399", "#fbbf24"],
-      },
+      light: createThemePalette("light", "#0284c7", "#0369a1", "#e0f2fe", "#bae6fd", "#f0f7fc", "#ffffff", "#fcfdff", "#bae6fd", "#0c4a6e", "#0369a1", ["#0284c7", "#06b6d4", "#3b82f6", "#10b981", "#f59e0b"]),
+      dark: createThemePalette("dark", "#0ea5e9", "#0284c7", "#0c4a6e", "#075985", "#070d16", "#0d1726", "#09111c", "#16283d", "#f0f9ff", "#7dd3fc", ["#38bdf8", "#22d3ee", "#60a5fa", "#34d399", "#fbbf24"]),
     },
   },
   {
@@ -112,32 +132,8 @@ export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
     primaryColor: "#059669",
     swatches: ["#059669", "#34d399", "#f0fdf4", "#0a2920"],
     colors: {
-      light: {
-        primary: "#059669",
-        primaryHover: "#047857",
-        secondary: "#dcfce7",
-        accent: "#bbf7d0",
-        pageBg: "#f4faf6",
-        cardBg: "#ffffff",
-        sidebarBg: "#fcfdfc",
-        border: "#bbf7d0",
-        text: "#064e3b",
-        mutedText: "#047857",
-        chart: ["#059669", "#10b981", "#0284c7", "#8b5cf6", "#f59e0b"],
-      },
-      dark: {
-        primary: "#10b981",
-        primaryHover: "#059669",
-        secondary: "#064e3b",
-        accent: "#065f46",
-        pageBg: "#06140f",
-        cardBg: "#0d221b",
-        sidebarBg: "#081b15",
-        border: "#133a2e",
-        text: "#f0fdf4",
-        mutedText: "#6ee7b7",
-        chart: ["#34d399", "#6ee7b7", "#38bdf8", "#c084fc", "#fbbf24"],
-      },
+      light: createThemePalette("light", "#059669", "#047857", "#dcfce7", "#bbf7d0", "#f4faf6", "#ffffff", "#fcfdfc", "#bbf7d0", "#064e3b", "#047857", ["#059669", "#10b981", "#0284c7", "#8b5cf6", "#f59e0b"]),
+      dark: createThemePalette("dark", "#10b981", "#059669", "#064e3b", "#065f46", "#06140f", "#0d221b", "#081b15", "#133a2e", "#f0fdf4", "#6ee7b7", ["#34d399", "#6ee7b7", "#38bdf8", "#c084fc", "#fbbf24"]),
     },
   },
   {
@@ -148,32 +144,8 @@ export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
     primaryColor: "#7c3aed",
     swatches: ["#7c3aed", "#a78bfa", "#faf5ff", "#1c1231"],
     colors: {
-      light: {
-        primary: "#7c3aed",
-        primaryHover: "#6d28d9",
-        secondary: "#f3e8ff",
-        accent: "#e9d5ff",
-        pageBg: "#fcf9fe",
-        cardBg: "#ffffff",
-        sidebarBg: "#fdfbfe",
-        border: "#e9d5ff",
-        text: "#581c87",
-        mutedText: "#6d28d9",
-        chart: ["#7c3aed", "#a855f7", "#ec4899", "#06b6d4", "#f59e0b"],
-      },
-      dark: {
-        primary: "#9d67ff",
-        primaryHover: "#7c3aed",
-        secondary: "#581c87",
-        accent: "#4c1d95",
-        pageBg: "#0f071a",
-        cardBg: "#1b102c",
-        sidebarBg: "#140b22",
-        border: "#2b1945",
-        text: "#faf5ff",
-        mutedText: "#c084fc",
-        chart: ["#a78bfa", "#c084fc", "#f472b6", "#22d3ee", "#fbbf24"],
-      },
+      light: createThemePalette("light", "#7c3aed", "#6d28d9", "#f3e8ff", "#e9d5ff", "#fcf9fe", "#ffffff", "#fdfbfe", "#e9d5ff", "#581c87", "#6d28d9", ["#7c3aed", "#a855f7", "#ec4899", "#06b6d4", "#f59e0b"]),
+      dark: createThemePalette("dark", "#9d67ff", "#7c3aed", "#581c87", "#4c1d95", "#0f071a", "#1b102c", "#140b22", "#2b1945", "#faf5ff", "#c084fc", ["#a78bfa", "#c084fc", "#f472b6", "#22d3ee", "#fbbf24"]),
     },
   },
   {
@@ -184,32 +156,8 @@ export const DASHBOARD_THEMES: DashboardThemeDefinition[] = [
     primaryColor: "#334155",
     swatches: ["#334155", "#94a3b8", "#f1f5f9", "#151b26"],
     colors: {
-      light: {
-        primary: "#334155",
-        primaryHover: "#1e293b",
-        secondary: "#e2e8f0",
-        accent: "#cbd5e1",
-        pageBg: "#f1f5f9",
-        cardBg: "#ffffff",
-        sidebarBg: "#f8fafc",
-        border: "#cbd5e1",
-        text: "#0f172a",
-        mutedText: "#475569",
-        chart: ["#334155", "#475569", "#0ea5e9", "#10b981", "#f59e0b"],
-      },
-      dark: {
-        primary: "#cbd5e1",
-        primaryHover: "#f1f5f9",
-        secondary: "#1e293b",
-        accent: "#334155",
-        pageBg: "#0a0d13",
-        cardBg: "#131822",
-        sidebarBg: "#0e121a",
-        border: "#1e2636",
-        text: "#f8fafc",
-        mutedText: "#94a3b8",
-        chart: ["#94a3b8", "#cbd5e1", "#38bdf8", "#34d399", "#fbbf24"],
-      },
+      light: createThemePalette("light", "#334155", "#1e293b", "#e2e8f0", "#cbd5e1", "#f1f5f9", "#ffffff", "#f8fafc", "#cbd5e1", "#0f172a", "#475569", ["#334155", "#475569", "#0ea5e9", "#10b981", "#f59e0b"]),
+      dark: createThemePalette("dark", "#cbd5e1", "#f1f5f9", "#1e293b", "#334155", "#0a0d13", "#131822", "#0e121a", "#1e2636", "#f8fafc", "#94a3b8", ["#94a3b8", "#cbd5e1", "#38bdf8", "#34d399", "#fbbf24"]),
     },
   },
 ];
@@ -229,25 +177,26 @@ const DashboardThemeContext = createContext<DashboardThemeContextValue | null>(n
 
 export function DashboardThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<DashboardTheme>("wani");
-  const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useNextTheme();
   const isDark = resolvedTheme === "dark";
 
-  // Initial load from localStorage on mount
   useEffect(() => {
+    if (typeof document === "undefined") return;
+
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as DashboardTheme;
-      if (saved && VALID_THEMES.includes(saved)) {
-        setThemeState(saved);
-        document.documentElement.setAttribute("data-theme", saved);
-      } else {
-        document.documentElement.setAttribute("data-theme", "wani");
-      }
+      const saved = localStorage.getItem(STORAGE_KEY) as DashboardTheme | null;
+      const nextTheme = saved && VALID_THEMES.includes(saved) ? saved : "wani";
+      setThemeState(nextTheme);
+      document.documentElement.setAttribute("data-theme", nextTheme);
     } catch {
       document.documentElement.setAttribute("data-theme", "wani");
     }
-    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const currentThemeConfig = useMemo(() => {
     return DASHBOARD_THEMES.find((t) => t.id === theme) ?? DASHBOARD_THEMES[0];
@@ -258,54 +207,18 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
     return currentThemeConfig.colors[mode].chart;
   }, [currentThemeConfig, isDark]);
 
-  // Temporarily disable all transitions so theme switching is completely instant (⚡)
-  const disableAnimationTemporarily = useCallback(() => {
-    if (typeof document === "undefined") return () => {};
-    const css = document.createElement("style");
-    css.setAttribute("data-theme-transition-lock", "true");
-    css.appendChild(
-      document.createTextNode(
-        `*, *::before, *::after {
-          -webkit-transition: none !important;
-          -moz-transition: none !important;
-          -o-transition: none !important;
-          -ms-transition: none !important;
-          transition: none !important;
-        }`
-      )
-    );
-    document.head.appendChild(css);
-
-    return () => {
-      // Force layout reflow with transitions disabled
-      (() => window.getComputedStyle(document.body))();
-      // Restore normal transitions in the next frame
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try {
-            if (document.head.contains(css)) {
-              document.head.removeChild(css);
-            }
-          } catch {}
-        });
-      });
-    };
-  }, []);
-
   const setTheme = useCallback(async (newTheme: DashboardTheme) => {
     if (!VALID_THEMES.includes(newTheme)) return;
 
-    const restore = disableAnimationTemporarily();
+    setThemeState(newTheme);
+
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
       document.documentElement.setAttribute("data-theme", newTheme);
     } catch {
       // ignore localStorage errors in sandboxed environments
     }
-    setThemeState(newTheme);
-    restore();
 
-    // Persist to user settings in background if authenticated
     fetch("/api/me/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -313,28 +226,19 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
     }).catch((err) => {
       console.warn("[theme] Failed to persist theme to backend:", err);
     });
-  }, [disableAnimationTemporarily]);
+  }, []);
 
-  // Sync with user's saved theme from database when they log in / profile loads
   const syncWithUserTheme = useCallback((backendTheme?: string | null) => {
     if (backendTheme && VALID_THEMES.includes(backendTheme as DashboardTheme)) {
       const valid = backendTheme as DashboardTheme;
-      setThemeState((current) => {
-        if (current !== valid) {
-          const restore = disableAnimationTemporarily();
-          try {
-            localStorage.setItem(STORAGE_KEY, valid);
-            document.documentElement.setAttribute("data-theme", valid);
-          } catch { }
-          restore();
-          return valid;
-        }
-        return current;
-      });
+      setThemeState((current) => (current === valid ? current : valid));
+      try {
+        localStorage.setItem(STORAGE_KEY, valid);
+        document.documentElement.setAttribute("data-theme", valid);
+      } catch {}
     }
-  }, [disableAnimationTemporarily]);
+  }, []);
 
-  // Expose sync helper on window for subscription / settings sync
   useEffect(() => {
     const handleSync = (e: CustomEvent<{ theme: string }>) => {
       if (e.detail?.theme) syncWithUserTheme(e.detail.theme);
@@ -365,10 +269,9 @@ export function DashboardThemeProvider({ children }: { children: React.ReactNode
 export function useDashboardTheme(): DashboardThemeContextValue {
   const context = useContext(DashboardThemeContext);
   if (!context) {
-    // Fallback if rendered outside provider
     return {
       theme: "wani",
-      setTheme: async () => { },
+      setTheme: async () => {},
       currentThemeConfig: DASHBOARD_THEMES[0],
       allThemes: DASHBOARD_THEMES,
       chartColors: DASHBOARD_THEMES[0].colors.light.chart,

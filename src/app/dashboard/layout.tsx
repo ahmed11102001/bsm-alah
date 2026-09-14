@@ -44,22 +44,22 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className={compact ? "w-9 h-9" : "w-full h-10"} />;
+  if (!mounted) return <div className={compact ? "h-9 w-9" : "h-10 w-full"} />;
 
   const cycle = () => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
-  const icon = theme === "dark" ? <Moon className="w-4 h-4" /> : theme === "light" ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  const icon = theme === "dark" ? <Moon className="h-4 w-4" /> : theme === "light" ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />;
   const label = theme === "dark" ? t.theme.dark : theme === "light" ? t.theme.light : t.theme.system;
 
   if (compact) return (
     <button onClick={cycle} title={label}
-      className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
+      className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted/60">
       {icon}
     </button>
   );
 
   return (
     <button onClick={cycle}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-sm">
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground">
       {icon}<span>{label}</span>
     </button>
   );
@@ -121,10 +121,10 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
       {showMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden`}>
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                <img src="/partners/claude.svg.svg" alt="" className="w-5 h-5 object-contain" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+          <div className={`absolute ${dir === "rtl" ? "left-0" : "right-0"} top-11 z-50 w-72 overflow-hidden rounded-2xl border border-border bg-popover shadow-xl`}>
+            <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/20">
+                <img src="/partners/claude.svg.svg" alt="" className="h-5 w-5 object-contain" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
               </div>
               <div>
                 <p className="text-sm font-bold text-white">Claude AI</p>
@@ -132,8 +132,8 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
               </div>
             </div>
 
-            <div className="p-3 space-y-1.5">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-2">
+            <div className="space-y-1.5 p-3">
+              <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {locale === "ar" ? "قول لـ Claude في Desktop App:" : "Tell Claude in Desktop App:"}
               </p>
               {(locale === "ar" ? [
@@ -424,61 +424,50 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex transition-colors duration-200" dir={dir}>
 
       {/* ── Desktop Sidebar ── */}
-      <aside className={`bg-sidebar border-sidebar-border text-sidebar-foreground fixed top-0 bottom-0 z-40 hidden lg:flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-64"
-        } ${dir === "rtl" ? "border-l right-0" : "border-r left-0"}`}>
-        <div className={`h-16 flex items-center border-b border-sidebar-border flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"
-          }`}>
-          <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
+      <aside className={`fixed bottom-0 top-0 z-40 hidden bg-sidebar text-sidebar-foreground transition-all duration-300 lg:flex lg:flex-col ${sidebarCollapsed ? "w-20" : "w-64"} ${dir === "rtl" ? "right-0 border-l border-sidebar-border" : "left-0 border-r border-sidebar-border"}`}>
+        <div className={`flex h-16 flex-shrink-0 items-center border-b border-sidebar-border transition-all duration-300 ${sidebarCollapsed ? "justify-center px-2" : "px-6"}`}>
+          <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary">
+              <img src="/faviconlink.svg" alt="WANI" className="h-full w-full object-cover" />
             </div>
             {!sidebarCollapsed && (
-              <span className="text-lg font-bold truncate">
-                {locale === "ar" ? "وني" : "WANI"}
-              </span>
+              <span className="truncate text-lg font-bold">{locale === "ar" ? "وني" : "WANI"}</span>
             )}
           </div>
         </div>
 
-        {/* Dashboard navigation: this is the ONLY scrollable area.
-            Admin stays here, directly under Integrations, above the divider. */}
-        <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3">
           {sidebarItems.map((item) => (
             <Link key={item.id} href={sidebarHref(item.id)}
               data-sidebar-id={item.id}
               onClick={() => playNavSound()}
               title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
-                } ${activeSection === item.id
-                  ? "bg-primary/10 text-primary font-semibold"
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""} ${activeSection === item.id
+                  ? "bg-sidebar-active text-sidebar-active-foreground font-semibold"
                   : "text-sidebar-foreground/75 hover:bg-muted/60 hover:text-sidebar-foreground"
                 }`}>
-              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              <item.icon className="h-[18px] w-[18px] flex-shrink-0" />
               {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
 
-          {/* Admin is part of navigation — NOT part of Account. */}
           {isSuper && (
             <Link href={sidebarHref("admin")}
               onClick={() => playNavSound()}
               title={sidebarCollapsed ? t.sidebar.admin : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mt-1 ${sidebarCollapsed ? "justify-center px-0" : ""
-                } ${activeSection === "admin"
-                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 font-semibold"
-                  : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"
+              className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""} ${activeSection === "admin"
+                  ? "bg-red-500/15 text-red-500 font-semibold"
+                  : "text-red-400 hover:bg-red-500/10"
                 }`}>
-              <adminItem.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              <adminItem.icon className="h-[18px] w-[18px] flex-shrink-0" />
               {!sidebarCollapsed && <span className="truncate">{t.sidebar.admin}</span>}
             </Link>
           )}
         </nav>
 
-        {/* Fixed Account section — the ONLY item below the divider. */}
         <div
           ref={accountMenuRef}
-          className={`relative flex-shrink-0 border-t border-gray-200 dark:border-gray-700 ${sidebarCollapsed ? "p-2" : "p-3"
-            }`}
+          className={`relative flex-shrink-0 border-t border-sidebar-border ${sidebarCollapsed ? "p-2" : "p-3"}`}
         >
           <button
             type="button"
@@ -488,52 +477,46 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               openAccountPanel();
             }}
             title={sidebarCollapsed ? `${accountLabel} — ${planName}` : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""
-              } ${accountPanelOpen
-                ? "bg-primary/10 text-primary font-semibold"
-                : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${sidebarCollapsed ? "justify-center px-0" : ""} ${accountPanelOpen
+                ? "bg-sidebar-active text-sidebar-active-foreground font-semibold"
+                : "text-sidebar-foreground/80 hover:bg-muted/60"
               }`}
           >
-            <User className="w-[18px] h-[18px] flex-shrink-0" />
+            <User className="h-[18px] w-[18px] flex-shrink-0" />
 
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1 text-left rtl:text-right">
-                <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex min-w-0 items-center justify-between gap-2">
                   <p className="truncate">{accountLabel}</p>
-                  {/* Each user's current subscription plan appears beside Account. */}
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${planColor}`}>
+                  <span className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-bold ${planColor}`}>
                     {planName}
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</p>
+                <p className="truncate text-[11px] text-sidebar-foreground/70">{displayName}</p>
               </div>
             )}
 
             {!sidebarCollapsed && (
               <ChevronDown
-                className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${
-                  accountPanelOpen
-                    ? "rotate-180 text-primary"
-                    : "text-gray-400 dark:text-gray-500"
+                className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${
+                  accountPanelOpen ? "rotate-180 text-primary" : "text-muted-foreground"
                 }`}
               />
             )}
           </button>
 
-          {/* Desktop popup: floats BESIDE the sidebar, never inside its layout/scroll area. */}
           {accountPanelOpen && (
             <div
-              className={`hidden lg:block absolute bottom-2 z-[70] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-1.5 ${dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
-                }`}
+              className={`absolute bottom-2 z-[70] hidden w-64 rounded-2xl border border-border bg-popover p-3 shadow-2xl lg:block ${dir === "rtl" ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"}`}
             >
-              <div className="pb-3 mb-1 border-b border-gray-100 dark:border-gray-700">
+              <div className="mb-1 border-b border-border pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{planName}</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{planName}</p>
                   </div>
                 </div>
               </div>
@@ -541,28 +524,28 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {accountQuickLinks()}
 
               {accountLinks.length > 0 && (
-                <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
+                <div className="my-1.5 border-t border-border" />
               )}
 
               <button
                 type="button"
                 onClick={() => { setAccountPanelOpen(false); openSettings(); }}
-                className="w-full flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-foreground/80 transition-colors hover:bg-muted/60"
               >
-                <Settings className="w-4 h-4 flex-shrink-0" />
+                <Settings className="h-4 w-4 flex-shrink-0" />
                 <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
               </button>
 
               <LanguageToggle />
               <ThemeToggle />
 
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-1.5 mt-1">
+              <div className="mt-1 border-t border-border pt-1.5">
                 <button
                   type="button"
                   onClick={() => signOutWithPushCleanup(signOut, { callbackUrl: "/" })}
-                  className="w-full flex items-center gap-3 text-sm text-red-500 px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-500/10"
                 >
-                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  <LogOut className="h-4 w-4 flex-shrink-0" />
                   <span>{t.signOut}</span>
                 </button>
               </div>
@@ -576,39 +559,34 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       {mobileMenuOpen && (
         <div
           dir={dir}
-          className="lg:hidden fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col overflow-y-auto"
+          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background lg:hidden"
         >
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+          <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-border bg-card px-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
-                <img src="/faviconlink.svg" alt="WANI" className="w-full h-full object-cover" />
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-primary">
+                <img src="/faviconlink.svg" alt="WANI" className="h-full w-full object-cover" />
               </div>
-              <span className="text-base font-bold">
-                {locale === "ar" ? "وني" : "WANI"}
-              </span>
+              <span className="text-base font-bold text-foreground">{locale === "ar" ? "وني" : "WANI"}</span>
             </div>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-2xl leading-none"
+              className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted/60 text-2xl leading-none"
             >
               ✕
             </button>
           </div>
 
-          {/* User info */}
-          <div className="flex items-center gap-3 mx-4 mt-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
-            <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0">
+          <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{displayName}</p>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${planColor}`}>{planName}</span>
+              <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${planColor}`}>{planName}</span>
             </div>
           </div>
 
-          {/* Nav items */}
-          <nav className="px-4 mt-4 space-y-1.5">
+          <nav className="mt-4 space-y-1.5 px-4">
             {sidebarItems.map((item) => (
               <Link
                 key={item.id}
@@ -618,12 +596,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   playNavSound();
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === item.id
+                className={`flex w-full items-center gap-4 rounded-2xl px-5 py-3.5 text-[15px] font-medium transition-all ${activeSection === item.id
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                  : "bg-card text-foreground/80"
                   }`}
               >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <item.icon className="h-5 w-5 flex-shrink-0" />
                 <span>{item.label}</span>
               </Link>
             ))}
@@ -635,60 +613,55 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                   playNavSound();
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[15px] font-medium transition-all ${activeSection === "admin"
+                className={`flex w-full items-center gap-4 rounded-2xl px-5 py-3.5 text-[15px] font-medium transition-all ${activeSection === "admin"
                   ? "bg-red-500 text-white shadow-sm"
-                  : "bg-white dark:bg-gray-800 text-red-500"
+                  : "bg-card text-red-500"
                   }`}
               >
-                <Shield className="w-5 h-5 flex-shrink-0" />
+                <Shield className="h-5 w-5 flex-shrink-0" />
                 <span>{t.sidebar.admin}</span>
               </Link>
             )}
           </nav>
 
-          {/* Footer actions */}
-          <div className="px-4 mt-4 mb-6">
+          <div className="mb-6 mt-4 px-4">
             <button
               type="button"
               onClick={() => {
                 playNavSound();
                 setAccountPanelOpen((prev) => !prev);
               }}
-              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition-all shadow-sm"
+              className="flex w-full items-center gap-4 rounded-2xl border border-border bg-card px-5 py-3.5 text-foreground shadow-sm transition-all"
             >
-              <User className="w-5 h-5 flex-shrink-0" />
+              <User className="h-5 w-5 flex-shrink-0" />
               <div className="min-w-0 flex-1 text-left rtl:text-right">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold">{accountLabel}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${planColor}`}>
+                  <span className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-bold ${planColor}`}>
                     {planName}
                   </span>
                 </div>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{displayName}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{displayName}</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                  accountPanelOpen
-                    ? "rotate-180 text-primary"
-                    : "text-gray-400 dark:text-gray-500"
-                }`}
+                className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${accountPanelOpen ? "rotate-180 text-primary" : "text-muted-foreground"}`}
               />
             </button>
 
             {accountPanelOpen && (
-              <div className="mt-3 space-y-2 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+              <div className="mt-3 space-y-2 rounded-2xl border border-border bg-card p-3">
                 {accountQuickLinks(true)}
 
                 {accountLinks.length > 0 && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 my-1.5" />
+                  <div className="my-1.5 border-t border-border" />
                 )}
 
                 <button
                   type="button"
                   onClick={() => { openSettings(); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-foreground/80 hover:bg-muted/60"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="h-4 w-4" />
                   <span>{locale === "ar" ? "الإعدادات" : "Settings"}</span>
                 </button>
                 <LanguageToggle />
@@ -696,9 +669,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => { signOutWithPushCleanup(signOut, { callbackUrl: "/" }); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-500/10"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="h-4 w-4" />
                   <span>{t.signOut}</span>
                 </button>
               </div>

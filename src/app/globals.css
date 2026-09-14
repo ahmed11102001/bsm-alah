@@ -6,73 +6,18 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142.1 76.2% 36.3%;
-    --radius: 0.5rem;
-    /* ── Design System pilot: semantic colors ──
-       primary/destructive = الإجراء والخطر فقط. success/warning/info
-       للحالات — ممنوع استخدام الأخضر البراندي كـ"نجاح". */
-    --success: 161 94% 30%;
-    --success-foreground: 0 0% 98%;
-    --warning: 32 95% 44%;
-    --warning-foreground: 0 0% 98%;
-    --info: 221 83% 53%;
-    --info-foreground: 0 0% 98%;
-    /* ── Design System pilot: motion tokens ──
-       fast = hover/focus، normal = فتح/إغلاق، slow = انتقالات كبرى فقط. */
+    color-scheme: light;
+    --radius: 0.75rem;
     --motion-fast: 150ms;
     --motion-normal: 250ms;
     --motion-slow: 400ms;
     --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142.1 76.2% 36.3%;
-    --success: 160 80% 45%;
-    --success-foreground: 0 0% 98%;
-    --warning: 43 96% 56%;
-    --warning-foreground: 240 10% 3.9%;
-    --info: 217 91% 60%;
-    --info-foreground: 0 0% 98%;
+  html.dark {
+    color-scheme: dark;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -86,38 +31,51 @@
   html {
     scroll-behavior: smooth;
   }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: hsl(var(--muted));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: hsl(var(--border));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: hsl(var(--muted-foreground));
 }
 
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
+[dir="rtl"] {
+  text-align: right;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+[dir="rtl"] .space-x-2>*+*,
+[dir="rtl"] .space-x-4>*+*,
+[dir="rtl"] .space-x-8>*+* {
+  --tw-space-x-reverse: 1;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+button,
+[role="button"],
+a,
+input[type="submit"],
+input[type="button"],
+.cursor-pointer {
+  cursor: pointer !important;
 }
 
 /* RTL */
