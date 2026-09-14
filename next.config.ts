@@ -6,14 +6,16 @@ import { validateEnv } from "./env-utils";
 validateEnv();
 
 // ─── Security Headers الثابتة ─────────────────────────────────────────────────
-// ملاحظة: Content-Security-Policy بيتولد في src/middleware.ts مع nonce لكل request
-// الـ headers دي ثابتة وما بتحتاجش nonce
+// ملاحظة: Content-Security-Policy بيتولد في src/proxy.ts (middleware) مع nonce
+// لكل request. الهيدرز اللي بتتكرر هناك بالظبط (X-Content-Type-Options,
+// X-Frame-Options, Referrer-Policy, Permissions-Policy) اتشالت من هنا —
+// كان بيحصل تعريف مزدوج لنفس اسم الهيدر من طبقتين مختلفتين (next.config +
+// middleware) في نفس الوقت، وده كان بيسبب دمج/تلف فعلي في شكل الـheader
+// اللي بيوصل للمتصفح (لاحظنا الخطأ: المتصفح بيحاول يقرأ 'X-Content-Type-
+// Options:' كأنه جزء من قيمة Content-Security-Policy نفسها). سايبين هنا بس
+// اللي مش موجود في middleware أصلاً.
 const securityHeaders = [
-  { key: "X-Frame-Options",            value: "DENY" },
-  { key: "X-Content-Type-Options",     value: "nosniff" },
-  { key: "Referrer-Policy",            value: "strict-origin-when-cross-origin" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Permissions-Policy",         value: "camera=(), microphone=(), geolocation=()" },
   { key: "Strict-Transport-Security",  value: "max-age=63072000; includeSubDomains; preload" },
 ];
 

@@ -26,7 +26,12 @@ function buildCsp(nonce: string): string {
   ].filter(Boolean).join(" ");
   return [
     "default-src 'self'", `script-src ${scriptSrc}`, `style-src ${styleSrc}`,
-    "img-src 'self' data: https: blob:", "media-src 'self' blob:",
+    "img-src 'self' data: https: blob:",
+    // media-src ناقصة cloudinary كانت بتمنع تشغيل فيديو/صوت الشات فعليًا
+    // (الرسائل مخزّنة على Cloudinary) — الـconnect-src كان فيها الدومين ده
+    // أصلاً لطلبات الـfetch، لكن عنصر <video>/<audio> بيتحكم فيه media-src
+    // بشكل منفصل تمامًا، مش connect-src.
+    "media-src 'self' blob: https://*.cloudinary.com",
     "frame-src 'self' https://www.facebook.com https://connect.facebook.net",
     "font-src 'self' https://fonts.gstatic.com", `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",

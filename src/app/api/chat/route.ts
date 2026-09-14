@@ -245,7 +245,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
         id: true, content: true, type: true,
         direction: true, status: true, senderType: true,
         mediaUrl: true, createdAt: true,
-        replyToMessageId: true,
+        replyToMessageId: true, reactions: true,
         replyTo: { select: { id: true, content: true, type: true, mediaUrl: true, direction: true } },
       },
     }),
@@ -445,7 +445,7 @@ export async function PATCH(req: NextRequest) {
     // جيب الـ whatsappId من الرسالة
     const message = await prisma.message.findFirst({
       where: { id: messageId, userId, contactId },
-      select: { whatsappId: true },
+      select: { id: true, whatsappId: true, reactions: true },
     });
     if (!message?.whatsappId)
       return NextResponse.json({ error: "الرسالة غير موجودة أو لم تُرسَل بعد" }, { status: 404 });
@@ -482,6 +482,21 @@ export async function PATCH(req: NextRequest) {
     const metaData = await metaRes.json();
     if (metaData.error)
       return NextResponse.json({ error: metaData.error.message }, { status: 400 });
+
+    // ── حفظ الـreaction محليًا (كان مفقود تمامًا) ─────────────────────────
+    // بدون ده الـreaction كان بيتبعت لميتا وبيتحفظ في الواجهة optimistic بس
+    // (client state)، فيختفي فور أي refresh لأن الداتابيز ما كانتش بتتحدث
+    // خالص. نفس منطق toggle-by-sender المستخدم في webhook.ts للـreactions
+    // الواردة من العميل — "me" بيمثل صاحب الحساب (Wani) هنا.
+    const existingReactions = (message.reactions as { emoji: string; senderId: string }[] | null) ?? [];
+    const updatedReactions = [
+      ...existingReactions.filter((r) => r.senderId !== "me"),
+      { emoji, senderId: "me" },
+    ];
+    await prisma.message.update({
+      where: { id: message.id },
+      data: { reactions: updatedReactions },
+    });
 
     return NextResponse.json({ success: true });
   }
