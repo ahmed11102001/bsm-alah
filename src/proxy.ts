@@ -10,7 +10,10 @@ function buildCsp(nonce: string): string {
     `'nonce-${nonce}'`, "'strict-dynamic'", "'unsafe-inline'",
     "'sha256-n46vPwSWuMC0W703pBofImv82Z26xo4LXymv0E9caPk='",
     "https://connect.facebook.net", "https://www.facebook.com",
-    isDev ? "'unsafe-eval'" : "",
+    // الـ Facebook JS SDK بيستخدم eval() داخليًا (مؤكد من خطأ حقيقي في الـ
+    // console وقت الـ Embedded Signup: "Missing 'unsafe-eval'") — لازم في كل
+    // البيئات مش بس dev، وإلا FB.login ممكن يرجع status:"unknown" بدل الكود.
+    "'unsafe-eval'",
   ].filter(Boolean).join(" ");
   const styleSrc = ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"].filter(Boolean).join(" ");
   const connectSrc = [
@@ -26,7 +29,7 @@ function buildCsp(nonce: string): string {
     "img-src 'self' data: https: blob:", "media-src 'self' blob:",
     "frame-src 'self' https://www.facebook.com https://connect.facebook.net",
     "font-src 'self' https://fonts.gstatic.com", `connect-src ${connectSrc}`,
-    "frame-ancestors 'none'", "X-Content-Type-Options: nosniff",
+    "frame-ancestors 'none'",
   ].join("; ");
 }
 
