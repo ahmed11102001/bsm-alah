@@ -61,7 +61,7 @@ export default function ReportsStorePage() {
         </h1>
       </div>
 
-      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mb-6">
+      <Card className="border border-border shadow-sm bg-card mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-500 dark:text-gray-400">من</Label>
@@ -80,7 +80,7 @@ export default function ReportsStorePage() {
           {loadingStore ? (
             <ReportsOverviewSkeleton />
           ) : !storeReport ? (
-            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+            <Card className="border border-border shadow-sm bg-card">
               <CardContent className="p-12 text-center text-gray-400">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">{pageText[locale].store.noData}</p>
@@ -95,7 +95,7 @@ export default function ReportsStorePage() {
                 <div className="flex flex-wrap gap-3 mb-2">
                   {storeReport.stores.map((s) => (
                     <div key={s.name}
-                      className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm text-sm">
+                      className="flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-2 shadow-sm text-sm">
                       <Store className="w-4 h-4 text-green-500" />
                       <span className="font-medium text-gray-700">{s.name}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.source === "shopify"
@@ -115,7 +115,7 @@ export default function ReportsStorePage() {
 
               {/* ── KPIs ── */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
+                <Card className="border border-border shadow-sm bg-card col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                       <Package className="w-4 h-4 text-blue-600" />
@@ -128,7 +128,7 @@ export default function ReportsStorePage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
+                <Card className="border border-border shadow-sm bg-card col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
                       <DollarSign className="w-4 h-4 text-primary" />
@@ -141,7 +141,7 @@ export default function ReportsStorePage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1 border-l-4 border-l-primary">
+                <Card className="border border-border shadow-sm bg-card col-span-1 border-l-4 border-l-primary">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Zap className="w-4 h-4 text-primary" />
@@ -154,7 +154,7 @@ export default function ReportsStorePage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
+                <Card className="border border-border shadow-sm bg-card col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
                       <TrendingUp className="w-4 h-4 text-purple-600" />
@@ -167,7 +167,7 @@ export default function ReportsStorePage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
+                <Card className="border border-border shadow-sm bg-card col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
                       <Users className="w-4 h-4 text-orange-500" />
@@ -180,7 +180,7 @@ export default function ReportsStorePage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 col-span-1">
+                <Card className="border border-border shadow-sm bg-card col-span-1">
                   <CardContent className="p-4 flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
                       <Store className="w-4 h-4 text-teal-600" />
@@ -199,7 +199,7 @@ export default function ReportsStorePage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Campaign Revenue Share Visual */}
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Zap className="w-4 h-4 text-primary" />
@@ -266,7 +266,7 @@ export default function ReportsStorePage() {
                 </Card>
 
                 {/* Daily Revenue Trend Chart */}
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-blue-500" />
@@ -305,7 +305,7 @@ export default function ReportsStorePage() {
 
               {/* ── Revenue Attribution per Campaign ── */}
               {storeReport.campaignRevenue.length > 0 && (
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <ArrowUpRight className="w-4 h-4 text-primary" />
@@ -318,7 +318,7 @@ export default function ReportsStorePage() {
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 text-xs text-gray-400">
+                        <tr className="border-b border-border text-xs text-muted-foreground">
                           <th className="text-right py-2 pr-2">{pageText[locale].logs.campaign}</th>
                           <th className="text-center py-2">{locale === "ar" ? "الإيراد المنسوب" : "Attributed Revenue"}</th>
                           <th className="text-center py-2">{pageText[locale].charts.orders}</th>
@@ -338,7 +338,7 @@ export default function ReportsStorePage() {
                             ? (c.revenue / c.sentCount).toFixed(1)
                             : "0";
                           return (
-                            <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <tr key={c.id} className="border-b border-border/60 hover:bg-muted/60 transition-colors">
                               <td className="py-3 pr-2">
                                 <div className="font-medium text-gray-800 max-w-[180px] truncate">{c.name}</div>
                               </td>
@@ -408,7 +408,7 @@ export default function ReportsStorePage() {
 
               {/* ── Top Customers ── */}
               {storeReport.topCustomers.length > 0 && (
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Star className="w-4 h-4 text-amber-500" />
@@ -418,7 +418,7 @@ export default function ReportsStorePage() {
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 text-xs text-gray-400">
+                        <tr className="border-b border-border text-xs text-muted-foreground">
                           <th className="text-right py-2 pr-2">#</th>
                           <th className="text-right py-2">{pageText[locale].store.customer}</th>
                           <th className="text-center py-2">{pageText[locale].store.phone}</th>
@@ -428,7 +428,7 @@ export default function ReportsStorePage() {
                       </thead>
                       <tbody>
                         {storeReport.topCustomers.map((c, i) => (
-                          <tr key={c.phone} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                          <tr key={c.phone} className="border-b border-border/60 hover:bg-muted/60 transition-colors">
                             <td className="py-3 pr-2 text-gray-400 text-xs">{i + 1}</td>
                             <td className="py-3">
                               <div className="font-medium text-gray-800">{c.name ?? "—"}</div>
@@ -452,8 +452,8 @@ export default function ReportsStorePage() {
 
               {/* ── Confirmed/Cancelled Orders ── */}
               {storeReport.confirmedOrders && (
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mt-6">
-                  <CardHeader className="pb-2 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <Card className="border border-border shadow-sm bg-card mt-6">
+                  <CardHeader className="pb-2 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       {pageText[locale].charts.confirmedOrdersTitle}
@@ -480,7 +480,7 @@ export default function ReportsStorePage() {
                       <>
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 bg-gray-50/50 dark:bg-gray-800/50">
+                            <tr className="border-b border-border text-xs text-muted-foreground bg-muted/50">
                               <th className="text-right py-3 px-4 font-medium">{pageText[locale].store.orderNumber}</th>
                               <th className="text-right py-3 px-4 font-medium">{pageText[locale].store.customer}</th>
                               <th className="text-center py-3 px-4 font-medium">{pageText[locale].store.phone}</th>
@@ -491,7 +491,7 @@ export default function ReportsStorePage() {
                           </thead>
                           <tbody>
                             {storeReport.confirmedOrders.map((o) => (
-                              <tr key={o.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-800 transition-colors">
+                              <tr key={o.id} className="border-b border-border/60 hover:bg-muted/60 transition-colors">
                                 <td className="py-3 px-4 text-gray-600 font-mono text-xs">{o.orderNumber || o.externalId}</td>
                                 <td className="py-3 px-4 font-medium text-gray-800 dark:text-gray-200">{o.customerName || "—"}</td>
                                 <td className="py-3 px-4 text-center text-gray-500 dark:text-gray-400 text-xs font-mono" dir="ltr">{o.customerPhone}</td>
@@ -515,7 +515,7 @@ export default function ReportsStorePage() {
                         </table>
 
                         {/* Pagination */}
-                        <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
+                        <div className="flex items-center justify-between p-4 border-t border-border text-xs text-muted-foreground">
                           <div>
                             {locale === "ar" ? "إجمالي:" : "Total:"} <span className="font-medium text-gray-800 dark:text-gray-200">{formatNumber(storeReport.confirmedOrdersTotal, numberLocale)}</span> {locale === "ar" ? "أوردر" : "orders"}
                           </div>

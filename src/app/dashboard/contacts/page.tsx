@@ -267,7 +267,7 @@ export default function Contacts() {
         <p className="text-xs font-semibold text-primary uppercase tracking-[0.2em] mb-2">
           {ct.title}
         </p>
-        <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white">
+        <h1 className="text-2xl lg:text-3xl font-black text-foreground">
           {ct.title}
         </h1>
       </div>
@@ -303,8 +303,8 @@ export default function Contacts() {
           <div key={s.label} className={`${s.bg} rounded-xl p-4 flex items-center gap-3`}>
             {s.icon}
             <div>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{numFmt(s.value)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{s.label}</p>
+              <p className="text-xl font-bold text-foreground">{numFmt(s.value)}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
             </div>
           </div>
         ))}
@@ -313,10 +313,10 @@ export default function Contacts() {
       {/* ── Header bar ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Search className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={ct.searchPlaceholder}
-            className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
+            className="pr-9 text-sm bg-background border-border" />
         </div>
         <div className="flex gap-2">
           <DropdownMenu>
@@ -326,11 +326,11 @@ export default function Contacts() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={`w-64 ${dir === "rtl" ? "text-right" : "text-left"}`}>
-              <DropdownMenuLabel className="text-xs text-gray-500">{locale === "ar" ? "اختار طريقة الإضافة" : "Choose an import method"}</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{locale === "ar" ? "اختار طريقة الإضافة" : "Choose an import method"}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => { resetExcel(); setShowAdd(true); }}>
-                <FileSpreadsheet className="w-4 h-4 text-gray-500" />
-                <span><span className="block text-sm font-medium">Excel / CSV</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "رفع ملف من الجهاز" : "Upload a local file"}</span></span>
+                <FileSpreadsheet className="w-4 h-4 text-muted-foreground" />
+                <span><span className="block text-sm font-medium">Excel / CSV</span><span className="block text-[11px] text-muted-foreground">{locale === "ar" ? "رفع ملف من الجهاز" : "Upload a local file"}</span></span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className={`gap-3 py-2.5 ${isFree ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -344,12 +344,12 @@ export default function Contacts() {
                 }}
               >
                 <Sheet className="w-4 h-4 text-green-600" />
-                <span><span className="block text-sm font-medium">Google Sheets</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "اختيار Spreadsheet ومزامنته" : "Import and sync a spreadsheet"}</span></span>
+                <span><span className="block text-sm font-medium">Google Sheets</span><span className="block text-[11px] text-muted-foreground">{locale === "ar" ? "اختيار Spreadsheet ومزامنته" : "Import and sync a spreadsheet"}</span></span>
                 {isFree && <Lock className="w-3.5 h-3.5 text-amber-500 ms-auto flex-shrink-0" />}
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-3 py-2.5 cursor-pointer" onClick={() => setShowCustom(true)}>
                 <PenLine className="w-4 h-4 text-purple-500" />
-                <span><span className="block text-sm font-medium">{locale === "ar" ? "إدخال مخصص" : "Custom input"}</span><span className="block text-[11px] text-gray-400">{locale === "ar" ? "كتابة الأرقام يدويًا" : "Enter contacts manually"}</span></span>
+                <span><span className="block text-sm font-medium">{locale === "ar" ? "إدخال مخصص" : "Custom input"}</span><span className="block text-[11px] text-muted-foreground">{locale === "ar" ? "كتابة الأرقام يدويًا" : "Enter contacts manually"}</span></span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -366,9 +366,9 @@ export default function Contacts() {
               <div className="flex items-center gap-3">
                 <Sheet className="w-6 h-6 text-green-600" />
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">Google Sheets · {googleConnection.spreadsheetName}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{googleConnection.audience?.name} · {numFmt(googleConnection.audience?._count?.contacts ?? 0)} {locale === "ar" ? "عميل" : "contacts"}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{locale === "ar" ? "المزامنة التلقائية:" : "Auto sync:"} <select value={googleConnection.syncInterval ?? "off"} onChange={(e) => setGoogleInterval(e.target.value)} className="bg-transparent font-medium"><option value="off">{locale === "ar" ? "متوقفة" : "Off"}</option><option value="hourly">{locale === "ar" ? "كل ساعة" : "Hourly"}</option><option value="6hours">{locale === "ar" ? "كل 6 ساعات" : "Every 6 hours"}</option><option value="daily">{locale === "ar" ? "يوميًا" : "Daily"}</option></select></p>
+                  <p className="font-semibold text-foreground">Google Sheets · {googleConnection.spreadsheetName}</p>
+                  <p className="text-xs text-muted-foreground">{googleConnection.audience?.name} · {numFmt(googleConnection.audience?._count?.contacts ?? 0)} {locale === "ar" ? "عميل" : "contacts"}</p>
+                  <p className="text-xs text-muted-foreground">{locale === "ar" ? "المزامنة التلقائية:" : "Auto sync:"} <select value={googleConnection.syncInterval ?? "off"} onChange={(e) => setGoogleInterval(e.target.value)} className="bg-transparent font-medium"><option value="off">{locale === "ar" ? "متوقفة" : "Off"}</option><option value="hourly">{locale === "ar" ? "كل ساعة" : "Hourly"}</option><option value="6hours">{locale === "ar" ? "كل 6 ساعات" : "Every 6 hours"}</option><option value="daily">{locale === "ar" ? "يوميًا" : "Daily"}</option></select></p>
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -447,11 +447,11 @@ export default function Contacts() {
 
           {customCards.length === 0 && excelCards.length === 0 && googleCards.length === 0 && !vip && !engaged && !noResp && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
-                <Users className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+              <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-5">
+                <Users className="w-10 h-10 text-muted-foreground/40" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">{ct.empty.title}</h3>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mb-6 max-w-xs">{ct.empty.subtitle}</p>
+                <h3 className="text-lg font-semibold text-foreground/80 mb-1">{ct.empty.title}</h3>
+              <p className="text-muted-foreground text-sm mb-6 max-w-xs">{ct.empty.subtitle}</p>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2" onClick={() => setShowAdd(true)}>
                 <Plus className="w-4 h-4" /> {ct.empty.btn}
               </Button>

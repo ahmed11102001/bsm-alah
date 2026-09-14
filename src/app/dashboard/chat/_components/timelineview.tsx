@@ -11,7 +11,7 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
   if (messages.length === 0) {
     return (
       <div className="flex justify-center py-12">
-        <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
+        <p className="text-xs px-4 py-1.5 rounded-full bg-card text-muted-foreground">
           لا توجد بيانات للأتمتة
         </p>
       </div>
@@ -24,17 +24,17 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
         
         {/* Workflow Started */}
         <div className="relative">
-          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-[#0b141a]">
+          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg ring-4 ring-background">
             <Clock className="w-3 h-3" />
           </div>
-          <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-[#1f2c34] border-[#2a3942]" : "bg-white border-gray-100"}`}>
+          <div className="p-4 rounded-xl shadow-sm border bg-card border-border">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">🚀</span>
-              <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>
+              <h4 className="font-semibold text-sm text-card-foreground">
                 {lang === "ar" ? "بداية الأتمتة" : "Automation Started"}
               </h4>
             </div>
-            <p className={`text-xs ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
+            <p className="text-xs text-muted-foreground">
               {timeStr(messages[0]?.createdAt ?? new Date().toISOString())}
             </p>
           </div>
@@ -71,21 +71,21 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
 
           return (
             <div key={msg.id} className="relative">
-              <div className={`absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full ${dotColor} text-white flex items-center justify-center shadow-md ring-4 ring-white dark:ring-[#0b141a]`}>
+              <div className={`absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full ${dotColor} text-white flex items-center justify-center shadow-md ring-4 ring-background`}>
                 {dotIcon}
               </div>
-              <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-[#1f2c34] border-[#2a3942]" : "bg-white border-gray-100"}`}>
+              <div className="p-4 rounded-xl shadow-sm border bg-card border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">{icon}</span>
                   <div>
-                    <h4 className={`font-semibold text-sm ${dark ? "text-[#e9edef]" : "text-gray-800"}`}>{title}</h4>
-                    <p className={`text-[10px] ${dark ? "text-[#8696a0]" : "text-gray-500"}`}>
+                    <h4 className="font-semibold text-sm text-card-foreground">{title}</h4>
+                    <p className="text-[10px] text-muted-foreground">
                       {dateStr(msg.createdAt, lang)} • {timeStr(msg.createdAt)}
                     </p>
                   </div>
                 </div>
                 {msg.content && (
-                  <div className={`text-sm p-3 rounded-lg ${dark ? "bg-[#2a3942] text-[#d1d7db]" : "bg-gray-50 text-gray-700"} whitespace-pre-wrap`}>
+                  <div className="text-sm p-3 rounded-lg bg-muted text-foreground/80 whitespace-pre-wrap">
                     {msg.content.replace("[متابعة ذكية] ", "").replace("[قالب] ", "")}
                   </div>
                 )}
@@ -101,7 +101,7 @@ export function TimelineView({ messages, lang, dark }: { messages: Message[], la
         
         {/* End of Workflow marker */}
         <div className="relative">
-          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-md ring-4 ring-white dark:ring-[#0b141a]">
+          <div className="absolute -left-[35px] rtl:-left-auto rtl:-right-[35px] w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-md ring-4 ring-background">
             <CheckCheck className="w-3 h-3" />
           </div>
           <div className={`p-4 rounded-xl shadow-sm border ${dark ? "bg-indigo-900/20 border-indigo-500/30" : "bg-indigo-50 border-indigo-100"}`}>

@@ -138,10 +138,10 @@ export default function ReportsOverviewPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-foreground">
             {locale === "ar" ? "التقارير والإحصائيات" : "Reports & Analytics"}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {locale === "ar" ? "نظرة شاملة على أداء عملياتك" : "A comprehensive view of your performance."}
           </p>
         </div>
@@ -167,17 +167,17 @@ export default function ReportsOverviewPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 mb-6">
+      <Card className="border border-border shadow-sm bg-card mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500 dark:text-gray-400">من</Label>
+            <Label className="text-xs text-muted-foreground">من</Label>
             <Input type="date" value={from} max={to}
               onChange={(e) => setFrom(e.target.value)}
               className="w-36 text-sm"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-500 dark:text-gray-400">إلى</Label>
+            <Label className="text-xs text-muted-foreground">إلى</Label>
             <Input type="date" value={to} min={from} max={TODAY}
               onChange={(e) => setTo(e.target.value)}
               className="w-36 text-sm"
@@ -197,7 +197,7 @@ export default function ReportsOverviewPage() {
           {pageText[locale].quickRanges.map((r: { label: string; days: number }) => (
             <button
               key={r.days}
-              className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary hover:underline"
+              className="text-xs text-muted-foreground hover:text-primary hover:underline"
               onClick={() => {
                 setFrom(new Date(Date.now() - r.days * 86400_000).toISOString().slice(0, 10));
                 setTo(TODAY);
@@ -228,13 +228,13 @@ export default function ReportsOverviewPage() {
               </div>
 
               {/* Daily chart */}
-              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+              <Card className="border border-border shadow-sm bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold">{pageText[locale].charts.dailyTitle}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {overview.daily.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-16">{pageText[locale].charts.noData}</p>
+                    <p className="text-sm text-muted-foreground text-center py-16">{pageText[locale].charts.noData}</p>
                   ) : (
                     <>
                       <ResponsiveContainer width="100%" height={240}>
@@ -257,11 +257,11 @@ export default function ReportsOverviewPage() {
                         </LineChart>
                       </ResponsiveContainer>
                       {overview.daily.length <= 1 && (
-                        <p className="text-xs text-gray-400 text-center mt-2">{pageText[locale].charts.notEnoughDailyData}</p>
+                        <p className="text-xs text-muted-foreground text-center mt-2">{pageText[locale].charts.notEnoughDailyData}</p>
                       )}
                     </>
                   )}
-                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex gap-6 justify-center mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[1] || "#2563eb" }} /> {pageText[locale].charts.campaignsLegendSent}</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[0] || "#16a34a" }} /> {pageText[locale].charts.campaignsLegendDelivered}</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 inline-block" style={{ backgroundColor: chartColors[2] || "#9333ea" }} /> {pageText[locale].charts.campaignsLegendReceived}</span>
@@ -271,7 +271,7 @@ export default function ReportsOverviewPage() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Hourly heatmap */}
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">{pageText[locale].charts.bestSendTimeTitle}</CardTitle>
                   </CardHeader>
@@ -303,23 +303,23 @@ export default function ReportsOverviewPage() {
                 </Card>
 
                 {/* Best campaigns */}
-                <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+                <Card className="border border-border shadow-sm bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">{pageText[locale].charts.bestCampaignsTitle}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {overview.bestCampaigns.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-8">{pageText[locale].charts.noData}</p>
+                      <p className="text-sm text-muted-foreground text-center py-8">{pageText[locale].charts.noData}</p>
                     ) : (
                       <div className="space-y-3">
                         {overview.bestCampaigns.map((c, i) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="w-6 h-6 rounded-full bg-gray-100 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center font-semibold flex-shrink-0">
+                            <span className="w-6 h-6 rounded-full bg-muted text-xs text-muted-foreground flex items-center justify-center font-semibold flex-shrink-0">
                               {i + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
-                              <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                              <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                              <div className="w-full h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
                                 <div className="h-full bg-green-400 rounded-full" style={{ width: `${c.rate}%` }} />
                               </div>
                             </div>
@@ -354,8 +354,8 @@ export default function ReportsOverviewPage() {
                     fetchCustomers(s.value);
                   }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${custSegment === s.value
-                    ? "border-green-500 bg-green-50 text-green-700"
-                    : "border-gray-200 text-gray-600 hover:border-gray-300 bg-white"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/50 bg-card"
                     }`}
                 >
                   {s.icon} {s.label}
@@ -363,33 +363,33 @@ export default function ReportsOverviewPage() {
               ))}
             </div>
 
-            <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+            <Card className="border border-border shadow-sm bg-card">
               <CardContent className="p-0">
                 {loadingCust ? (
                   <div className="p-3"><TableRowsSkeleton rows={5} bare cols={2} /></div>
                 ) : customers.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400 text-sm">{pageText[locale].customers.noResults}</div>
+                  <div className="text-center py-16 text-muted-foreground text-sm">{pageText[locale].customers.noResults}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="border-b border-gray-100">
+                      <thead className="border-b border-border">
                         <tr>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.phone}</th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.name}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].customers.phone}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].customers.name}</th>
                           {custSegment === "engaged" && (
-                            <><th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.messages}</th>
-                              <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.unread}</th></>
+                            <><th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].customers.messages}</th>
+                              <th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].customers.unread}</th></>
                           )}
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].customers.lastContact}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].customers.lastContact}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {customers.map((c) => (
-                          <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                            <td className="py-3 px-4 font-mono text-gray-700">{c.phone}</td>
-                            <td className="py-3 px-4 text-gray-600">{c.name ?? "—"}</td>
+                          <tr key={c.id} className="border-b border-border/60 hover:bg-muted/60 transition-colors">
+                            <td className="py-3 px-4 font-mono text-foreground/80">{c.phone}</td>
+                            <td className="py-3 px-4 text-foreground/75">{c.name ?? "—"}</td>
                             {custSegment === "engaged" && (
-                              <><td className="py-3 px-4 text-gray-700 font-medium">{c.totalMessages?.toLocaleString("ar-EG")}</td>
+                              <><td className="py-3 px-4 text-foreground font-medium">{c.totalMessages?.toLocaleString("ar-EG")}</td>
                                 <td className="py-3 px-4">
                                   {(c.unreadCount ?? 0) > 0 && (
                                     <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
@@ -398,7 +398,7 @@ export default function ReportsOverviewPage() {
                                   )}
                                 </td></>
                             )}
-                            <td className="py-3 px-4 text-gray-400 text-xs">
+                            <td className="py-3 px-4 text-muted-foreground text-xs">
                               {c.lastMessageAt
                                 ? new Date(c.lastMessageAt).toLocaleString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                                 : "—"}
@@ -420,8 +420,8 @@ export default function ReportsOverviewPage() {
             <ListRowsSkeleton rows={4} />
           ) : team.length === 0 ? (
             <div className="text-center py-20">
-              <Shield className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">{locale === "ar" ? "لا يوجد أعضاء فريق حتى الآن" : "No team members yet"}</p>
+              <Shield className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">{locale === "ar" ? "لا يوجد أعضاء فريق حتى الآن" : "No team members yet"}</p>
             </div>
           ) : (
             <div className="space-y-5">
@@ -439,7 +439,7 @@ export default function ReportsOverviewPage() {
               )}
 
               {/* Team chart */}
-              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+              <Card className="border border-border shadow-sm bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold">{pageText[locale].charts.teamActivity}</CardTitle>
                 </CardHeader>
@@ -459,7 +459,7 @@ export default function ReportsOverviewPage() {
                       <Bar dataKey="replied" fill="#3b82f6" radius={[0, 3, 3, 0]} name="replied" />
                     </BarChart>
                   </ResponsiveContainer>
-                  <div className="flex gap-6 justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex gap-6 justify-center mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-green-400 inline-block rounded-sm" /> {pageText[locale].charts.teamSent}</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-blue-400 inline-block rounded-sm" /> {pageText[locale].charts.teamReplied}</span>
                   </div>
@@ -467,25 +467,25 @@ export default function ReportsOverviewPage() {
               </Card>
 
               {/* Team table */}
-              <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+              <Card className="border border-border shadow-sm bg-card">
                 <CardContent className="p-0">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-gray-100">
+                    <thead className="border-b border-border">
                       <tr>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الاسم" : "Name"}</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الصلاحية" : "Role"}</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الرسائل المرسلة" : "Sent Messages"}</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "الردود" : "Replies"}</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{pageText[locale].charts.teamAssigned}</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{locale === "ar" ? "معدل الرد" : "Reply Rate"}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{locale === "ar" ? "الاسم" : "Name"}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{locale === "ar" ? "الصلاحية" : "Role"}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{locale === "ar" ? "الرسائل المرسلة" : "Sent Messages"}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{locale === "ar" ? "الردود" : "Replies"}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{pageText[locale].charts.teamAssigned}</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">{locale === "ar" ? "معدل الرد" : "Reply Rate"}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {team.map((m) => {
                         const rate = m.sent > 0 ? Math.round((m.replied / m.sent) * 100) : 0;
                         return (
-                          <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                            <td className="py-3 px-4 font-medium text-gray-800">{m.name}</td>
+                          <tr key={m.id} className="border-b border-border/60 hover:bg-muted/60">
+                            <td className="py-3 px-4 font-medium text-foreground">{m.name}</td>
                             <td className="py-3 px-4">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.role === "OWNER" ? "bg-purple-100 text-purple-700" :
                                 m.role === "FULL_ACCESS" ? "bg-blue-100 text-blue-700" :
@@ -494,9 +494,9 @@ export default function ReportsOverviewPage() {
                                 {m.role === "OWNER" ? (locale === "ar" ? "مالك" : "Owner") : m.role === "FULL_ACCESS" ? (locale === "ar" ? "وصول كامل" : "Full Access") : (locale === "ar" ? "دردشة فقط" : "Chat Only")}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-gray-700 font-medium">{formatNumber(m.sent, numberLocale)}</td>
-                            <td className="py-3 px-4 text-gray-700">{formatNumber(m.replied, numberLocale)}</td>
-                            <td className="py-3 px-4 text-gray-700">
+                            <td className="py-3 px-4 text-foreground/80 font-medium">{formatNumber(m.sent, numberLocale)}</td>
+                            <td className="py-3 px-4 text-foreground/80">{formatNumber(m.replied, numberLocale)}</td>
+                            <td className="py-3 px-4 text-foreground/80">
                               {m.role === "CHAT_ONLY" || m.role === "FULL_ACCESS" ? formatNumber(m.assigned, numberLocale) : "—"}
                             </td>
                             <td className="py-3 px-4">
@@ -504,7 +504,7 @@ export default function ReportsOverviewPage() {
                                 <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                   <div className="h-full bg-green-400 rounded-full" style={{ width: `${rate}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-gray-600">{rate}%</span>
+                                <span className="text-xs font-medium text-muted-foreground">{rate}%</span>
                               </div>
                             </td>
                           </tr>

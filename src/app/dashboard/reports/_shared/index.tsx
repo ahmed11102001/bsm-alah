@@ -438,7 +438,7 @@ export function StatCard({
   icon: React.ReactNode; color: string; locale: "ar" | "en";
 }) {
   return (
-    <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+    <Card className="border border-border shadow-sm bg-card">
       <CardContent className="p-5 flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>

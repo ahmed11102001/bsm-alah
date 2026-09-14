@@ -110,7 +110,7 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
         title="Claude AI"
         className="relative p-1.5 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors group"
       >
-        <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+        <div className="w-7 h-7 rounded-lg bg-card border border-orange-100 dark:border-orange-900/40 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
           <img src="/partners/claude.svg.svg" alt="Claude" className="w-5 h-5 object-contain" />
         </div>
         <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full">
@@ -161,7 +161,7 @@ function ClaudeHeaderBadge({ locale, dir, onNavigate, isOpen = false, onOpenChan
               >
                 {locale === "ar" ? "إدارة الربط" : "Manage connection"}
               </button>
-              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/10" />
                 {locale === "ar" ? "نشط" : "Active"}
               </span>

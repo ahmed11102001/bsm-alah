@@ -21,7 +21,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   MARKETING:      "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
   UTILITY:        "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
   AUTHENTICATION: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
-  SERVICE:        "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300",
+  SERVICE:        "bg-muted text-muted-foreground",
 };
 
 function estimateCost(count: number, category: string): number {
@@ -194,10 +194,10 @@ export default function CostReportTab() {
           <LayoutTemplate className="w-4 h-4 text-gray-400" />
           تكلفة القوالب
         </h3>
-        <div className="rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+              <tr className="bg-muted text-xs text-muted-foreground">
                 <th className="text-right px-4 py-3 font-medium">القالب</th>
                 <th className="text-center px-4 py-3 font-medium">الكاتيجوري</th>
                 <th className="text-center px-4 py-3 font-medium">استُخدم</th>
@@ -210,7 +210,7 @@ export default function CostReportTab() {
               {templateRows.map((row) => {
                 const pricePerMsg = EG_PRICES[row.category?.toUpperCase()] ?? EG_PRICES.MARKETING;
                 return (
-                  <tr key={row.templateName} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition">
+                  <tr key={row.templateName} className="bg-card hover:bg-muted/60 transition">
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200 truncate max-w-[160px]">
                       {row.templateName}
                     </td>
@@ -237,10 +237,10 @@ export default function CostReportTab() {
           <Megaphone className="w-4 h-4 text-gray-400" />
           تكلفة الحملات
         </h3>
-        <div className="rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+              <tr className="bg-muted text-xs text-muted-foreground">
                 <th className="text-right px-4 py-3 font-medium">الحملة</th>
                 <th className="text-center px-4 py-3 font-medium">القالب</th>
                 <th className="text-center px-4 py-3 font-medium">الكاتيجوري</th>
@@ -250,7 +250,7 @@ export default function CostReportTab() {
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
               {campaigns.map((c) => (
-                <tr key={c.id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition">
+                <tr key={c.id} className="bg-card hover:bg-muted/60 transition">
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[150px]">{c.name}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">

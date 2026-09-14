@@ -491,18 +491,18 @@ export default function Campaigns() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{tr("title", lang)}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{total} {tr("totalCampaignsSubtitle", lang)}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{tr("title", lang)}</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{total} {tr("totalCampaignsSubtitle", lang)}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => loadCampaigns()}
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-primary hover:border-primary/40 transition">
+            className="p-2 rounded-xl border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition">
             <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
           </button>
           <Button
             onClick={openCampaignDialog}
             className={campaignLimitActive
-              ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+              ? "bg-muted text-muted-foreground cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
               : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm gap-2 flex-1 sm:flex-none justify-center"
             }
           >
@@ -516,7 +516,7 @@ export default function Campaigns() {
       {campaigns.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
           {[
-            { label: tr("totalCampaigns", lang), value: total, icon: <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-gray-600 dark:text-gray-300", bg: "bg-gray-50 dark:bg-gray-800" },
+            { label: tr("totalCampaigns", lang), value: total, icon: <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-muted-foreground", bg: "bg-muted" },
             { label: tr("totalSent", lang), value: totalSent, icon: <Send className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/20" },
             { label: tr("totalDelivered", lang), value: totalDelivered, icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-primary", bg: "bg-primary/10 dark:bg-primary/15" },
             { label: tr("totalRead", lang), value: totalRead, icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" />, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
@@ -525,7 +525,7 @@ export default function Campaigns() {
               <span className={`${s.color} flex-shrink-0`}>{s.icon}</span>
               <div className="min-w-0">
                 <p className={`text-lg sm:text-xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
-                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{s.label}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{s.label}</p>
               </div>
             </div>
           ))}
@@ -534,9 +534,9 @@ export default function Campaigns() {
 
       {/* Overall rates */}
       {totalSent > 0 && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 mb-5 space-y-3 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-gray-400" /> {tr("overallPerf", lang)}
+        <div className="bg-card border border-border rounded-xl p-4 mb-5 space-y-3 shadow-sm">
+          <p className="text-sm font-semibold text-foreground/80 flex items-center gap-1.5">
+            <BarChart3 className="w-4 h-4 text-muted-foreground" /> {tr("overallPerf", lang)}
           </p>
           <ProgressBar label={tr("deliveryRate", lang)} value={totalDelivered} max={totalSent} color="bg-success" textColor="text-success" />
           <ProgressBar label={tr("readRate", lang)} value={totalRead} max={totalSent} color="bg-info" textColor="text-info" />
@@ -560,7 +560,7 @@ export default function Campaigns() {
       <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 flex-nowrap scrollbar-hide">        {STATUS_FILTERS.map(f => (
           <button key={f.value} onClick={() => setFilterStatus(f.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex-shrink-0
-              ${filterStatus === f.value ? "bg-primary/10 text-primary border border-primary/20" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"}`}>
+              ${filterStatus === f.value ? "bg-primary/10 text-primary border border-primary/20" : "bg-card border border-border text-muted-foreground hover:border-primary/50"}`}>
             {f.label}
           </button>
         ))}
@@ -571,13 +571,13 @@ export default function Campaigns() {
         <ListRowsSkeleton rows={4} />
       ) : campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5">
-            <Megaphone className="w-10 h-10 text-gray-300" />
+            <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-5">
+            <Megaphone className="w-10 h-10 text-muted-foreground/40" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          <h3 className="text-lg font-semibold text-foreground/80 mb-1">
             {filterStatus !== "all" ? tr("noFilterMatch", lang) : tr("noCampaigns", lang)}
           </h3>
-          <p className="text-gray-400 text-sm mb-6 max-w-xs">{tr("noCampaignsDesc", lang)}</p>
+          <p className="text-muted-foreground text-sm mb-6 max-w-xs">{tr("noCampaignsDesc", lang)}</p>
           {filterStatus === "all" && (
             <Button onClick={openCampaignDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
               <Plus className="w-4 h-4" /> {tr("startFirst", lang)}
@@ -606,10 +606,10 @@ export default function Campaigns() {
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={v => { if (!v) { setDialogOpen(false); resetDialog(); } }}>
-        <DialogContent className="max-w-2xl w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]" dir={lang === "ar" ? "rtl" : "ltr"}>
+        <DialogContent className="max-w-2xl w-full bg-card border-border flex flex-col max-h-[90vh]" dir={lang === "ar" ? "rtl" : "ltr"}>
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">{tr("createTitle", lang)}</DialogTitle>
-            <DialogDescription className="text-gray-500 dark:text-gray-400">{tr("createDesc", lang)}</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-foreground">{tr("createTitle", lang)}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">{tr("createDesc", lang)}</DialogDescription>
           </DialogHeader>
           <StepBar step={step} lang={lang} />
           <div className="overflow-y-auto flex-1 pr-1 -mr-1">

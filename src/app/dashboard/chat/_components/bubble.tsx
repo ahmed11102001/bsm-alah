@@ -97,18 +97,16 @@ export function Bubble({
     return acc;
   }, {});
 
-  const bubbleBg = isMe
-    ? (dark ? "bg-[#005c4b]" : "bg-[#d9fdd3]")
-    : (dark ? "bg-[#1f2c34]" : "bg-white");
+  const bubbleBg = isMe ? "bg-primary/15" : "bg-card";
 
-  const textColor = dark ? "text-[#e9edef]" : "text-[#111b21]";
+  const textColor = "text-card-foreground";
 
   return (
     <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} mb-1`} dir="ltr">
       <div className="group relative inline-block max-w-[80%] sm:max-w-[68%]">
         {showReactions && onReact && (
           <div className={`absolute -top-10 z-20 flex items-center gap-1 rounded-full shadow-lg border px-2 py-1
-            ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
+            bg-card border-border
             ${isMe ? "right-0" : "left-0"}`}>
             {QUICK_REACTIONS.map(emoji => (
               <button key={emoji}
@@ -118,7 +116,7 @@ export function Bubble({
               </button>
             ))}
             <button onClick={e => { e.stopPropagation(); setShowReactions(false); }}
-              className="text-gray-400 hover:text-gray-600 text-xs mr-1">✕</button>
+              className="text-muted-foreground hover:text-foreground text-xs mr-1">✕</button>
           </div>
         )}
 
@@ -137,7 +135,7 @@ export function Bubble({
                 isMe ? "left-0 -translate-x-[calc(100%+6px)]" : "right-0 translate-x-[calc(100%+6px)]"
               } ${
                 showActions ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef] hover:bg-[#2d3d45]" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+              } bg-card border-border text-foreground hover:bg-muted`}
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -145,7 +143,7 @@ export function Bubble({
               <div
                 className={`absolute top-full mt-1 z-40 flex gap-1 whitespace-nowrap rounded-lg border p-1 shadow-lg ${
                   isMe ? "right-0" : "left-0"
-                } ${dark ? "bg-[#233138] border-[#2a3942] text-[#e9edef]" : "bg-white border-gray-200 text-gray-700"}`}
+                } bg-card border-border text-foreground`}
                 onClick={e => e.stopPropagation()}
               >
                 {onReply && <button type="button" aria-label={lang === "ar" ? "رد" : "Reply"} title={lang === "ar" ? "رد" : "Reply"} onClick={() => { setShowActions(false); onReply(msg); }} className="p-1.5 hover:bg-black/10 rounded"><Reply className="w-4 h-4" /></button>}

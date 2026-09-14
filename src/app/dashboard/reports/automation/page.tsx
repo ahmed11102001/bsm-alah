@@ -214,7 +214,7 @@ function StatCard({
   color: string;
 }) {
   return (
-    <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+    <Card className="border border-border shadow-sm bg-card">
       <CardContent className="p-5 flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
@@ -308,7 +308,7 @@ export default function AutomationReportTab() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard label={t.total} value={kpis.totalAutomations} icon={<Zap className="w-5 h-5 text-yellow-600" />} color="bg-yellow-50 dark:bg-yellow-900/20" />
           <StatCard label={t.active} value={kpis.activeAutomations} icon={<CheckCircle2 className="w-5 h-5 text-green-600" />} color="bg-green-50 dark:bg-green-900/20" />
-          <StatCard label={t.stopped} value={kpis.stoppedAutomations} icon={<ToggleLeft className="w-5 h-5 text-gray-500" />} color="bg-gray-50 dark:bg-gray-700/50" />
+          <StatCard label={t.stopped} value={kpis.stoppedAutomations} icon={<ToggleLeft className="w-5 h-5 text-muted-foreground" />} color="bg-muted" />
           <StatCard label={t.errors} value={kpis.automationsWithErrors} icon={<AlertCircle className="w-5 h-5 text-red-500" />} color="bg-red-50 dark:bg-red-900/20" />
           <StatCard label={t.successRate} value={`${kpis.successRate}%`} sub={`${kpis.totalSuccess} successful / ${kpis.totalFailures} failed`} icon={<TrendingUp className="w-5 h-5 text-indigo-500" />} color="bg-indigo-50 dark:bg-indigo-900/20" />
           <StatCard label={t.runs} value={fmtRuns(kpis.totalRuns)} icon={<TimerReset className="w-5 h-5 text-blue-500" />} color="bg-blue-50 dark:bg-blue-900/20" />
@@ -317,7 +317,7 @@ export default function AutomationReportTab() {
 
       {/* ── Automation Performance Table ─────────────────────────────────────── */}
       <section>
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.automationPerf}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {filteredRules.length === 0 ? (
@@ -336,7 +336,7 @@ export default function AutomationReportTab() {
                 {filteredRules.map((rule) => {
                   const s = getSuccess(rule);
                   return (
-                    <div key={rule.id} className="grid grid-cols-12 items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/40">
+                    <div key={rule.id} className="grid grid-cols-12 items-center gap-3 p-4 rounded-2xl bg-muted/70">
                       <div className="col-span-3 font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <Bot className="w-4 h-4 text-purple-500" />
                         {rule.name}
@@ -363,7 +363,7 @@ export default function AutomationReportTab() {
 
       {/* ── Funnel ──────────────────────────────────────────────────────────── */}
       <section>
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.funnel}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -385,7 +385,7 @@ export default function AutomationReportTab() {
 
       {/* ── Error Log ───────────────────────────────────────────────────────── */}
       <section>
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.errorLog}</CardTitle></CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -399,7 +399,7 @@ export default function AutomationReportTab() {
                     className={`w-full text-left p-4 rounded-2xl border transition ${
                       selectedError?.id === err.id
                         ? "border-red-300 bg-red-50 dark:bg-red-900/20"
-                        : "border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40"
+                        : "border-border bg-muted/70"
                     }`}
                   >
                     <div className="flex items-center gap-2 text-red-600 font-semibold">
@@ -411,7 +411,7 @@ export default function AutomationReportTab() {
               )}
             </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/40 min-h-[220px]">
+            <div className="p-4 rounded-2xl bg-muted/70 min-h-[220px]">
               {selectedError ? (
                 <>
                   <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-semibold mb-2">
@@ -431,7 +431,7 @@ export default function AutomationReportTab() {
 
       {/* ── Most Used Automations ────────────────────────────────────────────── */}
       <section>
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.mostUsed}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {topAutomations.length === 0 ? (
@@ -456,7 +456,7 @@ export default function AutomationReportTab() {
 
       {/* ── AI Performance + Time Saved ──────────────────────────────────────── */}
       <section className="grid lg:grid-cols-2 gap-6">
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.aiPerf}</CardTitle></CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-4">
             <StatCard label={t.avgResponse} value={aiMetrics.avgResponseTime} icon={<Clock3 className="w-5 h-5 text-orange-500" />} color="bg-orange-50 dark:bg-orange-900/20" />
@@ -468,7 +468,7 @@ export default function AutomationReportTab() {
           </CardContent>
         </Card>
 
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.timeSaved}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-5 text-white">
@@ -477,12 +477,12 @@ export default function AutomationReportTab() {
               <div className="text-sm opacity-90 mt-1">{t.aiRepliedTo} {fmtRuns(timeSaved.totalAutoReplies)} {t.message}</div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/40">
+              <div className="p-4 rounded-2xl bg-muted/70">
                 <div className="text-sm text-gray-500">{t.executed}</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{fmtRuns(timeSaved.totalAutoReplies)}</div>
                 <div className="text-xs text-gray-400">{t.autoProcess}</div>
               </div>
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/40">
+              <div className="p-4 rounded-2xl bg-muted/70">
                 <div className="text-sm text-gray-500">{t.estimatedSaving}</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">+{timeSaved.efficiencyGain}%</div>
                 <div className="text-xs text-gray-400">{t.inSupportTime}</div>
@@ -494,7 +494,7 @@ export default function AutomationReportTab() {
 
       {/* ── Timeline ────────────────────────────────────────────────────────── */}
       <section>
-        <Card className="border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
+        <Card className="border border-border shadow-sm bg-card">
           <CardHeader className="pb-2"><CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.timeline}</CardTitle></CardHeader>
           <CardContent>
             {timeline.length === 0 ? (
@@ -506,7 +506,7 @@ export default function AutomationReportTab() {
                     <div className="w-14 text-sm font-semibold text-gray-500">{item.time}</div>
                     <div className="relative">
                       <div className="w-3 h-3 rounded-full bg-blue-500 mt-1" />
-                      {idx < timeline.length - 1 && <div className="absolute left-1.5 top-4 w-px h-12 bg-gray-200 dark:bg-gray-700" />}
+                      {idx < timeline.length - 1 && <div className="absolute left-1.5 top-4 w-px h-12 bg-border" />}
                     </div>
                     <div className="text-sm text-gray-800 dark:text-gray-100">{item.title}</div>
                   </div>

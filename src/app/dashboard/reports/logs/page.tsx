@@ -77,25 +77,25 @@ export default function ReportsLogsPage() {
   return (
     <div className="space-y-6">
       {/* Top Filter Controls */}
-      <Card className="rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+      <Card className="rounded-2xl border border-border shadow-sm bg-card">
         <CardContent className="p-4 flex flex-wrap items-center gap-4 justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-gray-500">{pageText[locale].from}</Label>
+              <Label className="text-xs text-muted-foreground">{pageText[locale].from}</Label>
               <Input
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="h-9 text-xs rounded-xl border-gray-200 dark:border-gray-700"
+                className="h-9 text-xs rounded-xl border-border bg-background"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-gray-500">{pageText[locale].to}</Label>
+              <Label className="text-xs text-muted-foreground">{pageText[locale].to}</Label>
               <Input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="h-9 text-xs rounded-xl border-gray-200 dark:border-gray-700"
+                className="h-9 text-xs rounded-xl border-border bg-background"
               />
             </div>
             <Button
@@ -125,7 +125,7 @@ export default function ReportsLogsPage() {
       </Card>
 
       {/* Log Filters & Table */}
-      <Card className="rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+      <Card className="rounded-2xl border border-border shadow-sm bg-card">
         <CardContent className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -177,12 +177,12 @@ export default function ReportsLogsPage() {
           {loadingLogs ? (
             <div className="p-3"><TableRowsSkeleton rows={6} bare cols={3} /></div>
           ) : !logs?.messages?.length ? (
-            <p className="text-center py-12 text-gray-400 text-sm">{pageText[locale].logs.noRecords}</p>
+                <p className="text-center py-12 text-muted-foreground text-sm">{pageText[locale].logs.noRecords}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 text-gray-400 font-medium">
+                  <tr className="border-b border-border text-muted-foreground font-medium">
                     <th className="text-right py-3 px-3">{pageText[locale].logs.date}</th>
                     <th className="text-right py-3 px-3">{pageText[locale].logs.customer}</th>
                     <th className="text-right py-3 px-3">{pageText[locale].logs.phone}</th>
@@ -194,23 +194,23 @@ export default function ReportsLogsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
                   {logs.messages.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                      <td className="py-3 px-3 text-gray-500 whitespace-nowrap">
+                    <tr key={m.id} className="hover:bg-muted/60 transition-colors">
+                      <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
                         {formatDate(m.createdAt, dateLocale)}
                       </td>
-                      <td className="py-3 px-3 font-medium text-gray-800 dark:text-gray-200">
+                      <td className="py-3 px-3 font-medium text-foreground">
                         {m.contact?.name || "—"}
                       </td>
-                      <td className="py-3 px-3 font-mono text-gray-500" dir="ltr">
+                      <td className="py-3 px-3 font-mono text-muted-foreground" dir="ltr">
                         {m.contact?.phone || "—"}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px]">
                           {getTypeLabel(locale, m.type)}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px]">
                           {getDirLabel(locale, m.direction)}
                         </span>
                       </td>
@@ -229,7 +229,7 @@ export default function ReportsLogsPage() {
 
               {/* Pagination */}
               {logs.total > logs.limit && (
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
                   <p className="text-xs text-gray-400">
                     {pageText[locale].charts.totalLabelShort}: {formatNumber(logs.total, numberLocale)}
                   </p>

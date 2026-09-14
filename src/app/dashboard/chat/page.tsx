@@ -155,18 +155,18 @@ export default function ChatPage() {
 
 
   // ── Theme classes ────────────────────────────────────────────────
-  const bg = dark ? "bg-[#111b21]" : "bg-[#f0f2f5]";
-  const sidebarBg = dark ? "bg-[#1f2c34]" : "bg-white";
-  const headerBg = dark ? "bg-[#202c33]" : "bg-[#f0f2f5]";
-  const inputBg = dark ? "bg-[#2a3942]" : "bg-white";
-  const textMain = dark ? "text-[#e9edef]" : "text-[#111b21]";
-  const textSub = dark ? "text-[#8696a0]" : "text-gray-400";
-  const border = dark ? "border-[#2a3942]" : "border-gray-200";
-  const borderLight = dark ? "border-[#2a3942]" : "border-gray-100";
-  const searchBg = dark ? "bg-[#2a3942] text-[#d1d7db] placeholder-[#8696a0]" : "bg-[#f0f2f5] text-gray-800 placeholder-gray-400";
-  const hoverRow = dark ? "hover:bg-[#2a3942]" : "hover:bg-[#f5f6f6]";
-  const selectedRow = dark ? "bg-[#2a3942]" : "bg-[#e8f5e9]";
-  const msgAreaBg = dark ? "#0b141a" : "#f0f2f5";
+  const bg = "bg-background";
+  const sidebarBg = "bg-card";
+  const headerBg = "bg-muted/70";
+  const inputBg = "bg-background";
+  const textMain = "text-foreground";
+  const textSub = "text-muted-foreground";
+  const border = "border-border";
+  const borderLight = "border-border/70";
+  const searchBg = "bg-muted text-foreground placeholder:text-muted-foreground";
+  const hoverRow = "hover:bg-muted/70";
+  const selectedRow = "bg-primary/10";
+  const msgAreaBg = "hsl(var(--background))";
 
   // ── Fetch helpers ────────────────────────────────────────────────
   const fetchConvs = useCallback(async () => {
@@ -689,7 +689,7 @@ export default function ChatPage() {
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
                 ? "bg-primary text-primary-foreground"
                 : dark
-                  ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
+                  ? "bg-muted text-muted-foreground hover:text-foreground"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}>
               {t[lang][f]}
@@ -701,7 +701,7 @@ export default function ChatPage() {
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "ai_replied"
               ? "bg-violet-500 border-violet-500 text-white"
               : dark
-                ? "bg-[#2a3942] border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
+                  ? "bg-muted border-violet-500/30 text-violet-400 hover:border-violet-400 hover:text-violet-300"
                 : "bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100"
               }`}>
             <Bot className="w-3 h-3" />
@@ -713,7 +713,7 @@ export default function ChatPage() {
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${filter === "automation"
               ? "bg-amber-500 border-amber-500 text-white"
               : dark
-                ? "bg-[#2a3942] border-amber-500/30 text-amber-400 hover:border-amber-400 hover:text-amber-300"
+                  ? "bg-muted border-amber-500/30 text-amber-400 hover:border-amber-400 hover:text-amber-300"
                 : "bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
               }`}>
             <Clock className="w-3 h-3" />
@@ -725,7 +725,7 @@ export default function ChatPage() {
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filter === f
                 ? "bg-primary text-primary-foreground"
                 : dark
-                  ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]"
+                  ? "bg-muted text-muted-foreground hover:text-foreground"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}>
               {t[lang][f]}
@@ -739,9 +739,9 @@ export default function ChatPage() {
             <ChatListSkeleton rows={7} />
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <MessageSquare className={`w-12 h-12 mb-3 ${dark ? "text-[#2a3942]" : "text-gray-200"}`} />
+              <MessageSquare className="w-12 h-12 mb-3 text-muted-foreground/30" />
               <p className={`text-sm mb-1 ${textSub}`}>{t[lang].noConvs}</p>
-              <p className={`text-xs mb-5 ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>{t[lang].noConvsHint}</p>
+              <p className="text-xs mb-5 text-muted-foreground/60">{t[lang].noConvsHint}</p>
               <Button size="sm"
                 className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
                 onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: "campaigns" }))}>
@@ -781,7 +781,7 @@ export default function ChatPage() {
                           {last.direction === "outbound" && <span className={textSub}>{t[lang].you}</span>}
                           {typePreviewMap[last.type] ?? last.content ?? ""}
                         </>
-                        : <span className={`italic ${dark ? "text-[#2a3942]" : "text-gray-300"}`}>
+                        : <span className="italic text-muted-foreground/60">
                           {t[lang].noMsgs}
                         </span>}
                     </p>
@@ -797,7 +797,7 @@ export default function ChatPage() {
                             e.stopPropagation();
                             selectConv(conv, "timeline");
                           }}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border ${dark ? "bg-[#233138] border-amber-500/30 text-amber-400 hover:bg-[#2a3942]" : "bg-white border-amber-200 text-amber-600 hover:bg-amber-50"}`}
+                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border bg-card border-amber-500/30 text-amber-500 hover:bg-muted"
                         >
                           <Clock className="w-3 h-3" />
                           مسار الأتمتة
@@ -826,7 +826,7 @@ export default function ChatPage() {
                 {/* Back button on mobile */}
                 <button
                   onClick={() => { setMobileShowChat(false); }}
-                  className={`sm:hidden p-1.5 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                  className="sm:hidden p-1.5 rounded-full transition-colors text-muted-foreground hover:bg-muted"
                 >
                   {dir === "rtl" ? <ChevronDown className="w-5 h-5 rotate-90" /> : <ChevronLeft className="w-5 h-5" />}
                 </button>
@@ -863,10 +863,10 @@ export default function ChatPage() {
                       title={!globalTextEnabled ? (lang === "ar" ? "الردود النصية معطلة في الإعدادات" : "Text Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                         ${!globalTextEnabled
-                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
+                          ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground"
                           : selected.textAiEnabled !== false
                           ? "bg-primary text-primary-foreground shadow-[0_0_12px_rgba(0,0,0,0.3)]"
-                          : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                          : "bg-muted text-muted-foreground hover:text-foreground"}`}
                     >
                       <Bot className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">{selected.textAiEnabled !== false ? t[lang].aiOn : t[lang].ai}</span>
@@ -876,10 +876,10 @@ export default function ChatPage() {
                       title={!globalVoiceEnabled ? (lang === "ar" ? "الردود الصوتية معطلة في الإعدادات" : "Voice Replies disabled in settings") : undefined}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all
                         ${!globalVoiceEnabled
-                          ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-[#2a3942] dark:text-gray-500"
+                          ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground"
                           : selected.voiceAgentEnabled
                           ? "bg-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.5)]"
-                          : dark ? "bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef]" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                          : "bg-muted text-muted-foreground hover:text-foreground"}`}
                     >
                       <Mic2 className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">{selected.voiceAgentEnabled ? t[lang].voiceOn : t[lang].voice}</span>
@@ -889,19 +889,19 @@ export default function ChatPage() {
                 <button
                   onClick={() => { setMsgSearchOpen(v => !v); }}
                   title={lang === "ar" ? "بحث في المحادثة" : "Search in conversation"}
-                  className={`p-2 rounded-full transition-colors ${msgSearchOpen ? "text-primary bg-primary/10" : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                  className={`p-2 rounded-full transition-colors ${msgSearchOpen ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   <Search className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => { setSelected(null); setMessages([]); setMobileShowChat(false); }}
-                  className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-500 hover:bg-gray-200"}`}
+                  className="p-2 rounded-full transition-colors text-muted-foreground hover:bg-muted"
                 >
                   <X className="w-5 h-5" />
                 </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className={`p-2 rounded-full transition-colors ${dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}>
+                    <button className="p-2 rounded-full transition-colors text-muted-foreground hover:bg-muted">
                       <MoreVertical className="w-5 h-5" />
                     </button>
                   </DropdownMenuTrigger>
@@ -1057,7 +1057,7 @@ export default function ChatPage() {
                 <ChatMessagesSkeleton />
               ) : messages.length === 0 ? (
                 <div className="flex justify-center">
-                  <p className={`text-xs px-4 py-1.5 rounded-full ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/60 text-gray-400"}`}>
+                  <p className="text-xs px-4 py-1.5 rounded-full bg-card text-muted-foreground">
                     {t[lang].noMsgs}
                   </p>
                 </div>
@@ -1072,7 +1072,7 @@ export default function ChatPage() {
                         {showDate && (
                           <div className="flex justify-center my-3">
                             <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
-                              ${dark ? "bg-[#1f2c34] text-[#8696a0]" : "bg-white/70 text-gray-500"}`}>
+                              bg-card text-muted-foreground`}
                               {dateStr(msg.createdAt, lang)}
                             </span>
                           </div>
@@ -1138,14 +1138,14 @@ export default function ChatPage() {
                 <button
                   onClick={() => { setShowAttach(p => !p); setShowTpl(false); setShowEmoji(false); }}
                   className={`p-2 rounded-full transition-colors ${showAttach
-                    ? dark ? "bg-[#2a3942] text-[#e9edef]" : "bg-gray-300 text-gray-700"
-                    : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted"}`}
                 >
                   {showAttach ? <X className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
                 </button>
                 {showAttach && (
                   <div className={`absolute bottom-12 ${dir === "rtl" ? "right-0" : "left-0"}
-                    ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
+                    bg-card border-border
                     rounded-2xl shadow-xl overflow-hidden border w-44`}>
                     {ATTACH_OPTIONS.map(a => {
                       const isLocked = Boolean(a.locked);
@@ -1220,14 +1220,14 @@ export default function ChatPage() {
                 <button
                   onClick={() => { setShowEmoji(p => !p); setShowAttach(false); setShowTpl(false); }}
                   className={`p-2 rounded-full transition-colors ${showEmoji
-                    ? dark ? "bg-[#2a3942] text-[#e9edef]" : "bg-gray-300 text-gray-700"
-                    : dark ? "text-[#8696a0] hover:bg-[#2a3942]" : "text-gray-600 hover:bg-gray-200"}`}
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted"}`}
                 >
                   <Smile className="w-5 h-5" />
                 </button>
                 {showEmoji && (
                   <div className={`absolute bottom-12 ${dir === "rtl" ? "right-0" : "left-0"}
-                    ${dark ? "bg-[#233138] border-[#2a3942]" : "bg-white border-gray-100"}
+                    bg-card border-border
                     rounded-2xl shadow-xl border p-3 w-64 sm:w-72 z-20`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className={`text-xs font-medium ${textSub}`}>{t[lang].emoji}</span>
@@ -1238,7 +1238,7 @@ export default function ChatPage() {
                     <div className="grid grid-cols-7 sm:grid-cols-8 gap-1 max-h-44 overflow-y-auto">
                       {["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🫣", "🤭", "🤫", "🤥", "😶", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "💀", "☠️", "👻", "👽", "🤖", "💩", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "👍", "👎", "👏", "🙌", "🤝", "🙏", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🤚", "🖐", "✋", "🖖", "💪", "🔥", "⭐", "✨", "💥", "💫", "🎉", "🎊", "🎈"].map(em => (
                         <button key={em} onClick={() => setText(t => t + em)}
-                          className={`text-xl rounded-lg p-0.5 transition-colors ${dark ? "hover:bg-[#2a3942]" : "hover:bg-gray-100"}`}>
+                          className="text-xl rounded-lg p-0.5 transition-colors hover:bg-muted">
                           {em}
                         </button>
                       ))}
@@ -1259,8 +1259,7 @@ export default function ChatPage() {
                 className={`flex-1 ${inputBg} rounded-xl px-3 py-2.5 text-sm outline-none resize-none
                   max-h-28 overflow-y-auto border border-transparent
                   ${dark
-                    ? "text-[#e9edef] placeholder-[#8696a0] focus:border-[#2a3942]"
-                    : "text-[#111b21] placeholder-gray-400 focus:border-gray-200"}
+                    : "text-foreground placeholder:text-muted-foreground focus:border-border"}
                   transition-colors`}
                 style={{ lineHeight: "1.5" }}
               />
@@ -1286,7 +1285,7 @@ export default function ChatPage() {
           <div className={`flex-1 flex flex-col items-center justify-center ${bg}`}>
             <div className="text-center max-w-xs px-6">
               <div className={`w-24 h-24 rounded-full shadow-sm flex items-center justify-center mx-auto mb-6
-                ${dark ? "bg-[#1f2c34]" : "bg-white"}`}>
+                bg-card`}>
                 <MessageSquare className="w-12 h-12 text-primary" />
               </div>
               <h2 className={`text-xl font-light mb-2 ${textMain}`}>{t[lang].pickConv}</h2>
@@ -1307,7 +1306,7 @@ export default function ChatPage() {
                 <h3 className={`font-semibold ${textMain}`}>{lang === "ar" ? "إعادة توجيه الرسالة" : "Forward message"}</h3>
                 <button onClick={() => setForwarding(null)} className={textSub}><X className="w-5 h-5" /></button>
               </div>
-              <div className={`rounded-lg p-2 mb-3 text-sm ${dark ? "bg-[#2a3942]" : "bg-gray-100"} ${textMain}`}>{forwarding.content || forwarding.type}</div>
+              <div className={`rounded-lg p-2 mb-3 text-sm bg-muted ${textMain}`}>{forwarding.content || forwarding.type}</div>
               {/* توضيح نافذة 24 ساعة */}
               <div className={`rounded-lg px-3 py-2 mb-2 text-xs flex items-center gap-2 ${dark ? "bg-emerald-900/30 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`}>
                 <Clock className="w-3.5 h-3.5 flex-shrink-0" />

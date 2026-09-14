@@ -155,7 +155,7 @@ function WaniPartnerCard({ locale }: { locale: "ar" | "en" }) {
           </div>
           <div className="hidden sm:flex flex-col gap-1.5 flex-shrink-0">
             {WANI_FEATURES.map((_, i) => (
-              <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-primary" : "bg-gray-200 dark:bg-gray-600"}`} />
+              <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-primary" : "bg-muted-foreground/40"}`} />
             ))}
           </div>
         </div>
@@ -307,13 +307,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-xs">{h.subtitle}</p>
+          <p className="text-muted-foreground text-xs">{h.subtitle}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button
             size="sm"
             className={campaignLimitActive
-              ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
+              ? "bg-muted text-muted-foreground cursor-not-allowed gap-1.5 text-sm w-full sm:w-auto justify-center"
               : "bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-sm w-full sm:w-auto justify-center"}
             onClick={() => {
               if (!whatsappConnected) return showMetaConnectPrompt();
@@ -336,7 +336,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <p className="text-[11px] sm:text-xs text-muted-foreground mb-1 leading-tight">{k.label}</p>
                   <p className="text-xl font-bold leading-none text-foreground">{numFmt(k.value)}</p>
                   {k.sub && (
-                    <p className={`text-[10px] sm:text-xs mt-1.5 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-gray-400"}`}>
+                    <p className={`text-[10px] sm:text-xs mt-1.5 flex items-center gap-1 ${k.trend === "up" ? "text-green-600" : "text-muted-foreground"}`}>
                       {k.trend === "up" && <TrendingUp className="w-3 h-3 flex-shrink-0" />}
                       <span className="truncate">{k.sub}</span>
                     </p>
@@ -358,7 +358,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         <WaniPartnerCard locale={locale as "ar" | "en"} />
 
         {/* ── Recent Conversations — elevated to top row: WhatsApp-first product ── */}
-        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+        <Card className="border border-border bg-card text-card-foreground shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <div className="flex items-center gap-2 min-w-0">
               <CardTitle className="text-base font-bold flex-shrink-0">{ov.conversations.title}</CardTitle>
@@ -376,19 +376,19 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             {loadingOverview ? (
               <div className="py-2"><ChatListSkeleton rows={3} /></div>
             ) : !overview || overview.recentConversations.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-20" />
                 <p className="text-xs">{ov.conversations.empty}</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
+              <div className="divide-y divide-border/60">
                 {overview.recentConversations.map(c => (
                   <button
                     key={c.id}
                     onClick={() => router.push(`/dashboard/chat?contact=${c.id}`)}
-                    className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-right"
+                    className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-muted/60 transition-colors text-right"
                   >
-                    <div className={`w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 flex-shrink-0 ${c.status === "needs_human" ? "ring-2 ring-amber-400/70" : ""}`}>
+                    <div className={`w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0 ${c.status === "needs_human" ? "ring-2 ring-amber-400/70" : ""}`}>
                       {c.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -398,7 +398,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                           {STATUS_EMOJI[c.status]} {ov.conversations.status[c.status]}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate ${c.unread ? "font-medium text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{c.lastMessage || "—"}</p>
+                      <p className={`text-[11px] truncate ${c.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>{c.lastMessage || "—"}</p>
                     </div>
                     <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0">
                       {(c.unreadCount || 0) > 0 && (
@@ -406,7 +406,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                           {numFmt(c.unreadCount)}
                         </span>
                       )}
-                      <span className="text-[10px] text-gray-400 whitespace-nowrap">{relativeTime(c.lastMessageAt)}</span>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">{relativeTime(c.lastMessageAt)}</span>
                     </div>
                   </button>
                 ))}
@@ -418,7 +418,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
       {/* ── Automation Performance + Recent Conversations + Template Cost ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+        <Card className="border border-border bg-card text-card-foreground shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
             <CardTitle className="text-base font-bold">{ov.automation.title}</CardTitle>
             <button onClick={() => router.push("/dashboard/automation")} className="text-xs text-primary hover:underline flex items-center gap-1 flex-shrink-0">
@@ -429,7 +429,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             {loadingOverview ? (
               <div className="py-4"><ListRowsSkeleton rows={3} /></div>
             ) : !overview || overview.automationPerformance.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <Zap className="w-8 h-8 mx-auto mb-2 opacity-20" />
                 <p className="text-xs">{ov.automation.empty}</p>
               </div>
@@ -437,13 +437,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               <div className="space-y-3">
                 {overview.automationPerformance.map(a => (
                   <div key={a.id} className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${a.source === "ai" ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-gray-100 dark:bg-gray-800"}`}>
-                      {a.source === "ai" ? <Feather className="w-4 h-4 text-emerald-600" /> : <Bot className="w-4 h-4 text-gray-500" />}
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${a.source === "ai" ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-muted"}`}>
+                      {a.source === "ai" ? <Feather className="w-4 h-4 text-emerald-600" /> : <Bot className="w-4 h-4 text-muted-foreground" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold truncate">{a.name}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${a.successRate == null ? "bg-gray-100 text-gray-500 dark:bg-gray-800" :
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${a.successRate == null ? "bg-muted text-muted-foreground" :
                           a.successRate >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
                             "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
                           }`}>
@@ -451,13 +451,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className={`h-full ${a.successRate != null && a.successRate < 80 ? "bg-amber-500" : "bg-emerald-500"}`}
                             style={{ width: `${a.successRate ?? 0}%` }}
                           />
                         </div>
-                        <span className="text-[10px] text-gray-400 flex-shrink-0">{numFmt(a.triggered)}</span>
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{numFmt(a.triggered)}</span>
                       </div>
                     </div>
                   </div>
@@ -469,7 +469,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
 
         {/* ── Wani AI Agent — moved down here; upsell hook kept intact ── */}
         {hasAiAgent ? (
-          <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+          <Card className="border border-border bg-card text-card-foreground shadow-sm">
             <CardHeader className="flex flex-row items-center gap-2.5 pb-2 pt-4 px-4 sm:px-5">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-emerald-600" />
@@ -479,13 +479,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             <CardContent className="px-4 sm:px-5 pb-5 flex flex-col items-center justify-center h-[240px] text-center">
               {loadingOverview ? (
                 <div className="animate-pulse flex flex-col items-center gap-2 py-4">
-                  <div className="h-10 w-24 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-gray-100 dark:bg-gray-700/60" />
+                  <div className="h-10 w-24 rounded-xl bg-muted" />
+                  <div className="h-3 w-40 max-w-full rounded-full bg-muted/60" />
                 </div>
               ) : (
                 <>
-                  <p className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{numFmt(overview?.aiAgentReplies ?? 0)}</p>
-                  <p className="text-xs text-gray-400 mt-2 max-w-[220px]">{ov.aiAgentCard.enterpriseSubtitle}</p>
+                  <p className="text-4xl font-extrabold text-foreground">{numFmt(overview?.aiAgentReplies ?? 0)}</p>
+                  <p className="text-xs text-muted-foreground mt-2 max-w-[220px]">{ov.aiAgentCard.enterpriseSubtitle}</p>
                 </>
               )}
             </CardContent>
@@ -500,7 +500,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
             </CardHeader>
             <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
-              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.proHook}</p>
+              <p className="text-sm text-foreground/80 leading-relaxed">{ov.aiAgentCard.proHook}</p>
               <button
                 onClick={() => router.push("/checkout?plan=max")}
                 className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl px-4 py-2.5 transition-colors"
@@ -520,7 +520,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               <Lock className="w-3.5 h-3.5 text-purple-400 ms-auto flex-shrink-0" />
             </CardHeader>
             <CardContent className="px-4 sm:px-5 pb-5 flex flex-col justify-center h-[240px]">
-              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{ov.aiAgentCard.lowerHook}</p>
+              <p className="text-sm text-foreground/80 leading-relaxed">{ov.aiAgentCard.lowerHook}</p>
               <div className="mt-4 flex flex-col gap-2">
                 <button
                   onClick={() => router.push("/checkout?plan=pro")}
@@ -541,7 +541,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         )}
 
         {/* ── Template Cost (Marketing vs Service) ── */}
-        <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+        <Card className="border border-border bg-card text-card-foreground shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4 sm:px-5">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
@@ -549,7 +549,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               </div>
               <CardTitle className="text-base font-bold">{ov.templateCost.title}</CardTitle>
             </div>
-            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-gray-400 hover:text-primary hover:underline flex-shrink-0">
+            <button onClick={() => router.push("/dashboard/reports/cost")} className="text-xs text-muted-foreground hover:text-primary hover:underline flex-shrink-0">
               {ov.templateCost.reports}
             </button>
           </CardHeader>
@@ -557,11 +557,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
             {loadingCost ? (
               <div className="h-[200px] flex items-end justify-center gap-2 animate-pulse">
                 {[35, 60, 45, 80, 55, 70, 50].map((h, i) => (
-                  <div key={i} className="w-8 rounded-t-lg bg-gray-200 dark:bg-gray-700" style={{ height: `${h}%` }} />
+                  <div key={i} className="w-8 rounded-t-lg bg-muted" style={{ height: `${h}%` }} />
                 ))}
               </div>
             ) : !templateCost || templateCostTotal === 0 ? (
-              <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
+              <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground">
                 <PieChartIcon className="w-8 h-8 mb-2 opacity-20" />
                 <p className="text-xs">{ov.templateCost.empty}</p>
               </div>
@@ -588,27 +588,27 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                     </PieChart>
                   </PieResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-[11px] text-gray-400">{ov.templateCost.totalSpend}</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">${templateCostTotal.toFixed(2)}</p>
+                    <p className="text-[11px] text-muted-foreground">{ov.templateCost.totalSpend}</p>
+                    <p className="text-xl font-bold text-foreground">${templateCostTotal.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
-                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center justify-between rounded-xl bg-muted/80 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-foreground/80">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: chartColors[0] || "#16a34a" }} />
                       {ov.templateCost.marketing}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ${templateCost.marketing.toFixed(2)} <span className="text-gray-400">({marketingPct}%)</span>
+                    <span className="text-xs text-muted-foreground">
+                      ${templateCost.marketing.toFixed(2)} <span className="text-muted-foreground">({marketingPct}%)</span>
                     </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
-                    <span className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center justify-between rounded-xl bg-muted/80 px-3 py-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-foreground/80">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: chartColors[1] || "#0ea5e9" }} />
                       {ov.templateCost.service}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ${templateCost.service.toFixed(2)} <span className="text-gray-400">({servicePct}%)</span>
+                    <span className="text-xs text-muted-foreground">
+                      ${templateCost.service.toFixed(2)} <span className="text-muted-foreground">({servicePct}%)</span>
                     </span>
                   </div>
                 </div>
@@ -619,13 +619,13 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       </div>
 
       {/* ── Recent Campaigns ── */}
-      <Card className="border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-sm">
+      <Card className="border border-border bg-card text-card-foreground shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-5">
           <div className="flex items-center gap-2 min-w-0">
             <CardTitle className="text-base font-bold flex-shrink-0">{h.campaigns.title}</CardTitle>
             {cb && campaignTotal > 0 && (
-              <span className="hidden sm:flex items-center gap-x-2 text-[10px] text-gray-500 dark:text-gray-400">
-                <span className="font-bold text-gray-700 dark:text-gray-300">{numFmt(stats.totalCampaigns)}</span>
+              <span className="hidden sm:flex items-center gap-x-2 text-[10px] text-muted-foreground">
+                <span className="font-bold text-foreground/80">{numFmt(stats.totalCampaigns)}</span>
                 {cb.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success" />{cb.running}</span>}
                 {cb.scheduled > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-warning" />{cb.scheduled}</span>}
                 {cb.completed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-info" />{cb.completed}</span>}
@@ -638,7 +638,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
         </CardHeader>
         <CardContent className="p-0">
           {recentCampaigns.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground">
               <Send className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p className="text-sm">{h.campaigns.empty}</p>
               <button onClick={onCreateCampaign} className="mt-3 text-xs text-primary hover:underline">{h.campaigns.startFirst}</button>
@@ -649,17 +649,17 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                    <tr className="border-b border-border bg-muted/50">
                       {Object.values(h.campaigns.headers).map(hd => (
-                        <th key={hd} className="text-right py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">{hd}</th>
+                        <th key={hd} className="text-right py-3 px-4 text-xs font-medium text-muted-foreground">{hd}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {recentCampaigns.map((c) => (
-                      <tr key={c.id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                      <tr key={c.id} className="border-b border-border/60 last:border-0 hover:bg-muted/60 transition-colors">
                         <td className="py-3 px-4 font-medium max-w-[160px] truncate">{c.name}</td>
-                        <td className="py-3 px-4 text-gray-400 text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-muted-foreground text-xs whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             {new Date(c.createdAt).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
@@ -669,7 +669,7 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                         <td className="py-3 px-4 text-green-600 font-medium">{numFmt(c.deliveredCount + c.readCount)}</td>
                         <td className="py-3 px-4 text-blue-600 font-medium">{numFmt(c.readCount)}</td>
                         <td className="py-3 px-4">
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[c.status] ?? "bg-muted text-muted-foreground"}`}>
                             {h.campaigns.status[c.status as keyof typeof h.campaigns.status] ?? c.status}
                           </span>
                         </td>
@@ -685,11 +685,11 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
                   <div key={c.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <p className="font-semibold text-sm truncate flex-1">{c.name}</p>
-                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_BADGE[c.status] ?? "bg-muted text-muted-foreground"}`}>
                         {h.campaigns.status[c.status as keyof typeof h.campaigns.status] ?? c.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {new Date(c.createdAt).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
