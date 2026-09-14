@@ -1555,6 +1555,16 @@ export default function ProjectOverviewPage() {
                 <input
                   className="form-input"
                   type="password"
+                  name="wani-meta-access-token"
+                  id="wani-meta-access-token"
+                  autoComplete="new-password"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  // readOnly حتى أول focus: يمنع مديري كلمات المرور من
+                  // تعبئة التوكن المحفوظ تلقائياً عند فتح الصفحة
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute("readOnly")}
                   placeholder="EAAxxxxxxxxxxxxxxx..."
                   value={metaForm.accessToken}
                   onChange={(e) =>
@@ -1581,6 +1591,14 @@ export default function ProjectOverviewPage() {
 
                 <input
                   className="form-input"
+                  name="wani-meta-waba-id"
+                  id="wani-meta-waba-id"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute("readOnly")}
                   placeholder="123456789012345"
                   value={metaForm.wabaId}
                   onChange={(e) =>
@@ -1607,6 +1625,14 @@ export default function ProjectOverviewPage() {
 
                 <input
                   className="form-input"
+                  name="wani-meta-phone-id"
+                  id="wani-meta-phone-id"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  readOnly
+                  onFocus={(e) => e.currentTarget.removeAttribute("readOnly")}
                   placeholder="987654321098765"
                   value={metaForm.phoneNumberId}
                   onChange={(e) =>
@@ -1636,6 +1662,12 @@ export default function ProjectOverviewPage() {
 
                 <input
                   className="form-input"
+                  name="wani-meta-display-phone"
+                  id="wani-meta-display-phone"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
                   placeholder="+20 10 xxxx xxxx"
                   value={metaForm.displayPhone}
                   onChange={(e) =>
