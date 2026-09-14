@@ -195,6 +195,13 @@ export async function runAIAgentReply(
       console.log(
         `[AI-AGENT] Paused — human replied ${minsSince.toFixed(1)}m ago for ${from}`
       );
+      // ── إصلاح تسريب حجز البيتا (راجع plan-guard.ts) ──────────────────────
+      // فيه حجز سابق (reserveAgentBetaTokens) اتعمل قبل الفحص ده ومفيش أي
+      // توليد هيحصل هنا — لازم نرجّعه كامل (actual=0) وإلا الـ1500 توكن
+      // هتفضل مخصومة من رصيد البيتا للأبد من غير أي استخدام فعلي.
+      if (betaReservedTokens > 0) {
+        await settleAgentBetaTokens(userId, betaReservedTokens, 0);
+      }
       return { sent: false, reason: "paused_human_reply" };
     }
   }
@@ -208,6 +215,10 @@ export async function runAIAgentReply(
   });
 
   if (!recentMsgs.length) {
+    // نفس إصلاح تسريب حجز البيتا — راجع تعليق "paused_human_reply" فوق
+    if (betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, 0);
+    }
     return { sent: false, reason: "no_messages" };
   }
 
@@ -225,6 +236,10 @@ export async function runAIAgentReply(
     }));
 
   if (!aiMessages.length) {
+    // نفس إصلاح تسريب حجز البيتا — راجع تعليق "paused_human_reply" فوق
+    if (betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, 0);
+    }
     return { sent: false, reason: "no_valid_text_messages" };
   }
 
