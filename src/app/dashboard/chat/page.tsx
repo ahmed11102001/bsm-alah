@@ -1071,8 +1071,7 @@ export default function ChatPage() {
                       <div key={msg.id} id={`message-${msg.id}`} className={activeMatchId === msg.id ? "rounded-xl ring-2 ring-primary ring-offset-1" : ""}>
                         {showDate && (
                           <div className="flex justify-center my-3">
-                            <span className={`text-[11px] px-3 py-0.5 rounded-full shadow-sm
-                              bg-card text-muted-foreground`}
+                            <span className="text-[11px] px-3 py-0.5 rounded-full shadow-sm bg-card text-muted-foreground">
                               {dateStr(msg.createdAt, lang)}
                             </span>
                           </div>
@@ -1258,8 +1257,7 @@ export default function ChatPage() {
                 rows={1}
                 className={`flex-1 ${inputBg} rounded-xl px-3 py-2.5 text-sm outline-none resize-none
                   max-h-28 overflow-y-auto border border-transparent
-                  ${dark
-                    : "text-foreground placeholder:text-muted-foreground focus:border-border"}
+                  text-foreground placeholder:text-muted-foreground focus:border-border
                   transition-colors`}
                 style={{ lineHeight: "1.5" }}
               />
