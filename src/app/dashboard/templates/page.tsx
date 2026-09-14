@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { T } from "./_components/i18n";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { WANI_READY } from "./_components/wani-ready-templates";
 import { StatusBadge } from "./_components/StatusBadge";
 import { CategoryBadge } from "./_components/CategoryBadge";
@@ -187,28 +188,29 @@ export default function TemplatesPage() {
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6" dir={dir}>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t.subtitle}</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={handleSync} disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-xl hover:bg-muted transition-all disabled:opacity-50">
-            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? t.syncing : t.syncBtn}
-          </button>
-          <button onClick={() => setView("library")}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all">
-            <Sparkles className="w-4 h-4" />
-            {t.waniLibraryBtn}
-          </button>
-          <Button onClick={() => { setView("create"); setStep(1); setForm(defaultForm); setSubmitSuccess(false); }}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm">
-            <Plus className="w-4 h-4" /> {t.newTemplate}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<FileText className="w-5 h-5 text-primary" />}
+        title={t.title}
+        subtitle={t.subtitle}
+        actions={
+          <>
+            <button onClick={handleSync} disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-xl hover:bg-muted transition-all disabled:opacity-50">
+              <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? t.syncing : t.syncBtn}
+            </button>
+            <button onClick={() => setView("library")}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all">
+              <Sparkles className="w-4 h-4" />
+              {t.waniLibraryBtn}
+            </button>
+            <Button onClick={() => { setView("create"); setStep(1); setForm(defaultForm); setSubmitSuccess(false); }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-sm">
+              <Plus className="w-4 h-4" /> {t.newTemplate}
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">

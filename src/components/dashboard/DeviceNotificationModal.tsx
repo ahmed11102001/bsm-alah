@@ -34,13 +34,14 @@ import {
   UserPlus,
   LayoutGrid,
   ShieldAlert,
+  Lock,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 import { toast } from "sonner";
 
 export interface NotificationItemDef {
   type: NotificationType;
-  category: "chat" | "store" | "campaigns" | "billing" | "automation" | "system";
+  category: "chat" | "store" | "campaigns" | "billing" | "automation" | "agent" | "system";
   title: { ar: string; en: string };
   description: { ar: string; en: string };
   icon: React.ReactNode;
@@ -247,7 +248,53 @@ export const ALL_SYSTEM_NOTIFICATIONS: NotificationItemDef[] = [
     bgClass: "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
   },
 
-  // ── 6. Team, Token & AI System ──
+  // ── 6. Agent Beta Access (تجربة إيجنت وني) ──
+  {
+    type: NotificationType.AGENT_BETA_ACTIVATED,
+    category: "agent",
+    title: { ar: "تفعيل تجربة إيجنت وني", en: "Wani Agent Trial Activated" },
+    description: {
+      ar: "إشعار عند تفعيل Agent Beta Access وبدء الـ 5 أيام",
+      en: "Alert when Agent Beta Access is activated and the 5-day trial starts",
+    },
+    icon: <Bot className="w-4 h-4 text-purple-500" />,
+    bgClass: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+  },
+  {
+    type: NotificationType.AGENT_BETA_EXPIRING,
+    category: "agent",
+    title: { ar: "اقتراب انتهاء تجربة الإيجنت", en: "Agent Trial Expiring Soon" },
+    description: {
+      ar: "تذكير قبل انتهاء مدة التجربة مع دعوة الترقية لباقة Max",
+      en: "Reminder before the trial period ends, with an upgrade prompt to Max",
+    },
+    icon: <Clock className="w-4 h-4 text-amber-500" />,
+    bgClass: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+  },
+  {
+    type: NotificationType.AGENT_BETA_LOW_TOKENS,
+    category: "agent",
+    title: { ar: "انخفاض توكنز تجربة الإيجنت", en: "Agent Trial Tokens Low" },
+    description: {
+      ar: "تنبيه عند بقاء أقل من 5K توكن من رصيد التجربة",
+      en: "Alert when less than 5K tokens remain in the trial balance",
+    },
+    icon: <Sparkles className="w-4 h-4 text-yellow-500" />,
+    bgClass: "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
+  },
+  {
+    type: NotificationType.AGENT_BETA_ENDED,
+    category: "agent",
+    title: { ar: "انتهاء تجربة الإيجنت", en: "Agent Trial Ended" },
+    description: {
+      ar: "إشعار بانتهاء المدة أو التوكنز — إعداداتك محفوظة مع دعوة الترقية",
+      en: "Notice when time or tokens run out — settings saved, with upgrade prompt",
+    },
+    icon: <Lock className="w-4 h-4 text-purple-500" />,
+    bgClass: "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+  },
+
+  // ── 7. Team, Token & AI System ──
   {
     type: NotificationType.TEAM_MEMBER_JOINED,
     category: "system",
@@ -411,6 +458,7 @@ export default function DeviceNotificationModal({
       { id: "campaigns", label: isAr ? "الحملات" : "Campaigns" },
       { id: "billing", label: isAr ? "الباقات والدفع" : "Billing" },
       { id: "automation", label: isAr ? "الأتمتة" : "Automation" },
+      { id: "agent", label: isAr ? "🤖 الإيجنت" : "🤖 Agent" },
       { id: "system", label: isAr ? "النظام والفريق" : "System" },
     ],
     [isAr]

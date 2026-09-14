@@ -656,7 +656,7 @@ export default function ChatPage() {
         <div className={`px-3 pt-3 pb-2 ${sidebarBg} border-b ${borderLight}`}>
           {/* Controls row */}
           <div className="flex items-center justify-between mb-2.5">
-            <span className={`text-base font-semibold ${textMain}`}>
+            <span className={`font-display font-extrabold text-lg ${textMain}`}>
               {lang === "ar" ? "المحادثات" : "Chats"}
             </span>
             <div className="flex items-center gap-1.5">

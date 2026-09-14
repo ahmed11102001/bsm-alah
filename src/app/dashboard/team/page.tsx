@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { useSubscription } from "@/lib/dashboard-context";
 import { hasPermission } from "@/lib/permissions";
 
@@ -588,13 +589,13 @@ export default function TeamPage() {
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl mx-auto" dir={dir}>
+      <PageHeader
+        icon={<Users className="w-5 h-5 text-primary" />}
+        title={tm.title}
+        subtitle={members.length > 0 ? tm.memberCount(members.length) : tm.subtitle}
+        className="mb-4"
+      />
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">
-          {tm.title}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {members.length > 0 ? tm.memberCount(members.length) : tm.subtitle}
-        </p>
 
         {canManageConversations && (
           <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -23,6 +23,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
+import { pageText } from "../_shared";
 
 // ─── Types (match API response) ──────────────────────────────────────────────
 interface AutomationRule {
@@ -295,12 +297,18 @@ export default function AutomationReportTab() {
 
   return (
     <div className="space-y-6">
-      {/* ── Filters + Refresh ───────────────────────────────────────────────── */}
-      <div className="flex items-center justify-end">
-        <Button variant="ghost" size="sm" onClick={fetchData}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-      </div>
+      {/* ── Page Header ── */}
+      <PageHeader
+        icon={<Bot className="w-5 h-5 text-primary" />}
+        title={pageText[locale].tabs.automation}
+        subtitle={locale === "ar" ? "أداء قواعد الأتمتة والذكاء الاصطناعي" : "Automation rules and AI performance"}
+        className="mb-0"
+        actions={
+          <Button variant="ghost" size="sm" onClick={fetchData}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        }
+      />
 
       {/* ── KPIs ────────────────────────────────────────────────────────────── */}
       <section>

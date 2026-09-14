@@ -12,6 +12,7 @@ import {
   User, Copy, Eye, EyeOff, MessageCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { useSubscription } from "@/lib/dashboard-context";
 import { signOutWithPushCleanup } from "@/lib/push-client";
 import {
@@ -183,15 +184,12 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 pb-12 max-w-4xl" dir={dir}>
       {/* ── Page Header ── */}
-      <div className="flex items-center gap-3">
-        <span className="w-12 h-12 rounded-2xl bg-primary/10 dark:bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
-          <Settings className="w-6 h-6" />
-        </span>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{s.title}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{s.description}</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Settings className="w-6 h-6 text-primary" />}
+        iconClassName="w-12 h-12 bg-primary/10 dark:bg-primary/15 text-primary"
+        title={s.title}
+        subtitle={s.description}
+      />
 
       {/* ═══════════════ الجزء الأول: إعدادات المستخدم ═══════════════ */}
       <section className="space-y-4">

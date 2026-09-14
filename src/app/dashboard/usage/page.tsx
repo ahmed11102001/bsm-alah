@@ -16,6 +16,7 @@ import {
   Calendar, Receipt, Gift,
 } from "lucide-react";
 import ReferralProgramCard from "@/components/dashboard/ReferralProgramCard";
+import PageHeader from "@/components/dashboard/PageHeader";
 import InvoicesTab from "./_components/InvoicesTab";
 
 // ─── ترتيب الباقات عشان نحدد "الباقة اللي بعدها" لزر الترقية ────────────────
@@ -465,19 +466,13 @@ export default function UsagePage() {
   return (
     <div dir={dir} className="space-y-6">
       {/* ── Page Header ── */}
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center shadow-md">
-          <BarChart3 className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {locale === "ar" ? "تتبع استهلاكك من توكنز الذكاء الاصطناعي" : "Track your AI token usage"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-purple-500 to-orange-500 shadow-md"
+        title={locale === "ar" ? "الاستهلاك والتوكنز" : "Usage & Tokens"}
+        subtitle={locale === "ar" ? "تتبع استهلاكك من توكنز الذكاء الاصطناعي" : "Track your AI token usage"}
+        className="mb-2"
+      />
 
       <Tabs defaultValue="usage" dir={dir} className="min-w-0">
         <TabsList className="w-full mb-2 h-auto min-h-10 gap-1 overflow-x-auto justify-start">

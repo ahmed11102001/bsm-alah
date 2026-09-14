@@ -12,6 +12,7 @@ import { useLanguage } from "@/lib/language-context";
 
 import type { Lang, StoreData } from "./_components/types";
 import { tr } from "./_components/constants";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { StoreTab } from "./_components/StoreTab";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -120,12 +121,11 @@ export default function Store({ onOpenChat }: StoreProps) {
     <div className="p-4 lg:p-8 max-w-6xl mx-auto">
 
       {/* ── Page Header ───────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-            {activeStore?.storeName ?? tr("storeFallback", lang)}
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
+      <PageHeader
+        icon={<ShoppingBag className="w-5 h-5 text-primary" />}
+        title={activeStore?.storeName ?? tr("storeFallback", lang)}
+        subtitle={
+          <span className="inline-flex items-center gap-2">
             {activeStore?.isActive === false ? (
               <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
@@ -141,25 +141,28 @@ export default function Store({ onOpenChat }: StoreProps) {
               {activeStore?.source === "shopify" ? "Shopify"
                 : activeStore?.source === "easyorders" ? (lang === "ar" ? "إيزي أوردرز" : "EasyOrders")
                   : "WooCommerce"}
+              {" • "}
+              {lang === "ar" ? "اربط متجرك وتابع الطلبات والأتمتة" : "Connect your store and track orders & automation"}
             </span>
-          </div>
-        </div>
-
-        {activeStore && (
-          <button
-            onClick={() => handleDisconnect(activeStore.source)}
-            disabled={disconnecting}
-            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {disconnecting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Unplug className="w-3.5 h-3.5" />
-            )}
-            {disconnecting ? tr("disconnecting", lang) : tr("disconnectBtn", lang)}
-          </button>
-        )}
-      </div>
+          </span>
+        }
+        actions={
+          activeStore ? (
+            <button
+              onClick={() => handleDisconnect(activeStore.source)}
+              disabled={disconnecting}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {disconnecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Unplug className="w-3.5 h-3.5" />
+              )}
+              {disconnecting ? tr("disconnecting", lang) : tr("disconnectBtn", lang)}
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* ── Tabs (لو في متجرين) ────────────────────────────────────────────── */}
       {hasBoth && (

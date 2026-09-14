@@ -7,6 +7,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "@/lib/dashboard-context";
 import { toast } from "sonner";
 import { STATUS_BADGE } from "@/app/dashboard/_shared";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -304,12 +305,12 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
       )}
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold mb-0.5">{h.greeting(firstName)}</h1>
-          <p className="text-muted-foreground text-xs">{h.subtitle}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
+      <PageHeader
+        icon={<Sparkles className="w-5 h-5 text-primary" />}
+        title={h.greeting(firstName)}
+        subtitle={h.subtitle}
+        className="mb-4"
+        actions={
           <Button
             size="sm"
             className={campaignLimitActive
@@ -323,8 +324,8 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
           >
             <Plus className="w-4 h-4" /> {campaignLimitActive ? (locale === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : h.newCampaign}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">

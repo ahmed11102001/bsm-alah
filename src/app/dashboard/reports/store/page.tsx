@@ -21,6 +21,7 @@ import {
   Star, Store, TrendingUp, Users, Zap,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
 import {
   type StoreReportData, TODAY, MONTH_AGO, pageText, formatNumber, formatDate,
 } from "../_shared";
@@ -55,11 +56,11 @@ export default function ReportsStorePage() {
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {pageText[locale].tabs.store}
-        </h1>
-      </div>
+      <PageHeader
+        icon={<ShoppingBag className="w-5 h-5 text-primary" />}
+        title={pageText[locale].tabs.store}
+        subtitle={locale === "ar" ? "مبيعات وطلبات متجرك في مكان واحد" : "Your store sales and orders in one place"}
+      />
 
       <Card className="border border-border shadow-sm bg-card mb-6">
         <CardContent className="p-4 flex flex-wrap items-end gap-4">

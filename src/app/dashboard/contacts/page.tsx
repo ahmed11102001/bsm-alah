@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import type { Audience } from "./_components/types";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { normalizePhone, isValidPhone } from "./_components/phone-utils";
 import { VipCard } from "./_components/VipCard";
 import { EngagedCard } from "./_components/EngagedCard";
@@ -263,14 +264,11 @@ export default function Contacts() {
 
   return (
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
-      <div className="mb-6">
-        <p className="text-xs font-semibold text-primary uppercase tracking-[0.2em] mb-2">
-          {ct.title}
-        </p>
-        <h1 className="text-2xl lg:text-3xl font-black text-foreground">
-          {ct.title}
-        </h1>
-      </div>
+      <PageHeader
+        icon={<Users className="w-5 h-5 text-primary" />}
+        title={ct.title}
+        subtitle={locale === "ar" ? "إدارة جهات الاتصال والجماهير في مكان واحد" : "Manage contacts and audiences in one place"}
+      />
 
       {/* ── Stats strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

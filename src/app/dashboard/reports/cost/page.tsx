@@ -7,6 +7,9 @@ import {
   DollarSign, Loader2, TrendingUp, Send,
   LayoutTemplate, Megaphone, Info,
 } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
+import { pageText } from "../_shared";
 
 // ─── Egypt WhatsApp Conversation Pricing (USD) ───────────────────────────────
 // المصدر: Meta Business Help Center — أسعار تقديرية
@@ -70,6 +73,7 @@ function StatCard({ label, value, sub, icon, color }: {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CostReportTab() {
+  const { locale } = useLanguage();
   const [campaigns, setCampaigns] = useState<CampaignCostRow[]>([]);
   const [loading,   setLoading]   = useState(true);
 
@@ -147,7 +151,15 @@ export default function CostReportTab() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={locale === "ar" ? "rtl" : "ltr"}>
+
+      {/* ── Page Header ── */}
+      <PageHeader
+        icon={<DollarSign className="w-5 h-5 text-primary" />}
+        title={pageText[locale].tabs.cost}
+        subtitle={locale === "ar" ? "تتبع تكلفة حملاتك التقديرية" : "Track your estimated campaign costs"}
+        className="mb-0"
+      />
 
       {/* ── Disclaimer ─────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-700 dark:text-amber-400">

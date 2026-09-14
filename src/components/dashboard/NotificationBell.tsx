@@ -28,6 +28,7 @@ import {
   Star,
   UserPlus,
   LayoutGrid,
+  Lock,
 } from "lucide-react";
 import { NotificationType } from "@/types/enums";
 import { syncPushSubscriptionOnLogin, urlBase64ToUint8Array } from "@/lib/push-client";
@@ -72,6 +73,10 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   NEW_TESTIMONIAL: <Star className="w-4 h-4 text-amber-500" />,
   NEW_LEAD: <UserPlus className="w-4 h-4 text-blue-500" />,
   SHOPIFY_GDPR: <ShoppingBag className="w-4 h-4 text-teal-600" />,
+  AGENT_BETA_ACTIVATED: <Bot className="w-4 h-4 text-purple-500" />,
+  AGENT_BETA_EXPIRING: <Clock className="w-4 h-4 text-amber-500" />,
+  AGENT_BETA_LOW_TOKENS: <Sparkles className="w-4 h-4 text-yellow-500" />,
+  AGENT_BETA_ENDED: <Lock className="w-4 h-4 text-purple-500" />,
 };
 
 const TYPE_BG: Record<NotificationType, string> = {
@@ -99,6 +104,10 @@ const TYPE_BG: Record<NotificationType, string> = {
   NEW_TESTIMONIAL: "bg-amber-50 dark:bg-amber-950/40",
   NEW_LEAD: "bg-blue-50 dark:bg-blue-950/40",
   SHOPIFY_GDPR: "bg-teal-50 dark:bg-teal-950/40",
+  AGENT_BETA_ACTIVATED: "bg-purple-50 dark:bg-purple-950/40",
+  AGENT_BETA_EXPIRING: "bg-amber-50 dark:bg-amber-950/40",
+  AGENT_BETA_LOW_TOKENS: "bg-yellow-50 dark:bg-yellow-950/40",
+  AGENT_BETA_ENDED: "bg-purple-50 dark:bg-purple-950/40",
 };
 
 function timeAgo(dateStr: string, lang: "ar" | "en" = "ar"): string {

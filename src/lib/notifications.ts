@@ -672,7 +672,7 @@ export async function notifyAdminNewLead(params: {
 export async function notifyAgentBetaActivated(userId: string) {
   await createNotification({
     userId,
-    type: NotificationType.SUBSCRIPTION_SUCCESS,
+    type: NotificationType.AGENT_BETA_ACTIVATED,
     title: bi("🤖 تم تفعيل Agent Beta Access", "🤖 Agent Beta Access activated"),
     body: bi(
       "اتفتح لك إيجنت وني (Gemini) لمدة 5 أيام وبحد 30K توكن — جرّبه من صفحة الأتمتة.",
@@ -686,7 +686,7 @@ export async function notifyAgentBetaActivated(userId: string) {
 export async function notifyAgentBetaExpiring(userId: string, daysLeft: number) {
   await createNotification({
     userId,
-    type: NotificationType.SUBSCRIPTION_EXPIRING,
+    type: NotificationType.AGENT_BETA_EXPIRING,
     title: bi("⏳ تجربة Agent Beta قرّبت تخلص", "⏳ Agent Beta trial expiring soon"),
     body: bi(
       `متبقي ${daysLeft} ${daysLeft === 1 ? "يوم واحد" : "أيام"} على Agent Beta Access — رقِّ إلى Max عشان تكمل.`,
@@ -700,7 +700,7 @@ export async function notifyAgentBetaExpiring(userId: string, daysLeft: number) 
 export async function notifyAgentBetaLowTokens(userId: string, remaining: number) {
   await createNotification({
     userId,
-    type: NotificationType.AI_TOKENS_LOW,
+    type: NotificationType.AGENT_BETA_LOW_TOKENS,
     title: bi("⚠️ توكنز Agent Beta قرّبت تخلص", "⚠️ Agent Beta tokens running low"),
     body: bi(
       `متبقي ${remaining.toLocaleString("ar-EG")} توكن من تجربة Agent Beta — رقِّ إلى Max عشان تكمل بدون توقف.`,
@@ -714,7 +714,7 @@ export async function notifyAgentBetaLowTokens(userId: string, remaining: number
 export async function notifyAgentBetaEnded(userId: string, reason: "expired" | "tokens_exhausted") {
   await createNotification({
     userId,
-    type: NotificationType.PLAN_LIMIT_REACHED,
+    type: NotificationType.AGENT_BETA_ENDED,
     title: bi("🔒 انتهت Agent Beta Access", "🔒 Agent Beta Access ended"),
     body: reason === "expired"
       ? bi(

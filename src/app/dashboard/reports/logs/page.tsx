@@ -11,9 +11,10 @@ import {
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ChevronLeft, ChevronRight, Loader2, RefreshCw, FileSpreadsheet,
+  ChevronLeft, ChevronRight, Loader2, RefreshCw, FileSpreadsheet, Activity,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
 import {
   type LogsData, TODAY, MONTH_AGO, pageText, statusColor,
   formatDate, formatNumber, getStatusLabel, getDirLabel, getTypeLabel, exportExcel,
@@ -76,6 +77,13 @@ export default function ReportsLogsPage() {
 
   return (
     <div className="space-y-6">
+      {/* ── Page Header ── */}
+      <PageHeader
+        icon={<Activity className="w-5 h-5 text-primary" />}
+        title={pageText[locale].tabs.logs}
+        subtitle={locale === "ar" ? "سجل كل الرسائل الصادرة والواردة" : "Log of all outbound and inbound messages"}
+        className="mb-0"
+      />
       {/* Top Filter Controls */}
       <Card className="rounded-2xl border border-border shadow-sm bg-card">
         <CardContent className="p-4 flex flex-wrap items-center gap-4 justify-between">

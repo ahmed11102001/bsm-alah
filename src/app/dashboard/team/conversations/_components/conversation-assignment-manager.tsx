@@ -6,6 +6,7 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Filter, Loader2, Search, U
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
+import PageHeader from "@/components/dashboard/PageHeader";
 
 type Member = { id: string; name: string | null; email: string; image: string | null; role: string };
 type Conversation = {
@@ -99,10 +100,14 @@ export default function ConversationAssignmentManager() {
       <button onClick={() => router.push("/dashboard/team")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-5">
         <ArrowLeft className={`w-4 h-4 ${dir === "rtl" ? "rotate-180" : ""}`} /> {ar ? "العودة للفريق" : "Back to Team"}
       </button>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
-        <div><h1 className="text-2xl font-bold text-foreground">{ar ? "إدارة تعيين المحادثات" : "Conversation Assignment"}</h1><p className="text-sm text-muted-foreground mt-1">{ar ? "إدارة مسؤول كل محادثة من مكان واحد" : "Manage which team member handles each conversation."}</p></div>
-        <div className="text-sm text-muted-foreground">{total} {ar ? "محادثة" : "conversations"}</div>
-      </div>
+      <PageHeader
+        icon={<UserRound className="w-5 h-5 text-primary" />}
+        title={ar ? "إدارة تعيين المحادثات" : "Conversation Assignment"}
+        subtitle={ar ? "إدارة مسؤول كل محادثة من مكان واحد" : "Manage which team member handles each conversation."}
+        actions={
+          <div className="text-sm text-muted-foreground">{total} {ar ? "محادثة" : "conversations"}</div>
+        }
+      />
 
       <div className="bg-card border border-border rounded-2xl p-4 shadow-sm mb-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">

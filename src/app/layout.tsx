@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cairo, Geist, Geist_Mono } from "next/font/google";
+import { Cairo, Changa, Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import ClientProvider from "@/components/ClientProvider";
@@ -13,6 +13,15 @@ const cairo = Cairo({
   subsets: ["arabic"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-cairo",
+});
+
+// ── خط العناوين المميز (PageHeader في الداشبورد) ──────────────────────────
+// Changa: خط عربي عرضي modern بأوزان ثقيلة (ExtraBold) — للعناوين فقط،
+// والنصوص تفضل Cairo. يُستخدم عبر كلاس font-display.
+const display = Changa({
+  subsets: ["arabic", "latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-display",
 });
 
 const geistSans = Geist({
@@ -168,7 +177,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={dir}
-      className={`${cairo.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
+      className={`${cairo.variable} ${display.variable} ${geistSans.variable} ${geistMono.variable} scroll-smooth`}
       suppressHydrationWarning
     >
       <head>

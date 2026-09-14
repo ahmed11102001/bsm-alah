@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { saveWhatsAppSettings } from "@/app/actions/whatsapp";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Blocks } from "lucide-react";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
@@ -704,10 +705,11 @@ export default function API() {
       />
 
       {/* ── Header ── */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{api.title}</h1>
-        <p className="text-muted-foreground text-sm mt-1">{api.subtitle}</p>
-      </div>
+      <PageHeader
+        icon={<Blocks className="w-5 h-5 text-primary" />}
+        title={api.title}
+        subtitle={api.subtitle}
+      />
 
       {/* ── Category Pills ── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">

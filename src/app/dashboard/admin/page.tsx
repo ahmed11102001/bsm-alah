@@ -16,6 +16,7 @@ import {
   PartnerCardTemplate, PARTNER_TEMPLATES, type PartnerCardContent,
 } from "@/app/dashboard/wani-partner/_components/PartnerCardTemplates";
 import ProtectionClaimsTab from "./_components/ProtectionClaimsTab";
+import PageHeader from "@/components/dashboard/PageHeader";
 import PaymentsTab from "./_components/PaymentsTab";
 import ArticleMarkdown from "@/components/ArticleMarkdown";
 
@@ -629,24 +630,22 @@ export default function AdminPage() {
       <div className="max-w-5xl mx-auto min-w-0">
 
         {/* Header */}
-        <div className="admin-page-header flex items-center justify-between gap-4 mb-6">
-          <div className="admin-page-title flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
+        <PageHeader
+          icon={<Shield className="w-5 h-5 text-red-600 dark:text-red-400" />}
+          iconClassName="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30"
+          title={adm.title}
+          subtitle={adm.subtitle}
+          className="admin-page-header"
+          actions={
+            <div className="admin-page-actions flex items-center gap-3 flex-wrap justify-end">
+              {activeTab === "users"    && <button onClick={() => setShowForm(true)}    className={btn}><Plus className="w-4 h-4" /> {adm.users.newBtn}</button>}
+              {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
+              {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
+              {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
+              {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "طلب حماية جديد" : "New Claim"}</button>}
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{adm.title}</h1>
-              <p className="text-xs text-gray-400 dark:text-gray-500">{adm.subtitle}</p>
-            </div>
-          </div>
-          <div className="admin-page-actions flex items-center gap-3 flex-wrap justify-end">
-            {activeTab === "users"    && <button onClick={() => setShowForm(true)}    className={btn}><Plus className="w-4 h-4" /> {adm.users.newBtn}</button>}
-            {activeTab === "coupons"  && <button onClick={() => setShowCouponF(true)} className={btn}><Plus className="w-4 h-4" /> {adm.coupons.newBtn}</button>}
-            {activeTab === "articles" && !showArticleF && <button onClick={openNewArticle} className={btn}><Plus className="w-4 h-4" /> {adm.articles.newBtn}</button>}
-            {activeTab === "leads"    && <button onClick={handleLeadExport} className={btn}><Download className="w-4 h-4" /> {adm.leads.exportBtn}</button>}
-            {activeTab === "protection-claims" && <button onClick={() => setOpenProtectionClaimModal(true)} className={btn}><Plus className="w-4 h-4" /> {locale === "ar" ? "طلب حماية جديد" : "New Claim"}</button>}
-          </div>
-        </div>
+          }
+        />
 
         {/* Tabs */}
         <div className="admin-tabs flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1 mb-6 w-full sm:w-fit flex-wrap">

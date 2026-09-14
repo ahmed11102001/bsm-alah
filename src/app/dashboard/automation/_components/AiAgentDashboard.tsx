@@ -774,7 +774,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             <img src="/aiasstant.svg" alt="Wani" className="w-full h-full object-cover" />
           </span>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">
+            <h2 className="font-display font-extrabold text-2xl text-foreground">
               {isAr ? "وني — مساعدك الذكي" : "Wani — Your AI Assistant"}
             </h2>
             <p className="text-sm text-muted-foreground">

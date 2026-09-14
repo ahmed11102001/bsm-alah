@@ -18,6 +18,7 @@ import { useSubscription } from "@/lib/dashboard-context";
 import { useTemplateParser } from "@/hooks/useTemplateParser";
 
 import { tr } from "./_components/i18n";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { cleanNumber, isValidPhone } from "./_components/helpers";
 import { StepBar } from "./_components/StepBar";
 import { ProgressBar } from "./_components/ProgressBar";
@@ -489,28 +490,29 @@ export default function Campaigns() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{tr("title", lang)}</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{total} {tr("totalCampaignsSubtitle", lang)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => loadCampaigns()}
-            className="p-2 rounded-xl border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition">
-            <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
-          </button>
-          <Button
-            onClick={openCampaignDialog}
-            className={campaignLimitActive
-              ? "bg-muted text-muted-foreground cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
-              : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm gap-2 flex-1 sm:flex-none justify-center"
-            }
-          >
-            <Plus className="w-4 h-4" />
-            {campaignLimitActive ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Megaphone className="w-5 h-5 text-primary" />}
+        title={tr("title", lang)}
+        subtitle={<>{total} {tr("totalCampaignsSubtitle", lang)}</>}
+        actions={
+          <>
+            <button onClick={() => loadCampaigns()}
+              className="p-2 rounded-xl border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition">
+              <RefreshCw className={`w-4 h-4 ${loadingList ? "animate-spin" : ""}`} />
+            </button>
+            <Button
+              onClick={openCampaignDialog}
+              className={campaignLimitActive
+                ? "bg-muted text-muted-foreground cursor-not-allowed shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm gap-2 flex-1 sm:flex-none justify-center"
+              }
+            >
+              <Plus className="w-4 h-4" />
+              {campaignLimitActive ? (lang === "ar" ? "وصلت الحد الأقصى" : "Limit reached") : tr("newCampaign", lang)}
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       {campaigns.length > 0 && (

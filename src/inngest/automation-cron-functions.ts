@@ -682,22 +682,16 @@ export const agentBetaExpiryDaily = inngest.createFunction(
         if (tokensExhausted || timeExpired) continue;
 
         // اقتراب الانتهاء: يومين أو أقل
-        // P1: فلترة meta.kind في JS (لا تعتمد على JSON path في Prisma) حتى لا
-        // يمنع تنبيه اشتراك/توكنز حقيقي تنبيه البيتا أو العكس.
+        // النوع مخصص للبيتا (AGENT_BETA_EXPIRING) فلا يتعارض مع تنبيهات الباقة.
         const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
         if (daysLeft <= 2 && daysLeft >= 0) {
-          const recentSameKind = await prisma.notification.findMany({
+          const alreadySent = await prisma.notification.findFirst({
             where: {
               userId: sub.userId,
-              type: "SUBSCRIPTION_EXPIRING",
+              type: "AGENT_BETA_EXPIRING",
               createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
             },
-            select: { meta: true },
-            take: 10,
-          });
-          const alreadySent = recentSameKind.some(n => {
-            const m = n.meta as any;
-            return m && typeof m === "object" && (m as any).kind === "agent_beta_expiring";
+            select: { id: true },
           });
           if (!alreadySent) {
             await notifyAgentBetaExpiring(sub.userId, Math.max(0, daysLeft));
@@ -707,18 +701,13 @@ export const agentBetaExpiryDaily = inngest.createFunction(
 
         // انخفاض التوكنز: <= 5K
         if (remaining <= 5000 && remaining > 0) {
-          const recentLowSameKind = await prisma.notification.findMany({
+          const alreadySentLow = await prisma.notification.findFirst({
             where: {
               userId: sub.userId,
-              type: "AI_TOKENS_LOW",
+              type: "AGENT_BETA_LOW_TOKENS",
               createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
             },
-            select: { meta: true },
-            take: 10,
-          });
-          const alreadySentLow = recentLowSameKind.some(n => {
-            const m = n.meta as any;
-            return m && typeof m === "object" && (m as any).kind === "agent_beta_low_tokens";
+            select: { id: true },
           });
           if (!alreadySentLow) {
             await notifyAgentBetaLowTokens(sub.userId, remaining);

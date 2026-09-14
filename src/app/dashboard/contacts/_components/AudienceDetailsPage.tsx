@@ -229,7 +229,7 @@ export default function AudienceDetailsPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-bold text-gray-900 dark:text-white">{audience.name}</h1>
+                <h1 className="truncate font-display font-extrabold text-xl text-gray-900 dark:text-white">{audience.name}</h1>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {total.toLocaleString(locale === "ar" ? "ar-EG" : "en-US")} عميل • إدارة وتحليل الجمهور
                 </p>

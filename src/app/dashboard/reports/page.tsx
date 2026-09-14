@@ -23,6 +23,7 @@ import {
   UserCheck, Archive, RefreshCw, Shield, UserX,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import PageHeader from "@/components/dashboard/PageHeader";
 import { useLanguage } from "@/lib/language-context";
 import { useDashboardTheme } from "@/lib/theme-context";
 import {
@@ -136,35 +137,31 @@ export default function ReportsOverviewPage() {
     <div className="p-4 lg:p-8 max-w-6xl mx-auto" dir={locale === "ar" ? "rtl" : "ltr"}>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {locale === "ar" ? "التقارير والإحصائيات" : "Reports & Analytics"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {locale === "ar" ? "نظرة شاملة على أداء عملياتك" : "A comprehensive view of your performance."}
-          </p>
-        </div>
-        {/* Export */}
-        <div className="flex gap-2">
-          <Button
-            size="sm" variant="outline" className="gap-1.5"
-            onClick={() => {
-              if (tab === "overview" && overview)
-                exportExcel(overview.daily, locale === "ar" ? "تقرير-الرسائل" : "message-report");
-              else if (tab === "customers")
-                exportExcel(customers, locale === "ar" ? "تقرير-العملاء" : "customer-report");
-              else if (tab === "team")
-                exportExcel(team, locale === "ar" ? "تقرير-الفريق" : "team-report");
-            }}
-          >
-            <FileSpreadsheet className="w-4 h-4" /> {locale === "ar" ? "Excel" : "Excel"}
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={printPage}>
-            <Printer className="w-4 h-4" /> {locale === "ar" ? "طباعة" : "Print"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="w-5 h-5 text-primary" />}
+        title={locale === "ar" ? "التقارير والإحصائيات" : "Reports & Analytics"}
+        subtitle={locale === "ar" ? "نظرة شاملة على أداء عملياتك" : "A comprehensive view of your performance."}
+        actions={
+          <>
+            <Button
+              size="sm" variant="outline" className="gap-1.5"
+              onClick={() => {
+                if (tab === "overview" && overview)
+                  exportExcel(overview.daily, locale === "ar" ? "تقرير-الرسائل" : "message-report");
+                else if (tab === "customers")
+                  exportExcel(customers, locale === "ar" ? "تقرير-العملاء" : "customer-report");
+                else if (tab === "team")
+                  exportExcel(team, locale === "ar" ? "تقرير-الفريق" : "team-report");
+              }}
+            >
+              <FileSpreadsheet className="w-4 h-4" /> {locale === "ar" ? "Excel" : "Excel"}
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={printPage}>
+              <Printer className="w-4 h-4" /> {locale === "ar" ? "طباعة" : "Print"}
+            </Button>
+          </>
+        }
+      />
 
       {/* Filters */}
       <Card className="border border-border shadow-sm bg-card mb-6">

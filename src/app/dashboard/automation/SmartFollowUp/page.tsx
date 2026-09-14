@@ -236,7 +236,7 @@ function ShippingFollowUpDetail({ lang, onBack }: { lang: Lang; onBack: () => vo
           <div className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0">
             <Truck className="w-4 h-4" />
           </div>
-          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "متابعة الشحن", "Shipping Follow-up")}</p>
+          <p className="font-display font-extrabold text-base text-gray-900 dark:text-gray-100 whitespace-nowrap">{tx(lang, "متابعة الشحن", "Shipping Follow-up")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

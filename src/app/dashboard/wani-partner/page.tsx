@@ -12,6 +12,7 @@ import {
 import {
   PARTNER_TEMPLATES, PartnerCardTemplate, type PartnerCardContent,
 } from "./_components/PartnerCardTemplates";
+import PageHeader from "@/components/dashboard/PageHeader";
 
 const inp = "w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary bg-white";
 const btn = "flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50";
@@ -158,23 +159,18 @@ export default function WaniPartnerPage() {
   return (
     <div dir={dir} className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
       {/* الهيدر */}
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center">
-            <Handshake className="w-5.5 h-5.5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">WANI Partner</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t("صمّم كارت إعلانك اللي بيظهر بالتدوير لكل مستخدمي الداشبورد", "Design your promo card that rotates on every user's dashboard")}
-            </p>
-          </div>
-        </div>
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1.5 flex-shrink-0">
-          {dir === "rtl" ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-          {t("الداشبورد", "Dashboard")}
-        </Link>
-      </div>
+      <PageHeader
+        icon={<Handshake className="w-5 h-5 text-primary" />}
+        iconClassName="bg-primary/10 border border-primary/25"
+        title="WANI Partner"
+        subtitle={t("صمّم كارت إعلانك اللي بيظهر بالتدوير لكل مستخدمي الداشبورد", "Design your promo card that rotates on every user's dashboard")}
+        actions={
+          <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1.5 flex-shrink-0">
+            {dir === "rtl" ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+            {t("الداشبورد", "Dashboard")}
+          </Link>
+        }
+      />
 
       {/* تنويه بسيط عن الفكرة */}
       <div className="flex items-start gap-2.5 mb-6 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-3">

@@ -11,6 +11,8 @@ module.exports = {
       // ربط الخطوط بمتغيرات CSS التي عرفناها في الـ Layout
       fontFamily: {
         cairo: ["var(--font-cairo)", "sans-serif"],
+        // خط العناوين المميز — PageHeader وأي عنوان رئيسي في الداشبورد
+        display: ["var(--font-display)", "var(--font-cairo)", "sans-serif"],
         sans: ["var(--font-geist-sans)", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
       },

@@ -35,6 +35,7 @@ import {
   Hand, Clock, CalendarClock, FlaskConical, AlertTriangle, Info, LayoutGrid, Lock,
 } from "lucide-react";
 import SmartFollowUpTab from "@/app/dashboard/automation/SmartFollowUp/page";
+import PageHeader from "@/components/dashboard/PageHeader";
 import AiAgentDashboard from "@/app/dashboard/automation/_components/AiAgentDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -969,6 +970,14 @@ export default function Automation() {
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto" dir={dir}>
+
+      {/* ── Page Header ── */}
+      <PageHeader
+        icon={<Bot className="w-5 h-5 text-primary" />}
+        title={tx(lang, "الأتمتة والذكاء الاصطناعي", "Automation & AI")}
+        subtitle={tx(lang, "ردود تلقائية وقواعد ذكية وإيجنت وني", "Auto-replies, smart rules and the Wani agent")}
+        className="mb-4"
+      />
 
       {/* Agent Beta Access banner — ساري فقط لغير Max أثناء البيتا */}
       {betaActive && (
