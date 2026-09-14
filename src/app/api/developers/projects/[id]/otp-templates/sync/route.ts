@@ -75,9 +75,11 @@ export async function POST(
     let imported = 0;
 
     for (const local of localTemplates) {
-      const metaTmpl = local.metaTemplateId
-        ? metaTemplates.find((m) => m.id === local.metaTemplateId)
-        : metaTemplates.find((m) => m.name === local.name && m.language === local.language);
+      // Prefer the stable Meta id, but recover when Meta recreated the template
+      // with a new id by matching the project-scoped name + language pair.
+      const metaTmpl =
+        (local.metaTemplateId && metaTemplates.find((m) => m.id === local.metaTemplateId)) ??
+        metaTemplates.find((m) => m.name === local.name && m.language === local.language);
 
       if (!metaTmpl) continue;
 
@@ -89,6 +91,7 @@ export async function POST(
       if (
         local.status !== newStatus ||
         local.metaTemplateId !== metaTmpl.id ||
+        local.language !== metaTmpl.language ||
         local.rejectedReason !== newRejectedReason
       ) {
         await prisma.developerOtpTemplate.update({
@@ -96,6 +99,7 @@ export async function POST(
           data: {
             status: newStatus as any,
             metaTemplateId: metaTmpl.id,
+            language: metaTmpl.language,
             rejectedReason: newRejectedReason,
           },
         });

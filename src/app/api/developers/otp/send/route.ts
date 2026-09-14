@@ -217,13 +217,14 @@ async function sendWhatsAppOtp(opts: {
   templateName: string;
   language: string;
   varCount: number;     // how many {{N}} in body
+  expiryMinutes: number;
 }): Promise<{ success: boolean; metaMessageId?: string; error?: string }> {
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.phoneNumberId}/messages`;
 
   // Build body parameters — fill all vars with the OTP code (most templates use 1 var)
-  const bodyParams = Array.from({ length: Math.max(opts.varCount, 1) }, () => ({
+  const bodyParams = Array.from({ length: Math.max(opts.varCount, 1) }, (_, index) => ({
     type: "text",
-    text: opts.code,
+    text: index === 0 ? opts.code : String(opts.expiryMinutes),
   }));
 
   const payload = {
@@ -454,6 +455,7 @@ export async function POST(req: NextRequest) {
     templateName:  template.name,
     language:      template.language,
     varCount,
+    expiryMinutes: Number(expiryMinutes),
   });
 
   // ── 10. Store in Redis (code hash only — no plain code stored) ────────────
