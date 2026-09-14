@@ -1,11 +1,32 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = "send" | "verify" | "status";
 type ReqStatus = "idle" | "loading" | "success" | "error";
+
+// سجل القالب كما يرجع من GET otp-templates — للعرض فقط (id/name/language/status)
+interface ProjectTemplate {
+  id: string;
+  name: string;
+  language: string;
+  status: string;
+  metaTemplateId: string | null;
+}
+
+// وصف اللغة في الـ dropdown — name + language هوية مميزة
+function languageLabel(code: string, arabic: boolean): string {
+  const c = (code || "").toLowerCase();
+  if (c.startsWith("ar")) return arabic ? "العربية" : "Arabic";
+  if (c.startsWith("en")) return arabic ? "الإنجليزية" : "English";
+  if (c.startsWith("fr")) return arabic ? "الفرنسية" : "French";
+  if (c.startsWith("ur")) return arabic ? "الأردية" : "Urdu";
+  if (c.startsWith("tr")) return arabic ? "التركية" : "Turkish";
+  return code;
+}
 
 interface LogEntry {
   id: string;
@@ -116,15 +137,32 @@ function OtpCodeInput({ value, onChange }: { value: string; onChange: (v: string
 // ═══════════════════════════════════════════════════════════════════════════
 export default function LiveTesterPage() {
   const { language, t } = useLanguage();
+  const params = useParams();
+  const projectId = params.id as string;
   const [mounted, setMounted] = useState(false);
 
   // Form state
   const [apiKey, setApiKey]           = useState("");
   const [phone, setPhone]             = useState("");
-  const [templateName, setTemplateName] = useState("otp_verification");
   const [expiryMins, setExpiryMins]   = useState(10);
   const [otpCode, setOtpCode]         = useState("");
   const [token, setToken]             = useState("");
+
+  // ── Template state — المصدر الوحيد: قوالب المشروع الحالي ──────────────
+  // selectedTemplateId هو المرجع الأساسي للإرسال. لا يوجد templateName يدوي —
+  // الاسم/اللغة يُستخرجان من السجل المختار للعرض فقط.
+  const [templates, setTemplates]             = useState<ProjectTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [templatesError, setTemplatesError]   = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [syncMsg, setSyncMsg]                 = useState<string | null>(null);
+
+  // القوالب القابلة للإرسال فقط: نفس المشروع + APPROVED + مربوطة بـ Meta
+  const sendableTemplates = templates.filter(
+    (tpl) => tpl.status === "APPROVED" && !!tpl.metaTemplateId
+  );
+  const selectedTemplate = templates.find((tpl) => tpl.id === selectedTemplateId) ?? null;
 
   // UI state
   const [step, setStep]       = useState<Step>("send");
@@ -135,6 +173,62 @@ export default function LiveTesterPage() {
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // ── جلب قوالب المشروع الحالي (session) ────────────────────────────────
+  async function fetchTemplates(silent = false) {
+    if (!silent) {
+      setLoadingTemplates(true);
+      setTemplatesError(null);
+    }
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`);
+      const data = await res.json();
+      if (!res.ok) {
+        setTemplatesError(data.error || t("Failed to load templates", "فشل تحميل القوالب"));
+        return;
+      }
+      const list: ProjectTemplate[] = Array.isArray(data.templates) ? data.templates : [];
+      setTemplates(list);
+      // اختيار تلقائي: أول قالب قابل للإرسال — أو إبقاء الاختيار لو ما زال صالحاً
+      setSelectedTemplateId((prev) => {
+        const stillValid = list.some((x) => x.id === prev && x.status === "APPROVED" && !!x.metaTemplateId);
+        if (stillValid) return prev;
+        return list.find((x) => x.status === "APPROVED" && !!x.metaTemplateId)?.id ?? "";
+      });
+    } catch {
+      setTemplatesError(t("Connection error", "خطأ في الاتصال"));
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // ── مزامنة مع Meta ثم إعادة التحميل ────────────────────────────────────
+  async function handleRefreshTemplates() {
+    setSyncingTemplates(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates/sync`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg(data.error || t("Sync failed", "فشلت المزامنة"));
+        return;
+      }
+      const parts: string[] = [];
+      if (data.updated) parts.push(t(`${data.updated} updated`, `${data.updated} اتحدث`));
+      if (data.imported) parts.push(t(`${data.imported} imported`, `${data.imported} جديد`));
+      setSyncMsg(t(`✅ Synced${parts.length ? " — " + parts.join("، ") : ""}`, `✅ تمت المزامنة${parts.length ? " — " + parts.join("، ") : ""}`));
+      await fetchTemplates(true);
+    } catch {
+      setSyncMsg(t("Connection error", "خطأ في الاتصال"));
+    } finally {
+      setSyncingTemplates(false);
+    }
+  }
 
   // Countdown timer
   useEffect(() => {
@@ -209,12 +303,15 @@ export default function LiveTesterPage() {
   async function handleSend() {
     if (!apiKey.trim()) { alert(t("Please enter your API Key first", "أدخل الـ API Key أولاً")); return; }
     if (!phone.trim())  { alert(t("Please enter the phone number", "أدخل رقم الهاتف")); return; }
+    if (!selectedTemplate) { alert(t("Please select an approved template first", "اختر قالباً معتمداً أولاً")); return; }
 
+    // الإرسال بـ templateId — الـ backend يستخرج المشروع من الـ API Key
+    // ويتحقق أن القالب ينتمي لنفس المشروع وأنه APPROVED ومربوط بـ Meta.
     const { ok, data } = await callApi({
       step: "send",
       method: "POST",
       endpoint: "/api/developers/otp/send",
-      body: { phone: phone.trim(), templateName: templateName.trim(), expiryMinutes: expiryMins },
+      body: { phone: phone.trim(), templateId: selectedTemplate.id, expiryMinutes: expiryMins },
     });
 
     if (ok && data.token) {
@@ -450,9 +547,57 @@ export default function LiveTesterPage() {
                         value={phone} onChange={e => setPhone(e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
                     </div>
                     <div className="field">
-                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Template Name (templateName)", "اسم القالب (templateName)")}</label>
-                      <input className="f-input mono" placeholder="otp_verification"
-                        value={templateName} onChange={e => setTemplateName(e.target.value)} />
+                      <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Template", "القالب")}</label>
+                      {loadingTemplates ? (
+                        <div className="f-input" style={{ opacity: 0.5 }}>{t("Loading templates...", "جاري تحميل القوالب...")}</div>
+                      ) : templatesError ? (
+                        <div>
+                          <div className="f-input" style={{ borderColor: "rgba(239,68,68,0.4)", color: "#f87171" }}>{templatesError}</div>
+                          <button className="btn-secondary" onClick={() => fetchTemplates()}>{t("🔄 Retry", "🔄 إعادة المحاولة")}</button>
+                        </div>
+                      ) : sendableTemplates.length === 0 ? (
+                        <div>
+                          <div className="f-input" style={{ borderColor: "rgba(245,158,11,0.4)", color: "rgba(255,255,255,0.6)" }}>
+                            {t("No approved OTP template for this project yet. Sync with Meta or create and approve one first.", "لا يوجد قالب OTP معتمد حاليًا لهذا المشروع. قم بمزامنة القوالب مع Meta أو أنشئ قالبًا واعتمده أولًا.")}
+                          </div>
+                          <button className="btn-secondary" onClick={handleRefreshTemplates} disabled={syncingTemplates}>
+                            {syncingTemplates ? t("Syncing...", "جاري المزامنة...") : t("🔄 Sync Templates with Meta", "🔄 مزامنة القوالب مع Meta")}
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            className="f-select"
+                            value={selectedTemplateId}
+                            onChange={e => setSelectedTemplateId(e.target.value)}
+                            style={{ textAlign: language === 'ar' ? 'right' : 'left' }}
+                          >
+                            {sendableTemplates.map((tpl) => (
+                              <option key={tpl.id} value={tpl.id}>
+                                {tpl.name} — {languageLabel(tpl.language, language === 'ar')}
+                              </option>
+                            ))}
+                          </select>
+                          {selectedTemplate && (
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 6, fontFamily: "'Fira Code',monospace", direction: "ltr", textAlign: "left" }}>
+                              {selectedTemplate.name} · {selectedTemplate.language} · {selectedTemplate.status}
+                              {templates.length > sendableTemplates.length && (
+                                <span style={{ color: "rgba(245,158,11,0.6)" }}>
+                                  {"  "}({t(`${templates.length - sendableTemplates.length} other template(s) not sendable`, `${templates.length - sendableTemplates.length} قالب آخر غير قابل للإرسال`)})
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <button className="btn-secondary" onClick={handleRefreshTemplates} disabled={syncingTemplates}>
+                            {syncingTemplates ? t("Syncing...", "جاري المزامنة...") : t("🔄 Refresh Templates", "🔄 تحديث القوالب")}
+                          </button>
+                          {syncMsg && (
+                            <div style={{ fontSize: 12, marginTop: 8, color: syncMsg.startsWith("✅") ? "#20d378" : "#f87171" }}>
+                              {syncMsg}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                     <div className="field">
                       <label className="field-label" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>{t("Expiry Time (Minutes)", "مدة الصلاحية (دقائق)")}</label>
@@ -460,7 +605,7 @@ export default function LiveTesterPage() {
                         {[5, 10, 15, 30].map(m => <option key={m} value={m}>{t(`${m} minutes`, `${m} دقيقة`)}</option>)}
                       </select>
                     </div>
-                    <button className="btn-send" onClick={handleSend} disabled={reqStatus === "loading"}>
+                    <button className="btn-send" onClick={handleSend} disabled={reqStatus === "loading" || !selectedTemplate}>
                       {reqStatus === "loading" ? <><div className="spinner" />{t("Sending...", "جاري الإرسال...")}</> : <>{t("🚀 Send OTP", "🚀 إرسال OTP")}</>}
                     </button>
                   </>

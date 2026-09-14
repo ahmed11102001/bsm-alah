@@ -27,7 +27,9 @@ interface AuthResult {
 }
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
-async function verifyApiKey(raw: string): Promise<AuthResult | null> {
+// يُرجع projectId من الـ API Key — المصدر الوحيد الموثوق للمشروع.
+// لا يُعتمد على أي projectId قادم من الـ client.
+async function verifyApiKey(raw: string): Promise<AuthResult | { error: "INVALID_KEY" | "NO_META_CONNECTION" } | null> {
   const hash = createHash("sha256").update(raw.trim()).digest("hex");
 
   const keyRecord = await prisma.developerApiKey.findUnique({
@@ -39,10 +41,13 @@ async function verifyApiKey(raw: string): Promise<AuthResult | null> {
     },
   });
 
-  if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
+  if (!keyRecord || keyRecord.status !== "ACTIVE") return { error: "INVALID_KEY" };
 
   const meta = keyRecord.project.metaConnection;
-  if (!meta || !meta.isVerified) return null;
+  // ربط Meta غير مكتمل أو غير مفعّل → خطأ مخصص (مش 401 عام)
+  if (!meta || !meta.isVerified || !meta.accessToken || !meta.phoneNumberId || !meta.wabaId) {
+    return { error: "NO_META_CONNECTION" };
+  }
 
   // track last usage (non-blocking)
   prisma.developerApiKey
@@ -83,15 +88,124 @@ function generateOtp(): string {
   return num.toString();
 }
 
-// ─── Resolve template: find APPROVED template by name ────────────────────────
-async function resolveTemplate(projectId: string, templateName: string) {
-  return prisma.developerOtpTemplate.findFirst({
-    where: {
-      projectId,
-      name: templateName,
-      status: "APPROVED",
-    },
+// ─── Template resolution ────────────────────────────────────────────────────
+// القاعدة: المشروع يؤخذ من الـ API Key فقط. القالب يجب أن ينتمي لنفس المشروع.
+//
+// المسار الأساسي: templateId (يستخدمه Live Tester) — لا غموض فيه.
+// المسار المتوافق (legacy): templateName [+ language] — للـ clients الخارجية
+// (quick-start/docs). عند تعدد اللغات لنفس الاسم يُرفض مع طلب التحديد.
+//
+// لا يوجد أي fallback خارج المشروع، ولا أي تجاوز للـ APPROVED.
+type TemplateResolution =
+  | { ok: true; template: { id: string; name: string; language: string; body: string; metaTemplateId: string } }
+  | { ok: false; code: string; error: string; status: number };
+
+async function resolveTemplateById(
+  projectId: string,
+  templateId: string
+): Promise<TemplateResolution> {
+  const template = await prisma.developerOtpTemplate.findUnique({
+    where: { id: templateId },
   });
+
+  if (!template) {
+    return { ok: false, code: "TEMPLATE_NOT_FOUND", error: "القالب غير موجود في هذا المشروع", status: 404 };
+  }
+  // القالب موجود لكن لمشروع آخر → رفض صريح (لا تسريب وجود/حالة)
+  if (template.projectId !== projectId) {
+    return { ok: false, code: "TEMPLATE_WRONG_PROJECT", error: "القالب لا ينتمي إلى هذا المشروع", status: 403 };
+  }
+  return assertTemplateUsable(template);
+}
+
+async function resolveTemplateByName(
+  projectId: string,
+  rawName: string,
+  rawLanguage?: unknown
+): Promise<TemplateResolution> {
+  const name = rawName.trim().toLowerCase();
+  const language = typeof rawLanguage === "string" && rawLanguage.trim()
+    ? rawLanguage.trim()
+    : undefined;
+
+  const candidates = await prisma.developerOtpTemplate.findMany({
+    where: { projectId, name },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (candidates.length === 0) {
+    return {
+      ok: false,
+      code: "TEMPLATE_NOT_FOUND",
+      error: `القالب "${name}" غير موجود في هذا المشروع — تأكد من مزامنته مع Meta من صفحة القوالب`,
+      status: 404,
+    };
+  }
+
+  let match = candidates;
+  if (language) {
+    match = match.filter((t) => t.language === language);
+    if (match.length === 0) {
+      const available = [...new Set(candidates.map((t) => t.language))].join("، ");
+      return {
+        ok: false,
+        code: "TEMPLATE_LANGUAGE_MISMATCH",
+        error: `القالب "${name}" غير موجود باللغة "${language}" — اللغات المتاحة: ${available}`,
+        status: 404,
+      };
+    }
+  }
+
+  if (match.length > 1) {
+    const available = [...new Set(match.map((t) => t.language))].join("، ");
+    return {
+      ok: false,
+      code: "TEMPLATE_AMBIGUOUS",
+      error: `يوجد أكثر من نسخة للقالب "${name}" — حدد اللغة أو استخدم templateId (اللغات: ${available})`,
+      status: 400,
+    };
+  }
+
+  return assertTemplateUsable(match[0]);
+}
+
+// ─── Usability gate — لا تُستدعى إلا على قالب مؤكد الانتماء للمشروع ─────────
+function assertTemplateUsable(template: {
+  id: string; name: string; language: string; body: string;
+  metaTemplateId: string | null; status: string;
+}): TemplateResolution {
+  if (template.status !== "APPROVED") {
+    const statusMsg: Record<string, string> = {
+      LOCAL_DRAFT: `القالب "${template.name}" مسودة محلية — أرسله لـ Meta واعتمده أولًا ثم زامن القوالب`,
+      PENDING: `القالب "${template.name}" قيد مراجعة Meta — زامن القوالب بعد الموافقة ثم أعد المحاولة`,
+      REJECTED: `القالب "${template.name}" مرفوض من Meta — راجع سبب الرفض في صفحة القوالب`,
+      DISABLED: `القالب "${template.name}" معطّل حاليًا في Meta`,
+    };
+    return {
+      ok: false,
+      code: "TEMPLATE_NOT_APPROVED",
+      error: statusMsg[template.status] ?? `القالب "${template.name}" غير معتمد حاليًا (الحالة: ${template.status})`,
+      status: 400,
+    };
+  }
+  if (!template.metaTemplateId) {
+    return {
+      ok: false,
+      code: "TEMPLATE_NO_META_ID",
+      error: `القالب "${template.name}" معتمد لكن غير مرتبط بقالب Meta — زامن القوالب مع Meta أولًا`,
+      status: 400,
+    };
+  }
+  return {
+    ok: true,
+    template: {
+      id: template.id,
+      name: template.name,
+      language: template.language,
+      body: template.body,
+      metaTemplateId: template.metaTemplateId,
+    },
+  };
 }
 
 // ─── Send OTP via Meta WhatsApp Cloud API ─────────────────────────────────────
@@ -152,9 +266,11 @@ async function sendWhatsAppOtp(opts: {
 // ═══════════════════════════════════════════════════════════════════════════
 // POST /api/developers/otp/send
 //
-// Headers:  x-api-key: wani_live_xxxx
-// Body:     { phone, templateName, expiryMinutes? }
-// Response: { ok, token, expiresAt }
+// Headers:  x-api-key: wani_live_xxxx  → يحدد المشروع (لا يُقبل projectId من client)
+// Body:     { phone, templateId?, templateName?, language?, expiryMinutes? }
+//           - templateId: المسار الأساسي (Live Tester) — سجل القالب المحلي
+//           - templateName [+ language]: legacy متوافق للـ clients الخارجية
+// Response: { ok, token, expiresAt } | { ok: false, error, code }
 // ═══════════════════════════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   // ── 1. Auth ──────────────────────────────────────────────────────────────
@@ -167,9 +283,15 @@ export async function POST(req: NextRequest) {
   }
 
   const auth = await verifyApiKey(rawKey);
-  if (!auth) {
+  if (!auth || "error" in auth) {
+    if (auth && auth.error === "NO_META_CONNECTION") {
+      return NextResponse.json(
+        { ok: false, error: "ربط Meta غير مكتمل لهذا المشروع — اربط Meta من صفحة Overview أولًا", code: "NO_META_CONNECTION" },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي — تحقق من x-api-key" },
+      { ok: false, error: "API Key غير صحيح أو ملغي — تحقق من x-api-key", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -185,17 +307,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { phone, templateName, expiryMinutes = 10 } = body;
+  const { phone, templateId, templateName, language, expiryMinutes = 10 } = body;
 
   if (!phone) {
     return NextResponse.json(
-      { ok: false, error: "phone مطلوب" },
+      { ok: false, error: "phone مطلوب", code: "PHONE_REQUIRED" },
       { status: 400 }
     );
   }
-  if (!templateName) {
+  // المسار الأساسي templateId (Live Tester) — والـ legacy templateName للتوافق
+  if (!templateId && !templateName) {
     return NextResponse.json(
-      { ok: false, error: "templateName مطلوب — اسم القالب الـ APPROVED في Meta" },
+      { ok: false, error: "templateId مطلوب — أو templateName للقوالب المعتمدة", code: "TEMPLATE_REF_REQUIRED" },
       { status: 400 }
     );
   }
@@ -298,17 +421,18 @@ export async function POST(req: NextRequest) {
     incrementField = true;
   }
 
-  // ── 6. Resolve template ───────────────────────────────────────────────────
-  const template = await resolveTemplate(auth.projectId, templateName);
-  if (!template) {
+  // ── 6. Resolve template (المشروع من الـ API Key فقط) ────────────────────
+  // لا يُقبل أي projectId من الـ client — ولا يُجبر الـ backend على اسم مختلف.
+  const resolution = templateId
+    ? await resolveTemplateById(auth.projectId, String(templateId))
+    : await resolveTemplateByName(auth.projectId, String(templateName), language);
+  if (!resolution.ok) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: `القالب "${templateName}" مش موجود أو لسه ما اتوافقش من Meta (status يجب أن يكون APPROVED)`,
-      },
-      { status: 400 }
+      { ok: false, error: resolution.error, code: resolution.code },
+      { status: resolution.status }
     );
   }
+  const template = resolution.template;
 
   // ── 7. Generate OTP + token ───────────────────────────────────────────────
   const otpCode = generateOtp();

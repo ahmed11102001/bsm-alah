@@ -51,6 +51,7 @@ export async function POST(
       id: string;
       name: string;
       status: string;
+      category?: string;
       language: string;
       rejected_reason?: string;
     }> = metaData.data || [];
@@ -63,11 +64,15 @@ export async function POST(
       PAUSED:   "DISABLED",
     };
 
+    // تصنيفات Meta المعروفة — أي قيمة خارجها تُعامل كـ UTILITY
+    const KNOWN_CATEGORIES = new Set(["AUTHENTICATION", "UTILITY", "MARKETING"]);
+
     const localTemplates = await prisma.developerOtpTemplate.findMany({
       where: { projectId: id },
     });
 
     let updated = 0;
+    let imported = 0;
 
     for (const local of localTemplates) {
       const metaTmpl = local.metaTemplateId
@@ -98,7 +103,49 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ ok: true, updated, total: metaTemplates.length });
+    // ── استيراد قوالب Meta التي لا سجل محلي لها ──────────────────────────
+    // السبب: قالب APPROVED في Meta بلا سجل محلي كان سبب 400 دائم في الإرسال
+    // (resolveTemplate لا يرى إلا الجدول المحلي). الاستيراد ينشئ السجل بنفس
+    // الهوية (name + language) والحالة الحقيقية — بلا أي تجاوز للـ APPROVED.
+    const matchedMetaIds = new Set(
+      localTemplates
+        .map((l) => l.metaTemplateId)
+        .filter(Boolean) as string[]
+    );
+    const matchedNameLang = new Set(
+      localTemplates.map((l) => `${l.name}::${l.language}`)
+    );
+
+    for (const m of metaTemplates) {
+      if (!m.id || !m.name) continue;
+      if (matchedMetaIds.has(m.id)) continue;
+      if (matchedNameLang.has(`${m.name}::${m.language}`)) continue;
+
+      const category = m.category && KNOWN_CATEGORIES.has(m.category.toUpperCase())
+        ? m.category.toUpperCase()
+        : "UTILITY";
+      const isAuth = category === "AUTHENTICATION";
+
+      await prisma.developerOtpTemplate.create({
+        data: {
+          projectId: id,
+          name: m.name,
+          language: m.language,
+          category: category as any,
+          // قوالب AUTHENTICATION تخزن إعدادات OTP في body (JSON) حسب convention
+          // المشروع — المستورد منها يُعلَّم لمراجعته من صفحة القوالب.
+          body: isAuth ? JSON.stringify({ imported: true }) : "",
+          status: (statusMap[m.status] || "PENDING") as any,
+          metaTemplateId: m.id,
+          rejectedReason: m.status === "REJECTED" ? m.rejected_reason || "مرفوض من Meta" : null,
+        },
+      });
+      matchedMetaIds.add(m.id);
+      matchedNameLang.add(`${m.name}::${m.language}`);
+      imported++;
+    }
+
+    return NextResponse.json({ ok: true, updated, imported, total: metaTemplates.length });
   } catch (err) {
     console.error("[sync-templates]", err);
     return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
