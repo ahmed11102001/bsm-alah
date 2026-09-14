@@ -1,9 +1,11 @@
 // src/app/api/agent-beta/activate/route.ts
 // ─── تفعيل Agent Beta Access — لحظة بداية الـ 5 أيام ───────────────────
-// POST فقط، OWNER فقط، لمرة واحدة، Free/Go/Pro فقط.
+// POST فقط، OWNER فقط، لمرة واحدة، Free/Go/Pro فقط، وبشرط ربط واتساب فعلي
+// (حتى لا يبدأ العداد والعميل غير جاهز للاستخدام).
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { activateAgentBeta, getAgentBetaStatus } from "@/lib/plan-guard";
 import { notifyAgentBetaActivated } from "@/lib/notifications";
 
@@ -20,6 +22,29 @@ export async function POST() {
   }
 
   const ownerId = session.user.id as string;
+
+  // P1: لا تبدأ الـ 5 أيام إلا والعميل جاهز فعلاً — ربط ميتا سليم أولاً.
+  // الفحص هنا في السيرفر (لا يُعتمد على شرط الـ UI وحده).
+  const wa = await prisma.whatsAppAccount.findUnique({
+    where: { userId: ownerId },
+    select: { phoneNumberId: true, wabaId: true, tokenStatus: true },
+  });
+  const whatsappConnected = Boolean(
+    wa?.phoneNumberId &&
+    wa?.wabaId &&
+    (wa?.tokenStatus as string) !== "INVALID" &&
+    (wa?.tokenStatus as string) !== "EXPIRED"
+  );
+  if (!whatsappConnected) {
+    return NextResponse.json(
+      {
+        error: "اربط حساب واتساب أولاً — التفعيل يبدأ العداد فوراً ولا نريد أن يضيع منه",
+        reason: "whatsapp_not_connected",
+      },
+      { status: 409 }
+    );
+  }
+
   const result = await activateAgentBeta(ownerId);
 
   if (!result.ok) {

@@ -475,7 +475,7 @@ export default function DeviceNotificationModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl h-[calc(100dvh-2rem)] max-h-[760px] bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Top Gradient Bar */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366] flex-shrink-0" />
 
@@ -572,7 +572,7 @@ export default function DeviceNotificationModal({
         </div>
 
         {/* List of Notification Types with Checkboxes */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2.5 divide-y divide-gray-50 dark:divide-gray-800/40">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4 space-y-2.5 divide-y divide-border/40">
           {filteredNotifications.length === 0 ? (
             <div className="py-12 text-center text-gray-400 dark:text-gray-500">
               <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />

@@ -17,20 +17,32 @@ export async function GET() {
   const ownerId = resolveOwnerId(session);
   if (!ownerId) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-  const [beta, sub] = await Promise.all([
+  const [beta, sub, wa] = await Promise.all([
     getAgentBetaStatus(ownerId),
     prisma.subscription.findUnique({
       where: { userId: ownerId },
       select: { plan: true },
     }),
+    // P1: الجاهزية = ربط واتساب فعلي (نفس تعريف hasMetaConnection في الداشبورد)
+    prisma.whatsAppAccount.findUnique({
+      where: { userId: ownerId },
+      select: { phoneNumberId: true, wabaId: true, tokenStatus: true },
+    }),
   ]);
 
   const isEnterprise = (sub?.plan as string) === "enterprise";
+  const whatsappConnected = Boolean(
+    wa?.phoneNumberId &&
+    wa?.wabaId &&
+    (wa?.tokenStatus as string) !== "INVALID" &&
+    (wa?.tokenStatus as string) !== "EXPIRED"
+  );
   return NextResponse.json({
     ...beta,
     plan: (sub?.plan as string) ?? "free",
     isEnterprise,
-    // هل يحق له رؤية زر التفعيل؟
-    eligible: !isEnterprise && !beta.consumed && !beta.active,
+    whatsappConnected,
+    // هل يحق له رؤية زر التفعيل؟ — لا يبدأ العداد إلا والعميل جاهز (ربط ميتا).
+    eligible: !isEnterprise && !beta.consumed && !beta.active && whatsappConnected,
   });
 }

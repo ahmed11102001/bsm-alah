@@ -8,7 +8,7 @@ import {
   isUnlimited, limitLabel,
   type PlanTier,
 } from "@/lib/plans";
-import { notifyPlanLimitReached } from "@/lib/notifications";
+import { notifyPlanLimitReached, notifyAgentBetaEnded } from "@/lib/notifications";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -313,6 +313,113 @@ export async function activateAgentBeta(ownerId: string): Promise<{ ok: boolean;
     },
   });
   return { ok: true, reason: "activated", endsAt };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Agent Beta token ledger — حجز/خصم ذري (الحماية الفعلية للـ 30K)
+// ─────────────────────────────────────────────────────────────────────────────
+// المشكلة: نمط check-then-act (فحص ثم توليد ثم خصم) فيه TOCTOU — طلبان
+// متزامنان يعدّيان الفحص معاً ويتجاوزان الليميت. الحل: حجز ذري مسبق
+// عبر updateMany مشروط (used <= limit - estimated) في statement واحد.
+// التدفق الصحيح لكل مسار يستهلك Gemini في البيتا:
+//   1. reserveAgentBetaTokens(ownerId, estimated) قبل getAIReply
+//      → false = مرفوض فوراً (لا توليد، لا تكلفة)
+//   2. بعد getAIReply: settleAgentBetaTokens(ownerId, estimated, actual)
+//      → يرد الفرق (refund) أو يخصم الزيادة (delta، محدود بحجم الرد الواحد)
+// وبهذا لا يمكن تجاوز الليميت إلا بحد أقصى رد واحد متأخر — وليس بلا سقف.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * حجز ذري لتوكنز البيتا قبل التوليد. يرجع false لو:
+ * - البيتا غير سارية (منتهية/مستنفدة/غير مفعّلة)، أو
+ * - الرصيد المتبقي لا يكفي الـ estimated (شرط ذري في نفس الـ UPDATE).
+ */
+export async function reserveAgentBetaTokens(
+  ownerId: string,
+  estimatedTokens: number
+): Promise<{ ok: boolean; reason?: string }> {
+  if (estimatedTokens <= 0) return { ok: true };
+  const beta = await getAgentBetaStatus(ownerId);
+  if (!beta.active) return { ok: false, reason: beta.reason };
+  if (beta.remaining < estimatedTokens) return { ok: false, reason: "insufficient" };
+  // شرط ذري: لا تحجز إلا لو used الحالي يسمح — يمنع تجاوز السباق
+  const claimed = await prisma.subscription.updateMany({
+    where: {
+      userId: ownerId,
+      agentBetaConsumed: true,
+      agentBetaEndsAt: { gt: new Date() },
+      agentBetaTokensUsed: { lte: beta.limit - estimatedTokens },
+    },
+    data: { agentBetaTokensUsed: { increment: estimatedTokens } },
+  });
+  if (claimed.count === 0) {
+    // خسر السباق الذري (حد تاني حجز أولاً) — أعد القراءة للسبب الدقيق
+    const fresh = await getAgentBetaStatus(ownerId);
+    return { ok: false, reason: fresh.active ? "insufficient" : fresh.reason };
+  }
+  return { ok: true };
+}
+
+/**
+ * تسوية بعد التوليد: estimated كان محجوزاً مسبقاً.
+ * - actual < estimated → refund الفرق (decrement، بحد أدنى 0 عبر clamp لاحق).
+ * - actual > estimated → خصم delta (قد يتجاوز الليميت بحد أقصى حجم رد واحد فقط).
+ * - actual == estimated → لا شيء.
+ */
+export async function settleAgentBetaTokens(
+  ownerId: string,
+  estimatedTokens: number,
+  actualTokens: number
+): Promise<void> {
+  const delta = actualTokens - estimatedTokens;
+  if (delta === 0) return;
+  try {
+    if (delta < 0) {
+      await prisma.subscription.updateMany({
+        where: { userId: ownerId, agentBetaTokensUsed: { gte: -delta } },
+        data: { agentBetaTokensUsed: { decrement: -delta } },
+      });
+    } else {
+      await prisma.subscription.update({
+        where: { userId: ownerId },
+        data: { agentBetaTokensUsed: { increment: delta } },
+      });
+    }
+    // إشعار فوري عند النفاد (مرة واحدة) — لا تنتظر cron اليومي
+    const beta = await getAgentBetaStatus(ownerId);
+    if (beta.reason === "tokens_exhausted") {
+      const claim = await prisma.subscription.updateMany({
+        where: { userId: ownerId, agentBetaExpiredNotifiedAt: null },
+        data: { agentBetaExpiredNotifiedAt: new Date() },
+      });
+      if (claim.count) {
+        notifyAgentBetaEnded(ownerId, "tokens_exhausted").catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error(`[AGENT-BETA] settle failed for ${ownerId}:`, err);
+  }
+}
+
+/** مسار قديم/احتياطي: خصم مباشر بعد التوليد (يُستخدم فقط لو الحجز المسبق تعذّر).
+ *  مفضل دائماً استخدام reserve→settle. يُبقي الشرط الذري lte لمنع التجاوز الصامت. */
+export async function consumeAgentBetaTokensAtomic(
+  ownerId: string,
+  tokens: number
+): Promise<boolean> {
+  if (tokens <= 0) return true;
+  const beta = await getAgentBetaStatus(ownerId);
+  if (!beta.active) return false;
+  const claimed = await prisma.subscription.updateMany({
+    where: {
+      userId: ownerId,
+      agentBetaConsumed: true,
+      agentBetaEndsAt: { gt: new Date() },
+      agentBetaTokensUsed: { lte: beta.limit - tokens },
+    },
+    data: { agentBetaTokensUsed: { increment: tokens } },
+  });
+  return claimed.count > 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -628,6 +735,48 @@ export async function canViewAgentBeta(ownerId: string): Promise<boolean> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Agent Surface Entitlement — مصدر الحقيقة الوحيد لأسطح الإيجنت الثلاثة
+// (واجهة Agent + تفاصيل الاستهلاك + تقارير الأتمتة/AI).
+// القاعدة: نفس الدالة تُستخدم في API routes الثلاثة — لا منطق مكرر.
+// ═══════════════════════════════════════════════════════════════════════════════
+export type AgentSurfaceSource =
+  | "internal"      // superadmin أو isBetaUser داخلي — كل شيء مفتوح
+  | "enterprise"    // Max — يمتلك الإيجنت أصلاً
+  | "beta_active"   // بيتا سارية — استخدام كامل (5 أيام/30K)
+  | "beta_history"  // بيتا منتهية — عرض تاريخي فقط (تقارير/استهلاك)، لا استخدام
+  | "none";
+
+export type AgentSurfaceAccess = {
+  /** هل يحق له *استخدام* الإيجنت (توليد/إعدادات/معاينة)؟ */
+  canUse: boolean;
+  /** هل يحق له *رؤية* بيانات الإيجنت التاريخية (استهلاك/تقارير)؟ */
+  canViewHistory: boolean;
+  source: AgentSurfaceSource;
+};
+
+export async function getAgentSurfaceAccess(ownerId: string): Promise<AgentSurfaceAccess> {
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) {
+    return { canUse: true, canViewHistory: true, source: "internal" };
+  }
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: { plan: true, agentBetaConsumed: true },
+  });
+  if ((sub?.plan as string) === "enterprise") {
+    return { canUse: true, canViewHistory: true, source: "enterprise" };
+  }
+  const beta = await getAgentBetaStatus(ownerId);
+  if (beta.active) {
+    return { canUse: true, canViewHistory: true, source: "beta_active" };
+  }
+  if (beta.consumed) {
+    // انتهت (مدة أو توكنز): الإعدادات محفوظة والتاريخ مرئي — لكن لا استخدام جديد.
+    return { canUse: false, canViewHistory: true, source: "beta_history" };
+  }
+  return { canUse: false, canViewHistory: false, source: "none" };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 5. getPlanStatus — للعرض في الداشبورد (بيُستخدم في الـ UI لاحقاً)
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function getPlanStatus(ownerId: string) {
@@ -903,15 +1052,23 @@ export async function incrementAITokens(ownerId: string, tokens: number): Promis
     // ── Agent Beta Access: الخصم من عداد البيتا المعزول فقط ──
     // لا يخصم من أي AI allowance آخر. لو رقّى لـ Max أثناء البيتا،
     // المسار العادي للباقة هو المستخدم (monthlyLimit > 0) والبيتا تُتجاهل.
+    // ملحوظة: هذا مسار احتياطي (post-hoc). المسارات الساخنة (runner/nudge/preview)
+    // تستخدم reserve→settle الذري قبل التوليد — هذا هنا للتوافق الخلفي فقط.
     if (monthlyLimit === 0) {
       const beta = await getAgentBetaStatus(ownerId);
       if (beta.active) {
-        // ذري بسيط + cap دفاعي: لا يتجاوز الليميت بصمت عند السباق
-        await prisma.subscription.updateMany({
-          where: { userId: ownerId, agentBetaTokensUsed: { lt: beta.limit } },
-          data: { agentBetaTokensUsed: { increment: tokens } },
-        });
-        console.log(`[AI-TOKENS] userId=${ownerId} tokensUsed=${tokens} agentBetaUsage=${beta.used + tokens} bypassLimit=false beta=true`);
+        const ok = await consumeAgentBetaTokensAtomic(ownerId, tokens);
+        console.log(`[AI-TOKENS] userId=${ownerId} tokensUsed=${tokens} agentBetaUsage~${beta.used + tokens} bypassLimit=false beta=true consumed=${ok}`);
+        if (!ok) {
+          // فشل الخصم الذري = نفاد متزامن — أرسل تنبيه الانتهاء مرة واحدة
+          const claim = await prisma.subscription.updateMany({
+            where: { userId: ownerId, agentBetaExpiredNotifiedAt: null },
+            data: { agentBetaExpiredNotifiedAt: new Date() },
+          });
+          if (claim.count) {
+            notifyAgentBetaEnded(ownerId, "tokens_exhausted").catch(() => {});
+          }
+        }
         return;
       }
     }

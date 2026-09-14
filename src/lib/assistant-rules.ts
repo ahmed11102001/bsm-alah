@@ -165,6 +165,7 @@ export const ASSISTANT_RULES: AssistantRule[] = [
 
   // ── 🤖 INFO: Agent Beta Access — دعوة التفعيل (Free/Go/Pro فقط) ─────────
   // التفعيل بزر من المساعد — العداد يبدأ من لحظة الضغط، لمرة واحدة.
+  // P1: لا تُعرض الدعوة إلا والعميل جاهز (ربط واتساب سليم) حتى لا تضيع الأيام.
   {
     id:            "agent_beta_access",
     pages:         ["*"],
@@ -173,6 +174,7 @@ export const ASSISTANT_RULES: AssistantRule[] = [
     cooldownHours: 0,
     condition:     ctx => ctx.role !== "CHAT_ONLY"
       && ctx.planTier !== "enterprise"
+      && ctx.whatsappConnected === true
       && ctx.agentBetaEligible === true
       && ctx.agentBetaActive !== true,
     title:   { ar: "🤖 جرّب إيجنت وني مجاناً — Agent Beta Access", en: "🤖 Try Wani Agent free — Agent Beta Access" },

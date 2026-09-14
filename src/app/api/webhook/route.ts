@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { SHOPIFY_CREDENTIALS_SELECT } from "@/lib/shopify-auth";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
-import { checkFeature, checkAITokensLimit, incrementAITokens } from "@/lib/plan-guard";
+import { checkFeature, checkAITokensLimit, incrementAITokens, getAgentBetaStatus } from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType, TriggerType, ReplyType } from "@/types/enums";
 import {
   notifyNewMessage,
@@ -791,7 +791,10 @@ async function handleAutomation(ctx: {
       where: { userId },
       select: { provider: true },
     });
-    const provider = providerRow?.provider ?? "gemini";
+    // P0: البيتا تجبر Gemini — قراءة provider الخام هنا كانت تفتح مسار
+    // Whisper/OpenAI (بلا سقف بيتا) لعميل بيتا حفظ openai قبل التفعيل.
+    const betaWhisper = await getAgentBetaStatus(userId).catch(() => null);
+    const provider = betaWhisper?.active ? "gemini" : (providerRow?.provider ?? "gemini");
 
     if (provider !== "openai") {
       // TODO: تفعيل تحليل Gemini الأصلي للصوت/الصورة لاحقاً
@@ -816,7 +819,8 @@ async function handleAutomation(ctx: {
       // بيستخدم صوت من غير حد.
       if (transcription.durationSeconds) {
         const estimatedTokens = estimateWhisperTokens(transcription.durationSeconds);
-        void incrementAITokens(userId, estimatedTokens);
+        // P0: awaited — النسخة fire-and-forget كانت تخفي فشل الخصم من الكوتا.
+        await incrementAITokens(userId, estimatedTokens);
         console.log(`[WHISPER] ~${estimatedTokens} token-equivalent خصمت (${transcription.durationSeconds.toFixed(1)}s)`);
       }
     }

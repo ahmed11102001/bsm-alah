@@ -617,7 +617,15 @@ export const aiTokensLowCheck = inngest.createFunction(
 // - متبقي يومين / يوم واحد → تنبيه اقتراب الانتهاء
 // - متبقي <= 5K توكن → تنبيه انخفاض التوكنز
 // - انتهت (مدة أو توكنز) → تنبيه انتهاء مرة واحدة + CTA ترقية Max
-// ملحوظة: القفل نفسه lazy في plan-guard (getAgentBetaStatus) — الكرون للتنبيهات فقط.
+//
+// ضمانات الانتهاء (P1):
+// - القفل نفسه lazy في plan-guard عبر getAgentBetaStatus (مقاربة بالوقت الحالي
+//   والعداد) — يسري فور انتهاء الـ 5 أيام/30K على كل المسارات (runner/nudge/
+//   preview/APIs/UI)، بلا انتظار لهذا الكرون.
+// - هذا الكرون للتنبيهات فقط: لا يمس plan/status/limits ولا إعدادات AIAgent
+//   إطلاقاً — يكتب agentBetaExpiredNotifiedAt فقط (claim ذري مرة واحدة).
+// - من رقّى إلى Max أثناء البيتا يُستبعد (plan != enterprise) — يمتلك الإيجنت
+//   أصلاً فلا تنبيه انتهاء له.
 // ═══════════════════════════════════════════════════════════════════════════════
 export const agentBetaExpiryDaily = inngest.createFunction(
   {
@@ -674,17 +682,24 @@ export const agentBetaExpiryDaily = inngest.createFunction(
         if (tokensExhausted || timeExpired) continue;
 
         // اقتراب الانتهاء: يومين أو أقل
+        // P1: فلترة meta.kind في JS (لا تعتمد على JSON path في Prisma) حتى لا
+        // يمنع تنبيه اشتراك/توكنز حقيقي تنبيه البيتا أو العكس.
         const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
         if (daysLeft <= 2 && daysLeft >= 0) {
-          const recent = await prisma.notification.findFirst({
+          const recentSameKind = await prisma.notification.findMany({
             where: {
               userId: sub.userId,
               type: "SUBSCRIPTION_EXPIRING",
               createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
-              // @ts-ignore — فلترة JSON غير مدعومة بدقة هنا، نكتفي بالحد الزمني
             },
+            select: { meta: true },
+            take: 10,
           });
-          if (!recent) {
+          const alreadySent = recentSameKind.some(n => {
+            const m = n.meta as any;
+            return m && typeof m === "object" && (m as any).kind === "agent_beta_expiring";
+          });
+          if (!alreadySent) {
             await notifyAgentBetaExpiring(sub.userId, Math.max(0, daysLeft));
             expiring++;
           }
@@ -692,14 +707,20 @@ export const agentBetaExpiryDaily = inngest.createFunction(
 
         // انخفاض التوكنز: <= 5K
         if (remaining <= 5000 && remaining > 0) {
-          const recentLow = await prisma.notification.findFirst({
+          const recentLowSameKind = await prisma.notification.findMany({
             where: {
               userId: sub.userId,
               type: "AI_TOKENS_LOW",
               createdAt: { gte: new Date(now.getTime() - 20 * 60 * 60 * 1000) },
             },
+            select: { meta: true },
+            take: 10,
           });
-          if (!recentLow) {
+          const alreadySentLow = recentLowSameKind.some(n => {
+            const m = n.meta as any;
+            return m && typeof m === "object" && (m as any).kind === "agent_beta_low_tokens";
+          });
+          if (!alreadySentLow) {
             await notifyAgentBetaLowTokens(sub.userId, remaining);
             lowTokens++;
           }

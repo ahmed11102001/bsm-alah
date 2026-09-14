@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { decryptToken, isEncrypted } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
-import { checkAITokensLimit, incrementAITokens, getAgentBetaStatus } from "@/lib/plan-guard";
+import { checkAITokensLimit, incrementAITokens, getAgentBetaStatus, reserveAgentBetaTokens, settleAgentBetaTokens } from "@/lib/plan-guard";
 import { uploadAudioToCloudinary } from "@/lib/elevenlabs";
 import { runConvaiVoiceReply, type ConvaiContextMessage } from "@/lib/elevenlabs-convai-runner";
 import {
@@ -120,9 +120,14 @@ export async function runAIAgentReply(
   // (الحفظ في PUT يُجبر أيضاً — ده خط دفاع ثانٍ لو الداتا قديمة).
   let effectiveProvider = agent.provider as "gemini" | "openai";
   let isVoiceOutEnabled: boolean;
+  // هل هذا التشغيل على عداد البيتا المعزول؟ (يُستخدم للحجز الذري المسبق)
+  let isBetaMetered = false;
+  // مقدار محجوز مسبقاً من عداد البيتا قبل التوليد (يُسوّى بعده بالفعلي)
+  let betaReservedTokens = 0;
   {
     const betaRt = await getAgentBetaStatus(userId).catch(() => null);
     const isBetaOnlyRt = betaRt?.active === true;
+    isBetaMetered = isBetaOnlyRt;
     if (isBetaOnlyRt) effectiveProvider = "gemini";
     const voiceApiKeyRt = agent.elevenLabsApiKey
       ? (isEncrypted(agent.elevenLabsApiKey) ? decryptToken(agent.elevenLabsApiKey) : agent.elevenLabsApiKey)
@@ -144,11 +149,24 @@ export async function runAIAgentReply(
   // فحص حصة توكنز Wani يمنعه أو يأثر عليه. (أثناء Agent Beta: isVoiceOutEnabled=false إجبارياً).
 
   // فحص حصة الـ AI Tokens (Plan Guard) — بيأثر على قناة النص بس (اللي بتستخدم Wani AI فعلياً)
+  // P0: مسار البيتا يحجز ذرياً *قبل* التوليد (reserve→settle) بدل check-then-act،
+  // وإلا طلبان متزامنان يعدّيان الفحص معاً ويتجاوزان الـ 30K.
+  const BETA_ESTIMATED_TOKENS = 1500;
   if (isTextOutEnabled) {
-    const aiPlanGuard = await checkAITokensLimit(userId);
-    if (!aiPlanGuard.allowed) {
-      console.log(`[AI-AGENT] Text channel blocked — token limit reached for ${userId}`);
-      isTextOutEnabled = false;
+    if (isBetaMetered) {
+      const reservation = await reserveAgentBetaTokens(userId, BETA_ESTIMATED_TOKENS);
+      if (!reservation.ok) {
+        console.log(`[AI-AGENT] Text channel blocked — agent beta quota exhausted for ${userId} (${reservation.reason})`);
+        isTextOutEnabled = false;
+      } else {
+        betaReservedTokens = BETA_ESTIMATED_TOKENS;
+      }
+    } else {
+      const aiPlanGuard = await checkAITokensLimit(userId);
+      if (!aiPlanGuard.allowed) {
+        console.log(`[AI-AGENT] Text channel blocked — token limit reached for ${userId}`);
+        isTextOutEnabled = false;
+      }
     }
   }
 
@@ -351,12 +369,30 @@ export async function runAIAgentReply(
 
   if (!textResult.ok) {
     console.error(`[AI-AGENT] Text generation error (voice channel unaffected):`, textResult.error);
+    // التوليد فشل بعد الحجز → رد الحجز كاملاً
+    if (isBetaMetered && betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, 0);
+      betaReservedTokens = 0;
+    }
   } else if (textResult.offTopic) {
     console.log(
       `[AI-AGENT] Off-topic — no text reply sent for "${combinedSearchText}"`
     );
+    // لا رد مرسل لكن التوليد استهلك توكنز → سوِّ بالفعلي الحقيقي
+    if (isBetaMetered && betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, textResult.tokensUsed ?? 0);
+      betaReservedTokens = 0;
+    } else if (textResult.tokensUsed) {
+      await incrementAITokens(userId, textResult.tokensUsed);
+    }
   } else if (!textResult.reply?.trim()) {
     console.log(`[AI-AGENT] Empty text reply — skipping text channel only`);
+    if (isBetaMetered && betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, textResult.tokensUsed ?? 0);
+      betaReservedTokens = 0;
+    } else if (textResult.tokensUsed) {
+      await incrementAITokens(userId, textResult.tokensUsed);
+    }
   } else {
   const result = textResult;
 
@@ -402,9 +438,18 @@ export async function runAIAgentReply(
     }
   }
 
-  // 10. تسجيل استهلاك التوكنز
+  // 10. تسجيل استهلاك التوكنز (awaited — fire-and-forget هنا كان يخفي فشل الخصم)
+  // مسار البيتا: تسوية الحجز المسبق بالفعلي. غيره: خصم عادي منتظر.
   if (result.tokensUsed) {
-    void incrementAITokens(userId, result.tokensUsed);
+    if (isBetaMetered && betaReservedTokens > 0) {
+      await settleAgentBetaTokens(userId, betaReservedTokens, result.tokensUsed);
+    } else {
+      await incrementAITokens(userId, result.tokensUsed);
+    }
+  } else if (isBetaMetered && betaReservedTokens > 0) {
+    // التوليد فشل/رجع بدون توكنز → رد الحجز كاملاً حتى لا يأكل الرصيد
+    await settleAgentBetaTokens(userId, betaReservedTokens, 0);
+    betaReservedTokens = 0;
   }
 
   // 11. استخراج صورة أول منتج متطابق (Product Image Resolution)

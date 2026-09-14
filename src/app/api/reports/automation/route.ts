@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { getAgentSurfaceAccess } from "@/lib/plan-guard";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function resolveUserId(session: any): string {
@@ -56,6 +57,13 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const range = dateRange(from, to);
+
+    // ── P0: Agent surface entitlement — نفس مصدر الحقيقة للأسطح الثلاثة ──
+    // بدون استحقاق إيجنت (لا Max ولا بيتا سابقة/سارية): تُخفى أقسام الـ AI
+    // فقط (AI rules/aiMetrics/history)، وتظل تقارير البوت العامة شغالة —
+    // حتى لا نكسر سلوك Free/Go/Pro الحالي في تقارير الأتمتة العامة.
+    const agentAccess = await getAgentSurfaceAccess(userId);
+    const showAiSections = agentAccess.canViewHistory;
 
     // ── 1. Fetch all automation sources in parallel ──────────────────────────
     const [
@@ -535,15 +543,37 @@ export async function GET(req: NextRequest) {
     };
 
     // ── Return ───────────────────────────────────────────────────────────────
+    // P0: بلا استحقاق إيجنت — أخفِ أقسام AI (قواعد AI + مقاييس AI) وأبقِ الباقي.
+    const visibleRules = showAiSections
+      ? rulesResult
+      : rulesResult.filter(r => r.type !== "AI Agent");
+    const visibleTopAutomations = showAiSections
+      ? topAutomations
+      : topAutomations.filter(t => t.name !== "AI Agent");
     return NextResponse.json({
-      kpis,
-      rules: rulesResult,
+      kpis: showAiSections ? kpis : {
+        ...kpis,
+        totalAutomations: visibleRules.length,
+        activeAutomations: visibleRules.filter(r => r.isEnabled).length,
+        stoppedAutomations: visibleRules.filter(r => !r.isEnabled).length,
+      },
+      rules: visibleRules,
       errorLog,
-      topAutomations,
-      aiMetrics,
+      topAutomations: visibleTopAutomations,
+      aiMetrics: showAiSections ? aiMetrics : {
+        avgResponseTime: "—",
+        fastestResponse: "—",
+        slowestResponse: "—",
+        aiRepliesCount: 0,
+        aiSuccessRate: 0,
+        humanHandoffs: 0,
+        locked: true,
+        requiredPlan: "enterprise",
+      },
       timeSaved,
       timeline,
       funnel,
+      agentAccess: { canViewHistory: showAiSections, source: agentAccess.source },
     });
 
   } catch (err) {

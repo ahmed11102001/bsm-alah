@@ -5,7 +5,15 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
 import { getRelevantProducts } from "@/lib/product-search";
-import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import {
+  checkFeature,
+  guardResponse,
+  checkAITokensLimit,
+  reserveAgentBetaTokens,
+  settleAgentBetaTokens,
+  incrementAITokens,
+  getAgentBetaStatus,
+} from "@/lib/plan-guard";
 import { requirePermission } from "@/lib/permissions";
 
 async function resolveUserId(session: any): Promise<string | null> {
@@ -27,9 +35,31 @@ export async function POST(req: NextRequest) {
   const userId = await resolveUserId(session);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const aiGuard = await checkFeature(userId, "aiAgent");
+    const aiGuard = await checkFeature(userId, "aiAgent");
   const aiBlocked = guardResponse(aiGuard);
   if (aiBlocked) return aiBlocked;
+
+  // ── P0: المعاينة توليد Gemini حقيقي — كانت بلا فحص كوتا ولا خصم ──────
+  // البيتا: حجز ذري من الـ 30K قبل التوليد. غيرها: فحص الكوتا الشهرية.
+  const betaPreview = await getAgentBetaStatus(userId).catch(() => null);
+  const isBetaMeteredPreview = betaPreview?.active === true;
+  const PREVIEW_ESTIMATED_TOKENS = 1500;
+  if (isBetaMeteredPreview) {
+    const reservation = await reserveAgentBetaTokens(userId, PREVIEW_ESTIMATED_TOKENS);
+    if (!reservation.ok) {
+      return NextResponse.json(
+        {
+          error: "انتهت توكنز تجربة Agent Beta Access (30K). رقِّ إلى باقة Max لمتابعة استخدام إيجنت وني.",
+          code: "LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
+  } else {
+    const quota = await checkAITokensLimit(userId, PREVIEW_ESTIMATED_TOKENS);
+    const quotaBlocked = guardResponse(quota);
+    if (quotaBlocked) return quotaBlocked;
+  }
 
   try {
     const body = await req.json();
@@ -124,8 +154,17 @@ export async function POST(req: NextRequest) {
           : undefined,
         guardrails: guardrails ?? undefined,
       },
-      agent.provider as "gemini" | "openai"
+      // البيتا: Gemini فقط حتى لو المحفوظ openai
+      isBetaMeteredPreview ? "gemini" : (agent.provider as "gemini" | "openai")
     );
+
+    // ── P0: تسوية/خصم فعلي (كانت غائبة) ────────────────────────────────
+    const actualPreview = result.tokensUsed ?? 0;
+    if (isBetaMeteredPreview) {
+      await settleAgentBetaTokens(userId, PREVIEW_ESTIMATED_TOKENS, result.ok ? actualPreview : 0);
+    } else if (result.ok && actualPreview > 0) {
+      await incrementAITokens(userId, actualPreview);
+    }
 
     // Resolve images for product_ids if any
     let matchedProducts: any[] = [];

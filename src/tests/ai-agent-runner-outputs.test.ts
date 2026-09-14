@@ -36,6 +36,9 @@ vi.mock("@/lib/crypto", () => ({
 vi.mock("@/lib/plan-guard", () => ({
   checkAITokensLimit: vi.fn().mockResolvedValue({ allowed: true }),
   incrementAITokens: vi.fn().mockResolvedValue(undefined),
+  getAgentBetaStatus: vi.fn().mockResolvedValue({ active: false }),
+  reserveAgentBetaTokens: vi.fn().mockResolvedValue({ ok: true }),
+  settleAgentBetaTokens: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/notifications", () => ({
   notifyAiHandoffNeeded: vi.fn(),

@@ -14,6 +14,14 @@ import prisma from "@/lib/prisma";
 import { decryptToken } from "@/lib/crypto";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-api";
 import { getAIReply, type ConversationMessage } from "@/lib/ai-agent";
+import {
+  checkFeature,
+  checkAITokensLimit,
+  reserveAgentBetaTokens,
+  settleAgentBetaTokens,
+  incrementAITokens,
+  getAgentBetaStatus,
+} from "@/lib/plan-guard";
 import { MessageDirection, MessageStatus, MessageType, MessageSenderType } from "@/types/enums";
 
 const NUDGE_DELAY = "2m";           // ابدأ بدقيقتين — عدّلها حسب الـ latency الفعلي للـ queue
@@ -39,6 +47,26 @@ async function generateNudgeMessage(
   });
 
   if (!agent?.isEnabled) return { ok: false };
+
+  // ── P0: بوابة الاستحقاق + الكوتا قبل أي توليد ──────────────────────────
+  // الـ nudge استهلاك Gemini حقيقي — كان يتجاوز الكوتا تماماً (لا فحص ولا خصم).
+  // نفس entitlement الواجهة: checkFeature(aiAgent) يفتح البيتا السارية تلقائياً.
+  const entitlement = await checkFeature(userId, "aiAgent" as any).catch(() => null);
+  if (entitlement && !entitlement.allowed) return { ok: false };
+
+  // البيتا: Gemini فقط (يجبر provider) + حجز ذري مسبق من الـ 30K.
+  // غير البيتا: فحص الكوتا الشهرية العادية.
+  const beta = await getAgentBetaStatus(userId).catch(() => null);
+  const isBetaMetered = beta?.active === true;
+  const effectiveProvider = isBetaMetered ? "gemini" : agent.provider;
+  const NUDGE_ESTIMATED_TOKENS = 800;
+  if (isBetaMetered) {
+    const reservation = await reserveAgentBetaTokens(userId, NUDGE_ESTIMATED_TOKENS);
+    if (!reservation.ok) return { ok: false };
+  } else {
+    const quota = await checkAITokensLimit(userId, NUDGE_ESTIMATED_TOKENS).catch(() => null);
+    if (quota && !quota.allowed) return { ok: false };
+  }
 
   const recentMsgs = await prisma.message.findMany({
     where: { contactId, type: MessageType.text },
@@ -72,11 +100,19 @@ async function generateNudgeMessage(
       languageMode: agent.languageMode,
       systemPrompt: [agent.systemPrompt, nudgeInstruction].filter(Boolean).join("\n\n"),
     },
-    agent.provider as "gemini" | "openai",
+    effectiveProvider as "gemini" | "openai",
   );
 
+  // ── P0: محاسبة فعلية (كانت غائبة تماماً) ──────────────────────────────
+  const actual = result.tokensUsed ?? 0;
+  if (isBetaMetered) {
+    await settleAgentBetaTokens(userId, NUDGE_ESTIMATED_TOKENS, result.ok ? actual : 0);
+  } else if (result.ok && actual > 0) {
+    await incrementAITokens(userId, actual);
+  }
+
   if (!result.ok || !result.reply?.trim()) return { ok: false };
-  return { ok: true, text: result.reply.trim(), tokensUsed: result.tokensUsed };
+  return { ok: true, text: result.reply.trim(), tokensUsed: actual };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

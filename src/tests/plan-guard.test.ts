@@ -13,6 +13,8 @@ const mockPrisma = {
   subscription: {
     findUnique: vi.fn(),
     update:     vi.fn(),
+    updateMany: vi.fn(),
+    upsert:     vi.fn(),
     create:     vi.fn(),
   },
   user: {
@@ -30,6 +32,7 @@ const mockPrisma = {
 vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 vi.mock("@/lib/notifications", () => ({
   notifyPlanLimitReached: vi.fn(),
+  notifyAgentBetaEnded: vi.fn().mockResolvedValue(undefined),
 }));
 
 const {
@@ -42,6 +45,11 @@ const {
   guardResponse,
   checkAITokensLimit,
   incrementAITokens,
+  getAgentBetaStatus,
+  reserveAgentBetaTokens,
+  settleAgentBetaTokens,
+  consumeAgentBetaTokensAtomic,
+  getAgentSurfaceAccess,
 } = await import("@/lib/plan-guard");
 
 // ─── Helper: اعمل subscription stub ──────────────────────────────────────────
@@ -616,6 +624,160 @@ describe("incrementAITokens — فصل Usage Tracking عن Limit Enforcement", (
         where: { userId: "user_reset_1" },
         data: expect.objectContaining({
           aiTokensUsedThisMonth: { increment: 5000 },
+        }),
+      })
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("Agent Beta Access — العداد المعزول والحجز الذري (P0)", () => {
+  const now = new Date();
+  const future = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const past = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+
+  function makeBetaSub(overrides = {}) {
+    return makeSub("free", {
+      agentBetaStartedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+      agentBetaEndsAt: future,
+      agentBetaTokensLimit: 30_000,
+      agentBetaTokensUsed: 10_000,
+      agentBetaConsumed: true,
+      ...overrides,
+    });
+  }
+
+  it("بيتا سارية على Free → checkFeature(aiAgent) مسموح", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    const r = await checkFeature("beta_user", "aiAgent");
+    expect(r.allowed).toBe(true);
+  });
+
+  it("بيتا سارية → باقي المميزات تفضل مقفولة (storeIntegration)", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    const r = await checkFeature("beta_user", "storeIntegration");
+    expect(r.allowed).toBe(false);
+  });
+
+  it("بيتا منتهية المدة → checkFeature(aiAgent) مرفوض + CTA enterprise", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeBetaSub({ agentBetaEndsAt: past })
+    );
+    const r = await checkFeature("beta_user", "aiAgent");
+    expect(r.allowed).toBe(false);
+    if (!r.allowed) expect(r.requiredPlan).toBe("enterprise");
+  });
+
+  it("بيتا مستنفدة التوكنز → checkFeature(aiAgent) مرفوض LIMIT_REACHED", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeBetaSub({ agentBetaTokensUsed: 30_000 })
+    );
+    const r = await checkFeature("beta_user", "aiAgent");
+    expect(r.allowed).toBe(false);
+    if (!r.allowed) expect(r.code).toBe("LIMIT_REACHED");
+  });
+
+  it("reserve: رصيد كافٍ → حجز ذري واحد بشرط lte", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    mockPrisma.subscription.updateMany.mockResolvedValue({ count: 1 });
+    const r = await reserveAgentBetaTokens("beta_user", 1500);
+    expect(r.ok).toBe(true);
+    expect(mockPrisma.subscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: "beta_user",
+          agentBetaTokensUsed: { lte: 30_000 - 1500 },
+        }),
+        data: { agentBetaTokensUsed: { increment: 1500 } },
+      })
+    );
+  });
+
+  it("reserve: رصيد غير كافٍ → رفض بدون أي UPDATE", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeBetaSub({ agentBetaTokensUsed: 29_500 })
+    );
+    mockPrisma.subscription.updateMany.mockClear();
+    const r = await reserveAgentBetaTokens("beta_user", 1500);
+    expect(r.ok).toBe(false);
+    expect(mockPrisma.subscription.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("reserve: خسارة السباق الذري (count=0) → رفض", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    mockPrisma.subscription.updateMany.mockResolvedValue({ count: 0 });
+    const r = await reserveAgentBetaTokens("beta_user", 1500);
+    expect(r.ok).toBe(false);
+  });
+
+  it("settle: فعلي أقل من المحجوز → refund الفرق", async () => {
+    mockPrisma.subscription.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    await settleAgentBetaTokens("beta_user", 1500, 400);
+    expect(mockPrisma.subscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { agentBetaTokensUsed: { decrement: 1100 } },
+      })
+    );
+  });
+
+  it("checkAITokensLimit على Free مع بيتا سارية ورصيد كافٍ → مسموح", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    const r = await checkAITokensLimit("beta_user", 1500);
+    expect(r.allowed).toBe(true);
+  });
+
+  it("checkAITokensLimit على Free مع بيتا ورصيد غير كافٍ → مرفوض", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeBetaSub({ agentBetaTokensUsed: 29_900 })
+    );
+    const r = await checkAITokensLimit("beta_user", 1500);
+    expect(r.allowed).toBe(false);
+  });
+
+  it("getAgentSurfaceAccess: enterprise → enterprise/canUse", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeSub("enterprise"));
+    const a = await getAgentSurfaceAccess("ent_user");
+    expect(a).toEqual({ canUse: true, canViewHistory: true, source: "enterprise" });
+  });
+
+  it("getAgentSurfaceAccess: بيتا سارية → beta_active/canUse", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    const a = await getAgentSurfaceAccess("beta_user");
+    expect(a.source).toBe("beta_active");
+    expect(a.canUse).toBe(true);
+  });
+
+  it("getAgentSurfaceAccess: بيتا منتهية → beta_history (عرض فقط بلا استخدام)", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeBetaSub({ agentBetaEndsAt: past })
+    );
+    const a = await getAgentSurfaceAccess("beta_user");
+    expect(a).toEqual({ canUse: false, canViewHistory: true, source: "beta_history" });
+  });
+
+  it("getAgentSurfaceAccess: بلا بيتا → none", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(
+      makeSub("free", {
+        agentBetaConsumed: false,
+        agentBetaStartedAt: null,
+        agentBetaEndsAt: null,
+        agentBetaTokensUsed: 0,
+      })
+    );
+    const a = await getAgentSurfaceAccess("plain_user");
+    expect(a).toEqual({ canUse: false, canViewHistory: false, source: "none" });
+  });
+
+  it("consumeAgentBetaTokensAtomic: شرط ذري lte يُطبق", async () => {
+    mockPrisma.subscription.findUnique.mockResolvedValue(makeBetaSub());
+    mockPrisma.subscription.updateMany.mockResolvedValue({ count: 1 });
+    const ok = await consumeAgentBetaTokensAtomic("beta_user", 2000);
+    expect(ok).toBe(true);
+    expect(mockPrisma.subscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          agentBetaTokensUsed: { lte: 28_000 },
         }),
       })
     );
