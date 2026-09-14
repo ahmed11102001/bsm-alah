@@ -5,8 +5,8 @@ export const STATUS_CONFIG: Record<TemplateStatus, { icon: React.ReactNode; cls:
     APPROVED: { icon: <CheckCircle2 className="w-3 h-3" />, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700", dot: "bg-emerald-500" },
     PENDING: { icon: <Clock className="w-3 h-3" />, cls: "bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:border-amber-700", dot: "bg-amber-400" },
     REJECTED: { icon: <XCircle className="w-3 h-3" />, cls: "bg-red-50    text-red-700    border-red-200    dark:bg-red-900/30    dark:text-red-300    dark:border-red-700", dot: "bg-red-500" },
-    PAUSED: { icon: <Ban className="w-3 h-3" />, cls: "bg-gray-100  text-gray-600   border-gray-200   dark:bg-gray-700      dark:text-gray-400   dark:border-gray-600", dot: "bg-gray-400" },
-    NOT_SENT: { icon: <FileText className="w-3 h-3" />, cls: "bg-gray-50   text-gray-500   border-gray-200   dark:bg-gray-700/50    dark:text-gray-400   dark:border-gray-600", dot: "bg-gray-300" },
+    PAUSED: { icon: <Ban className="w-3 h-3" />, cls: "bg-muted text-muted-foreground border-border", dot: "bg-muted-foreground" },
+    NOT_SENT: { icon: <FileText className="w-3 h-3" />, cls: "bg-muted/70 text-muted-foreground border-border", dot: "bg-muted-foreground/60" },
 };
 
 export const CATEGORY_CONFIG: Record<TemplateCategory, { icon: React.ReactNode; cls: string; label_ar: string }> = {

@@ -189,12 +189,12 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t.subtitle}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t.subtitle}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSync} disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all disabled:opacity-50">
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-xl hover:bg-muted transition-all disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? t.syncing : t.syncBtn}
           </button>
@@ -213,15 +213,15 @@ export default function TemplatesPage() {
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: t.stats.total, value: stats.total, cls: "text-gray-800 dark:text-white", icon: <LayoutGrid className="w-4 h-4 text-gray-400" /> },
+          { label: t.stats.total, value: stats.total, cls: "text-foreground", icon: <LayoutGrid className="w-4 h-4 text-muted-foreground" /> },
           { label: t.stats.approved, value: stats.approved, cls: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" /> },
           { label: t.stats.pending, value: stats.pending, cls: "text-amber-700  dark:text-amber-400", icon: <Clock className="w-4 h-4 text-amber-500" /> },
         ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div key={s.label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 shadow-sm">
             {s.icon}
             <div>
               <p className={`text-xl font-bold leading-none ${s.cls}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{s.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
@@ -230,31 +230,31 @@ export default function TemplatesPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={t.filters.search}
-            className="pr-9 text-sm dark:bg-gray-800 dark:border-gray-700" />
+            className="pr-9 text-sm bg-background border-border" />
         </div>
 
         {/* Status filter — الكل/مقبول/قيد المراجعة فقط (مرفوض/متوقف خارج الفلاتر السريعة) */}
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <div className="flex gap-1 bg-muted rounded-xl p-1">
           {["ALL", "APPROVED", "PENDING"].map(s => (
             <button key={s}
               onClick={() => setFilterStatus(s)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all
-                ${filterStatus === s ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                ${filterStatus === s ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {s === "ALL" ? t.filters.all : t.status[s as TemplateStatus]}
             </button>
           ))}
         </div>
 
         {/* Category filter */}
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <div className="flex gap-1 bg-muted rounded-xl p-1">
           {["ALL", "MARKETING", "UTILITY", "AUTHENTICATION"].map(c => (
             <button key={c}
               onClick={() => setFilterCat(c)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all
-                ${filterCat === c ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                ${filterCat === c ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {c === "ALL" ? t.filters.all : t.category[c as TemplateCategory]}
             </button>
           ))}
@@ -263,34 +263,34 @@ export default function TemplatesPage() {
 
       {/* My Templates Table */}
       <div>
-        <p className="text-sm font-bold text-gray-800 dark:text-white mb-3">{t.myTemplates}</p>
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+        <p className="text-sm font-bold text-foreground mb-3">{t.myTemplates}</p>
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           {loading ? (
             <div className="p-3"><TableRowsSkeleton rows={5} bare cols={2} /></div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+              <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-muted-foreground/40" />
               </div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300">{t.empty}</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t.emptyHint}</p>
+              <p className="font-semibold text-foreground/80">{t.empty}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t.emptyHint}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                  <tr className="border-b border-border bg-muted/70">
                     {[t.table.name, t.table.category, t.table.language, t.table.updated, t.table.status, ""].map((h, i) => (
-                      <th key={i} className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      <th key={i} className="text-right px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                <tbody className="divide-y divide-border/60">
                   {filtered.map(tpl => (
                     <tr key={tpl.id} onClick={() => setDetailTpl(tpl)}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors cursor-pointer group">
+                      className="hover:bg-muted/60 transition-colors cursor-pointer group">
                       <td className="px-4 py-3.5">
-                        <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
+                        <span className="font-mono text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                           {tpl.name}
                         </span>
                         {(tpl.isCurrentAccount === false) ? (
@@ -302,25 +302,25 @@ export default function TemplatesPage() {
                             {lang === "ar" ? "الحساب الحالي" : "Current account"}
                           </span>
                         ) : (
-                          <span className="mt-1 block w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                          <span className="mt-1 block w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
                             {lang === "ar" ? "قديم — غير منسوب" : "Legacy — unattributed"}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3.5"><CategoryBadge category={tpl.category} lang={lang} /></td>
                       <td className="px-4 py-3.5">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           {tpl.language === "ar" ? "🇸🇦" : "🇬🇧"} {tpl.language}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">{tpl.updatedAt ?? "—"}</span>
+                        <span className="text-xs text-muted-foreground">{tpl.updatedAt ?? "—"}</span>
                       </td>
                       <td className="px-4 py-3.5">
                         <StatusBadge status={tpl.status} label={t.status[tpl.status]} />
                       </td>
                       <td className="px-4 py-3.5">
-                        <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
+                        <ChevronLeft className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
                       </td>
                     </tr>
                   ))}
@@ -348,12 +348,12 @@ export default function TemplatesPage() {
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6" dir={dir}>
       {/* Breadcrumb & Language Toggle */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <button onClick={() => setView("list")} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button onClick={() => setView("list")} className="hover:text-foreground transition-colors">
             {t.title}
           </button>
           <ChevronLeft className="w-3.5 h-3.5" />
-          <span className="text-gray-900 dark:text-white font-medium">{t.waniLibraryBtn}</span>
+          <span className="text-foreground font-medium">{t.waniLibraryBtn}</span>
         </div>
 
       </div>
@@ -365,8 +365,8 @@ export default function TemplatesPage() {
             <Package className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.storeGroupTitle}</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{t.storeGroupDesc}</p>
+            <h2 className="text-base font-bold text-foreground leading-tight">{t.storeGroupTitle}</h2>
+            <p className="text-xs text-muted-foreground">{t.storeGroupDesc}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -394,8 +394,8 @@ export default function TemplatesPage() {
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.followupGroupTitle}</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{t.followupGroupDesc}</p>
+            <h2 className="text-base font-bold text-foreground leading-tight">{t.followupGroupTitle}</h2>
+            <p className="text-xs text-muted-foreground">{t.followupGroupDesc}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -423,12 +423,12 @@ export default function TemplatesPage() {
             <Megaphone className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">{t.campaignGroupTitle}</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{t.campaignGroupDesc}</p>
+            <h2 className="text-base font-bold text-foreground leading-tight">{t.campaignGroupTitle}</h2>
+            <p className="text-xs text-muted-foreground">{t.campaignGroupDesc}</p>
           </div>
         </div>
 
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.marketingTitle}</h3>
+        <h3 className="text-sm font-semibold text-foreground/80 mb-3">{t.marketingTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
           {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "MARKETING" && tpl.language === "ar").map(tpl => {
             const matched = templates.find(t => t.name === tpl.name) ?? null;
@@ -446,7 +446,7 @@ export default function TemplatesPage() {
           })}
         </div>
 
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t.utilityTitle}</h3>
+        <h3 className="text-sm font-semibold text-foreground/80 mb-3">{t.utilityTitle}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
           {WANI_READY.filter(tpl => tpl.group === "campaign" && tpl.category === "UTILITY" && tpl.language === "ar").map(tpl => {
             const matched = templates.find(t => t.name === tpl.name) ?? null;
@@ -479,12 +479,12 @@ export default function TemplatesPage() {
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto" dir={dir}>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-        <button onClick={() => { setView("list"); setStep(1); }} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <button onClick={() => { setView("list"); setStep(1); }} className="hover:text-foreground transition-colors">
           {t.title}
         </button>
         <ChevronLeft className="w-3.5 h-3.5" />
-        <span className="text-gray-900 dark:text-white font-medium">{t.newTemplate}</span>
+        <span className="text-foreground font-medium">{t.newTemplate}</span>
       </div>
 
       {/* Steps indicator */}
@@ -492,20 +492,20 @@ export default function TemplatesPage() {
         {[{ n: 1, label: t.step1 }, { n: 2, label: t.step2 }].map((s, i) => (
           <div key={s.n} className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all
-              ${step === s.n ? "bg-primary text-primary-foreground" : step > s.n ? "bg-primary/15 text-primary" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
+              ${step === s.n ? "bg-primary text-primary-foreground" : step > s.n ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
               {step > s.n ? <CheckCheck className="w-3.5 h-3.5" /> : s.n}
             </div>
-            <span className={`text-sm font-medium ${step === s.n ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"}`}>
+            <span className={`text-sm font-medium ${step === s.n ? "text-foreground" : "text-muted-foreground"}`}>
               {s.label}
             </span>
-            {i < 1 && <div className={`h-0.5 w-12 mx-1 ${step > 1 ? "bg-primary" : "bg-gray-200 dark:bg-gray-700"}`} />}
+            {i < 1 && <div className={`h-0.5 w-12 mx-1 ${step > 1 ? "bg-primary" : "bg-border"}`} />}
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Form panel */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
           {step === 1
             ? <Step1 form={form} setForm={setForm} lang={lang}
               onNext={() => setStep(2)}
@@ -518,8 +518,8 @@ export default function TemplatesPage() {
 
         {/* Preview panel */}
         <div className="lg:col-span-1 sticky top-6">
-          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-5 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
               <Smartphone className="w-3.5 h-3.5" /> {t.preview}
             </p>
             <WhatsAppPreview form={form} lang={lang} />

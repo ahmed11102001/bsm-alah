@@ -50,8 +50,8 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
     if (success) return (
         <div className="flex flex-col items-center py-10 text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4 text-2xl">✅</div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t.successTitle}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">{t.successMsg}</p>
+            <h3 className="text-lg font-bold text-foreground mb-2">{t.successTitle}</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">{t.successMsg}</p>
         </div>
     );
 
@@ -59,7 +59,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
         <div className="space-y-5">
             {/* Header */}
             <div>
-                <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">{t.header}</Label>
+                <Label className="text-sm font-semibold text-foreground/80 mb-2 block">{t.header}</Label>
                 <div className="grid grid-cols-5 gap-1.5 mb-3">
                     {(["none", "text", "image", "video", "document"] as HeaderType[]).map(h => (
                         <button key={h}
@@ -67,7 +67,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                             className={`py-1.5 rounded-lg text-xs font-medium border transition-all
                 ${form.headerType === h
                                     ? "border-primary bg-primary/10 text-primary"
-                                    : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                                    : "border-border text-muted-foreground hover:border-primary/50"
                                 }`}
                         >
                             {form.headerType === h && h !== "none" && (
@@ -85,7 +85,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                 {form.headerType === "text" && (
                     <Input value={form.headerText} onChange={e => setForm({ ...form, headerText: e.target.value })}
                         placeholder={lang === "ar" ? "عنوان الرسالة" : "Message title"}
-                        className="dark:bg-gray-700 dark:border-gray-600" />
+                        className="bg-background border-border" />
                 )}
                 {(form.headerType === "image" || form.headerType === "video" || form.headerType === "document") && (
                     <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3">
@@ -98,7 +98,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
             {/* Body */}
             <div>
                 <div className="flex items-center justify-between mb-1.5">
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.body}</Label>
+                    <Label className="text-sm font-semibold text-foreground/80">{t.body}</Label>
                     <button onClick={addVar} className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
                         <Plus className="w-3.5 h-3.5" /> {t.addVar}
                     </button>
@@ -113,9 +113,9 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                         setForm({ ...form, body: newBody, exampleVars: vars.slice(0, Math.max(cnt, vars.length)) });
                     }}
                     placeholder={lang === "ar" ? "مرحباً {{1}}\n\nتم تأكيد طلبك رقم {{2}}." : "Hello {{1}},\n\nYour order {{2}} is confirmed."}
-                    className={`font-mono text-sm resize-none dark:bg-gray-700 dark:border-gray-600 ${errors.body ? "border-red-400" : ""}`}
+                    className={`font-mono text-sm resize-none bg-background border-border ${errors.body ? "border-red-400" : ""}`}
                 />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t.bodyHint}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t.bodyHint}</p>
                 {errors.body && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.body}</p>}
 
                 {/* Example vars */}
@@ -134,7 +134,7 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                                             setForm({ ...form, exampleVars: ev });
                                         }}
                                         placeholder={t.examplePlaceholder}
-                                        className="h-7 text-xs dark:bg-gray-700 dark:border-gray-600"
+                                        className="h-7 text-xs bg-background border-border"
                                     />
                                 </div>
                             ))}
@@ -145,19 +145,19 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
 
             {/* Footer */}
             <div>
-                <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 block">
-                    {t.footer} <span className="text-[11px] font-normal text-gray-400">({form.footer.length}/60)</span>
+                <Label className="text-sm font-semibold text-foreground/80 mb-1.5 block">
+                    {t.footer} <span className="text-[11px] font-normal text-muted-foreground">({form.footer.length}/60)</span>
                 </Label>
                 <Input value={form.footer} maxLength={60}
                     onChange={e => setForm({ ...form, footer: e.target.value })}
                     placeholder={lang === "ar" ? "مثل: Wani Store" : "e.g. Wani Store"}
-                    className="dark:bg-gray-700 dark:border-gray-600" />
+                    className="bg-background border-border" />
             </div>
 
             {/* Buttons */}
             <div>
                 <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.buttons}</Label>
+                    <Label className="text-sm font-semibold text-foreground/80">{t.buttons}</Label>
                     {form.buttons.length < 3 && (
                         <button onClick={addButton} className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
                             <Plus className="w-3.5 h-3.5" /> {t.addButton}
@@ -166,14 +166,14 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                 </div>
                 <div className="space-y-3">
                     {form.buttons.map((btn, i) => (
-                        <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border border-gray-200 dark:border-gray-600 space-y-2.5">
+                        <div key={i} className="bg-muted/70 rounded-xl p-3 border border-border space-y-2.5">
                             <div className="flex items-center gap-2">
                                 <div className="flex gap-1.5">
                                     {(["url", "phone", "quick_reply"] as ButtonType[]).map(bt => (
                                         <button key={bt}
                                             onClick={() => updateButton(i, "type", bt)}
                                             className={`text-[11px] px-2 py-1 rounded-lg font-medium border transition-all
-                        ${btn.type === bt ? "border-primary bg-primary/10 text-primary" : "border-gray-200 dark:border-gray-500 text-gray-500 dark:text-gray-400"}`}
+                        ${btn.type === bt ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
                                         >{t.btnTypes[bt]}</button>
                                     ))}
                                 </div>
@@ -183,11 +183,11 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
                             </div>
                             <Input value={btn.text} onChange={e => updateButton(i, "text", e.target.value)}
                                 placeholder={btn.type === "quick_reply" ? t.btnQR : t.btnText}
-                                className="h-8 text-sm dark:bg-gray-700 dark:border-gray-600" />
+                                className="h-8 text-sm bg-background border-border" />
                             {btn.type !== "quick_reply" && (
                                 <Input dir="ltr" value={btn.value} onChange={e => updateButton(i, "value", e.target.value)}
                                     placeholder={btn.type === "url" ? "https://..." : "+201234567890"}
-                                    className="h-8 text-sm font-mono dark:bg-gray-700 dark:border-gray-600" />
+                                    className="h-8 text-sm font-mono bg-background border-border" />
                             )}
                         </div>
                     ))}
@@ -195,14 +195,14 @@ export function Step2({ form, setForm, lang, onSubmit, onBack, submitting, succe
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <Button variant="outline" onClick={onBack} className="gap-1.5 dark:border-gray-600 dark:text-gray-300">
+            <div className="flex gap-2 pt-3 border-t border-border">
+                <Button variant="outline" onClick={onBack} className="gap-1.5 border-border text-foreground">
                     <ChevronRight className="w-4 h-4" /> {t.back}
                 </Button>
                 <Button variant="outline"
                     onClick={() => { if (validate()) onSubmit(true); }}
                     disabled={submitting}
-                    className="flex-1 dark:border-gray-600 dark:text-gray-300">
+                    className="flex-1 border-border text-foreground">
                     {t.saveDraft}
                 </Button>
                 <Button

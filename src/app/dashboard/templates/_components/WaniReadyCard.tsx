@@ -71,7 +71,7 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
 
     return (
         <div
-            className="group relative bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700
+            className="group relative bg-card border border-border
           rounded-xl p-4 hover:shadow-md hover:border-primary/40 dark:hover:border-primary/30
         transition-all duration-200 cursor-pointer"
             onClick={onView}
@@ -91,23 +91,23 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
 
             <div className="flex items-start justify-between gap-3 mt-1">
                 <div className="flex-1 min-w-0">
-                    <p className="font-mono text-sm font-semibold text-gray-900 dark:text-white truncate">{template.name}</p>
+                    <p className="font-mono text-sm font-semibold text-foreground truncate">{template.name}</p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <CategoryBadge category={template.category} lang={lang} />
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{template.language === "ar" ? "🇸🇦 عربي" : "🇬🇧 English"}</span>
+                        <span className="text-[10px] text-muted-foreground">{template.language === "ar" ? "🇸🇦 عربي" : "🇬🇧 English"}</span>
                         {varCount > 0 && (
-                            <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-md font-mono">
+                            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md font-mono">
                                 {varCount} {lang === "ar" ? "متغير" : "vars"}
                             </span>
                         )}
                     </div>
                 </div>
-                <Eye className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors mt-0.5 flex-shrink-0" />
+                <Eye className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors mt-0.5 flex-shrink-0" />
             </div>
 
             {/* Body preview */}
-            <div className="mt-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 border border-gray-100 dark:border-gray-600">
-                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+            <div className="mt-3 bg-muted/70 rounded-xl p-3 border border-border">
+                <p className="text-xs text-foreground/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
                     {template.body}
                 </p>
             </div>
@@ -128,7 +128,7 @@ export function WaniReadyCard({ template, lang, onView, onSend, onCustomize, mat
                 {!isApproved && (
                     <button
                         onClick={e => { e.stopPropagation(); onCustomize(template); }}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary dark:hover:border-primary dark:hover:text-primary flex items-center justify-center gap-1.5 transition-all bg-white dark:bg-gray-800"
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold border border-border text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center gap-1.5 transition-all bg-card"
                     >
                         <Pencil className="w-3 h-3" />
                         {(tw as any)?.customize ?? (lang === 'ar' ? 'تخصيص' : 'Customize')}

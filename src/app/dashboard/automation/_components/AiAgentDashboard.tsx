@@ -766,13 +766,13 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             <img src="/aiasstant.svg" alt="Wani" className="w-full h-full object-cover" />
           </span>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-2xl font-bold text-foreground">
               {isAr ? "وني — مساعدك الذكي" : "Wani — Your AI Assistant"}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {isAr ? "كلما زادت معرفة وني بالبراند والمنتجات والسياسات، أصبحت ردوده أكثر دقة" : "The more Wani knows about your brand, the more accurate its replies"}
             </p>
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
               <Info className="w-3 h-3 flex-shrink-0" />
               <span dir="auto">Wani is AI and can make mistakes.</span>
             </p>
@@ -782,7 +782,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowTestPanel(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-emerald-400 text-sm font-semibold text-gray-700 dark:text-gray-200 shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-card border border-border hover:border-emerald-400 text-sm font-semibold text-foreground shadow-sm transition-all"
           >
             <MessageCircle className="w-4 h-4 text-emerald-500" />
             {isAr ? "جرّب وني" : "Test Wani"}
@@ -792,7 +792,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             onClick={() => saveAgentSettings({ isEnabled: !agent.isEnabled })}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all shadow-sm ${agent.isEnabled
               ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-              : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500"
+              : "bg-muted border-border text-muted-foreground"
               }`}
           >
             {agent.isEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
@@ -802,14 +802,14 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       </div>
 
       {/* ── Main Tabs ── */}
-      <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-2xl w-fit">
         {MAIN_TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setMainTab(t.id)}
             className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${mainTab === t.id
-              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
               }`}
           >
             <t.icon className="w-4 h-4" /> {t.label}
@@ -822,21 +822,21 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
       {/* ═══════════════ نظرة عامة ═══════════════ */}
       {mainTab === "overview" && (
-        <div className="bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 rounded-3xl p-6 shadow-sm space-y-5">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900 dark:text-gray-100 text-base">
+              <span className="font-bold text-foreground text-base">
                 {isAr ? "نسبة جاهزية وني" : "Wani Readiness"}
               </span>
               <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 {readiness}%
               </span>
             </div>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {readiness >= 80 ? (isAr ? "جاهز للاستخدام 🚀" : "Ready 🚀") : (isAr ? "كمّل البنود الناقصة تحت" : "Finish the items below")}
             </span>
           </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-700/60 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-700" style={{ width: `${readiness}%` }} />
           </div>
 
@@ -845,13 +845,13 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               <button
                 key={item.id}
                 onClick={() => { setMainTab(item.goto); if (item.gotoSub) setKnowledgeTab(item.gotoSub); }}
-                className="w-full flex items-center justify-between gap-3 p-3 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all text-right"
+                className="w-full flex items-center justify-between gap-3 p-3 rounded-2xl border border-border hover:border-emerald-400 dark:hover:border-emerald-500 transition-all text-right"
               >
                 <span className="flex items-center gap-2.5 text-sm">
-                  {item.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0" />}
-                  <span className={item.done ? "text-gray-500 dark:text-gray-400 line-through" : "text-gray-800 dark:text-gray-200 font-medium"}>{item.label}</span>
+                  {item.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-border flex-shrink-0" />}
+                  <span className={item.done ? "text-muted-foreground line-through" : "text-foreground font-medium"}>{item.label}</span>
                 </span>
-                {!item.done && <ArrowLeft className={`w-4 h-4 text-gray-300 ${isAr ? "" : "rotate-180"}`} />}
+                {!item.done && <ArrowLeft className={`w-4 h-4 text-muted-foreground/50 ${isAr ? "" : "rotate-180"}`} />}
               </button>
             ))}
           </div>
@@ -861,8 +861,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       {/* ═══════════════ الهوية ═══════════════ */}
       {mainTab === "identity" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 space-y-4">
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base flex items-center gap-2">
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4">
+            <h3 className="font-bold text-foreground text-base flex items-center gap-2">
               <Store className="w-4 h-4 text-blue-500" /> {isAr ? "بيانات البراند" : "Brand Info"}
             </h3>
             <div>
@@ -897,8 +897,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5 space-y-4">
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base flex items-center gap-2">
+          <div className="bg-card border border-border rounded-3xl p-5 space-y-4">
+            <h3 className="font-bold text-foreground text-base flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-purple-500" /> {isAr ? "شخصية وني" : "Wani's Personality"}
             </h3>
             <div>
@@ -942,7 +942,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             </div>
             <div>
               <Label className="text-xs mb-1 block">{isAr ? "العودة التلقائية بعد التحويل لموظف" : "Auto-resume after handoff to human"}</Label>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-tight">
+              <p className="text-[11px] text-muted-foreground mb-2 leading-tight">
                 {isAr
                   ? "إذا لم يرد أي موظف، يعود وني للمحادثة تلقائيًا بعد المدة المحددة."
                   : "If no human agent replies, Wani automatically resumes the conversation after the selected time."}
@@ -977,7 +977,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
         const customerServiceCount = faqs.length + customerIssues.length + (customerService.generalSupportInfo?.trim() ? 1 : 0);
         return (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit">
+            <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-2xl w-fit">
               {([
                 ["catalog", isAr ? "المنتجات والخدمات" : "Products & Services", ShoppingBag, productStats.total],
                 ["customer_service", isAr ? "خدمة العملاء" : "Customer Service", Headphones, customerServiceCount],
@@ -988,12 +988,12 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   key={id}
                   onClick={() => setKnowledgeTab(id)}
                   className={`flex items-center gap-1.5 text-sm rounded-xl px-4 py-2 font-semibold transition-all ${knowledgeTab === id
-                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <Icon className="w-4 h-4" /> {label}
-                  {count > 0 && <span className="text-[10px] bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">{count}</span>}
+                  {count > 0 && <span className="text-[10px] bg-muted-foreground/20 px-1.5 rounded-full">{count}</span>}
                 </button>
               ))}
             </div>
@@ -1011,25 +1011,25 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 shopify: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400",
                 easyorders: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
                 woocommerce: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
-                manual: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+                manual: "bg-muted text-muted-foreground",
               };
 
               return (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "المنتجات والخدمات" : "Products & Services"}</h3>
+                      <h3 className="font-bold text-base text-foreground">{isAr ? "المنتجات والخدمات" : "Products & Services"}</h3>
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isAr ? `إجمالي المنتجات: ${totalKnown}` : `Total products: ${totalKnown}`}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-4">{isAr ? "كل المنتجات في قائمة واحدة — منتجات المتجر مميزة باسم المنصة، والمنتجات اليدوية مميزة بوسم «يدوي»." : "One catalog for everything — store products show their platform, while manual products are marked Manual."}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{isAr ? "كل المنتجات في قائمة واحدة — منتجات المتجر مميزة باسم المنصة، والمنتجات اليدوية مميزة بوسم «يدوي»." : "One catalog for everything — store products show their platform, while manual products are marked Manual."}</p>
 
                     {/* مصادر المنتجات */}
-                    <div className="border border-gray-100 dark:border-gray-700 rounded-2xl divide-y divide-gray-100 dark:divide-gray-700 mb-4">
+                    <div className="border border-border rounded-2xl divide-y divide-border mb-4">
                       {storeSources.map(({ src, count }) => (
                         <div key={src} className="flex items-center justify-between p-3">
                           <span className="text-sm flex items-center gap-2">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[src]}`}>{SOURCE_LABEL[src]}</span>
-                            <span className="text-gray-500 dark:text-gray-400">{count} {isAr ? "منتج" : "products"}</span>
+                            <span className="text-muted-foreground">{count} {isAr ? "منتج" : "products"}</span>
                           </span>
                           <Button size="sm" variant="outline" onClick={() => triggerProductSync(src)} disabled={syncingProducts} className="rounded-xl text-xs gap-1.5">
                             <RefreshCw className={`w-3.5 h-3.5 ${syncingProducts ? "animate-spin" : ""}`} /> {isAr ? "مزامنة" : "Sync"}
@@ -1039,7 +1039,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       <div className="flex items-center justify-between p-3">
                         <span className="text-sm flex items-center gap-2">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR.manual}`}>{SOURCE_LABEL.manual}</span>
-                          <span className="text-gray-500 dark:text-gray-400">{manualCount} {isAr ? "منتج" : "products"}</span>
+                          <span className="text-muted-foreground">{manualCount} {isAr ? "منتج" : "products"}</span>
                         </span>
                         <Button size="sm" onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
                           <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة منتج" : "Add product"}
@@ -1048,7 +1048,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     </div>
 
                     {!hasAnyStore && (
-                      <div className="text-[11px] text-gray-400 mb-4 flex items-center gap-1">
+                      <div className="text-[11px] text-muted-foreground mb-4 flex items-center gap-1">
                         <Info className="w-3.5 h-3.5" />
                         {isAr ? "مفيش متجر متصل؟" : "No store connected?"}
                         <a href="/dashboard/store" className="text-emerald-600 hover:underline font-semibold">{isAr ? "اربط متجرك من هنا" : "Connect your store here"}</a>
@@ -1056,10 +1056,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     )}
 
                     {totalKnown === 0 ? (
-                      <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
-                        <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{isAr ? "لا يوجد متجر متصل" : "No store connected"}</p>
-                        <p className="text-xs text-gray-400 mt-1 mb-4">{isAr ? "يمكنك بناء كتالوج منتجاتك يدويًا وسيستخدمه وني في الإجابة عن الأسعار والمنتجات والتوافر." : "Build your product catalog manually — Wani will use it to answer questions about prices, products, and availability."}</p>
+                      <div className="text-center py-10 border-2 border-dashed border-border rounded-2xl">
+                        <ShoppingBag className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
+                        <p className="text-sm font-semibold text-foreground/80">{isAr ? "لا يوجد متجر متصل" : "No store connected"}</p>
+                        <p className="text-xs text-muted-foreground mt-1 mb-4">{isAr ? "يمكنك بناء كتالوج منتجاتك يدويًا وسيستخدمه وني في الإجابة عن الأسعار والمنتجات والتوافر." : "Build your product catalog manually — Wani will use it to answer questions about prices, products, and availability."}</p>
                         <Button onClick={() => { setManualProductForm({ ...emptyCatalogItem }); setEditingProductId(null); setShowAddForm(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
                           <Plus className="w-3.5 h-3.5" /> {isAr ? "إضافة أول منتج" : "Add your first product"}
                         </Button>
@@ -1068,36 +1068,36 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       <>
                         {/* فلاتر + بحث */}
                         <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
+                          <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
                             {([["all", isAr ? "كل المنتجات" : "All"], ["store", isAr ? "من المتجر" : "From store"], ["manual", isAr ? "يدوية" : "Manual"]] as const).map(([id, label]) => (
-                              <button key={id} onClick={() => setProductFilter(id)} className={`text-xs rounded-lg px-3 py-1.5 font-semibold transition-all ${productFilter === id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>{label}</button>
+                              <button key={id} onClick={() => setProductFilter(id)} className={`text-xs rounded-lg px-3 py-1.5 font-semibold transition-all ${productFilter === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>{label}</button>
                             ))}
                           </div>
                           <Input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder={isAr ? "🔎 ابحث عن منتج..." : "🔎 Search products..."} className="text-xs rounded-xl flex-1" />
                         </div>
 
                         {/* الجدول الموحّد */}
-                        <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                        <div className="border border-border rounded-2xl overflow-hidden">
                           {productsLoading ? (
                             <div className="p-3"><TableRowsSkeleton rows={4} bare cols={2} /></div>
                           ) : products.length === 0 ? (
-                            <p className="text-xs text-gray-400 text-center py-8">{isAr ? "مفيش نتائج مطابقة" : "No matching products"}</p>
+                            <p className="text-xs text-muted-foreground text-center py-8">{isAr ? "مفيش نتائج مطابقة" : "No matching products"}</p>
                           ) : (
                             <table className="w-full text-xs">
-                              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                              <thead className="bg-muted/70 border-b border-border">
                                 <tr>
-                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المنتج" : "Product"}</th>
-                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "المصدر" : "Source"}</th>
-                                  <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400">{isAr ? "السعر" : "Price"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground">{isAr ? "المنتج" : "Product"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground">{isAr ? "المصدر" : "Source"}</th>
+                                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground">{isAr ? "السعر" : "Price"}</th>
                                   <th className="text-right py-2.5 px-3 font-semibold text-gray-500 dark:text-gray-400" />
                                 </tr>
                               </thead>
                               <tbody>
                                 {products.map(p => (
-                                  <tr key={p.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                                    <td className="py-2.5 px-3 font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[220px]">{p.name}</td>
+                                  <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-muted/60">
+                                    <td className="py-2.5 px-3 font-semibold text-foreground truncate max-w-[220px]">{p.name}</td>
                                     <td className="py-2.5 px-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SOURCE_COLOR[p.source]}`}>{SOURCE_LABEL[p.source]}</span></td>
-                                    <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{p.price != null ? `${p.price} ${p.currency}` : "—"}</td>
+                                    <td className="py-2.5 px-3 text-foreground/80">{p.price != null ? `${p.price} ${p.currency}` : "—"}</td>
                                     <td className="py-2.5 px-3 text-left">
                                       {p.source === "manual" ? (
                                         <div className="flex items-center gap-1 justify-end">
@@ -1105,7 +1105,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                                           <button onClick={() => handleDeleteCatalogItem(p)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                                         </div>
                                       ) : (
-                                        <span className="text-[10px] text-gray-300">{isAr ? "من المتجر (قراءة فقط)" : "Read-only"}</span>
+                                        <span className="text-[10px] text-muted-foreground/60">{isAr ? "من المتجر (قراءة فقط)" : "Read-only"}</span>
                                       )}
                                     </td>
                                   </tr>
@@ -1119,8 +1119,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
                     {/* بديل نصي يدوي */}
                     {totalKnown === 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                        <p className="text-xs text-gray-500">{isAr ? "أو اكتب وصف نصي بديل مؤقت لحد ما تضيف منتجاتك:" : "Or add temporary fallback text until you add your products:"}</p>
+                      <div className="mt-4 pt-4 border-t border-border space-y-3">
+                        <p className="text-xs text-muted-foreground">{isAr ? "أو اكتب وصف نصي بديل مؤقت لحد ما تضيف منتجاتك:" : "Or add temporary fallback text until you add your products:"}</p>
                         <Textarea value={agent.productsInfo || ""} onChange={e => setAgent(f => ({ ...f, productsInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب وصفًا مختصرًا للمنتجات أو الخدمات..." : "Describe your products or services..."} className="rounded-xl text-xs min-h-[60px]" />
                         <Textarea value={agent.pricingInfo || ""} onChange={e => setAgent(f => ({ ...f, pricingInfo: e.target.value }))} onBlur={() => saveAgentSettings()} placeholder={isAr ? "اكتب الأسعار أو قواعد التسعير..." : "Add prices or pricing rules..."} className="rounded-xl text-xs min-h-[50px]" />
                       </div>
@@ -1141,14 +1141,14 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
               return (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                       <div>
-                        <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <h3 className="font-bold text-base text-foreground flex items-center gap-2">
                           <Headphones className="w-5 h-5 text-emerald-500" />
                           {isAr ? "معرفة خدمة العملاء والدعم" : "Customer Service & Support Knowledge"}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {isAr
                             ? "مصدر معرفة مستقل ومتاح دائمًا لتعليم Wani كيفية دعم العملاء وحل مشاكلهم والإجابة عن استفساراتهم."
                             : "Independent and always-available knowledge source to teach Wani how to support customers, resolve issues, and answer queries."}
@@ -1167,12 +1167,12 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
                     {/* Empty State Banner if completely empty */}
                     {!hasAnyCsKnowledge && (
-                      <div className="text-center py-8 px-4 mb-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-800/30">
+                      <div className="text-center py-8 px-4 mb-6 border-2 border-dashed border-border rounded-2xl bg-muted/50">
                         <Headphones className="w-10 h-10 text-emerald-500/60 mx-auto mb-3" />
-                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                        <p className="text-sm font-bold text-foreground">
                           {isAr ? "علّم Wani كيف يتعامل مع عملائك" : "Teach Wani how to serve your customers"}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 max-w-lg mx-auto leading-relaxed">
+                        <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-lg mx-auto leading-relaxed">
                           {isAr
                             ? "أضف معلومات عن خدمات الدعم، الأسئلة الشائعة، والمشكلات التي تواجه عملاءك، حتى يستطيع Wani مساعدتهم بدقة أكبر دون تخمين."
                             : "Add support information, FAQs, and common customer issues so Wani can assist them accurately without guessing."}
@@ -1208,10 +1208,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     <div className="space-y-6">
                       {/* أ) الخدمات والدعم الذي نقدمه */}
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                        <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                           <span>{isAr ? "أ) الخدمات والدعم الذي نقدمه" : "A) Services & Support We Provide"}</span>
                         </Label>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-[11px] text-muted-foreground">
                           {isAr
                             ? "عرّف Wani بالخدمات أو أنواع الدعم التي تقدمها شركتك."
                             : "Introduce Wani to the services and types of support your company provides."}
@@ -1225,21 +1225,21 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                               ? "مثال: نقدم دعمًا في ربط Shopify، إعداد المتاجر، مشاكل الطلبات، الدفع، الشحن، وإعدادات WhatsApp..."
                               : "E.g. We provide support for Shopify integration, store setup, order issues, payments, shipping, and WhatsApp settings..."
                           }
-                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-muted/50 border-border"
                         />
                       </div>
 
                       {/* ب) الأسئلة الشائعة */}
-                      <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                      <div className="space-y-3 pt-4 border-t border-border">
                         <div className="flex items-center justify-between">
                           <div>
-                            <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                            <Label className="text-xs font-bold text-foreground flex items-center gap-2">
                               <span>{isAr ? "ب) الأسئلة الشائعة (FAQ)" : "B) Frequently Asked Questions (FAQ)"}</span>
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                                 {faqs.length}
                               </span>
                             </Label>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                               {isAr
                                 ? "الأسئلة المتكررة من عملائك وإجاباتها النموذجية."
                                 : "Common customer questions and their approved answers."}
@@ -1259,7 +1259,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         </div>
 
                         {faqs.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50/30 dark:bg-gray-800/20 rounded-2xl">
+                          <p className="text-xs text-muted-foreground italic text-center py-4 bg-muted/30 rounded-2xl">
                             {isAr ? "لا توجد أسئلة شائعة مضافة حتى الآن." : "No FAQs added yet."}
                           </p>
                         ) : (
@@ -1267,19 +1267,19 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                             {faqs.map(faq => (
                               <div
                                 key={faq.id}
-                                className="p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 flex flex-col justify-between gap-2"
+                                className="p-3.5 rounded-2xl border border-border bg-muted/60 flex flex-col justify-between gap-2"
                               >
                                 <div className="space-y-1">
-                                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-start gap-1.5">
+                                  <p className="text-xs font-bold text-foreground flex items-start gap-1.5">
                                     <span className="text-emerald-600 font-black">س:</span>
                                     <span>{faq.question}</span>
                                   </p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-300 flex items-start gap-1.5 mt-1 leading-relaxed">
+                                  <p className="text-xs text-foreground/80 flex items-start gap-1.5 mt-1 leading-relaxed">
                                     <span className="text-blue-500 font-black">ج:</span>
                                     <span>{faq.answer}</span>
                                   </p>
                                 </div>
-                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/60">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1305,16 +1305,16 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       </div>
 
                       {/* ج) مشاكل العملاء وحلولها */}
-                      <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                      <div className="space-y-3 pt-4 border-t border-border">
                         <div className="flex items-center justify-between">
                           <div>
-                            <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                            <Label className="text-xs font-bold text-foreground flex items-center gap-2">
                               <span>{isAr ? "ج) مشاكل العملاء وحلولها" : "C) Customer Issues & Resolutions"}</span>
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
                                 {customerIssues.length}
                               </span>
                             </Label>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                               {isAr
                                 ? "المشاكل التقنية أو الإجرائية الشائعة وخطوات حلها المعتمدة ليعرف وني كيفية التعامل معها فورًا."
                                 : "Common technical or process issues and their approved resolutions for Wani to use."}
@@ -1334,7 +1334,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         </div>
 
                         {customerIssues.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50/30 dark:bg-gray-800/20 rounded-2xl">
+                          <p className="text-xs text-muted-foreground italic text-center py-4 bg-muted/30 rounded-2xl">
                             {isAr ? "لا توجد مشاكل وحلول مسجلة حتى الآن." : "No customer issues recorded yet."}
                           </p>
                         ) : (
@@ -1342,23 +1342,23 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                             {customerIssues.map(issue => (
                               <div
                                 key={issue.id}
-                                className="p-3.5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 flex flex-col justify-between gap-2"
+                                className="p-3.5 rounded-2xl border border-border bg-muted/60 flex flex-col justify-between gap-2"
                               >
                                 <div className="space-y-1">
                                   <div className="flex items-start gap-2">
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 shrink-0">
                                       {isAr ? "المشكلة" : "Issue"}
                                     </span>
-                                    <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{issue.problem}</p>
+                                    <p className="text-xs font-bold text-foreground">{issue.problem}</p>
                                   </div>
                                   <div className="flex items-start gap-2 mt-2">
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 shrink-0">
                                       {isAr ? "طريقة الحل" : "Resolution"}
                                     </span>
-                                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{issue.resolution}</p>
+                                    <p className="text-xs text-foreground/80 leading-relaxed">{issue.resolution}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                                <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/60">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1384,11 +1384,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       </div>
 
                       {/* د) إجراءات خدمة العملاء */}
-                      <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                      <div className="space-y-2 pt-4 border-t border-border">
+                        <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                           <span>{isAr ? "د) إجراءات وخطوات خدمة العملاء" : "D) Customer Service Procedures"}</span>
                         </Label>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-[11px] text-muted-foreground">
                           {isAr
                             ? "كيف تريد من Wani التعامل مع مشاكل العملاء خطوة بخطوة؟"
                             : "How should Wani handle customer issues step by step?"}
@@ -1402,16 +1402,16 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                               ? "مثال: ابدأ بفهم المشكلة، ثم اطلب المعلومات الناقصة، ثم قدم خطوات الحل. إذا لم تكن المعلومة موجودة في قاعدة المعرفة، لا تخمن وحول المحادثة لموظف."
                               : "E.g. Start by understanding the issue, ask for missing details, then provide solution steps. If info is not in knowledge base, do not guess and handoff to human."
                           }
-                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-muted/50 border-border"
                         />
                       </div>
 
                       {/* هـ) متى يحول Wani لموظف؟ */}
-                      <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <Label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                      <div className="space-y-2 pt-4 border-t border-border">
+                        <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                           <span>{isAr ? "هـ) متى يحول Wani لموظف؟ (قواعد التصعيد)" : "E) When Should Wani Escalate to Human?"}</span>
                         </Label>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-[11px] text-muted-foreground">
                           {isAr
                             ? "حدد الحالات الاستثنائية أو المتطلبات التي تستوجب تحويل المحادثة إلى موظف بشري فورًا."
                             : "Specify situations that require immediate handoff to human staff."}
@@ -1425,7 +1425,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                               ? "مثال: إذا طلب العميل موظفًا، أو كانت المشكلة تتطلب وصولًا إلى حسابه، أو لم تكن الإجابة موجودة في قاعدة المعرفة."
                               : "E.g. If customer asks for human, issue requires account access, or answer is not in knowledge base."
                           }
-                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-gray-50/50 dark:bg-gray-800/50"
+                          className="rounded-2xl text-xs min-h-[85px] leading-relaxed bg-muted/50 border-border"
                         />
                       </div>
                     </div>
@@ -1436,22 +1436,22 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             {/* ── السياسات ── */}
             {knowledgeTab === "policies" && (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-3xl p-5">
+              <div className="bg-card border border-border rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{policies.length} {isAr ? "سياسة مضافة" : "policies added"}</h3>
+                  <h3 className="font-bold text-foreground text-base">{policies.length} {isAr ? "سياسة مضافة" : "policies added"}</h3>
                   <Button onClick={() => { setPolicyForm({ id: "", type: "return_policy", title: "", content: "" }); setShowPolicyDrawer(true); }} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs gap-1.5">
                     <Plus className="w-3.5 h-3.5" /> {isAr ? "سياسة جديدة" : "New Policy"}
                   </Button>
                 </div>
                 {policies.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic text-center py-8">{isAr ? "أضف سياسات الشحن والاسترجاع والضمان ليعرفها وني." : "Add shipping, return, and warranty policies for Wani."}</p>
+                  <p className="text-sm text-muted-foreground italic text-center py-8">{isAr ? "أضف سياسات الشحن والاسترجاع والضمان ليعرفها وني." : "Add shipping, return, and warranty policies for Wani."}</p>
                 ) : (
                   <div className="space-y-2">
                     {policies.map(p => (
-                      <div key={p.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30">
+                      <div key={p.id} className="flex items-start justify-between gap-3 p-3 rounded-xl border border-border bg-muted/50">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{p.title}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{p.content}</p>
+                          <p className="text-sm font-semibold text-foreground">{p.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.content}</p>
                         </div>
                         <button onClick={() => deletePolicy(p.id)} className="text-gray-400 hover:text-red-500 p-1 flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -1463,11 +1463,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
 
             {/* ── معرفة الموقع ── */}
             {knowledgeTab === "website" && (
-              <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
-                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">🌐 {isAr ? "معرفة الموقع" : "Website Knowledge"}</h3>
-                    <p className="text-xs text-gray-500 mt-1">{isAr ? "استخرج معلومات مفيدة من صفحات محدودة لاستخدامها كمصدر معرفة لوني." : "Extract useful content from selected website pages as a Wani knowledge source."}</p>
+                    <h3 className="font-bold text-base text-foreground">🌐 {isAr ? "معرفة الموقع" : "Website Knowledge"}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">{isAr ? "استخرج معلومات مفيدة من صفحات محدودة لاستخدامها كمصدر معرفة لوني." : "Extract useful content from selected website pages as a Wani knowledge source."}</p>
                   </div>
                   <Switch checked={websiteKnowledge.isEnabled} onCheckedChange={value => updateWebsiteKnowledge({ isEnabled: value })} />
                 </div>
@@ -1477,10 +1477,10 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     {syncingWebsite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}{syncingWebsite ? (isAr ? "بنقرأ موقعك..." : "Reading your site...") : (isAr ? "استخراج المعرفة الآن" : "Extract Knowledge Now")}
                   </Button>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-2">{isAr ? "العملية تعمل في الخلفية وقد تستغرق دقيقة. المواقع التي تعتمد على JavaScript بالكامل قد لا يظهر محتواها." : "Runs in the background and may take a minute. Fully JavaScript-rendered sites may not expose readable content."}</p>
-                {websitePages.length > 0 && <div className="mt-3 space-y-1.5 border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-[10px] text-muted-foreground mt-2">{isAr ? "العملية تعمل في الخلفية وقد تستغرق دقيقة. المواقع التي تعتمد على JavaScript بالكامل قد لا يظهر محتواها." : "Runs in the background and may take a minute. Fully JavaScript-rendered sites may not expose readable content."}</p>
+                {websitePages.length > 0 && <div className="mt-3 space-y-1.5 border-t border-border pt-3">
                   {websitePages.map(page => <div key={page.id} className="flex items-center gap-2 text-[11px]">
-                    <div className="flex-1 min-w-0"><div className="font-semibold truncate text-gray-700 dark:text-gray-300">{page.title || page.url}</div><div className="text-gray-400 truncate">{page.url} · {page._count.chunks} chunks · {new Date(page.lastCrawledAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</div></div>
+                    <div className="flex-1 min-w-0"><div className="font-semibold truncate text-foreground/80">{page.title || page.url}</div><div className="text-muted-foreground truncate">{page.url} · {page._count.chunks} chunks · {new Date(page.lastCrawledAt).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</div></div>
                     <button type="button" onClick={() => deleteWebsitePage(page.id)} className="text-red-500 hover:underline">{isAr ? "حذف" : "Delete"}</button>
                   </div>)}
                 </div>}
@@ -1494,11 +1494,11 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       {mainTab === "behavior" && (
         <div className="space-y-4">
           {/* هدف Wani */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{isAr ? "هدف Wani" : "Wani's Goal"}</h3>
-                <p className="text-xs text-gray-500 mt-1">{isAr ? "ما الدور الأساسي الذي تريد من Wani القيام به؟" : "What is the primary role you want Wani to play?"}</p>
+                <h3 className="font-bold text-base text-foreground">{isAr ? "هدف Wani" : "Wani's Goal"}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{isAr ? "ما الدور الأساسي الذي تريد من Wani القيام به؟" : "What is the primary role you want Wani to play?"}</p>
               </div>
               <Button onClick={saveSalesBehavior} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold"><Save className="w-3.5 h-3.5" />{isAr ? "حفظ" : "Save"}</Button>
             </div>
@@ -1525,7 +1525,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                   className={`flex flex-col gap-1.5 rounded-2xl border p-3.5 text-xs cursor-pointer transition-all ${
                     salesBehavior.goal === item.id
                       ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm ring-1 ring-emerald-500"
-                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                      : "border-border hover:border-primary/50"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -1536,9 +1536,9 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       onChange={() => setSalesBehavior(s => ({ ...s, goal: item.id }))}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="font-bold text-gray-900 dark:text-gray-100">{item.title}</span>
+                    <span className="font-bold text-foreground">{item.title}</span>
                   </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{item.desc}</p>
                 </label>
               ))}
             </div>
@@ -1549,7 +1549,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                 ["suggestCrossSell", isAr ? "اقتراح منتجات مكملة" : "Suggest complementary products"],
                 ["suggestDiscounts", isAr ? "ذكر العروض والخصومات الموجودة فقط" : "Mention existing discounts only"],
               ] as const).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300">
+                <div key={key} className="flex items-center justify-between text-xs text-foreground/80">
                   <span>{label}</span><Switch checked={salesBehavior[key]} onCheckedChange={value => {
                     if (key === "suggestCrossSell" && value && !relationProducts.some(product => product.relatedProductIds.length > 0)) {
                       setShowRelationManager(true);
@@ -1564,12 +1564,12 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
             {salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2">{isAr ? "الاقتراحات المكملة تحتاج ربط المنتجات يدويًا من الكتالوج أولًا." : "Complementary suggestions require manual product relationships in the catalog."}</p>}
             {salesBehavior.suggestCrossSell && <button type="button" onClick={() => setShowRelationManager(true)} className="text-[11px] text-emerald-600 hover:underline font-bold">{isAr ? "إدارة المنتجات المرتبطة →" : "Manage related products →"}</button>}
             {showRelationManager && !salesBehavior.suggestCrossSell && <p className="mt-3 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2 flex items-center justify-between gap-2"><span>{isAr ? "اربط منتجات مكملة من الكتالوج أولًا حتى يتمكن وني من اقتراحها بدقة." : "Link complementary products in the catalog first so Wani can suggest them accurately."}</span><button type="button" onClick={() => setShowRelationManager(true)} className="shrink-0 underline font-bold">{isAr ? "إدارة المنتجات المرتبطة →" : "Manage related products →"}</button></p>}
-            {(salesBehavior.suggestCrossSell || showRelationManager) && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-              <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{isAr ? "ربط المنتجات المكملة" : "Link complementary products"}</div>
+            {(salesBehavior.suggestCrossSell || showRelationManager) && relationProducts.length > 0 && <div className="mt-3 space-y-2 border-t border-border pt-3">
+              <div className="text-xs font-bold text-foreground/80">{isAr ? "ربط المنتجات المكملة" : "Link complementary products"}</div>
               {relationProducts.slice(0, 20).map(product => (
                 <div key={product.id} className="flex items-center gap-2">
-                  <span className="text-[11px] flex-1 truncate text-gray-600 dark:text-gray-400">{product.name}</span>
-                  <select multiple value={product.relatedProductIds} onChange={event => saveProductRelations(product.id, Array.from(event.target.selectedOptions).map(option => option.value))} className="w-48 min-h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[10px] p-1">
+                  <span className="text-[11px] flex-1 truncate text-muted-foreground">{product.name}</span>
+                  <select multiple value={product.relatedProductIds} onChange={event => saveProductRelations(product.id, Array.from(event.target.selectedOptions).map(option => option.value))} className="w-48 min-h-9 rounded-lg border border-border bg-background text-[10px] p-1">
                     {relationProducts.filter(other => other.id !== product.id).map(other => <option key={other.id} value={other.id}>{other.name}</option>)}
                   </select>
                 </div>
@@ -1585,9 +1585,9 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
           </div>
 
           {/* القواعد والحدود (Guardrails) — نفس المستوى، مش مودال منفصل */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="bg-card rounded-3xl p-5 border border-border shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <h3 className="font-bold text-base text-foreground flex items-center gap-2">
                 <Shield className="w-4 h-4 text-rose-500" /> {isAr ? "القواعد والحدود (Guardrails)" : "Guardrails"}
               </h3>
               <Button onClick={saveGuardrails} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold"><Save className="w-3.5 h-3.5" />{isAr ? "حفظ" : "Save"}</Button>
@@ -1627,17 +1627,17 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                       onClick={() => setGuardrails(g => ({ ...g, responseStyle: option.value }))}
                       className={`rounded-xl border px-2 py-2 text-xs transition text-center ${guardrails.responseStyle === option.value
                         ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
-                        : "border-gray-200 text-gray-500 hover:border-emerald-300 dark:border-gray-700 dark:text-gray-400"
+                        : "border-border text-muted-foreground hover:border-emerald-300"
                         }`}
                     >
                       <span className="flex items-center justify-center gap-1 font-semibold">
-                        <span className={`h-2.5 w-2.5 rounded-full border ${guardrails.responseStyle === option.value ? "border-emerald-500 bg-emerald-500" : "border-gray-400"}`} />
+                        <span className={`h-2.5 w-2.5 rounded-full border ${guardrails.responseStyle === option.value ? "border-emerald-500 bg-emerald-500" : "border-border"}`} />
                         {isAr ? option.ar : option.en}
                       </span>
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] leading-relaxed text-gray-400">
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
                   {isAr
                     ? ({ short: "إجابات مباشرة وسريعة، بدون تفاصيل زائدة", natural: "إجابات متوازنة وواضحة بدون إطالة غير ضرورية", detailed: "شرح شامل وتفاصيل إضافية عندما تكون مفيدة" } as const)[guardrails.responseStyle]
                     : ({ short: "Direct answers with only the essential information", natural: "Balanced, clear answers without unnecessary length", detailed: "Thorough explanations with useful extra detail" } as const)[guardrails.responseStyle]}
@@ -1659,17 +1659,17 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
       {/* ── Side Panel: جرّب وني (متاح من أي تاب) ── */}
       <Sheet open={showTestPanel} onOpenChange={setShowTestPanel}>
         <SheetContent side={isAr ? "left" : "right"} className="w-full sm:max-w-md flex flex-col p-0" dir={isAr ? "rtl" : "ltr"}>
-          <SheetHeader className="p-5 border-b border-gray-100 dark:border-gray-700">
+          <SheetHeader className="p-5 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
               <span className="text-lg">🧪</span> {isAr ? "جرّب وني (Test Chat Live)" : "Test Wani Live"}
             </SheetTitle>
             <SheetDescription>{isAr ? "اختبر ردود وني وبحث المنتجات مباشرة قبل تفعيله مع العملاء" : "Test how Wani replies live before engaging real customers"}</SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/60">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/60">
             {chatMessages.map(msg => (
               <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.sender === "user" ? "mr-auto items-end" : "ml-auto items-start"}`}>
-                <div className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${msg.sender === "user" ? "bg-emerald-600 text-white rounded-tl-none" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tr-none"}`}>
+                <div className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${msg.sender === "user" ? "bg-emerald-600 text-white rounded-tl-none" : "bg-card text-card-foreground border border-border rounded-tr-none"}`}>
                   <p className="whitespace-pre-wrap">{msg.text}</p>
                   {msg.matchedProducts && msg.matchedProducts.length > 0 && (
                     <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2">
@@ -1678,7 +1678,7 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                         <div key={prod.id} className="flex items-center gap-2 bg-emerald-50/50 dark:bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/20">
                           {prod.images?.[0] && <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />}
                           <div className="truncate text-[11px]">
-                            <p className="font-bold text-gray-900 dark:text-gray-100 truncate">{prod.name}</p>
+                            <p className="font-bold text-foreground truncate">{prod.name}</p>
                             <p className="text-emerald-700 dark:text-emerald-300 font-semibold">{prod.price} {prod.currency || "EGP"}</p>
                           </div>
                         </div>
@@ -1691,8 +1691,8 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     </div>
                   )}
                   {msg.knowledgeSources && msg.knowledgeSources.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
-                      <p className="mb-1 text-[9px] font-semibold text-gray-400">{isAr ? "مصادر المعرفة المتاحة للرد" : "Knowledge sources available for this reply"}</p>
+                    <div className="mt-2 pt-2 border-t border-border/60">
+                      <p className="mb-1 text-[9px] font-semibold text-muted-foreground">{isAr ? "مصادر المعرفة المتاحة للرد" : "Knowledge sources available for this reply"}</p>
                       <div className="flex flex-wrap gap-1">
                         {msg.knowledgeSources.map(source => (
                           <span key={source} className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 text-[9px] text-emerald-700 dark:text-emerald-300">
@@ -1703,18 +1703,18 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
+                <span className="text-[10px] text-muted-foreground mt-1 px-1">{msg.time}</span>
               </div>
             ))}
           </div>
 
-          <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+          <div className="p-4 border-t border-border flex items-center gap-2">
             <Input
               value={inputMessage}
               onChange={e => setInputMessage(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") sendTestMessage(); }}
               placeholder={isAr ? "اكتب رسالة تجريبية..." : "Type a test message..."}
-              className="rounded-2xl text-xs py-5 bg-gray-50 dark:bg-gray-900/50"
+              className="rounded-2xl text-xs py-5 bg-muted/50 border-border"
             />
             <Button onClick={sendTestMessage} disabled={sendingTest || !inputMessage.trim()} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl px-4 py-5 flex-shrink-0 font-bold">
               {sendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

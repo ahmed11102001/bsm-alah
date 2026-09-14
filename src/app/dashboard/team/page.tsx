@@ -157,7 +157,7 @@ function MemberCard({
         {canDelete && (
           <button
             onClick={() => onDelete(member.id)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 transition-all"
             title={tm.deleteTitle}
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -211,9 +211,9 @@ function MemberCard({
       {showDetails &&
         member.conversationCount !== undefined &&
         member.repliesCount !== undefined && (
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-50 dark:border-gray-700/50">
-            <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <p className="text-[10px] text-gray-500 text-center">
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/60">
+            <div className="flex flex-col items-center gap-1 p-2 bg-muted/70 rounded-lg">
+              <p className="text-[10px] text-muted-foreground text-center">
                 {isAdmin
                   ? locale === "ar"
                     ? "الوصول"
@@ -231,8 +231,8 @@ function MemberCard({
               </p>
             </div>
 
-            <div className="flex flex-col items-center gap-1 p-2 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-              <p className="text-[10px] text-gray-500 text-center">
+            <div className="flex flex-col items-center gap-1 p-2 bg-muted/70 rounded-lg">
+              <p className="text-[10px] text-muted-foreground text-center">
                 {locale === "ar" ? "ردودي" : "My Replies"}
               </p>
               <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
@@ -240,8 +240,8 @@ function MemberCard({
               </p>
             </div>
 
-            <div className="flex flex-col items-center gap-1 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-              <p className="text-[10px] text-gray-500 text-center">
+            <div className="flex flex-col items-center gap-1 p-2 bg-muted/70 rounded-lg">
+              <p className="text-[10px] text-muted-foreground text-center">
                 {locale === "ar" ? "تاريخ الانضمام" : "Joined"}
               </p>
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 text-center">
@@ -275,17 +275,17 @@ function InvitationCard({
   const Icon = cfg.icon;
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex flex-col gap-3.5">
+    <div className="bg-card border border-dashed border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex flex-col gap-3.5">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 text-xs font-bold">
           {getInitials(invitation.name, invitation.email)}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+          <p className="text-sm font-semibold text-foreground truncate">
             {invitation.name || "—"}
           </p>
-          <p className="text-[11px] text-gray-400 truncate" dir="ltr">
+          <p className="text-[11px] text-muted-foreground truncate" dir="ltr">
             {invitation.email}
           </p>
         </div>
@@ -305,7 +305,7 @@ function InvitationCard({
         </span>
       </div>
 
-      <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-[11px] text-gray-400">
+      <div className="flex items-center justify-between border-t border-border pt-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           {tm.sentAgo
@@ -364,13 +364,13 @@ export default function TeamPage() {
     toast.custom(
       () => (
         <div
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]"
+          className="bg-card border border-border rounded-xl shadow-lg p-4 flex flex-col gap-2 min-w-[260px]"
           dir="rtl"
         >
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-sm font-semibold text-foreground">
             وصلت الحد الأقصى للأعضاء في باقتك
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-muted-foreground">
             رقّي الباقة لإضافة المزيد من أعضاء الفريق.
           </p>
           <button
@@ -589,10 +589,10 @@ export default function TeamPage() {
   return (
     <div className="p-4 lg:p-8 max-w-5xl mx-auto" dir={dir}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           {tm.title}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           {members.length > 0 ? tm.memberCount(members.length) : tm.subtitle}
         </p>
 
@@ -619,27 +619,27 @@ export default function TeamPage() {
       {isOwner && canAddMembers && !atLimit && (
         <form
           onSubmit={handleAdd}
-          className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-8 shadow-sm"
+          className="bg-card border border-border rounded-2xl p-5 mb-8 shadow-sm"
         >
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-foreground/80 mb-3 flex items-center gap-1.5">
             <UserPlus className="w-4 h-4 text-primary" />
             {tm.addForm.title}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              <label className="text-[11px] font-semibold text-muted-foreground">
                 {tm.addForm.name}
               </label>
               <input
                 name="name"
                 placeholder={tm.addForm.namePlaceholder}
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="h-9 px-3 text-sm bg-background text-foreground rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              <label className="text-[11px] font-semibold text-muted-foreground">
                 {tm.addForm.email} <span className="text-red-400">*</span>
               </label>
               <input
@@ -647,17 +647,17 @@ export default function TeamPage() {
                 type="email"
                 placeholder="email@company.com"
                 required
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="h-9 px-3 text-sm bg-background text-foreground rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              <label className="text-[11px] font-semibold text-muted-foreground">
                 {tm.addForm.role}
               </label>
               <select
                 name="role"
-                className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="h-9 px-3 text-sm bg-background text-foreground rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <option value="CHAT_ONLY">{tm.addForm.roleAgent}</option>
                 <option value="FULL_ACCESS">{tm.addForm.roleAdmin}</option>
@@ -683,10 +683,10 @@ export default function TeamPage() {
       )}
 
       {isOwner && canAddMembers && atLimit && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 mb-8 shadow-sm">
+        <div className="bg-card border border-border rounded-2xl p-5 mb-8 shadow-sm">
           <button
             onClick={showLimitToast}
-            className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+            className="inline-flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-xl bg-muted text-muted-foreground"
           >
             <UserPlus className="w-4 h-4" />
             {locale === "ar" ? "وصلت الحد الأقصى للأعضاء" : "Member limit reached"}
@@ -695,12 +695,12 @@ export default function TeamPage() {
       )}
 
       {isOwner && !canAddMembers && (
-        <div className="bg-white dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-8 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+        <div className="bg-card border border-dashed border-border rounded-2xl p-5 mb-8 shadow-sm">
+          <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
             <UserPlus className="w-3.5 h-3.5" />
             {tm.addForm.title}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-muted-foreground">
             {locale === "ar"
               ? "متاحة من باقة Go فما فوق"
               : "Available on Go plan and above"}
@@ -714,20 +714,20 @@ export default function TeamPage() {
         <div className="space-y-8">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary" />
                 <span>{tm.membersSectionTitle || "أعضاء الفريق"}</span>
-                <span className="text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
                   {members.length}
                 </span>
               </h2>
             </div>
 
             {members.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-8 text-center">
-                <Users className="w-6 h-6 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-500">{tm.empty}</p>
-                <p className="text-xs text-gray-400 mt-1">{tm.emptyHint}</p>
+              <div className="bg-card border border-border rounded-2xl p-8 text-center">
+                <Users className="w-6 h-6 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">{tm.empty}</p>
+                <p className="text-xs text-muted-foreground mt-1">{tm.emptyHint}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -769,14 +769,14 @@ export default function TeamPage() {
           {invitations.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                   <MailCheck className="w-4 h-4 text-amber-500" />
                   <span>{tm.pendingSectionTitle || "الدعوات المعلقة"}</span>
                   <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                     {invitations.length}
                   </span>
                 </h2>
-                <p className="text-xs text-gray-400 hidden sm:block">
+                <p className="text-xs text-muted-foreground hidden sm:block">
                   {tm.pendingSubtitle || "دعوات تم إرسالها وفي انتظار قبول العضو"}
                 </p>
               </div>
