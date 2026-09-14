@@ -174,7 +174,7 @@ async function isBetaBypass(ownerId: string): Promise<boolean> {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const AGENT_BETA_DAYS = 5;
 export const AGENT_BETA_TOKENS = 30_000;
-const AGENT_BETA_MS = AGENT_BETA_DAYS * 24 * 60 * 60 * 1000;
+export const AGENT_BETA_MS = AGENT_BETA_DAYS * 24 * 60 * 60 * 1000;
 
 export type AgentBetaStatus = {
   active: boolean;

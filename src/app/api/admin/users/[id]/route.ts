@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { addAITokensBonus } from "@/lib/plan-guard";
+import {
+  addAITokensBonus,
+  activateAgentBeta,
+  getAgentBetaStatus,
+  AGENT_BETA_TOKENS,
+  AGENT_BETA_MS,
+} from "@/lib/plan-guard";
 
 async function guardSuper() {
   const session = await getServerSession(authOptions);
@@ -33,6 +39,75 @@ export async function PATCH(
       },
     });
     return NextResponse.json({ success: true });
+  }
+
+  // ── Agent Beta Access (أدمن): تفعيل لمرة واحدة لأي يوزر ───────────────
+  // body: { agentBeta: "activate" }
+  // الأدمن يتجاوز شرط ربط الواتساب (منح يدوي مقصود) — لكن يظل محظوراً لـ Max
+  // ولمن استهلكها من قبل (استخدم "reset" لمنحه فرصة جديدة).
+  if (body.agentBeta === "activate") {
+    const result = await activateAgentBeta(id);
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.reason, reason: result.reason },
+        { status: 409 }
+      );
+    }
+    const beta = await getAgentBetaStatus(id);
+    return NextResponse.json({ success: true, reason: result.reason, beta });
+  }
+
+  // ── Agent Beta Access (أدمن): تصفير ومنح جديد (5 أيام / 30K من الآن) ───
+  // body: { agentBeta: "reset" }
+  // لليوزر اللي خلص تجربته وعايز الأدمن يديله فرصة تانية — أو لإلغاء التفعيل
+  // الخاطئ. يُستخدم بحذر: يمسح الاستهلاك السابق.
+  if (body.agentBeta === "reset") {
+    const target = await prisma.subscription.findUnique({
+      where: { userId: id },
+      select: { plan: true },
+    });
+    if ((target?.plan as string) === "enterprise") {
+      return NextResponse.json(
+        { error: "is_enterprise", reason: "is_enterprise" },
+        { status: 409 }
+      );
+    }
+    const now = new Date();
+    await prisma.subscription.upsert({
+      where: { userId: id },
+      update: {
+        agentBetaStartedAt: now,
+        agentBetaEndsAt: new Date(now.getTime() + AGENT_BETA_MS),
+        agentBetaTokensLimit: AGENT_BETA_TOKENS,
+        agentBetaTokensUsed: 0,
+        agentBetaConsumed: true,
+        agentBetaExpiredNotifiedAt: null,
+      },
+      create: {
+        userId: id, plan: "free", status: "active",
+        periodResetAt: now, campaignsUsedThisMonth: 0,
+        aiTokensUsedThisMonth: 0, aiTokensBonusBalance: 0,
+        agentBetaStartedAt: now,
+        agentBetaEndsAt: new Date(now.getTime() + AGENT_BETA_MS),
+        agentBetaTokensLimit: AGENT_BETA_TOKENS,
+        agentBetaTokensUsed: 0,
+        agentBetaConsumed: true,
+      },
+    });
+    const beta = await getAgentBetaStatus(id);
+    return NextResponse.json({ success: true, reason: "reset", beta });
+  }
+
+  // ── Agent Beta Access (أدمن): إلغاء التفعيل الساري (يقفل الاستخدام فوراً) ─
+  // body: { agentBeta: "revoke" } — ينهي المدة الآن مع الاحتفاظ consumed=true
+  // (الإعدادات محفوظة، والاستهلاك السابق ظاهر).
+  if (body.agentBeta === "revoke") {
+    await prisma.subscription.updateMany({
+      where: { userId: id, agentBetaConsumed: true },
+      data: { agentBetaEndsAt: new Date() },
+    });
+    const beta = await getAgentBetaStatus(id);
+    return NextResponse.json({ success: true, reason: "revoked", beta });
   }
 
   // إضافة bonus tokens للـ AI — بتاخد صلاحية 30 يوم زي أي رصيد توكنز مشترى

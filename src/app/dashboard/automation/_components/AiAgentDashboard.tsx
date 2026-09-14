@@ -20,7 +20,7 @@ import {
   Loader2, Save, ShoppingBag, ArrowRight, ArrowLeft, Zap, MessageSquare, Info,
   ExternalLink, Layers, Check, ImagePlus, X, ChevronDown, ChevronUp, Upload,
   MessageCircle, Globe, Users, ListChecks, Wand2, Headphones,
-  GraduationCap,
+  GraduationCap, Lock,
 } from "lucide-react";
 
 interface AiAgentSettings {
@@ -913,18 +913,27 @@ export default function AiAgentDashboard({ lang }: { lang: "ar" | "en" }) {
               <Label className="text-xs mb-1 block">{isAr ? "مزوّد الذكاء الاصطناعي" : "AI Provider"}</Label>
               <Select
                 value={betaOnly ? "gemini" : agent.provider}
-                disabled={betaOnly}
-                onValueChange={v => saveAgentSettings({ provider: v as "gemini" | "openai" })}
+                onValueChange={v => {
+                  // أثناء البيتا ChatGPT مقفول — التجاهل دفاع إضافي بجانب disabled
+                  if (betaOnly && v === "openai") return;
+                  saveAgentSettings({ provider: v as "gemini" | "openai" });
+                }}
               >
                 <SelectTrigger className="rounded-xl text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
-                  <SelectItem value="openai" disabled={betaOnly}>ChatGPT GPT-4o mini{betaOnly ? (isAr ? " (غير متاح في التجربة)" : " (not in trial)") : ""}</SelectItem>
+                  <SelectItem value="openai" disabled={betaOnly}>
+                    <span className="flex items-center gap-1.5">
+                      ChatGPT GPT-4o mini
+                      {betaOnly && <Lock className="w-3.5 h-3.5 text-amber-500" />}
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               {betaOnly && (
-                <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-1">
-                  {isAr ? "🤖 تجربة Agent Beta تعمل على Gemini فقط." : "🤖 Agent Beta trial runs on Gemini only."}
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  {isAr ? "ChatGPT مقفول في تجربة Agent Beta — متاح في باقة Max." : "ChatGPT is locked in Agent Beta trial — available on Max."}
                 </p>
               )}
             </div>

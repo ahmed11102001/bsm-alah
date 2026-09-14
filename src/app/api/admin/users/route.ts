@@ -50,7 +50,10 @@ export async function GET(req: NextRequest) {
       createdAt: true,
       subscription: {
         select: { plan: true, status: true, isBetaUser: true,
-                  aiTokensUsedThisMonth: true, aiTokensBonusBalance: true },
+                  aiTokensUsedThisMonth: true, aiTokensBonusBalance: true,
+                  agentBetaStartedAt: true, agentBetaEndsAt: true,
+                  agentBetaTokensLimit: true, agentBetaTokensUsed: true,
+                  agentBetaConsumed: true },
       },
     },
   });

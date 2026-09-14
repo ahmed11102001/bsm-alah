@@ -36,6 +36,9 @@ interface User {
   subscription: {
     plan: Plan; status: string; isBetaUser: boolean;
     aiTokensUsedThisMonth: number; aiTokensBonusBalance: number;
+    agentBetaStartedAt: string | null; agentBetaEndsAt: string | null;
+    agentBetaTokensLimit: number; agentBetaTokensUsed: number;
+    agentBetaConsumed: boolean;
   } | null;
 }
 interface Testimonial {
@@ -119,6 +122,8 @@ export default function AdminPage() {
   const [tokenBonusId,  setTokenBonusId]  = useState<string | null>(null);
   const [tokenBonusAmt, setTokenBonusAmt] = useState("500000");
   const [savingToken,   setSavingToken]   = useState(false);
+  // Agent Beta Access (أدمن)
+  const [agentBetaBusy, setAgentBetaBusy] = useState<string | null>(null);
   // pagination + search
   const [cursors,    setCursors]    = useState<(string | null)[]>([null]);
   const [pageIdx,    setPageIdx]    = useState(0);
@@ -446,6 +451,39 @@ export default function AdminPage() {
     fetchUsers(cursors[pageIdx], userSearch, showDeleted);
   };
 
+  // ── Agent Beta Access (أدمن): تفعيل / منح جديد / إلغاء ───────────────────
+  const handleAgentBeta = async (userId: string, action: "activate" | "reset" | "revoke") => {
+    if (action !== "activate") {
+      const confirmMsg = locale === "ar"
+        ? action === "reset"
+          ? "منح تجربة Agent Beta جديدة (5 أيام / 30K)؟ سيُمسح الاستهلاك السابق."
+          : "إلغاء تجربة Agent Beta السارية؟ سيُقفل الإيجنت فوراً."
+        : action === "reset"
+          ? "Grant a fresh Agent Beta trial (5 days / 30K)? Previous usage will be cleared."
+          : "Revoke the active Agent Beta trial? The agent locks immediately.";
+      if (!confirm(confirmMsg)) return;
+    }
+    setAgentBetaBusy(userId);
+    const r = await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agentBeta: action }),
+    });
+    setAgentBetaBusy(null);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      alert(d.error || d.reason || (locale === "ar" ? "تعذر تنفيذ العملية" : "Action failed"));
+    }
+    fetchUsers(cursors[pageIdx], userSearch, showDeleted);
+  };
+
+  // حالة بيتا الإيجنت للعرض: active | ended | never
+  const agentBetaState = (sub: User["subscription"]): "active" | "ended" | "never" => {
+    if (!sub?.agentBetaConsumed) return "never";
+    const endsAt = sub.agentBetaEndsAt ? new Date(sub.agentBetaEndsAt).getTime() : 0;
+    const active = endsAt > Date.now() && (sub.agentBetaTokensUsed ?? 0) < (sub.agentBetaTokensLimit ?? 30000);
+    return active ? "active" : "ended";
+  };
+
   const handleRestore = async (userId: string) => {    setRestoring(userId);
     await fetch(`/api/admin/users/${userId}`, {
       method: "PUT",
@@ -763,6 +801,25 @@ export default function AdminPage() {
                               β Beta
                             </span>
                           )}
+                          {/* Agent Beta Access badge */}
+                          {user.subscription?.agentBetaConsumed && (() => {
+                            const st = agentBetaState(user.subscription);
+                            if (st === "active") {
+                              const endsAt = new Date(user.subscription!.agentBetaEndsAt as string);
+                              const daysLeft = Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / 86400000));
+                              const remaining = Math.max(0, (user.subscription!.agentBetaTokensLimit ?? 30000) - (user.subscription!.agentBetaTokensUsed ?? 0));
+                              return (
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  🤖 Beta • {daysLeft}د • {(remaining / 1000).toFixed(0)}K
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                                🤖 Beta ended
+                              </span>
+                            );
+                          })()}
                           {/* AI tokens display — enterprise فقط */}
                           {user.subscription?.plan === "enterprise" && (
                             <div className="mt-1 w-full">
@@ -828,6 +885,45 @@ export default function AdminPage() {
                           >
                             β
                           </button>
+                          {/* Agent Beta Access — تفعيل بيتا الإيجنت لأي يوزر */}
+                          {user.subscription?.plan !== "enterprise" && (() => {
+                            const st = agentBetaState(user.subscription);
+                            const busy = agentBetaBusy === user.id;
+                            if (st === "active") {
+                              return (
+                                <button
+                                  onClick={() => handleAgentBeta(user.id, "revoke")}
+                                  disabled={busy}
+                                  title={locale === "ar" ? "إلغاء بيتا الإيجنت السارية" : "Revoke active agent beta"}
+                                  className="text-xs px-2 py-0.5 rounded-full border font-medium transition border-purple-400 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 disabled:opacity-50"
+                                >
+                                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : "🤖"}
+                                </button>
+                              );
+                            }
+                            if (st === "ended") {
+                              return (
+                                <button
+                                  onClick={() => handleAgentBeta(user.id, "reset")}
+                                  disabled={busy}
+                                  title={locale === "ar" ? "منح تجربة جديدة (تصفير 5 أيام / 30K)" : "Grant fresh trial (reset 5 days / 30K)"}
+                                  className="text-xs px-2 py-0.5 rounded-full border font-medium transition border-gray-300 text-gray-400 hover:border-purple-400 hover:text-purple-600 dark:border-gray-600 disabled:opacity-50"
+                                >
+                                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : "🤖↺"}
+                                </button>
+                              );
+                            }
+                            return (
+                              <button
+                                onClick={() => handleAgentBeta(user.id, "activate")}
+                                disabled={busy}
+                                title={locale === "ar" ? "تفعيل بيتا إيجنت (5 أيام / 30K)" : "Activate agent beta (5 days / 30K)"}
+                                className="text-xs px-2 py-0.5 rounded-full border font-medium transition border-gray-300 text-gray-400 hover:border-purple-400 hover:text-purple-600 dark:border-gray-600 disabled:opacity-50"
+                              >
+                                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : "🤖"}
+                              </button>
+                            );
+                          })()}
                           {/* edit plan — مش موجود في وضع المحذوفين */}
                           {!showDeleted && (
                             <button onClick={() => { setEditId(user.id); setEditPlan(user.subscription?.plan ?? "free"); }}
