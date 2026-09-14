@@ -33,7 +33,7 @@ export async function POST(
     const plainAccessToken = decryptToken(connection.accessToken);
 
     // Fetch templates from Meta
-    const metaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${connection.wabaId}/message_templates?limit=100&fields=id,name,status,category,language,rejected_reason`;
+    const metaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${connection.wabaId}/message_templates?limit=100&fields=id,name,status,category,language,rejected_reason,components`;
     const metaRes = await fetch(metaUrl, {
       headers: { Authorization: `Bearer ${plainAccessToken}` },
     });
@@ -54,6 +54,7 @@ export async function POST(
       category?: string;
       language: string;
       rejected_reason?: string;
+      components?: unknown[];
     }> = metaData.data || [];
 
     const statusMap: Record<string, string> = {
@@ -100,6 +101,7 @@ export async function POST(
             status: newStatus as any,
             metaTemplateId: metaTmpl.id,
             language: metaTmpl.language,
+            metaComponents: metaTmpl.components ? JSON.parse(JSON.stringify(metaTmpl.components)) : undefined,
             rejectedReason: newRejectedReason,
           },
         });
@@ -141,6 +143,7 @@ export async function POST(
           body: isAuth ? JSON.stringify({ imported: true }) : "",
           status: (statusMap[m.status] || "PENDING") as any,
           metaTemplateId: m.id,
+          metaComponents: m.components ? JSON.parse(JSON.stringify(m.components)) : undefined,
           rejectedReason: m.status === "REJECTED" ? m.rejected_reason || "مرفوض من Meta" : null,
         },
       });

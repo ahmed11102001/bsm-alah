@@ -146,6 +146,10 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(payload.template.name).toBe("otp_verification");
     expect(payload.template.language).toEqual({ code: "ar" });
+    expect(payload.template.components).toEqual([
+      { type: "body", parameters: [{ type: "text", text: expect.any(String) }] },
+      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: expect.any(String) }] },
+    ]);
   });
 
   // ── Status gates ───────────────────────────────────────────────────────

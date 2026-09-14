@@ -6,6 +6,13 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { decryptToken } from "@/lib/crypto";
 import { storeOtp } from "@/lib/otp-redis";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+import {
+  buildAuthenticationComponents,
+  buildOtpParameters,
+  validateVariableDefinitions,
+  type MetaTemplateComponent,
+  type OtpVariableDefinition,
+} from "@/lib/developer-template-contract";
 
 interface AuthResult {
   projectId: string;
@@ -97,7 +104,7 @@ function generateOtp(): string {
 //
 // لا يوجد أي fallback خارج المشروع، ولا أي تجاوز للـ APPROVED.
 type TemplateResolution =
-  | { ok: true; template: { id: string; name: string; language: string; body: string; metaTemplateId: string } }
+  | { ok: true; template: { id: string; name: string; language: string; body: string; category: string; metaTemplateId: string; variables: OtpVariableDefinition[]; metaComponents: MetaTemplateComponent[] } }
   | { ok: false; code: string; error: string; status: number };
 
 async function resolveTemplateById(
@@ -171,8 +178,8 @@ async function resolveTemplateByName(
 
 // ─── Usability gate — لا تُستدعى إلا على قالب مؤكد الانتماء للمشروع ─────────
 function assertTemplateUsable(template: {
-  id: string; name: string; language: string; body: string;
-  metaTemplateId: string | null; status: string;
+  id: string; name: string; language: string; body: string; category: string;
+  metaTemplateId: string | null; status: string; variables?: unknown; metaComponents?: unknown;
 }): TemplateResolution {
   if (template.status !== "APPROVED") {
     const statusMsg: Record<string, string> = {
@@ -196,6 +203,13 @@ function assertTemplateUsable(template: {
       status: 400,
     };
   }
+  const definitions = Array.isArray(template.variables) ? template.variables as OtpVariableDefinition[] : [];
+  if (template.category !== "AUTHENTICATION") {
+    const variableCheck = validateVariableDefinitions(template.body, definitions);
+    if (!variableCheck.ok) {
+      return { ok: false, code: "TEMPLATE_VARIABLES_INVALID", error: variableCheck.error, status: 400 };
+    }
+  }
   return {
     ok: true,
     template: {
@@ -203,7 +217,10 @@ function assertTemplateUsable(template: {
       name: template.name,
       language: template.language,
       body: template.body,
+      category: template.category,
       metaTemplateId: template.metaTemplateId,
+      variables: definitions,
+      metaComponents: Array.isArray(template.metaComponents) ? template.metaComponents as MetaTemplateComponent[] : [],
     },
   };
 }
@@ -216,16 +233,20 @@ async function sendWhatsAppOtp(opts: {
   code: string;
   templateName: string;
   language: string;
-  varCount: number;     // how many {{N}} in body
   expiryMinutes: number;
-}): Promise<{ success: boolean; metaMessageId?: string; error?: string }> {
+  category: string;
+  variables: OtpVariableDefinition[];
+  metaComponents: MetaTemplateComponent[];
+  templateBody: string;
+}): Promise<{ success: boolean; metaMessageId?: string; error?: string; metaCode?: string; statusCode?: number }> {
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.phoneNumberId}/messages`;
 
   // Build body parameters — fill all vars with the OTP code (most templates use 1 var)
-  const bodyParams = Array.from({ length: Math.max(opts.varCount, 1) }, (_, index) => ({
-    type: "text",
-    text: index === 0 ? opts.code : String(opts.expiryMinutes),
-  }));
+  const isAuthentication = opts.category === "AUTHENTICATION" || !opts.category;
+  const parameterResult = isAuthentication
+    ? { ok: true as const, parameters: [{ type: "text" as const, text: opts.code }] }
+    : buildOtpParameters(opts.variables, opts.code, opts.expiryMinutes);
+  if (!parameterResult.ok) return { success: false, error: parameterResult.error, statusCode: 400 };
 
   const payload = {
     messaging_product: "whatsapp",
@@ -235,9 +256,11 @@ async function sendWhatsAppOtp(opts: {
     template: {
       name: opts.templateName,
       language: { code: opts.language },
-      components: [
-        { type: "body", parameters: bodyParams },
-      ],
+      components: isAuthentication
+        ? buildAuthenticationComponents(opts.metaComponents, opts.code, (() => {
+            try { return JSON.parse(opts.templateBody || "{}"); } catch { return {}; }
+          })())
+        : [{ type: "body", parameters: parameterResult.parameters }],
     },
   };
 
@@ -255,12 +278,13 @@ async function sendWhatsAppOtp(opts: {
 
     if (!res.ok || data.error) {
       const msg = data.error?.error_user_msg || data.error?.message || "Meta API error";
-      return { success: false, error: msg };
+      const metaCode = data.error?.code ? String(data.error.code) : undefined;
+      return { success: false, error: msg, metaCode, statusCode: res.status >= 500 ? 502 : 400 };
     }
 
     return { success: true, metaMessageId: data.messages?.[0]?.id };
   } catch (err: any) {
-    return { success: false, error: err.message || "Network error" };
+    return { success: false, error: err.message || "Network error", statusCode: 502 };
   }
 }
 
@@ -440,9 +464,6 @@ export async function POST(req: NextRequest) {
   const token   = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + Number(expiryMinutes) * 60 * 1000);
 
-  // Count vars in template body
-  const varCount = (template.body.match(/\{\{\d+\}\}/g) ?? []).length;
-
   // ── 8. فك تشفير الـ accessToken من DB ────────────────────────────────────
   const plainAccessToken = decryptToken(auth.metaConnection.accessToken);
 
@@ -454,8 +475,11 @@ export async function POST(req: NextRequest) {
     code:          otpCode,
     templateName:  template.name,
     language:      template.language,
-    varCount,
     expiryMinutes: Number(expiryMinutes),
+    category: template.category,
+    variables: template.variables,
+    metaComponents: template.metaComponents,
+    templateBody: template.body,
   });
 
   // ── 10. Store in Redis (code hash only — no plain code stored) ────────────
@@ -501,8 +525,14 @@ export async function POST(req: NextRequest) {
   // ── 13. Return ────────────────────────────────────────────────────────────
   if (!sendResult.success) {
     return NextResponse.json(
-      { ok: false, error: "فشل الإرسال عبر WhatsApp: " + sendResult.error },
-      { status: 502 }
+      {
+        ok: false,
+        error: sendResult.metaCode === "131008"
+          ? "WhatsApp template parameters are invalid or incomplete."
+          : "WhatsApp send failed: " + sendResult.error,
+        ...(sendResult.metaCode ? { metaCode: sendResult.metaCode } : {}),
+      },
+      { status: sendResult.statusCode ?? 502 }
     );
   }
 

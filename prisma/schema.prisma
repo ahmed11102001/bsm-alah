@@ -1210,6 +1210,8 @@ model DeveloperOtpTemplate {
   headerText     String?
   body           String
   bodyExample    String?
+  variables      Json?
+  metaComponents Json?
   footer         String?
   rejectedReason String?
   createdAt      DateTime                @default(now())

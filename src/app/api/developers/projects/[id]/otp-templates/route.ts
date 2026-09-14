@@ -5,6 +5,7 @@ import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+import { validateVariableDefinitions, type OtpVariableDefinition } from "@/lib/developer-template-contract";
 
 async function getProjectOrFail(userId: string, projectId: string) {
   return getProjectForOwnerOrDeveloper(projectId, userId);
@@ -50,6 +51,7 @@ export async function POST(
     headerText,
     body,
     bodyExample,
+    variables,
     footer,
     submitToMeta = false,
     // OTP-specific fields for AUTHENTICATION
@@ -61,6 +63,10 @@ export async function POST(
   if (!name?.trim()) return NextResponse.json({ error: "اسم القالب مطلوب" }, { status: 400 });
   // Body is only required for non-AUTHENTICATION categories
   if (category !== "AUTHENTICATION" && !body?.trim()) return NextResponse.json({ error: "محتوى القالب مطلوب" }, { status: 400 });
+  if (category !== "AUTHENTICATION") {
+    const variableCheck = validateVariableDefinitions(body, variables as OtpVariableDefinition[] | undefined);
+    if (!variableCheck.ok) return NextResponse.json({ error: variableCheck.error, code: "TEMPLATE_VARIABLES_INVALID" }, { status: 400 });
+  }
 
   const metaName = name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
   if (metaName.length < 3)
@@ -78,6 +84,7 @@ export async function POST(
       headerText: isAuth ? null : (headerType === "text" ? headerText?.trim() : null),
       body: isAuth ? JSON.stringify({ addSecurityRecommendation, codeExpirationMinutes, otpType }) : body.trim(),
       bodyExample: isAuth ? null : (bodyExample ? JSON.stringify(bodyExample) : null),
+      variables: isAuth ? undefined : (Array.isArray(variables) ? JSON.parse(JSON.stringify(variables)) : undefined),
       footer: isAuth ? null : (footer?.trim() || null),
       status: "LOCAL_DRAFT",
     },
@@ -279,4 +286,4 @@ async function deleteTemplateFromMeta({
     console.error("[delete-meta-template] Meta API error:", data.error);
     // لا نوقف الحذف المحلي حتى لو فشل الحذف في ميتا
   }
-}
+}

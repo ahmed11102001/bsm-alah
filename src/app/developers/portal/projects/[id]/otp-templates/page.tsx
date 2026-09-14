@@ -25,6 +25,17 @@ interface Template {
   createdAt: string;
 }
 
+const STARTER_TEMPLATES = [
+  { name: "otp_verification_ar", language: "ar", body: "رمز التحقق الخاص بك هو {{1}}. صالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "otp_authentication_ar", language: "ar", body: "مرحبًا، رمز التحقق الخاص بك هو {{1}}. استخدمه خلال {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "otp_code_ar", language: "ar", body: "رمز التحقق: {{1}}\nصالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "login_verification_ar", language: "ar", body: "رمز تسجيل الدخول هو {{1}}. صالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "otp_verification_en", language: "en_US", body: "Your verification code is {{1}}. This code expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "otp_authentication_en", language: "en_US", body: "Hello, your verification code is {{1}}. Use it within {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "otp_code_en", language: "en_US", body: "Your OTP is {{1}}. It expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+  { name: "login_verification_en", language: "en_US", body: "Your login verification code is {{1}}. It expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
+] as const;
+
 // ─── WhatsApp Live Preview ────────────────────────────────────────────────────
 function WAPreview({ headerType, headerText, body, footer, category, addSecurityRecommendation, codeExpirationMinutes, otpType }: {
   headerType: string; headerText: string; body: string; footer: string; category: TemplateCategory;
@@ -221,6 +232,7 @@ export default function ProjectTemplatesPage() {
 
   const CATEGORIES: { value: TemplateCategory; label: string; desc: string; icon: string }[] = [
     { value: "AUTHENTICATION", label: t("OTP / Verification", "OTP / التحقق"),  desc: t("Verification codes and two-factor authentication", "أكواد التحقق والمصادقة الثنائية"), icon: "🔐" },
+    { value: "UTILITY", label: t("Utility OTP", "OTP خدمي"), desc: t("Custom OTP message with explicit variables", "رسالة OTP مخصصة بمتغيرات واضحة"), icon: "⚡" },
   ];
 
   const STATUS_CONFIG: Record<TemplateStatus, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -247,6 +259,7 @@ export default function ProjectTemplatesPage() {
   const [otpType, setOtpType] = useState<"COPY_CODE" | "ONE_TAP" | "NO_BUTTON">("COPY_CODE");
 
   const [bodyExamples, setBodyExamples] = useState<string[]>([]);
+  const [variableKeys, setVariableKeys] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -282,6 +295,11 @@ export default function ProjectTemplatesPage() {
   // Detect {{N}} variables in body
   const varMatches = [...new Set((form.body.match(/\{\{(\d+)\}\}/g) || []))];
   const varCount = varMatches.length;
+  const variableDefinitions = varMatches.map((token, index) => ({
+    position: Number(token.match(/\d+/)?.[0] ?? index + 1),
+    key: variableKeys[index] || "",
+    example: bodyExamples[index] || "",
+  }));
 
   function setExample(idx: number, val: string) {
     setBodyExamples(prev => {
@@ -289,6 +307,17 @@ export default function ProjectTemplatesPage() {
       next[idx] = val;
       return next;
     });
+  }
+
+  function setVariableKey(idx: number, val: string) {
+    setVariableKeys(prev => { const next = [...prev]; next[idx] = val; return next; });
+  }
+
+  function useStarter(starter: typeof STARTER_TEMPLATES[number]) {
+    setForm(f => ({ ...f, name: starter.name, language: starter.language, category: "UTILITY", body: starter.body }));
+    setVariableKeys([...starter.keys]);
+    setBodyExamples([...starter.examples]);
+    setFormError(""); setFormSuccess("");
   }
 
   // Auto-generate name from Arabic input
@@ -305,7 +334,7 @@ export default function ProjectTemplatesPage() {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: false, addSecurityRecommendation, codeExpirationMinutes, otpType }),
+        body: JSON.stringify({ ...form, bodyExample: bodyExamples, variables: variableDefinitions, submitToMeta: false, addSecurityRecommendation, codeExpirationMinutes, otpType }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -322,12 +351,15 @@ export default function ProjectTemplatesPage() {
     if (!isAuthCategory && varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
       setFormError(t(`Add ${varCount} sample values for the variables — Meta requires this`, `أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`)); return;
     }
+    if (!isAuthCategory && variableDefinitions.some(v => !v.key)) {
+      setFormError(t("Choose a meaning for every variable before submitting.", "اختر معنى كل متغير قبل الإرسال.")); return;
+    }
     setSubmitting(true); setFormError(""); setFormSuccess("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, submitToMeta: true, addSecurityRecommendation, codeExpirationMinutes, otpType }),
+        body: JSON.stringify({ ...form, bodyExample: bodyExamples, variables: variableDefinitions, submitToMeta: true, addSecurityRecommendation, codeExpirationMinutes, otpType }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -366,6 +398,7 @@ export default function ProjectTemplatesPage() {
     setCodeExpirationMinutes(10);
     setOtpType("COPY_CODE");
     setBodyExamples([]);
+    setVariableKeys([]);
     setFormError(""); setFormSuccess("");
   }
 
@@ -643,6 +676,18 @@ export default function ProjectTemplatesPage() {
                 {/* ── Left: Form ── */}
                 <div className="form-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                   <h2 className="form-title">{t("New OTP Template", "قالب OTP جديد")}</h2>
+                  <div style={{ marginBottom: 20, padding: 14, border: "1px solid rgba(56,189,248,.2)", borderRadius: 12, background: "rgba(56,189,248,.05)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }}>{t("Starter template library", "مكتبة القوالب الجاهزة")}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {STARTER_TEMPLATES.map(starter => (
+                        <button key={starter.name} type="button" onClick={() => useStarter(starter)}
+                          style={{ padding: "6px 9px", borderRadius: 7, border: "1px solid #334155", background: "#172033", color: "#cbd5e1", cursor: "pointer", fontSize: 11 }}>
+                          {starter.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>{t("Starters are drafts only and still require Meta review.", "هذه القوالب مسودات فقط وتحتاج مراجعة Meta.")}</div>
+                  </div>
 
                   {/* Meta not connected warning */}
                   {metaConnected === false && (
@@ -806,7 +851,14 @@ export default function ProjectTemplatesPage() {
                             </div>
                             {Array.from({ length: varCount }, (_, i) => (
                               <div key={i} className="var-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-                                <span className="var-tag">{`{{${i+1}}}`}</span>
+                                <span className="var-tag">{varMatches[i]}</span>
+                                <select className="f-select" value={variableKeys[i] || ""} onChange={e => setVariableKey(i, e.target.value)} style={{ minWidth: 130 }}>
+                                  <option value="">{t("Meaning", "المعنى")}</option>
+                                  <option value="otp">OTP</option>
+                                  <option value="expiryMinutes">Expiry minutes</option>
+                                  <option value="serviceName">Service name</option>
+                                  <option value="custom">Custom</option>
+                                </select>
                                 <input className="var-input" placeholder={t("Example:", "مثال:") + ` ${i === 0 ? "123456" : i === 1 ? "10" : "val_" + (i+1)}`}
                                   value={bodyExamples[i] || ""}
                                   onChange={e => setExample(i, e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
