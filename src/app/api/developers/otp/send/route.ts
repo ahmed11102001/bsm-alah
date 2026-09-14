@@ -9,6 +9,7 @@ import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import {
   buildAuthenticationComponents,
   buildOtpParameters,
+  validateAuthenticationComponents,
   validateVariableDefinitions,
   type MetaTemplateComponent,
   type OtpVariableDefinition,
@@ -210,6 +211,19 @@ function assertTemplateUsable(template: {
       return { ok: false, code: "TEMPLATE_VARIABLES_INVALID", error: variableCheck.error, status: 400 };
     }
   }
+  if (template.category === "AUTHENTICATION") {
+    const metadataCheck = validateAuthenticationComponents(
+      Array.isArray(template.metaComponents) ? template.metaComponents as MetaTemplateComponent[] : undefined,
+    );
+    if (!metadataCheck.ok) {
+      return {
+        ok: false,
+        code: "TEMPLATE_METADATA_INCOMPLETE",
+        error: "Template metadata is incomplete. Please sync templates again.",
+        status: 409,
+      };
+    }
+  }
   return {
     ok: true,
     template: {
@@ -227,6 +241,9 @@ function assertTemplateUsable(template: {
 
 // ─── Send OTP via Meta WhatsApp Cloud API ─────────────────────────────────────
 async function sendWhatsAppOtp(opts: {
+  projectId: string;
+  templateId: string;
+  metaTemplateId: string;
   accessToken: string;
   phoneNumberId: string;
   to: string;           // E.164 without +
@@ -237,16 +254,23 @@ async function sendWhatsAppOtp(opts: {
   category: string;
   variables: OtpVariableDefinition[];
   metaComponents: MetaTemplateComponent[];
-  templateBody: string;
 }): Promise<{ success: boolean; metaMessageId?: string; error?: string; metaCode?: string; statusCode?: number }> {
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.phoneNumberId}/messages`;
 
   // Build body parameters — fill all vars with the OTP code (most templates use 1 var)
   const isAuthentication = opts.category === "AUTHENTICATION" || !opts.category;
-  const parameterResult = isAuthentication
-    ? { ok: true as const, parameters: [{ type: "text" as const, text: opts.code }] }
-    : buildOtpParameters(opts.variables, opts.code, opts.expiryMinutes);
-  if (!parameterResult.ok) return { success: false, error: parameterResult.error, statusCode: 400 };
+  const authenticationResult = isAuthentication
+    ? buildAuthenticationComponents(opts.metaComponents, opts.code)
+    : null;
+  const parameterResult = !isAuthentication
+    ? buildOtpParameters(opts.variables, opts.code, opts.expiryMinutes)
+    : null;
+  if (authenticationResult && !authenticationResult.ok) {
+    return { success: false, error: "Template metadata is incomplete. Please sync templates again.", statusCode: 409 };
+  }
+  if (parameterResult && !parameterResult.ok) {
+    return { success: false, error: parameterResult.error, statusCode: 400 };
+  }
 
   const payload = {
     messaging_product: "whatsapp",
@@ -257,10 +281,8 @@ async function sendWhatsAppOtp(opts: {
       name: opts.templateName,
       language: { code: opts.language },
       components: isAuthentication
-        ? buildAuthenticationComponents(opts.metaComponents, opts.code, (() => {
-            try { return JSON.parse(opts.templateBody || "{}"); } catch { return {}; }
-          })())
-        : [{ type: "body", parameters: parameterResult.parameters }],
+        ? authenticationResult!.components
+        : [{ type: "body", parameters: parameterResult!.parameters }],
     },
   };
 
@@ -279,7 +301,30 @@ async function sendWhatsAppOtp(opts: {
     if (!res.ok || data.error) {
       const msg = data.error?.error_user_msg || data.error?.message || "Meta API error";
       const metaCode = data.error?.code ? String(data.error.code) : undefined;
-      return { success: false, error: msg, metaCode, statusCode: res.status >= 500 ? 502 : 400 };
+      if (metaCode === "131008") {
+        console.error("[developer-otp-meta]", {
+          projectId: opts.projectId,
+          templateId: opts.templateId,
+          metaTemplateId: opts.metaTemplateId,
+          templateName: opts.templateName,
+          language: opts.language,
+          category: opts.category,
+          componentTypes: opts.metaComponents.map((component) => String(component.type ?? "").toUpperCase()),
+          parameters: payload.template.components.map((component: any) => ({
+            type: component.type,
+            index: component.index ?? null,
+            count: Array.isArray(component.parameters) ? component.parameters.length : 0,
+          })),
+          metaCode,
+          metaMessage: msg,
+        });
+      }
+      return {
+        success: false,
+        error: msg,
+        metaCode,
+        statusCode: metaCode === "131008" ? 422 : res.status >= 500 ? 502 : 400,
+      };
     }
 
     return { success: true, metaMessageId: data.messages?.[0]?.id };
@@ -469,6 +514,9 @@ export async function POST(req: NextRequest) {
 
   // ── 9. Send via Meta ──────────────────────────────────────────────────────
   const sendResult = await sendWhatsAppOtp({
+    projectId:      auth.projectId,
+    templateId:     template.id,
+    metaTemplateId: template.metaTemplateId,
     accessToken:   plainAccessToken,
     phoneNumberId: auth.metaConnection.phoneNumberId,
     to:            normalizedPhone,
@@ -479,7 +527,6 @@ export async function POST(req: NextRequest) {
     category: template.category,
     variables: template.variables,
     metaComponents: template.metaComponents,
-    templateBody: template.body,
   });
 
   // ── 10. Store in Redis (code hash only — no plain code stored) ────────────

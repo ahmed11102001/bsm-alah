@@ -1,10 +1,43 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAuthenticationComponents,
   buildOtpParameters,
   validateVariableDefinitions,
 } from "@/lib/developer-template-contract";
 
 describe("developer template variable contract", () => {
+  it("uses only actual Meta OTP button metadata and does not invent a BODY parameter", () => {
+    const result = buildAuthenticationComponents([
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
+      { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+    ], "123456");
+    expect(result).toEqual({
+      ok: true,
+      components: [{
+        type: "button",
+        sub_type: "url",
+        index: "0",
+        parameters: [{ type: "text", text: "123456" }],
+      }],
+    });
+  });
+
+  it("adds a BODY parameter only when the stored definition has a placeholder", () => {
+    const result = buildAuthenticationComponents([
+      { type: "BODY", text: "Your code is {{1}}" },
+    ], "123456");
+    expect(result).toEqual({
+      ok: true,
+      components: [{ type: "body", parameters: [{ type: "text", text: "123456" }] }],
+    });
+  });
+
+  it("rejects missing or malformed authentication metadata", () => {
+    expect(buildAuthenticationComponents(null, "123456").ok).toBe(false);
+    expect(buildAuthenticationComponents([{ type: "BUTTONS", buttons: [{ type: "OTP" }] }], "123456").ok).toBe(false);
+  });
+
   it("maps semantic variables instead of assuming positions", () => {
     const result = buildOtpParameters([
       { position: 1, key: "serviceName", example: "Wani" },

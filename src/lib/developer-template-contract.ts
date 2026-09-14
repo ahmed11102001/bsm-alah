@@ -11,7 +11,16 @@ export interface MetaTemplateComponent {
   format?: string;
   text?: string;
   example?: unknown;
-  buttons?: Array<{ type?: string; otp_type?: string; sub_type?: string; index?: string }>;
+  add_security_recommendation?: boolean;
+  code_expiration_minutes?: number;
+  parameters?: unknown[];
+  buttons?: Array<{
+    type?: string;
+    otp_type?: string;
+    sub_type?: string;
+    index?: string | number;
+    text?: string;
+  }>;
 }
 
 export function placeholderPositions(body: string): number[] {
@@ -61,27 +70,84 @@ export function buildOtpParameters(
   return { ok: true, parameters };
 }
 
+export function validateAuthenticationComponents(
+  components: MetaTemplateComponent[] | null | undefined,
+): { ok: true; components: MetaTemplateComponent[] } | { ok: false; error: string } {
+  if (!Array.isArray(components) || components.length === 0) {
+    return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+  }
+
+  const supported = new Set(["BODY", "HEADER", "FOOTER", "BUTTONS"]);
+  let otpButtonCount = 0;
+  let parameterBearingBody = false;
+
+  for (const component of components) {
+    if (!component || typeof component !== "object") {
+      return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+    }
+    const type = String(component.type ?? "").toUpperCase();
+    if (!supported.has(type)) {
+      return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+    }
+    if (type === "BUTTONS") {
+      if (!Array.isArray(component.buttons)) {
+        return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+      }
+      for (const button of component.buttons) {
+        if (String(button?.type ?? "").toUpperCase() === "OTP") {
+          otpButtonCount += 1;
+          if (!String(button.otp_type ?? "").trim()) {
+            return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+          }
+        }
+      }
+    }
+    if (type === "BODY") {
+      const positions = typeof component.text === "string" ? placeholderPositions(component.text) : [];
+      if (positions.length > 0 || (Array.isArray(component.parameters) && component.parameters.length > 0)) {
+        parameterBearingBody = true;
+      }
+      if (positions.length > 1 || (Array.isArray(component.parameters) && component.parameters.length > 1)) {
+        return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+      }
+    }
+  }
+
+  if (otpButtonCount === 0 && !parameterBearingBody) {
+    return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+  }
+  return { ok: true, components };
+}
+
 export function buildAuthenticationComponents(
   components: MetaTemplateComponent[] | null | undefined,
   otp: string,
-  fallbackConfig?: { otpType?: string },
-) {
-  const source = components?.length ? components : [
-    { type: "BODY" },
-    { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: fallbackConfig?.otpType ?? "COPY_CODE" }] },
-  ];
+): { ok: true; components: Array<Record<string, unknown>> } | { ok: false; error: string } {
+  const validation = validateAuthenticationComponents(components);
+  if (!validation.ok) return validation;
+
   const result: Array<Record<string, unknown>> = [];
-  for (const component of source) {
+  for (const component of validation.components) {
     const type = String(component.type ?? "").toUpperCase();
-    if (type === "BODY") result.push({ type: "body", parameters: [{ type: "text", text: otp }] });
-    if (type === "HEADER" && component.format === "TEXT") result.push({ type: "header", parameters: [{ type: "text", text: otp }] });
+    if (type === "BODY") {
+      const positions = typeof component.text === "string" ? placeholderPositions(component.text) : [];
+      const parameterCount = positions.length || (Array.isArray(component.parameters) ? component.parameters.length : 0);
+      if (parameterCount === 1) {
+        result.push({ type: "body", parameters: [{ type: "text", text: otp }] });
+      }
+    }
     if (type === "BUTTONS") {
       for (const [index, button] of (component.buttons ?? []).entries()) {
         if (String(button.type ?? "").toUpperCase() === "OTP") {
-          result.push({ type: "button", sub_type: "url", index: String(button.index ?? index), parameters: [{ type: "text", text: otp }] });
+          result.push({
+            type: "button",
+            sub_type: button.sub_type || "url",
+            index: String(button.index ?? index),
+            parameters: [{ type: "text", text: otp }],
+          });
         }
       }
     }
   }
-  return result;
+  return { ok: true, components: result };
 }

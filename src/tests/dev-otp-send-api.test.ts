@@ -88,7 +88,13 @@ function makeTemplate(overrides: any = {}) {
     language: "ar",
     body: '{"addSecurityRecommendation":true}',
     status: "APPROVED",
+    category: "AUTHENTICATION",
     metaTemplateId: "meta_999",
+    metaComponents: [
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
+      { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copy Code" }] },
+    ],
     ...overrides,
   };
 }
@@ -143,13 +149,61 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     expect(data.token).toBeTruthy();
     // Meta استلم اسم ولغة القالب من السجل المحلي — مش من الـ client
     expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toContain("/messages");
+    expect(mockFetch.mock.calls[0][1].method).toBe("POST");
+    expect(mockFetch.mock.calls[0][1].headers).toEqual({
+      Authorization: "Bearer ENC_TOKEN",
+      "Content-Type": "application/json",
+    });
     const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(payload.messaging_product).toBe("whatsapp");
+    expect(payload.recipient_type).toBe("individual");
+    expect(payload.type).toBe("template");
     expect(payload.template.name).toBe("otp_verification");
     expect(payload.template.language).toEqual({ code: "ar" });
     expect(payload.template.components).toEqual([
-      { type: "body", parameters: [{ type: "text", text: expect.any(String) }] },
       { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: expect.any(String) }] },
     ]);
+  });
+
+  it("approved authentication template without metadata is rejected before Meta", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({ metaComponents: null })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(409);
+    expect(data.code).toBe("TEMPLATE_METADATA_INCOMPLETE");
+    expect(data.error).toBe("Template metadata is incomplete. Please sync templates again.");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("approved authentication template with malformed metadata is rejected before Meta", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({ metaComponents: [{ type: "BUTTONS", buttons: [{ type: "OTP" }] }] })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(409);
+    expect(data.code).toBe("TEMPLATE_METADATA_INCOMPLETE");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("Meta 131008 is mapped to 422 without logging credentials or OTP", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { code: 131008, message: "Invalid parameter" } }),
+    });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(422);
+    expect(data.metaCode).toBe("131008");
+    expect(data.error).toBe("WhatsApp template parameters are invalid or incomplete.");
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain("ENC_TOKEN");
+    logSpy.mockRestore();
   });
 
   // ── Status gates ───────────────────────────────────────────────────────
