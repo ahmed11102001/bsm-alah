@@ -80,6 +80,7 @@ export default function EmbeddedSignupButton({
         appId: process.env.NEXT_PUBLIC_META_APP_ID!,
         autoLogAppEvents: true,
         xfbml: false,
+        cookie: true,
         version: GRAPH_API_VERSION,
       });
       setSdkReady(true);
