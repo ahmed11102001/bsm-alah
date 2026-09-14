@@ -1,0 +1,99 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+const mockPrisma = vi.hoisted(() => ({
+  developerProject: { findFirst: vi.fn() },
+  developerOtpTemplate: {
+    findMany: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn(),
+  },
+  developerMetaConnection: { findUnique: vi.fn() },
+}));
+const mockSession = vi.hoisted(() => vi.fn());
+const mockProject = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
+vi.mock("@/lib/dev-auth", () => ({ getDevSessionFromRequest: mockSession }));
+vi.mock("@/lib/dev-project-auth", () => ({ getProjectForOwnerOrDeveloper: mockProject }));
+vi.mock("@/lib/crypto", () => ({ decryptToken: vi.fn((token: string) => token) }));
+
+import { GET } from "@/app/api/developers/projects/[id]/otp-templates/route";
+import { POST as SYNC } from "@/app/api/developers/projects/[id]/otp-templates/sync/route";
+
+const params = { params: Promise.resolve({ id: "proj-1" }) };
+const request = (url: string, init?: any) => new NextRequest(url, init);
+
+describe("developer OTP templates API", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSession.mockResolvedValue({ id: "dev-1" });
+    mockProject.mockResolvedValue({ id: "proj-1" });
+  });
+
+  it("GET returns old records with null metadata without inventing values", async () => {
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([{
+      id: "tpl-1",
+      projectId: "proj-1",
+      variables: null,
+      metaComponents: null,
+    }]);
+
+    const response = await GET(request("http://localhost/api/developers/projects/proj-1/otp-templates"), params);
+    expect(response.status).toBe(200);
+    expect((await response.json()).templates).toEqual([expect.objectContaining({
+      id: "tpl-1",
+      variables: null,
+      metaComponents: null,
+    })]);
+  });
+
+  it("sync updates metadata even when status and Meta id are unchanged", async () => {
+    mockPrisma.developerMetaConnection.findUnique.mockResolvedValue({
+      isVerified: true,
+      accessToken: "TOKEN",
+      wabaId: "waba-1",
+    });
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([{
+      id: "tpl-1",
+      name: "otp_verification",
+      language: "ar",
+      category: "AUTHENTICATION",
+      status: "APPROVED",
+      metaTemplateId: "meta-1",
+      metaComponents: null,
+      rejectedReason: null,
+    }]);
+    mockPrisma.developerOtpTemplate.update.mockResolvedValue({});
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{
+        id: "meta-1",
+        name: "otp_verification",
+        status: "APPROVED",
+        category: "AUTHENTICATION",
+        language: "ar",
+        components: [
+          { type: "BODY", add_security_recommendation: true },
+          { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+        ],
+      }] }),
+    }));
+
+    const response = await SYNC(
+      request("http://localhost/api/developers/projects/proj-1/otp-templates/sync", { method: "POST" }),
+      params,
+    );
+    expect(response.status).toBe(200);
+    expect(mockPrisma.developerOtpTemplate.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "tpl-1" },
+      data: expect.objectContaining({
+        metaTemplateId: "meta-1",
+        metaComponents: [
+          { type: "BODY", add_security_recommendation: true },
+          { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+        ],
+      }),
+    }));
+  });
+});

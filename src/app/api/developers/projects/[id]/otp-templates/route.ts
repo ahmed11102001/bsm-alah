@@ -23,12 +23,31 @@ export async function GET(
   const project = await getProjectOrFail(session.id, id);
   if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
 
-  const templates = await prisma.developerOtpTemplate.findMany({
-    where: { projectId: id },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const templates = await prisma.developerOtpTemplate.findMany({
+      where: { projectId: id },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({ templates });
+    // Older rows legitimately have null JSON metadata. Keep the API shape stable
+    // without inventing metadata that was never returned by Meta.
+    return NextResponse.json({
+      templates: templates.map((template) => ({
+        ...template,
+        variables: template.variables ?? null,
+        metaComponents: template.metaComponents ?? null,
+      })),
+    });
+  } catch (error) {
+    console.error("[otp-templates:get] database failure", {
+      projectId: id,
+      error: error instanceof Error ? error.message : "unknown error",
+    });
+    return NextResponse.json(
+      { error: "Unable to load templates right now. Please try again shortly." },
+      { status: 503 },
+    );
+  }
 }
 
 // ── POST — create template for project ────────────────────────────────────────

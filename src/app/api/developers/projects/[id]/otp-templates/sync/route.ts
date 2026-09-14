@@ -4,6 +4,24 @@ import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
+import { placeholderPositions, type OtpVariableDefinition } from "@/lib/developer-template-contract";
+
+function deriveVariables(components: unknown, category?: string): OtpVariableDefinition[] | null | undefined {
+  if (category?.toUpperCase() === "AUTHENTICATION") return undefined;
+  if (!Array.isArray(components)) return undefined;
+  const body = components.find((component: any) => String(component?.type ?? "").toUpperCase() === "BODY") as any;
+  if (!body || typeof body.text !== "string") return undefined;
+  const positions = placeholderPositions(body.text);
+  if (positions.length === 0 || positions.length > 2) return undefined;
+  const examples = Array.isArray(body.example?.body_text?.[0]) ? body.example.body_text[0] : [];
+  if (examples.length < positions.length || examples.some((value: unknown) => !String(value ?? "").trim())) return undefined;
+  const keys: OtpVariableDefinition["key"][] = ["otp", "expiryMinutes"];
+  return positions.map((position, index) => ({
+    position,
+    key: keys[index],
+    example: String(examples[index]),
+  }));
+}
 
 // ── POST /api/developers/projects/[id]/otp-templates/sync ────────────────────
 export async function POST(
@@ -89,11 +107,25 @@ export async function POST(
         ? metaTmpl.rejected_reason || "مرفوض من Meta"
         : null;
 
+      const syncedComponents = Array.isArray(metaTmpl.components)
+        ? JSON.parse(JSON.stringify(metaTmpl.components))
+        : null;
+      const componentsChanged = JSON.stringify(local.metaComponents ?? null) !== JSON.stringify(syncedComponents);
+      const syncedCategory = metaTmpl.category && KNOWN_CATEGORIES.has(metaTmpl.category.toUpperCase())
+        ? metaTmpl.category.toUpperCase()
+        : local.category;
+      const derivedVariables = deriveVariables(metaTmpl.components, syncedCategory);
+      const variablesChanged = derivedVariables !== undefined &&
+        JSON.stringify(local.variables ?? null) !== JSON.stringify(derivedVariables);
+
       if (
         local.status !== newStatus ||
         local.metaTemplateId !== metaTmpl.id ||
         local.language !== metaTmpl.language ||
-        local.rejectedReason !== newRejectedReason
+        local.category !== syncedCategory ||
+        local.rejectedReason !== newRejectedReason ||
+        componentsChanged ||
+        variablesChanged
       ) {
         await prisma.developerOtpTemplate.update({
           where: { id: local.id },
@@ -101,7 +133,9 @@ export async function POST(
             status: newStatus as any,
             metaTemplateId: metaTmpl.id,
             language: metaTmpl.language,
-            metaComponents: metaTmpl.components ? JSON.parse(JSON.stringify(metaTmpl.components)) : undefined,
+            category: syncedCategory as any,
+            metaComponents: syncedComponents,
+    ...(derivedVariables !== undefined ? { variables: JSON.parse(JSON.stringify(derivedVariables)) } : {}),
             rejectedReason: newRejectedReason,
           },
         });
@@ -131,6 +165,7 @@ export async function POST(
         ? m.category.toUpperCase()
         : "UTILITY";
       const isAuth = category === "AUTHENTICATION";
+      const derivedVariables = deriveVariables(m.components, category);
 
       await prisma.developerOtpTemplate.create({
         data: {
@@ -143,6 +178,7 @@ export async function POST(
           body: isAuth ? JSON.stringify({ imported: true }) : "",
           status: (statusMap[m.status] || "PENDING") as any,
           metaTemplateId: m.id,
+          ...(derivedVariables !== undefined ? { variables: JSON.parse(JSON.stringify(derivedVariables)) } : {}),
           metaComponents: m.components ? JSON.parse(JSON.stringify(m.components)) : undefined,
           rejectedReason: m.status === "REJECTED" ? m.rejected_reason || "مرفوض من Meta" : null,
         },
@@ -154,6 +190,13 @@ export async function POST(
 
     return NextResponse.json({ ok: true, updated, imported, total: metaTemplates.length });
   } catch (err) {
+    console.error("[sync-templates] unexpected failure", {
+      error: err instanceof Error ? err.message : "unknown error",
+    });
+    return NextResponse.json(
+      { error: "Unable to sync templates right now. Please try again shortly." },
+      { status: 503 },
+    );
     console.error("[sync-templates]", err);
     return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
   }
