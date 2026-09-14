@@ -74,7 +74,7 @@ export function ClaudeIntegration({
             readOnly
             dir="ltr"
             value={apiKey ? `Bearer ${apiKey}` : locale === "ar" ? "لم يتم إنشاء مفتاح بعد" : "No key generated yet"}
-            className="font-mono text-xs bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+            className="font-mono text-xs bg-background border-border text-foreground"
           />
           <Button
             type="button"
@@ -82,7 +82,7 @@ export function ClaudeIntegration({
             size="icon"
             onClick={() => copyClaudeText("key")}
             disabled={!apiKey}
-            className="dark:border-gray-600 dark:text-gray-300 flex-shrink-0"
+            className="border-border text-foreground flex-shrink-0"
             title={locale === "ar" ? "نسخ المفتاح" : "Copy Key"}
           >
             {copied === "key" ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -145,7 +145,7 @@ export function ClaudeIntegration({
               size="sm"
               variant="outline"
               onClick={() => copyClaudeText("config")}
-              className="absolute top-2 left-2 text-xs gap-1 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              className="absolute top-2 left-2 text-xs gap-1 bg-secondary border-border text-secondary-foreground hover:bg-muted"
             >
               {copied === "config" ? (
                 <>
@@ -162,7 +162,7 @@ export function ClaudeIntegration({
       )}
 
       {/* أمثلة أوامر Claude */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-4 space-y-2">
+      <div className="rounded-xl border border-border bg-muted/80 p-4 space-y-2">
         <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
           {locale === "ar" ? "بعد الربط — تقدر تقول لـ Claude:" : "After connecting — you can ask Claude:"}
         </p>

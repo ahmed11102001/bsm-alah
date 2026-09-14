@@ -39,7 +39,7 @@ export default function ReportsLayout({ children }: { children: React.ReactNode 
 
   return (
     <div dir={dir}>
-      <div className="mb-6 flex flex-wrap gap-1 bg-muted p-1 rounded-xl w-fit">
+      <div className="mb-6 flex flex-wrap gap-1 bg-muted border border-border p-1 rounded-xl w-fit">
         {REPORT_TABS.map((item) => {
           const allowed = ORDER.indexOf(planTier) >= ORDER.indexOf(item.minPlan);
           const label = pageText[locale].tabs[item.value];
@@ -53,8 +53,8 @@ export default function ReportsLayout({ children }: { children: React.ReactNode 
                 ${!allowed
                   ? "opacity-40 cursor-not-allowed text-muted-foreground pointer-events-none"
                   : isActive
-                    ? "bg-card text-foreground shadow-sm border border-border"
-                    : "text-foreground/75 hover:bg-muted/60"
+                    ? "bg-primary text-primary-foreground shadow-sm border border-primary"
+                    : "text-muted-foreground hover:bg-card hover:text-foreground"
                 }`}
             >
               <item.icon className="w-4 h-4" /> {label}

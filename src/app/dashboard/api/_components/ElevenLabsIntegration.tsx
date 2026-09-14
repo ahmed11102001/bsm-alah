@@ -61,15 +61,15 @@ export function ElevenLabsIntegration({
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/80 border border-border">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Agent ID</p>
-              <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{agentId}</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Agent ID</p>
+              <p className="text-xs font-mono text-foreground mt-0.5">{agentId}</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 p-3">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/80 p-3">
+            <p className="text-sm font-semibold text-foreground">
               {locale === "ar" ? "الرد الصوتي مفعّل" : "Voice Reply enabled"}
             </p>
             <button
@@ -118,7 +118,7 @@ export function ElevenLabsIntegration({
               type="button"
               variant="outline"
               onClick={() => setEditMode(true)}
-              className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
+              className="flex-1 gap-2 text-xs font-medium border-border"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
@@ -150,7 +150,7 @@ export function ElevenLabsIntegration({
               onChange={e => setApiKey(e.target.value)}
               placeholder="sk_••••••••"
               dir="ltr"
-              className="rounded-xl text-xs font-mono dark:bg-gray-800 dark:border-gray-700"
+              className="rounded-xl text-xs font-mono bg-background border-border"
             />
           </div>
           <div>
@@ -165,7 +165,7 @@ export function ElevenLabsIntegration({
               onChange={e => setAgentId(e.target.value)}
               placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               dir="ltr"
-              className="rounded-xl text-xs font-mono dark:bg-gray-800 dark:border-gray-700"
+              className="rounded-xl text-xs font-mono bg-background border-border"
             />
           </div>
 

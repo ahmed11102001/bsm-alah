@@ -140,7 +140,7 @@ export function EasyOrdersIntegration({
           placeholder={labels.storePlaceholder}
           value={storeName}
           onChange={e => setStoreName(e.target.value)}
-          className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
+          className="mt-1 bg-background border-border text-xs"
         />
       </div>
 
@@ -158,7 +158,7 @@ export function EasyOrdersIntegration({
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
           type="password"
-          className="mt-1 font-mono text-xs dark:bg-gray-800 dark:border-gray-700"
+          className="mt-1 font-mono text-xs bg-background border-border"
         />
       </div>
 
@@ -187,7 +187,7 @@ export function EasyOrdersIntegration({
               value={webhookSecretOrders}
               onChange={e => setWebhookSecretOrders(e.target.value)}
               type="password"
-              className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 flex-1"
+              className="font-mono text-xs bg-background border-border flex-1"
             />
             <Button
               type="button"
@@ -195,7 +195,7 @@ export function EasyOrdersIntegration({
               disabled={savingSecretOrders || !webhookSecretOrders.trim() || !status?.connected}
               size="sm"
               variant="outline"
-              className="text-xs dark:border-gray-700 flex-shrink-0"
+              className="text-xs border-border flex-shrink-0"
             >
               {savingSecretOrders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : labels.saveSecretBtn}
             </Button>
@@ -220,7 +220,7 @@ export function EasyOrdersIntegration({
               value={webhookSecretStatusUpdate}
               onChange={e => setWebhookSecretStatusUpdate(e.target.value)}
               type="password"
-              className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 flex-1"
+              className="font-mono text-xs bg-background border-border flex-1"
             />
             <Button
               type="button"
@@ -228,7 +228,7 @@ export function EasyOrdersIntegration({
               disabled={savingSecretStatusUpdate || !webhookSecretStatusUpdate.trim() || !status?.connected}
               size="sm"
               variant="outline"
-              className="text-xs dark:border-gray-700 flex-shrink-0"
+              className="text-xs border-border flex-shrink-0"
             >
               {savingSecretStatusUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : labels.saveSecretBtn}
             </Button>

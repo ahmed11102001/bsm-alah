@@ -181,7 +181,7 @@ export function WooCommerceIntegration({
             variant="outline"
             onClick={handleSyncProducts}
             disabled={syncingProducts}
-            className="w-full gap-2 text-xs font-medium dark:border-gray-700"
+            className="w-full gap-2 text-xs font-medium border-border"
           >
             {syncingProducts ? (
               <>
@@ -212,7 +212,7 @@ export function WooCommerceIntegration({
               placeholder={isAr ? "مثال: متجري" : "E.g. My Store"}
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
-              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
+              className="mt-1 bg-background border-border text-xs"
             />
           </div>
           <div>
@@ -227,7 +227,7 @@ export function WooCommerceIntegration({
               dir="ltr"
               value={storeUrl}
               onChange={e => setStoreUrl(e.target.value)}
-              className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs text-left"
+              className="mt-1 bg-background border-border font-mono text-xs text-left"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -245,7 +245,7 @@ export function WooCommerceIntegration({
                 value={consumerKey}
                 onChange={e => setConsumerKey(e.target.value)}
                 type={showKeys ? "text" : "password"}
-                className="mt-1 font-mono text-xs dark:bg-gray-800 dark:border-gray-700"
+                className="mt-1 font-mono text-xs bg-background border-border"
               />
             </div>
             <div>
@@ -263,7 +263,7 @@ export function WooCommerceIntegration({
                   value={consumerSecret}
                   onChange={e => setConsumerSecret(e.target.value)}
                   type={showKeys ? "text" : "password"}
-                  className="font-mono text-xs dark:bg-gray-800 dark:border-gray-700 pl-10"
+                  className="font-mono text-xs bg-background border-border pl-10"
                 />
                 <button
                   type="button"

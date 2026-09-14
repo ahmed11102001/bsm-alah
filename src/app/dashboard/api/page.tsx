@@ -705,8 +705,8 @@ export default function API() {
 
       {/* ── Header ── */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{api.title}</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{api.subtitle}</p>
+        <h1 className="text-2xl font-bold text-foreground">{api.title}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{api.subtitle}</p>
       </div>
 
       {/* ── Category Pills ── */}
@@ -729,8 +729,8 @@ export default function API() {
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 border select-none",
                 isActive
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent shadow-sm"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/60"
+                  ? "bg-foreground text-background border-transparent shadow-sm"
+                  : "bg-card text-muted-foreground border-border hover:border-muted-foreground/80 hover:bg-muted"
               )}
             >
               {cat.icon}

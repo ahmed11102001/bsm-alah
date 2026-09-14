@@ -23,7 +23,7 @@ export function DisconnectModal({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-red-200 dark:border-red-900/50" onClick={e => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-red-200 dark:border-red-900/50" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
             <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -35,7 +35,7 @@ export function DisconnectModal({
             </p>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-gray-800/60 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
+        <p className="text-sm text-foreground/80 leading-relaxed bg-muted/80 p-3.5 rounded-xl border border-border">
           {description}
         </p>
         <div className="flex gap-2 pt-2">
@@ -52,7 +52,7 @@ export function DisconnectModal({
             variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="dark:border-gray-700 dark:text-gray-300"
+            className="border-border text-foreground"
           >
             {locale === "ar" ? "إلغاء" : "Cancel"}
           </Button>
@@ -82,7 +82,7 @@ export function UpgradeModal({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-amber-200 dark:border-amber-900/50" onClick={e => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 border border-amber-200 dark:border-amber-900/50" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 flex items-center justify-center flex-shrink-0 shadow-inner">
             <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -113,7 +113,7 @@ export function UpgradeModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="dark:border-gray-700 dark:text-gray-300"
+            className="border-border text-foreground"
           >
             {locale === "ar" ? "لاحقاً" : "Later"}
           </Button>

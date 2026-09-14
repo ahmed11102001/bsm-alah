@@ -95,10 +95,10 @@ export function WhatsAppIntegration({
         )}
 
         {initialData.wabaId && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/80 border border-border">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">WABA ID</p>
-              <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{initialData.wabaId}</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">WABA ID</p>
+              <p className="text-xs font-mono text-foreground mt-0.5">{initialData.wabaId}</p>
             </div>
             <button
               type="button"
@@ -111,10 +111,10 @@ export function WhatsAppIntegration({
         )}
 
         {initialData.phoneNumberId && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/80 border border-border">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Phone Number ID</p>
-              <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mt-0.5">{initialData.phoneNumberId}</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Phone Number ID</p>
+              <p className="text-xs font-mono text-foreground mt-0.5">{initialData.phoneNumberId}</p>
             </div>
             <button
               type="button"
@@ -132,7 +132,7 @@ export function WhatsAppIntegration({
             type="button"
             variant="outline"
             onClick={() => setShowForm(true)}
-            className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
+            className="flex-1 gap-2 text-xs font-medium border-border"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
@@ -165,7 +165,7 @@ export function WhatsAppIntegration({
             required
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs"
+            className="mt-1 bg-background border-border font-mono text-xs"
             dir="ltr"
           />
         </div>
@@ -179,7 +179,7 @@ export function WhatsAppIntegration({
             required
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs"
+            className="mt-1 bg-background border-border font-mono text-xs"
             dir="ltr"
           />
         </div>
@@ -193,7 +193,7 @@ export function WhatsAppIntegration({
             required
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 dark:bg-gray-800 dark:border-gray-700 font-mono text-xs"
+            className="mt-1 bg-background border-border font-mono text-xs"
             dir="ltr"
           />
         </div>

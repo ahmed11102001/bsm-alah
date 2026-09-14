@@ -30,7 +30,7 @@ export function WebhookIntegration({
           <CopyInput value={verifyToken} placeholder="..." />
         </div>
       </div>
-      <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700">
+      <div className="p-3 rounded-lg bg-muted/80 border border-border">
         <p className="text-xs text-gray-700 dark:text-gray-300">{hint}</p>
       </div>
     </div>

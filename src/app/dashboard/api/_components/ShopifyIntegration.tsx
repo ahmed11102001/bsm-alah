@@ -133,7 +133,7 @@ export function ShopifyIntegration({
             variant="outline"
             onClick={onSyncWebhooks}
             disabled={syncing}
-            className="w-full gap-2 text-xs font-medium dark:border-gray-700"
+            className="w-full gap-2 text-xs font-medium border-border"
           >
             {syncing ? (
               <>
@@ -152,7 +152,7 @@ export function ShopifyIntegration({
               type="button"
               variant="outline"
               onClick={() => setShowForm(true)}
-              className="flex-1 gap-2 text-xs font-medium dark:border-gray-700"
+              className="flex-1 gap-2 text-xs font-medium border-border"
             >
               <RefreshCw className="w-3.5 h-3.5" /> {locale === "ar" ? "تعديل البيانات" : "Edit credentials"}
             </Button>
@@ -180,7 +180,7 @@ export function ShopifyIntegration({
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
               autoComplete="off"
-              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-xs"
+              className="mt-1 bg-background border-border text-xs"
             />
           </div>
           <div>
@@ -195,7 +195,7 @@ export function ShopifyIntegration({
               value={shopDomain}
               onChange={e => setShopDomain(e.target.value)}
               autoComplete="off"
-              className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-left text-xs font-mono"
+              className="mt-1 bg-background border-border text-left text-xs font-mono"
               dir="ltr"
             />
           </div>
@@ -219,7 +219,7 @@ export function ShopifyIntegration({
                 type={showToken ? "text" : "password"}
                 autoComplete="new-password"
                 spellCheck={false}
-                className="dark:bg-gray-800 dark:border-gray-700 text-left pl-10 font-mono text-xs"
+                className="bg-background border-border text-left pl-10 font-mono text-xs"
                 dir="ltr"
               />
               <button
@@ -245,7 +245,7 @@ export function ShopifyIntegration({
                 value={clientId}
                 onChange={e => setClientId(e.target.value)}
                 autoComplete="off"
-                className="mt-1 dark:bg-gray-800 dark:border-gray-700 text-left font-mono text-xs"
+                className="mt-1 bg-background border-border text-left font-mono text-xs"
                 dir="ltr"
               />
             </div>
@@ -263,7 +263,7 @@ export function ShopifyIntegration({
                   type={showSecret ? "text" : "password"}
                   autoComplete="new-password"
                   spellCheck={false}
-                  className="dark:bg-gray-800 dark:border-gray-700 text-left pl-10 font-mono text-xs"
+                  className="bg-background border-border text-left pl-10 font-mono text-xs"
                   dir="ltr"
                 />
                 <button
@@ -324,7 +324,7 @@ export function ShopifyIntegration({
                     placeholder="mystore.myshopify.com"
                     value={oauthShop}
                     onChange={e => setOAuthShop(e.target.value)}
-                    className="dark:bg-gray-800 dark:border-gray-700 text-left text-xs font-mono"
+                    className="bg-background border-border text-left text-xs font-mono"
                     dir="ltr"
                   />
                   <Button
