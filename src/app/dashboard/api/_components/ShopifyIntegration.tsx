@@ -25,8 +25,6 @@ export interface ShopifyIntegrationProps {
   setStoreName: (v: string) => void;
   shopDomain: string;
   setShopDomain: (v: string) => void;
-  accessToken: string;
-  setAccessToken: (v: string) => void;
   clientId: string;
   setClientId: (v: string) => void;
   clientSecret: string;
@@ -48,8 +46,6 @@ export function ShopifyIntegration({
   setStoreName,
   shopDomain,
   setShopDomain,
-  accessToken,
-  setAccessToken,
   clientId,
   setClientId,
   clientSecret,
@@ -64,7 +60,6 @@ export function ShopifyIntegration({
   locale = "ar",
   onDisconnect,
 }: ShopifyIntegrationProps) {
-  const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [oauthShop, setOAuthShop] = useState("");
@@ -200,39 +195,7 @@ export function ShopifyIntegration({
             />
           </div>
 
-          {/* Admin API Access Token */}
-          <div>
-            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-              <Key className="w-3 h-3 text-emerald-600" />
-              Admin API Access Token
-              <span className="text-gray-400 font-normal mr-1">
-                {locale === "ar" ? "(للمتاجر القديمة — يبدأ بـ shpat_)" : "(legacy — starts with shpat_)"}
-              </span>
-            </Label>
-            <div className="relative mt-1">
-              <Input
-                id="shopify-admin-access-token"
-                name="shopify_admin_access_token_custom"
-                placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                value={accessToken}
-                onChange={e => setAccessToken(e.target.value)}
-                type={showToken ? "text" : "password"}
-                autoComplete="new-password"
-                spellCheck={false}
-                className="bg-background border-border text-left pl-10 font-mono text-xs"
-                dir="ltr"
-              />
-              <button
-                type="button"
-                onClick={() => setShowToken(v => !v)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Client ID + Client Secret (Dev Dashboard) */}
+          {/* Client ID + Client Secret (Dev Dashboard) — المسار الوحيد للربط اليدوي */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">

@@ -16,6 +16,8 @@ export interface IntegrationCardProps {
   locked?: boolean;
   lockMessage?: string;
   externalLink?: ExternalLinkItem;
+  /** محتوى إضافي اختياري داخل الدليل (مثال: صندوق نسخ الصلاحيات) */
+  guideExtra?: React.ReactNode;
   locale?: string;
   connected?: boolean;
   connectedLabel?: string;
@@ -34,6 +36,7 @@ export function IntegrationCard({
   locked = false,
   lockMessage = "",
   externalLink,
+  guideExtra,
   locale = "ar",
   connected = false,
   connectedLabel,
@@ -146,8 +149,11 @@ export function IntegrationCard({
                     </div>
                   )}
 
-                  {externalLink && (
-                    <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-border">
+                  {guideExtra && (
+                    <div className="pt-1">{guideExtra}</div>
+                  )}
+
+                  {externalLink && (                    <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-border">
                       <span className="text-xs text-foreground/80 font-medium">
                         {externalLink.label}
                       </span>

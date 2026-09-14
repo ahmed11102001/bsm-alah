@@ -51,4 +51,6 @@ export interface CardDef {
   subtitle: string;
   steps: StepItem[];
   externalLink?: ExternalLinkItem;
+  /** محتوى إضافي اختياري داخل الدليل (مثال: صندوق نسخ الصلاحيات) */
+  guideExtra?: React.ReactNode;
 }

@@ -12,6 +12,7 @@ import { useSubscription } from "@/lib/dashboard-context";
 import { CardId, CategoryId, CATEGORIES, CardDef } from "./_types";
 import { DisconnectModal, UpgradeModal } from "./_components/Modals";
 import { IntegrationCard } from "./_components/IntegrationCard";
+import { ShopifyScopesBox } from "./_components/ShopifyScopesBox";
 import { WhatsAppIntegration } from "./_components/WhatsAppIntegration";
 import { ShopifyIntegration, type ShopifyStatus } from "./_components/ShopifyIntegration";
 import { EasyOrdersIntegration } from "./_components/EasyOrdersIntegration";
@@ -54,7 +55,6 @@ export default function API() {
   const [shopifyStatus, setShopifyStatus] = useState<ShopifyStatus | null>(null);
   const [shStoreName, setShStoreName] = useState("");
   const [shShopDomain, setShShopDomain] = useState("");
-  const [shAccessToken, setShAccessToken] = useState("");
   const [shClientId, setShClientId] = useState("");
   const [shClientSecret, setShClientSecret] = useState("");
   const [shWebhookUrl, setShWebhookUrl] = useState("");
@@ -478,15 +478,14 @@ export default function API() {
     }
   };
 
-  // ── Shopify Handlers ──
+  // ── Shopify Handlers (Client Credentials فقط — بلا Admin Token) ──
   const handleShConnect = async () => {
     if (!shStoreName.trim()) { toast.error("أدخل اسم المتجر أولاً"); return; }
     if (!shShopDomain.trim()) { toast.error("أدخل دومين Shopify — مطلوب للتحقق من المتجر"); return; }
-    const token = shAccessToken.trim();
     const clientId = shClientId.trim();
     const clientSecret = shClientSecret.trim();
-    if ((clientId && !clientSecret) || (!clientId && clientSecret)) {
-      toast.error("ابعت Client ID و Client Secret مع بعض — المجموعة ناقصة");
+    if (!clientId || !clientSecret) {
+      toast.error(locale === "ar" ? "أدخل Client ID و Client Secret — الاتنين مطلوبين" : "Client ID and Client Secret are both required");
       return;
     }
     setShConnecting(true);
@@ -497,9 +496,8 @@ export default function API() {
         body: JSON.stringify({
           storeName: shStoreName.trim(),
           shopDomain: shShopDomain.trim(),
-          accessToken: token || undefined,
-          clientId: clientId || undefined,
-          clientSecret: clientSecret || undefined,
+          clientId,
+          clientSecret,
         }),
       });
       const d = await r.json();
@@ -511,7 +509,7 @@ export default function API() {
       } else {
         toast.success(`✅ تم حفظ متجر ${d.storeName} — أضف الـ Webhook URL في Shopify يدوياً`);
       }
-      setShStoreName(""); setShShopDomain(""); setShAccessToken("");
+      setShStoreName(""); setShShopDomain("");
       setShClientId(""); setShClientSecret("");
       loadShopifyStatus();
     } catch {
@@ -606,12 +604,13 @@ export default function API() {
     {
       id: "shopify",
       title: locale === "ar" ? "ربط Shopify" : "Connect Shopify",
-      subtitle: locale === "ar" ? "دومين + Access Token — تسجيل تلقائي للـ Webhooks" : "Domain + Access Token — auto Webhook setup",
+      subtitle: locale === "ar" ? "Client ID + Secret — تسجيل تلقائي للـ Webhooks" : "Client ID + Secret — auto Webhook setup",
       steps: [
-        { title: locale === "ar" ? "أنشئ Custom App على Shopify" : "Create a Custom App on Shopify", desc: locale === "ar" ? "من لوحة تحكم متجرك: Settings → Apps → Develop apps → Create an app. ده تطبيق خاص بيك انت بتعمله جوه متجرك، مش تطبيق من الـ App Store." : "In your store admin: Settings → Apps → Develop apps → Create an app. This is a private app you create inside your own store, not one you install from the App Store." },
-        { title: locale === "ar" ? "فعّل الصلاحيات وخد الـ Token" : "Grant scopes & copy the token", desc: locale === "ar" ? "فعّل read_orders, write_orders, read_checkouts, read_customers, read_products، ثم Install app وانسخ الـ Admin API access token" : "Enable read_orders, write_orders, read_checkouts, read_customers, read_products, then Install app and copy the Admin API access token" },
-        { title: locale === "ar" ? "أدخل البيانات في وني واربط" : "Enter the details in Wani & connect", desc: locale === "ar" ? "اسم المتجر + الدومين (متجرك.myshopify.com) + الـ Token — لو حطيت الـToken هنسجل الـ Webhooks تلقائيًا، من غير ما تدخل Shopify تاني" : "Store name + domain (yourstore.myshopify.com) + the token — with the token provided, webhooks are registered automatically, no need to go back into Shopify" },
+        { title: locale === "ar" ? "أنشئ تطبيقًا من لوحة مطوري Shopify" : "Create an app in Shopify Dev Dashboard", desc: locale === "ar" ? "افتح الزرار تحت ← أنشئ تطبيقًا جديدًا (Create app) ← اختر متجرك وثبّت التطبيق عليه (Custom distribution)." : "Open the button below → create a new app (Create app) → select your store and install it (Custom distribution)." },
+        { title: locale === "ar" ? "فعّل الصلاحيات وثبّت" : "Enable scopes & install", desc: locale === "ar" ? "من صفحة التطبيق: Configuration ← فعّل صلاحيات Admin API من الصندوق تحت ← احفظ ثم Install/Update عشان تتطبق." : "In the app page: Configuration → enable the Admin API scopes from the box below → Save, then Install/Update to apply." },
+        { title: locale === "ar" ? "انسخ بيانات الاعتماد واربط" : "Copy credentials & connect", desc: locale === "ar" ? "من API credentials انسخ Client ID و Client Secret والصقهما في وني مع اسم المتجر والدومين — وهنسجل الـ Webhooks تلقائيًا." : "From API credentials copy the Client ID and Client Secret, paste them in Wani with the store name and domain — webhooks register automatically." },
       ],
+      guideExtra: <ShopifyScopesBox locale={locale} />,
       externalLink: {
         href: "https://dev.shopify.com/dashboard",
         label: locale === "ar" ? "لوحة مطوري Shopify (Dev Dashboard)" : "Shopify Dev Dashboard",
@@ -829,8 +828,6 @@ export default function API() {
                     storeName={shStoreName}
                     shopDomain={shShopDomain}
                     setShopDomain={setShShopDomain}
-                    accessToken={shAccessToken}
-                    setAccessToken={setShAccessToken}
                     clientId={shClientId}
                     setClientId={setShClientId}
                     clientSecret={shClientSecret}
