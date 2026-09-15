@@ -10,26 +10,17 @@ import {
 import { useLanguage } from "../../../../_components/LanguageProvider";
 import { useDevPath } from "@/lib/dev-links";
 import {
+  frameworksForLanguage,
   generateIntegrationCode,
   getOtpApiContract,
+  LANGUAGES,
   type IntegrationLanguage,
   type QuickStartOperation,
 } from "@/lib/developer-code-generator";
 
 type BuildPath = "manual" | "sdk" | "cli";
-// Extra alias: "Node.js" renders the JavaScript generator with a Node label.
-type ManualLang = IntegrationLanguage | "node";
 
 type Template = { id: string; name: string; language: string; status: string; metaTemplateId: string | null };
-
-const MANUAL_LANGS: { id: ManualLang; label: string; framework: string }[] = [
-  { id: "javascript", label: "JavaScript", framework: "JavaScript (fetch)" },
-  { id: "typescript", label: "TypeScript", framework: "TypeScript (fetch)" },
-  { id: "node", label: "Node.js", framework: "Node.js" },
-  { id: "python", label: "Python", framework: "Python (requests)" },
-  { id: "php", label: "PHP", framework: "PHP (cURL)" },
-  { id: "curl", label: "cURL", framework: "Server shell" },
-];
 
 function CopyBtn({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -82,9 +73,23 @@ export default function QuickStartPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [templatesMsg, setTemplatesMsg] = useState("");
 
-  // ── Manual generator state: language + operation + template ──
-  const [manualLang, setManualLang] = useState<ManualLang>("javascript");
+  // ── Manual generator state: language → framework → operation → template ──
+  // The framework dropdown only lists frameworks with a tested generator
+  // (see LANGUAGE_FRAMEWORKS), so every visible option produces real code.
+  const [manualLang, setManualLang] = useState<IntegrationLanguage>("javascript");
+  const [manualFramework, setManualFramework] = useState("node");
   const [manualOp, setManualOp] = useState<QuickStartOperation>("send");
+
+  const availableFrameworks = useMemo(
+    () => frameworksForLanguage(manualLang),
+    [manualLang]
+  );
+
+  useEffect(() => {
+    if (!availableFrameworks.some((f) => f.id === manualFramework)) {
+      setManualFramework(availableFrameworks[0]?.id ?? "");
+    }
+  }, [manualLang, manualFramework, availableFrameworks]);
 
   const [baseUrl, setBaseUrl] = useState("");
   useEffect(() => {
@@ -119,16 +124,14 @@ export default function QuickStartPage() {
 
   // ── Generated code derives from the SAME contract via the shared generator ──
   const generatedCode = useMemo(() => {
-    const langEntry = MANUAL_LANGS.find((l) => l.id === manualLang) ?? MANUAL_LANGS[0];
-    const genLang: IntegrationLanguage = manualLang === "node" ? "javascript" : manualLang;
     return generateIntegrationCode({
       operation: manualOp,
-      language: genLang,
-      framework: langEntry.framework,
+      language: manualLang,
+      framework: manualFramework,
       templateId: needsTemplate ? selected?.id : undefined,
       baseUrl: baseUrl || "https://developers.aiwni.com/api/developers/otp",
     });
-  }, [manualLang, manualOp, needsTemplate, selected, baseUrl]);
+  }, [manualLang, manualFramework, manualOp, needsTemplate, selected, baseUrl]);
 
   // ── SDK steps (short, copyable) ──
   const sdkInstall = "npm install @aiwni/sdk";
@@ -416,8 +419,8 @@ wani otp status --token <token>`;
             </div>
             <p className="qs-section-desc">
               {t(
-                "Use Wani directly with HTTPS requests. Choose your language and copy the code.",
-                "استخدم Wani مباشرة عبر HTTPS. اختر لغتك وانسخ الكود."
+                "Use Wani directly with HTTPS requests. Choose your language, then your framework, and copy production-safe code.",
+                "استخدم Wani مباشرة عبر HTTPS. اختر لغتك، ثم الفريم وورك، وانسخ كودًا جاهزًا للإنتاج."
               )}
             </p>
 
@@ -427,10 +430,22 @@ wani otp status --token <token>`;
                 <select
                   className="qs-select"
                   value={manualLang}
-                  onChange={(e) => setManualLang(e.target.value as ManualLang)}
+                  onChange={(e) => setManualLang(e.target.value as IntegrationLanguage)}
                 >
-                  {MANUAL_LANGS.map((l) => (
+                  {LANGUAGES.map((l) => (
                     <option key={l.id} value={l.id}>{l.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="qs-field">
+                <label className="qs-label">{t("Framework / Runtime", "الفريم وورك / البيئة")}</label>
+                <select
+                  className="qs-select"
+                  value={manualFramework}
+                  onChange={(e) => setManualFramework(e.target.value)}
+                >
+                  {availableFrameworks.map((f) => (
+                    <option key={f.id} value={f.id}>{f.label}</option>
                   ))}
                 </select>
               </div>
@@ -446,15 +461,16 @@ wani otp status --token <token>`;
                   ))}
                 </select>
               </div>
-              {needsTemplate ? (
-                templatePicker()
-              ) : (
-                <div className="qs-field">
-                  <label className="qs-label">{t("Token", "الرمز")}</label>
-                  <div className="qs-hint">TOKEN_FROM_SEND — {t("returned by Send OTP", "يُرجع من Send OTP")}</div>
-                </div>
-              )}
             </div>
+
+            {needsTemplate ? (
+              templatePicker()
+            ) : (
+              <div className="qs-field">
+                <label className="qs-label">{t("Token", "الرمز")}</label>
+                <div className="qs-hint">TOKEN_FROM_SEND — {t("returned by Send OTP", "يُرجع من Send OTP")}</div>
+              </div>
+            )}
 
             <div className="qs-endpoint">
               <span className="qs-method">{contract.method}</span>
