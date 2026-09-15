@@ -28,6 +28,10 @@ wani --version
 wani login
 # → shows a code, opens the portal authorization page, waits for approval
 
+# 2. Guided end-to-end check (interactive: phone → template → code)
+wani otp test
+wani otp test --phone 201012345678 --template-id YOUR_TEMPLATE_ID --code 123456
+
 # 2. See your projects and pick one
 wani project list
 wani project use cmu123abc --api-key wani_live_xxxx
@@ -50,6 +54,7 @@ wani otp status --token <token>
 | `wani project list` | List your projects |
 | `wani project use <id-or-name> [--api-key KEY]` | Select the working project (id, id-prefix or exact name); optionally save its API key |
 | `wani project current` | Show the selected project |
+| `wani otp test [--phone P] [--template-id ID \| --template NAME] [--code C]` | Guided end-to-end OTP check (prompts for missing values) |
 | `wani otp send --phone P (--template-id ID \| --template NAME [--language CODE]) [--expires N]` | Send a WhatsApp OTP |
 | `wani otp verify --token T [--code C]` | Verify an OTP code (prompts for the code when omitted) |
 | `wani otp status --token T` | Check OTP delivery status |

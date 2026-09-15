@@ -16,6 +16,7 @@ import { projectCurrentCommand } from "./commands/project/current.js";
 import { otpSendCommand } from "./commands/otp/send.js";
 import { otpVerifyCommand } from "./commands/otp/verify.js";
 import { otpStatusCommand } from "./commands/otp/status.js";
+import { otpTestCommand } from "./commands/otp/test.js";
 import { printError } from "./output/errors.js";
 import { isHelpRequest, isJsonOutput, optString, parseArgs } from "./utils/args.js";
 
@@ -34,9 +35,11 @@ Commands:
   project use <id-or-name> [--api-key]  Select the working project (optionally save its API key)
   project current                       Show the selected project
 
+  otp test [--phone <phone>] [--template-id <id>] [--code <code>]
+                                         Guided end-to-end OTP check (interactive)
   otp send --phone <phone> (--template-id <id> | --template <name> [--language <code>])
            [--expires <minutes>] [--project <id>] [--api-key <key>]
-                                        Send a WhatsApp OTP
+                                         Send a WhatsApp OTP
   otp verify --token <token> [--code <code>]
                                         Verify an OTP code
   otp status --token <token>            Check OTP delivery status
@@ -59,6 +62,7 @@ Auth model:
 
 const OTP_HELP = `wani otp — test the WhatsApp OTP API
 
+  wani otp test [--phone 201012345678] [--template-id <id>] [--code 123456]
   wani otp send --phone 201012345678 --template-id <id> [--expires 10]
   wani otp send --phone 201012345678 --template otp_verification --language en_US
   wani otp verify --token <token> --code 123456
@@ -145,6 +149,10 @@ async function main(argv: string[]): Promise<void> {
       }
       throw new CliError(`Unknown project command: ${action ?? "(none)"}. Try: list, use, current.`, { kind: "usage" });
     case "otp":
+      if (action === "test") {
+        await otpTestCommand(ctx, scoped);
+        return;
+      }
       if (action === "send") {
         await otpSendCommand(ctx, scoped);
         return;
@@ -157,7 +165,7 @@ async function main(argv: string[]): Promise<void> {
         await otpStatusCommand(ctx, scoped);
         return;
       }
-      throw new CliError(`Unknown otp command: ${action ?? "(none)"}. Try: send, verify, status.`, { kind: "usage" });
+      throw new CliError(`Unknown otp command: ${action ?? "(none)"}. Try: test, send, verify, status.`, { kind: "usage" });
     default:
       throw new CliError(`Unknown command: ${args.command.join(" ")}. Run \`wani --help\`.`, { kind: "usage" });
   }
