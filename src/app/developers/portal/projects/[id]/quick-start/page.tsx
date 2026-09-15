@@ -326,6 +326,13 @@ wani otp status --token <token>`;
           background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
           border-radius: 11px; padding: 11px 14px; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap;
         }
+        .qs-cli-auth-note {
+          display: flex; align-items: flex-start; gap: 10px; margin-top: 12px;
+          font-size: 12.5px; color: rgba(255,255,255,0.55); line-height: 1.7;
+          background: rgba(32,211,120,0.05); border: 1px solid rgba(32,211,120,0.12);
+          border-radius: 11px; padding: 12px 14px;
+          flex-direction: row;
+        }
 
         .qs-reqres-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .qs-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; flex-direction: ${isAr ? "row" : "row-reverse"}; }
@@ -557,6 +564,19 @@ wani otp status --token <token>`;
             <StepBlock n="1" title={t("Install", "التثبيت")} code={cliInstall} />
             <div className="qs-block-label">2. {t("Then", "ثم")}</div>
             <CodeBlock code={cliCommands} />
+
+            <div className="qs-cli-auth-note">
+              <TerminalSquare size={14} style={{ color: "#20d378", flexShrink: 0 }} />
+              <span>
+                {t(
+                  "wani login opens your browser — no passwords in the terminal. Manage connected devices in ",
+                  "أمر wani login يفتح المتصفح — بلا كلمات مرور في الطرفية. أدر الأجهزة المتصلة من "
+                )}
+                <Link href={devPath("/portal/settings")} style={{ color: "#20d378", fontWeight: 600 }}>
+                  {t("Settings → CLI & Integrations", "الإعدادات ← CLI والتكاملات")}
+                </Link>
+              </span>
+            </div>
 
             <div className="qs-warn">
               {t(

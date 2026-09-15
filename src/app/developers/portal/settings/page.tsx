@@ -2,15 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Shield, Save, ArrowRight } from "lucide-react";
+import { User, Shield, Save, ArrowRight, TerminalSquare, MonitorSmartphone, LogOut } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLanguage } from "../../_components/LanguageProvider";
+import { useDevPath } from "@/lib/dev-links";
+
+interface CliDevice {
+  id: string;
+  deviceName: string | null;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+}
 
 export default function DeveloperSettingsPage() {
   const router = useRouter();
+  const devPath = useDevPath();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { language, t } = useLanguage();
+  const [devices, setDevices] = useState<CliDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -40,8 +54,56 @@ export default function DeveloperSettingsPage() {
         setLoading(false);
       }
     }
+    async function loadDevices() {
+      try {
+        const res = await fetch("/api/developers/cli/sessions");
+        if (res.ok) {
+          const data = await res.json();
+          setDevices(Array.isArray(data.sessions) ? data.sessions : []);
+        }
+      } catch {
+        // Handle error quietly
+      } finally {
+        setDevicesLoading(false);
+      }
+    }
     loadInfo();
+    loadDevices();
   }, []);
+
+  async function handleRevokeDevice(id: string) {
+    try {
+      const res = await fetch("/api/developers/cli/sessions/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || t("Failed to revoke device", "فشل إلغاء الجهاز"));
+      } else {
+        toast.success(t("Device revoked", "تم إلغاء الجهاز"));
+        setDevices((d) => d.filter((x) => x.id !== id));
+      }
+    } catch {
+      toast.error(t("Connection error with the server", "مشكلة في الاتصال بالخادم"));
+    }
+  }
+
+  async function handleRevokeAllDevices() {
+    try {
+      const res = await fetch("/api/developers/cli/sessions/revoke-all", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || t("Failed to revoke devices", "فشل إلغاء الأجهزة"));
+      } else {
+        toast.success(t("All CLI devices revoked", "تم إلغاء جميع أجهزة CLI"));
+        setDevices([]);
+      }
+    } catch {
+      toast.error(t("Connection error with the server", "مشكلة في الاتصال بالخادم"));
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -245,6 +307,47 @@ export default function DeveloperSettingsPage() {
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        .btn-connect-cli {
+          background: #20d378; color: #060810; border: none; border-radius: 10px;
+          padding: 11px 20px; font-size: 13.5px; font-weight: 600; font-family: inherit;
+          display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+          transition: opacity 0.2s; margin-bottom: 24px;
+        }
+        .btn-connect-cli:hover { opacity: 0.9; }
+        .devices-title {
+          display: flex; align-items: center; justify-content: space-between;
+          font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7);
+          margin-bottom: 12px; padding-top: 20px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .btn-revoke-all {
+          background: none; border: none; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px;
+          font-size: 12px; font-family: inherit; color: rgba(239,68,68,0.7);
+        }
+        .btn-revoke-all:hover { color: #ef4444; }
+        .devices-loading { display: flex; justify-content: center; padding: 16px 0; }
+        .devices-empty { font-size: 13px; color: rgba(255,255,255,0.3); margin: 0; }
+        .device-row {
+          display: flex; align-items: center; gap: 12px;
+          background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+        }
+        .device-icon {
+          width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+          background: rgba(32,211,120,0.1); color: #20d378;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .device-info { flex: 1; min-width: 0; }
+        .device-name { font-size: 13.5px; font-weight: 500; color: #fff; }
+        .device-meta { font-size: 11.5px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+        .btn-revoke {
+          background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+          color: rgba(239,68,68,0.8); border-radius: 8px; padding: 7px 14px;
+          font-size: 12px; font-family: inherit; cursor: pointer; flex-shrink: 0;
+        }
+        .btn-revoke:hover { background: rgba(239,68,68,0.15); }
+
         @media (max-width: 768px) {
           .settings-container { padding: 16px; }
           .form-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -342,6 +445,60 @@ export default function DeveloperSettingsPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* CLI & Integrations */}
+          <div className="settings-card">
+            <div className="card-header">
+              <div className="card-icon"><TerminalSquare size={16} /></div>
+              <span className="card-title">{t("CLI & Integrations", "CLI والتكاملات")}</span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, marginBottom: '16px' }}>
+              {t(
+                "Connect your terminal to Wani. The Wani CLI lets you manage your projects and test the OTP API without leaving the terminal — login happens in the browser, never with passwords in the terminal.",
+                "اربط الطرفية بـ Wani. يتيح لك Wani CLI إدارة مشاريعك واختبار OTP API دون مغادرة الطرفية — تسجيل الدخول يتم عبر المتصفح، وليس بكلمات مرور في الطرفية."
+              )}
+            </p>
+            <button
+              type="button"
+              className="btn-connect-cli"
+              onClick={() => router.push(devPath("/cli/authorize"))}
+            >
+              <TerminalSquare size={15} />
+              {t("Connect CLI", "ربط CLI")}
+            </button>
+
+            <div className="devices-title">
+              {t("Connected CLI devices", "أجهزة CLI المتصلة")}
+              {devices.length > 0 && (
+                <button type="button" className="btn-revoke-all" onClick={handleRevokeAllDevices}>
+                  <LogOut size={12} />
+                  {t("Revoke all", "إلغاء الكل")}
+                </button>
+              )}
+            </div>
+            {devicesLoading ? (
+              <div className="devices-loading"><div className="spinner" style={{ width: 18, height: 18 }} /></div>
+            ) : devices.length === 0 ? (
+              <p className="devices-empty">
+                {t("No CLI devices connected yet.", "لا توجد أجهزة CLI متصلة بعد.")}
+              </p>
+            ) : (
+              devices.map((d) => (
+                <div key={d.id} className="device-row">
+                  <div className="device-icon"><MonitorSmartphone size={15} /></div>
+                  <div className="device-info">
+                    <div className="device-name">{d.deviceName || "Wani CLI"}</div>
+                    <div className="device-meta">
+                      {t("Last active:", "آخر نشاط:")} {new Date(d.lastUsedAt).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                    </div>
+                  </div>
+                  <button type="button" className="btn-revoke" onClick={() => handleRevokeDevice(d.id)}>
+                    {t("Revoke", "إلغاء")}
+                  </button>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="submit-wrap">
