@@ -1,22 +1,30 @@
 /**
- * Browser-assisted login helper (`wani login --browser`).
+ * Browser-assisted login helper (`wani login`).
  *
- * The Developer API has no OAuth/token-exchange endpoint, so the browser
- * cannot hand a session back to the CLI (the cookie is HttpOnly). Instead
- * this opens the portal's API-keys page where the user copies a project
- * key, then saves it with `wani project use --api-key`.
+ * Builds the portal authorization page URL for the current base URL and
+ * opens it in the default browser (best-effort, never throws).
  */
 import { spawn } from "node:child_process";
-import { PORTAL_URL } from "../constants.js";
 
-export function apiKeysPageUrl(baseUrl: string): string {
+/**
+ * Resolve a portal path (e.g. `/developers/cli/authorize`) against the CLI
+ * base URL: dev-subdomain hosts serve it without the `/developers` prefix.
+ */
+export function authorizePageUrl(baseUrl: string, verificationUri = "/developers/cli/authorize"): string {
+  if (/^https?:\/\//i.test(verificationUri)) return verificationUri;
   try {
     const url = new URL(baseUrl);
-    if (url.hostname === "developers.aiwni.com") return `${PORTAL_URL}/portal/api-keys`;
+    if (url.hostname === "developers.aiwni.com" || url.hostname === "developers.localhost") {
+      const stripped = verificationUri.startsWith("/developers")
+        ? verificationUri.slice("/developers".length) || "/"
+        : verificationUri;
+      return `${url.origin}${stripped}`;
+    }
   } catch {
     // fall through to base-relative URL
   }
-  return `${baseUrl.replace(/\/+$/, "")}/portal/api-keys`;
+  const path = verificationUri.startsWith("/") ? verificationUri : `/${verificationUri}`;
+  return `${baseUrl.replace(/\/+$/, "")}${path}`;
 }
 
 /** Best-effort: open a URL in the default browser. Never throws. */

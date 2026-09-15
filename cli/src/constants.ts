@@ -12,9 +12,6 @@ export const PORTAL_URL = "https://developers.aiwni.com";
 /** Default per-request timeout in milliseconds. */
 export const DEFAULT_TIMEOUT_MS = 15_000;
 
-/** Name of the session cookie set by the Developer API on login. */
-export const SESSION_COOKIE_NAME = "dev-session";
-
 /** Env var holding a project API key (`wani_live_...`). */
 export const API_KEY_ENV_VAR = "WANI_API_KEY";
 

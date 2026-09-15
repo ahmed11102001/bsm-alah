@@ -18,7 +18,7 @@ export async function projectCurrentCommand(ctx: CommandContext): Promise<void> 
   }
 
   let name: string | null = null;
-  if (ctx.config.sessionCookie) {
+  if (ctx.config.cliAccessToken) {
     try {
       const projects = await fetchProjects(ctx);
       name = projects.find((p) => p.id === currentProjectId)?.name ?? null;

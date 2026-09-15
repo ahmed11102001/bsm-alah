@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { ApiClient, extractSessionCookie } from "../src/api/client.js";
+import { ApiClient } from "../src/api/client.js";
 import { CliError } from "../src/api/errors.js";
 
 interface Seen {
@@ -19,7 +19,7 @@ function jsonRes(status: number, body: unknown, setCookie?: string) {
 }
 
 describe("ApiClient", () => {
-  it("sends session cookie and x-api-key headers", async () => {
+  it("sends Bearer token and x-api-key headers (never cookies)", async () => {
     const seen: Seen[] = [];
     const fetchImpl = (async (url: any, init?: any) => {
       seen.push({ url: String(url), init });
@@ -29,12 +29,13 @@ describe("ApiClient", () => {
       baseUrl: "https://api.test/",
       timeoutMs: 1000,
       fetchImpl,
-      sessionCookie: "sess123",
+      accessToken: "tok123",
       apiKey: "wani_live_x",
     });
     await client.post("/api/x", { a: 1 });
     assert.equal(seen[0].url, "https://api.test/api/x");
-    assert.equal(seen[0].init.headers["Cookie"], "dev-session=sess123");
+    assert.equal(seen[0].init.headers["Authorization"], "Bearer tok123");
+    assert.equal(seen[0].init.headers["Cookie"], undefined);
     assert.equal(seen[0].init.headers["x-api-key"], "wani_live_x");
     assert.deepEqual(JSON.parse(seen[0].init.body), { a: 1 });
   });
@@ -67,10 +68,15 @@ describe("ApiClient", () => {
     await assert.rejects(client.get("/x"), (err: any) => err instanceof CliError && err.code === "TIMEOUT");
   });
 
-  it("extractSessionCookie parses single and array headers", () => {
-    assert.equal(extractSessionCookie("dev-session=abc; Path=/; HttpOnly"), "abc");
-    assert.equal(extractSessionCookie(["a=1", "dev-session=xyz; Secure"]), "xyz");
-    assert.equal(extractSessionCookie(null), undefined);
-    assert.equal(extractSessionCookie("other=1"), undefined);
+  it("sends no auth headers when no credentials are set", async () => {
+    const seen: Seen[] = [];
+    const fetchImpl = (async (url: any, init?: any) => {
+      seen.push({ url: String(url), init });
+      return jsonRes(200, { ok: true });
+    }) as any;
+    const client = new ApiClient({ baseUrl: "https://api.test", timeoutMs: 1000, fetchImpl });
+    await client.get("/x");
+    assert.equal(seen[0].init.headers["Authorization"], undefined);
+    assert.equal(seen[0].init.headers["Cookie"], undefined);
   });
 });

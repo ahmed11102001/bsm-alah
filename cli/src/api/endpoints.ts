@@ -3,8 +3,10 @@
  * Only endpoints that exist in the current public contract.
  */
 export const ENDPOINTS = {
-  authLogin: "/api/developers/auth/login",
   authMe: "/api/developers/auth/me",
+  cliDeviceCode: "/api/developers/cli/device/code",
+  cliDeviceToken: "/api/developers/cli/device/token",
+  cliRevokeCurrent: "/api/developers/cli/sessions/revoke-current",
   projects: "/api/developers/projects",
   otpSend: "/api/developers/otp/send",
   otpVerify: "/api/developers/otp/verify",

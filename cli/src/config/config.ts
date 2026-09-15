@@ -1,26 +1,44 @@
 /**
- * Local CLI profile: session cookie, selected project, stored project keys.
+ * Local CLI profile: CLI access token, selected project, stored project keys.
  *
  * Stored at `~/.wani/config.json` with `0600` permissions (dir `0700`).
  * Secrets here never leave the machine except as auth headers to Wani.
+ *
+ * v2: the credential is a revocable CLI access token from the browser device
+ * flow (`wani login`). Legacy v1 `sessionCookie` profiles are treated as
+ * logged out — re-authenticate with the new flow.
  */
 import * as fs from "node:fs";
 import { configFilePath, configHome } from "./paths.js";
 import { decryptSecret, encryptSecret, isEncryptedValue } from "../auth/secure-store.js";
 
 export interface CliConfig {
-  version: 1;
+  version: 2;
   /** Base URL override persisted via `--base-url` (env/flag win at runtime). */
   baseUrl?: string;
-  /** Raw `dev-session` cookie value from `wani login`. */
-  sessionCookie?: string;
+  /** CLI access token (`wani_cli_...`) from the browser device flow. */
+  cliAccessToken?: string;
+  /** ISO expiry of the access token (informational; server is authoritative). */
+  cliTokenExpiresAt?: string;
   /** Currently selected project id (`wani project use`). */
   currentProjectId?: string;
   /** Project API keys saved via `wani project use --api-key`. */
   apiKeys: Record<string, string>;
 }
 
-const EMPTY: CliConfig = { version: 1, apiKeys: {} };
+const EMPTY: CliConfig = { version: 2, apiKeys: {} };
+
+function readStoredSecret(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || raw === "") return undefined;
+  if (isEncryptedValue(raw)) {
+    try {
+      return decryptSecret(raw);
+    } catch {
+      return undefined; // undecryptable (salt lost / copied machine) → logged out
+    }
+  }
+  return raw; // legacy plaintext — re-encrypted on next save
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -53,24 +71,15 @@ export function loadConfig(): CliConfig {
         }
       }
     }
-    const config: CliConfig = { version: 1, apiKeys };
+    const config: CliConfig = { version: 2, apiKeys };
     if (typeof parsed["baseUrl"] === "string" && parsed["baseUrl"] !== "") {
       config.baseUrl = parsed["baseUrl"];
     }
-    if (typeof parsed["sessionCookie"] === "string" && parsed["sessionCookie"] !== "") {
-      // Secrets are decrypted into memory only; the file stays encrypted.
-      // Undecryptable values (salt lost / file copied from another machine)
-      // are dropped so the user re-authenticates instead of failing obscurely.
-      const raw = parsed["sessionCookie"];
-      if (isEncryptedValue(raw)) {
-        try {
-          config.sessionCookie = decryptSecret(raw);
-        } catch {
-          // drop — treated as logged out
-        }
-      } else {
-        config.sessionCookie = raw; // legacy plaintext — re-encrypted on next save
-      }
+    // v1 `sessionCookie` profiles are intentionally not carried over.
+    const cliAccessToken = readStoredSecret(parsed["cliAccessToken"]);
+    if (cliAccessToken) config.cliAccessToken = cliAccessToken;
+    if (typeof parsed["cliTokenExpiresAt"] === "string" && parsed["cliTokenExpiresAt"] !== "") {
+      config.cliTokenExpiresAt = parsed["cliTokenExpiresAt"];
     }
     if (typeof parsed["currentProjectId"] === "string" && parsed["currentProjectId"] !== "") {
       config.currentProjectId = parsed["currentProjectId"];
@@ -84,13 +93,14 @@ export function loadConfig(): CliConfig {
 export function saveConfig(config: CliConfig): void {
   // Encrypt secrets at rest — memory holds plaintext, disk never does.
   const onDisk: CliConfig = {
-    version: 1,
+    version: 2,
     apiKeys: Object.fromEntries(
       Object.entries(config.apiKeys).map(([k, v]) => [k, encryptSecret(v)])
     ),
   };
   if (config.baseUrl) onDisk.baseUrl = config.baseUrl;
-  if (config.sessionCookie) onDisk.sessionCookie = encryptSecret(config.sessionCookie);
+  if (config.cliAccessToken) onDisk.cliAccessToken = encryptSecret(config.cliAccessToken);
+  if (config.cliTokenExpiresAt) onDisk.cliTokenExpiresAt = config.cliTokenExpiresAt;
   if (config.currentProjectId) onDisk.currentProjectId = config.currentProjectId;
 
   fs.mkdirSync(configHome(), { recursive: true, mode: 0o700 });

@@ -20,12 +20,12 @@ interface MeResponse {
 }
 
 export async function whoamiCommand(ctx: CommandContext): Promise<void> {
-  const sessionCookie = requireSession(ctx);
+  const accessToken = requireSession(ctx);
   const client = new ApiClient({
     baseUrl: ctx.baseUrl,
     timeoutMs: ctx.timeoutMs,
     fetchImpl: ctx.fetchImpl,
-    sessionCookie,
+    accessToken,
   });
   const data = await client.get<MeResponse>(ENDPOINTS.authMe);
   const developer = data.developer ?? {};

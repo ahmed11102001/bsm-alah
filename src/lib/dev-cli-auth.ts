@@ -94,16 +94,16 @@ export function newCliSessionToken(): { raw: string; hash: string; prefix: strin
 export function isSameOriginRequest(req: Request): boolean {
   const host = hostOf(req);
   if (!host) return false;
-  const origin = req.headers.get("origin");
+  const origin = req.headers?.get?.("origin");
   if (origin) return hostOfString(origin) === host;
-  const referer = req.headers.get("referer");
+  const referer = req.headers?.get?.("referer");
   if (referer) return hostOfString(referer) === host;
   return false;
 }
 
 function hostOf(req: Request): string | null {
-  const forwarded = req.headers.get("x-forwarded-host");
-  const h = forwarded || req.headers.get("host") || "";
+  const forwarded = req.headers?.get?.("x-forwarded-host");
+  const h = forwarded || req.headers?.get?.("host") || "";
   return h.split(":")[0].toLowerCase() || null;
 }
 
@@ -122,11 +122,14 @@ export interface CliSessionRecord {
   deviceName: string | null;
 }
 
-export async function requireCliSession(req: Request): Promise<CliSessionRecord | null> {
-  const header = req.headers.get("authorization") ?? "";
+export function extractBearerToken(req: Request): string | null {
+  const header = req.headers?.get?.("authorization") ?? "";
   const match = /^Bearer\s+(\S+)$/i.exec(header.trim());
-  if (!match) return null;
-  const tokenHash = sha256hex(match[1]);
+  return match ? match[1] : null;
+}
+
+export async function resolveCliSessionToken(rawToken: string): Promise<CliSessionRecord | null> {
+  const tokenHash = sha256hex(rawToken);
 
   const session = await prisma.developerCliSession.findUnique({
     where: { tokenHash },
@@ -150,6 +153,12 @@ export async function requireCliSession(req: Request): Promise<CliSessionRecord 
     .catch(() => {});
 
   return { id: session.id, developerId: session.developerId, deviceName: session.deviceName };
+}
+
+export async function requireCliSession(req: Request): Promise<CliSessionRecord | null> {
+  const raw = extractBearerToken(req);
+  if (!raw) return null;
+  return resolveCliSessionToken(raw);
 }
 
 /** Live suspended check for the approving web session (defense in depth). */

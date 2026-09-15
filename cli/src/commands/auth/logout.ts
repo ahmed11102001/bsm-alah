@@ -1,8 +1,11 @@
 /**
- * `wani logout [--all]` — discard the stored account session.
- * Stored project API keys are kept by default (they are per-project secrets
- * independent of the account session); `--all` removes those too.
+ * `wani logout [--all]` — revoke the stored CLI session server-side
+ * (best-effort) and discard it locally. Stored project API keys are kept by
+ * default (they are per-project secrets independent of the account session);
+ * `--all` removes those too.
  */
+import { ApiClient } from "../../api/client.js";
+import { ENDPOINTS } from "../../api/endpoints.js";
 import type { CommandContext } from "../context.js";
 import type { ParsedArgs } from "../../utils/args.js";
 import { printJson } from "../../output/json.js";
@@ -10,10 +13,26 @@ import { printLine } from "../../output/human.js";
 
 export async function logoutCommand(ctx: CommandContext, args?: ParsedArgs): Promise<void> {
   const all = args?.options["all"] === true;
-  const hadSession = Boolean(ctx.config.sessionCookie);
+  const hadSession = Boolean(ctx.config.cliAccessToken);
   const hadKeys = Object.keys(ctx.config.apiKeys).length;
+
+  if (hadSession && ctx.config.cliAccessToken) {
+    try {
+      const client = new ApiClient({
+        baseUrl: ctx.baseUrl,
+        timeoutMs: ctx.timeoutMs,
+        fetchImpl: ctx.fetchImpl,
+        accessToken: ctx.config.cliAccessToken,
+      });
+      await client.post(ENDPOINTS.cliRevokeCurrent);
+    } catch {
+      // Local logout must succeed even if the server is unreachable.
+    }
+  }
+
   const next = { ...ctx.config, apiKeys: { ...ctx.config.apiKeys } };
-  delete next.sessionCookie;
+  delete next.cliAccessToken;
+  delete next.cliTokenExpiresAt;
   if (all) {
     next.apiKeys = {};
     delete next.currentProjectId;

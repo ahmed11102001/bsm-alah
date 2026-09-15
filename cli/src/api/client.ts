@@ -2,17 +2,17 @@
  * Minimal HTTP client over native fetch.
  *
  * Two credential modes (never mixed into logs):
- * - session mode: sends `Cookie: dev-session=<jwt>` (portal account auth)
+ * - account mode: sends `Authorization: Bearer <cli-access-token>`
+ *   (revocable CLI session from the browser device flow)
  * - api-key mode: sends `x-api-key: <key>` (project OTP auth)
  */
-import { SESSION_COOKIE_NAME } from "../constants.js";
 import { CliError } from "./errors.js";
 
 export interface ApiClientOptions {
   baseUrl: string;
   timeoutMs: number;
   fetchImpl?: typeof fetch | undefined;
-  sessionCookie?: string | undefined;
+  accessToken?: string | undefined;
   apiKey?: string | undefined;
 }
 
@@ -24,14 +24,14 @@ export class ApiClient {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
-  private readonly sessionCookie?: string | undefined;
+  private readonly accessToken?: string | undefined;
   private readonly apiKey?: string | undefined;
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.timeoutMs = options.timeoutMs;
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.sessionCookie = options.sessionCookie;
+    this.accessToken = options.accessToken;
     this.apiKey = options.apiKey;
   }
 
@@ -50,8 +50,8 @@ export class ApiClient {
   private async send<T>(method: "GET" | "POST", path: string, body: Record<string, unknown> | undefined, signal: AbortSignal | undefined): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.sessionCookie) {
-      headers["Cookie"] = `${SESSION_COOKIE_NAME}=${this.sessionCookie}`;
+    if (this.accessToken) {
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
     if (this.apiKey) {
       headers["x-api-key"] = this.apiKey;
@@ -123,19 +123,3 @@ export class ApiClient {
   }
 }
 
-/**
- * Extract the `dev-session` cookie value from a login response's
- * `Set-Cookie` header(s). Returns undefined when absent.
- */
-export function extractSessionCookie(setCookie: string | string[] | null | undefined): string | undefined {
-  if (!setCookie) return undefined;
-  const headers = Array.isArray(setCookie) ? setCookie : [setCookie];
-  for (const header of headers) {
-    const first = header.split(";")[0]?.trim() ?? "";
-    if (first.startsWith(`${SESSION_COOKIE_NAME}=`)) {
-      const value = first.slice(SESSION_COOKIE_NAME.length + 1);
-      if (value) return value;
-    }
-  }
-  return undefined;
-}

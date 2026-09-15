@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
+import { extractBearerToken, resolveCliSessionToken } from "@/lib/dev-cli-auth";
 
 const secretStr = process.env.DEV_JWT_SECRET ?? process.env.NEXTAUTH_SECRET;
 if (!secretStr) {
@@ -96,9 +97,34 @@ export async function getDevSession(): Promise<DevSession | null> {
 }
 
 export async function getDevSessionFromRequest(req: NextRequest): Promise<DevSession | null> {
+  // Web path first — cookie behavior is byte-for-byte unchanged.
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return withLiveStatus(await verifyDevToken(token));
+  if (token) return withLiveStatus(await verifyDevToken(token));
+  // CLI path: `Authorization: Bearer <cli-session-token>` (device flow).
+  // Bearer is a non-ambient credential (browsers never attach it cross-site),
+  // so accepting it here introduces no CSRF exposure, and every downstream
+  // route keeps working unchanged with a live-checked DevSession.
+  return devSessionFromCliBearer(req);
+}
+
+async function devSessionFromCliBearer(req: NextRequest): Promise<DevSession | null> {
+  const raw = extractBearerToken(req);
+  if (!raw) return null;
+  const cli = await resolveCliSessionToken(raw);
+  if (!cli) return null;
+  const user = await prisma.developerUser.findUnique({
+    where: { id: cli.developerId },
+    select: { email: true, firstName: true, lastName: true, status: true },
+  });
+  // resolveCliSessionToken already rejected revoked/expired/suspended — this
+  // is a second cheap identity gate, never a fallback that widens access.
+  if (!user || user.status === "SUSPENDED") return null;
+  return {
+    id: cli.developerId,
+    email: user.email,
+    name: `${user.firstName} ${user.lastName}`,
+    status: user.status,
+  };
 }
 
 export function buildDevSessionCookie(token: string): string {

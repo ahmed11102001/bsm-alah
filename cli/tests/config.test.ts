@@ -21,15 +21,17 @@ describe("config", () => {
 
   it("round-trips profile with 0600 file permissions", () => {
     saveConfig({
-      version: 1,
+      version: 2,
       baseUrl: "https://example.test",
-      sessionCookie: "abc",
+      cliAccessToken: "tok-abc",
+      cliTokenExpiresAt: "2030-01-01T00:00:00.000Z",
       currentProjectId: "p1",
       apiKeys: { p1: "wani_live_x" },
     });
     const loaded = loadConfig();
     assert.equal(loaded.baseUrl, "https://example.test");
-    assert.equal(loaded.sessionCookie, "abc");
+    assert.equal(loaded.cliAccessToken, "tok-abc");
+    assert.equal(loaded.cliTokenExpiresAt, "2030-01-01T00:00:00.000Z");
     assert.equal(loaded.currentProjectId, "p1");
     assert.deepEqual(loaded.apiKeys, { p1: "wani_live_x" });
     if (process.platform !== "win32") {
@@ -43,8 +45,19 @@ describe("config", () => {
     fs.mkdirSync(path.dirname(configFilePath()), { recursive: true });
     fs.writeFileSync(configFilePath(), "{not json", "utf8");
     const loaded = loadConfig();
-    assert.equal(loaded.sessionCookie, undefined);
+    assert.equal(loaded.cliAccessToken, undefined);
     assert.deepEqual(loaded.apiKeys, {});
+  });
+
+  it("ignores legacy v1 sessionCookie profiles (re-login required)", () => {
+    fs.mkdirSync(path.dirname(configFilePath()), { recursive: true });
+    fs.writeFileSync(
+      configFilePath(),
+      JSON.stringify({ version: 1, sessionCookie: "old-jwt", apiKeys: {} }),
+      "utf8"
+    );
+    const loaded = loadConfig();
+    assert.equal(loaded.cliAccessToken, undefined);
   });
 
   it("drops non-string apiKeys entries", () => {
@@ -58,7 +71,7 @@ describe("config", () => {
   });
 
   it("resolveBaseUrl precedence: flag > env > stored > default", () => {
-    const config = { version: 1 as const, apiKeys: {}, baseUrl: "https://stored.test" };
+    const config = { version: 2 as const, apiKeys: {}, baseUrl: "https://stored.test" };
     assert.equal(
       resolveBaseUrl({ flag: "https://flag.test/", config, fallback: "https://d.test" }),
       "https://flag.test"

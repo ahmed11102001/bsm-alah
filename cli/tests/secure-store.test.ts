@@ -31,17 +31,17 @@ describe("secure-store", () => {
 
   it("config file on disk contains no plaintext secrets", () => {
     saveConfig({
-      version: 1,
-      sessionCookie: "sess-cookie-value",
+      version: 2,
+      cliAccessToken: "cli-token-value",
       currentProjectId: "p1",
       apiKeys: { p1: "wani_live_keyvalue" },
     });
     const raw = fs.readFileSync(configFilePath(), "utf8");
-    assert.ok(!raw.includes("sess-cookie-value"));
+    assert.ok(!raw.includes("cli-token-value"));
     assert.ok(!raw.includes("wani_live_keyvalue"));
     // ...but loading restores usable values
     const loaded = loadConfig();
-    assert.equal(loaded.sessionCookie, "sess-cookie-value");
+    assert.equal(loaded.cliAccessToken, "cli-token-value");
     assert.deepEqual(loaded.apiKeys, { p1: "wani_live_keyvalue" });
   });
 
@@ -49,11 +49,11 @@ describe("secure-store", () => {
     fs.mkdirSync(path.dirname(configFilePath()), { recursive: true });
     fs.writeFileSync(
       configFilePath(),
-      JSON.stringify({ version: 1, sessionCookie: "old-plain", apiKeys: { p: "wani_live_old" } }),
+      JSON.stringify({ version: 2, cliAccessToken: "old-plain", apiKeys: { p: "wani_live_old" } }),
       "utf8"
     );
     const loaded = loadConfig();
-    assert.equal(loaded.sessionCookie, "old-plain");
+    assert.equal(loaded.cliAccessToken, "old-plain");
     saveConfig(loaded);
     const raw = fs.readFileSync(configFilePath(), "utf8");
     assert.ok(!raw.includes("old-plain"));
@@ -64,9 +64,9 @@ describe("secure-store", () => {
     fs.mkdirSync(path.dirname(configFilePath()), { recursive: true });
     fs.writeFileSync(
       configFilePath(),
-      JSON.stringify({ version: 1, sessionCookie: "enc:v1:bm90LXZhbGlk", apiKeys: {} }),
+      JSON.stringify({ version: 2, cliAccessToken: "enc:v1:bm90LXZhbGlk", apiKeys: {} }),
       "utf8"
     );
-    assert.equal(loadConfig().sessionCookie, undefined);
+    assert.equal(loadConfig().cliAccessToken, undefined);
   });
 });

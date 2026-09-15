@@ -18,7 +18,6 @@ import { otpVerifyCommand } from "./commands/otp/verify.js";
 import { otpStatusCommand } from "./commands/otp/status.js";
 import { printError } from "./output/errors.js";
 import { isHelpRequest, isJsonOutput, optString, parseArgs } from "./utils/args.js";
-import { promptPassword, promptText } from "./utils/prompt.js";
 
 const HELP = `${CLI_NAME} — Wani Developer CLI (v${CLI_VERSION})
 
@@ -26,8 +25,8 @@ Usage:
   wani <command> [subcommand] [options]
 
 Commands:
-  login [--email <email>] [--browser]   Log in (email/password) and store the session
-                                        (--browser only opens the portal to copy a key)
+  login [--no-open]                     Log in via the browser (device flow) and store the session
+                                        (--no-open prints the URL without opening it)
   logout                                Discard the stored session (--all also clears stored keys)
   whoami                                Show the logged-in account
 
@@ -52,7 +51,8 @@ Global options:
   --version             Show version
 
 Auth model:
-  Account commands (login/whoami/project) use your stored session.
+  Account commands (login/whoami/project) use your stored CLI session
+  (browser device flow — no passwords in the terminal).
   OTP commands use a project API key: --api-key flag, WANI_API_KEY env,
   or a key saved with \`wani project use --api-key\`.
 `;
@@ -105,8 +105,6 @@ async function main(argv: string[]): Promise<void> {
     baseUrl,
     timeoutMs,
     json,
-    readEmail: () => promptText("Email: "),
-    readPassword: () => promptPassword("Password: "),
   };
 
   const [group, action, ...rest] = args.command;

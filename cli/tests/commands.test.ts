@@ -32,14 +32,12 @@ function testContext(config: Partial<CliConfig> & { apiKeys: Record<string, stri
     return jsonRes(200, body);
   }) as any;
   return {
-    config: { version: 1, ...config, apiKeys: config.apiKeys },
+    config: { version: 2, ...config, apiKeys: config.apiKeys },
     saveConfig: () => undefined,
     baseUrl: "https://api.test",
     timeoutMs: 1000,
     json: true,
     fetchImpl,
-    readEmail: async () => "a@b.c",
-    readPassword: async () => "secret",
   };
 }
 
@@ -160,9 +158,9 @@ describe("project use", () => {
       positional: pos,
       options,
     });
-    const useCtx: CommandContext = { ...ctx, config: { ...ctx.config, sessionCookie: "sess" } };
+    const useCtx: CommandContext = { ...ctx, config: { ...ctx.config, cliAccessToken: "tok" } };
     ctx.saveConfig = (c) => {
-      saved.config = { ...c, sessionCookie: "sess" };
+      saved.config = { ...c, cliAccessToken: "tok" };
     };
 
     await projectUseCommand(useCtx, useArgs(["cmu111"]));
@@ -194,7 +192,7 @@ describe("project use", () => {
       );
       const useCtx: CommandContext = {
         ...base,
-        config: { ...base.config, sessionCookie: "sess" },
+        config: { ...base.config, cliAccessToken: "tok" },
         saveConfig: (c) => {
           saved.config = { apiKeys: (c as CliConfig).apiKeys };
         },
@@ -218,7 +216,7 @@ describe("project use", () => {
     );
     const useCtx2: CommandContext = {
       ...base2,
-      config: { ...base2.config, sessionCookie: "sess" },
+      config: { ...base2.config, cliAccessToken: "tok" },
       saveConfig: () => {
         throw new Error("must not save on mismatch");
       },
@@ -240,7 +238,7 @@ describe("project use", () => {
       });
       const useCtx3: CommandContext = {
         ...base3,
-        config: { ...base3.config, sessionCookie: "sess" },
+        config: { ...base3.config, cliAccessToken: "tok" },
         saveConfig: (c) => {
           saved3.config = { apiKeys: (c as CliConfig).apiKeys };
         },
@@ -259,24 +257,25 @@ describe("project use", () => {
     silenceOutput();
     const seen: Seen[] = [];
     const base = testContext(
-      { apiKeys: { p1: "k1" }, sessionCookie: "sess", currentProjectId: "p1" },
+      { apiKeys: { p1: "k1" }, cliAccessToken: "tok", currentProjectId: "p1" },
       seen
     );
     const saved: { config: CliConfig | null } = { config: null };
     const ctx: CommandContext = { ...base, saveConfig: (c) => { saved.config = c; } };
 
     await logoutCommand(ctx, { command: ["logout"], positional: [], options: {} });
-    assert.equal(saved.config?.sessionCookie, undefined);
+    assert.equal(saved.config?.cliAccessToken, undefined);
     assert.deepEqual(saved.config?.apiKeys, { p1: "k1" });
 
     const ctx2: CommandContext = {
       ...base,
-      config: { version: 1, apiKeys: { p1: "k1" }, sessionCookie: "sess", currentProjectId: "p1" },
+      config: { version: 2, apiKeys: { p1: "k1" }, cliAccessToken: "tok", currentProjectId: "p1" },
       saveConfig: (c) => { saved.config = c; },
     };
     await logoutCommand(ctx2, { command: ["logout"], positional: [], options: { all: true } });
-    assert.equal(saved.config?.sessionCookie, undefined);
+    assert.equal(saved.config?.cliAccessToken, undefined);
     assert.deepEqual(saved.config?.apiKeys, {});
     assert.equal(saved.config?.currentProjectId, undefined);
   });
 });
+

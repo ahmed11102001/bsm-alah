@@ -24,8 +24,9 @@ wani --version
 ## Quick start
 
 ```bash
-# 1. Log in with your Developer Portal account
+# 1. Log in via the browser (no passwords in the terminal)
 wani login
+# → shows a code, opens the portal authorization page, waits for approval
 
 # 2. See your projects and pick one
 wani project list
@@ -43,7 +44,7 @@ wani otp status --token <token>
 
 | Command | Description |
 |---|---|
-| `wani login [--email E] [--browser]` | Log in (email/password, session stored encrypted). `--browser` only opens the portal to copy a key (does not log the CLI in) |
+| `wani login [--no-open]` | Log in via the browser device flow (session stored encrypted). `--no-open` prints the URL without opening it |
 | `wani logout [--all]` | Discard the stored session (`--all` also clears stored project keys) |
 | `wani whoami` | Show the logged-in account |
 | `wani project list` | List your projects |
@@ -61,7 +62,7 @@ Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--dev`, `--timeout <ms
 
 ## Authentication model
 
-- **Account commands** (`login`, `whoami`, `project …`) use the stored session cookie from `wani login`.
+- **Account commands** (`login`, `whoami`, `project …`) use the stored CLI session token from `wani login` (browser device flow — email/password never touch the terminal). Revoke anytime from Portal Settings → CLI & Integrations, or with `wani logout`.
 - **OTP commands** need a project API key, resolved as: `--api-key` flag → `WANI_API_KEY` env → key saved with `wani project use --api-key`. The project itself is always resolved server-side from that key — the CLI never sends a project id to the OTP API.
 
 ## Output
@@ -70,7 +71,7 @@ Human-readable tables by default; add `--json` for a single machine-readable doc
 
 ## Security model (read this before publishing use)
 
-- **At rest:** session cookies and project API keys are **AES-256-GCM encrypted**
+- **At rest:** the CLI access token and project API keys are **AES-256-GCM encrypted**
   in `~/.wani/config.json` with a key derived from machine+user factors plus a
   per-install salt. A copied config file is useless on another machine/user —
   but this is **not** an OS-keychain substitute: any process running as *your*
@@ -81,7 +82,7 @@ Human-readable tables by default; add `--json` for a single machine-readable doc
   Any other host is refused; loopback URLs work only with explicit `--dev`
   mode (`--dev` flag or `WANI_DEV=1`). Never run the CLI against a URL you
   don't control — a malicious server would receive your credentials.
-- Keys are sent only as `x-api-key` / session cookie to the configured base
+- Keys are sent only as `x-api-key` / `Authorization: Bearer` to the configured base
   URL, and never appear in error output or logs.
 - Profile lives at `~/.wani/config.json` (override dir with `WANI_CONFIG_HOME`).
   `wani logout` clears the session only; `wani logout --all` also removes

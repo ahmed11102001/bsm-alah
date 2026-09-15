@@ -17,12 +17,12 @@ export interface ProjectSummary {
 }
 
 export async function fetchProjects(ctx: CommandContext): Promise<ProjectSummary[]> {
-  const sessionCookie = requireSession(ctx);
+  const accessToken = requireSession(ctx);
   const client = new ApiClient({
     baseUrl: ctx.baseUrl,
     timeoutMs: ctx.timeoutMs,
     fetchImpl: ctx.fetchImpl,
-    sessionCookie,
+    accessToken,
   });
   const data = await client.get<{ projects?: ProjectSummary[] }>(ENDPOINTS.projects);
   const projects = Array.isArray(data.projects) ? data.projects : [];

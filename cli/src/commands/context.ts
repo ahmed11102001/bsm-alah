@@ -12,14 +12,12 @@ export interface CommandContext {
   timeoutMs: number;
   json: boolean;
   fetchImpl?: typeof fetch | undefined;
-  readEmail: () => Promise<string>;
-  readPassword: () => Promise<string>;
 }
 
 export function requireSession(ctx: CommandContext): string {
-  const cookie = ctx.config.sessionCookie;
-  if (!cookie) {
+  const token = ctx.config.cliAccessToken;
+  if (!token) {
     throw new CliError("Not logged in. Run `wani login` first.", { kind: "auth" });
   }
-  return cookie;
+  return token;
 }

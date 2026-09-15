@@ -1,22 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractSessionCookieFromLogin } from "../src/auth/session.js";
 import { resolveProjectApiKey } from "../src/auth/credentials.js";
-import { apiKeysPageUrl } from "../src/auth/browser-login.js";
+import { authorizePageUrl } from "../src/auth/browser-login.js";
 import { CliError } from "../src/api/errors.js";
 import type { CliConfig } from "../src/config/config.js";
 
-const baseConfig: CliConfig = { version: 1, apiKeys: { projA: "wani_live_stored" } };
-
-describe("session cookie extraction", () => {
-  it("handles single header, arrays and absence", () => {
-    assert.equal(extractSessionCookieFromLogin("dev-session=tok123; Path=/; HttpOnly"), "tok123");
-    assert.equal(extractSessionCookieFromLogin(["x=1", "dev-session=t2; Secure"]), "t2");
-    assert.equal(extractSessionCookieFromLogin(null), undefined);
-    assert.equal(extractSessionCookieFromLogin("other=1"), undefined);
-  });
-});
+const baseConfig: CliConfig = { version: 2, apiKeys: { projA: "wani_live_stored" } };
 
 describe("resolveProjectApiKey", () => {
   it("precedence: flag > env > stored", () => {
@@ -45,9 +35,29 @@ describe("resolveProjectApiKey", () => {
   });
 });
 
-describe("browser login helper", () => {
-  it("points at the portal api-keys page", () => {
-    assert.equal(apiKeysPageUrl("https://developers.aiwni.com"), "https://developers.aiwni.com/portal/api-keys");
-    assert.equal(apiKeysPageUrl("http://localhost:3000/"), "http://localhost:3000/portal/api-keys");
+describe("authorizePageUrl", () => {
+  it("strips the /developers prefix on dev-subdomain hosts", () => {
+    assert.equal(
+      authorizePageUrl("https://developers.aiwni.com", "/developers/cli/authorize"),
+      "https://developers.aiwni.com/cli/authorize"
+    );
+    assert.equal(
+      authorizePageUrl("http://developers.localhost:3000", "/developers/cli/authorize"),
+      "http://developers.localhost:3000/cli/authorize"
+    );
+  });
+
+  it("keeps the full path on other hosts", () => {
+    assert.equal(
+      authorizePageUrl("http://localhost:3000/", "/developers/cli/authorize"),
+      "http://localhost:3000/developers/cli/authorize"
+    );
+  });
+
+  it("passes absolute URLs through untouched", () => {
+    assert.equal(
+      authorizePageUrl("http://localhost:3000", "https://developers.aiwni.com/cli/authorize"),
+      "https://developers.aiwni.com/cli/authorize"
+    );
   });
 });
