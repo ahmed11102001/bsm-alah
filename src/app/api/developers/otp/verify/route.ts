@@ -100,9 +100,10 @@ export async function POST(req: NextRequest) {
   const result = await verifyOtp(token, String(code).trim(), auth.projectId);
 
   if (!result.success) {
-    const statusCode = result.error?.includes("غير موجود") ? 404 : 400;
+    // 404 للغير موجود فقط — الباقي 400 مع code مخصص (بلا تخمين من النص)
+    const statusCode = result.code === "TOKEN_NOT_FOUND" ? 404 : 400;
     return NextResponse.json(
-      { ok: false, verified: false, error: result.error },
+      { ok: false, verified: false, error: result.error, code: result.code ?? "VERIFY_FAILED" },
       { status: statusCode }
     );
   }

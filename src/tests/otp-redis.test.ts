@@ -59,7 +59,19 @@ describe("OTP Redis Module", () => {
       const badLengthHash = "abcdef"; // Not 64 chars
 
       expect(() => safeCompareHash(code, badLengthHash)).not.toThrow();
-      expect(safeCompareHash(code, badLengthHash)).toBe(false);
+      expect(safeCompareHash(code, badLengthHash)).not.toBe(true);
+    });
+
+    it("الـ hash مربوط بسر السيرفر (pepper) — تغييره يغير الناتج", () => {
+      vi.stubEnv("OTP_HASH_PEPPER", "pepper-one");
+      const h1 = hashOtpCode("123456");
+      vi.stubEnv("OTP_HASH_PEPPER", "pepper-two");
+      const h2 = hashOtpCode("123456");
+      expect(h1).not.toBe(h2);
+      expect(h1).toHaveLength(64);
+      // safeCompare يعمل مع نفس الـ pepper فقط
+      expect(safeCompareHash("123456", h1)).toBe(false);
+      vi.unstubAllEnvs();
     });
   });
 
@@ -196,7 +208,23 @@ describe("OTP Redis Module", () => {
       const res = await verifyOtp("t", validCode, validProjectId);
       expect(res.success).toBe(false);
       expect(res.alreadyVerified).toBe(true);
+      expect(res.code).toBe("ALREADY_VERIFIED");
       expect(res.error).toMatch(/لا يمكن استخدامه مرة أخرى/);
+    });
+
+    it("كل فشل تحقق يحمل code منظم (TOKEN_NOT_FOUND/WRONG_PROJECT/MISMATCH/EXPIRED)", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      expect((await verifyOtp("t", "1", "p")).code).toBe("TOKEN_NOT_FOUND");
+
+      mockRedis.get.mockResolvedValue(JSON.stringify(makeMockOtp()));
+      expect((await verifyOtp("t", "1", "wrong")).code).toBe("TOKEN_WRONG_PROJECT");
+      expect((await verifyOtp("t", "000000", validProjectId)).code).toBe("CODE_MISMATCH");
+
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify(makeMockOtp({ expiresAt: new Date(Date.now() - 1000).toISOString() }))
+      );
+      mockRedis.ttl.mockResolvedValue(100);
+      expect((await verifyOtp("t", validCode, validProjectId)).code).toBe("OTP_EXPIRED");
     });
   });
 

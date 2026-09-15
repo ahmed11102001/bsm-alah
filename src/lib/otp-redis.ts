@@ -16,7 +16,7 @@
 //   TTL:   expiryMinutes + 5 دقائق buffer (عشان نقدر نرجع status حتى بعد الانتهاء)
 
 import { Redis } from "@upstash/redis";
-import { createHash, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 // ─── Redis Client ────────────────────────────────────────────────────────────
 function getRedis(): Redis {
@@ -57,10 +57,28 @@ function otpKey(token: string): string {
   return `${OTP_PREFIX}${token}`;
 }
 
-// ─── Hash OTP Code (SHA-256) ──────────────────────────────────────────────────
-// نستخدم SHA-256 عشان سريع + الكود 6 أرقام بس — الهدف منع تسريب الكود لو Redis اتسرب
+// ─── Hash OTP Code (HMAC-SHA-256 with server pepper) ─────────────────────────
+// الكود 6 أرقام فقط (مليون احتمال) — SHA-256 عادي يتكسر في أجزاء من الثانية
+// لو Redis اتسربت (brute force تافه). الـ pepper السري من السيرفر يجعل الـ
+// rainbow/brute-force مستحيلًا عمليًا بدون السر. تغيير الـ pepper يُبطل الأكواد
+// القائمة (≤ 60 دقيقة) — مقبول مقابل الهدف الأمني المعلن.
+// ملحوظة: createHash ما زال مستخدمًا لـ API keys في routes أخرى.
+function getOtpPepper(): string {
+  const pepper =
+    process.env.OTP_HASH_PEPPER ??
+    process.env.DEV_JWT_SECRET ??
+    process.env.NEXTAUTH_SECRET;
+  if (!pepper) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("[otp-redis] OTP_HASH_PEPPER مطلوب في Production — لا تشغّل بدونه.");
+    }
+    return "dev-only-otp-pepper-NOT-FOR-PRODUCTION";
+  }
+  return pepper;
+}
+
 export function hashOtpCode(code: string): string {
-  return createHash("sha256").update(code.trim()).digest("hex");
+  return createHmac("sha256", getOtpPepper()).update(code.trim()).digest("hex");
 }
 
 // ─── Timing-Safe Compare ─────────────────────────────────────────────────────
@@ -141,6 +159,7 @@ export async function verifyOtp(
 ): Promise<{
   success: boolean;
   error?: string;
+  code?: string;
   phone?: string;
   alreadyVerified?: boolean;
 }> {
@@ -148,12 +167,12 @@ export async function verifyOtp(
 
   // Token not found
   if (!otp) {
-    return { success: false, error: "Token غير موجود أو منتهي الصلاحية" };
+    return { success: false, code: "TOKEN_NOT_FOUND", error: "Token غير موجود أو منتهي الصلاحية" };
   }
 
   // Verify project ownership
   if (otp.projectId !== projectId) {
-    return { success: false, error: "Token لا ينتمي لهذا الـ API Key" };
+    return { success: false, code: "TOKEN_WRONG_PROJECT", error: "Token لا ينتمي لهذا الـ API Key" };
   }
 
   // Already verified
@@ -163,6 +182,7 @@ export async function verifyOtp(
     // inspect an auxiliary flag.
     return {
       success: false,
+      code: "ALREADY_VERIFIED",
       error: "OTP تم التحقق منه مسبقاً ولا يمكن استخدامه مرة أخرى",
       phone: otp.phone,
       alreadyVerified: true,
@@ -171,7 +191,7 @@ export async function verifyOtp(
 
   // Failed OTP
   if (otp.status === "FAILED") {
-    return { success: false, error: "OTP لم يُرسل بنجاح، اطلب كود جديد" };
+    return { success: false, code: "OTP_NOT_SENT", error: "OTP لم يُرسل بنجاح، اطلب كود جديد" };
   }
 
   // Expired check
@@ -179,12 +199,12 @@ export async function verifyOtp(
   if (new Date(otp.expiresAt) < now) {
     // Update status to expired
     await updateOtpStatus(token, "EXPIRED");
-    return { success: false, error: "OTP انتهت صلاحيته — اطلب كود جديد" };
+    return { success: false, code: "OTP_EXPIRED", error: "OTP انتهت صلاحيته — اطلب كود جديد" };
   }
 
   // Timing-safe comparison
   if (!safeCompareHash(code, otp.codeHash)) {
-    return { success: false, error: "الكود غير صحيح" };
+    return { success: false, code: "CODE_MISMATCH", error: "الكود غير صحيح" };
   }
 
   // Mark as verified

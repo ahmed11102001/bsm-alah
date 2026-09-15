@@ -401,6 +401,15 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  // مدة الصلاحية: عدد صحيح موجب بحد أقصى 60 دقيقة — قيمة فاسدة كانت
+  // تنتج NaN ثم 500 بعد الإرسال (Invalid Date → toISOString يرمي).
+  const expiryMins = Number(expiryMinutes);
+  if (!Number.isFinite(expiryMins) || !Number.isInteger(expiryMins) || expiryMins < 1 || expiryMins > 60) {
+    return NextResponse.json(
+      { ok: false, error: "expiryMinutes يجب أن يكون عددًا صحيحًا بين 1 و 60", code: "EXPIRY_INVALID" },
+      { status: 400 }
+    );
+  }
 
   // ── 3. Normalize phone ────────────────────────────────────────────────────
   const normalizedPhone = normalizePhone(phone);
@@ -411,41 +420,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 4. Rate limit: per phone + per IP (distributed attack protection) ─────
-  const rlPhone = `otp-send:${auth.projectId}:${normalizedPhone}`;
-  const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 });
-  if (!rl.success) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: `Rate limit — وصلت للحد الأقصى (5 رسائل/ساعة) لهذا الرقم`,
-        retryAfter: rl.retryAfter,
-      },
-      {
-        status: 429,
-        headers: { "Retry-After": String(rl.retryAfter ?? 60) },
-      }
-    );
-  }
-
-  // Rate limit per IP — حماية من distributed attacks
-  const ip = getIP(req);
-  const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 });
-  if (!rlIpMin.success) {
-    return NextResponse.json(
-      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", retryAfter: rlIpMin.retryAfter },
-      { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
-    );
-  }
-  const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 });
-  if (!rlIpHr.success) {
-    return NextResponse.json(
-      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", retryAfter: rlIpHr.retryAfter },
-      { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
-    );
-  }
-
-  // ── 5. Plan & Trial enforcement (Project-level) ───────────────────────────
+  // ── 4. Plan & Trial enforcement (Project-level) ───────────────────────────
+  // قبل الـ rate limit: طلب مرفوض (باقة/قالب) لا يجب أن يستهلك حصة الرقم —
+  // وإلا مهاجم يعرف رقم الضحية يستنزف حصتها (5/ساعة) بطلبات فاشلة.
   let isAllowed = false;
   let incrementField = false;
 
@@ -500,8 +477,9 @@ export async function POST(req: NextRequest) {
     incrementField = true;
   }
 
-  // ── 6. Resolve template (المشروع من الـ API Key فقط) ────────────────────
+  // ── 5. Resolve template (المشروع من الـ API Key فقط) ────────────────────
   // لا يُقبل أي projectId من الـ client — ولا يُجبر الـ backend على اسم مختلف.
+  // قبل الـ rate limit لنفس السبب: طلب مرفوض لا يستهلك حصة الرقم.
   const resolution = templateId
     ? await resolveTemplateById(auth.projectId, String(templateId))
     : await resolveTemplateByName(auth.projectId, String(templateName), language);
@@ -513,10 +491,45 @@ export async function POST(req: NextRequest) {
   }
   const template = resolution.template;
 
+  // ── 6. Rate limit: per phone + per IP (بعد كل التحققات — قبل أي أثر جانبي)
+  const rlPhone = `otp-send:${auth.projectId}:${normalizedPhone}`;
+  const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 });
+  if (!rl.success) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Rate limit — وصلت للحد الأقصى (5 رسائل/ساعة) لهذا الرقم`,
+        code: "RATE_LIMIT_PHONE",
+        retryAfter: rl.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfter ?? 60) },
+      }
+    );
+  }
+
+  // Rate limit per IP — حماية من distributed attacks
+  const ip = getIP(req);
+  const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 });
+  if (!rlIpMin.success) {
+    return NextResponse.json(
+      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", code: "RATE_LIMIT_IP", retryAfter: rlIpMin.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
+    );
+  }
+  const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 });
+  if (!rlIpHr.success) {
+    return NextResponse.json(
+      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", code: "RATE_LIMIT_IP", retryAfter: rlIpHr.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
+    );
+  }
+
   // ── 7. Generate OTP + token (server-side فقط — الـ client لا يرسل OTP) ────
   const otpCode = generateOtp();
   const token   = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + Number(expiryMinutes) * 60 * 1000);
+  const expiresAt = new Date(Date.now() + expiryMins * 60 * 1000);
   // correlation id للّوجز — أول 8 أحرف فقط، بلا phone/code/token كامل/secrets
   const correlationId = token.slice(0, 8);
   console.log("[developer-otp]", {
@@ -549,35 +562,65 @@ export async function POST(req: NextRequest) {
     metaComponents: template.metaComponents,
   });
 
-  // ── 10. Store in Redis (code hash only — no plain code stored) ────────────
-  await storeOtp({
-    token,
-    code:          otpCode,
-    phone:         normalizedPhone,
-    projectId:     auth.projectId,
-    developerId:   auth.developerId,
-    status:        sendResult.success ? "SENT" : "FAILED",
-    metaMessageId: sendResult.metaMessageId ?? null,
-    error:         sendResult.error ?? null,
-    sentAt:        sendResult.success ? new Date() : null,
-    expiryMinutes: Number(expiryMinutes),
-  });
-
-  // ── 11. Log to DB (without code — for analytics only) ─────────────────────
-  await prisma.otpLog.create({
-    data: {
-      developerId: auth.developerId,
-      projectId:   auth.projectId,
-      phone:       normalizedPhone,
+  // ── 10. Persist OTP state (Redis + DB) ────────────────────────────────────
+  // حرج: لو الحفظ فشل بعد نجاح Meta، الكود وصل للمستخدم لكن لا يمكن التحقق
+  // منه (500 صامتة كانت تُرجع بلا token ولا تفسير). أي فشل هنا = 502 صريح
+  // "اطلب كود جديد" + لا يُحتسب من الـ trial.
+  let persistOk = true;
+  try {
+    // ── 10a. Store in Redis (code hash only — no plain code stored) ─────────
+    await storeOtp({
       token,
-      code:        "REDACTED", // الكود مش بيتخزن في DB — موجود في Redis فقط
-      status:      sendResult.success ? "SENT" : "FAILED",
+      code:          otpCode,
+      phone:         normalizedPhone,
+      projectId:     auth.projectId,
+      developerId:   auth.developerId,
+      status:        sendResult.success ? "SENT" : "FAILED",
       metaMessageId: sendResult.metaMessageId ?? null,
-      error:       sendResult.error ?? null,
-      sentAt:      sendResult.success ? new Date() : null,
-      expiredAt:   expiresAt,
-    },
-  });
+      error:         sendResult.error ?? null,
+      sentAt:        sendResult.success ? new Date() : null,
+      expiryMinutes: expiryMins,
+    });
+
+    // ── 10b. Log to DB (without code — for analytics only) ──────────────────
+    await prisma.otpLog.create({
+      data: {
+        developerId: auth.developerId,
+        projectId:   auth.projectId,
+        phone:       normalizedPhone,
+        token,
+        code:        "REDACTED", // الكود مش بيتخزن في DB — موجود في Redis فقط
+        status:      sendResult.success ? "SENT" : "FAILED",
+        metaMessageId: sendResult.metaMessageId ?? null,
+        error:       sendResult.error ?? null,
+        sentAt:      sendResult.success ? new Date() : null,
+        expiredAt:   expiresAt,
+      },
+    });
+  } catch (persistErr) {
+    persistOk = false;
+    console.error("[developer-otp]", {
+      event: "OTP_PERSIST_FAILED",
+      correlationId,
+      projectId: auth.projectId,
+      templateId: template.id,
+      metaDelivered: sendResult.success,
+      error: persistErr instanceof Error ? persistErr.message : "persistence failure",
+    });
+  }
+
+  if (sendResult.success && !persistOk) {
+    // الكود اتبعت لكن لا يمكن التحقق منه — لا نرجع token يعطي إحساسًا كاذبًا
+    // بالنجاح، ولا نحتسبه من الـ trial.
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "تم إرسال الكود لكن تعذر حفظه للتحقق — اطلب كودًا جديدًا",
+        code: "OTP_STORE_FAILED",
+      },
+      { status: 502 }
+    );
+  }
 
   // ── 12. Increment trial counter (non-blocking) ────────────────────────────
   if (sendResult.success && incrementField) {

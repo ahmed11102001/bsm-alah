@@ -39,6 +39,8 @@ vi.stubGlobal("fetch", mockFetch);
 import { POST } from "@/app/api/developers/otp/send/route";
 import { NextRequest } from "next/server";
 import { createHash } from "crypto";
+import { rateLimit } from "@/lib/rate-limit";
+import { storeOtp } from "@/lib/otp-redis";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const API_KEY = "wani_live_testkey123";
@@ -473,5 +475,37 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     expect(mockPrisma.developerApiKey.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { keyHash: expected } })
     );
+  });
+
+  // ── F3: expiryMinutes validation (قبل أي أثر جانبي) ─────────────────────
+  it.each(["abc", 0, -5, 61, 1.5, null])("expiryMinutes غير صالح (%s) → 400 EXPIRY_INVALID", async (bad) => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1", expiryMinutes: bad as any }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("EXPIRY_INVALID");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  // ── F4: الطلب المرفوض لا يستهلك حصة الرقم ───────────────────────────────
+  it("قالب مرفوض (404) لا يستهلك rate limit الهاتف", async () => {
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([]);
+    const res = await POST(makeReq({ phone: "01012345678", templateName: "nope" }));
+    expect(res.status).toBe(404);
+    expect(vi.mocked(rateLimit)).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  // ── F2: فشل الحفظ بعد نجاح Meta ─────────────────────────────────────────
+  it("Meta نجح والحفظ فشل → 502 OTP_STORE_FAILED ولا trial increment", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    vi.mocked(storeOtp).mockRejectedValueOnce(new Error("redis down"));
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(502);
+    expect(data.code).toBe("OTP_STORE_FAILED");
+    expect(data).not.toHaveProperty("token");
+    // Meta اتبعت فعلًا لكن الـ trial لم يُحتسب (الكود غير قابل للتحقق)
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.developerProject.update).not.toHaveBeenCalled();
   });
 });
