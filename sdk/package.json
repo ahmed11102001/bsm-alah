@@ -1,0 +1,47 @@
+{
+  "name": "@aiwni/sdk",
+  "version": "0.1.0",
+  "description": "Official server-side Node.js SDK for the Wani Developer OTP API (WhatsApp OTP send, verify and status).",
+  "license": "MIT",
+  "author": "Wani",
+  "homepage": "https://developers.aiwni.com/docs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmed11102001/bsm-alah.git",
+    "directory": "sdk"
+  },
+  "keywords": [
+    "wani",
+    "whatsapp",
+    "otp",
+    "authentication",
+    "sdk"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit",
+    "test": "tsc -p tsconfig.tests.json && node --test --test-reporter=spec .test-build/tests/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.6.0"
+  }
+}

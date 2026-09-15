@@ -1,0 +1,8 @@
+# Published files are controlled by the "files" field in package.json.
+# This file exists as defense-in-depth so tests and configs are never packed.
+src/
+tests/
+tsconfig*.json
+.test-build/
+*.tsbuildinfo
+.gitignore
