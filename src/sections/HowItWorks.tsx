@@ -235,24 +235,37 @@ export default function HowItWorks({ lang, onLoginClick }: HowItWorksProps) {
 
         {/* ── CTA ───────────────────────────────────────────────────────────── */}
         <div
-          className="mt-14 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-3xl p-7 flex flex-col sm:flex-row items-center justify-between gap-5"
+          className="mt-14 relative overflow-hidden bg-gradient-to-bl from-[#25D366]/10 via-white to-[#128C7E]/5 border border-[#25D366]/20 rounded-3xl p-8 text-center"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.7s cubic-bezier(0.16,1,0.3,1) 500ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) 500ms",
           }}
         >
-          <div className={`text-center ${isAr ? "sm:text-right" : "sm:text-left"}`}>
-            <p className="text-base font-bold text-gray-900 mb-1">{tr(t.how.ctaTitle, lang)}</p>
-            <p className="text-sm text-gray-400">{tr(t.how.ctaSub, lang)}</p>
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#25D366]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-[#128C7E]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative">
+            <p className="text-xs font-bold text-[#25D366] tracking-widest uppercase mb-2">{tr(t.faq.ctaBadge, lang)}</p>
+            <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">{tr(t.faq.ctaTitle, lang)}</h3>
+            <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto leading-relaxed">{tr(t.faq.ctaSub, lang)}</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={onLoginClick}
+                className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a] active:scale-[.98] text-[#06371f] font-extrabold px-7 py-3.5 rounded-xl transition-all text-sm shadow-lg shadow-green-200 cursor-pointer"
+              >
+                {tr(t.faq.ctaBtn, lang)}
+                <ArrowIcon className="w-4 h-4" />
+              </button>
+              <a
+                href="https://wa.me/201281657907"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors"
+              >
+                {tr(t.faq.ctaLink, lang)}
+              </a>
+            </div>
           </div>
-          <button
-            onClick={onLoginClick}
-            className="flex-shrink-0 inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bb5a] text-white font-bold px-7 py-3 rounded-xl transition-all text-sm whitespace-nowrap active:scale-95 shadow-lg shadow-green-200 hover:shadow-green-300 hover:scale-[1.02]"
-          >
-            {tr(t.how.ctaBtn, lang)}
-            <ArrowIcon className="w-4 h-4" />
-          </button>
         </div>
 
       </div>
