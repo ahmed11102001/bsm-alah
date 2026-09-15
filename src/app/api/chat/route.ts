@@ -10,7 +10,7 @@ import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { decryptToken } from "@/lib/crypto";
 import { requirePermission } from "@/lib/permissions";
 import type { Permission } from "@/lib/permissions";
-import { checkFeature, guardResponse } from "@/lib/plan-guard";
+import { checkFeature, guardResponse, getMaxVideoSizeMB } from "@/lib/plan-guard";
 
 // ─── helper ───────────────────────────────────────────────────────────────────
 function uid(session: any): string {
@@ -639,6 +639,27 @@ async function sendMedia(userId: string, req: NextRequest, session: any) {
 
     if (!file || !contactId)
       return NextResponse.json({ error: "file و contactId مطلوبان" }, { status: 400 });
+
+    // ── فيديو: ميزة منفصلة عن باقي الوسائط + حد حجم لكل باقة ────────────────
+    // بتتحقق هنا قبل أي رفع (لا لميتا ولا لـCloudinary) عشان العميل ياخد رد
+    // فوري بدل ما يستنى رفع كامل يفشل بعدين.
+    const isVideoFile = file.type.startsWith("video/");
+    if (isVideoFile) {
+      const videoFeatureGuard = await checkFeature(userId, "videoMessages");
+      if (!videoFeatureGuard.allowed) return guardResponse(videoFeatureGuard)!;
+
+      const maxVideoSizeMB = await getMaxVideoSizeMB(userId);
+      const maxVideoSizeBytes = maxVideoSizeMB * 1024 * 1024;
+      if (Number.isFinite(maxVideoSizeMB) && file.size > maxVideoSizeBytes) {
+        return NextResponse.json(
+          {
+            error: `حجم الفيديو أكبر من الحد المسموح في باقتك (${maxVideoSizeMB} ميجا). حجم ملفك: ${(file.size / (1024 * 1024)).toFixed(1)} ميجا.`,
+            code: "LIMIT_REACHED",
+          },
+          { status: 413 }
+        );
+      }
+    }
 
     // جيب الـ contact والـ account بالتوازي
     const [contact, account] = await Promise.all([

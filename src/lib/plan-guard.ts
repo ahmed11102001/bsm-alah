@@ -643,6 +643,7 @@ const FEATURE_LABELS: Record<BooleanFeature, string> = {
   advancedReports: "التقارير المتقدمة",
   apiAccess: "الوصول عبر API",
   mediaMessages: "إرسال الوسائط (صور / ملفات / صوت)",
+  videoMessages: "إرسال الفيديو",
   customAudiences: "الجمهور المخصص",
   storeIntegration: "ربط المتجر والأتمتة",
   aiAgent: "AI Sales Assistant",
@@ -697,6 +698,19 @@ export async function checkFeature(
     plan,
     requiredPlan: required,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4.1 getMaxVideoSizeMB — حد حجم الفيديو المسموح لباقة اليوزر (بالميجابايت)
+// ═══════════════════════════════════════════════════════════════════════════════
+/** 0 يعني الفيديو غير متاح أصلاً لباقته (يتحقق منه checkFeature("videoMessages") أولًا) */
+export async function getMaxVideoSizeMB(ownerId: string): Promise<number> {
+  // ✅ السوبر أدمن وبيتا يوزرز مفيش عليهم قيود
+  if (await isSuperAdmin(ownerId) || await isBetaBypass(ownerId)) return Infinity;
+
+  const sub = await getSubscription(ownerId);
+  const plan = getEffectivePlan(sub);
+  return PLANS[plan].maxVideoSizeMB;
 }
 
 /** WANI Partner is an Enterprise-only workspace feature. */

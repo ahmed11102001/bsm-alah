@@ -16,7 +16,9 @@ export interface PlanLimits {
   scheduledCampaigns:  boolean;
   advancedReports:     boolean;
   apiAccess:           boolean;
-  mediaMessages:       boolean;  // صور / فيديو / ملفات / صوت
+  mediaMessages:       boolean;  // صور / ملفات / صوت
+  videoMessages:       boolean;  // إرسال فيديو من وني — منفصل عن mediaMessages
+  maxVideoSizeMB:      number;   // 0 = الفيديو غير متاح أصلاً (يتحقق منه فقط لو videoMessages=true)
   customAudiences:     boolean;
   storeIntegration:    boolean;  // ربط Shopify / WooCommerce / EasyOrders + أتمتة المتجر
   aiAgent:             boolean;  // AI Sales Assistant (Wani)
@@ -33,6 +35,8 @@ const FREE_LIMITS: PlanLimits = {
   advancedReports:    false,
   apiAccess:          false,
   mediaMessages:      false,
+  videoMessages:      false,
+  maxVideoSizeMB:     0,
   customAudiences:    false,
   storeIntegration:   false,
   aiAgent:            false,
@@ -49,6 +53,8 @@ const GO_LIMITS: PlanLimits = {
   advancedReports:    false,
   apiAccess:          false,
   mediaMessages:      true,
+  videoMessages:      false,
+  maxVideoSizeMB:     0,
   customAudiences:    true,
   storeIntegration:   false,
   aiAgent:            false,
@@ -65,6 +71,8 @@ const PRO_LIMITS: PlanLimits = {
   advancedReports:    true,
   apiAccess:          true,
   mediaMessages:      true,
+  videoMessages:      true,
+  maxVideoSizeMB:     8,
   customAudiences:    true,
   storeIntegration:   true,
   aiAgent:            false,
@@ -81,6 +89,8 @@ const MAX_LIMITS: PlanLimits = {
   advancedReports:    true,
   apiAccess:          true,
   mediaMessages:      true,
+  videoMessages:      true,
+  maxVideoSizeMB:     8,
   customAudiences:    true,
   storeIntegration:   true,
   aiAgent:            true,
@@ -110,6 +120,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
   | "advancedReports"
   | "apiAccess"
   | "mediaMessages"
+  | "videoMessages"
   | "customAudiences"
   | "storeIntegration"
   | "aiAgent"
@@ -119,6 +130,7 @@ export const FEATURE_REQUIRED_PLAN: Record<keyof Pick<PlanLimits,
   advancedReports:    "pro",
   apiAccess:          "pro",
   mediaMessages:      "starter",
+  videoMessages:      "pro",
   customAudiences:    "starter",
   storeIntegration:   "pro",
   aiAgent:            "enterprise",
