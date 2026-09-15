@@ -1,0 +1,7 @@
+# Published files are controlled by the "files" field in package.json.
+src/
+tests/
+tsconfig*.json
+.test-build/
+*.tsbuildinfo
+.gitignore

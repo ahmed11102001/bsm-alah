@@ -1,0 +1,46 @@
+{
+  "name": "@aiwni/cli",
+  "version": "0.1.0",
+  "description": "Official Wani Developer CLI — manage projects and test the WhatsApp OTP API from your terminal.",
+  "license": "MIT",
+  "author": "Wani",
+  "homepage": "https://developers.aiwni.com/docs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmed11102001/bsm-alah.git",
+    "directory": "cli"
+  },
+  "keywords": [
+    "wani",
+    "whatsapp",
+    "otp",
+    "cli",
+    "developer-tools"
+  ],
+  "type": "module",
+  "bin": {
+    "wani": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit",
+    "test": "tsc -p tsconfig.tests.json && node --test --test-reporter=spec .test-build/tests/*.test.js",
+    "postbuild": "node -e \"try{require('fs').chmodSync('./dist/index.js',0o755)}catch(e){}\"",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.6.0"
+  }
+}
