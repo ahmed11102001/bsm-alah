@@ -9,11 +9,27 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 import { useDevPath } from "@/lib/dev-links";
+import {
+  generateIntegrationCode,
+  getOtpApiContract,
+  type IntegrationLanguage,
+  type QuickStartOperation,
+} from "@/lib/developer-code-generator";
 
 type BuildPath = "manual" | "sdk" | "cli";
-type ManualOp = "send" | "verify" | "status";
+// Extra alias: "Node.js" renders the JavaScript generator with a Node label.
+type ManualLang = IntegrationLanguage | "node";
 
 type Template = { id: string; name: string; language: string; status: string; metaTemplateId: string | null };
+
+const MANUAL_LANGS: { id: ManualLang; label: string; framework: string }[] = [
+  { id: "javascript", label: "JavaScript", framework: "JavaScript (fetch)" },
+  { id: "typescript", label: "TypeScript", framework: "TypeScript (fetch)" },
+  { id: "node", label: "Node.js", framework: "Node.js" },
+  { id: "python", label: "Python", framework: "Python (requests)" },
+  { id: "php", label: "PHP", framework: "PHP (cURL)" },
+  { id: "curl", label: "cURL", framework: "Server shell" },
+];
 
 function CopyBtn({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -43,6 +59,15 @@ function CodeBlock({ code, copyValue }: { code: string; copyValue?: string }) {
   );
 }
 
+function StepBlock({ n, title, code }: { n: string; title: string; code: string }) {
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <div className="qs-block-label">{n}. {title}</div>
+      <CodeBlock code={code} />
+    </div>
+  );
+}
+
 export default function QuickStartPage() {
   const { language, t } = useLanguage();
   const devPath = useDevPath();
@@ -52,11 +77,14 @@ export default function QuickStartPage() {
 
   const [activePath, setActivePath] = useState<BuildPath>("manual");
 
-  // ── Manual API state ──
-  const [manualOp, setManualOp] = useState<ManualOp>("send");
+  // ── Shared project data: the developer picks THEIR data, the page generates ──
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [templatesMsg, setTemplatesMsg] = useState("");
+
+  // ── Manual generator state: language + operation + template ──
+  const [manualLang, setManualLang] = useState<ManualLang>("javascript");
+  const [manualOp, setManualOp] = useState<QuickStartOperation>("send");
 
   const [baseUrl, setBaseUrl] = useState("");
   useEffect(() => {
@@ -70,8 +98,7 @@ export default function QuickStartPage() {
         const next: Template[] = Array.isArray(data.templates) ? data.templates : [];
         setTemplates(next);
         const approved = next.filter((x) => x.status === "APPROVED" && !!x.metaTemplateId);
-        if (approved.length === 1) setSelectedTemplateId(approved[0].id);
-        else if (approved.length > 0) setSelectedTemplateId(approved[0].id);
+        if (approved.length > 0) setSelectedTemplateId((prev) => prev || approved[0].id);
       })
       .catch(() => setTemplatesMsg(t("Could not load templates.", "تعذر تحميل القوالب.")));
   }, [id, t]);
@@ -82,57 +109,52 @@ export default function QuickStartPage() {
   );
   const selected = approved.find((x) => x.id === selectedTemplateId);
   const templateIdDisplay = selected?.id ?? "YOUR_TEMPLATE_ID";
+  const needsTemplate = manualOp === "send";
 
-  const manualSpec = useMemo(() => {
-    const endpoint =
-      manualOp === "send" ? `${baseUrl || "<origin>/api/developers/otp"}/send`
-      : manualOp === "verify" ? `${baseUrl || "<origin>/api/developers/otp"}/verify`
-      : `${baseUrl || "<origin>/api/developers/otp"}/status/:token`;
-    const method = manualOp === "status" ? "GET" : "POST";
-    const requestBody =
-      manualOp === "send"
-        ? { phone: "+201234567890", templateId: templateIdDisplay, expiryMinutes: 10 }
-        : manualOp === "verify"
-          ? { token: "TOKEN_FROM_SEND", code: "123456" }
-          : null;
-    const curl =
-      manualOp === "send"
-        ? `curl -X POST "${endpoint}" \\\n  -H "Content-Type: application/json" \\\n  -H "x-api-key: $WANI_API_KEY" \\\n  -d '${JSON.stringify({ phone: "+201234567890", templateId: templateIdDisplay, expiryMinutes: 10 })}'`
-        : manualOp === "verify"
-          ? `curl -X POST "${endpoint}" \\\n  -H "Content-Type: application/json" \\\n  -H "x-api-key: $WANI_API_KEY" \\\n  -d '{"token":"TOKEN_FROM_SEND","code":"123456"}'`
-          : `curl "${endpoint.replace(":token", "TOKEN_FROM_SEND")}" \\\n  -H "x-api-key: $WANI_API_KEY"`;
-    const responseExample =
-      manualOp === "send"
-        ? { ok: true, token: "otp_abc123…", expiresAt: "2026-01-01T00:10:00.000Z" }
-        : manualOp === "verify"
-          ? { ok: true, verified: true }
-          : { ok: true, status: "verified" };
-    return { endpoint, method, requestBody, curl, responseExample };
-  }, [manualOp, baseUrl, templateIdDisplay]);
+  // ── Single contract source: endpoint + request/response derive from here ──
+  const contract = useMemo(
+    () => getOtpApiContract(manualOp, selected?.id),
+    [manualOp, selected]
+  );
 
+  // ── Generated code derives from the SAME contract via the shared generator ──
+  const generatedCode = useMemo(() => {
+    const langEntry = MANUAL_LANGS.find((l) => l.id === manualLang) ?? MANUAL_LANGS[0];
+    const genLang: IntegrationLanguage = manualLang === "node" ? "javascript" : manualLang;
+    return generateIntegrationCode({
+      operation: manualOp,
+      language: genLang,
+      framework: langEntry.framework,
+      templateId: needsTemplate ? selected?.id : undefined,
+      baseUrl: baseUrl || "https://developers.aiwni.com/api/developers/otp",
+    });
+  }, [manualLang, manualOp, needsTemplate, selected, baseUrl]);
+
+  // ── SDK steps (short, copyable) ──
   const sdkInstall = "npm install @aiwni/sdk";
-  const sdkCode = `import { Wani } from "@aiwni/sdk";
+  const sdkConfigure = `import { Wani } from "@aiwni/sdk";
 
 const wani = new Wani({
-  apiKey: process.env.WANI_API_KEY,
-});
-
-// Send an OTP (templateId is shown next to each template in the portal)
+  apiKey: process.env.WANI_API_KEY, // WANI_API_KEY="your_project_api_key"
+});`;
+  const sdkSend = `// Send an OTP (templateId is shown next to each template in the portal)
 const sent = await wani.otp.send({
   phone: "201xxxxxxxxx",
   templateId: "${templateIdDisplay}",
 });
 
-console.log(sent.token, sent.expiresAt);
-
-// Verify the code the user received
+console.log(sent.token, sent.expiresAt);`;
+  const sdkVerify = `// Verify the code the user received
 const result = await wani.otp.verify({
   token: sent.token,
   code: "123456",
-});`;
+});
 
+console.log(result.verified); // true`;
+
+  // ── CLI steps ──
   const cliInstall = "npm install -g @aiwni/cli";
-  const cliCode = `# 1. Log in with your Developer Portal account
+  const cliCommands = `# 1. Log in with your Developer Portal account
 wani login
 
 # 2. See your projects and pick one
@@ -146,16 +168,55 @@ wani otp verify --token <token> --code 123456
 wani otp status --token <token>`;
 
   const paths: { id: BuildPath; icon: any; titleEn: string; titleAr: string; subEn: string; subAr: string }[] = [
-    { id: "manual", icon: Globe, titleEn: "Manual API", titleAr: "Manual API", subEn: "Full control", subAr: "تحكم كامل" },
-    { id: "sdk", icon: Package, titleEn: "SDK", titleAr: "SDK", subEn: "Fast integration", subAr: "دمج سريع" },
-    { id: "cli", icon: TerminalSquare, titleEn: "CLI", titleAr: "CLI", subEn: "Developer tools", subAr: "أدوات المطور" },
+    { id: "manual", icon: Globe, titleEn: "Manual API", titleAr: "Manual API", subEn: "HTTP", subAr: "HTTP" },
+    { id: "sdk", icon: Package, titleEn: "SDK", titleAr: "SDK", subEn: "Libraries", subAr: "مكتبات" },
+    { id: "cli", icon: TerminalSquare, titleEn: "CLI", titleAr: "CLI", subEn: "Dev tools", subAr: "أدوات المطور" },
   ];
 
-  const ops: { id: ManualOp; en: string; ar: string }[] = [
+  const ops: { id: QuickStartOperation; en: string; ar: string }[] = [
     { id: "send", en: "Send OTP", ar: "إرسال OTP" },
     { id: "verify", en: "Verify OTP", ar: "التحقق من OTP" },
     { id: "status", en: "Check Status", ar: "فحص الحالة" },
   ];
+
+  function templatePicker(hint?: string) {
+    return (
+      <div className="qs-field">
+        <label className="qs-label">{t("Template", "القالب")}</label>
+        <select
+          className="qs-select"
+          value={selectedTemplateId}
+          onChange={(e) => setSelectedTemplateId(e.target.value)}
+        >
+          <option value="">{t("Select a template", "اختر قالبًا")}</option>
+          {approved.map((x) => (
+            <option key={x.id} value={x.id}>{x.name} — {x.language}</option>
+          ))}
+        </select>
+        {selected ? (
+          <div className="qs-tid-row">
+            <span className="qs-tid-label">Template ID</span>
+            <code className="qs-tid-value">{selected.id}</code>
+            <CopyBtn value={selected.id} />
+          </div>
+        ) : (
+          <div className="qs-hint">{hint ?? templateIdDisplay}</div>
+        )}
+        {approved.length === 0 && (
+          <div className="qs-warn">
+            {t(
+              "No approved OTP template for this project yet. Create or sync one first.",
+              "لا يوجد قالب OTP معتمد لهذا المشروع بعد. أنشئ أو زامن قالبًا أولًا."
+            )}{" "}
+            <Link href={devPath(`/portal/projects/${id}/otp-templates`)} style={{ color: "#20d378" }}>
+              {t("Go to Templates →", "→ اذهب إلى القوالب")}
+            </Link>
+          </div>
+        )}
+        {templatesMsg && <div className="qs-error">{templatesMsg}</div>}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -212,13 +273,7 @@ wani otp status --token <token>`;
         .qs-section-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
         .qs-section-desc { font-size: 13px; color: rgba(255,255,255,0.4); margin: 0 0 16px; line-height: 1.7; text-align: ${isAr ? "right" : "left"}; }
 
-        .qs-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; flex-direction: ${isAr ? "row" : "row-reverse"}; }
-        .qs-tab {
-          padding: 8px 14px; border-radius: 9px; font-size: 12.5px; font-family: inherit; cursor: pointer;
-          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
-        }
-        .qs-tab.active { background: rgba(32,211,120,0.12); border-color: rgba(32,211,120,0.35); color: #20d378; font-weight: 600; }
-
+        .qs-controls { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 12px; margin-bottom: 4px; }
         .qs-field { margin-bottom: 14px; text-align: ${isAr ? "right" : "left"}; }
         .qs-label { display: block; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); margin-bottom: 7px; }
         .qs-select, .qs-input {
@@ -230,14 +285,24 @@ wani otp status --token <token>`;
         .qs-select:focus, .qs-input:focus { border-color: rgba(32,211,120,0.4); }
         .qs-hint { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 6px; font-family: 'Fira Code', monospace; direction: ltr; text-align: left; }
 
-        .qs-kv {
-          display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; font-size: 12.5px;
-          background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
+        .qs-tid-row {
+          display: flex; align-items: center; gap: 10px; margin-top: 8px;
+          background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 10px; padding: 8px 10px 8px 12px;
+          flex-direction: row;
         }
-        .qs-kv-key { color: rgba(255,255,255,0.35); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
-        .qs-kv-val { font-family: 'Fira Code', monospace; font-size: 12px; color: rgba(255,255,255,0.8); word-break: break-all; direction: ltr; text-align: left; }
-        .qs-kv-val.green { color: #20d378; }
+        .qs-tid-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+        .qs-tid-value { flex: 1; font-family: 'Fira Code', monospace; font-size: 11.5px; color: #20d378; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap; }
+
+        .qs-endpoint {
+          display: flex; align-items: center; gap: 10px; margin: 6px 0 4px;
+          font-family: 'Fira Code', monospace; font-size: 12.5px; direction: ltr; text-align: left;
+          background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px; padding: 12px 16px;
+          flex-direction: row;
+        }
+        .qs-method { font-weight: 700; color: ${contract.method === "GET" ? "#38bdf8" : "#f59e0b"}; }
+        .qs-url { color: rgba(255,255,255,0.75); word-break: break-all; }
 
         .qs-block-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: .6px; margin: 16px 0 8px; text-align: ${isAr ? "right" : "left"}; }
 
@@ -259,6 +324,7 @@ wani otp status --token <token>`;
           border-radius: 11px; padding: 11px 14px; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap;
         }
 
+        .qs-reqres-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .qs-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; flex-direction: ${isAr ? "row" : "row-reverse"}; }
         .qs-btn-primary {
           display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: 10px;
@@ -283,8 +349,9 @@ wani otp status --token <token>`;
         @media (max-width: 700px) {
           .qs-root { padding: 24px 16px 40px; }
           .qs-path-grid { grid-template-columns: 1fr; }
+          .qs-controls { grid-template-columns: 1fr; }
+          .qs-reqres-grid { grid-template-columns: 1fr; }
           .qs-key-banner { flex-direction: column; align-items: stretch; }
-          .qs-kv { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -295,8 +362,8 @@ wani otp status --token <token>`;
           <h1 className="qs-title">{t("Start building with Wani", "ابدأ البناء مع Wani")}</h1>
           <p className="qs-sub">
             {t(
-              "Choose the right way to integrate Wani into your project.",
-              "اختر الطريقة المناسبة لك لدمج Wani في مشروعك."
+              "Choose how you want to integrate Wani — pick your data and copy ready code into your project.",
+              "اختر كيف تريد دمج Wani — اختر بياناتك وانسخ الكود الجاهز إلى مشروعك."
             )}
           </p>
         </div>
@@ -341,7 +408,7 @@ wani otp status --token <token>`;
           })}
         </div>
 
-        {/* ── 1. Manual API ── */}
+        {/* ── 1. Manual API — code generator ── */}
         {activePath === "manual" && (
           <section className="qs-section">
             <div className="qs-section-head">
@@ -349,79 +416,66 @@ wani otp status --token <token>`;
             </div>
             <p className="qs-section-desc">
               {t(
-                "Build with the Wani REST API directly — full control over every request.",
-                "ابنِ باستخدام Wani REST API مباشرة — تحكم كامل في كل طلب."
+                "Use Wani directly with HTTPS requests. Choose your language and copy the code.",
+                "استخدم Wani مباشرة عبر HTTPS. اختر لغتك وانسخ الكود."
               )}
             </p>
 
-            <div className="qs-tabs">
-              {ops.map((o) => (
-                <button
-                  key={o.id}
-                  className={`qs-tab ${manualOp === o.id ? "active" : ""}`}
-                  onClick={() => setManualOp(o.id)}
-                >
-                  {isAr ? o.ar : o.en}
-                </button>
-              ))}
-            </div>
-
-            {manualOp === "send" && (
+            <div className="qs-controls">
               <div className="qs-field">
-                <label className="qs-label">{t("Approved OTP template", "قالب OTP المعتمد")}</label>
+                <label className="qs-label">{t("Language", "اللغة")}</label>
                 <select
                   className="qs-select"
-                  value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  value={manualLang}
+                  onChange={(e) => setManualLang(e.target.value as ManualLang)}
                 >
-                  <option value="">{t("Select a template", "اختر قالبًا")}</option>
-                  {approved.map((x) => (
-                    <option key={x.id} value={x.id}>{x.name} — {x.language}</option>
+                  {MANUAL_LANGS.map((l) => (
+                    <option key={l.id} value={l.id}>{l.label}</option>
                   ))}
                 </select>
-                {approved.length === 0 && (
-                  <div className="qs-warn">
-                    {t(
-                      "No approved OTP template for this project yet. Create or sync one first.",
-                      "لا يوجد قالب OTP معتمد لهذا المشروع بعد. أنشئ أو زامن قالبًا أولًا."
-                    )}{" "}
-                    <Link href={devPath(`/portal/projects/${id}/otp-templates`)} style={{ color: "#20d378" }}>
-                      {t("Go to Templates →", "→ اذهب إلى القوالب")}
-                    </Link>
-                  </div>
-                )}
-                {templatesMsg && <div className="qs-error">{templatesMsg}</div>}
               </div>
-            )}
-
-            <div className="qs-block-label">Endpoint</div>
-            <div className="qs-kv">
-              <span className="qs-kv-key">Method</span>
-              <span className={`qs-kv-val ${manualSpec.method === "GET" ? "" : "green"}`}>{manualSpec.method}</span>
-              <span className="qs-kv-key">URL</span>
-              <span className="qs-kv-val">{manualSpec.endpoint}</span>
+              <div className="qs-field">
+                <label className="qs-label">{t("Operation", "العملية")}</label>
+                <select
+                  className="qs-select"
+                  value={manualOp}
+                  onChange={(e) => setManualOp(e.target.value as QuickStartOperation)}
+                >
+                  {ops.map((o) => (
+                    <option key={o.id} value={o.id}>{isAr ? o.ar : o.en}</option>
+                  ))}
+                </select>
+              </div>
+              {needsTemplate ? (
+                templatePicker()
+              ) : (
+                <div className="qs-field">
+                  <label className="qs-label">{t("Token", "الرمز")}</label>
+                  <div className="qs-hint">TOKEN_FROM_SEND — {t("returned by Send OTP", "يُرجع من Send OTP")}</div>
+                </div>
+              )}
             </div>
 
-            <div className="qs-block-label">Headers</div>
-            <div className="qs-kv">
-              <span className="qs-kv-key">Content-Type</span>
-              <span className="qs-kv-val">application/json</span>
-              <span className="qs-kv-key">x-api-key</span>
-              <span className="qs-kv-val green">$WANI_API_KEY</span>
+            <div className="qs-endpoint">
+              <span className="qs-method">{contract.method}</span>
+              <span className="qs-url">/api/developers/otp{contract.path}</span>
             </div>
 
-            {manualSpec.requestBody && (
-              <>
-                <div className="qs-block-label">Request body</div>
-                <CodeBlock code={JSON.stringify(manualSpec.requestBody, null, 2)} />
-              </>
-            )}
+            <div className="qs-block-label">{t("Your code", "الكود الخاص بك")}</div>
+            <CodeBlock code={generatedCode} />
 
-            <div className="qs-block-label">Response example</div>
-            <CodeBlock code={JSON.stringify(manualSpec.responseExample, null, 2)} />
-
-            <div className="qs-block-label">cURL</div>
-            <CodeBlock code={manualSpec.curl} />
+            <div className="qs-reqres-grid">
+              <div>
+                <div className="qs-block-label">Request</div>
+                <CodeBlock
+                  code={contract.requestBody ? JSON.stringify(contract.requestBody, null, 2) : t("No body — token goes in the URL path.", "لا يوجد body — الرمز في مسار الرابط.")}
+                />
+              </div>
+              <div>
+                <div className="qs-block-label">Response</div>
+                <CodeBlock code={JSON.stringify(contract.responseExample, null, 2)} />
+              </div>
+            </div>
 
             <div className="qs-actions">
               <Link href={devPath(`/portal/projects/${id}/live-tester`)} className="qs-btn-primary">
@@ -434,7 +488,7 @@ wani otp status --token <token>`;
           </section>
         )}
 
-        {/* ── 2. SDK ── */}
+        {/* ── 2. SDK — steps ── */}
         {activePath === "sdk" && (
           <section className="qs-section">
             <div className="qs-section-head">
@@ -447,29 +501,12 @@ wani otp status --token <token>`;
               )}
             </p>
 
-            <div className="qs-block-label">{t("Install", "التثبيت")}</div>
-            <div className="qs-install-row">
-              <div className="qs-install-code">{sdkInstall}</div>
-              <CopyBtn value={sdkInstall} label={t("Copy install command", "نسخ أمر التثبيت")} />
-            </div>
+            {templatePicker()}
 
-            <div className="qs-field" style={{ marginTop: 14 }}>
-              <label className="qs-label">{t("Approved OTP template", "قالب OTP المعتمد")}</label>
-              <select
-                className="qs-select"
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-              >
-                <option value="">{t("Select a template", "اختر قالبًا")}</option>
-                {approved.map((x) => (
-                  <option key={x.id} value={x.id}>{x.name} — {x.language}</option>
-                ))}
-              </select>
-              {selected && <div className="qs-hint">{selected.name} · {selected.language}</div>}
-            </div>
-
-            <div className="qs-block-label">{t("Usage", "الاستخدام")}</div>
-            <CodeBlock code={sdkCode} />
+            <StepBlock n="1" title={t("Install", "التثبيت")} code={sdkInstall} />
+            <StepBlock n="2" title={t("Configure", "الإعداد")} code={sdkConfigure} />
+            <StepBlock n="3" title={t("Send OTP", "إرسال OTP")} code={sdkSend} />
+            <StepBlock n="4" title={t("Verify OTP", "التحقق من OTP")} code={sdkVerify} />
 
             <div className="qs-warn">
               {t(
@@ -486,7 +523,7 @@ wani otp status --token <token>`;
           </section>
         )}
 
-        {/* ── 3. CLI ── */}
+        {/* ── 3. CLI — steps ── */}
         {activePath === "cli" && (
           <section className="qs-section">
             <div className="qs-section-head">
@@ -499,28 +536,11 @@ wani otp status --token <token>`;
               )}
             </p>
 
-            <div className="qs-block-label">{t("Install", "التثبيت")}</div>
-            <div className="qs-install-row">
-              <div className="qs-install-code">{cliInstall}</div>
-              <CopyBtn value={cliInstall} label={t("Copy install command", "نسخ أمر التثبيت")} />
-            </div>
+            {templatePicker()}
 
-            <div className="qs-field" style={{ marginTop: 14 }}>
-              <label className="qs-label">{t("Approved OTP template (used in the example below)", "قالب OTP المعتمد (مستخدم في المثال بالأسفل)")}</label>
-              <select
-                className="qs-select"
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-              >
-                <option value="">{t("Select a template", "اختر قالبًا")}</option>
-                {approved.map((x) => (
-                  <option key={x.id} value={x.id}>{x.name} — {x.language}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="qs-block-label">{t("Quick commands", "أوامر سريعة")}</div>
-            <CodeBlock code={cliCode} />
+            <StepBlock n="1" title={t("Install", "التثبيت")} code={cliInstall} />
+            <div className="qs-block-label">2. {t("Then", "ثم")}</div>
+            <CodeBlock code={cliCommands} />
 
             <div className="qs-warn">
               {t(
