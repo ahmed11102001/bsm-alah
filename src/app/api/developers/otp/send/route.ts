@@ -8,9 +8,8 @@ import { storeOtp } from "@/lib/otp-redis";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import {
   buildAuthenticationComponents,
-  buildOtpParameters,
-  validateAuthenticationComponents,
-  validateVariableDefinitions,
+  validateOtpTemplateContract,
+  OTP_CONTRACT_ERRORS,
   type MetaTemplateComponent,
   type OtpVariableDefinition,
 } from "@/lib/developer-template-contract";
@@ -123,7 +122,7 @@ async function resolveTemplateById(
   if (template.projectId !== projectId) {
     return { ok: false, code: "TEMPLATE_WRONG_PROJECT", error: "القالب لا ينتمي إلى هذا المشروع", status: 403 };
   }
-  return assertTemplateUsable(template);
+  return assertTemplateUsable(template, projectId);
 }
 
 async function resolveTemplateByName(
@@ -174,17 +173,20 @@ async function resolveTemplateByName(
     };
   }
 
-  return assertTemplateUsable(match[0]);
+  return assertTemplateUsable(match[0], projectId);
 }
 
-// ─── Usability gate — لا تُستدعى إلا على قالب مؤكد الانتماء للمشروع ─────────
+// ─── Usability gate — المفوّض الوحيد: validateOtpTemplateContract ──────────
+// لا تُستدعى إلا على قالب مؤكد الانتماء للمشروع. أي فشل = لا إرسال (fail closed).
+// رسائل العرض العربية هنا فقط (presentation) — القرار نفسه في الـ contract.
 function assertTemplateUsable(template: {
-  id: string; name: string; language: string; body: string; category: string;
+  id: string; projectId: string; name: string; language: string; body: string; category: string;
   metaTemplateId: string | null; status: string; variables?: unknown; metaComponents?: unknown;
-}): TemplateResolution {
+}, expectedProjectId: string): TemplateResolution {
+  // رسالة عربية مخصصة لكل حالة عدم اعتماد (لتجربة المطور)
   if (template.status !== "APPROVED") {
     const statusMsg: Record<string, string> = {
-      LOCAL_DRAFT: `القالب "${template.name}" مسودة محلية — أرسله لـ Meta واعتمده أولًا ثم زامن القوالب`,
+      LOCAL_DRAFT: `القالب "${template.name}" مسودة محلية — أنشئ قالب OTP من صفحة القوالب وأرسله لـ Meta واعتمده أولًا ثم زامن`,
       PENDING: `القالب "${template.name}" قيد مراجعة Meta — زامن القوالب بعد الموافقة ثم أعد المحاولة`,
       REJECTED: `القالب "${template.name}" مرفوض من Meta — راجع سبب الرفض في صفحة القوالب`,
       DISABLED: `القالب "${template.name}" معطّل حاليًا في Meta`,
@@ -196,34 +198,47 @@ function assertTemplateUsable(template: {
       status: 400,
     };
   }
-  if (!template.metaTemplateId) {
-    return {
-      ok: false,
-      code: "TEMPLATE_NO_META_ID",
-      error: `القالب "${template.name}" معتمد لكن غير مرتبط بقالب Meta — زامن القوالب مع Meta أولًا`,
-      status: 400,
-    };
+
+  const check = validateOtpTemplateContract({
+    id: template.id,
+    projectId: template.projectId,
+    expectedProjectId,
+    name: template.name,
+    language: template.language,
+    category: template.category,
+    status: template.status,
+    metaTemplateId: template.metaTemplateId,
+    metaComponents: template.metaComponents,
+  });
+  // ملحوظة: الوجود/الملكية/الحالة فُحصت قبل الوصول هنا — الـ contract يعيد
+  // التأكيد عليها كشبكة أمان ثانية بنفس القرار.
+  if (!check.ok) {
+    switch (check.code) {
+      case OTP_CONTRACT_ERRORS.TEMPLATE_NO_META_ID:
+        return {
+          ok: false,
+          code: "TEMPLATE_NO_META_ID",
+          error: `القالب "${template.name}" معتمد لكن غير مرتبط بقالب Meta — زامن القوالب مع Meta أولًا`,
+          status: 400,
+        };
+      case OTP_CONTRACT_ERRORS.OTP_TEMPLATE_NOT_COMPATIBLE:
+        return {
+          ok: false,
+          code: "OTP_TEMPLATE_NOT_COMPATIBLE",
+          error: `القالب "${template.name}" غير متوافق مع OTP (مطلوب AUTHENTICATION معتمد) — ${check.reason}`,
+          status: 400,
+        };
+      default:
+        return {
+          ok: false,
+          code: "OTP_TEMPLATE_METADATA_INVALID",
+          error: `القالب "${template.name}" غير صالح للإرسال — ${check.reason}`,
+          status: 409,
+        };
+    }
   }
+
   const definitions = Array.isArray(template.variables) ? template.variables as OtpVariableDefinition[] : [];
-  if (template.category !== "AUTHENTICATION") {
-    const variableCheck = validateVariableDefinitions(template.body, definitions);
-    if (!variableCheck.ok) {
-      return { ok: false, code: "TEMPLATE_VARIABLES_INVALID", error: variableCheck.error, status: 400 };
-    }
-  }
-  if (template.category === "AUTHENTICATION") {
-    const metadataCheck = validateAuthenticationComponents(
-      Array.isArray(template.metaComponents) ? template.metaComponents as MetaTemplateComponent[] : undefined,
-    );
-    if (!metadataCheck.ok) {
-      return {
-        ok: false,
-        code: "TEMPLATE_METADATA_INCOMPLETE",
-        error: "Template metadata is incomplete. Please sync templates again.",
-        status: 409,
-      };
-    }
-  }
   return {
     ok: true,
     template: {
@@ -232,9 +247,9 @@ function assertTemplateUsable(template: {
       language: template.language,
       body: template.body,
       category: template.category,
-      metaTemplateId: template.metaTemplateId,
+      metaTemplateId: template.metaTemplateId as string,
       variables: definitions,
-      metaComponents: Array.isArray(template.metaComponents) ? template.metaComponents as MetaTemplateComponent[] : [],
+      metaComponents: template.metaComponents as MetaTemplateComponent[],
     },
   };
 }
@@ -257,19 +272,14 @@ async function sendWhatsAppOtp(opts: {
 }): Promise<{ success: boolean; metaMessageId?: string; error?: string; metaCode?: string; statusCode?: number }> {
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.phoneNumberId}/messages`;
 
-  // Build body parameters — fill all vars with the OTP code (most templates use 1 var)
-  const isAuthentication = opts.category === "AUTHENTICATION" || !opts.category;
-  const authenticationResult = isAuthentication
-    ? buildAuthenticationComponents(opts.metaComponents, opts.code)
-    : null;
-  const parameterResult = !isAuthentication
-    ? buildOtpParameters(opts.variables, opts.code, opts.expiryMinutes)
-    : null;
-  if (authenticationResult && !authenticationResult.ok) {
-    return { success: false, error: "Template metadata is incomplete. Please sync templates again.", statusCode: 409 };
+  // AUTHENTICATION فقط — لا مسار UTILITY/MARKETING هنا إطلاقًا (PHASE 7/20).
+  // الـ validator المركزي يمنع غير المتوافق قبل الوصول؛ هذا خط دفاع أخير.
+  if (opts.category !== "AUTHENTICATION") {
+    return { success: false, error: "OTP_TEMPLATE_NOT_COMPATIBLE: OTP requires an AUTHENTICATION template.", statusCode: 400 };
   }
-  if (parameterResult && !parameterResult.ok) {
-    return { success: false, error: parameterResult.error, statusCode: 400 };
+  const authenticationResult = buildAuthenticationComponents(opts.metaComponents, opts.code);
+  if (!authenticationResult.ok) {
+    return { success: false, error: "OTP_TEMPLATE_METADATA_INVALID: validated metadata could not build a payload. Please sync templates again.", statusCode: 409 };
   }
 
   const payload = {
@@ -280,9 +290,7 @@ async function sendWhatsAppOtp(opts: {
     template: {
       name: opts.templateName,
       language: { code: opts.language },
-      components: isAuthentication
-        ? authenticationResult!.components
-        : [{ type: "body", parameters: parameterResult!.parameters }],
+      components: authenticationResult.components,
     },
   };
 
@@ -301,24 +309,25 @@ async function sendWhatsAppOtp(opts: {
     if (!res.ok || data.error) {
       const msg = data.error?.error_user_msg || data.error?.message || "Meta API error";
       const metaCode = data.error?.code ? String(data.error.code) : undefined;
-      if (metaCode === "131008") {
-        console.error("[developer-otp-meta]", {
-          projectId: opts.projectId,
-          templateId: opts.templateId,
-          metaTemplateId: opts.metaTemplateId,
-          templateName: opts.templateName,
-          language: opts.language,
-          category: opts.category,
-          componentTypes: opts.metaComponents.map((component) => String(component.type ?? "").toUpperCase()),
-          parameters: payload.template.components.map((component: any) => ({
-            type: component.type,
-            index: component.index ?? null,
-            count: Array.isArray(component.parameters) ? component.parameters.length : 0,
-          })),
-          metaCode,
-          metaMessage: msg,
-        });
-      }
+      // PHASE 15: structured failure log — sanitized diagnostics only.
+      // Never: api keys, access tokens, OTP plaintext, full tokens, phone numbers.
+      console.error("[developer-otp-meta]", {
+        event: "META_REQUEST_FAILED",
+        projectId: opts.projectId,
+        templateId: opts.templateId,
+        metaTemplateId: opts.metaTemplateId,
+        templateName: opts.templateName,
+        language: opts.language,
+        category: opts.category,
+        componentTypes: opts.metaComponents.map((component) => String(component.type ?? "").toUpperCase()),
+        parameters: payload.template.components.map((component: any) => ({
+          type: component.type,
+          index: component.index ?? null,
+          count: Array.isArray(component.parameters) ? component.parameters.length : 0,
+        })),
+        metaCode,
+        metaMessage: msg,
+      });
       return {
         success: false,
         error: msg,
@@ -504,10 +513,21 @@ export async function POST(req: NextRequest) {
   }
   const template = resolution.template;
 
-  // ── 7. Generate OTP + token ───────────────────────────────────────────────
+  // ── 7. Generate OTP + token (server-side فقط — الـ client لا يرسل OTP) ────
   const otpCode = generateOtp();
   const token   = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + Number(expiryMinutes) * 60 * 1000);
+  // correlation id للّوجز — أول 8 أحرف فقط، بلا phone/code/token كامل/secrets
+  const correlationId = token.slice(0, 8);
+  console.log("[developer-otp]", {
+    event: "OTP_SEND_STARTED",
+    correlationId,
+    projectId: auth.projectId,
+    templateId: template.id,
+    metaTemplateId: template.metaTemplateId,
+    category: template.category,
+    language: template.language,
+  });
 
   // ── 8. فك تشفير الـ accessToken من DB ────────────────────────────────────
   const plainAccessToken = decryptToken(auth.metaConnection.accessToken);
@@ -571,17 +591,35 @@ export async function POST(req: NextRequest) {
 
   // ── 13. Return ────────────────────────────────────────────────────────────
   if (!sendResult.success) {
+    const isPayloadMismatch = sendResult.metaCode === "131008";
+    if (isPayloadMismatch) {
+      console.error("[developer-otp]", {
+        event: "OTP_SEND_FAILED",
+        correlationId,
+        projectId: auth.projectId,
+        templateId: template.id,
+        metaCode: sendResult.metaCode,
+      });
+    }
     return NextResponse.json(
       {
         ok: false,
-        error: sendResult.metaCode === "131008"
-          ? "WhatsApp template parameters are invalid or incomplete."
+        error: isPayloadMismatch
+          ? `القالب "${template.name}" مرفوض من Meta (parameters mismatch) — زامن القوالب من صفحة القوالب ثم أعد المحاولة. لو تكرر، راجع تعريف القالب في Meta.`
           : "WhatsApp send failed: " + sendResult.error,
+        code: isPayloadMismatch ? "META_131008" : undefined,
         ...(sendResult.metaCode ? { metaCode: sendResult.metaCode } : {}),
       },
       { status: sendResult.statusCode ?? 502 }
     );
   }
+
+  console.log("[developer-otp]", {
+    event: "OTP_SEND_SUCCESS",
+    correlationId,
+    projectId: auth.projectId,
+    templateId: template.id,
+  });
 
   const remaining = incrementField
     ? { messagesLeft: 50 - (auth.trialMessagesUsed + 1) }

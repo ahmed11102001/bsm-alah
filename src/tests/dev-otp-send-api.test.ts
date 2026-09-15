@@ -173,8 +173,7 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
     const data = await res.json();
     expect(res.status).toBe(409);
-    expect(data.code).toBe("TEMPLATE_METADATA_INCOMPLETE");
-    expect(data.error).toBe("Template metadata is incomplete. Please sync templates again.");
+    expect(data.code).toBe("OTP_TEMPLATE_METADATA_INVALID");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -185,11 +184,51 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
     const data = await res.json();
     expect(res.status).toBe(409);
-    expect(data.code).toBe("TEMPLATE_METADATA_INCOMPLETE");
+    expect(data.code).toBe("OTP_TEMPLATE_METADATA_INVALID");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("Meta 131008 is mapped to 422 without logging credentials or OTP", async () => {
+  it("APPROVED UTILITY template is rejected — OTP requires AUTHENTICATION", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({ category: "UTILITY" })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.code).toBe("OTP_TEMPLATE_NOT_COMPATIBLE");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("APPROVED MARKETING template is rejected — OTP requires AUTHENTICATION", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({ category: "MARKETING" })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.code).toBe("OTP_TEMPLATE_NOT_COMPATIBLE");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("AUTHENTICATION template with body {{1}} + OTP button emits both components", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({
+        metaComponents: [
+          { type: "BODY", text: "{{1}} is your verification code." },
+          { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+        ],
+      })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    expect(res.status).toBe(200);
+    const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(payload.template.components).toEqual([
+      { type: "body", parameters: [{ type: "text", text: expect.any(String) }] },
+      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: expect.any(String) }] },
+    ]);
+  });
+
+  it("Meta 131008 is mapped to 422 with META_131008 code and no credential logging", async () => {
     mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
     mockFetch.mockResolvedValue({
       ok: false,
@@ -201,9 +240,67 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     const data = await res.json();
     expect(res.status).toBe(422);
     expect(data.metaCode).toBe("131008");
-    expect(data.error).toBe("WhatsApp template parameters are invalid or incomplete.");
+    expect(data.code).toBe("META_131008");
     expect(JSON.stringify(logSpy.mock.calls)).not.toContain("ENC_TOKEN");
     logSpy.mockRestore();
+  });
+
+  // ── PHASE 17 regression: realistic wani_otp AUTHENTICATION fixture ──────
+  // body "{{1}} is your verification code..." + Copy Code button (كما في Meta).
+  // metadata صحيحة → validate → build → Meta 200 → لا 131008.
+  it("REGRESSION 131008: realistic wani_otp metadata builds a valid payload and sends", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({
+        id: "tpl-wani-otp",
+        name: "wani_otp",
+        language: "en_US",
+        body: JSON.stringify({ addSecurityRecommendation: true, codeExpirationMinutes: 10, otpType: "COPY_CODE" }),
+        status: "APPROVED",
+        category: "AUTHENTICATION",
+        metaTemplateId: "meta_wani_otp_en",
+        metaComponents: [
+          {
+            type: "BODY",
+            text: "{{1}} is your verification code. For your security, do not share this code.",
+            example: { body_text: [["123456"]] },
+          },
+          { type: "FOOTER", code_expiration_minutes: 10 },
+          { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copy code" }] },
+        ],
+      })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-wani-otp" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.ok).toBe(true);
+    const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(payload.template.name).toBe("wani_otp");
+    expect(payload.template.language).toEqual({ code: "en_US" });
+    // العقد الكامل: body param + button param — ولا components فارغة
+    expect(payload.template.components.length).toBeGreaterThan(0);
+    expect(payload.template.components).toEqual([
+      { type: "body", parameters: [{ type: "text", text: expect.any(String) }] },
+      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: expect.any(String) }] },
+    ]);
+  });
+
+  it("REGRESSION 131008: نفس القالب بلا metadata → 409 قبل Meta (لا payload ناقص)", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({
+        id: "tpl-wani-otp",
+        name: "wani_otp",
+        language: "en_US",
+        status: "APPROVED",
+        category: "AUTHENTICATION",
+        metaTemplateId: "meta_wani_otp_en",
+        metaComponents: null,
+      })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-wani-otp" }));
+    const data = await res.json();
+    expect(res.status).toBe(409);
+    expect(data.code).toBe("OTP_TEMPLATE_METADATA_INVALID");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   // ── Status gates ───────────────────────────────────────────────────────

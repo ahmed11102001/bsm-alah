@@ -49,8 +49,8 @@ const ENDPOINTS: Endpoint[] = [
     path: "/api/developers/otp/send",
     summary: "Send OTP",
     summaryAr: "إرسال OTP",
-    desc: "Generates an OTP code and sends it to the user via WhatsApp using a Meta-approved template.",
-    descAr: "يولد كود OTP ويرسله للمستخدم عبر WhatsApp باستخدام قالب مُوافق عليه من Meta.",
+    desc: "Generates an OTP code server-side and sends it via WhatsApp using an OTP-ready AUTHENTICATION template. Wani builds the Meta payload — you only provide phone + template.",
+    descAr: "يولد كود OTP من السيرفر ويرسله عبر WhatsApp باستخدام قالب AUTHENTICATION جاهز. Wani يبني payload الخاص بـ Meta — أنت تبعت الهاتف والقالب فقط.",
     auth: true,
     headers: [
       { name: "x-api-key", type: "string", required: true, desc: "Your project API key", descAr: "مفتاح الـ API الخاص بمشروعك", example: "wani_live_xxxx_yyyy" },
@@ -58,28 +58,37 @@ const ENDPOINTS: Endpoint[] = [
     ],
     body: [
       { name: "phone", type: "string", required: true, desc: "Phone number — E.164 or Egyptian format", descAr: "رقم الهاتف — E.164 أو الصيغة المصرية", example: "+201234567890 or 01234567890" },
-      { name: "templateName", type: "string", required: true, desc: "APPROVED template name in Meta", descAr: "اسم القالب الـ APPROVED في Meta", example: "otp_verification" },
+      { name: "templateId", type: "string", required: true, desc: "Wani Template ID (preferred) — shown on each template card in OTP Templates", descAr: "معرف قالب Wani (مفضل) — ظاهر على كارت كل قالب في صفحة القوالب", example: "cmxxxxxxxxxxxxxxxx" },
+      { name: "templateName", type: "string", required: false, desc: "Legacy alternative to templateId — approved template name in Meta", descAr: "بديل قديم لـ templateId — اسم القالب المعتمد في Meta", example: "otp_verification" },
+      { name: "language", type: "string", required: false, desc: "With templateName only — when one name exists in several languages", descAr: "مع templateName فقط — عندما يوجد نفس الاسم بلغات متعددة", example: "en_US" },
       { name: "expiryMinutes", type: "number", required: false, desc: "Code validity duration in minutes", descAr: "مدة صلاحية الكود بالدقائق", example: "10 (default)" },
     ],
     response: {
       success: { ok: true, token: "a3f9c2e1...64hex...", expiresAt: "2025-01-15T14:30:00.000Z" },
-      error: { ok: false, error: "Template \"otp_verification\" not found or not yet approved" },
+      error: { ok: false, error: "…", code: "TEMPLATE_NOT_APPROVED" },
     },
     fields: [
       { name: "ok", type: "boolean", desc: "true on success", descAr: "true عند النجاح" },
       { name: "token", type: "string", desc: "64-char hex token — save it for the verify step", descAr: "64-char hex token — احتفظ بيه لخطوة التحقق" },
       { name: "expiresAt", type: "string", desc: "ISO 8601 — code expiration time", descAr: "ISO 8601 — وقت انتهاء صلاحية الكود" },
+      { name: "code", type: "string", desc: "Machine-readable error reason on failure", descAr: "سبب الخطأ بصيغة آلية عند الفشل" },
       { name: "retryAfter", type: "number", desc: "Only present on 429 — seconds to wait before retrying", descAr: "موجود فقط عند 429 — عدد الثواني المطلوب الانتظار قبل إعادة المحاولة" },
     ],
     notes: [
+      "To use Wani OTP, create an OTP Authentication Template from Wani — Wani defines its structure, Meta reviews it, and only approved compatible templates can send",
+      "Wani generates the OTP automatically — never send an OTP value in the request",
       "Rate limit: 5 messages per phone per developer per hour",
-      "Template must be APPROVED by Meta before sending",
+      "Template must be OTP READY (APPROVED + AUTHENTICATION + synced Meta metadata) before sending",
       "Phone number is automatically normalized to E.164 (Egyptian: 01x → 201x)",
+      "No Meta API calls are required from the developer — the SDK never talks to Meta",
     ],
     notesAr: [
+      "لاستخدام Wani OTP: أنشئ قالب OTP Authentication من Wani — Wani يحدد بنيته وMeta تراجعه، والقوالب المعتمدة المتوافقة فقط هي التي ترسل",
+      "Wani يولد الـ OTP تلقائيًا — لا ترسل قيمة OTP في الطلب أبدًا",
       "Rate limit: 5 رسائل لكل رقم لكل مبرمج كل ساعة",
-      "القالب يجب أن يكون بحالة APPROVED من Meta قبل الإرسال",
+      "القالب يجب أن يكون OTP READY (معتمد + AUTHENTICATION + بيانات Meta متزامنة) قبل الإرسال",
       "الرقم يُطبَّع تلقائيًا لـ E.164 (مصري: 01x → 201x)",
+      "لا حاجة لأي استدعاء لـ Meta API من المطور — الـ SDK لا يتصل بـ Meta أبدًا",
     ],
   },
   {
@@ -593,7 +602,7 @@ export default function ApiDocsPage() {
                 <span className="st">&quot;https://your-domain.com/api/developers/otp/send&quot;</span> \{"\n"}
                 {"  "}-H <span className="st">&quot;x-api-key: wani_live_xxxx_yyyy&quot;</span> \{"\n"}
                 {"  "}-H <span className="st">&quot;Content-Type: application/json&quot;</span> \{"\n"}
-                {"  "}-d <span className="st">&apos;{`{"phone":"+201234567890","templateName":"otp_verification"}`}&apos;</span>
+                {"  "}-d <span className="st">&apos;{`{"phone":"+201234567890","templateId":"cmxxxxxxxxxxxxxxxx"}`}&apos;</span>
               </div>
 
               <h3 style={{ marginTop: 24 }}>⚠️ {t("API Key Security", "أمان الـ API Key")}</h3>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 import { useDevPath, MAIN_BASE_URL } from "@/lib/dev-links";
+import { isOtpCompatibleWithMeta } from "@/lib/developer-template-contract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TemplateStatus = "LOCAL_DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "DISABLED";
@@ -22,19 +23,14 @@ interface Template {
   status: TemplateStatus;
   rejectedReason: string | null;
   metaTemplateId: string | null;
+  variables?: unknown;
+  metaComponents?: unknown;
   createdAt: string;
+  updatedAt: string;
 }
 
-const STARTER_TEMPLATES = [
-  { name: "otp_verification_ar", language: "ar", body: "رمز التحقق الخاص بك هو {{1}}. صالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "otp_authentication_ar", language: "ar", body: "مرحبًا، رمز التحقق الخاص بك هو {{1}}. استخدمه خلال {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "otp_code_ar", language: "ar", body: "رمز التحقق: {{1}}\nصالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "login_verification_ar", language: "ar", body: "رمز تسجيل الدخول هو {{1}}. صالح لمدة {{2}} دقائق.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "otp_verification_en", language: "en_US", body: "Your verification code is {{1}}. This code expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "otp_authentication_en", language: "en_US", body: "Hello, your verification code is {{1}}. Use it within {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "otp_code_en", language: "en_US", body: "Your OTP is {{1}}. It expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-  { name: "login_verification_en", language: "en_US", body: "Your login verification code is {{1}}. It expires in {{2}} minutes.", keys: ["otp", "expiryMinutes"], examples: ["583214", "10"] },
-] as const;
+// NOTE (PHASE 12): starter/free-text templates removed — OTP creation is
+// constrained to AUTHENTICATION with a Wani-generated structure.
 
 // ─── WhatsApp Live Preview ────────────────────────────────────────────────────
 function WAPreview({ headerType, headerText, body, footer, category, addSecurityRecommendation, codeExpirationMinutes, otpType }: {
@@ -307,29 +303,18 @@ export default function ProjectTemplatesPage() {
     DISABLED:    { label: t("Disabled", "متوقف"),         color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.2)", icon: "🚫" },
   };
 
-  // Form state
+  // Form state — مقيد: الاسم + اللغة + مدة الصلاحية فقط (PHASE 3).
+  // البنية (AUTHENTICATION + نص مولّد + زر Copy Code) يحددها Wani دائمًا.
   const [form, setForm] = useState({
     name: "",
     language: "ar",
-    category: "AUTHENTICATION" as TemplateCategory,
-    headerType: "none",
-    headerText: "",
-    body: "",
-    footer: "",
   });
   // OTP-specific state
-  const [addSecurityRecommendation, setAddSecurityRecommendation] = useState(true);
   const [codeExpirationMinutes, setCodeExpirationMinutes] = useState(10);
-  const [otpType, setOtpType] = useState<"COPY_CODE" | "ONE_TAP" | "NO_BUTTON">("COPY_CODE");
-
-  const [bodyExamples, setBodyExamples] = useState<string[]>([]);
-  const [variableKeys, setVariableKeys] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
-
-  const isAuthCategory = form.category === "AUTHENTICATION";
 
   useEffect(() => {
     setMounted(true);
@@ -356,34 +341,6 @@ export default function ProjectTemplatesPage() {
     setFormSuccess("");
   }
 
-  // Detect {{N}} variables in body
-  const varMatches = [...new Set((form.body.match(/\{\{(\d+)\}\}/g) || []))];
-  const varCount = varMatches.length;
-  const variableDefinitions = varMatches.map((token, index) => ({
-    position: Number(token.match(/\d+/)?.[0] ?? index + 1),
-    key: variableKeys[index] || "",
-    example: bodyExamples[index] || "",
-  }));
-
-  function setExample(idx: number, val: string) {
-    setBodyExamples(prev => {
-      const next = [...prev];
-      next[idx] = val;
-      return next;
-    });
-  }
-
-  function setVariableKey(idx: number, val: string) {
-    setVariableKeys(prev => { const next = [...prev]; next[idx] = val; return next; });
-  }
-
-  function useStarter(starter: typeof STARTER_TEMPLATES[number]) {
-    setForm(f => ({ ...f, name: starter.name, language: starter.language, category: "UTILITY", body: starter.body }));
-    setVariableKeys([...starter.keys]);
-    setBodyExamples([...starter.examples]);
-    setFormError(""); setFormSuccess("");
-  }
-
   // Auto-generate name from Arabic input
   function handleNameInput(raw: string) {
     const safe = raw.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
@@ -392,13 +349,12 @@ export default function ProjectTemplatesPage() {
 
   async function handleSaveDraft() {
     if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
-    if (!isAuthCategory && !form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
     setSaving(true); setFormError("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, variables: variableDefinitions, submitToMeta: false, addSecurityRecommendation, codeExpirationMinutes, otpType }),
+        body: JSON.stringify({ name: form.name, language: form.language, codeExpirationMinutes, submitToMeta: false }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -411,19 +367,12 @@ export default function ProjectTemplatesPage() {
 
   async function handleSubmitToMeta() {
     if (!form.name) { setFormError(t("Template name is required", "اسم القالب مطلوب")); return; }
-    if (!isAuthCategory && !form.body.trim()) { setFormError(t("Template body content is required", "محتوى القالب مطلوب")); return; }
-    if (!isAuthCategory && varCount > 0 && bodyExamples.filter(Boolean).length < varCount) {
-      setFormError(t(`Add ${varCount} sample values for the variables — Meta requires this`, `أضف ${varCount} قيمة تجريبية للمتغيرات — Meta بتطلبها`)); return;
-    }
-    if (!isAuthCategory && variableDefinitions.some(v => !v.key)) {
-      setFormError(t("Choose a meaning for every variable before submitting.", "اختر معنى كل متغير قبل الإرسال.")); return;
-    }
     setSubmitting(true); setFormError(""); setFormSuccess("");
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, bodyExample: bodyExamples, variables: variableDefinitions, submitToMeta: true, addSecurityRecommendation, codeExpirationMinutes, otpType }),
+        body: JSON.stringify({ name: form.name, language: form.language, codeExpirationMinutes, submitToMeta: true }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error || t("An error occurred", "حصل خطأ")); return; }
@@ -457,12 +406,8 @@ export default function ProjectTemplatesPage() {
   }
 
   function resetForm() {
-    setForm({ name: "", language: "ar", category: "AUTHENTICATION", headerType: "none", headerText: "", body: "", footer: "" });
-    setAddSecurityRecommendation(true);
+    setForm({ name: "", language: "ar" });
     setCodeExpirationMinutes(10);
-    setOtpType("COPY_CODE");
-    setBodyExamples([]);
-    setVariableKeys([]);
     setFormError(""); setFormSuccess("");
   }
 
@@ -691,6 +636,13 @@ export default function ProjectTemplatesPage() {
                   {templates.map((tData) => {
                     const s = STATUS_CONFIG[tData.status] || STATUS_CONFIG.LOCAL_DRAFT;
                     const cat = CATEGORIES.find(c => c.value === tData.category);
+                    // OTP Ready محسوب بنفس contract الـ backend (PHASE 10)
+                    const otpReady = isOtpCompatibleWithMeta({
+                      category: tData.category,
+                      status: tData.status,
+                      metaTemplateId: tData.metaTemplateId,
+                      metaComponents: tData.metaComponents,
+                    });
                     return (
                       <div key={tData.id} className="tmpl-card" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                         <div className="tmpl-icon">{cat?.icon ?? "📋"}</div>
@@ -699,6 +651,9 @@ export default function ProjectTemplatesPage() {
                           <div className="tmpl-meta" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', justifyContent: language === 'ar' ? 'flex-start' : 'flex-end' }}>
                             <span>{LANGUAGES.find(l => l.code === tData.language)?.label ?? tData.language}</span>
                             <span>{cat?.label}</span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                              {t("Last synced", "آخر مزامنة")}: {(tData.updatedAt ?? "").slice(0, 10) || "—"}
+                            </span>
                           </div>
                           {/* IDs — Wani ID (for SDK/API templateId) vs Meta ID (reference only) */}
                           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
@@ -726,6 +681,15 @@ export default function ProjectTemplatesPage() {
                           <div className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
                             {s.icon} {s.label}
                           </div>
+                          {otpReady.compatible ? (
+                            <div className="status-badge" title={otpReady.reason} style={{ color: "#20d378", background: "rgba(32,211,120,0.12)", border: "1px solid rgba(32,211,120,0.35)" }}>
+                              ✓ {t("OTP Ready", "جاهز لـ OTP")}
+                            </div>
+                          ) : tData.status === "APPROVED" ? (
+                            <div className="status-badge" title={otpReady.reason} style={{ color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                              ⚠ {t("Approved, not OTP-compatible", "معتمد لكن غير متوافق مع OTP")}
+                            </div>
+                          ) : null}
                           <button 
                             className="btn-delete" 
                             title={t("Delete Template", "حذف القالب")}
@@ -754,17 +718,9 @@ export default function ProjectTemplatesPage() {
                 {/* ── Left: Form ── */}
                 <div className="form-panel" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                   <h2 className="form-title">{t("New OTP Template", "قالب OTP جديد")}</h2>
-                  <div style={{ marginBottom: 20, padding: 14, border: "1px solid rgba(56,189,248,.2)", borderRadius: 12, background: "rgba(56,189,248,.05)" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }}>{t("Starter template library", "مكتبة القوالب الجاهزة")}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {STARTER_TEMPLATES.map(starter => (
-                        <button key={starter.name} type="button" onClick={() => useStarter(starter)}
-                          style={{ padding: "6px 9px", borderRadius: 7, border: "1px solid #334155", background: "#172033", color: "#cbd5e1", cursor: "pointer", fontSize: 11 }}>
-                          {starter.name}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>{t("Starters are drafts only and still require Meta review.", "هذه القوالب مسودات فقط وتحتاج مراجعة Meta.")}</div>
+                  <div style={{ marginBottom: 20, padding: 14, border: "1px solid rgba(32,211,120,.2)", borderRadius: 12, background: "rgba(32,211,120,.05)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#20d378", marginBottom: 8 }}>🔐 {t("Fixed OTP structure — decided by Wani", "بنية OTP ثابتة — يحددها Wani")}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.7 }}>{t("Every template is created as AUTHENTICATION with the OTP code variable and a Copy Code button. You only choose the name, language and code expiry — the structure cannot be changed, so it always matches what Meta requires.", "كل قالب يُنشأ كـ AUTHENTICATION بمتغير كود OTP وزر نسخ الكود. تختار فقط الاسم واللغة ومدة الصلاحية — البنية ثابتة لتطابق متطلبات Meta دائمًا.")}</div>
                   </div>
 
                   {/* Meta not connected warning */}
@@ -802,30 +758,17 @@ export default function ProjectTemplatesPage() {
 
                   <div className="divider" />
 
-                  {isAuthCategory ? (
-                    /* ── OTP / AUTHENTICATION Fields ── */
-                    <>
-                      <div className="otp-section">
-                        <div className="otp-section-title">
-                          🔐 {t("OTP Template Configuration", "إعدادات قالب OTP")}
-                        </div>
-
-                        {/* Security Recommendation Toggle */}
-                        <div
-                          className={`otp-toggle ${addSecurityRecommendation ? "active" : ""}`}
-                          onClick={() => setAddSecurityRecommendation(!addSecurityRecommendation)}
-                          style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}
-                        >
-                          <div className={`otp-switch ${addSecurityRecommendation ? "on" : ""}`} />
-                          <div className="otp-info" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
-                            <div className="otp-info-title">
-                              {t("Add security recommendation", "إضافة توصية أمنية")}
-                            </div>
-                            <div className="otp-info-desc">
-                              {t("Adds 'For your security, do not share this code' message", "يضيف رسالة 'لأمانك، لا تشارك هذا الكود'")}
-                            </div>
-                          </div>
-                        </div>
+                  {/* ── OTP configuration — fixed AUTHENTICATION structure ── */}
+                  <>
+                    <div className="otp-section">
+                      <div className="otp-section-title">
+                        🔐 {t("OTP Template Configuration", "إعدادات قالب OTP")}
+                      </div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.8, marginBottom: 4 }}>
+                        <div>✅ {t("Category: AUTHENTICATION (fixed)", "التصنيف: AUTHENTICATION (ثابت)")}</div>
+                        <div>✅ {t("Body: generated OTP text with {{1}} code variable", "النص: مولّد تلقائيًا بمتغير الكود {{1}}")}</div>
+                        <div>✅ {t("Button: Copy Code (fixed)", "الزر: نسخ الكود (ثابت)")}</div>
+                      </div>
 
                         {/* Expiration Minutes */}
                         <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
@@ -849,111 +792,21 @@ export default function ProjectTemplatesPage() {
 
                         <div className="divider" />
 
-                        {/* OTP Button Type */}
-                        <div className="field" style={{ marginBottom: 0 }}>
-                          <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 8, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-                            🔘 {t("OTP Button Type", "نوع زر OTP")}
-                          </label>
-                          <div className="otp-btn-group" style={{ marginTop: 8 }}>
-                            {[
-                              { value: "COPY_CODE", icon: "📋", label: t("Copy Code", "نسخ الكود"), desc: t("User copies the code manually", "المستخدم ينسخ الكود يدوياً") },
-                              { value: "ONE_TAP", icon: "⚡", label: t("One Tap (Auto-fill)", "نقرة واحدة (ملء تلقائي)"), desc: t("Auto-fills the code in your app", "يملأ الكود تلقائياً في التطبيق") },
-                              { value: "NO_BUTTON", icon: "🚫", label: t("No Button", "بدون زر"), desc: t("No button shown", "لا يظهر زر") },
-                            ].map(opt => (
-                              <button
-                                key={opt.value}
-                                className={`otp-btn-opt ${otpType === opt.value ? "active" : ""}`}
-                                onClick={() => setOtpType(opt.value as any)}
-                              >
-                                <span>{opt.icon}</span>
-                                <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
-                                  <div style={{ fontWeight: 500 }}>{opt.label}</div>
-                                  <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>{opt.desc}</div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
+                        {/* Fixed button (Copy Code is part of the blessed structure) */}
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.8 }}>
+                          <div>📋 {t("Button: Copy Code (fixed)", "الزر: نسخ الكود (ثابت)")}</div>
                         </div>
                       </div>
 
                       {/* Meta info for AUTHENTICATION */}
                       <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 10, fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, textAlign: language === 'ar' ? 'right' : 'left' }}>
                         💡 {t(
-                          "AUTHENTICATION templates use Meta's OTP format — body, header, and footer are auto-generated by Meta based on these settings.",
-                          "قوالب AUTHENTICATION تستخدم صيغة OTP الخاصة بـ Meta — المحتوى والعنوان والفوتر يتم إنشاؤها تلقائياً بواسطة Meta بناءً على هذه الإعدادات."
+                          "AUTHENTICATION templates use Meta's OTP format — body text and button are auto-generated by Wani from these settings.",
+                          "قوالب AUTHENTICATION تستخدم صيغة OTP الخاصة بـ Meta — النص والزر يتم إنشاؤهما تلقائيًا بواسطة Wani من هذه الإعدادات."
                         )}
                       </div>
                     </>
-                  ) : (
-                    /* ── Standard Fields (UTILITY / MARKETING) ── */
-                    <>
-                      {/* Header */}
-                      <div className="field">
-                        <label className="field-label">{t("Header (Optional)", "الهيدر (اختياري)")}</label>
-                        <div className="htype-row">
-                          {["none","text"].map(tType => (
-                            <button key={tType} className={`htype-btn ${form.headerType === tType ? "active" : ""}`}
-                              onClick={() => setField("headerType", tType)}>
-                              {tType === "none" ? t("No Header", "بدون هيدر") : t("Text", "نص")}
-                            </button>
-                          ))}
-                        </div>
-                        {form.headerType === "text" && (
-                          <input className="f-input" style={{ marginTop:10 }} placeholder={t("Message header text...", "عنوان الرسالة...")}
-                            value={form.headerText} onChange={e => setField("headerText", e.target.value)} />
-                        )}
-                      </div>
-
-                      {/* Body */}
-                      <div className="field">
-                        <label className="field-label">
-                          {t("Body Content *", "المحتوى *")}&nbsp;
-                          <span style={{ color:"rgba(255,255,255,0.3)", fontWeight:400, fontSize:12 }}>
-                            {t("Use {{1}} {{2}} for variables", "استخدم {{1}} {{2}} للمتغيرات")}
-                          </span>
-                        </label>
-                        <textarea className="f-textarea" rows={5}
-                          placeholder={t("Your verification code is: {{1}}\nValid for 10 minutes.\nDo not share this code with anyone.", "كود التحقق الخاص بك هو: {{1}}\nصالح لمدة 10 دقائق.\nلا تشارك هذا الكود مع أي أحد.")}
-                          value={form.body} onChange={e => setField("body", e.target.value)} style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }} />
-                        <div className="field-hint">
-                          {varCount > 0
-                            ? t(`Detected ${varCount} variables — add sample values below`, `تم اكتشاف ${varCount} متغير — أضف قيم تجريبية أسفل`)
-                            : t("No variables detected yet", "لم يتم اكتشاف متغيرات بعد")}
-                        </div>
-
-                        {/* Variable examples */}
-                        {varCount > 0 && (
-                          <div style={{ marginTop:12, background:"rgba(32,211,120,0.04)", border:"1px solid rgba(32,211,120,0.12)", borderRadius:12, padding:"12px 14px" }}>
-                            <div style={{ fontSize:12, color:"#20d378", fontWeight:600, marginBottom:10 }}>
-                              {t("Sample values — Meta requires these to review the template", "قيم تجريبية — Meta بتطلبها عشان تراجع القالب")}
-                            </div>
-                            {Array.from({ length: varCount }, (_, i) => (
-                              <div key={i} className="var-row" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-                                <span className="var-tag">{varMatches[i]}</span>
-                                <select className="f-select" value={variableKeys[i] || ""} onChange={e => setVariableKey(i, e.target.value)} style={{ minWidth: 130 }}>
-                                  <option value="">{t("Meaning", "المعنى")}</option>
-                                  <option value="otp">OTP</option>
-                                  <option value="expiryMinutes">Expiry minutes</option>
-                                  <option value="serviceName">Service name</option>
-                                  <option value="custom">Custom</option>
-                                </select>
-                                <input className="var-input" placeholder={t("Example:", "مثال:") + ` ${i === 0 ? "123456" : i === 1 ? "10" : "val_" + (i+1)}`}
-                                  value={bodyExamples[i] || ""}
-                                  onChange={e => setExample(i, e.target.value)} style={{ textAlign: language === 'ar' ? 'right' : 'left' }} />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Footer */}
-                      <div className="field">
-                        <label className="field-label">{t("Footer (Optional)", "الفوتر (اختياري)")}</label>
-                        <input className="f-input" placeholder={t("Do not share this code with anyone", "لا تشارك هذا الكود مع أي شخص")}
-                          value={form.footer} onChange={e => setField("footer", e.target.value)} />
-                      </div>
-                    </>
-                  )}
+                      {/* ── Standard Fields REMOVED (PHASE 12): this page creates AUTHENTICATION OTP only ── */}
 
                   {formError  && <div className="form-error">{formError}</div>}
                   {formSuccess && <div className="form-success">{formSuccess}</div>}
@@ -977,14 +830,14 @@ export default function ProjectTemplatesPage() {
                 <div className="preview-sticky">
                   <div className="preview-label">{t("Live Preview", "معاينة مباشرة")}</div>
                   <WAPreview
-                    headerType={form.headerType}
-                    headerText={form.headerText}
-                    body={form.body}
-                    footer={form.footer}
-                    category={form.category}
-                    addSecurityRecommendation={addSecurityRecommendation}
+                    headerType="none"
+                    headerText=""
+                    body=""
+                    footer=""
+                    category="AUTHENTICATION"
+                    addSecurityRecommendation
                     codeExpirationMinutes={codeExpirationMinutes}
-                    otpType={otpType}
+                    otpType="COPY_CODE"
                   />
 
                   {/* Meta submit flow info */}

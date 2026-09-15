@@ -13,5 +13,8 @@ export default defineConfig({
     environment: "node",
     globals: true,
     alias: { "@/": src + "/" },
+    // الـ SDK حزمة مستقلة لها runner خاص (node --test داخل sdk/) —
+    // لا تُشغَّل اختباراتها ضمن suite التطبيق الرئيسي.
+    exclude: ["**/node_modules/**", "**/sdk/**"],
   },
 });

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import {
+  normalizeOtpTemplateName,
+  isValidOtpTemplateName,
+  isSupportedOtpLanguage,
+  generatedOtpBody,
+  buildMetaCreateComponents,
+} from "@/lib/developer-template-contract";
 import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
@@ -65,46 +72,53 @@ export async function POST(
   const {
     name,
     language = "ar",
-    category = "AUTHENTICATION",
-    headerType = "none",
-    headerText,
-    body,
-    bodyExample,
-    variables,
-    footer,
+    // NOTE: category/body/variables/header/footer are intentionally IGNORED —
+    // OTP templates are always AUTHENTICATION with a Wani-generated structure
+    // (PHASE 3/4/12). There is no Marketing/Utility OTP creation path.
     submitToMeta = false,
     // OTP-specific fields for AUTHENTICATION
     addSecurityRecommendation = true,
     codeExpirationMinutes = 10,
-    otpType = "COPY_CODE",
   } = await req.json();
 
   if (!name?.trim()) return NextResponse.json({ error: "اسم القالب مطلوب" }, { status: 400 });
-  // Body is only required for non-AUTHENTICATION categories
-  if (category !== "AUTHENTICATION" && !body?.trim()) return NextResponse.json({ error: "محتوى القالب مطلوب" }, { status: 400 });
-  if (category !== "AUTHENTICATION") {
-    const variableCheck = validateVariableDefinitions(body, variables as OtpVariableDefinition[] | undefined);
-    if (!variableCheck.ok) return NextResponse.json({ error: variableCheck.error, code: "TEMPLATE_VARIABLES_INVALID" }, { status: 400 });
+  if (!isSupportedOtpLanguage(language)) {
+    return NextResponse.json(
+      { error: "اللغة غير مدعومة لقوالب OTP", code: "OTP_LANGUAGE_UNSUPPORTED" },
+      { status: 400 }
+    );
+  }
+  const expiry = Number(codeExpirationMinutes);
+  if (!Number.isFinite(expiry) || expiry < 1 || expiry > 90) {
+    return NextResponse.json(
+      { error: "مدة صلاحية الكود يجب أن تكون بين 1 و 90 دقيقة", code: "OTP_EXPIRY_INVALID" },
+      { status: 400 }
+    );
   }
 
-  const metaName = name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
-  if (metaName.length < 3)
+  const metaName = normalizeOtpTemplateName(name);
+  if (!isValidOtpTemplateName(metaName))
     return NextResponse.json({ error: "اسم القالب قصير جداً أو يحتوي على أحرف غير مدعومة" }, { status: 400 });
 
-  // For AUTHENTICATION templates, store OTP config in body/footer fields
-  const isAuth = category === "AUTHENTICATION";
+  // For AUTHENTICATION templates, store OTP config in body/footer fields.
+  // The send body text itself is Wani-generated (single {{1}} for the code).
   const template = await prisma.developerOtpTemplate.create({
     data: {
       projectId: id,
       name: metaName,
       language,
-      category,
-      headerType: isAuth ? "none" : (headerType || "none"),
-      headerText: isAuth ? null : (headerType === "text" ? headerText?.trim() : null),
-      body: isAuth ? JSON.stringify({ addSecurityRecommendation, codeExpirationMinutes, otpType }) : body.trim(),
-      bodyExample: isAuth ? null : (bodyExample ? JSON.stringify(bodyExample) : null),
-      variables: isAuth ? undefined : (Array.isArray(variables) ? JSON.parse(JSON.stringify(variables)) : undefined),
-      footer: isAuth ? null : (footer?.trim() || null),
+      category: "AUTHENTICATION",
+      headerType: "none",
+      headerText: null,
+      body: JSON.stringify({
+        addSecurityRecommendation,
+        codeExpirationMinutes: Math.round(expiry),
+        otpType: "COPY_CODE",
+        text: generatedOtpBody(language),
+      }),
+      bodyExample: null,
+      variables: undefined,
+      footer: null,
       status: "LOCAL_DRAFT",
     },
   });
@@ -127,7 +141,7 @@ export async function POST(
       const metaResult = await submitTemplateToMeta({
         accessToken: plainAccessToken,
         wabaId: connection.wabaId,
-        template: { ...template, bodyExample: bodyExample || [], addSecurityRecommendation, codeExpirationMinutes, otpType },
+        template: { ...template, addSecurityRecommendation, codeExpirationMinutes: Math.round(expiry) },
       });
 
       const updated = await prisma.developerOtpTemplate.update({
@@ -198,6 +212,8 @@ export async function DELETE(
 }
 
 // ── Helper: Submit to Meta Graph API ──────────────────────────────────────────
+// يستخدم buildMetaCreateComponents من الـ contract — لا يوجد builder يدوي مكرر.
+// القالب دائمًا AUTHENTICATION بالنص المولّد من Wani (متغير {{1}} واحد للكود).
 async function submitTemplateToMeta({
   accessToken,
   wabaId,
@@ -207,57 +223,14 @@ async function submitTemplateToMeta({
   wabaId: string;
   template: any;
 }) {
-  const isAuth = template.category === "AUTHENTICATION";
-  let components: any[];
+  const addSecurity = template.addSecurityRecommendation ?? true;
+  const components = buildMetaCreateComponents({ addSecurityRecommendation: addSecurity });
 
-  if (isAuth) {
-    // ── AUTHENTICATION (OTP) template — Meta requires this exact structure ──
-    const addSecurity = template.addSecurityRecommendation ?? true;
-    const expirationMinutes = template.codeExpirationMinutes ?? 10;
-    const otpButtonType = template.otpType ?? "COPY_CODE";
-
-    const bodyComp: any = { type: "BODY" };
-    if (addSecurity) {
-      bodyComp.add_security_recommendation = true;
-    }
-    components = [bodyComp];
-
-    // Add BUTTONS with OTP type
-    if (otpButtonType !== "NO_BUTTON") {
-      components.push({
-        type: "BUTTONS",
-        buttons: [
-          {
-            type: "OTP",
-            otp_type: otpButtonType, // COPY_CODE or ONE_TAP
-          },
-        ],
-      });
-    }
-  } else {
-    // ── UTILITY / MARKETING — standard components ──
-    components = [];
-
-    if (template.headerType === "text" && template.headerText) {
-      components.push({ type: "HEADER", format: "TEXT", text: template.headerText });
-    }
-
-    const varMatches = template.body.match(/\{\{(\d+)\}\}/g) ?? [];
-    const varCount = varMatches.length;
-    const exampleVars: string[] = Array.isArray(template.bodyExample) ? template.bodyExample : [];
-
-    const bodyComp: any = { type: "BODY", text: template.body };
-    if (varCount > 0) {
-      const filled = Array.from({ length: varCount }, (_, i) =>
-        exampleVars[i]?.trim() || `قيمة_${i + 1}`
-      );
-      bodyComp.example = { body_text: [filled] };
-    }
-    components.push(bodyComp);
-
-    if (template.footer) {
-      components.push({ type: "FOOTER", text: template.footer });
-    }
+  // BODY يحمل النص المولّد ({{1}} واحد للكود) + مثال — نفس structure الإرسال.
+  const bodyComp = components.find((c) => c["type"] === "BODY") as Record<string, unknown> | undefined;
+  if (bodyComp) {
+    bodyComp["text"] = generatedOtpBody(template.language);
+    bodyComp["example"] = { body_text: [["123456"]] };
   }
 
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/message_templates`;
@@ -269,7 +242,7 @@ async function submitTemplateToMeta({
     },
     body: JSON.stringify({
       name: template.name,
-      category: template.category,
+      category: "AUTHENTICATION",
       language: template.language,
       components,
     }),

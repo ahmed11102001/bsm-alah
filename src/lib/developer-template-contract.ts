@@ -151,3 +151,193 @@ export function buildAuthenticationComponents(
   }
   return { ok: true, components: result };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OTP TEMPLATE CONTRACT — المصدر الوحيد للحقيقة (PHASE 2)
+// ─────────────────────────────────────────────────────────────────────────────
+// Wani هو الذي يفرض structure قالب الـ OTP. المطور يختار فقط:
+//   (1) الاسم  (2) اللغة  (3) مدة صلاحية الكود
+// وكل ما عداه (النص، الزر، التصنيف، الباراميترات) يولّده Wani.
+// لا string-parsing للنص كآلية أساسية — القرار على structured metadata.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** اللغات المدعومة لإنشاء OTP (أكواد Meta كما تُرسل في language.code). */
+export const OTP_SUPPORTED_LANGUAGES = ["ar", "en_US", "en_GB", "fr", "de", "es", "tr", "ur"] as const;
+export type OtpSupportedLanguage = (typeof OTP_SUPPORTED_LANGUAGES)[number];
+
+/** نص الـ BODY المولّد — متغير واحد {{1}} فقط للكود، بلا أي متغير آخر. */
+const OTP_GENERATED_BODIES: Record<string, string> = {
+  ar: "{{1}} هو رمز التحقق الخاص بك. لا تشاركه مع أحد.",
+  en_US: "{{1}} is your verification code. For your security, do not share this code.",
+  en_GB: "{{1}} is your verification code. For your security, do not share this code.",
+  fr: "{{1}} est votre code de vérification. Pour votre sécurité, ne le partagez pas.",
+  de: "{{1}} ist Ihr Bestätigungscode. Teilen Sie ihn aus Sicherheitsgründen mit niemandem.",
+  es: "{{1}} es tu código de verificación. Por tu seguridad, no lo compartas.",
+  tr: "{{1}} doğrulama kodunuzdur. Güvenliğiniz için kimseyle paylaşmayın.",
+  ur: "{{1}} آپ کا تصدیقی کوڈ ہے۔ اپنی حفاظت کے لیے اسے کسی سے شیئر نہ کریں۔",
+};
+
+/** الإعداد المبارك لزر OTP — ثابت، لا يقبل التعديل من المطور. */
+export const OTP_BLESSED_BUTTON = {
+  type: "OTP",
+  otp_type: "COPY_CODE",
+} as const;
+
+export interface OtpTemplateSpec {
+  name: string;
+  language: string;
+  body: string;
+  codeExpirationMinutes: number;
+}
+
+/** أخطاء الـ OTP contract — machine-readable reasons. */
+export const OTP_CONTRACT_ERRORS = {
+  TEMPLATE_NOT_FOUND: "TEMPLATE_NOT_FOUND",
+  TEMPLATE_WRONG_PROJECT: "TEMPLATE_WRONG_PROJECT",
+  TEMPLATE_NOT_APPROVED: "TEMPLATE_NOT_APPROVED",
+  TEMPLATE_NO_META_ID: "TEMPLATE_NO_META_ID",
+  OTP_TEMPLATE_NOT_COMPATIBLE: "OTP_TEMPLATE_NOT_COMPATIBLE",
+  OTP_TEMPLATE_METADATA_INVALID: "OTP_TEMPLATE_METADATA_INVALID",
+  OTP_TEMPLATE_SYNC_FAILED: "OTP_TEMPLATE_SYNC_FAILED",
+} as const;
+
+/** تطبيع اسم القالب لقواعد Meta (snake_case). */
+export function normalizeOtpTemplateName(raw: unknown): string {
+  return String(raw ?? "").trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
+
+export function isValidOtpTemplateName(name: string): boolean {
+  return name.length >= 3 && name.length <= 512;
+}
+
+export function isSupportedOtpLanguage(language: unknown): language is string {
+  return typeof language === "string" && (OTP_SUPPORTED_LANGUAGES as readonly string[]).includes(language);
+}
+
+/** النص المولّد للغة — fallback إنجليزي إن غابت الترجمة (لا يخترع structure). */
+export function generatedOtpBody(language: string): string {
+  return OTP_GENERATED_BODIES[language] ?? OTP_GENERATED_BODIES["en_US"] as string;
+}
+
+/**
+ * مكونات الإنشاء المرسلة إلى Meta — المصدر الوحيد لبناء AUTHENTICATION.
+ * تُستخدم في submitTemplateToMeta بدل أي builder يدوي مكرر.
+ */
+export function buildMetaCreateComponents(spec: { addSecurityRecommendation: boolean }): Array<Record<string, unknown>> {
+  const body: Record<string, unknown> = { type: "BODY" };
+  if (spec.addSecurityRecommendation) {
+    body["add_security_recommendation"] = true;
+  }
+  return [
+    body,
+    {
+      type: "BUTTONS",
+      buttons: [{ type: OTP_BLESSED_BUTTON.type, otp_type: OTP_BLESSED_BUTTON.otp_type }],
+    },
+  ];
+}
+
+export interface OtpContractInput {
+  id: string | null;
+  projectId: string | null;
+  expectedProjectId: string;
+  name: string | null;
+  language: string | null;
+  category: string | null;
+  status: string | null;
+  metaTemplateId: string | null;
+  metaComponents: unknown;
+}
+
+export type OtpContractResult =
+  | { ok: true }
+  | { ok: false; code: string; reason: string };
+
+/**
+ * validateOtpTemplateContract — الفاحص المركزي الوحيد (PHASE 6).
+ * يتحقق بالترتيب: الوجود → الملكية → Meta ID → التصنيف → الحالة →
+ * اللغة → سلامة الـ metadata → قابلية بناء الـ payload.
+ * أي فشل = لا إرسال إلى Meta إطلاقًا (fail closed).
+ */
+export function validateOtpTemplateContract(input: OtpContractInput): OtpContractResult {
+  if (!input.id || !input.name) {
+    return { ok: false, code: OTP_CONTRACT_ERRORS.TEMPLATE_NOT_FOUND, reason: "Template record does not exist." };
+  }
+  if (!input.projectId || input.projectId !== input.expectedProjectId) {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.TEMPLATE_WRONG_PROJECT,
+      reason: "Template belongs to a different project.",
+    };
+  }
+  if (!input.metaTemplateId) {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.TEMPLATE_NO_META_ID,
+      reason: `Template "${input.name}" is not linked to a Meta template. Sync with Meta first.`,
+    };
+  }
+  if (input.category !== "AUTHENTICATION") {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.OTP_TEMPLATE_NOT_COMPATIBLE,
+      reason: `Template "${input.name}" is category ${input.category ?? "unknown"} — OTP requires AUTHENTICATION.`,
+    };
+  }
+  if (input.status !== "APPROVED") {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.TEMPLATE_NOT_APPROVED,
+      reason: `Template "${input.name}" is ${input.status ?? "unknown"} — only APPROVED templates can send OTP.`,
+    };
+  }
+  if (!input.language) {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.OTP_TEMPLATE_METADATA_INVALID,
+      reason: `Template "${input.name}" has no language. Sync with Meta first.`,
+    };
+  }
+  const metadata = validateAuthenticationComponents(
+    Array.isArray(input.metaComponents) ? (input.metaComponents as MetaTemplateComponent[]) : null,
+  );
+  if (!metadata.ok) {
+    return {
+      ok: false,
+      code: OTP_CONTRACT_ERRORS.OTP_TEMPLATE_METADATA_INVALID,
+      reason: `Template "${input.name}" metadata is incomplete: ${metadata.error}`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * isOtpCompatibleWithMeta — فحص التوافق الصرف مع Meta (PHASE 4).
+ * يُستخدم للعرض (OTP Ready) وللبوابة قبل الإرسال.
+ */
+export function isOtpCompatibleWithMeta(input: {
+  category: string | null;
+  status: string | null;
+  metaTemplateId: string | null;
+  metaComponents: unknown;
+}): { compatible: boolean; reason: string } {
+  if (input.category !== "AUTHENTICATION") {
+    return {
+      compatible: false,
+      reason: `Category is ${input.category ?? "unknown"} — OTP requires AUTHENTICATION.`,
+    };
+  }
+  if (input.status !== "APPROVED") {
+    return { compatible: false, reason: `Status is ${input.status ?? "unknown"} — must be APPROVED.` };
+  }
+  if (!input.metaTemplateId) {
+    return { compatible: false, reason: "Not linked to a Meta template — sync required." };
+  }
+  const metadata = validateAuthenticationComponents(
+    Array.isArray(input.metaComponents) ? (input.metaComponents as MetaTemplateComponent[]) : null,
+  );
+  if (!metadata.ok) {
+    return { compatible: false, reason: metadata.error };
+  }
+  return { compatible: true, reason: "OTP ready." };
+}

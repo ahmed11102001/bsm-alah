@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import { isOtpCompatibleWithMeta } from "@/lib/developer-template-contract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = "send" | "verify" | "status";
@@ -14,7 +15,9 @@ interface ProjectTemplate {
   name: string;
   language: string;
   status: string;
+  category?: string | null;
   metaTemplateId: string | null;
+  metaComponents?: unknown;
 }
 
 // وصف اللغة في الـ dropdown — name + language هوية مميزة
@@ -158,10 +161,17 @@ export default function LiveTesterPage() {
   const [syncingTemplates, setSyncingTemplates] = useState(false);
   const [syncMsg, setSyncMsg]                 = useState<string | null>(null);
 
-  // القوالب القابلة للإرسال فقط: نفس المشروع + APPROVED + مربوطة بـ Meta
-  const sendableTemplates = templates.filter(
-    (tpl) => tpl.status === "APPROVED" && !!tpl.metaTemplateId
-  );
+  // القوالب القابلة للإرسال: نفس contract الـ backend — APPROVED +
+  // AUTHENTICATION + مربوطة بـ Meta + metadata مكتملة (لا UTILITY/MARKETING).
+  function isSendable(tpl: ProjectTemplate): boolean {
+    return isOtpCompatibleWithMeta({
+      category: tpl.category ?? null,
+      status: tpl.status,
+      metaTemplateId: tpl.metaTemplateId,
+      metaComponents: tpl.metaComponents,
+    }).compatible;
+  }
+  const sendableTemplates = templates.filter(isSendable);
   const selectedTemplate = templates.find((tpl) => tpl.id === selectedTemplateId) ?? null;
 
   // UI state
@@ -189,11 +199,18 @@ export default function LiveTesterPage() {
       }
       const list: ProjectTemplate[] = Array.isArray(data.templates) ? data.templates : [];
       setTemplates(list);
-      // اختيار تلقائي: أول قالب قابل للإرسال — أو إبقاء الاختيار لو ما زال صالحاً
+      // اختيار تلقائي: أول قالب OTP-compatible — أو إبقاء الاختيار لو ما زال صالحاً
+      const sendable = (tpl: ProjectTemplate): boolean =>
+        isOtpCompatibleWithMeta({
+          category: tpl.category ?? null,
+          status: tpl.status,
+          metaTemplateId: tpl.metaTemplateId,
+          metaComponents: tpl.metaComponents,
+        }).compatible;
       setSelectedTemplateId((prev) => {
-        const stillValid = list.some((x) => x.id === prev && x.status === "APPROVED" && !!x.metaTemplateId);
+        const stillValid = list.some((x) => x.id === prev && sendable(x));
         if (stillValid) return prev;
-        return list.find((x) => x.status === "APPROVED" && !!x.metaTemplateId)?.id ?? "";
+        return list.find(sendable)?.id ?? "";
       });
     } catch {
       setTemplatesError(t("Connection error", "خطأ في الاتصال"));

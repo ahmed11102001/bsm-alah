@@ -3,6 +3,14 @@ import {
   buildAuthenticationComponents,
   buildOtpParameters,
   validateVariableDefinitions,
+  validateOtpTemplateContract,
+  isOtpCompatibleWithMeta,
+  normalizeOtpTemplateName,
+  isValidOtpTemplateName,
+  isSupportedOtpLanguage,
+  generatedOtpBody,
+  buildMetaCreateComponents,
+  placeholderPositions,
 } from "@/lib/developer-template-contract";
 
 describe("developer template variable contract", () => {
@@ -66,5 +74,96 @@ describe("developer template variable contract", () => {
       ok: true,
       parameters: [{ type: "text", text: "123456" }, { type: "text", text: "10" }],
     });
+  });
+});
+
+describe("OTP template contract (PHASE 2/4/6)", () => {
+  const base = {
+    id: "tpl-1",
+    projectId: "proj-A",
+    expectedProjectId: "proj-A",
+    name: "wani_otp",
+    language: "en_US",
+    category: "AUTHENTICATION",
+    status: "APPROVED",
+    metaTemplateId: "meta_1",
+    metaComponents: [
+      { type: "BODY", text: "{{1}} is your verification code." },
+      { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+    ],
+  };
+
+  it("accepts a complete AUTHENTICATION contract", () => {
+    expect(validateOtpTemplateContract(base)).toEqual({ ok: true });
+  });
+
+  it("rejects missing record / wrong project", () => {
+    expect(validateOtpTemplateContract({ ...base, id: null }).ok).toBe(false);
+    const wrong = validateOtpTemplateContract({ ...base, projectId: "proj-B" });
+    expect(wrong.ok).toBe(false);
+    if (!wrong.ok) expect(wrong.code).toBe("TEMPLATE_WRONG_PROJECT");
+  });
+
+  it("rejects non-AUTHENTICATION categories (no Utility/Marketing OTP)", () => {
+    for (const category of ["UTILITY", "MARKETING", null]) {
+      const r = validateOtpTemplateContract({ ...base, category });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.code).toBe("OTP_TEMPLATE_NOT_COMPATIBLE");
+    }
+  });
+
+  it("rejects non-APPROVED statuses", () => {
+    for (const status of ["LOCAL_DRAFT", "PENDING", "REJECTED", "DISABLED"]) {
+      const r = validateOtpTemplateContract({ ...base, status });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.code).toBe("TEMPLATE_NOT_APPROVED");
+    }
+  });
+
+  it("rejects missing Meta ID / missing language", () => {
+    expect(validateOtpTemplateContract({ ...base, metaTemplateId: null }).ok).toBe(false);
+    const noLang = validateOtpTemplateContract({ ...base, language: null });
+    expect(noLang.ok).toBe(false);
+    if (!noLang.ok) expect(noLang.code).toBe("OTP_TEMPLATE_METADATA_INVALID");
+  });
+
+  it("rejects incomplete metadata without guessing", () => {
+    expect(validateOtpTemplateContract({ ...base, metaComponents: null }).ok).toBe(false);
+    expect(validateOtpTemplateContract({ ...base, metaComponents: [] }).ok).toBe(false);
+    expect(
+      validateOtpTemplateContract({ ...base, metaComponents: [{ type: "BODY", text: "static" }] }).ok
+    ).toBe(false);
+  });
+
+  it("isOtpCompatibleWithMeta mirrors the gate for display", () => {
+    expect(isOtpCompatibleWithMeta({ ...base, metaComponents: base.metaComponents }).compatible).toBe(true);
+    expect(
+      isOtpCompatibleWithMeta({ category: "UTILITY", status: "APPROVED", metaTemplateId: "m", metaComponents: [] }).compatible
+    ).toBe(false);
+    expect(
+      isOtpCompatibleWithMeta({ category: "AUTHENTICATION", status: "PENDING", metaTemplateId: "m", metaComponents: [] }).compatible
+    ).toBe(false);
+  });
+
+  it("normalizes names and validates languages", () => {
+    expect(normalizeOtpTemplateName("  My OTP Test ")).toBe("my_otp_test");
+    expect(isValidOtpTemplateName("ab")).toBe(false);
+    expect(isValidOtpTemplateName("otp_verification")).toBe(true);
+    expect(isSupportedOtpLanguage("en_US")).toBe(true);
+    expect(isSupportedOtpLanguage("xx")).toBe(false);
+  });
+
+  it("generates a single-{{1}} body per language", () => {
+    for (const lang of ["ar", "en_US", "fr"]) {
+      expect(placeholderPositions(generatedOtpBody(lang))).toEqual([1]);
+    }
+  });
+
+  it("buildMetaCreateComponents is the single creation source (BODY + OTP button)", () => {
+    const components = buildMetaCreateComponents({ addSecurityRecommendation: true });
+    expect(components).toEqual([
+      { type: "BODY", add_security_recommendation: true },
+      { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+    ]);
   });
 });
