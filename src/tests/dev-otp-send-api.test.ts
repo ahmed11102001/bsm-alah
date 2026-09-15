@@ -284,6 +284,47 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     ]);
   });
 
+  it("REGRESSION 131008 (real case): Meta URL copy-code button gets its parameter", async () => {
+    // تعريف wani_otp الحقيقي من DB: زر URL (لا OTP) رابطه يحمل {{1}}.
+    // سابقًا كان الباني يتجاهله → باراميتر ناقص → 131008 من Meta.
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
+      makeTemplate({
+        id: "tpl-wani-otp",
+        name: "wani_otp",
+        language: "en_US",
+        metaTemplateId: "1630235528795888",
+        metaComponents: [
+          {
+            text: "*{{1}}* is your verification code. For your security, do not share this code.",
+            type: "BODY",
+            example: { body_text: [["123456"]] },
+            add_security_recommendation: true,
+          },
+          {
+            type: "BUTTONS",
+            buttons: [{
+              url: "https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp{{1}}",
+              text: "Copy code",
+              type: "URL",
+              example: ["https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp123456"],
+            }],
+          },
+        ],
+      })
+    );
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-wani-otp" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.ok).toBe(true);
+    const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(payload.template.name).toBe("wani_otp");
+    expect(payload.template.language).toEqual({ code: "en_US" });
+    expect(payload.template.components).toEqual([
+      { type: "body", parameters: [{ type: "text", text: expect.any(String) }] },
+      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: expect.any(String) }] },
+    ]);
+  });
+
   it("REGRESSION 131008: نفس القالب بلا metadata → 409 قبل Meta (لا payload ناقص)", async () => {
     mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(
       makeTemplate({

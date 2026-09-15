@@ -47,6 +47,55 @@ describe("developer template variable contract", () => {
     expect(buildAuthenticationComponents([{ type: "BUTTONS", buttons: [{ type: "OTP" }] }], "123456").ok).toBe(false);
   });
 
+  it("handles real Meta copy-code buttons (type URL with {{1}} in url)", () => {
+    // التعريف الحقيقي المخزن من Meta لقالب wani_otp — زر URL لا OTP
+    const result = buildAuthenticationComponents([
+      {
+        type: "BODY",
+        text: "*{{1}}* is your verification code. For your security, do not share this code.",
+        example: { body_text: [["123456"]] },
+        add_security_recommendation: true,
+      },
+      {
+        type: "BUTTONS",
+        buttons: [{
+          url: "https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp{{1}}",
+          text: "Copy code",
+          type: "URL",
+          example: ["https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code=otp123456"],
+        }],
+      },
+    ], "654321");
+    expect(result).toEqual({
+      ok: true,
+      components: [
+        { type: "body", parameters: [{ type: "text", text: "654321" }] },
+        { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: "654321" }] },
+      ],
+    });
+  });
+
+  it("rejects URL buttons with several distinct variables (fail closed)", () => {
+    const result = buildAuthenticationComponents([
+      {
+        type: "BUTTONS",
+        buttons: [{ type: "URL", url: "https://x.test/?a={{1}}&b={{2}}" }],
+      },
+    ], "123456");
+    expect(result.ok).toBe(false);
+  });
+
+  it("static URL buttons without variables need no parameters", () => {
+    const result = buildAuthenticationComponents([
+      { type: "BODY", text: "Your code is {{1}}" },
+      { type: "BUTTONS", buttons: [{ type: "URL", url: "https://x.test/help", text: "Help" }] },
+    ], "123456");
+    expect(result).toEqual({
+      ok: true,
+      components: [{ type: "body", parameters: [{ type: "text", text: "123456" }] }],
+    });
+  });
+
   it("maps semantic variables instead of assuming positions", () => {
     const result = buildOtpParameters([
       { position: 1, key: "serviceName", example: "Wani" },

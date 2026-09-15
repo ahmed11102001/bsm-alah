@@ -20,11 +20,22 @@ export interface MetaTemplateComponent {
     sub_type?: string;
     index?: string | number;
     text?: string;
+    url?: string;
+    example?: unknown;
   }>;
 }
 
 export function placeholderPositions(body: string): number[] {
   return [...new Set([...body.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1])))].sort((a, b) => a - b);
+}
+
+/**
+ * مواضع المتغيرات داخل رابط زر URL (مثال: ...&code=otp{{1}}).
+ * Meta الحقيقية ترجع أزرار Copy-code من نوع URL بهذا الشكل — وليس type OTP دائمًا.
+ */
+export function urlPlaceholderPositions(url: unknown): number[] {
+  if (typeof url !== "string") return [];
+  return [...new Set([...url.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1])))].sort((a, b) => a - b);
 }
 
 export function validateVariableDefinitions(
@@ -80,6 +91,7 @@ export function validateAuthenticationComponents(
   const supported = new Set(["BODY", "HEADER", "FOOTER", "BUTTONS"]);
   let otpButtonCount = 0;
   let parameterBearingBody = false;
+  let parameterBearingUrlButton = false;
 
   for (const component of components) {
     if (!component || typeof component !== "object") {
@@ -100,6 +112,17 @@ export function validateAuthenticationComponents(
             return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
           }
         }
+        // زر URL يحمل متغيرًا (شكل Copy-code الحقيقي من Meta) يتطلب باراميتر.
+        // أكثر من موضع مميز يُرفض — لا يمكن معرفة أيها الكود (fail closed).
+        if (String(button?.type ?? "").toUpperCase() === "URL") {
+          const urlPositions = urlPlaceholderPositions(button.url);
+          if (urlPositions.length > 1) {
+            return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
+          }
+          if (urlPositions.length === 1) {
+            parameterBearingUrlButton = true;
+          }
+        }
       }
     }
     if (type === "BODY") {
@@ -113,7 +136,7 @@ export function validateAuthenticationComponents(
     }
   }
 
-  if (otpButtonCount === 0 && !parameterBearingBody) {
+  if (otpButtonCount === 0 && !parameterBearingBody && !parameterBearingUrlButton) {
     return { ok: false, error: "Template metadata is incomplete. Please sync templates again." };
   }
   return { ok: true, components };
@@ -142,6 +165,16 @@ export function buildAuthenticationComponents(
           result.push({
             type: "button",
             sub_type: button.sub_type || "url",
+            index: String(button.index ?? index),
+            parameters: [{ type: "text", text: otp }],
+          });
+        }
+        // زر URL بمتغير (شكل Copy-code الحقيقي): باراميتر الكود لرابط الزرار.
+        // sub_type هنا "url" حقيقي — لا fallback.
+        if (String(button.type ?? "").toUpperCase() === "URL" && urlPlaceholderPositions(button.url).length === 1) {
+          result.push({
+            type: "button",
+            sub_type: "url",
             index: String(button.index ?? index),
             parameters: [{ type: "text", text: otp }],
           });
