@@ -9,7 +9,6 @@
  * Template listing needs a login (`wani login`); sending/verifying only
  * needs a project API key (flag > env > stored), like `otp send`.
  */
-import { ApiClient } from "../../api/client.js";
 import { CliError } from "../../api/errors.js";
 import { ENDPOINTS } from "../../api/endpoints.js";
 import type { CommandContext } from "../context.js";
@@ -19,13 +18,11 @@ import { printLine } from "../../output/human.js";
 import { promptText } from "../../utils/prompt.js";
 import { makeOtpClient } from "./common.js";
 import { fetchProjects } from "../project/list.js";
-
-export interface OtpTemplateOption {
-  id: string;
-  name: string;
-  language: string;
-  status: string;
-}
+import {
+  chooseTemplateIndex,
+  fetchApprovedTemplates,
+  type OtpTemplateOption,
+} from "./templates.js";
 
 interface TestFlags {
   phone?: string | undefined;
@@ -56,41 +53,6 @@ function readFlags(args: ParsedArgs): TestFlags {
     expiryMinutes: parseExpiryMinutes(optString(args.options, "expires", "expiry-minutes")),
     projectId: optString(args.options, "project")?.trim() || undefined,
   };
-}
-
-/** Pure selection helper (unit-testable): 1-based input, default first. */
-export function chooseTemplateIndex(input: string, count: number): number {
-  const trimmed = input.trim();
-  if (trimmed === "") return 0;
-  const n = Number(trimmed);
-  if (!Number.isInteger(n) || n < 1 || n > count) {
-    throw new CliError(`Pick a template number between 1 and ${count}.`, { kind: "usage" });
-  }
-  return n - 1;
-}
-
-async function fetchApprovedTemplates(
-  ctx: CommandContext,
-  projectId: string
-): Promise<OtpTemplateOption[]> {
-  const accessToken = ctx.config.cliAccessToken;
-  if (!accessToken) {
-    throw new CliError(
-      "Template listing needs a login (`wani login`), or pass --template-id directly.",
-      { kind: "auth" }
-    );
-  }
-  const client = new ApiClient({
-    baseUrl: ctx.baseUrl,
-    timeoutMs: ctx.timeoutMs,
-    fetchImpl: ctx.fetchImpl,
-    accessToken,
-  });
-  const data = await client.get<{ templates?: OtpTemplateOption[] }>(ENDPOINTS.otpTemplates(projectId));
-  const templates = Array.isArray(data.templates) ? data.templates : [];
-  return templates.filter(
-    (t) => t && typeof t.id === "string" && typeof t.name === "string" && t.status === "APPROVED"
-  );
 }
 
 async function resolveTemplateId(

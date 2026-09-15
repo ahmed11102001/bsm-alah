@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   cliDeviceCode: "/api/developers/cli/device/code",
   cliDeviceToken: "/api/developers/cli/device/token",
   cliRevokeCurrent: "/api/developers/cli/sessions/revoke-current",
+  cliCodegen: "/api/developers/cli/codegen",
   projects: "/api/developers/projects",
   otpTemplates: (projectId: string): string => `/api/developers/projects/${encodeURIComponent(projectId)}/otp-templates`,
   otpSend: "/api/developers/otp/send",

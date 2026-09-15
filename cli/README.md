@@ -32,6 +32,10 @@ wani login
 wani otp test
 wani otp test --phone 201012345678 --template-id YOUR_TEMPLATE_ID --code 123456
 
+# 3. Scaffold the integration inside your project (detects the framework)
+wani init
+wani init --framework next --template-id YOUR_TEMPLATE_ID
+
 # 2. See your projects and pick one
 wani project list
 wani project use cmu123abc --api-key wani_live_xxxx
@@ -55,6 +59,8 @@ wani otp status --token <token>
 | `wani project use <id-or-name> [--api-key KEY]` | Select the working project (id, id-prefix or exact name); optionally save its API key |
 | `wani project current` | Show the selected project |
 | `wani otp test [--phone P] [--template-id ID \| --template NAME] [--code C]` | Guided end-to-end OTP check (prompts for missing values) |
+| `wani init [--framework ID] [--template-id ID] [--force] [--no-install]` | Detect the framework, install `@aiwni/sdk` (JS/TS), write the integration file, configure env |
+| `wani setup` | Interactive first-run menu (login → project → test) |
 | `wani otp send --phone P (--template-id ID \| --template NAME [--language CODE]) [--expires N]` | Send a WhatsApp OTP |
 | `wani otp verify --token T [--code C]` | Verify an OTP code (prompts for the code when omitted) |
 | `wani otp status --token T` | Check OTP delivery status |
@@ -69,6 +75,13 @@ Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--dev`, `--timeout <ms
 
 - **Account commands** (`login`, `whoami`, `project …`) use the stored CLI session token from `wani login` (browser device flow — email/password never touch the terminal). Revoke anytime from Portal Settings → CLI & Integrations, or with `wani logout`.
 - **OTP commands** need a project API key, resolved as: `--api-key` flag → `WANI_API_KEY` env → key saved with `wani project use --api-key`. The project itself is always resolved server-side from that key — the CLI never sends a project id to the OTP API.
+
+## `wani init` details
+
+- Detects Node.js / Next.js / React / Django / Flask / FastAPI / Laravel / Symfony from the current directory (override with `--framework`).
+- Fetches the integration code from the official portal codegen API — the same generator the portal Quick Start uses.
+- Writes one integration file (e.g. `lib/wani.ts`, `wani_otp.py`), installs `@aiwni/sdk` for JS/TS projects, and adds `WANI_API_KEY=your_project_api_key` to the framework's env file (`.env.local`/`.env`). Pass `--api-key <key>` explicitly to write a real key; existing files are never overwritten without `--force`.
+- Ensures the env file is gitignored. Generated snippets are server-only — the key never goes into React/browser code.
 
 ## Output
 

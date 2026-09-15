@@ -2,6 +2,9 @@
 /**
  * `wani` — official Wani Developer CLI (server-side credentials only).
  */
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CliError } from "./api/errors.js";
 import { assertTrustedBaseUrl } from "./api/trusted-hosts.js";
 import { BASE_URL_ENV_VAR, CLI_NAME, CLI_VERSION, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS } from "./constants.js";
@@ -17,6 +20,8 @@ import { otpSendCommand } from "./commands/otp/send.js";
 import { otpVerifyCommand } from "./commands/otp/verify.js";
 import { otpStatusCommand } from "./commands/otp/status.js";
 import { otpTestCommand } from "./commands/otp/test.js";
+import { otpInitCommand } from "./commands/init/init.js";
+import { setupCommand } from "./commands/setup.js";
 import { printError } from "./output/errors.js";
 import { isHelpRequest, isJsonOutput, optString, parseArgs } from "./utils/args.js";
 
@@ -37,6 +42,9 @@ Commands:
 
   otp test [--phone <phone>] [--template-id <id>] [--code <code>]
                                          Guided end-to-end OTP check (interactive)
+  init [--framework <id>] [--template-id <id>] [--force] [--no-install]
+                                         Scaffold a Wani integration in this project
+  setup                                  Interactive first-run menu (login → project → test)
   otp send --phone <phone> (--template-id <id> | --template <name> [--language <code>])
            [--expires <minutes>] [--project <id>] [--api-key <key>]
                                          Send a WhatsApp OTP
@@ -120,6 +128,12 @@ async function main(argv: string[]): Promise<void> {
       process.stdout.write(OTP_HELP);
       return;
     }
+    // Bare `wani` in an interactive terminal starts guided setup;
+    // scripts/pipes (non-TTY) keep the classic help output.
+    if (args.command.length === 0 && process.stdin.isTTY && !isHelpRequest(args.options, args.positional)) {
+      await setupCommand(ctx, scoped);
+      return;
+    }
     process.stdout.write(HELP);
     return;
   }
@@ -148,6 +162,12 @@ async function main(argv: string[]): Promise<void> {
         return;
       }
       throw new CliError(`Unknown project command: ${action ?? "(none)"}. Try: list, use, current.`, { kind: "usage" });
+    case "init":
+      await otpInitCommand(ctx, scoped);
+      return;
+    case "setup":
+      await setupCommand(ctx, scoped);
+      return;
     case "otp":
       if (action === "test") {
         await otpTestCommand(ctx, scoped);
@@ -171,13 +191,29 @@ async function main(argv: string[]): Promise<void> {
   }
 }
 
-function isMainModule(): boolean {
+/**
+ * Robust ESM entrypoint detection.
+ *
+ * Compares canonical real paths (not URL strings): `process.argv[1]` may
+ * point at the file through an npm link symlink, a global-shim path, or a
+ * relative path, while `import.meta.url` is already symlink-resolved. Plain
+ * string/URL comparison therefore fails exactly in the installed cases
+ * (`npm link`, global shims on Windows/macOS/Linux).
+ */
+export function isMainModule(): boolean {
   const entry = process.argv[1];
   if (!entry) return false;
   try {
-    return import.meta.url === new URL(`file://${entry.replace(/\\/g, "/")}`).href;
+    const thisFile = realpathSync(fileURLToPath(import.meta.url));
+    const entryFile = realpathSync(resolve(entry));
+    // Windows/macOS filesystems are case-insensitive — normalize the drive
+    // letter and casing there so `C:\…` and `c:\…` compare equal.
+    if (process.platform === "win32" || process.platform === "darwin") {
+      return thisFile.toLowerCase() === entryFile.toLowerCase();
+    }
+    return thisFile === entryFile;
   } catch {
-    return entry.endsWith("index.js");
+    return false;
   }
 }
 

@@ -1,7 +1,8 @@
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { chooseTemplateIndex, otpTestCommand } from "../src/commands/otp/test.js";
+import { otpTestCommand } from "../src/commands/otp/test.js";
+import { chooseTemplateIndex } from "../src/commands/otp/templates.js";
 import type { CommandContext } from "../src/commands/context.js";
 import type { CliConfig } from "../src/config/config.js";
 import { parseArgs } from "../src/utils/args.js";
