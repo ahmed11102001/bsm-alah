@@ -220,8 +220,68 @@ export function generatedOtpBody(language: string): string {
 }
 
 /**
- * مكونات الإنشاء المرسلة إلى Meta — المصدر الوحيد لبناء AUTHENTICATION.
- * تُستخدم في submitTemplateToMeta بدل أي builder يدوي مكرر.
+ * مكونات الإنشاء المرسلة إلى Meta — الباني الوحيد الكامل (deterministic).
+ *
+ * الشكل مطابق لتعريف Meta الفعلي لقوالب AUTHENTICATION (كما ترجعه
+ * message_templates نفسها — BODY بلا نص مخصص + FOOTER للمدة + زر OTP):
+ *   BODY    { type:"BODY", add_security_recommendation? }
+ *             — Meta تولّد النص القياسي بنفسها؛ أي text مخصص مع
+ *             add_security_recommendation يرفضه Meta بـ Invalid parameter.
+ *   FOOTER  { type:"FOOTER", code_expiration_minutes }
+ *             — هنا تُربط مدة الصلاحية بإعدادات Meta فعليًا.
+ *   BUTTONS [{ type:"OTP", otp_type:"COPY_CODE" }]
+ *
+ * لا ترقيع بعد الباني: الناتج يُرسل كما هو. أي نقص يُرفض قبل الاتصال بـ Meta.
+ */
+export interface MetaCreateTemplateInput {
+  name: string;
+  language: string;
+  codeExpirationMinutes: number;
+  addSecurityRecommendation: boolean;
+}
+
+export type MetaCreateTemplateResult =
+  | { ok: true; payload: { name: string; category: "AUTHENTICATION"; language: string; components: Array<Record<string, unknown>> } }
+  | { ok: false; code: string; reason: string };
+
+export function buildMetaCreateTemplatePayload(input: MetaCreateTemplateInput): MetaCreateTemplateResult {
+  const name = normalizeOtpTemplateName(input.name);
+  if (!isValidOtpTemplateName(name)) {
+    return { ok: false, code: "OTP_NAME_INVALID", reason: "Template name must be 3-512 chars of [a-z0-9_]." };
+  }
+  if (!isSupportedOtpLanguage(input.language)) {
+    return { ok: false, code: "OTP_LANGUAGE_UNSUPPORTED", reason: `Language "${input.language}" is not supported for OTP templates.` };
+  }
+  const expiry = Math.round(Number(input.codeExpirationMinutes));
+  if (!Number.isFinite(expiry) || expiry < 1 || expiry > 90) {
+    return { ok: false, code: "OTP_EXPIRY_INVALID", reason: "Code expiration must be 1-90 minutes." };
+  }
+
+  const body: Record<string, unknown> = { type: "BODY" };
+  if (input.addSecurityRecommendation) {
+    body["add_security_recommendation"] = true;
+  }
+  return {
+    ok: true,
+    payload: {
+      name,
+      category: "AUTHENTICATION",
+      language: input.language,
+      components: [
+        body,
+        { type: "FOOTER", code_expiration_minutes: expiry },
+        {
+          type: "BUTTONS",
+          buttons: [{ type: OTP_BLESSED_BUTTON.type, otp_type: OTP_BLESSED_BUTTON.otp_type }],
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * @deprecated استخدم buildMetaCreateTemplatePayload الكامل بدلًا منه.
+ * أُبقي للتوافق الداخلي فقط — لا تبنِ عليه payload إنشاء جديد.
  */
 export function buildMetaCreateComponents(spec: { addSecurityRecommendation: boolean }): Array<Record<string, unknown>> {
   const body: Record<string, unknown> = { type: "BODY" };

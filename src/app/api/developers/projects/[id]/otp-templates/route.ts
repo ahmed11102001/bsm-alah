@@ -6,7 +6,7 @@ import {
   isValidOtpTemplateName,
   isSupportedOtpLanguage,
   generatedOtpBody,
-  buildMetaCreateComponents,
+  buildMetaCreateTemplatePayload,
 } from "@/lib/developer-template-contract";
 import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
@@ -141,9 +141,8 @@ export async function POST(
       const metaResult = await submitTemplateToMeta({
         accessToken: plainAccessToken,
         wabaId: connection.wabaId,
-        template: { ...template, addSecurityRecommendation, codeExpirationMinutes: Math.round(expiry) },
+        template: { ...template, addSecurityRecommendation: true, codeExpirationMinutes: Math.round(expiry) },
       });
-
       const updated = await prisma.developerOtpTemplate.update({
         where: { id: template.id },
         data: { metaTemplateId: metaResult.id, status: "PENDING" },
@@ -212,8 +211,8 @@ export async function DELETE(
 }
 
 // ── Helper: Submit to Meta Graph API ──────────────────────────────────────────
-// يستخدم buildMetaCreateComponents من الـ contract — لا يوجد builder يدوي مكرر.
-// القالب دائمًا AUTHENTICATION بالنص المولّد من Wani (متغير {{1}} واحد للكود).
+// يبني الـ payload الكامل عبر buildMetaCreateTemplatePayload فقط — لا ترقيع
+// بعده إطلاقًا. أي نقص يُرفض محليًا قبل أي اتصال بـ Meta (fail closed).
 async function submitTemplateToMeta({
   accessToken,
   wabaId,
@@ -223,14 +222,14 @@ async function submitTemplateToMeta({
   wabaId: string;
   template: any;
 }) {
-  const addSecurity = template.addSecurityRecommendation ?? true;
-  const components = buildMetaCreateComponents({ addSecurityRecommendation: addSecurity });
-
-  // BODY يحمل النص المولّد ({{1}} واحد للكود) + مثال — نفس structure الإرسال.
-  const bodyComp = components.find((c) => c["type"] === "BODY") as Record<string, unknown> | undefined;
-  if (bodyComp) {
-    bodyComp["text"] = generatedOtpBody(template.language);
-    bodyComp["example"] = { body_text: [["123456"]] };
+  const built = buildMetaCreateTemplatePayload({
+    name: template.name,
+    language: template.language,
+    codeExpirationMinutes: template.codeExpirationMinutes,
+    addSecurityRecommendation: template.addSecurityRecommendation ?? true,
+  });
+  if (!built.ok) {
+    throw new Error(built.reason);
   }
 
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/message_templates`;
@@ -240,12 +239,7 @@ async function submitTemplateToMeta({
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      name: template.name,
-      category: "AUTHENTICATION",
-      language: template.language,
-      components,
-    }),
+    body: JSON.stringify(built.payload),
   });
 
   const data = await res.json();

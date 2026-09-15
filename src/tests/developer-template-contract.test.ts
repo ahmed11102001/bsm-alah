@@ -10,6 +10,7 @@ import {
   isSupportedOtpLanguage,
   generatedOtpBody,
   buildMetaCreateComponents,
+  buildMetaCreateTemplatePayload,
   placeholderPositions,
 } from "@/lib/developer-template-contract";
 
@@ -165,5 +166,37 @@ describe("OTP template contract (PHASE 2/4/6)", () => {
       { type: "BODY", add_security_recommendation: true },
       { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
     ]);
+  });
+
+  it("buildMetaCreateTemplatePayload returns the COMPLETE deterministic creation payload", () => {
+    const result = buildMetaCreateTemplatePayload({
+      name: "Opt_Wani ",
+      language: "en_US",
+      codeExpirationMinutes: 5,
+      addSecurityRecommendation: true,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // الاسم مطبّع، والمدة مربوطة بـ FOOTER — بلا أي ترقيع لاحق
+    expect(result.payload).toEqual({
+      name: "opt_wani",
+      category: "AUTHENTICATION",
+      language: "en_US",
+      components: [
+        { type: "BODY", add_security_recommendation: true },
+        { type: "FOOTER", code_expiration_minutes: 5 },
+        { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+      ],
+    });
+    // لا text ولا example مخصصين على BODY — النص القياسي تولّده Meta
+    const body = result.payload.components[0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("text");
+    expect(body).not.toHaveProperty("example");
+  });
+
+  it("buildMetaCreateTemplatePayload fails closed on bad input (before any Meta call)", () => {
+    expect(buildMetaCreateTemplatePayload({ name: "ab", language: "en_US", codeExpirationMinutes: 5, addSecurityRecommendation: true }).ok).toBe(false);
+    expect(buildMetaCreateTemplatePayload({ name: "otp_x", language: "xx", codeExpirationMinutes: 5, addSecurityRecommendation: true }).ok).toBe(false);
+    expect(buildMetaCreateTemplatePayload({ name: "otp_x", language: "ar", codeExpirationMinutes: 500, addSecurityRecommendation: true }).ok).toBe(false);
   });
 });

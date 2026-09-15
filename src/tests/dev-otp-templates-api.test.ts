@@ -134,8 +134,7 @@ describe("developer OTP templates API", () => {
     expect(created.body).not.toContain("MARKETING");
   });
 
-  it("creation rejects unsupported language and bad expiry", async () => {
-    const badLang = await POST(
+  it("creation rejects unsupported language and bad expiry", async () => {    const badLang = await POST(
       request("http://localhost/api/developers/projects/proj-1/otp-templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,5 +154,50 @@ describe("developer OTP templates API", () => {
       params
     );
     expect(badExpiry.status).toBe(400);
+  });
+
+  it("submit sends the exact deterministic builder payload (FOOTER expiry, no custom text)", async () => {
+    mockPrisma.developerMetaConnection.findUnique.mockResolvedValue({
+      isVerified: true,
+      accessToken: "TOKEN",
+      wabaId: "waba-1",
+    });
+    mockPrisma.developerOtpTemplate.create.mockResolvedValue({
+      id: "tpl-new",
+      projectId: "proj-1",
+      name: "opt_wani",
+      language: "en_US",
+      category: "AUTHENTICATION",
+      status: "LOCAL_DRAFT",
+    });
+    mockPrisma.developerOtpTemplate.update.mockResolvedValue({});
+    const metaFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "meta-new" }),
+    });
+    vi.stubGlobal("fetch", metaFetch);
+
+    const response = await POST(
+      request("http://localhost/api/developers/projects/proj-1/otp-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "opt_wani", language: "en_US", codeExpirationMinutes: 5, submitToMeta: true }),
+      }),
+      params
+    );
+    expect(response.status).toBe(200);
+    expect(metaFetch).toHaveBeenCalledTimes(1);
+    const sent = JSON.parse(metaFetch.mock.calls[0][1].body);
+    expect(sent).toEqual({
+      name: "opt_wani",
+      category: "AUTHENTICATION",
+      language: "en_US",
+      components: [
+        { type: "BODY", add_security_recommendation: true },
+        { type: "FOOTER", code_expiration_minutes: 5 },
+        { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE" }] },
+      ],
+    });
+    vi.unstubAllGlobals();
   });
 });
