@@ -1,19 +1,20 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest, signDevToken, buildDevSessionCookie } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import bcrypt from "bcryptjs";
 
 export async function PUT(req: NextRequest) {
   try {
     const session = await getDevSessionFromRequest(req);
     if (!session) {
-      return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
+      return devError("غير مصرّح", "AUTH_REQUIRED", 401);
     }
 
     const { firstName, lastName, currentPassword, newPassword } = await req.json();
 
     if (!firstName?.trim() || !lastName?.trim()) {
-      return NextResponse.json({ error: "الاسم الأول والأخير مطلوبين" }, { status: 400 });
+      return devError("الاسم الأول والأخير مطلوبين", "INVALID_REQUEST", 400);
     }
 
     const developer = await prisma.developerUser.findUnique({
@@ -21,7 +22,7 @@ export async function PUT(req: NextRequest) {
     });
 
     if (!developer) {
-      return NextResponse.json({ error: "حساب المطور غير موجود" }, { status: 404 });
+      return devError("حساب المطور غير موجود", "NOT_FOUND", 404);
     }
 
     const updateData: any = {
@@ -33,10 +34,10 @@ export async function PUT(req: NextRequest) {
     if (currentPassword && newPassword) {
       const isValid = await bcrypt.compare(currentPassword, developer.password);
       if (!isValid) {
-        return NextResponse.json({ error: "كلمة المرور الحالية غير صحيحة" }, { status: 400 });
+        return devError("كلمة المرور الحالية غير صحيحة", "INVALID_CREDENTIALS", 400);
       }
       if (newPassword.length < 8) {
-        return NextResponse.json({ error: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل" }, { status: 400 });
+        return devError("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل", "INVALID_REQUEST", 400);
       }
       updateData.password = await bcrypt.hash(newPassword, 12);
     }
@@ -59,6 +60,6 @@ export async function PUT(req: NextRequest) {
     return res;
   } catch (error) {
     console.error("[dev-settings-update]", error);
-    return NextResponse.json({ error: "حصل خطأ أثناء تحديث الإعدادات" }, { status: 500 });
+    return devError("حصل خطأ أثناء تحديث الإعدادات", "INTERNAL", 500);
   }
 }

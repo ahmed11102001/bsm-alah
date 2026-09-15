@@ -5,7 +5,7 @@ const mockLimit = vi.hoisted(() => vi.fn());
 const MockRatelimitClass = vi.hoisted(() => {
   return class {
     limit = mockLimit;
-    static slidingWindow = vi.fn();
+    static slidingWindow: (...args: unknown[]) => unknown = vi.fn();
   };
 });
 
@@ -23,11 +23,12 @@ vi.mock("@upstash/redis", () => {
   };
 });
 
-import { rateLimit, getIP } from "@/lib/rate-limit";
+import { rateLimit, getIP, clearRateLimitFallback } from "@/lib/rate-limit";
 
 describe("Rate Limit Module", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearRateLimitFallback();
     vi.stubEnv("UPSTASH_REDIS_REST_URL", "http://fake-redis");
     vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "fake-token");
     vi.stubEnv("NODE_ENV", "production");
@@ -54,17 +55,53 @@ describe("Rate Limit Module", () => {
       expect(res.retryAfter).toBeLessThanOrEqual(6);
     });
 
-    it("لو الـ Redis رمى error (مشكلة اتصال) → fail-open (success: true)", async () => {
+    it("لو الـ Redis رمى error والـ mode الافتراضي → in-memory fallback (مش bypass مفتوح)", async () => {
       mockLimit.mockRejectedValue(new Error("Connection refused"));
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const res = await rateLimit("ip-1", { limit: 10, windowSecs: 60 });
-      expect(res.success).toBe(true);
-      
+      // limit=2 → أول طلبين يعدوا من الـ fallback، التالت يترفض.
+      const key = "fallback-key-1";
+      const r1 = await rateLimit(key, { limit: 2, windowSecs: 60 });
+      const r2 = await rateLimit(key, { limit: 2, windowSecs: 60 });
+      const r3 = await rateLimit(key, { limit: 2, windowSecs: 60 });
+
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true);
+      expect(r3.success).toBe(false);
+      expect(r3.retryAfter).toBeGreaterThan(0);
+
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining("Redis error"),
         expect.any(Error)
       );
+      consoleSpy.mockRestore();
+    });
+
+    it("لو الـ Redis رمى error مع failureMode closed (OTP) → رفض unavailable بدل السماح", async () => {
+      mockLimit.mockRejectedValue(new Error("Connection refused"));
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const res = await rateLimit("otp-send:x", { limit: 5, windowSecs: 3600 }, { failureMode: "closed" });
+
+      // لا bypass غير محدود للـ OTP أثناء عطل Redis.
+      expect(res.success).toBe(false);
+      expect(res.unavailable).toBe(true);
+      expect(res.retryAfter).toBeGreaterThan(0);
+      consoleSpy.mockRestore();
+    });
+
+    it("رجوع Redis للعمل → سلوك طبيعي (no regression)", async () => {
+      mockLimit.mockRejectedValueOnce(new Error("Connection refused"));
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const during = await rateLimit("ip-2", { limit: 10, windowSecs: 60 }, { failureMode: "closed" });
+      expect(during.success).toBe(false);
+
+      mockLimit.mockResolvedValue({ success: true, remaining: 9, reset: Date.now() + 10000 });
+      const after = await rateLimit("ip-2", { limit: 10, windowSecs: 60 }, { failureMode: "closed" });
+      expect(after.success).toBe(true);
+      expect(after.remaining).toBe(9);
+      expect(after.unavailable).toBeUndefined();
       consoleSpy.mockRestore();
     });
   });

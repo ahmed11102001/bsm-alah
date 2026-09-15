@@ -2,13 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.hoisted(() => {
   process.env.DEV_JWT_SECRET = "super-secret-key-12345";
-  process.env.NODE_ENV = "production";
 });
+
+const mockDevUserFindUnique = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/prisma", () => ({
+  default: { developerUser: { findUnique: mockDevUserFindUnique } },
+}));
 
 import {
   signDevToken,
   verifyDevToken,
   getDevSessionFromRequest,
+  clearDevSessionStatusCache,
   buildDevSessionCookie,
   buildDevLogoutCookie,
   type DevSession,
@@ -19,6 +25,10 @@ import { SignJWT } from "jose";
 describe("Dev Auth Module", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubEnv("NODE_ENV", "production");
+    // Default: live account is ACTIVE — pure-JWT tests below stay green.
+    mockDevUserFindUnique.mockResolvedValue({ status: "ACTIVE" });
+    clearDevSessionStatusCache();
   });
 
   afterEach(() => {

@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { devError, devRateLimited } from "@/lib/dev-errors";
 
 export async function POST(req: NextRequest) {
   try {
     const ip = getIP(req);
     const rl = await rateLimit(`claim-check:${ip}`, { limit: 5, windowSecs: 3600 });
     if (!rl.success) {
-      return NextResponse.json({ error: "تجاوزت الحد المسموح — حاول بعد ساعة" }, { status: 429 });
+      return devRateLimited("تجاوزت الحد المسموح — حاول بعد ساعة", "RATE_LIMITED", rl.retryAfter);
     }
 
     const { email, inviteCode } = await req.json();
     if (!email || !inviteCode) {
-      return NextResponse.json({ error: "البريد الإلكتروني والكود مطلوبين" }, { status: 400 });
+      return devError("البريد الإلكتروني والكود مطلوبين", "INVALID_REQUEST", 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -25,16 +26,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!invite) {
-      return NextResponse.json({ error: "البيانات غير صحيحة" }, { status: 400 });
+      return devError("البيانات غير صحيحة", "INVALID_REQUEST", 400);
     }
 
     if (new Date() > invite.expiresAt) {
-      return NextResponse.json({ error: "الكود منتهي الصلاحية، اطلب كود جديد" }, { status: 400 });
+      return devError("الكود منتهي الصلاحية، اطلب كود جديد", "INVALID_REQUEST", 400);
     }
 
     const isValid = await bcrypt.compare(inviteCode, invite.codeHash);
     if (!isValid) {
-      return NextResponse.json({ error: "البيانات غير صحيحة" }, { status: 400 });
+      return devError("البيانات غير صحيحة", "INVALID_REQUEST", 400);
     }
 
     const existingUser = await prisma.developerUser.findUnique({
@@ -49,6 +50,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[claim-check]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }

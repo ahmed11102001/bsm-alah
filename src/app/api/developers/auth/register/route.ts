@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signDevToken, buildDevSessionCookie } from "@/lib/dev-auth";
+import { devError, devRateLimited } from "@/lib/dev-errors";
 import { rateLimit } from "@/lib/rate-limit";
 
 // ── Validate Egyptian/international phone number ──────────────────────────────
@@ -22,30 +23,30 @@ export async function POST(req: NextRequest) {
 
     // ── Validation ────────────────────────────────────────────────────────────
     if (!firstName?.trim() || !lastName?.trim()) {
-      return NextResponse.json({ error: "الاسم الأول والأخير مطلوبين" }, { status: 400 });
+      return devError("الاسم الأول والأخير مطلوبين", "INVALID_REQUEST", 400);
     }
     if (firstName.trim().length < 2 || lastName.trim().length < 2) {
-      return NextResponse.json({ error: "الاسم يجب أن يكون حرفين على الأقل" }, { status: 400 });
+      return devError("الاسم يجب أن يكون حرفين على الأقل", "INVALID_REQUEST", 400);
     }
     if (!phone) {
-      return NextResponse.json({ error: "رقم الموبايل مطلوب" }, { status: 400 });
+      return devError("رقم الموبايل مطلوب", "INVALID_REQUEST", 400);
     }
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) {
-      return NextResponse.json({ error: "رقم الموبايل غير صحيح" }, { status: 400 });
+      return devError("رقم الموبايل غير صحيح", "INVALID_REQUEST", 400);
     }
     if (!email) {
-      return NextResponse.json({ error: "الإيميل مطلوب" }, { status: 400 });
+      return devError("الإيميل مطلوب", "INVALID_REQUEST", 400);
     }
     if (!password || password.length < 8) {
-      return NextResponse.json({ error: "كلمة المرور 8 أحرف على الأقل" }, { status: 400 });
+      return devError("كلمة المرور 8 أحرف على الأقل", "INVALID_REQUEST", 400);
     }
 
     // ── Rate limit ────────────────────────────────────────────────────────────
     const ip = req.headers.get("x-forwarded-for") ?? "unknown";
     const rl = await rateLimit(`dev-register:${ip}`, { limit: 5, windowSecs: 3600 });
     if (!rl.success) {
-      return NextResponse.json({ error: "كثير من المحاولات، حاول بعد شوية" }, { status: 429 });
+      return devRateLimited("كثير من المحاولات، حاول بعد شوية", "RATE_LIMITED", rl.retryAfter);
     }
 
     // ── Check uniqueness ──────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       where: { email: email.toLowerCase() },
     });
     if (existingEmail) {
-      return NextResponse.json({ error: "الإيميل ده مسجل قبل كده" }, { status: 409 });
+      return devError("الإيميل ده مسجل قبل كده", "CONFLICT", 409);
     }
 
     // ── Create user ───────────────────────────────────────────────────────────
@@ -81,6 +82,6 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("[dev-register]", err);
-    return NextResponse.json({ error: "حصل خطأ، حاول تاني" }, { status: 500 });
+    return devError("حصل خطأ، حاول تاني", "INTERNAL", 500);
   }
 }

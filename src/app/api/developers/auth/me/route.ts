@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 
 export async function GET(req: Request) {
   try {
     const session = await getDevSessionFromRequest(req as any);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return devError("Unauthorized", "AUTH_REQUIRED", 401);
     }
 
     const developer = await prisma.developerUser.findUnique({
@@ -22,11 +23,11 @@ export async function GET(req: Request) {
     });
 
     if (!developer) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return devError("Not found", "NOT_FOUND", 404);
     }
 
     return NextResponse.json({ developer });
   } catch (error) {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return devError("Server error", "INTERNAL", 500);
   }
 }

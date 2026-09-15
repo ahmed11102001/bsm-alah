@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 
@@ -11,11 +12,11 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
   const project = await getProjectForOwnerOrDeveloper(id, session.id);
   if (!project) {
-    return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    return devError("المشروع مش موجود", "NOT_FOUND", 404);
   }
 
   const projectWithDetails = await prisma.developerProject.findFirst({
@@ -43,7 +44,7 @@ export async function GET(
   });
 
   if (!projectWithDetails) {
-    return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    return devError("المشروع مش موجود", "NOT_FOUND", 404);
   }
 
   // OTP count for today
@@ -75,16 +76,16 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
   const project = await getProjectForOwnerOrDeveloper(id, session.id);
 
   if (!project) {
-    return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    return devError("المشروع مش موجود", "NOT_FOUND", 404);
   }
 
   if (project.status === "TRANSFERRED") {
-    return NextResponse.json({ error: "المشروع اتسلم لعميل — مش تقدر تحذفه" }, { status: 400 });
+    return devError("المشروع اتسلم لعميل — مش تقدر تحذفه", "INVALID_REQUEST", 400);
   }
 
   await prisma.developerProject.update({

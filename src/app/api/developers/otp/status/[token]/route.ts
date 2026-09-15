@@ -9,10 +9,24 @@ async function verifyApiKey(raw: string): Promise<{ projectId: string; developer
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
     include: {
-      project: { select: { developerId: true } },
+      project: {
+        select: {
+          developerId: true,
+          developer: { select: { status: true } },
+          owner: { select: { status: true } },
+        },
+      },
     },
   });
   if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
+
+  // Suspended developer OR owner → key is unusable (same 401 as a bad key).
+  if (
+    keyRecord.project.developer?.status === "SUSPENDED" ||
+    keyRecord.project.owner?.status === "SUSPENDED"
+  ) {
+    return null;
+  }
   return {
     projectId: keyRecord.projectId,
     developerId: keyRecord.project.developerId,
@@ -40,7 +54,7 @@ export async function GET(
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "x-api-key header مطلوب" },
+      { ok: false, error: "x-api-key header مطلوب", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -48,7 +62,7 @@ export async function GET(
   const auth = await verifyApiKey(rawKey);
   if (!auth) {
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي" },
+      { ok: false, error: "API Key غير صحيح أو ملغي", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -57,7 +71,7 @@ export async function GET(
   const { token } = await params;
   if (!token) {
     return NextResponse.json(
-      { ok: false, error: "token مطلوب في الـ URL" },
+      { ok: false, error: "token مطلوب في الـ URL", code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -119,7 +133,7 @@ export async function GET(
 
   if (!dbOtp) {
     return NextResponse.json(
-      { ok: false, error: "Token غير موجود أو لا ينتمي لهذا الـ API Key" },
+      { ok: false, error: "Token غير موجود أو لا ينتمي لهذا الـ API Key", code: "TOKEN_NOT_FOUND" },
       { status: 404 }
     );
   }

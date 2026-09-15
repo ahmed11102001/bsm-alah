@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { getProjectForOwner } from "@/lib/dev-project-auth";
 
 const OWNER_PLAN_PRICE = 249;
 
 export async function GET(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
-  if (!projectId) return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+  if (!projectId) return devError("projectId is required", "INVALID_REQUEST", 400);
 
   const project = await getProjectForOwner(projectId, session.id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود أو مش بتاعك" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود أو مش بتاعك", "NOT_FOUND", 404);
 
   const pending = await prisma.paymentRequest.findFirst({
     where: { developerProjectId: projectId, status: "PENDING" },
@@ -26,19 +27,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const { projectId, paymentMethod } = await req.json().catch(() => ({}));
-  if (!projectId) return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+  if (!projectId) return devError("projectId is required", "INVALID_REQUEST", 400);
   if (paymentMethod && !["instapay", "etisalat"].includes(paymentMethod)) {
-    return NextResponse.json({ error: "طريقة دفع غير صالحة" }, { status: 400 });
+    return devError("طريقة دفع غير صالحة", "INVALID_REQUEST", 400);
   }
 
   const project = await getProjectForOwner(projectId, session.id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود أو مش بتاعك" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود أو مش بتاعك", "NOT_FOUND", 404);
 
   if (project.plan === "OWNER_PLAN" && project.planRenewsAt && project.planRenewsAt > new Date()) {
-    return NextResponse.json({ error: "المشروع ده مشترك بالفعل في باقة الأونر" }, { status: 409 });
+    return devError("المشروع ده مشترك بالفعل في باقة الأونر", "CONFLICT", 409);
   }
 
   // منع تكرار طلب pending لنفس المشروع

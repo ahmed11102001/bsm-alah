@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { createHash, randomBytes } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { rateLimiterUnavailableResponse } from "@/lib/dev-errors";
 import { decryptToken } from "@/lib/crypto";
 import { storeOtp } from "@/lib/otp-redis";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
@@ -43,12 +44,24 @@ async function verifyApiKey(raw: string): Promise<AuthResult | { error: "INVALID
     where: { keyHash: hash },
     include: {
       project: {
-        include: { metaConnection: true },
+        include: {
+          metaConnection: true,
+          developer: { select: { status: true } },
+          owner: { select: { status: true } },
+        },
       },
     },
   });
 
   if (!keyRecord || keyRecord.status !== "ACTIVE") return { error: "INVALID_KEY" };
+
+  // Suspended developer OR owner → key is unusable (same 401 as a bad key).
+  if (
+    keyRecord.project.developer?.status === "SUSPENDED" ||
+    keyRecord.project.owner?.status === "SUSPENDED"
+  ) {
+    return { error: "INVALID_KEY" };
+  }
 
   const meta = keyRecord.project.metaConnection;
   // ربط Meta غير مكتمل أو غير مفعّل → خطأ مخصص (مش 401 عام)
@@ -356,7 +369,7 @@ export async function POST(req: NextRequest) {
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "API Key مطلوب في header: x-api-key" },
+      { ok: false, error: "API Key مطلوب في header: x-api-key", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -381,7 +394,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Request body يجب أن يكون JSON صحيح" },
+      { ok: false, error: "Request body يجب أن يكون JSON صحيح", code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -415,7 +428,7 @@ export async function POST(req: NextRequest) {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) {
     return NextResponse.json(
-      { ok: false, error: `رقم الهاتف غير صحيح: "${phone}" — استخدم E.164 أو الصيغة المصرية` },
+      { ok: false, error: `رقم الهاتف غير صحيح: "${phone}" — استخدم E.164 أو الصيغة المصرية`, code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -493,8 +506,10 @@ export async function POST(req: NextRequest) {
 
   // ── 6. Rate limit: per phone + per IP (بعد كل التحققات — قبل أي أثر جانبي)
   const rlPhone = `otp-send:${auth.projectId}:${normalizedPhone}`;
-  const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 });
+  // fail-closed: عطل Redis أثناء OTP ≠ سماح — نرفض بـ 503 بدل الـ bypass.
+  const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rl.success) {
+    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter);
     return NextResponse.json(
       {
         ok: false,
@@ -511,15 +526,17 @@ export async function POST(req: NextRequest) {
 
   // Rate limit per IP — حماية من distributed attacks
   const ip = getIP(req);
-  const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 });
+  const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 }, { failureMode: "closed" });
   if (!rlIpMin.success) {
+    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter);
     return NextResponse.json(
       { ok: false, error: "كثير من الطلبات — حاول بعد شوية", code: "RATE_LIMIT_IP", retryAfter: rlIpMin.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
     );
   }
-  const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 });
+  const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rlIpHr.success) {
+    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter);
     return NextResponse.json(
       { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", code: "RATE_LIMIT_IP", retryAfter: rlIpHr.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
@@ -650,7 +667,7 @@ export async function POST(req: NextRequest) {
         error: isPayloadMismatch
           ? `القالب "${template.name}" مرفوض من Meta (parameters mismatch) — زامن القوالب من صفحة القوالب ثم أعد المحاولة. لو تكرر، راجع تعريف القالب في Meta.`
           : "WhatsApp send failed: " + sendResult.error,
-        code: isPayloadMismatch ? "META_131008" : undefined,
+        code: isPayloadMismatch ? "META_131008" : "META_SEND_FAILED",
         ...(sendResult.metaCode ? { metaCode: sendResult.metaCode } : {}),
       },
       { status: sendResult.statusCode ?? 502 }

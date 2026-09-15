@@ -26,11 +26,23 @@ export async function GET(req: NextRequest) {
     where: { keyHash: hash },
     select: {
       status: true,
-      project: { select: { id: true, name: true } },
+      project: {
+        select: {
+          id: true,
+          name: true,
+          developer: { select: { status: true } },
+          owner: { select: { status: true } },
+        },
+      },
     },
   });
 
-  if (!keyRecord || keyRecord.status !== "ACTIVE") {
+  if (
+    !keyRecord ||
+    keyRecord.status !== "ACTIVE" ||
+    keyRecord.project.developer?.status === "SUSPENDED" ||
+    keyRecord.project.owner?.status === "SUSPENDED"
+  ) {
     return NextResponse.json(
       { ok: false, error: "API Key غير صحيح أو ملغي", code: "INVALID_API_KEY" },
       { status: 401 }

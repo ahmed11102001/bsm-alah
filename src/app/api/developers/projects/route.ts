@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { isOwnerOnlyAccount } from "@/lib/dev-role";
 
 // ── GET /api/developers/projects — جلب كل مشاريع المبرمج ─────────────────────
 export async function GET(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
   const projects = await prisma.developerProject.findMany({
     where: { 
@@ -42,23 +43,24 @@ export async function GET(req: NextRequest) {
 // ── POST /api/developers/projects — إنشاء مشروع جديد ────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
   // الأونر (عميل استلم مشروع جاهز) مش يقدر ينشئ مشاريع جديدة — الإنشاء للمطور بس
   if (await isOwnerOnlyAccount(session.id)) {
-    return NextResponse.json(
-      { error: "حساب الأونر مش يقدر ينشئ مشاريع جديدة" },
-      { status: 403 }
+    return devError(
+      "حساب الأونر مش يقدر ينشئ مشاريع جديدة",
+      "FORBIDDEN",
+      403
     );
   }
 
   const { name, description } = await req.json();
 
   if (!name?.trim()) {
-    return NextResponse.json({ error: "اسم المشروع مطلوب" }, { status: 400 });
+    return devError("اسم المشروع مطلوب", "INVALID_REQUEST", 400);
   }
   if (name.trim().length < 3) {
-    return NextResponse.json({ error: "اسم المشروع 3 أحرف على الأقل" }, { status: 400 });
+    return devError("اسم المشروع 3 أحرف على الأقل", "INVALID_REQUEST", 400);
   }
 
 

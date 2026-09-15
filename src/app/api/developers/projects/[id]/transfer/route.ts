@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { getProjectForOwner } from "@/lib/dev-project-auth";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
@@ -23,11 +24,11 @@ export async function POST(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     const { email, role } = await req.json();
     if (!email || !["OWNER", "DEVELOPER"].includes(role)) {
-      return NextResponse.json({ error: "بيانات غير صالحة" }, { status: 400 });
+      return devError("بيانات غير صالحة", "INVALID_REQUEST", 400);
     }
 
     let project;
@@ -36,23 +37,25 @@ export async function POST(
       project = await prisma.developerProject.findFirst({
         where: { id, developerId: session.id, status: "ACTIVE" },
       });
-      if (!project) return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+      if (!project) return devError("غير مصرح", "FORBIDDEN", 403);
 
       if (project.ownerId) {
-        return NextResponse.json(
-          { error: "المشروع عنده مالك بالفعل — لازم يشيل نفسه أو تتواصل مع الدعم قبل تعيين مالك جديد" },
-          { status: 409 }
+        return devError(
+          "المشروع عنده مالك بالفعل — لازم يشيل نفسه أو تتواصل مع الدعم قبل تعيين مالك جديد",
+          "CONFLICT",
+          409
         );
       }
     } else {
       // الطالب لازم يكون ownerId
       project = await getProjectForOwner(id, session.id);
-      if (!project) return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+      if (!project) return devError("غير مصرح", "FORBIDDEN", 403);
 
       if (project.developerRemovedAt === null) {
-        return NextResponse.json(
-          { error: "المشروع عنده مطور نشط بالفعل — لازم تشيله الأول قبل ما تدعو مطور جديد" },
-          { status: 409 }
+        return devError(
+          "المشروع عنده مطور نشط بالفعل — لازم تشيله الأول قبل ما تدعو مطور جديد",
+          "CONFLICT",
+          409
         );
       }
     }
@@ -85,7 +88,7 @@ export async function POST(
     return NextResponse.json({ ok: true, code });
   } catch (err) {
     console.error("[project-transfer-post]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }
 
@@ -96,11 +99,11 @@ export async function DELETE(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     // Only owner can remove developer
     const project = await getProjectForOwner(id, session.id);
-    if (!project) return NextResponse.json({ error: "غير مصرح — للمالك فقط" }, { status: 403 });
+    if (!project) return devError("غير مصرح — للمالك فقط", "FORBIDDEN", 403);
 
     await prisma.developerProject.update({
       where: { id },
@@ -110,6 +113,6 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[project-transfer-delete]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }

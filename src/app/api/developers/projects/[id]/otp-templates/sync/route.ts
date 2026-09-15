@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { decryptToken } from "@/lib/crypto";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+import { devError } from "@/lib/dev-errors";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 import { placeholderPositions, type OtpVariableDefinition } from "@/lib/developer-template-contract";
 
@@ -31,19 +32,20 @@ export async function POST(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     const project = await getProjectForOwnerOrDeveloper(id, session.id);
-    if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
     const connection = await prisma.developerMetaConnection.findUnique({
       where: { projectId: id },
     });
 
     if (!connection?.isVerified || !connection.accessToken || !connection.wabaId) {
-      return NextResponse.json(
-        { error: "ربط Meta مطلوب — ادخل على نظرة عامة واربط Meta الأول" },
-        { status: 400 }
+      return devError(
+        "ربط Meta مطلوب — ادخل على نظرة عامة واربط Meta الأول",
+        "INVALID_REQUEST",
+        400
       );
     }
 
@@ -59,9 +61,10 @@ export async function POST(
     const metaData = await metaRes.json();
 
     if (!metaRes.ok || metaData.error) {
-      return NextResponse.json(
-        { error: metaData.error?.message || "فشل الاتصال بـ Meta" },
-        { status: 502 }
+      return devError(
+        metaData.error?.message || "فشل الاتصال بـ Meta",
+        "UPSTREAM_ERROR",
+        502
       );
     }
 
@@ -193,11 +196,10 @@ export async function POST(
     console.error("[sync-templates] unexpected failure", {
       error: err instanceof Error ? err.message : "unknown error",
     });
-    return NextResponse.json(
-      { error: "Unable to sync templates right now. Please try again shortly." },
-      { status: 503 },
+    return devError(
+      "Unable to sync templates right now. Please try again shortly.",
+      "UNAVAILABLE",
+      503,
     );
-    console.error("[sync-templates]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
   }
 }

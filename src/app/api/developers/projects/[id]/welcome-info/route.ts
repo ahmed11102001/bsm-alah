@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 
 export async function GET(
   req: NextRequest,
@@ -8,7 +9,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const project = await prisma.developerProject.findFirst({
     where: { id, ownerId: session.id },
@@ -16,7 +17,7 @@ export async function GET(
   });
 
   if (!project) {
-    return NextResponse.json({ error: "المشروع مش موجود أو مش بتاعك" }, { status: 404 });
+    return devError("المشروع مش موجود أو مش بتاعك", "NOT_FOUND", 404);
   }
 
   if (project.ownerWelcomeSeenAt) {

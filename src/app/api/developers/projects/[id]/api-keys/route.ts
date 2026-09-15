@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { randomBytes, createHash } from "crypto";
 
 function generateApiKey(): { prefix: string; fullKey: string; hash: string } {
@@ -26,10 +27,10 @@ export async function GET(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     const project = await getProjectOrFail(session.id, id);
-    if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
     const keys = await prisma.developerApiKey.findMany({
       where: { projectId: id },
@@ -48,7 +49,7 @@ export async function GET(
     return NextResponse.json({ keys });
   } catch (err) {
     console.error("[project-api-keys-get]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }
 
@@ -60,10 +61,10 @@ export async function POST(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     const project = await getProjectOrFail(session.id, id);
-    if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
     const { name } = await req.json();
 
@@ -72,9 +73,10 @@ export async function POST(
     });
 
     if (activeCount >= 5) {
-      return NextResponse.json(
-        { error: "ممكن 5 API Keys بس نشطين في نفس الوقت لكل مشروع. احذف واحد الأول." },
-        { status: 400 }
+      return devError(
+        "ممكن 5 API Keys بس نشطين في نفس الوقت لكل مشروع. احذف واحد الأول.",
+        "INVALID_REQUEST",
+        400
       );
     }
 
@@ -112,7 +114,7 @@ export async function POST(
     });
   } catch (err) {
     console.error("[project-api-keys-post]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }
 
@@ -124,20 +126,20 @@ export async function DELETE(
   try {
     const { id } = await params;
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
     const project = await getProjectOrFail(session.id, id);
-    if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
     const { searchParams } = new URL(req.url);
     const keyId = searchParams.get("keyId");
-    if (!keyId) return NextResponse.json({ error: "keyId مطلوب" }, { status: 400 });
+    if (!keyId) return devError("keyId مطلوب", "INVALID_REQUEST", 400);
 
     const key = await prisma.developerApiKey.findFirst({
       where: { id: keyId, projectId: id },
     });
 
-    if (!key) return NextResponse.json({ error: "API Key مش موجود" }, { status: 404 });
+    if (!key) return devError("API Key مش موجود", "NOT_FOUND", 404);
 
     await prisma.developerApiKey.update({
       where: { id: keyId },
@@ -147,6 +149,6 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[project-api-keys-delete]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }

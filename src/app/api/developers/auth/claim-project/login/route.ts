@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { devError, devRateLimited } from "@/lib/dev-errors";
 import { signDevToken } from "@/lib/dev-auth";
 
 export async function POST(req: NextRequest) {
@@ -9,12 +10,12 @@ export async function POST(req: NextRequest) {
     const ip = getIP(req);
     const rl = await rateLimit(`claim-login:${ip}`, { limit: 5, windowSecs: 3600 });
     if (!rl.success) {
-      return NextResponse.json({ error: "تجاوزت الحد المسموح — حاول بعد ساعة" }, { status: 429 });
+      return devRateLimited("تجاوزت الحد المسموح — حاول بعد ساعة", "RATE_LIMITED", rl.retryAfter);
     }
 
     const { email, inviteCode, password } = await req.json();
     if (!email || !inviteCode || !password) {
-      return NextResponse.json({ error: "بيانات ناقصة" }, { status: 400 });
+      return devError("بيانات ناقصة", "INVALID_REQUEST", 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -25,12 +26,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (!invite || new Date() > invite.expiresAt) {
-      return NextResponse.json({ error: "الكود منتهي الصلاحية أو غير صحيح" }, { status: 400 });
+      return devError("الكود منتهي الصلاحية أو غير صحيح", "INVALID_REQUEST", 400);
     }
 
     const isValidCode = await bcrypt.compare(inviteCode, invite.codeHash);
     if (!isValidCode) {
-      return NextResponse.json({ error: "البيانات غير صحيحة" }, { status: 400 });
+      return devError("البيانات غير صحيحة", "INVALID_REQUEST", 400);
     }
 
     const existingUser = await prisma.developerUser.findUnique({
@@ -38,12 +39,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!existingUser) {
-      return NextResponse.json({ error: "الحساب غير موجود" }, { status: 400 });
+      return devError("الحساب غير موجود", "INVALID_REQUEST", 400);
     }
 
     const isValidPassword = await bcrypt.compare(password, existingUser.password);
     if (!isValidPassword) {
-      return NextResponse.json({ error: "كلمة المرور غير صحيحة" }, { status: 401 });
+      return devError("كلمة المرور غير صحيحة", "INVALID_CREDENTIALS", 401);
+    }
+
+    if (existingUser.status === "SUSPENDED") {
+      return devError("الحساب موقف، تواصل مع الدعم", "ACCOUNT_SUSPENDED", 403);
     }
 
     // Atomic update
@@ -53,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (updatedInvite.count === 0) {
-      return NextResponse.json({ error: "تم استخدام الكود بالفعل" }, { status: 400 });
+      return devError("تم استخدام الكود بالفعل", "CONFLICT", 400);
     }
 
     // Assign role
@@ -89,6 +94,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err) {
     console.error("[claim-login]", err);
-    return NextResponse.json({ error: "حصل خطأ" }, { status: 500 });
+    return devError("حصل خطأ", "INTERNAL", 500);
   }
 }

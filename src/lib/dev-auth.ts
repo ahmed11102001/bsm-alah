@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import prisma from "@/lib/prisma";
 
 const secretStr = process.env.DEV_JWT_SECRET ?? process.env.NEXTAUTH_SECRET;
 if (!secretStr) {
@@ -37,17 +38,67 @@ export async function verifyDevToken(token: string): Promise<DevSession | null> 
   }
 }
 
+// ─── Central SUSPENDED enforcement ──────────────────────────────────────────
+// JWTs live up to 30 days and embed `status` at login time, so a token issued
+// while ACTIVE stays cryptographically valid after a SUSPEND. Every session
+// route in /api/developers/** resolves identity through getDevSession() /
+// getDevSessionFromRequest(), so the live status check lives HERE — one place,
+// not one check per route.
+//
+// Performance: a short-lived (60s) in-memory status cache bounds the extra DB
+// load to ~1 query/min/active-user/instance. Worst case, a freshly suspended
+// account keeps access for at most 60s on a warm instance — not 30 days.
+// On DB failure we fall back to the JWT claim (previous behavior) and log,
+// so a DB blip doesn't lock out every developer; the trade-off is documented.
+
+const STATUS_TTL_MS = 60_000;
+const STATUS_CACHE_MAX = 5000;
+const statusCache = new Map<string, { status: string; expiresAt: number }>();
+
+export function clearDevSessionStatusCache(): void {
+  statusCache.clear();
+}
+
+async function getLiveAccountStatus(userId: string, jwtStatus: string): Promise<string> {
+  const now = Date.now();
+  const cached = statusCache.get(userId);
+  if (cached && cached.expiresAt > now) return cached.status;
+  try {
+    const user = await prisma.developerUser.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    const status = user?.status ?? "DELETED";
+    statusCache.set(userId, { status, expiresAt: now + STATUS_TTL_MS });
+    if (statusCache.size > STATUS_CACHE_MAX) {
+      const oldest = statusCache.keys().next().value;
+      if (oldest) statusCache.delete(oldest);
+    }
+    return status;
+  } catch (err) {
+    console.error("[dev-auth] live status lookup failed — trusting JWT claim:", err);
+    return jwtStatus;
+  }
+}
+
+async function withLiveStatus(session: DevSession | null): Promise<DevSession | null> {
+  if (!session) return null;
+  const live = await getLiveAccountStatus(session.id, session.status);
+  if (live === "SUSPENDED" || live === "DELETED") return null;
+  return live === session.status ? session : { ...session, status: live };
+}
+
 export async function getDevSession(): Promise<DevSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyDevToken(token);
+  return withLiveStatus(await verifyDevToken(token));
 }
 
 export async function getDevSessionFromRequest(req: NextRequest): Promise<DevSession | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyDevToken(token);
+  return withLiveStatus(await verifyDevToken(token));
 }
 
 export function buildDevSessionCookie(token: string): string {

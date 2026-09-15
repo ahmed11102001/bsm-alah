@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createHash } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
+import { rateLimiterUnavailableResponse } from "@/lib/dev-errors";
 import { verifyOtp } from "@/lib/otp-redis";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
@@ -10,10 +11,24 @@ async function verifyApiKey(raw: string): Promise<{ projectId: string; developer
   const keyRecord = await prisma.developerApiKey.findUnique({
     where: { keyHash: hash },
     include: {
-      project: { select: { developerId: true } },
+      project: {
+        select: {
+          developerId: true,
+          developer: { select: { status: true } },
+          owner: { select: { status: true } },
+        },
+      },
     },
   });
   if (!keyRecord || keyRecord.status !== "ACTIVE") return null;
+
+  // Suspended developer OR owner → key is unusable (same 401 as a bad key).
+  if (
+    keyRecord.project.developer?.status === "SUSPENDED" ||
+    keyRecord.project.owner?.status === "SUSPENDED"
+  ) {
+    return null;
+  }
 
   prisma.developerApiKey
     .update({ where: { id: keyRecord.id }, data: { lastUsedAt: new Date() } })
@@ -37,7 +52,7 @@ export async function POST(req: NextRequest) {
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "x-api-key header مطلوب" },
+      { ok: false, error: "x-api-key header مطلوب", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -45,7 +60,7 @@ export async function POST(req: NextRequest) {
   const auth = await verifyApiKey(rawKey);
   if (!auth) {
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي" },
+      { ok: false, error: "API Key غير صحيح أو ملغي", code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -55,7 +70,7 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch {
     return NextResponse.json(
-      { ok: false, error: "Request body يجب أن يكون JSON صحيح" },
+      { ok: false, error: "Request body يجب أن يكون JSON صحيح", code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -64,34 +79,38 @@ export async function POST(req: NextRequest) {
 
   if (!token || !code) {
     return NextResponse.json(
-      { ok: false, error: "token و code مطلوبين في body" },
+      { ok: false, error: "token و code مطلوبين في body", code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
 
   // ── 3. Rate limit: per token + per IP (distributed attacks) ───────────────
   // 10 محاولات كل 15 دقيقة لكل token
-  const rl = await rateLimit(`otp-verify:${token}`, { limit: 10, windowSecs: 900 });
+  // fail-closed: عطل Redis أثناء OTP ≠ سماح — نرفض بـ 503 بدل الـ bypass.
+  const rl = await rateLimit(`otp-verify:${token}`, { limit: 10, windowSecs: 900 }, { failureMode: "closed" });
   if (!rl.success) {
+    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter);
     return NextResponse.json(
-      { ok: false, error: "كثير من المحاولات — انتظر قبل إعادة المحاولة", retryAfter: rl.retryAfter },
+      { ok: false, error: "كثير من المحاولات — انتظر قبل إعادة المحاولة", code: "RATE_LIMITED", retryAfter: rl.retryAfter },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
     );
   }
 
   // Rate limit per IP — 15 req/min + 150 req/hr
   const ip = getIP(req);
-  const rlIpMin = await rateLimit(`otp-verify-ip-min:${ip}`, { limit: 15, windowSecs: 60 });
+  const rlIpMin = await rateLimit(`otp-verify-ip-min:${ip}`, { limit: 15, windowSecs: 60 }, { failureMode: "closed" });
   if (!rlIpMin.success) {
+    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter);
     return NextResponse.json(
-      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", retryAfter: rlIpMin.retryAfter },
+      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", code: "RATE_LIMITED", retryAfter: rlIpMin.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
     );
   }
-  const rlIpHr = await rateLimit(`otp-verify-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 });
+  const rlIpHr = await rateLimit(`otp-verify-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rlIpHr.success) {
+    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter);
     return NextResponse.json(
-      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", retryAfter: rlIpHr.retryAfter },
+      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", code: "RATE_LIMITED", retryAfter: rlIpHr.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
     );
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 
 // ─── GET /api/developers/projects/[id]/logs?page=&limit=&status= ─────────────
@@ -15,10 +16,10 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const project = await getProjectForOwnerOrDeveloper(id, session.id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
@@ -29,7 +30,7 @@ export async function GET(
   let statusWhere: any = undefined;
   if (statusFilter !== "ALL") {
     if (!(DISPLAY_STATUSES as readonly string[]).includes(statusFilter)) {
-      return NextResponse.json({ error: "status غير صالح" }, { status: 400 });
+      return devError("status غير صالح", "INVALID_REQUEST", 400);
     }
     statusWhere = statusFilter === "PENDING"
       ? { in: ["PENDING", "SENT"] }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signDevToken, buildDevSessionCookie } from "@/lib/dev-auth";
+import { devError, devRateLimited } from "@/lib/dev-errors";
 import { rateLimit } from "@/lib/rate-limit";
 import { isOwnerOnlyAccount, getLatestOwnedProjectId } from "@/lib/dev-role";
 
@@ -9,15 +10,16 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ error: "الإيميل وكلمة المرور مطلوبين" }, { status: 400 });
+      return devError("الإيميل وكلمة المرور مطلوبين", "INVALID_REQUEST", 400);
     }
 
     const key = `dev-login:${email.toLowerCase()}`;
     const rl = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
     if (!rl.success) {
-      return NextResponse.json(
-        { error: `كثير من المحاولات. حاول بعد ${rl.retryAfter} ثانية` },
-        { status: 429 }
+      return devRateLimited(
+        `كثير من المحاولات. حاول بعد ${rl.retryAfter} ثانية`,
+        "RATE_LIMITED",
+        rl.retryAfter
       );
     }
 
@@ -25,10 +27,10 @@ export async function POST(req: NextRequest) {
       where: { email: email.toLowerCase() },
     });
     if (!developer || !(await bcrypt.compare(password, developer.password))) {
-      return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
+      return devError("بيانات الدخول غير صحيحة", "INVALID_CREDENTIALS", 401);
     }
     if (developer.status === "SUSPENDED") {
-      return NextResponse.json({ error: "الحساب موقف، تواصل مع الدعم" }, { status: 403 });
+      return devError("الحساب موقف، تواصل مع الدعم", "ACCOUNT_SUSPENDED", 403);
     }
 
     const token = await signDevToken({
@@ -50,6 +52,6 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("[dev-login]", err);
-    return NextResponse.json({ error: "حصل خطأ، حاول تاني" }, { status: 500 });
+    return devError("حصل خطأ، حاول تاني", "INTERNAL", 500);
   }
 }

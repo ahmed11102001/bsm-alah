@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 import { NextRequest } from "next/server";
 
 // PUT /api/developers/notifications/[id]/read — تعليم إشعار واحد كمقروء
@@ -10,7 +11,7 @@ export async function PUT(
 ) {
   const session = await getDevSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
+    return devError("غير مصرّح", "AUTH_REQUIRED", 401);
   }
 
   const { id } = await params;
@@ -20,7 +21,7 @@ export async function PUT(
   });
 
   if (!notification) {
-    return NextResponse.json({ error: "الإشعار غير موجود" }, { status: 404 });
+    return devError("الإشعار غير موجود", "NOT_FOUND", 404);
   }
 
   await prisma.developerNotification.update({

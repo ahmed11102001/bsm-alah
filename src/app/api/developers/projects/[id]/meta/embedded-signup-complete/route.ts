@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { devError, devRateLimited } from "@/lib/dev-errors";
 import { encryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION as GRAPH_VERSION } from "@/lib/meta-graph";
 
@@ -29,18 +30,18 @@ export async function POST(
   /* ── 1. Auth check — dev-portal session, not NextAuth ───────────────────── */
   const session = await getDevSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    return devError("unauthenticated", "AUTH_REQUIRED", 401);
   }
 
   const project = await getProjectForOwnerOrDeveloper(projectId, session.id);
   if (!project) {
-    return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+    return devError("المشروع مش موجود", "NOT_FOUND", 404);
   }
 
   const ip = req.headers.get("x-forwarded-for") ?? "unknown";
   const rl = await rateLimit(`dev-meta-embedded-connect:${ip}`, { limit: 10, windowSecs: 3600 });
   if (!rl.success) {
-    return NextResponse.json({ error: "كثير من المحاولات، حاول بعد شوية" }, { status: 429 });
+    return devRateLimited("كثير من المحاولات، حاول بعد شوية", "RATE_LIMITED", rl.retryAfter);
   }
 
   /* ── 2. Parse body ───────────────────────────────────────────────────────── */
@@ -48,7 +49,7 @@ export async function POST(
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return devError("Invalid JSON body", "INVALID_REQUEST", 400);
   }
 
   const {
@@ -64,7 +65,7 @@ export async function POST(
   };
 
   if (!code) {
-    return NextResponse.json({ error: "code مطلوب" }, { status: 400 });
+    return devError("code مطلوب", "INVALID_REQUEST", 400);
   }
 
   /* ── 3. Exchange code → business token ──────────────────────────────────── */
@@ -75,9 +76,10 @@ export async function POST(
 
   if (!appId || !appSecret) {
     console.error("[DEV-EmbeddedSignup] Missing NEXT_PUBLIC_META_APP_ID or META_APP_SECRET");
-    return NextResponse.json(
-      { error: "Server configuration error — Meta credentials missing" },
-      { status: 500 },
+    return devError(
+      "Server configuration error — Meta credentials missing",
+      "INTERNAL",
+      500,
     );
   }
 
@@ -110,16 +112,18 @@ export async function POST(
 
     if (!tokenRes.ok || tokenData.error || !tokenData.access_token) {
       console.error("[DEV-EmbeddedSignup] Token exchange error:", tokenData);
-      return NextResponse.json(
-        { error: tokenData.error?.message ?? "فشل تبادل الـ code — تأكد من صلاحيته" },
-        { status: 502 },
+      return devError(
+        tokenData.error?.message ?? "فشل تبادل الـ code — تأكد من صلاحيته",
+        "UPSTREAM_ERROR",
+        502,
       );
     }
   } catch (err) {
     console.error("[DEV-EmbeddedSignup] Token exchange network error:", err);
-    return NextResponse.json(
-      { error: "فشل الاتصال بـ Meta — حاول مرة أخرى" },
-      { status: 502 },
+    return devError(
+      "فشل الاتصال بـ Meta — حاول مرة أخرى",
+      "UPSTREAM_ERROR",
+      502,
     );
   }
 
@@ -156,12 +160,10 @@ export async function POST(
 
   if (!phone_number_id || !waba_id) {
     console.error("[DEV-EmbeddedSignup] Could not resolve WABA/Phone — rawPhoneId:", rawPhoneId, "rawWabaId:", rawWabaId);
-    return NextResponse.json(
-      {
-        code: "WABA_DISCOVERY_FAILED",
-        error: "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى",
-      },
-      { status: 502 },
+    return devError(
+      "لم نتمكن من الحصول على WABA ID أو Phone Number ID — حاول مرة أخرى",
+      "WABA_DISCOVERY_FAILED",
+      502,
     );
   }
 
@@ -211,7 +213,7 @@ export async function POST(
     });
   } catch (err) {
     console.error("[DEV-EmbeddedSignup] DB upsert error:", err);
-    return NextResponse.json({ error: "فشل حفظ البيانات — حاول مرة أخرى" }, { status: 500 });
+    return devError("فشل حفظ البيانات — حاول مرة أخرى", "INTERNAL", 500);
   }
 
   /* ── 7. Return success (no token in response!) ──────────────────────────── */

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
+import { devError } from "@/lib/dev-errors";
 
 // ── GET /api/developers/reports ──────────────────────────────────────────────
 // تقارير المطور نفسه: المشاريع اللي عملها، سلّمها، نشطة، أو اتشال منها.
 // مش تقارير OTP/رسايل بتاعت الأونر — دي حاجة تانية خالص وليها مكانها لكل مشروع.
 export async function GET(req: NextRequest) {
     const session = await getDevSessionFromRequest(req);
-    if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
     // كل المشاريع اللي المطور ده هو منشئها (developerId)، مش أي مشروع هو أونر ليه بس
     const projects: Array<{

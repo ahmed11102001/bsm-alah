@@ -3,6 +3,7 @@ import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { sendDeveloperResetEmail } from "@/lib/email";
+import { devError } from "@/lib/dev-errors";
 import { getRequestLocale } from "@/lib/locale-resolver";
 
 const GENERIC_MESSAGE = "إذا كان الحساب موجودًا، تم إرسال رابط الاستعادة إلى بريدك الإلكتروني.";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     const locale = getRequestLocale(req);
     const body = await req.json();
     const email = typeof body?.email === "string" ? body.email.toLowerCase().trim() : "";
-    if (!email) return NextResponse.json({ error: "الإيميل مطلوب" }, { status: 400 });
+    if (!email) return devError("الإيميل مطلوب", "INVALID_REQUEST", 400);
 
     const developer = await prisma.developerUser.findUnique({
       where: { email },
@@ -38,6 +39,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, message: GENERIC_MESSAGE });
   } catch (error) {
     console.error("[developer-forgot-password] request failed", error instanceof Error ? error.name : "unknown");
-    return NextResponse.json({ error: "حدث خطأ، حاول ثانية" }, { status: 500 });
+    return devError("حدث خطأ، حاول ثانية", "INTERNAL", 500);
   }
 }

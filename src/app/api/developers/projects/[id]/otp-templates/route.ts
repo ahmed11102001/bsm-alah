@@ -12,6 +12,7 @@ import { decryptToken } from "@/lib/crypto";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+import { devError } from "@/lib/dev-errors";
 import { validateVariableDefinitions, type OtpVariableDefinition } from "@/lib/developer-template-contract";
 
 async function getProjectOrFail(userId: string, projectId: string) {
@@ -25,10 +26,10 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const project = await getProjectOrFail(session.id, id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
   try {
     const templates = await prisma.developerOtpTemplate.findMany({
@@ -50,9 +51,10 @@ export async function GET(
       projectId: id,
       error: error instanceof Error ? error.message : "unknown error",
     });
-    return NextResponse.json(
-      { error: "Unable to load templates right now. Please try again shortly." },
-      { status: 503 },
+    return devError(
+      "Unable to load templates right now. Please try again shortly.",
+      "UNAVAILABLE",
+      503,
     );
   }
 }
@@ -64,10 +66,10 @@ export async function POST(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const project = await getProjectOrFail(session.id, id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
   const {
     name,
@@ -81,24 +83,24 @@ export async function POST(
     codeExpirationMinutes = 10,
   } = await req.json();
 
-  if (!name?.trim()) return NextResponse.json({ error: "اسم القالب مطلوب" }, { status: 400 });
+  if (!name?.trim()) return devError("اسم القالب مطلوب", "INVALID_REQUEST", 400);
   if (!isSupportedOtpLanguage(language)) {
-    return NextResponse.json(
-      { error: "اللغة غير مدعومة لقوالب OTP", code: "OTP_LANGUAGE_UNSUPPORTED" },
-      { status: 400 }
+    return devError(
+      "اللغة غير مدعومة لقوالب OTP", "OTP_LANGUAGE_UNSUPPORTED",
+      400
     );
   }
   const expiry = Number(codeExpirationMinutes);
   if (!Number.isFinite(expiry) || expiry < 1 || expiry > 90) {
-    return NextResponse.json(
-      { error: "مدة صلاحية الكود يجب أن تكون بين 1 و 90 دقيقة", code: "OTP_EXPIRY_INVALID" },
-      { status: 400 }
+    return devError(
+      "مدة صلاحية الكود يجب أن تكون بين 1 و 90 دقيقة", "OTP_EXPIRY_INVALID",
+      400
     );
   }
 
   const metaName = normalizeOtpTemplateName(name);
   if (!isValidOtpTemplateName(metaName))
-    return NextResponse.json({ error: "اسم القالب قصير جداً أو يحتوي على أحرف غير مدعومة" }, { status: 400 });
+    return devError("اسم القالب قصير جداً أو يحتوي على أحرف غير مدعومة", "INVALID_REQUEST", 400);
 
   // For AUTHENTICATION templates, store OTP config in body/footer fields.
   // The send body text itself is Wani-generated (single {{1}} for the code).
@@ -172,20 +174,20 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const session = await getDevSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
   const project = await getProjectOrFail(session.id, id);
-  if (!project) return NextResponse.json({ error: "المشروع مش موجود" }, { status: 404 });
+  if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
   const { searchParams } = new URL(req.url);
   const templateId = searchParams.get("templateId");
-  if (!templateId) return NextResponse.json({ error: "templateId مطلوب" }, { status: 400 });
+  if (!templateId) return devError("templateId مطلوب", "INVALID_REQUEST", 400);
 
   const template = await prisma.developerOtpTemplate.findFirst({
     where: { id: templateId, projectId: id },
   });
 
-  if (!template) return NextResponse.json({ error: "القالب مش موجود" }, { status: 404 });
+  if (!template) return devError("القالب مش موجود", "NOT_FOUND", 404);
 
   if (template.metaTemplateId || template.status !== "LOCAL_DRAFT") {
     const connection = await prisma.developerMetaConnection.findUnique({
