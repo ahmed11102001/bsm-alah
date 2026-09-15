@@ -6,6 +6,7 @@
  * from the key itself.
  */
 import { ApiClient } from "../../api/client.js";
+import { CliError } from "../../api/errors.js";
 import { resolveProjectApiKey } from "../../auth/credentials.js";
 import type { CommandContext } from "../context.js";
 import { optString, type ParsedArgs } from "../../utils/args.js";
@@ -15,15 +16,22 @@ export interface OtpCommandSetup {
   keySource: "flag" | "env" | "stored";
 }
 
-/** Project hint used solely for stored-key lookup (`--project` or current). */
-export function resolveKeyProjectId(ctx: CommandContext, args: ParsedArgs): string | undefined {
-  return optString(args.options, "project") ?? ctx.config.currentProjectId;
-}
-
 export function makeOtpClient(ctx: CommandContext, args: ParsedArgs): OtpCommandSetup {
-  const projectId = resolveKeyProjectId(ctx, args);
+  // --project only selects WHICH stored key to use. Combined with --api-key
+  // it is meaningless (the key decides the project server-side), so reject
+  // the combination explicitly instead of silently ignoring --project.
+  const projectFlag = optString(args.options, "project");
+  const apiKeyFlag = optString(args.options, "api-key", "apiKey");
+  if (projectFlag !== undefined && apiKeyFlag !== undefined) {
+    throw new CliError(
+      "Do not combine --project with --api-key: the project is always resolved server-side from the key. " +
+        "Use --api-key alone, or omit it to use the stored key of --project.",
+      { kind: "usage" }
+    );
+  }
+  const projectId = projectFlag ?? ctx.config.currentProjectId;
   const { apiKey, source } = resolveProjectApiKey({
-    flag: optString(args.options, "api-key", "apiKey"),
+    flag: apiKeyFlag,
     config: ctx.config,
     projectId,
   });

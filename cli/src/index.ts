@@ -3,6 +3,7 @@
  * `wani` — official Wani Developer CLI (server-side credentials only).
  */
 import { CliError } from "./api/errors.js";
+import { assertTrustedBaseUrl } from "./api/trusted-hosts.js";
 import { BASE_URL_ENV_VAR, CLI_NAME, CLI_VERSION, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS } from "./constants.js";
 import { loadConfig, resolveBaseUrl, saveConfig } from "./config/config.js";
 import type { CommandContext } from "./commands/context.js";
@@ -26,7 +27,8 @@ Usage:
 
 Commands:
   login [--email <email>] [--browser]   Log in (email/password) and store the session
-  logout                                Discard the stored session
+                                        (--browser only opens the portal to copy a key)
+  logout                                Discard the stored session (--all also clears stored keys)
   whoami                                Show the logged-in account
 
   project list                          List your projects
@@ -41,8 +43,9 @@ Commands:
   otp status --token <token>            Check OTP delivery status
 
 Global options:
-  --base-url <url>      API base URL (default ${DEFAULT_BASE_URL})
-                        Also: ${BASE_URL_ENV_VAR} env var
+  --base-url <url>      API base URL. Only https://developers.aiwni.com is
+                        trusted; loopback URLs require --dev (explicit dev mode)
+  --dev                 Development mode: allow loopback base URLs
   --timeout <ms>        Request timeout in milliseconds (default ${DEFAULT_TIMEOUT_MS})
   --json, -j            Machine-readable JSON output
   --help, -h            Show help
@@ -84,11 +87,15 @@ async function main(argv: string[]): Promise<void> {
   }
 
   const config = loadConfig();
-  const baseUrl = resolveBaseUrl({
-    flag: optString(args.options, "base-url", "baseUrl"),
-    config,
-    fallback: DEFAULT_BASE_URL,
-  });
+  const devFlag = args.options["dev"] === true;
+  const baseUrl = assertTrustedBaseUrl(
+    resolveBaseUrl({
+      flag: optString(args.options, "base-url", "baseUrl"),
+      config,
+      fallback: DEFAULT_BASE_URL,
+    }),
+    { dev: devFlag }
+  );
   const timeoutMs = parseTimeoutMs(optString(args.options, "timeout", "timeoutMs"));
   const json = isJsonOutput(args.options);
 

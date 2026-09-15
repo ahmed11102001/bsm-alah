@@ -5,6 +5,7 @@
  * that project's API key for OTP commands.
  */
 import { CliError } from "../../api/errors.js";
+import { ApiClient } from "../../api/client.js";
 import type { CommandContext } from "../context.js";
 import type { ParsedArgs } from "../../utils/args.js";
 import { optString } from "../../utils/args.js";
@@ -44,6 +45,38 @@ export async function projectUseCommand(ctx: CommandContext, args: ParsedArgs): 
   const projects = await fetchProjects(ctx);
   const project = matchProject(projects, ref);
 
+  let keyValidated = false;
+  let keyWarning: string | undefined;
+  if (apiKeyFlag !== undefined) {
+    // Verify the key actually belongs to the selected project before saving.
+    // A mismatch is rejected; an unreachable/legacy server falls back to a
+    // loud warning (the key is still verified on first OTP request).
+    const probe = new ApiClient({
+      baseUrl: ctx.baseUrl,
+      timeoutMs: ctx.timeoutMs,
+      fetchImpl: ctx.fetchImpl,
+      apiKey: apiKeyFlag,
+    });
+    try {
+      const info = await probe.get<{ projectId?: string; projectName?: string }>("/api/developers/otp/key-info");
+      if (typeof info.projectId !== "string" || info.projectId === "") {
+        keyWarning = "Key server returned an unexpected shape — saved anyway; it will be verified on first OTP request.";
+      } else if (info.projectId !== project.id) {
+        throw new CliError(
+          `API key belongs to another project (${info.projectName ?? info.projectId}) — not saved.`,
+          { kind: "usage" }
+        );
+      } else {
+        keyValidated = true;
+      }
+    } catch (err) {
+      if (err instanceof CliError && err.message.startsWith("API key belongs to another project")) {
+        throw err;
+      }
+      keyWarning = "Could not validate key ownership (server too old?) — saved anyway; it will be verified on first OTP request.";
+    }
+  }
+
   const next = { ...ctx.config, currentProjectId: project.id, apiKeys: { ...ctx.config.apiKeys } };
   if (apiKeyFlag !== undefined) {
     next.apiKeys[project.id] = apiKeyFlag;
@@ -51,11 +84,11 @@ export async function projectUseCommand(ctx: CommandContext, args: ParsedArgs): 
   ctx.saveConfig(next);
 
   if (ctx.json) {
-    printJson({ ok: true, project: { id: project.id, name: project.name }, apiKeySaved: apiKeyFlag !== undefined });
+    printJson({ ok: true, project: { id: project.id, name: project.name }, apiKeySaved: apiKeyFlag !== undefined, keyValidated, ...(keyWarning ? { warning: keyWarning } : {}) });
     return;
   }
   printLine(`Using project "${project.name}" (${project.id}).`);
   if (apiKeyFlag !== undefined) {
-    printLine("Project API key saved for OTP commands.");
+    printLine(keyValidated ? "Project API key verified and saved for OTP commands." : `Project API key saved. ${keyWarning ?? ""}`);
   }
 }

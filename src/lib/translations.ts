@@ -128,7 +128,7 @@ export const t = {
     h2b: { ar: "في أقل من 15 دقيقة", en: "in less than 15 minutes" },
     subtitle: { ar: "4 خطوات واضحة. مفيش setup معقد. مفيش كورس تتعلمه.", en: "4 clear steps. No complex setup. No course needed." },
     ctaTitle: { ar: "جاهز تبدأ؟ الخطوة الأولى مجانية", en: "Ready to start? The first step is free." },
-    ctaSub: { ar: "100 رسالة مجانية — بدون بطاقة ائتمان — بدون التزام", en: "100 free messages — no credit card — no commitment." },
+    ctaSub: { ar: "ابدأ بـ100 جهة اتصال مجانية — حوّل جمهورك لفرص حقيقية من أول يوم", en: "Start with 100 free contacts — turn your audience into real opportunities from day one." },
     ctaBtn: { ar: "ابدأ مجاناً الآن", en: "Start Free Now" },
     steps: [
       {
@@ -278,7 +278,7 @@ export const t = {
     subtitle: { ar: "مش أسئلة شكلية — أسئلة حقيقية بتجيها قبل ما تقرر. إجابات صريحة بدون مبالغة.", en: "Not formal questions — real ones you have before deciding. Honest answers, no hype." },
     ctaBadge: { ar: "لسه مش متأكد؟", en: "Still not sure?" },
     ctaTitle: { ar: "جرب مجاناً — وخلي النتائج تقنعك", en: "Try for free — let the results convince you" },
-    ctaSub: { ar: "100 رسالة مجانية بدون بطاقة ائتمان. لو مش عجبك بعد التجربة، مش هتخسر حاجة.", en: "100 free messages, no credit card. If you're not impressed after trying, you've lost nothing." },
+    ctaSub: { ar: "100 جهة اتصال مجانية تساعدك تبدأ صح — بدون بطاقة ائتمان أو التزام.", en: "100 free contacts to help you start right — no credit card or commitment." },
     ctaBtn: { ar: "ابدأ مجاناً الآن", en: "Start Free Now" },
     ctaLink: { ar: "أو تواصل مع الدعم", en: "Or contact support" },
     items: [
@@ -318,8 +318,8 @@ export const t = {
         category: { ar: "التجربة والاشتراك", en: "Trial & Subscription" },
         q: { ar: "هل أقدر أجرب قبل ما أدفع؟", en: "Can I try before paying?" },
         a: {
-          ar: `نعم — وبدون بطاقة ائتمان.\n\nالباقة المجانية بتديك:\n→ 100 رسالة فعلية\n→ الوصول لكل مميزات الداشبورد\n→ صندوق الوارد والتقارير من اليوم الأول\n→ دعم فني حقيقي مش روبوت`,
-          en: `Yes — no credit card required.\n\nThe free plan gives you:\n→ 100 real messages\n→ Full dashboard access\n→ Inbox & reports from day one\n→ Real human support, not a bot`
+          ar: `نعم — وبدون بطاقة ائتمان.\n\nالباقة المجانية بتديك:\n→ 100 جهة اتصال نشطة\n→ الوصول لكل مميزات الداشبورد\n→ صندوق الوارد والتقارير من اليوم الأول\n→ دعم فني حقيقي مش روبوت`,
+          en: `Yes — no credit card required.\n\nThe free plan gives you:\n→ 100 active contacts\n→ Full dashboard access\n→ Inbox & reports from day one\n→ Real human support, not a bot`
         },
       },
       {

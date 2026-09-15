@@ -8,6 +8,7 @@ import { otpSendCommand } from "../src/commands/otp/send.js";
 import { otpVerifyCommand } from "../src/commands/otp/verify.js";
 import { otpStatusCommand } from "../src/commands/otp/status.js";
 import { projectUseCommand } from "../src/commands/project/use.js";
+import { logoutCommand } from "../src/commands/auth/logout.js";
 import { parseArgs } from "../src/utils/args.js";
 
 interface Seen {
@@ -104,6 +105,20 @@ describe("otp send", () => {
     await otpSendCommand(ctx, parseArgs(["--phone", "2010", "--template-id", "t"]));
     assert.equal(seen[0].init.headers["x-api-key"], "wani_live_stored");
   });
+
+  it("rejects --project combined with --api-key (meaningless combo)", async () => {
+    silenceOutput();
+    const seen: Seen[] = [];
+    const ctx = testContext({ apiKeys: {} }, seen);
+    await assert.rejects(
+      otpSendCommand(
+        ctx,
+        parseArgs(["--phone", "2010", "--template-id", "t", "--project", "p1", "--api-key", "k"])
+      ),
+      (e: any) => e instanceof CliError && e.exitCode === 2
+    );
+    assert.equal(seen.length, 0);
+  });
 });
 
 describe("otp verify / status", () => {
@@ -162,5 +177,106 @@ describe("project use", () => {
 
     await assert.rejects(projectUseCommand(useCtx, useArgs(["cmu"])), (e: any) => e instanceof CliError && e.exitCode === 2);
     await assert.rejects(projectUseCommand(useCtx, useArgs(["nope"])), (e: any) => e instanceof CliError && e.exitCode === 2);
+  });
+
+  it("validates a saved key against its project (match / mismatch / legacy server)", async () => {
+    silenceOutput();
+    const projects = [{ id: "cmu111", name: "Shop", viewerRole: "owner" }];
+
+    async function runUse(
+      keyBehavior: (url: string) => unknown,
+      ref: string[] = ["cmu111"]
+    ): Promise<{ saved: { config: { apiKeys: Record<string, string> } | null }; seen: Seen[] }> {
+      const seen: Seen[] = [];
+      const saved: { config: { apiKeys: Record<string, string> } | null } = { config: null };
+      const base = testContext({ apiKeys: {} }, seen, (url: string) =>
+        url.includes("/otp/key-info") ? keyBehavior(url) : { projects }
+      );
+      const useCtx: CommandContext = {
+        ...base,
+        config: { ...base.config, sessionCookie: "sess" },
+        saveConfig: (c) => {
+          saved.config = { apiKeys: (c as CliConfig).apiKeys };
+        },
+      };
+      await projectUseCommand(useCtx, {
+        command: ["project", "use"],
+        positional: ref,
+        options: { "api-key": "wani_live_probe" },
+      });
+      return { saved, seen };
+    }
+
+    // match → saved
+    const matched = await runUse(() => ({ ok: true, projectId: "cmu111", projectName: "Shop" }));
+    assert.equal(matched.saved.config?.apiKeys["cmu111"], "wani_live_probe");
+
+    // mismatch → rejected, not saved
+    const seen2: Seen[] = [];
+    const base2 = testContext({ apiKeys: {} }, seen2, (url: string) =>
+      url.includes("/otp/key-info") ? { ok: true, projectId: "cmuOTHER", projectName: "Other" } : { projects }
+    );
+    const useCtx2: CommandContext = {
+      ...base2,
+      config: { ...base2.config, sessionCookie: "sess" },
+      saveConfig: () => {
+        throw new Error("must not save on mismatch");
+      },
+    };
+    await assert.rejects(
+      projectUseCommand(useCtx2, { command: ["project", "use"], positional: ["cmu111"], options: { "api-key": "k" } }),
+      (e: any) => e instanceof CliError && /another project/.test(e.message)
+    );
+
+    // legacy server (key-info missing → 404-like CliError) → warn + save
+    const legacy = await (async () => {
+      const seen3: Seen[] = [];
+      const saved3: { config: { apiKeys: Record<string, string> } | null } = { config: null };
+      const base3 = testContext({ apiKeys: {} }, seen3, (url: string) => {
+        if (url.includes("/otp/key-info")) {
+          throw new CliError("Not found", { kind: "http", status: 404 });
+        }
+        return { projects };
+      });
+      const useCtx3: CommandContext = {
+        ...base3,
+        config: { ...base3.config, sessionCookie: "sess" },
+        saveConfig: (c) => {
+          saved3.config = { apiKeys: (c as CliConfig).apiKeys };
+        },
+      };
+      await projectUseCommand(useCtx3, {
+        command: ["project", "use"],
+        positional: ["cmu111"],
+        options: { "api-key": "wani_live_probe" },
+      });
+      return saved3;
+    })();
+    assert.equal(legacy.config?.apiKeys["cmu111"], "wani_live_probe");
+  });
+
+  it("logout clears session only by default, everything with --all", async () => {
+    silenceOutput();
+    const seen: Seen[] = [];
+    const base = testContext(
+      { apiKeys: { p1: "k1" }, sessionCookie: "sess", currentProjectId: "p1" },
+      seen
+    );
+    const saved: { config: CliConfig | null } = { config: null };
+    const ctx: CommandContext = { ...base, saveConfig: (c) => { saved.config = c; } };
+
+    await logoutCommand(ctx, { command: ["logout"], positional: [], options: {} });
+    assert.equal(saved.config?.sessionCookie, undefined);
+    assert.deepEqual(saved.config?.apiKeys, { p1: "k1" });
+
+    const ctx2: CommandContext = {
+      ...base,
+      config: { version: 1, apiKeys: { p1: "k1" }, sessionCookie: "sess", currentProjectId: "p1" },
+      saveConfig: (c) => { saved.config = c; },
+    };
+    await logoutCommand(ctx2, { command: ["logout"], positional: [], options: { all: true } });
+    assert.equal(saved.config?.sessionCookie, undefined);
+    assert.deepEqual(saved.config?.apiKeys, {});
+    assert.equal(saved.config?.currentProjectId, undefined);
   });
 });

@@ -43,8 +43,8 @@ wani otp status --token <token>
 
 | Command | Description |
 |---|---|
-| `wani login [--email E] [--browser]` | Log in (email/password, session stored with `0600`). `--browser` opens the portal so you can copy a project API key |
-| `wani logout` | Discard the stored session |
+| `wani login [--email E] [--browser]` | Log in (email/password, session stored encrypted). `--browser` only opens the portal to copy a key (does not log the CLI in) |
+| `wani logout [--all]` | Discard the stored session (`--all` also clears stored project keys) |
 | `wani whoami` | Show the logged-in account |
 | `wani project list` | List your projects |
 | `wani project use <id-or-name> [--api-key KEY]` | Select the working project (id, id-prefix or exact name); optionally save its API key |
@@ -53,7 +53,11 @@ wani otp status --token <token>
 | `wani otp verify --token T [--code C]` | Verify an OTP code (prompts for the code when omitted) |
 | `wani otp status --token T` | Check OTP delivery status |
 
-Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--timeout <ms>`, `--json`/`-j`, `--help`, `--version`.
+Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--dev`, `--timeout <ms>`, `--json`/`-j`, `--help`, `--version`.
+
+> `--project` in OTP commands only selects *which stored key* to use — it is
+> never sent to the API. Combining `--project` with `--api-key` is rejected
+> as meaningless: the project is always resolved server-side from the key.
 
 ## Authentication model
 
@@ -64,10 +68,24 @@ Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--timeout <ms>`, `--js
 
 Human-readable tables by default; add `--json` for a single machine-readable document (errors go to stderr with exit code `1`, usage errors exit `2`).
 
-## Security notes
+## Security model (read this before publishing use)
 
-- Profile lives at `~/.wani/config.json` (`0600`; override dir with `WANI_CONFIG_HOME`).
-- Keys are sent only as `x-api-key` / session cookie to the configured Wani base URL, and never appear in error output.
+- **At rest:** session cookies and project API keys are **AES-256-GCM encrypted**
+  in `~/.wani/config.json` with a key derived from machine+user factors plus a
+  per-install salt. A copied config file is useless on another machine/user —
+  but this is **not** an OS-keychain substitute: any process running as *your*
+  OS user can derive the same key. The hard boundary remains file permissions
+  (`0600`, dir `0700`) and OS user separation — the same model as `gh`/`aws`
+  CLIs. On shared machines, prefer `--api-key` / `WANI_API_KEY` (memory-only).
+- **In transit:** credentials are sent **only** to `https://developers.aiwni.com`.
+  Any other host is refused; loopback URLs work only with explicit `--dev`
+  mode (`--dev` flag or `WANI_DEV=1`). Never run the CLI against a URL you
+  don't control — a malicious server would receive your credentials.
+- Keys are sent only as `x-api-key` / session cookie to the configured base
+  URL, and never appear in error output or logs.
+- Profile lives at `~/.wani/config.json` (override dir with `WANI_CONFIG_HOME`).
+  `wani logout` clears the session only; `wani logout --all` also removes
+  stored project keys and the selected project.
 
 ## License
 

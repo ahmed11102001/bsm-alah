@@ -2,8 +2,9 @@
  * `wani login [--email <email>] [--browser]`
  *
  * Interactive email/password login against the public auth endpoint.
- * Stores the session cookie locally (0600). `--browser` opens the portal
- * so the user can create/copy a project API key instead.
+ * Stores the session cookie locally (0600, encrypted at rest). `--browser`
+ * does NOT log the CLI in (the backend has no device flow) — it opens the
+ * portal so you can copy a project API key instead.
  */
 import { apiKeysPageUrl, openInBrowser } from "../../auth/browser-login.js";
 import { loginWithPassword } from "../../auth/session.js";
@@ -18,10 +19,10 @@ export async function loginCommand(ctx: CommandContext, args: ParsedArgs): Promi
     const url = apiKeysPageUrl(ctx.baseUrl);
     openInBrowser(url);
     if (ctx.json) {
-      printJson({ ok: true, browser: true, url });
+      printJson({ ok: true, browser: true, url, loggedIn: false });
     } else {
       printLine(`Opening ${url}`);
-      printLine("Create a project API key there, then save it with:");
+      printLine("Note: this does not log the CLI in. Create a project API key there, then save it with:");
       printLine("  wani project use <project-id> --api-key <key>");
     }
     return;

@@ -174,9 +174,14 @@ function FAQCTA({ lang, onLoginClick }: { lang: Lang; onLoginClick?: () => void 
             {tr(t.faq.ctaBtn, lang)}
             <ArrowIcon className="w-4 h-4" />
           </button>
-          <button onClick={onLoginClick} className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors cursor-pointer">
+          <a
+            href="https://wa.me/201281657907"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-[#25D366] font-medium text-sm transition-colors"
+          >
             {tr(t.faq.ctaLink, lang)}
-          </button>
+          </a>
         </div>
       </div>
     </div>
