@@ -204,6 +204,70 @@ function WAPreview({ headerType, headerText, body, footer, category, addSecurity
   );
 }
 
+// ─── Copy helper (clipboard + fallback, exact value, no formatting) ─────────
+async function copyExactText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to legacy method below
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+// ─── ID row with Copy button (Wani ID vs Meta ID — never mixed) ─────────────
+function TemplateIdRow({ label, value, note }: { label: string; value: string | null; note: string }) {
+  const { t } = useLanguage();
+  const [copied, setCopied] = useState(false);
+  const display = value && value.length > 0 ? value : "—";
+
+  async function handleCopy() {
+    if (!value) return;
+    const ok = await copyExactText(value);
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", minWidth: 105 }}>{label}:</span>
+      <code style={{ fontFamily: "'Fira Code',monospace", fontSize: 11, color: "rgba(255,255,255,0.75)", wordBreak: "break-all" }}>
+        {display}
+      </code>
+      {value && (
+        <button
+          type="button"
+          onClick={handleCopy}
+          title={note}
+          style={{
+            padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+            border: "1px solid rgba(255,255,255,0.14)", cursor: "pointer",
+            background: copied ? "rgba(32,211,120,0.15)" : "rgba(255,255,255,0.05)",
+            color: copied ? "#20d378" : "rgba(255,255,255,0.55)",
+          }}
+        >
+          {copied ? t("Copied ✓", "تم النسخ ✓") : t("Copy", "نسخ")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProjectTemplatesPage() {
   const params = useParams();
@@ -635,7 +699,21 @@ export default function ProjectTemplatesPage() {
                           <div className="tmpl-meta" style={{ flexDirection: language === 'ar' ? 'row' : 'row-reverse', justifyContent: language === 'ar' ? 'flex-start' : 'flex-end' }}>
                             <span>{LANGUAGES.find(l => l.code === tData.language)?.label ?? tData.language}</span>
                             <span>{cat?.label}</span>
-                            {tData.metaTemplateId && <span style={{ fontFamily: "Fira Code", fontSize:11, color:"rgba(255,255,255,0.25)" }}>ID: {tData.metaTemplateId}</span>}
+                          </div>
+                          {/* IDs — Wani ID (for SDK/API templateId) vs Meta ID (reference only) */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
+                            <TemplateIdRow
+                              label={t("Wani Template ID", "معرف Wani للقالب")}
+                              value={tData.id ?? null}
+                              note={t("Used by SDK/API as templateId", "يُستخدم في SDK/API كـ templateId")}
+                            />
+                            {tData.metaTemplateId && (
+                              <TemplateIdRow
+                                label={t("Meta Template ID", "معرف Meta للقالب")}
+                                value={tData.metaTemplateId}
+                                note={t("Meta reference only — not used as SDK templateId", "مرجع Meta فقط — لا يُستخدم كـ templateId في SDK")}
+                              />
+                            )}
                           </div>
                           {tData.body && (
                             <div className="tmpl-body-preview" style={{ direction: language === 'ar' ? 'rtl' : 'ltr', textAlign: language === 'ar' ? 'right' : 'left' }}>{tData.body.replace(/\{\{\d+\}\}/g, "●●●")}</div>
