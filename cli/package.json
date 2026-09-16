@@ -1,13 +1,13 @@
 {
   "name": "@aiwni/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official Wani Developer CLI — manage projects and test the WhatsApp OTP API from your terminal.",
   "license": "MIT",
   "author": "Wani",
   "homepage": "https://developers.aiwni.com/docs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ahmed11102001/bsm-alah.git",
+    "url": "git+https://github.com/ahmed11102001/bsm-alah.git",
     "directory": "cli"
   },
   "keywords": [
@@ -19,7 +19,7 @@
   ],
   "type": "module",
   "bin": {
-    "wani": "./dist/index.js"
+    "wani": "dist/index.js"
   },
   "exports": {
     ".": "./dist/index.js"
