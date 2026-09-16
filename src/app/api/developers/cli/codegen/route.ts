@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getIP } from "@/lib/rate-limit";
-import { devRateLimited, devError } from "@/lib/dev-errors";
+import { devRateLimited, devError, lmsg } from "@/lib/dev-errors";
 import { requireCliSession } from "@/lib/dev-cli-auth";
 import {
   generateIntegrationCode,
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const ip = getIP(req);
   const rl = await rateLimit(`cli-codegen:${ip}`, { limit: 60, windowSecs: 3600 });
   if (!rl.success) {
-    return devRateLimited("كثير من المحاولات، حاول بعد شوية", "RATE_LIMITED", rl.retryAfter);
+    return devRateLimited(lmsg(req, "كثير من المحاولات، حاول بعد شوية", "Too many attempts, try again shortly"), "RATE_LIMITED", rl.retryAfter);
   }
 
   const body = await req.json().catch(() => ({}));

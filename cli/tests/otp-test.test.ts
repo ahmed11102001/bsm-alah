@@ -81,10 +81,10 @@ describe("wani otp test (flags-only)", () => {
     const { ctx, seen } = testContext(
       { apiKeys: {}, currentProjectId: "p1", cliAccessToken: "tok" },
       (url) => {
-        if (url.endsWith("/otp-templates")) {
+        if (url.includes("/otp-templates")) {
           return {
             templates: [
-              { id: "tpl_9", name: "otp_login", language: "ar", status: "APPROVED" },
+              { id: "tpl_9", name: "otp_login", language: "ar", status: "APPROVED", category: "AUTHENTICATION", metaTemplateId: "meta-9" },
               { id: "tpl_8", name: "draft_one", language: "ar", status: "PENDING" },
             ],
           };
@@ -102,6 +102,8 @@ describe("wani otp test (flags-only)", () => {
     const send = seen.find((s) => s.url.endsWith("/otp/send"));
     assert.deepEqual(JSON.parse(send?.init.body), { phone: "2010", templateId: "tpl_9" });
     assert.match(captured, /My Store/);
+    // Server-side narrowing is requested; client re-checks for old portals.
+    assert.ok(seen.some((s) => s.url.includes("sendable=otp")));
   });
 
   it("emits a single JSON document in --json mode", async () => {
@@ -141,6 +143,29 @@ describe("wani otp test (flags-only)", () => {
     );
   });
 
+  it("rejects MARKETING templates even when APPROVED (server-compat path)", async () => {
+    const { ctx } = testContext(
+      { apiKeys: {}, currentProjectId: "p1", cliAccessToken: "tok" },
+      (url) => {
+        if (url.includes("/otp-templates")) {
+          // Old portal without ?sendable=otp would return this row;
+          // the client must still refuse it.
+          return {
+            templates: [
+              { id: "tpl_m", name: "promo_spring", language: "ar", status: "APPROVED", category: "MARKETING", metaTemplateId: "meta-m" },
+            ],
+          };
+        }
+        if (url.endsWith("/projects")) return { projects: [{ id: "p1", name: "My Store" }] };
+        throw new Error(`unexpected request: ${url}`);
+      }
+    );
+    await assert.rejects(
+      otpTestCommand(ctx, parseArgs(["--phone", "2010", "--code", "1", "--api-key", "wani_live_k"])),
+      (e: any) => e instanceof CliError && /No approved templates/.test(e.message)
+    );
+  });
+
   it("verification failure exits non-zero", async () => {
     const { ctx } = testContext({ apiKeys: {} }, (url) => {
       if (url.endsWith("/otp/send")) return { ok: true, token: "t", expiresAt: "2030-01-01T00:00:00.000Z" };
@@ -155,3 +180,5 @@ describe("wani otp test (flags-only)", () => {
     );
   });
 });
+
+

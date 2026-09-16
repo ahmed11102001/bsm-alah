@@ -31,6 +31,61 @@ describe("developer OTP templates API", () => {
     mockProject.mockResolvedValue({ id: "proj-1" });
   });
 
+  it("GET lists AUTHENTICATION templates only (no MARKETING/UTILITY leak)", async () => {
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([]);
+
+    await GET(request("http://localhost/api/developers/projects/proj-1/otp-templates"), params);
+
+    expect(mockPrisma.developerOtpTemplate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ projectId: "proj-1", category: "AUTHENTICATION" }),
+      })
+    );
+  });
+
+  it("GET ?sendable=otp narrows to APPROVED + Meta-linked (Live Tester / CLI set)", async () => {
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([]);
+
+    await GET(request("http://localhost/api/developers/projects/proj-1/otp-templates?sendable=otp"), params);
+
+    expect(mockPrisma.developerOtpTemplate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          projectId: "proj-1",
+          category: "AUTHENTICATION",
+          status: "APPROVED",
+          metaTemplateId: { not: null },
+        }),
+      })
+    );
+  });
+
+  it("sync skips non-AUTHENTICATION Meta templates on import", async () => {
+    mockPrisma.developerMetaConnection.findUnique.mockResolvedValue({
+      isVerified: true,
+      accessToken: "TOKEN",
+      wabaId: "waba-1",
+    });
+    mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([]);
+    mockPrisma.developerOtpTemplate.create.mockResolvedValue({ id: "tpl-new" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [
+        { id: "meta-mkt", name: "promo_spring", status: "APPROVED", category: "MARKETING", language: "en_US", components: [] },
+        { id: "meta-otp", name: "otp_login", status: "APPROVED", category: "AUTHENTICATION", language: "en_US", components: [] },
+      ] }),
+    }));
+
+    const response = await SYNC(
+      request("http://localhost/api/developers/projects/proj-1/otp-templates/sync", { method: "POST" }),
+      params,
+    );
+    expect(response.status).toBe(200);
+    const createdNames = mockPrisma.developerOtpTemplate.create.mock.calls.map((c: any) => c[0].data.name);
+    expect(createdNames).toEqual(["otp_login"]);
+    vi.unstubAllGlobals();
+  });
+
   it("GET returns old records with null metadata without inventing values", async () => {
     mockPrisma.developerOtpTemplate.findMany.mockResolvedValue([{
       id: "tpl-1",

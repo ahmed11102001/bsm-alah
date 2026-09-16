@@ -49,7 +49,10 @@ export class ApiClient {
 
   private async send<T>(method: "GET" | "POST", path: string, body: Record<string, unknown> | undefined, signal: AbortSignal | undefined): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    // The terminal is English-only (Arabic garbles terminal output), so every
+    // CLI request asks for English human messages. Machine `code` values are
+    // unaffected, and the portal default stays Arabic for browser callers.
+    const headers: Record<string, string> = { "Content-Type": "application/json", "Accept-Language": "en" };
     if (this.accessToken) {
       headers["Authorization"] = `Bearer ${this.accessToken}`;
     }

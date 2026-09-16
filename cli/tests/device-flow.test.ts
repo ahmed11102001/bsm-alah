@@ -50,6 +50,7 @@ describe("requestDeviceCode", () => {
     assert.equal(res.deviceCode, "dev-1");
     assert.equal(res.userCode, "ABCD-1234");
     assert.deepEqual(JSON.parse(seen[0].init.body), { device_name: "my machine" });
+    assert.equal(seen[0].init.headers["Accept-Language"], "en");
   });
 
   it("rejects malformed responses without leaking", async () => {

@@ -250,9 +250,10 @@ export default function TemplatesPage() {
           ))}
         </div>
 
-        {/* Category filter */}
+        {/* Category filter — merchant world only: AUTHENTICATION (OTP) lives
+            in the Developer Portal and is excluded server-side as well. */}
         <div className="flex gap-1 bg-muted rounded-xl p-1">
-          {["ALL", "MARKETING", "UTILITY", "AUTHENTICATION"].map(c => (
+          {["ALL", "MARKETING", "UTILITY"].map(c => (
             <button key={c}
               onClick={() => setFilterCat(c)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all

@@ -167,7 +167,7 @@ describe("POST /api/campaigns — إنشاء حملة (handleCreate)", () => {
     mockConsumeCampaignQuotaAtomic.mockResolvedValue({ allowed: true });
     mockCheckFeature.mockResolvedValue({ allowed: true });
     mockPrisma.whatsAppAccount.findUnique.mockResolvedValue(WHATSAPP_ACCOUNT);
-    mockPrisma.template.findFirst.mockResolvedValue({ id: "tpl-1", name: "wani_promo", language: "ar" });
+    mockPrisma.template.findFirst.mockResolvedValue({ id: "tpl-1", name: "wani_promo", language: "ar", category: "MARKETING", status: "APPROVED" });
     mockPrisma.campaign.create.mockResolvedValue({ id: "camp-new" });
     mockEnqueueCampaign.mockResolvedValue({ queued: 10 });
   });
@@ -286,6 +286,33 @@ describe("POST /api/campaigns — إنشاء حملة (handleCreate)", () => {
     expect(res.status).toBe(500);
     expect(mockRefundCampaignQuota).toHaveBeenCalledWith("user-1");
   });
+
+  it("AUTHENTICATION+APPROVED template → 422 (OTP templates are not for campaigns)", async () => {
+    mockPrisma.template.findFirst.mockResolvedValueOnce({
+      id: "tpl-auth", name: "otp_login", language: "ar", category: "AUTHENTICATION", status: "APPROVED",
+    });
+    const res = await POST(makeReq("POST", { name: "x", templateName: "otp_login", numbers: ["201012345678"] }));
+    expect(res.status).toBe(422);
+    expect(mockPrisma.campaign.create).not.toHaveBeenCalled();
+    expect(mockEnqueueCampaign).not.toHaveBeenCalled();
+  });
+
+  it("MARKETING+PENDING template → 422", async () => {
+    mockPrisma.template.findFirst.mockResolvedValueOnce({
+      id: "tpl-pend", name: "promo_new", language: "ar", category: "MARKETING", status: "PENDING",
+    });
+    const res = await POST(makeReq("POST", { name: "x", templateName: "promo_new", numbers: ["201012345678"] }));
+    expect(res.status).toBe(422);
+    expect(mockPrisma.campaign.create).not.toHaveBeenCalled();
+  });
+
+  it("UTILITY+APPROVED template → 200", async () => {
+    mockPrisma.template.findFirst.mockResolvedValueOnce({
+      id: "tpl-u", name: "order_update", language: "ar", category: "UTILITY", status: "APPROVED",
+    });
+    const res = await POST(makeReq("POST", { name: "x", templateName: "order_update", numbers: ["201012345678"] }));
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("POST /api/campaigns — MCP internal bypass (legacy flags ignored)", () => {
@@ -298,7 +325,7 @@ describe("POST /api/campaigns — MCP internal bypass (legacy flags ignored)", (
     mockConsumeCampaignQuotaAtomic.mockResolvedValue({ allowed: true });
     mockCheckFeature.mockResolvedValue({ allowed: true });
     mockPrisma.whatsAppAccount.findUnique.mockResolvedValue(WHATSAPP_ACCOUNT);
-    mockPrisma.template.findFirst.mockResolvedValue({ id: "tpl-1", name: "wani_promo", language: "ar" });
+    mockPrisma.template.findFirst.mockResolvedValue({ id: "tpl-1", name: "wani_promo", language: "ar", category: "MARKETING", status: "APPROVED" });
     mockPrisma.campaign.create.mockResolvedValue({ id: "camp-mcp" });
     mockEnqueueCampaign.mockResolvedValue({ queued: 1 });
   });
@@ -340,7 +367,7 @@ describe("POST /api/campaigns — تكرار حملة (handleRepeat)", () => {
   const OLD_CAMPAIGN = {
     id: "camp-old", name: "حملة قديمة",
     createdAt: new Date(Date.now() - 72 * 3600_000), // من 3 أيام
-    template: { id: "tpl-1", name: "wani_promo", language: "ar" },
+    template: { id: "tpl-1", name: "wani_promo", language: "ar", category: "MARKETING", status: "APPROVED" },
     messages: [
       { contact: { phone: "201011111111" } },
       { contact: { phone: "201011111111" } }, // مكرر — لازم يتفلتر
@@ -379,6 +406,26 @@ describe("POST /api/campaigns — تكرار حملة (handleRepeat)", () => {
     expect(mockEnqueueCampaign).toHaveBeenCalledWith(
       expect.objectContaining({ numbers: ["201011111111", "201022222222"] })
     );
+  });
+
+  it("repeat of an AUTHENTICATION template → 422", async () => {
+    mockPrisma.campaign.findFirst.mockResolvedValueOnce({
+      ...OLD_CAMPAIGN,
+      template: { id: "tpl-auth", name: "otp_login", language: "ar", category: "AUTHENTICATION", status: "APPROVED" },
+    });
+    const res = await POST(makeReq("POST", { _action: "repeat", campaignId: "camp-old" }));
+    expect(res.status).toBe(422);
+    expect(mockPrisma.campaign.create).not.toHaveBeenCalled();
+  });
+
+  it("repeat of a REJECTED template → 422", async () => {
+    mockPrisma.campaign.findFirst.mockResolvedValueOnce({
+      ...OLD_CAMPAIGN,
+      template: { id: "tpl-r", name: "wani_promo", language: "ar", category: "MARKETING", status: "REJECTED" },
+    });
+    const res = await POST(makeReq("POST", { _action: "repeat", campaignId: "camp-old" }));
+    expect(res.status).toBe(422);
+    expect(mockPrisma.campaign.create).not.toHaveBeenCalled();
   });
 });
 

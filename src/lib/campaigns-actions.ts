@@ -19,6 +19,7 @@ import { enqueueCampaign } from "@/lib/queue";
 import { inngest } from "@/inngest/client";
 import { decryptToken } from "@/lib/crypto";
 import { getCampaignQueuePressure, type CampaignQueuePressure } from "@/lib/campaign-queue";
+import { isCampaignSendable } from "@/lib/template-visibility";
 
 export async function createCampaignForUser(userId: string, body: any) {
   const { name, templateName, numbers, scheduledAt, templateVars, attributionHours, recipients } = body;
@@ -85,6 +86,15 @@ export async function createCampaignForUser(userId: string, body: any) {
   if (template.wabaId && template.wabaId !== account.wabaId)
     return NextResponse.json(
       { error: "هذا القالب تابع لحساب واتساب آخر — اختر قالبًا من الحساب المتصل حاليًا" },
+      { status: 422 }
+    );
+
+  // ── Campaign-sendable gate (server-side): MARKETING/UTILITY + APPROVED ─────
+  // AUTHENTICATION (OTP) templates and unapproved rows can never be campaigned,
+  // no matter what the UI picker shows (see template-visibility.ts).
+  if (!isCampaignSendable({ category: template.category, status: template.status }))
+    return NextResponse.json(
+      { error: "هذا القالب غير صالح للحملات — اختر قالب MARKETING أو UTILITY معتمدًا" },
       { status: 422 }
     );
 
@@ -253,6 +263,14 @@ export async function repeatCampaignForUser(userId: string, campaignId: string) 
   if (original.template.wabaId && original.template.wabaId !== account.wabaId)
     return NextResponse.json(
       { error: "قالب الحملة الأصلية تابع لحساب واتساب آخر — أنشئ حملة جديدة بقالب الحساب الحالي" },
+      { status: 422 }
+    );
+
+  // نفس بوابة الصلاحية أعلاه — القالب قد يكون تغيّر (أو سُحب اعتماده) منذ
+  // الحملة الأصلية. التكرار يعيد الإرسال فعليًا، فيُرفض غير الصالح هنا أيضًا.
+  if (!isCampaignSendable({ category: original.template.category, status: original.template.status }))
+    return NextResponse.json(
+      { error: "قالب الحملة الأصلية لم يعد صالحًا للحملات — أنشئ حملة جديدة بقالب MARKETING أو UTILITY معتمد" },
       { status: 422 }
     );
 

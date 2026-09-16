@@ -14,6 +14,8 @@ export interface OtpTemplateOption {
   name: string;
   language: string;
   status: string;
+  category?: string | undefined;
+  metaTemplateId?: string | null | undefined;
 }
 
 /** Pure selection helper: 1-based input, empty defaults to the first. */
@@ -27,7 +29,14 @@ export function chooseTemplateIndex(input: string, count: number): number {
   return n - 1;
 }
 
-/** Approved templates of a project (throws when login is missing). */
+/**
+ * OTP-sendable templates of a project (throws when login is missing).
+ *
+ * The portal filters server-side (`?sendable=otp` → AUTHENTICATION +
+ * APPROVED + Meta-linked), but the client re-checks AUTHENTICATION +
+ * APPROVED itself so older portal versions (which ignore the param) can
+ * never leak a MARKETING/UTILITY or unapproved template into the flow.
+ */
 export async function fetchApprovedTemplates(
   ctx: CommandContext,
   projectId: string
@@ -45,9 +54,16 @@ export async function fetchApprovedTemplates(
     fetchImpl: ctx.fetchImpl,
     accessToken,
   });
-  const data = await client.get<{ templates?: OtpTemplateOption[] }>(ENDPOINTS.otpTemplates(projectId));
+  const data = await client.get<{ templates?: OtpTemplateOption[] }>(
+    `${ENDPOINTS.otpTemplates(projectId)}?sendable=otp`
+  );
   const templates = Array.isArray(data.templates) ? data.templates : [];
   return templates.filter(
-    (t) => t && typeof t.id === "string" && typeof t.name === "string" && t.status === "APPROVED"
+    (t) =>
+      t &&
+      typeof t.id === "string" &&
+      typeof t.name === "string" &&
+      String(t.category ?? "AUTHENTICATION").toUpperCase() === "AUTHENTICATION" &&
+      String(t.status ?? "").toUpperCase() === "APPROVED"
   );
 }

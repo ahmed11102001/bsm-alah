@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
-import { devRateLimited, devError } from "@/lib/dev-errors";
+import { devRateLimited, devError, lmsg } from "@/lib/dev-errors";
 import {
   sha256hex,
   newCliSessionToken,
@@ -19,12 +19,12 @@ export async function POST(req: NextRequest) {
   const ip = getIP(req);
   const rl = await rateLimit(`cli-device-token:${ip}`, { limit: 60, windowSecs: 300 });
   if (!rl.success) {
-    return devRateLimited("كثير من المحاولات، حاول بعد شوية", "RATE_LIMITED", rl.retryAfter);
+    return devRateLimited(lmsg(req, "كثير من المحاولات، حاول بعد شوية", "Too many attempts, try again shortly"), "RATE_LIMITED", rl.retryAfter);
   }
 
   const body = await req.json().catch(() => ({}));
   const deviceCode = typeof body?.device_code === "string" ? body.device_code.trim() : "";
-  if (!deviceCode) return devError("device_code مطلوب", "INVALID_REQUEST", 400);
+  if (!deviceCode) return devError(lmsg(req, "device_code مطلوب", "device_code is required"), "INVALID_REQUEST", 400);
 
   const auth = await prisma.developerCliAuthorization.findUnique({
     where: { deviceCodeHash: sha256hex(deviceCode) },
@@ -36,22 +36,22 @@ export async function POST(req: NextRequest) {
       deviceName: true,
     },
   });
-  if (!auth) return devError("طلب غير صالح", "AUTHORIZATION_INVALID", 404);
+  if (!auth) return devError(lmsg(req, "طلب غير صالح", "Invalid request"), "AUTHORIZATION_INVALID", 404);
   if (auth.expiresAt.getTime() <= Date.now()) {
-    return devError("انتهت صلاحية هذا الطلب — ابدأ تسجيل الدخول من جديد", "AUTHORIZATION_EXPIRED", 410);
+    return devError(lmsg(req, "انتهت صلاحية هذا الطلب — ابدأ تسجيل الدخول من جديد", "This request has expired — start login again"), "AUTHORIZATION_EXPIRED", 410);
   }
   if (auth.status === CLI_AUTH_STATUS.PENDING) {
-    return devError("بانتظار الموافقة من المتصفح", "AUTHORIZATION_PENDING", 400);
+    return devError(lmsg(req, "بانتظار الموافقة من المتصفح", "Waiting for browser approval"), "AUTHORIZATION_PENDING", 400);
   }
   if (auth.status === CLI_AUTH_STATUS.DENIED) {
-    return devError("تم رفض هذا الطلب", "AUTHORIZATION_DENIED", 403);
+    return devError(lmsg(req, "تم رفض هذا الطلب", "This request was denied"), "AUTHORIZATION_DENIED", 403);
   }
   if (auth.status !== CLI_AUTH_STATUS.APPROVED || !auth.developerId) {
-    return devError("طلب غير صالح أو تم استخدامه بالفعل", "AUTHORIZATION_INVALID", 400);
+    return devError(lmsg(req, "طلب غير صالح أو تم استخدامه بالفعل", "Invalid request or already used"), "AUTHORIZATION_INVALID", 400);
   }
 
   if (await isDeveloperSuspended(auth.developerId)) {
-    return devError("الحساب موقف، تواصل مع الدعم", "ACCOUNT_SUSPENDED", 403);
+    return devError(lmsg(req, "الحساب موقف، تواصل مع الدعم", "Account is suspended, contact support"), "ACCOUNT_SUSPENDED", 403);
   }
 
   // Atomic single-use consume — a concurrent poll loses the race (count 0).
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     },
   });
   if (consumed.count === 0) {
-    return devError("طلب غير صالح أو تم استخدامه بالفعل", "AUTHORIZATION_INVALID", 400);
+    return devError(lmsg(req, "طلب غير صالح أو تم استخدامه بالفعل", "Invalid request or already used"), "AUTHORIZATION_INVALID", 400);
   }
 
   // Cap active sessions: revoke the oldest beyond the limit (deterministic).

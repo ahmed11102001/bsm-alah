@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import prisma from "@/lib/prisma";
 import { getOtp, updateOtpStatus } from "@/lib/otp-redis";
+import { lmsg } from "@/lib/dev-errors";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
 async function verifyApiKey(raw: string): Promise<{ projectId: string; developerId: string } | null> {
@@ -54,7 +55,7 @@ export async function GET(
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "x-api-key header مطلوب", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "x-api-key header مطلوب", "x-api-key header is required"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -62,7 +63,7 @@ export async function GET(
   const auth = await verifyApiKey(rawKey);
   if (!auth) {
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "API Key غير صحيح أو ملغي", "Invalid or revoked API key"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -71,7 +72,7 @@ export async function GET(
   const { token } = await params;
   if (!token) {
     return NextResponse.json(
-      { ok: false, error: "token مطلوب في الـ URL", code: "INVALID_REQUEST" },
+      { ok: false, error: lmsg(req, "token مطلوب في الـ URL", "token is required in the URL"), code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -133,7 +134,7 @@ export async function GET(
 
   if (!dbOtp) {
     return NextResponse.json(
-      { ok: false, error: "Token غير موجود أو لا ينتمي لهذا الـ API Key", code: "TOKEN_NOT_FOUND" },
+      { ok: false, error: lmsg(req, "Token غير موجود أو لا ينتمي لهذا الـ API Key", "Token not found or does not belong to this API key"), code: "TOKEN_NOT_FOUND" },
       { status: 404 }
     );
   }

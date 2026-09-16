@@ -44,20 +44,44 @@ export function devRateLimited(
 
 /**
  * 503 for fail-closed rate limiting (Redis down on a sensitive endpoint).
- * Arabic default matches the OTP routes' language; pass `message` to override.
+ * Arabic default matches the OTP routes' language; pass `message` to override,
+ * or `req` to pick the default by the client's Accept-Language.
  */
 export function rateLimiterUnavailableResponse(
   retryAfter?: number,
-  message?: string
+  message?: string,
+  req?: Request
 ): NextResponse {
   const ra = retryAfter ?? 60;
+  const fallback =
+    req && requestLocale(req) === "en"
+      ? "Abuse-protection service is temporarily unavailable — try again shortly"
+      : "خدمة الحماية من الإساءة غير متاحة مؤقتًا — حاول بعد شوية";
   return NextResponse.json(
     {
       ok: false,
-      error: message ?? "خدمة الحماية من الإساءة غير متاحة مؤقتًا — حاول بعد شوية",
+      error: message ?? fallback,
       code: "RATE_LIMITER_UNAVAILABLE",
       retryAfter: ra,
     },
     { status: 503, headers: { "Retry-After": String(ra) } }
   );
+}
+
+// ─── Response language ──────────────────────────────────────────────────────
+// OTP + CLI device routes serve two audiences: the (Arabic-default) portal
+// and English-only API consumers (CLI/SDK/scripts). The default stays Arabic
+// — portal behavior is byte-for-byte unchanged — unless the client sends
+// `Accept-Language: en…`, in which case human messages switch to English.
+// Machine `code` values never change, so no consumer breaks either way.
+export type ApiLocale = "ar" | "en";
+
+export function requestLocale(req: Request): ApiLocale {
+  const header = req.headers?.get?.("accept-language") ?? "";
+  return header.trim().toLowerCase().startsWith("en") ? "en" : "ar";
+}
+
+/** Pick the human message for this request: `lmsg(req, "…ar…", "…en…")`. */
+export function lmsg(req: Request, ar: string, en: string): string {
+  return requestLocale(req) === "en" ? en : ar;
 }

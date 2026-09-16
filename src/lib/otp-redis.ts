@@ -152,10 +152,22 @@ export async function getOtp(token: string): Promise<OtpData | null> {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Verify OTP code
 // ═══════════════════════════════════════════════════════════════════════════════
+export type VerifyLocale = "ar" | "en";
+
+const VERIFY_MESSAGES: Record<string, { ar: string; en: string }> = {
+  TOKEN_NOT_FOUND: { ar: "Token غير موجود أو منتهي الصلاحية", en: "Token not found or expired" },
+  TOKEN_WRONG_PROJECT: { ar: "Token لا ينتمي لهذا الـ API Key", en: "Token does not belong to this API key" },
+  ALREADY_VERIFIED: { ar: "OTP تم التحقق منه مسبقاً ولا يمكن استخدامه مرة أخرى", en: "OTP was already verified and cannot be used again" },
+  OTP_NOT_SENT: { ar: "OTP لم يُرسل بنجاح، اطلب كود جديد", en: "OTP was not sent successfully, request a new code" },
+  OTP_EXPIRED: { ar: "OTP انتهت صلاحيته — اطلب كود جديد", en: "OTP has expired — request a new code" },
+  CODE_MISMATCH: { ar: "الكود غير صحيح", en: "Incorrect code" },
+};
+
 export async function verifyOtp(
   token: string,
   code: string,
-  projectId: string
+  projectId: string,
+  lang: VerifyLocale = "ar"
 ): Promise<{
   success: boolean;
   error?: string;
@@ -163,16 +175,19 @@ export async function verifyOtp(
   phone?: string;
   alreadyVerified?: boolean;
 }> {
+  const msg = (code: keyof typeof VERIFY_MESSAGES): string =>
+    lang === "en" ? VERIFY_MESSAGES[code].en : VERIFY_MESSAGES[code].ar;
+
   const otp = await getOtp(token);
 
   // Token not found
   if (!otp) {
-    return { success: false, code: "TOKEN_NOT_FOUND", error: "Token غير موجود أو منتهي الصلاحية" };
+    return { success: false, code: "TOKEN_NOT_FOUND", error: msg("TOKEN_NOT_FOUND") };
   }
 
   // Verify project ownership
   if (otp.projectId !== projectId) {
-    return { success: false, code: "TOKEN_WRONG_PROJECT", error: "Token لا ينتمي لهذا الـ API Key" };
+    return { success: false, code: "TOKEN_WRONG_PROJECT", error: msg("TOKEN_WRONG_PROJECT") };
   }
 
   // Already verified
@@ -183,7 +198,7 @@ export async function verifyOtp(
     return {
       success: false,
       code: "ALREADY_VERIFIED",
-      error: "OTP تم التحقق منه مسبقاً ولا يمكن استخدامه مرة أخرى",
+      error: msg("ALREADY_VERIFIED"),
       phone: otp.phone,
       alreadyVerified: true,
     };
@@ -191,7 +206,7 @@ export async function verifyOtp(
 
   // Failed OTP
   if (otp.status === "FAILED") {
-    return { success: false, code: "OTP_NOT_SENT", error: "OTP لم يُرسل بنجاح، اطلب كود جديد" };
+    return { success: false, code: "OTP_NOT_SENT", error: msg("OTP_NOT_SENT") };
   }
 
   // Expired check
@@ -199,12 +214,12 @@ export async function verifyOtp(
   if (new Date(otp.expiresAt) < now) {
     // Update status to expired
     await updateOtpStatus(token, "EXPIRED");
-    return { success: false, code: "OTP_EXPIRED", error: "OTP انتهت صلاحيته — اطلب كود جديد" };
+    return { success: false, code: "OTP_EXPIRED", error: msg("OTP_EXPIRED") };
   }
 
   // Timing-safe comparison
   if (!safeCompareHash(code, otp.codeHash)) {
-    return { success: false, code: "CODE_MISMATCH", error: "الكود غير صحيح" };
+    return { success: false, code: "CODE_MISMATCH", error: msg("CODE_MISMATCH") };
   }
 
   // Mark as verified

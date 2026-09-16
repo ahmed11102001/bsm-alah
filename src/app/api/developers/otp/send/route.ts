@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 import { createHash, randomBytes } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
-import { rateLimiterUnavailableResponse } from "@/lib/dev-errors";
+import { rateLimiterUnavailableResponse, lmsg, requestLocale, type ApiLocale } from "@/lib/dev-errors";
 import { decryptToken } from "@/lib/crypto";
 import { storeOtp } from "@/lib/otp-redis";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
@@ -122,27 +122,32 @@ type TemplateResolution =
 
 async function resolveTemplateById(
   projectId: string,
-  templateId: string
+  templateId: string,
+  lang: ApiLocale = "ar"
 ): Promise<TemplateResolution> {
+  const en = lang === "en";
   const template = await prisma.developerOtpTemplate.findUnique({
     where: { id: templateId },
   });
 
   if (!template) {
-    return { ok: false, code: "TEMPLATE_NOT_FOUND", error: "القالب غير موجود في هذا المشروع", status: 404 };
+    return { ok: false, code: "TEMPLATE_NOT_FOUND", error: en ? "Template not found in this project" : "القالب غير موجود في هذا المشروع", status: 404 };
   }
   // القالب موجود لكن لمشروع آخر → رفض صريح (لا تسريب وجود/حالة)
   if (template.projectId !== projectId) {
-    return { ok: false, code: "TEMPLATE_WRONG_PROJECT", error: "القالب لا ينتمي إلى هذا المشروع", status: 403 };
+    return { ok: false, code: "TEMPLATE_WRONG_PROJECT", error: en ? "Template does not belong to this project" : "القالب لا ينتمي إلى هذا المشروع", status: 403 };
   }
-  return assertTemplateUsable(template, projectId);
+  return assertTemplateUsable(template, projectId, lang);
 }
 
 async function resolveTemplateByName(
   projectId: string,
   rawName: string,
-  rawLanguage?: unknown
+  rawLanguage?: unknown,
+  lang: ApiLocale = "ar"
 ): Promise<TemplateResolution> {
+  const en = lang === "en";
+  const sep = en ? ", " : "، ";
   const name = rawName.trim().toLowerCase();
   const language = typeof rawLanguage === "string" && rawLanguage.trim()
     ? rawLanguage.trim()
@@ -157,7 +162,9 @@ async function resolveTemplateByName(
     return {
       ok: false,
       code: "TEMPLATE_NOT_FOUND",
-      error: `القالب "${name}" غير موجود في هذا المشروع — تأكد من مزامنته مع Meta من صفحة القوالب`,
+      error: en
+        ? `Template "${name}" not found in this project — make sure it is synced with Meta from the templates page`
+        : `القالب "${name}" غير موجود في هذا المشروع — تأكد من مزامنته مع Meta من صفحة القوالب`,
       status: 404,
     };
   }
@@ -166,27 +173,31 @@ async function resolveTemplateByName(
   if (language) {
     match = match.filter((t) => t.language === language);
     if (match.length === 0) {
-      const available = [...new Set(candidates.map((t) => t.language))].join("، ");
+      const available = [...new Set(candidates.map((t) => t.language))].join(sep);
       return {
         ok: false,
         code: "TEMPLATE_LANGUAGE_MISMATCH",
-        error: `القالب "${name}" غير موجود باللغة "${language}" — اللغات المتاحة: ${available}`,
+        error: en
+          ? `Template "${name}" does not exist in language "${language}" — available languages: ${available}`
+          : `القالب "${name}" غير موجود باللغة "${language}" — اللغات المتاحة: ${available}`,
         status: 404,
       };
     }
   }
 
   if (match.length > 1) {
-    const available = [...new Set(match.map((t) => t.language))].join("، ");
+    const available = [...new Set(match.map((t) => t.language))].join(sep);
     return {
       ok: false,
       code: "TEMPLATE_AMBIGUOUS",
-      error: `يوجد أكثر من نسخة للقالب "${name}" — حدد اللغة أو استخدم templateId (اللغات: ${available})`,
+      error: en
+        ? `Multiple versions of template "${name}" exist — specify the language or use templateId (languages: ${available})`
+        : `يوجد أكثر من نسخة للقالب "${name}" — حدد اللغة أو استخدم templateId (اللغات: ${available})`,
       status: 400,
     };
   }
 
-  return assertTemplateUsable(match[0], projectId);
+  return assertTemplateUsable(match[0], projectId, lang);
 }
 
 // ─── Usability gate — المفوّض الوحيد: validateOtpTemplateContract ──────────
@@ -195,10 +206,16 @@ async function resolveTemplateByName(
 function assertTemplateUsable(template: {
   id: string; projectId: string; name: string; language: string; body: string; category: string;
   metaTemplateId: string | null; status: string; variables?: unknown; metaComponents?: unknown;
-}, expectedProjectId: string): TemplateResolution {
-  // رسالة عربية مخصصة لكل حالة عدم اعتماد (لتجربة المطور)
+}, expectedProjectId: string, lang: ApiLocale = "ar"): TemplateResolution {
+  const en = lang === "en";
+  // رسالة مخصصة لكل حالة عدم اعتماد (لتجربة المطور)
   if (template.status !== "APPROVED") {
-    const statusMsg: Record<string, string> = {
+    const statusMsg: Record<string, string> = en ? {
+      LOCAL_DRAFT: `Template "${template.name}" is a local draft — create an OTP template from the templates page, submit it to Meta, get it approved, then sync`,
+      PENDING: `Template "${template.name}" is under Meta review — sync templates after approval, then retry`,
+      REJECTED: `Template "${template.name}" was rejected by Meta — check the rejection reason on the templates page`,
+      DISABLED: `Template "${template.name}" is currently disabled in Meta`,
+    } : {
       LOCAL_DRAFT: `القالب "${template.name}" مسودة محلية — أنشئ قالب OTP من صفحة القوالب وأرسله لـ Meta واعتمده أولًا ثم زامن`,
       PENDING: `القالب "${template.name}" قيد مراجعة Meta — زامن القوالب بعد الموافقة ثم أعد المحاولة`,
       REJECTED: `القالب "${template.name}" مرفوض من Meta — راجع سبب الرفض في صفحة القوالب`,
@@ -207,7 +224,9 @@ function assertTemplateUsable(template: {
     return {
       ok: false,
       code: "TEMPLATE_NOT_APPROVED",
-      error: statusMsg[template.status] ?? `القالب "${template.name}" غير معتمد حاليًا (الحالة: ${template.status})`,
+      error: statusMsg[template.status] ?? (en
+        ? `Template "${template.name}" is not currently approved (status: ${template.status})`
+        : `القالب "${template.name}" غير معتمد حاليًا (الحالة: ${template.status})`),
       status: 400,
     };
   }
@@ -231,21 +250,27 @@ function assertTemplateUsable(template: {
         return {
           ok: false,
           code: "TEMPLATE_NO_META_ID",
-          error: `القالب "${template.name}" معتمد لكن غير مرتبط بقالب Meta — زامن القوالب مع Meta أولًا`,
+          error: en
+            ? `Template "${template.name}" is approved but not linked to a Meta template — sync templates with Meta first`
+            : `القالب "${template.name}" معتمد لكن غير مرتبط بقالب Meta — زامن القوالب مع Meta أولًا`,
           status: 400,
         };
       case OTP_CONTRACT_ERRORS.OTP_TEMPLATE_NOT_COMPATIBLE:
         return {
           ok: false,
           code: "OTP_TEMPLATE_NOT_COMPATIBLE",
-          error: `القالب "${template.name}" غير متوافق مع OTP (مطلوب AUTHENTICATION معتمد) — ${check.reason}`,
+          error: en
+            ? `Template "${template.name}" is not OTP-compatible (approved AUTHENTICATION required) — ${check.reason}`
+            : `القالب "${template.name}" غير متوافق مع OTP (مطلوب AUTHENTICATION معتمد) — ${check.reason}`,
           status: 400,
         };
       default:
         return {
           ok: false,
           code: "OTP_TEMPLATE_METADATA_INVALID",
-          error: `القالب "${template.name}" غير صالح للإرسال — ${check.reason}`,
+          error: en
+            ? `Template "${template.name}" is not valid for sending — ${check.reason}`
+            : `القالب "${template.name}" غير صالح للإرسال — ${check.reason}`,
           status: 409,
         };
     }
@@ -369,7 +394,7 @@ export async function POST(req: NextRequest) {
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "API Key مطلوب في header: x-api-key", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "API Key مطلوب في header: x-api-key", "API key is required in the x-api-key header"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -378,12 +403,12 @@ export async function POST(req: NextRequest) {
   if (!auth || "error" in auth) {
     if (auth && auth.error === "NO_META_CONNECTION") {
       return NextResponse.json(
-        { ok: false, error: "ربط Meta غير مكتمل لهذا المشروع — اربط Meta من صفحة Overview أولًا", code: "NO_META_CONNECTION" },
+        { ok: false, error: lmsg(req, "ربط Meta غير مكتمل لهذا المشروع — اربط Meta من صفحة Overview أولًا", "Meta connection is incomplete for this project — connect Meta from the project Overview first"), code: "NO_META_CONNECTION" },
         { status: 400 }
       );
     }
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي — تحقق من x-api-key", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "API Key غير صحيح أو ملغي — تحقق من x-api-key", "Invalid or revoked API key — check x-api-key"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -394,7 +419,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Request body يجب أن يكون JSON صحيح", code: "INVALID_REQUEST" },
+      { ok: false, error: lmsg(req, "Request body يجب أن يكون JSON صحيح", "Request body must be valid JSON"), code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -403,14 +428,14 @@ export async function POST(req: NextRequest) {
 
   if (!phone) {
     return NextResponse.json(
-      { ok: false, error: "phone مطلوب", code: "PHONE_REQUIRED" },
+      { ok: false, error: lmsg(req, "phone مطلوب", "phone is required"), code: "PHONE_REQUIRED" },
       { status: 400 }
     );
   }
   // المسار الأساسي templateId (Live Tester) — والـ legacy templateName للتوافق
   if (!templateId && !templateName) {
     return NextResponse.json(
-      { ok: false, error: "templateId مطلوب — أو templateName للقوالب المعتمدة", code: "TEMPLATE_REF_REQUIRED" },
+      { ok: false, error: lmsg(req, "templateId مطلوب — أو templateName للقوالب المعتمدة", "templateId is required — or templateName for approved templates"), code: "TEMPLATE_REF_REQUIRED" },
       { status: 400 }
     );
   }
@@ -419,7 +444,7 @@ export async function POST(req: NextRequest) {
   const expiryMins = Number(expiryMinutes);
   if (!Number.isFinite(expiryMins) || !Number.isInteger(expiryMins) || expiryMins < 1 || expiryMins > 60) {
     return NextResponse.json(
-      { ok: false, error: "expiryMinutes يجب أن يكون عددًا صحيحًا بين 1 و 60", code: "EXPIRY_INVALID" },
+      { ok: false, error: lmsg(req, "expiryMinutes يجب أن يكون عددًا صحيحًا بين 1 و 60", "expiryMinutes must be an integer between 1 and 60"), code: "EXPIRY_INVALID" },
       { status: 400 }
     );
   }
@@ -428,7 +453,7 @@ export async function POST(req: NextRequest) {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) {
     return NextResponse.json(
-      { ok: false, error: `رقم الهاتف غير صحيح: "${phone}" — استخدم E.164 أو الصيغة المصرية`, code: "INVALID_REQUEST" },
+      { ok: false, error: lmsg(req, `رقم الهاتف غير صحيح: "${phone}" — استخدم E.164 أو الصيغة المصرية`, `Invalid phone number: "${phone}" — use E.164 or the Egyptian format`), code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -443,7 +468,7 @@ export async function POST(req: NextRequest) {
     // Check if subscription expired
     if (auth.planRenewsAt && new Date() > auth.planRenewsAt) {
       return NextResponse.json(
-        { ok: false, error: "انتهى اشتراك باقة الأونر — يرجى التجديد للاستمرار", code: "NO_ACTIVE_PLAN" },
+        { ok: false, error: lmsg(req, "انتهى اشتراك باقة الأونر — يرجى التجديد للاستمرار", "Owner plan subscription has expired — please renew to continue"), code: "NO_ACTIVE_PLAN" },
         { status: 403 }
       );
     }
@@ -462,7 +487,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: "انتهت فترة الـ Trial (أو وصلت للحد الأقصى) — اشترك في باقة الأونر للاستمرار",
+          error: lmsg(req, "انتهت فترة الـ Trial (أو وصلت للحد الأقصى) — اشترك في باقة الأونر للاستمرار", "Trial period has ended (or limit reached) — subscribe to the owner plan to continue"),
           code: "TRIAL_EXPIRED",
           upgradeUrl: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
         },
@@ -493,9 +518,10 @@ export async function POST(req: NextRequest) {
   // ── 5. Resolve template (المشروع من الـ API Key فقط) ────────────────────
   // لا يُقبل أي projectId من الـ client — ولا يُجبر الـ backend على اسم مختلف.
   // قبل الـ rate limit لنفس السبب: طلب مرفوض لا يستهلك حصة الرقم.
+  const lang = requestLocale(req);
   const resolution = templateId
-    ? await resolveTemplateById(auth.projectId, String(templateId))
-    : await resolveTemplateByName(auth.projectId, String(templateName), language);
+    ? await resolveTemplateById(auth.projectId, String(templateId), lang)
+    : await resolveTemplateByName(auth.projectId, String(templateName), language, lang);
   if (!resolution.ok) {
     return NextResponse.json(
       { ok: false, error: resolution.error, code: resolution.code },
@@ -509,11 +535,11 @@ export async function POST(req: NextRequest) {
   // fail-closed: عطل Redis أثناء OTP ≠ سماح — نرفض بـ 503 بدل الـ bypass.
   const rl = await rateLimit(rlPhone, { limit: 5, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rl.success) {
-    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter);
+    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter, undefined, req);
     return NextResponse.json(
       {
         ok: false,
-        error: `Rate limit — وصلت للحد الأقصى (5 رسائل/ساعة) لهذا الرقم`,
+        error: lmsg(req, `Rate limit — وصلت للحد الأقصى (5 رسائل/ساعة) لهذا الرقم`, `Rate limit — maximum reached (5 messages/hour) for this number`),
         code: "RATE_LIMIT_PHONE",
         retryAfter: rl.retryAfter,
       },
@@ -528,17 +554,17 @@ export async function POST(req: NextRequest) {
   const ip = getIP(req);
   const rlIpMin = await rateLimit(`otp-send-ip-min:${ip}`, { limit: 15, windowSecs: 60 }, { failureMode: "closed" });
   if (!rlIpMin.success) {
-    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter);
+    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter, undefined, req);
     return NextResponse.json(
-      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", code: "RATE_LIMIT_IP", retryAfter: rlIpMin.retryAfter },
+      { ok: false, error: lmsg(req, "كثير من الطلبات — حاول بعد شوية", "Too many requests — try again shortly"), code: "RATE_LIMIT_IP", retryAfter: rlIpMin.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
     );
   }
   const rlIpHr = await rateLimit(`otp-send-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rlIpHr.success) {
-    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter);
+    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter, undefined, req);
     return NextResponse.json(
-      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", code: "RATE_LIMIT_IP", retryAfter: rlIpHr.retryAfter },
+      { ok: false, error: lmsg(req, "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", "Hourly request limit exceeded — try again later"), code: "RATE_LIMIT_IP", retryAfter: rlIpHr.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
     );
   }
@@ -632,7 +658,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        error: "تم إرسال الكود لكن تعذر حفظه للتحقق — اطلب كودًا جديدًا",
+        error: lmsg(req, "تم إرسال الكود لكن تعذر حفظه للتحقق — اطلب كودًا جديدًا", "The code was sent but could not be stored for verification — request a new code"),
         code: "OTP_STORE_FAILED",
       },
       { status: 502 }
@@ -665,7 +691,7 @@ export async function POST(req: NextRequest) {
       {
         ok: false,
         error: isPayloadMismatch
-          ? `القالب "${template.name}" مرفوض من Meta (parameters mismatch) — زامن القوالب من صفحة القوالب ثم أعد المحاولة. لو تكرر، راجع تعريف القالب في Meta.`
+          ? lmsg(req, `القالب "${template.name}" مرفوض من Meta (parameters mismatch) — زامن القوالب من صفحة القوالب ثم أعد المحاولة. لو تكرر، راجع تعريف القالب في Meta.`, `Template "${template.name}" was rejected by Meta (parameters mismatch) — sync templates from the templates page and retry. If it persists, review the template definition in Meta.`)
           : "WhatsApp send failed: " + sendResult.error,
         code: isPayloadMismatch ? "META_131008" : "META_SEND_FAILED",
         ...(sendResult.metaCode ? { metaCode: sendResult.metaCode } : {}),

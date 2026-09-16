@@ -37,6 +37,8 @@ describe("ApiClient", () => {
     assert.equal(seen[0].init.headers["Authorization"], "Bearer tok123");
     assert.equal(seen[0].init.headers["Cookie"], undefined);
     assert.equal(seen[0].init.headers["x-api-key"], "wani_live_x");
+    // Terminal is English-only: every CLI request asks for English messages.
+    assert.equal(seen[0].init.headers["Accept-Language"], "en");
     assert.deepEqual(JSON.parse(seen[0].init.body), { a: 1 });
   });
 

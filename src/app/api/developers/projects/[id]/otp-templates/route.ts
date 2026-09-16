@@ -31,9 +31,18 @@ export async function GET(
   const project = await getProjectOrFail(session.id, id);
   if (!project) return devError("المشروع مش موجود", "NOT_FOUND", 404);
 
+  // The Developer Portal is OTP-only: never list MARKETING/UTILITY rows here
+  // (see template-visibility.ts). `?sendable=otp` narrows further to
+  // AUTHENTICATION + APPROVED + Meta-linked — the exact set Live Tester
+  // and Wani CLI may offer.
+  const sendableOnly = new URL(req.url).searchParams.get("sendable") === "otp";
   try {
     const templates = await prisma.developerOtpTemplate.findMany({
-      where: { projectId: id },
+      where: {
+        projectId: id,
+        category: "AUTHENTICATION",
+        ...(sendableOnly ? { status: "APPROVED", metaTemplateId: { not: null } } : {}),
+      },
       orderBy: { createdAt: "desc" },
     });
 

@@ -212,6 +212,25 @@ describe("OTP Redis Module", () => {
       expect(res.error).toMatch(/لا يمكن استخدامه مرة أخرى/);
     });
 
+    it("lang=en returns English messages with identical codes", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      const nf = await verifyOtp("t", "1", "p", "en");
+      expect(nf.code).toBe("TOKEN_NOT_FOUND");
+      expect(nf.error).toBe("Token not found or expired");
+
+      mockRedis.get.mockResolvedValue(JSON.stringify(makeMockOtp()));
+      const mm = await verifyOtp("t", "000000", validProjectId, "en");
+      expect(mm.code).toBe("CODE_MISMATCH");
+      expect(mm.error).toBe("Incorrect code");
+      expect(mm.error).not.toMatch(/[\u0600-\u06FF]/);
+    });
+
+    it("default (no lang) stays Arabic", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      const res = await verifyOtp("t", "1", "p");
+      expect(res.error).toMatch(/غير موجود/);
+    });
+
     it("كل فشل تحقق يحمل code منظم (TOKEN_NOT_FOUND/WRONG_PROJECT/MISMATCH/EXPIRED)", async () => {
       mockRedis.get.mockResolvedValue(null);
       expect((await verifyOtp("t", "1", "p")).code).toBe("TOKEN_NOT_FOUND");

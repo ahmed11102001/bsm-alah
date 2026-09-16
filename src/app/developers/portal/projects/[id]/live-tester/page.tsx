@@ -185,13 +185,15 @@ export default function LiveTesterPage() {
   useEffect(() => { setMounted(true); }, []);
 
   // ── جلب قوالب المشروع الحالي (session) ────────────────────────────────
+  // ?sendable=otp narrows server-side to AUTHENTICATION + APPROVED + linked;
+  // the isSendable() check below re-validates metadata client-side.
   async function fetchTemplates(silent = false) {
     if (!silent) {
       setLoadingTemplates(true);
       setTemplatesError(null);
     }
     try {
-      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates`);
+      const res = await fetch(`/api/developers/projects/${projectId}/otp-templates?sendable=otp`);
       const data = await res.json();
       if (!res.ok) {
         setTemplatesError(data.error || t("Failed to load templates", "فشل تحميل القوالب"));

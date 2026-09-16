@@ -16,6 +16,7 @@ import {
 import { useLanguage } from "@/lib/language-context";
 import { useSubscription } from "@/lib/dashboard-context";
 import { useTemplateParser } from "@/hooks/useTemplateParser";
+import { isCampaignSendable } from "@/lib/template-visibility";
 
 import { tr } from "./_components/i18n";
 import PageHeader from "@/components/dashboard/PageHeader";
@@ -129,9 +130,11 @@ export default function Campaigns() {
       // قوالب الحساب المتصل حاليًا فقط — المثبوت لحساب آخر مخفي هنا ومرفوض
       // في الباك إند حتى لو أُرسل id يدويًا (isCurrentAccount من GET).
       const scoped = list.filter((t: any) => t.isCurrentAccount !== false);
-      const approved = scoped.filter(t => ["approved", "APPROVED"].includes(t.status ?? ""));
-      setTemplates(approved);
-      if (approved.length > 0) setSelectedTemplate(approved[0]);
+      // الحملات تقبل MARKETING/UTILITY المعتمدة فقط — AUTHENTICATION (OTP)
+      // مرفوضة هنا وفي الباك إند (isCampaignSendable).
+      const sendable = scoped.filter((t: any) => isCampaignSendable({ category: t.category, status: t.status }));
+      setTemplates(sendable);
+      if (sendable.length > 0) setSelectedTemplate(sendable[0]);
     } catch { toast.error(tr("errLoadTemplates", lang)); }
   }, []);
 

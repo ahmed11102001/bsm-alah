@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
-import { devRateLimited, devError } from "@/lib/dev-errors";
+import { devRateLimited, devError, lmsg } from "@/lib/dev-errors";
 import {
   newDeviceCode,
   newUserCode,
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const ip = getIP(req);
   const rl = await rateLimit(`cli-device-code:${ip}`, { limit: 10, windowSecs: 3600 });
   if (!rl.success) {
-    return devRateLimited("كثير من المحاولات، حاول بعد شوية", "RATE_LIMITED", rl.retryAfter);
+    return devRateLimited(lmsg(req, "كثير من المحاولات، حاول بعد شوية", "Too many attempts, try again shortly"), "RATE_LIMITED", rl.retryAfter);
   }
 
   let deviceName: string | undefined;
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[cli-device-code]", err);
-    return devError("حصل خطأ، حاول تاني", "INTERNAL", 500);
+    return devError(lmsg(req, "حصل خطأ، حاول تاني", "An error occurred, try again"), "INTERNAL", 500);
   }
 
   return NextResponse.json({

@@ -89,8 +89,11 @@ export async function POST(
     // تصنيفات Meta المعروفة — أي قيمة خارجها تُعامل كـ UTILITY
     const KNOWN_CATEGORIES = new Set(["AUTHENTICATION", "UTILITY", "MARKETING"]);
 
+    // Developer Portal is OTP-only: sync AUTHENTICATION templates exclusively
+    // (see template-visibility.ts). Non-AUTH rows are neither updated nor
+    // imported, so MARKETING/UTILITY can never leak into the portal.
     const localTemplates = await prisma.developerOtpTemplate.findMany({
-      where: { projectId: id },
+      where: { projectId: id, category: "AUTHENTICATION" },
     });
 
     let updated = 0;
@@ -104,6 +107,9 @@ export async function POST(
         metaTemplates.find((m) => m.name === local.name && m.language === local.language);
 
       if (!metaTmpl) continue;
+      // Never let a same-named non-AUTH Meta template flip a local OTP row
+      // into another category (it would vanish from the portal).
+      if (metaTmpl.category && metaTmpl.category.toUpperCase() !== "AUTHENTICATION") continue;
 
       const newStatus = statusMap[metaTmpl.status] || local.status;
       const newRejectedReason = metaTmpl.status === "REJECTED"
@@ -167,7 +173,9 @@ export async function POST(
       const category = m.category && KNOWN_CATEGORIES.has(m.category.toUpperCase())
         ? m.category.toUpperCase()
         : "UTILITY";
-      const isAuth = category === "AUTHENTICATION";
+      // OTP portal only — skip MARKETING/UTILITY imports entirely.
+      if (category !== "AUTHENTICATION") continue;
+      const isAuth = true;
       const derivedVariables = deriveVariables(m.components, category);
 
       await prisma.developerOtpTemplate.create({

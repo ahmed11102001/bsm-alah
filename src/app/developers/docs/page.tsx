@@ -532,8 +532,9 @@ export default function ApiDocsPage() {
         "wani login",
         "wani project list",
         "wani project use <project>",
-        "wani otp test --phone 201012345678 --template-id YOUR_TEMPLATE_ID --code 123456",
-      ].join("\n");
+                    "wani otp test --phone 201012345678 --template-id YOUR_TEMPLATE_ID --code 123456",
+                    "wani init  # scaffold the SDK integration in your project",
+                  ].join("\n");
     }
     const opt = EXAMPLE_OPTIONS.find(o => o.id === example);
     if (!opt || opt.id === "cli") return "";
@@ -840,7 +841,7 @@ export default function ApiDocsPage() {
                       <td style={{ fontFamily: "Fira Code, monospace", fontSize: 12 }}>otp.send()</td>
                       <td style={{ fontFamily: "Fira Code, monospace", fontSize: 12 }}>otp.verify()</td>
                       <td style={{ fontFamily: "Fira Code, monospace", fontSize: 12 }}>otp.status()</td>
-                      <td style={{ fontFamily: "Fira Code, monospace", fontSize: 12 }}>WaniError.code</td>
+                      <td style={{ fontFamily: "Fira Code, monospace", fontSize: 12 }}>WaniError.code + retryAfter</td>
                     </tr>
                     <tr>
                       <td style={{ fontWeight: 600, color: "#fff" }}>REST</td>

@@ -63,9 +63,28 @@ describe("GET /api/templates", () => {
     const data = await res.json();
 
     expect(mockPrisma.template.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: "user-1" } })
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: "user-1",
+          NOT: expect.arrayContaining([
+            expect.objectContaining({ category: "AUTHENTICATION" }),
+          ]),
+        }),
+      })
     );
     expect(data).toEqual([{ id: "t1", userId: "user-1", isCurrentAccount: true }]);
+  });
+
+  it("excludes AUTHENTICATION (OTP) templates server-side", async () => {
+    mockGetServerSession.mockResolvedValueOnce(SESSION);
+    mockPrisma.template.findMany.mockResolvedValueOnce([]);
+
+    await GET(makeReq());
+
+    const where = mockPrisma.template.findMany.mock.calls[0][0].where;
+    const serialized = JSON.stringify(where.NOT ?? where);
+    expect(serialized).toContain("AUTHENTICATION");
+    expect(serialized).not.toContain("MARKETING");
   });
 
   it("بيستخدم parentId (حساب فرعي) لو موجود بدل الـ id", async () => {
@@ -75,7 +94,14 @@ describe("GET /api/templates", () => {
     await GET(makeReq());
 
     expect(mockPrisma.template.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: "owner-1" } })
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: "owner-1",
+          NOT: expect.arrayContaining([
+            expect.objectContaining({ category: "AUTHENTICATION" }),
+          ]),
+        }),
+      })
     );
   });
 });

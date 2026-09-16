@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createHash } from "crypto";
 import { rateLimit, getIP } from "@/lib/rate-limit";
-import { rateLimiterUnavailableResponse } from "@/lib/dev-errors";
+import { rateLimiterUnavailableResponse, lmsg, requestLocale } from "@/lib/dev-errors";
 import { verifyOtp } from "@/lib/otp-redis";
 
 // ─── Verify API Key ───────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const rawKey = req.headers.get("x-api-key")?.trim();
   if (!rawKey) {
     return NextResponse.json(
-      { ok: false, error: "x-api-key header مطلوب", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "x-api-key header مطلوب", "x-api-key header is required"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   const auth = await verifyApiKey(rawKey);
   if (!auth) {
     return NextResponse.json(
-      { ok: false, error: "API Key غير صحيح أو ملغي", code: "INVALID_API_KEY" },
+      { ok: false, error: lmsg(req, "API Key غير صحيح أو ملغي", "Invalid or revoked API key"), code: "INVALID_API_KEY" },
       { status: 401 }
     );
   }
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch {
     return NextResponse.json(
-      { ok: false, error: "Request body يجب أن يكون JSON صحيح", code: "INVALID_REQUEST" },
+      { ok: false, error: lmsg(req, "Request body يجب أن يكون JSON صحيح", "Request body must be valid JSON"), code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   if (!token || !code) {
     return NextResponse.json(
-      { ok: false, error: "token و code مطلوبين في body", code: "INVALID_REQUEST" },
+      { ok: false, error: lmsg(req, "token و code مطلوبين في body", "token and code are required in body"), code: "INVALID_REQUEST" },
       { status: 400 }
     );
   }
@@ -89,9 +89,9 @@ export async function POST(req: NextRequest) {
   // fail-closed: عطل Redis أثناء OTP ≠ سماح — نرفض بـ 503 بدل الـ bypass.
   const rl = await rateLimit(`otp-verify:${token}`, { limit: 10, windowSecs: 900 }, { failureMode: "closed" });
   if (!rl.success) {
-    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter);
+    if (rl.unavailable) return rateLimiterUnavailableResponse(rl.retryAfter, undefined, req);
     return NextResponse.json(
-      { ok: false, error: "كثير من المحاولات — انتظر قبل إعادة المحاولة", code: "RATE_LIMITED", retryAfter: rl.retryAfter },
+      { ok: false, error: lmsg(req, "كثير من المحاولات — انتظر قبل إعادة المحاولة", "Too many attempts — wait before retrying"), code: "RATE_LIMITED", retryAfter: rl.retryAfter },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
     );
   }
@@ -100,23 +100,23 @@ export async function POST(req: NextRequest) {
   const ip = getIP(req);
   const rlIpMin = await rateLimit(`otp-verify-ip-min:${ip}`, { limit: 15, windowSecs: 60 }, { failureMode: "closed" });
   if (!rlIpMin.success) {
-    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter);
+    if (rlIpMin.unavailable) return rateLimiterUnavailableResponse(rlIpMin.retryAfter, undefined, req);
     return NextResponse.json(
-      { ok: false, error: "كثير من الطلبات — حاول بعد شوية", code: "RATE_LIMITED", retryAfter: rlIpMin.retryAfter },
+      { ok: false, error: lmsg(req, "كثير من الطلبات — حاول بعد شوية", "Too many requests — try again shortly"), code: "RATE_LIMITED", retryAfter: rlIpMin.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpMin.retryAfter ?? 60) } }
     );
   }
   const rlIpHr = await rateLimit(`otp-verify-ip-hr:${ip}`, { limit: 150, windowSecs: 3600 }, { failureMode: "closed" });
   if (!rlIpHr.success) {
-    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter);
+    if (rlIpHr.unavailable) return rateLimiterUnavailableResponse(rlIpHr.retryAfter, undefined, req);
     return NextResponse.json(
-      { ok: false, error: "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", code: "RATE_LIMITED", retryAfter: rlIpHr.retryAfter },
+      { ok: false, error: lmsg(req, "تجاوزت حد الطلبات في الساعة — حاول لاحقاً", "Hourly request limit exceeded — try again later"), code: "RATE_LIMITED", retryAfter: rlIpHr.retryAfter },
       { status: 429, headers: { "Retry-After": String(rlIpHr.retryAfter ?? 60) } }
     );
   }
 
   // ── 4. Verify OTP from Redis (timing-safe comparison inside) ─────────────
-  const result = await verifyOtp(token, String(code).trim(), auth.projectId);
+  const result = await verifyOtp(token, String(code).trim(), auth.projectId, requestLocale(req));
 
   if (!result.success) {
     // 404 للغير موجود فقط — الباقي 400 مع code مخصص (بلا تخمين من النص)
@@ -140,7 +140,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok:       true,
     verified: true,
-    message:  result.alreadyVerified ? "OTP تم التحقق منه مسبقاً" : "OTP تم التحقق بنجاح",
+    message:  result.alreadyVerified
+      ? lmsg(req, "OTP تم التحقق منه مسبقاً", "OTP was already verified")
+      : lmsg(req, "OTP تم التحقق بنجاح", "OTP verified successfully"),
     phone:    result.phone,
   });
 }

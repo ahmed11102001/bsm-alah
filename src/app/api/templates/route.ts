@@ -13,8 +13,18 @@ export async function GET(req: Request) {
     if (denied) return denied;
     const ownerId = (session!.user as any).parentId || session!.user.id;
     const [templates, account] = await Promise.all([
+      // Merchant world is MARKETING/UTILITY only — AUTHENTICATION (OTP)
+      // templates belong to the Developer Portal and must never surface
+      // here (see template-visibility.ts).
       prisma.template.findMany({
-        where: { userId: ownerId },
+        where: {
+          userId: ownerId,
+          NOT: [
+            { category: "AUTHENTICATION" },
+            { category: "authentication" },
+            { category: "Authentication" },
+          ],
+        },
         orderBy: { createdAt: "desc" }
       }),
       prisma.whatsAppAccount.findUnique({

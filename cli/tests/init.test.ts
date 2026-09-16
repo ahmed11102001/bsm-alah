@@ -116,8 +116,8 @@ describe("wani init", () => {
         { apiKeys: {}, currentProjectId: "p1", cliAccessToken: "tok" },
         (url) => {
           if (url.endsWith("/projects")) return { projects: [{ id: "p1", name: "My Store" }] };
-          if (url.endsWith("/otp-templates")) {
-            return { templates: [{ id: "tpl_9", name: "wani_otp_test", language: "ar", status: "APPROVED" }] };
+          if (url.includes("/otp-templates")) {
+            return { templates: [{ id: "tpl_9", name: "wani_otp_test", language: "ar", status: "APPROVED", category: "AUTHENTICATION", metaTemplateId: "meta-9" }] };
           }
           return codegenBehavior(url);
         }
@@ -188,3 +188,5 @@ describe("wani init", () => {
     );
   });
 });
+
+

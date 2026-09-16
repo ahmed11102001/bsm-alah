@@ -57,7 +57,7 @@ async function postJson(
   try {
     const res = await fetchImpl(`${baseUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept-Language": "en" },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
