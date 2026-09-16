@@ -37,7 +37,7 @@ Commands:
   whoami                                Show the logged-in account
 
   project list                          List your projects
-  project use <id-or-name> [--api-key]  Select the working project (optionally save its API key)
+  project use [id-or-name] [--api-key]  Select the working project (interactive picker when omitted)
   project current                       Show the selected project
 
   otp test [--phone <phone>] [--template-id <id>] [--code <code>]

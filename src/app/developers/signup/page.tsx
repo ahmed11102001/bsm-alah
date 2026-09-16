@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LanguageProvider, useLanguage } from "../_components/LanguageProvider";
 import { useDevPath } from "@/lib/dev-links";
+import { GoogleOAuthButton } from "@/components/GoogleOAuthButton";
 
 export default function DevSignUpPage() {
   return (
@@ -17,6 +18,7 @@ export default function DevSignUpPage() {
 
 function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { language, toggleLanguage, t } = useLanguage();
   const devPath = useDevPath();
   const [step, setStep] = useState<"google" | "profile" | "code">("google");
@@ -44,67 +46,18 @@ function SignUpContent() {
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  // Google Identity Services — إثبات الإيميل فقط، بدون إنشاء حساب
   useEffect(() => {
-    if (!mounted || step !== "google") return;
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setError(t("Google signup is not enabled right now", "التسجيل بجوجل غير مفعّل حاليًا"));
-      return;
-    }
-    const render = () => {
-      const w = window as any;
-      if (!w.google?.accounts?.id) return;
-      w.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (resp: any) => { if (resp?.credential) handleGoogleCredential(resp.credential); },
-        auto_select: false,
-      });
-      const el = document.getElementById("dev-gsi-signup");
-      if (el) {
-        el.innerHTML = "";
-        w.google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", width: 300, text: "signup_with", shape: "rectangular" });
-      }
-    };
-    if ((window as any).google?.accounts?.id) { render(); return; }
-    const s = document.createElement("script");
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true;
-    s.defer = true;
-    s.onload = render;
-    document.head.appendChild(s);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, step]);
-
-  async function handleGoogleCredential(idToken: string) {
-    setLoading(true); setError("");
-    try {
-      const res = await fetch("/api/developers/auth/signup/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      const data = await res.json().catch(() => ({}));
-      setLoading(false);
-      if (!res.ok) {
-        setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني"));
-        return;
-      }
-      setSignupToken(data.signupToken);
-      setGoogleEmail(data.email || "");
-      const parts = String(data.name || "").trim().split(/\s+/);
-      if (parts.length > 1) {
-        setFirstName(parts[0]);
-        setLastName(parts.slice(1).join(" "));
-      } else if (parts.length === 1) {
-        setFirstName(parts[0]);
-      }
-      setStep("profile");
-    } catch {
-      setLoading(false);
-      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
-    }
-  }
+    const token = searchParams.get("signupToken");
+    if (!token) return;
+    setSignupToken(token);
+    setGoogleEmail(searchParams.get("signupEmail") || "");
+    const parts = String(searchParams.get("signupName") || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) {
+      setFirstName(parts[0]);
+      setLastName(parts.slice(1).join(" "));
+    } else if (parts.length === 1) setFirstName(parts[0]);
+    setStep("profile");
+  }, [searchParams]);
 
   function validateProfile() {
     const errs: Record<string, string> = {};
@@ -362,11 +315,6 @@ function SignUpContent() {
           text-align: ${language === 'ar' ? 'right' : 'left'};
         }
 
-        .gsi-wrap {
-          display: flex; justify-content: center;
-          margin: 8px 0 4px; min-height: 44px;
-        }
-
         .field-hint {
           font-size: 11px; color: rgba(255,255,255,0.35);
           margin-top: 6px;
@@ -523,7 +471,12 @@ function SignUpContent() {
             {step === "google" && (
               <div>
                 <p className="step-hint">{t("Start with your Google account — then we'll verify your WhatsApp number.", "ابدأ بحساب جوجل — وبعدين هنأكد رقم الواتساب.")}</p>
-                <div id="dev-gsi-signup" className="gsi-wrap" />
+                <GoogleOAuthButton
+                  callbackUrl={`/auth/google-signup?context=portal&returnTo=${encodeURIComponent(devPath("/signup"))}`}
+                  loading={loading}
+                  label={t("Continue with Google", "متابعة بـ Google")}
+                  onStart={() => setLoading(true)}
+                />
                 {loading && <p className="step-hint">{t("Verifying...", "جاري التحقق...")}</p>}
                 {error && <div className="error-box">{error}</div>}
               </div>

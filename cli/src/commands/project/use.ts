@@ -1,14 +1,16 @@
 /**
- * `wani project use <id-or-name> [--api-key <key>]`
+ * `wani project use [id-or-name] [--api-key <key>]`
  *
  * Selects the working project (persisted locally) and optionally stores
- * that project's API key for OTP commands.
+ * that project's API key for OTP commands. With no id-or-name, shows an
+ * interactive arrow-key picker (↑/↓ + Enter) instead of an error.
  */
 import { CliError } from "../../api/errors.js";
 import { ApiClient } from "../../api/client.js";
 import type { CommandContext } from "../context.js";
 import type { ParsedArgs } from "../../utils/args.js";
 import { optString } from "../../utils/args.js";
+import { promptSelect } from "../../utils/prompt.js";
 import { printJson } from "../../output/json.js";
 import { printLine } from "../../output/human.js";
 import { fetchProjects, type ProjectSummary } from "./list.js";
@@ -37,13 +39,36 @@ function matchProject(projects: ProjectSummary[], ref: string): ProjectSummary {
 
 export async function projectUseCommand(ctx: CommandContext, args: ParsedArgs): Promise<void> {
   const ref = args.positional[0];
-  if (!ref) {
-    throw new CliError("Usage: wani project use <project-id-or-name> [--api-key <key>]", { kind: "usage" });
-  }
   const apiKeyFlag = optString(args.options, "api-key", "apiKey");
 
   const projects = await fetchProjects(ctx);
-  const project = matchProject(projects, ref);
+  if (projects.length === 0) {
+    throw new CliError("No projects found for this account.", { kind: "usage" });
+  }
+
+  let project: ProjectSummary;
+  if (!ref) {
+    if (ctx.json) {
+      throw new CliError("Usage: wani project use <project-id-or-name> [--api-key <key>] (`--json` scripts must pass the project explicitly)", { kind: "usage" });
+    }
+    if (projects.length === 1 && projects[0]) {
+      project = projects[0];
+    } else {
+      const picked = await promptSelect(
+        "Select a project",
+        projects.map((p) => ({
+          label: p.name,
+          detail: `${p.id}${p.viewerRole ? ` · ${p.viewerRole}` : ""}`,
+        }))
+      );
+      if (picked === null || !projects[picked]) {
+        throw new CliError("No project selected.", { kind: "usage" });
+      }
+      project = projects[picked];
+    }
+  } else {
+    project = matchProject(projects, ref);
+  }
 
   let keyValidated = false;
   let keyWarning: string | undefined;

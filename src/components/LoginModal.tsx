@@ -184,6 +184,14 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
       if (codeParam) {
         setJoinCode(codeParam.toUpperCase().trim());
       }
+      const signupTokenParam = sp.get("signupToken");
+      if (signupTokenParam) {
+        setView("register");
+        setRegStep("profile");
+        setSignupToken(signupTokenParam);
+        setGoogleEmail(sp.get("signupEmail") || "");
+        setGoogleName(sp.get("signupName") || "");
+      }
     } catch {}
 
     return () => {
@@ -218,6 +226,15 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   };
 
   // ── Email Login ───────────────────────────────────────────────────────────
+  const handleGoogleSignup = async () => {
+    setGBusy(true);
+    const currentLang = lang || (document.cookie.includes("NEXT_LOCALE=en") ? "en" : "ar");
+    const returnTo = `/${currentLang}?openLogin=1`;
+    await signIn("google", {
+      callbackUrl: `/auth/google-signup?context=dashboard&returnTo=${encodeURIComponent(returnTo)}`,
+    });
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
@@ -244,66 +261,6 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     setOtpCode("");
     setResendIn(0);
   }
-
-  // GIS callback — لا ينشئ جلسة، فقط يبدأ التسجيل المؤقت
-  async function handleGoogleCredential(idToken: string) {
-    setErr(""); setGBusy(true);
-    try {
-      const r = await fetch("/api/auth/signup/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        if (d.code === "EMAIL_EXISTS") {
-          setLoginEmail(d.email || "");
-          go("login");
-          setErr(d.error || "الإيميل مسجل بالفعل — سجل الدخول");
-        } else {
-          setErr(d.error || "تعذر التحقق من Google — حاول مرة أخرى");
-        }
-        return;
-      }
-      setSignupToken(d.signupToken);
-      setGoogleEmail(d.email || "");
-      setGoogleName(d.name || "");
-      setRegStep("profile");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
-    finally { setGBusy(false); }
-  }
-
-  // render GIS button on register-google step
-  useEffect(() => {
-    if (!isOpen || view !== "register" || regStep !== "google") return;
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setErr("التسجيل بـ Google غير مفعّل حاليًا — تواصل مع الدعم");
-      return;
-    }
-    const render = () => {
-      const w = window as any;
-      if (!w.google?.accounts?.id) return;
-      w.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (resp: any) => { if (resp?.credential) handleGoogleCredential(resp.credential); },
-        auto_select: false,
-      });
-      const el = document.getElementById("wani-gsi-register");
-      if (el) {
-        el.innerHTML = "";
-        w.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: 320, text: "signup_with" });
-      }
-    };
-    if ((window as any).google?.accounts?.id) { render(); return; }
-    const s = document.createElement("script");
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true;
-    s.defer = true;
-    s.onload = render;
-    document.head.appendChild(s);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, view, regStep]);
 
   // resend countdown
   useEffect(() => {
@@ -533,7 +490,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
                       <p className="text-sm text-gray-600 leading-relaxed">
                         سجل بإيميل Google أولًا، وبعدين هنأكد رقم الواتساب بكود.
                       </p>
-                      <div id="wani-gsi-register" className="flex justify-center min-h-[44px]" />
+                      <GoogleButton loading={gBusy} onClick={handleGoogleSignup} />
                       {err && <ErrMsg msg={err} />}
                       <p className="text-xs text-gray-400 text-center">
                         عندك حساب؟{" "}

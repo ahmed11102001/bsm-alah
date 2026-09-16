@@ -1,7 +1,7 @@
 /** Shared constants for the Wani CLI. */
 
 export const CLI_NAME = "wani";
-export const CLI_VERSION = "0.1.3";
+export const CLI_VERSION = "0.2.0";
 
 /** Official Wani Developer API base URL. */
 export const DEFAULT_BASE_URL = "https://developers.aiwni.com";

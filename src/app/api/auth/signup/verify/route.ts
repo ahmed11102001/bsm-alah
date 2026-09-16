@@ -15,6 +15,29 @@ import { getRequestLocale } from "@/lib/locale-resolver";
 
 async function finalizeDashboardAccount(state: NonNullable<Awaited<ReturnType<typeof getSignupSession>>>) {
   const now = new Date();
+  const existing = await prisma.user.findUnique({
+    where: { email: state.google.email },
+    select: { id: true, email: true, name: true, phone: true, password: true, onboardingCompleted: true, signupMethod: true },
+  });
+  if (existing && existing.signupMethod === "GOOGLE" && !existing.phone && !existing.password && !existing.onboardingCompleted) {
+    const user = await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name: state.google.name ?? existing.name ?? state.google.email.split("@")[0],
+        phone: state.phone!,
+        password: state.passwordHash!,
+        emailVerified: now,
+        onboardingCompleted: true,
+      },
+      select: { id: true, email: true, name: true },
+    });
+    await prisma.subscription.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, plan: "free", status: "active", campaignsUsedThisMonth: 0, periodResetAt: now, currentPeriodStart: now, currentPeriodEnd: null },
+      update: {},
+    }).catch(() => {});
+    return user;
+  }
   try {
     const user = await prisma.user.create({
       data: {
