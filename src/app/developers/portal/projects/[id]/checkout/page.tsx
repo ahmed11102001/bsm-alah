@@ -4,13 +4,18 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Shield, Lock, Check, Loader2, CreditCard, ArrowRight, Sparkles,
-  Copy, MessageCircle, Clock,
+  Copy, MessageCircle, Clock, Wallet,
 } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 
 const SALES_WHATSAPP = process.env.NEXT_PUBLIC_SALES_WHATSAPP || "201281657907";
 const INSTAPAY_ACCOUNT = process.env.NEXT_PUBLIC_INSTAPAY_ACCOUNT || "";
 const ETISALAT_ACCOUNT = process.env.NEXT_PUBLIC_ETISALAT_CASH_ACCOUNT || "";
+
+const PRICE_PER_MESSAGE = 0.75;
+const TOPUP_MIN = 20;
+const TOPUP_MAX = 200;
+const PRESETS = [20, 50, 100, 200];
 
 type PaymentMethod = "instapay" | "etisalat";
 
@@ -47,6 +52,8 @@ export default function DeveloperCheckoutPage() {
   const [project, setProject] = useState<any>(null);
   const [developer, setDeveloper] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [amount, setAmount] = useState<number>(50);
+  const [customAmount, setCustomAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -70,7 +77,13 @@ export default function DeveloperCheckoutPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  const effectiveAmount = customAmount.trim() ? parseInt(customAmount.trim(), 10) : amount;
+  const amountValid =
+    Number.isInteger(effectiveAmount) && effectiveAmount >= TOPUP_MIN && effectiveAmount <= TOPUP_MAX;
+  const messages = amountValid ? Math.floor(effectiveAmount / PRICE_PER_MESSAGE) : 0;
 
   const devName = developer ? `${developer.firstName || ""} ${developer.lastName || ""}`.trim() : "";
   const devEmail = developer?.email || "";
@@ -79,24 +92,22 @@ export default function DeveloperCheckoutPage() {
 
   const whatsappMessage = useMemo(() => [
     "مرحبًا Wani 👋",
-    `أتممت دفع باقة الأونر لمشروع ${project?.name || ""}.`,
+    `أتممت شحن رصيد مشروع ${project?.name || ""}.`,
     `المشروع: ${project?.name || projectId}`,
-    "الباقة: باقة الأونر — اشتراك شهري",
-    "السعر الأصلي: 249 EGP",
-    "الإجمالي المطلوب دفعه: 249 EGP",
+    `المبلغ: ${amountValid ? effectiveAmount : "—"} EGP (≈ ${messages} رسالة)`,
     paymentMethod ? `طريقة الدفع: ${methodLabel}` : "",
     "سأرسل Screenshot لإيصال الدفع في هذه المحادثة.",
-  ].filter(Boolean).join("\n"), [project, projectId, paymentMethod, methodLabel]);
+  ].filter(Boolean).join("\n"), [project, projectId, paymentMethod, methodLabel, effectiveAmount, messages, amountValid]);
 
   const confirmRequest = async () => {
-    if (!paymentMethod || submitting || doneRequest) return;
+    if (!paymentMethod || !amountValid || submitting || doneRequest) return;
     setSubmitting(true);
     setSubmitError("");
     try {
       const res = await fetch("/api/developers/billing/manual-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, paymentMethod }),
+        body: JSON.stringify({ projectId, amount: effectiveAmount, paymentMethod }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -124,7 +135,7 @@ export default function DeveloperCheckoutPage() {
     );
   }
 
-  const isSubscribed = project?.plan === "OWNER_PLAN" && project?.planRenewsAt && new Date(project.planRenewsAt) > new Date();
+  const balance = project?.wallet?.paidBalanceEGP ?? 0;
 
   return (
     <>
@@ -154,6 +165,12 @@ export default function DeveloperCheckoutPage() {
         .method-account span { font-size: 12px; color: rgba(255,255,255,0.55); word-break: break-all; }
         .copy-btn { display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: rgba(255,255,255,0.6); background: transparent; cursor: pointer; white-space: nowrap; }
         .copy-btn:hover { border-color: #20d378; color: #20d378; }
+        .amount-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+        .amount-chip { border-radius: 12px; border: 2px solid rgba(255,255,255,0.08); padding: 14px 8px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.02); color: #fff; transition: all 0.2s; font-weight: 700; font-size: 15px; }
+        .amount-chip small { display: block; font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.45); margin-top: 4px; }
+        .amount-chip.selected { border-color: #20d378; background: rgba(32,211,120,0.06); }
+        .custom-input { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 15px; font-family: inherit; outline: none; }
+        .custom-input:focus { border-color: rgba(32,211,120,0.4); }
         .steps-box { background: rgba(32,211,120,0.06); border: 1px solid rgba(32,211,120,0.2); border-radius: 12px; padding: 20px; }
         .steps-box h2 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
         .steps-box ol { display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: rgba(255,255,255,0.65); }
@@ -164,7 +181,6 @@ export default function DeveloperCheckoutPage() {
         .btn-wa:hover { background: #1fb85a; }
         .error-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #ef4444; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-top: 16px; }
         .pending-box { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); color: #f59e0b; padding: 16px; border-radius: 12px; font-size: 14px; margin-top: 16px; display: flex; gap: 10px; align-items: flex-start; }
-        .success-box { background: rgba(32,211,120,0.08); border: 1px solid rgba(32,211,120,0.25); color: #20d378; padding: 16px; border-radius: 12px; font-size: 14px; margin-top: 16px; }
         .hint { text-align: center; font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 16px; }
         .summary-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
         .summary-item:last-child { border-bottom: none; }
@@ -179,7 +195,7 @@ export default function DeveloperCheckoutPage() {
             <ArrowRight size={16} style={{ transform: dir === 'rtl' ? 'rotate(180deg)' : 'none' }} />
             {t("Back", "رجوع")}
           </button>
-          <h1 style={{ fontSize: 20, fontWeight: 600 }}>{t("Checkout", "إتمام الدفع")}</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 600 }}>{t("Top up balance", "شحن الرصيد")}</h1>
         </div>
 
         <div className="checkout-container">
@@ -191,13 +207,12 @@ export default function DeveloperCheckoutPage() {
                 <ReadOnlyField label={t("Email", "البريد الإلكتروني")} value={devEmail} />
               </div>
               <ReadOnlyField label={t("Project", "المشروع")} value={project?.name || ""} />
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                {t(`Current balance: ${balance.toFixed(2)} EGP`, `الرصيد الحالي: ${balance.toFixed(2)} جنيه`)}
+              </div>
             </div>
 
-            {isSubscribed ? (
-              <div className="success-box">
-                {t("This project already has an active Owner Plan.", "المشروع ده مشترك بالفعل في باقة الأونر.")}
-              </div>
-            ) : doneRequest ? (
+            {doneRequest ? (
               <>
                 <div className="pending-box">
                   <Clock size={18} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -206,14 +221,14 @@ export default function DeveloperCheckoutPage() {
                     <p style={{ marginTop: 6, color: 'rgba(255,255,255,0.6)' }}>
                       {reused
                         ? t("You already have a pending request for this project.", "عندك طلب معلّق بالفعل لنفس المشروع — مش محتاج تبعت طلب جديد.")
-                        : t("Your payment request was recorded. Send the receipt on WhatsApp to activate faster.", "اتسجل طلب الدفع بتاعك. ابعت إيصال الدفع على واتساب عشان التفعيل يتم أسرع.")}
+                        : t("Your top-up request was recorded. Send the receipt on WhatsApp to activate faster.", "اتسجل طلب الشحن بتاعك. ابعت إيصال الدفع على واتساب عشان التفعيل يتم أسرع.")}
                     </p>
                   </div>
                 </div>
                 <div className="steps-box" style={{ marginTop: 16 }}>
                   <h2>{t("Payment method", "طريقة الدفع")}: {doneRequest.paymentMethod === "etisalat" ? "Etisalat Cash" : "InstaPay"}</h2>
                   <ol>
-                    <li>1. {t("Transfer", "حوّل مبلغ")} <b style={{ color: '#fff' }}>249 EGP</b> {t("to", "إلى")} <span dir="ltr">{doneRequest.paymentMethod === "etisalat" ? ETISALAT_ACCOUNT : INSTAPAY_ACCOUNT}</span></li>
+                    <li>1. {t("Transfer", "حوّل مبلغ")} <b style={{ color: '#fff' }}>{doneRequest.amount} EGP</b> {t("to", "إلى")} <span dir="ltr">{doneRequest.paymentMethod === "etisalat" ? ETISALAT_ACCOUNT : INSTAPAY_ACCOUNT}</span></li>
                     <li>2. {t("Press the WhatsApp button below.", "اضغط زر واتساب بالأسفل.")}</li>
                     <li>3. {t("Send a screenshot of the receipt in the chat.", "ابعت Screenshot لإيصال الدفع جوه المحادثة.")}</li>
                   </ol>
@@ -224,6 +239,40 @@ export default function DeveloperCheckoutPage() {
               </>
             ) : (
               <>
+                <div className="card-panel">
+                  <h2 className="panel-title"><Wallet size={18} /> {t("Top-up amount (20–200 EGP)", "مبلغ الشحن (20–200 جنيه)")}</h2>
+                  <div className="amount-grid">
+                    {PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => { setAmount(p); setCustomAmount(""); }}
+                        className={`amount-chip${!customAmount.trim() && amount === p ? " selected" : ""}`}
+                      >
+                        {p} ج
+                        <small>≈ {Math.floor(p / PRICE_PER_MESSAGE)} {t("msgs", "رسالة")}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <label className="field-label">{t("Or custom amount", "أو مبلغ مخصص")}</label>
+                  <input
+                    className="custom-input"
+                    type="number"
+                    min={TOPUP_MIN}
+                    max={TOPUP_MAX}
+                    placeholder={`${TOPUP_MIN} – ${TOPUP_MAX}`}
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    dir="ltr"
+                    style={{ textAlign: "left" }}
+                  />
+                  {customAmount.trim() && !amountValid && (
+                    <p style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>
+                      {t(`Amount must be between ${TOPUP_MIN} and ${TOPUP_MAX} EGP`, `المبلغ لازم يكون بين ${TOPUP_MIN} و ${TOPUP_MAX} جنيه`)}
+                    </p>
+                  )}
+                </div>
+
                 <div className="card-panel">
                   <h2 className="panel-title"><CreditCard size={18} /> {t("Payment Method", "طريقة الدفع")}</h2>
                   <div className="method-grid">
@@ -236,25 +285,27 @@ export default function DeveloperCheckoutPage() {
                   </div>
                 </div>
 
-                {paymentMethod && (
+                {paymentMethod && amountValid && (
                   <div className="steps-box">
                     <h2>{t("Payment method", "طريقة الدفع")}: {methodLabel}</h2>
                     <ol>
-                      <li>1. {t("Transfer", "حوّل مبلغ")} <b style={{ color: '#fff' }}>249 EGP</b> {t("to the account shown above.", "لرقم الحساب الموضح فوق.")}</li>
+                      <li>1. {t("Transfer", "حوّل مبلغ")} <b style={{ color: '#fff' }}>{effectiveAmount} EGP (≈ {messages} {t("messages", "رسالة")})</b> {t("to the account shown above.", "لرقم الحساب الموضح فوق.")}</li>
                       <li>2. {t("After transferring, press confirm below.", "بعد التحويل اضغط زر التأكيد بالأسفل.")}</li>
                       <li>3. {t("Then send a screenshot of the receipt on WhatsApp.", "وبعدها ابعت Screenshot لإيصال الدفع على واتساب.")}</li>
-                      <li>4. {t("The plan activates after admin review.", "الباقة بتتفعل بعد مراجعة الأدمن.")}</li>
+                      <li>4. {t("Balance is credited after admin review.", "الرصيد بيتضاف بعد مراجعة الأدمن.")}</li>
                     </ol>
                   </div>
                 )}
 
                 {submitError && <div className="error-box">{submitError}</div>}
 
-                <button className="btn-pay" onClick={confirmRequest} disabled={!paymentMethod || submitting}>
-                  {submitting ? (<><Loader2 size={20} className="animate-spin" /> {t("Processing...", "جاري تسجيل الطلب...")}</>) : (<><Lock size={18} /> {t("Confirm request — 249 EGP", "تأكيد الطلب — 249 ج")}</>)}
+                <button className="btn-pay" onClick={confirmRequest} disabled={!paymentMethod || !amountValid || submitting}>
+                  {submitting
+                    ? (<><Loader2 size={20} className="animate-spin" /> {t("Processing...", "جاري تسجيل الطلب...")}</>)
+                    : (<><Lock size={18} /> {amountValid ? t(`Confirm request — ${effectiveAmount} EGP`, `تأكيد الطلب — ${effectiveAmount} ج`) : t("Enter a valid amount", "أدخل مبلغًا صحيحًا")}</>)}
                 </button>
                 {!paymentMethod && <p className="hint">{t("Choose a payment method first", "اختر طريقة الدفع أولًا")}</p>}
-                <p className="hint">{t("After sending the receipt, the payment is reviewed and the plan is activated.", "بعد إرسال الإيصال، تتم مراجعة الدفع وتفعيل الباقة من فريق WANI.")}</p>
+                <p className="hint">{t("After sending the receipt, the payment is reviewed and the balance is credited.", "بعد إرسال الإيصال، تتم مراجعة الدفع وإضافة الرصيد من فريق WANI.")}</p>
               </>
             )}
           </div>
@@ -264,10 +315,10 @@ export default function DeveloperCheckoutPage() {
               <h2 className="panel-title">{t("Order Summary", "ملخص الطلب")}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(32,211,120,0.1)', color: '#20d378', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Shield size={24} />
+                  <Wallet size={24} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{t("Owner Plan", "باقة الأونر")}</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{t("Balance Top-up", "شحن رصيد")}</h3>
                   <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
                     {project?.name ? `${t("Project:", "مشروع:")} ${project.name}` : ""}
                   </p>
@@ -275,23 +326,27 @@ export default function DeveloperCheckoutPage() {
               </div>
               <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16 }}>
                 <div className="summary-item">
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t("Billing Cycle", "دورة الفوترة")}</span>
-                  <span style={{ fontWeight: 500 }}>{t("Monthly", "شهري")}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t("Amount", "المبلغ")}</span>
+                  <span style={{ fontWeight: 500 }}>{amountValid ? effectiveAmount : "—"} {t("EGP", "ج")}</span>
                 </div>
                 <div className="summary-item">
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>249 {t("EGP", "ج")} × 1 {t("month", "شهر")}</span>
-                  <span style={{ fontWeight: 500 }}>249 {t("EGP", "ج")}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t("Messages", "الرسائل")}</span>
+                  <span style={{ fontWeight: 500 }}>≈ {messages} OTP</span>
+                </div>
+                <div className="summary-item">
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t("Price per message", "سعر الرسالة")}</span>
+                  <span style={{ fontWeight: 500 }}>{PRICE_PER_MESSAGE} {t("EGP", "ج")}</span>
                 </div>
                 <div className="summary-item" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 16 }}>
                   <span style={{ fontWeight: 600, color: '#fff' }}>{t("Total Due", "الإجمالي")}</span>
-                  <span style={{ fontWeight: 700, color: '#20d378', fontSize: 18 }}>249 {t("EGP", "ج")}</span>
+                  <span style={{ fontWeight: 700, color: '#20d378', fontSize: 18 }}>{amountValid ? effectiveAmount : "—"} {t("EGP", "ج")}</span>
                 </div>
               </div>
             </div>
             <div className="trust-list">
               <div className="trust-item"><Shield size={16} className="trust-icon" />{t("Manual review by WANI team", "مراجعة يدوية من فريق WANI")}</div>
-              <div className="trust-item"><Check size={16} className="trust-icon" />{t("Cancel subscription at any time", "إلغاء الاشتراك في أي وقت")}</div>
-              <div className="trust-item"><Sparkles size={16} className="trust-icon" />{t("Activation after receipt review", "تفعيل بعد مراجعة الإيصال")}</div>
+              <div className="trust-item"><Check size={16} className="trust-icon" />{t("Balance never expires", "الرصيد لا ينتهي أبدًا")}</div>
+              <div className="trust-item"><Sparkles size={16} className="trust-icon" />{t("Credit after receipt review", "إضافة الرصيد بعد مراجعة الإيصال")}</div>
             </div>
           </div>
         </div>

@@ -25,6 +25,14 @@ interface AuthResult {
   trialEndsAt: Date | null;
   trialMessagesUsed: number;
   trialWarningNotifiedAt: Date | null;
+  trialCreditsTotal: number;
+  trialCreditsUsed: number;
+  monthlyFreeTotal: number;
+  monthlyFreeUsed: number;
+  monthlyPeriodStart: Date | null;
+  monthlyPeriodEnd: Date | null;
+  paidBalanceEGP: number;
+  projectCreatedAt: Date;
   metaConnection: {
     accessToken: string;   // encrypted in DB
     phoneNumberId: string;
@@ -84,6 +92,14 @@ async function verifyApiKey(raw: string): Promise<AuthResult | { error: "INVALID
     trialEndsAt: keyRecord.project.trialEndsAt,
     trialMessagesUsed: keyRecord.project.trialMessagesUsed,
     trialWarningNotifiedAt: keyRecord.project.trialWarningNotifiedAt,
+    trialCreditsTotal: keyRecord.project.trialCreditsTotal,
+    trialCreditsUsed: keyRecord.project.trialCreditsUsed,
+    monthlyFreeTotal: keyRecord.project.monthlyFreeTotal,
+    monthlyFreeUsed: keyRecord.project.monthlyFreeUsed,
+    monthlyPeriodStart: keyRecord.project.monthlyPeriodStart,
+    monthlyPeriodEnd: keyRecord.project.monthlyPeriodEnd,
+    paidBalanceEGP: keyRecord.project.paidBalanceEGP,
+    projectCreatedAt: keyRecord.project.createdAt,
     metaConnection: meta,
   };
 }
@@ -458,62 +474,77 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 4. Plan & Trial enforcement (Project-level) ───────────────────────────
-  // قبل الـ rate limit: طلب مرفوض (باقة/قالب) لا يجب أن يستهلك حصة الرقم —
+  // ── 4. Prepaid wallet enforcement (Project-level) ─────────────────────────
+  // ترتيب الخصم: trial → monthly_free → paid_wallet → debt (حتى -10 صارم).
+  // قبل الـ rate limit: طلب مرفوض (رصيد/قالب) لا يجب أن يستهلك حصة الرقم —
   // وإلا مهاجم يعرف رقم الضحية يستنزف حصتها (5/ساعة) بطلبات فاشلة.
-  let isAllowed = false;
-  let incrementField = false;
+  // لا يوجد اشتراك شهري — OWNER_PLAN القديمة تعامل كمشروع عادي (trial ثم wallet).
+  const { TRIAL_CREDITS } = await import("@/lib/portal-billing");
+  const {
+    ensureTrialStarted: ensureTrial,
+    renewMonthlyIfNeeded: renewMonthly,
+    decideSource: decideBillingSource,
+  } = await import("@/lib/portal-billing");
 
-  if (auth.plan === "OWNER_PLAN") {
-    // Check if subscription expired
-    if (auth.planRenewsAt && new Date() > auth.planRenewsAt) {
-      return NextResponse.json(
-        { ok: false, error: lmsg(req, "انتهى اشتراك باقة الأونر — يرجى التجديد للاستمرار", "Owner plan subscription has expired — please renew to continue"), code: "NO_ACTIVE_PLAN" },
-        { status: 403 }
-      );
-    }
-    isAllowed = true;
-  } else {
-    // Trial logic
-    if (!auth.trialStartedAt) {
-      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-      await prisma.developerProject.update({
-        where: { id: auth.projectId },
-        data: { trialStartedAt: new Date(), trialEndsAt },
-      });
-      auth.trialStartedAt = new Date();
-      auth.trialEndsAt = trialEndsAt;
-    } else if (new Date() > auth.trialEndsAt! || auth.trialMessagesUsed >= 50) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: lmsg(req, "انتهت فترة الـ Trial (أو وصلت للحد الأقصى) — اشترك في باقة الأونر للاستمرار", "Trial period has ended (or limit reached) — subscribe to the owner plan to continue"),
-          code: "TRIAL_EXPIRED",
-          upgradeUrl: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
-        },
-        { status: 403 }
-      );
-    }
-
-    if (auth.trialMessagesUsed === 40 && !auth.trialWarningNotifiedAt) {
-      await prisma.developerNotification.create({
-        data: {
-          developerId: auth.developerId,
-          type: "TRIAL_WARNING",
-          title: "تنبيه استهلاك الباقة المجانية",
-          message: "وصلت لـ 80% من رصيد الرسائل المجانية (40 من 50) لمشروعك.",
-          link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`
-        }
-      });
-      await prisma.developerProject.update({
-        where: { id: auth.projectId },
-        data: { trialWarningNotifiedAt: new Date() },
-      });
-    }
-
-    isAllowed = true;
-    incrementField = true;
+  // قراءة جديدة لحالة الفوترة (auth snapshot قد يكون قديمًا)
+  const billingState = await prisma.developerProject.findUnique({
+    where: { id: auth.projectId },
+    select: {
+      id: true, ownerId: true,
+      trialCreditsTotal: true, trialCreditsUsed: true,
+      trialStartedAt: true, trialEndsAt: true,
+      monthlyFreeTotal: true, monthlyFreeUsed: true,
+      monthlyPeriodStart: true, monthlyPeriodEnd: true,
+      paidBalanceEGP: true, createdAt: true,
+      trialWarningNotifiedAt: true, lowBalanceNotifiedAt: true, debtNotifiedAt: true,
+    },
+  });
+  if (!billingState) {
+    return NextResponse.json(
+      { ok: false, error: lmsg(req, "المشروع غير موجود", "Project not found"), code: "INVALID_API_KEY" },
+      { status: 401 }
+    );
   }
+
+  let billing = await ensureTrial(billingState);
+  billing = await renewMonthly(billing);
+  const decision = decideBillingSource(billing);
+
+  if (!decision.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: lmsg(req, decision.error ?? "انتهى رصيد المشروع — اشحن الرصيد للاستمرار", "Project balance exhausted — top up to continue"),
+        code: decision.code ?? "INSUFFICIENT_BALANCE",
+        upgradeUrl: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
+      },
+      { status: 403 }
+    );
+  }
+  const billingSource = decision.source!;
+
+  // تحذير Trial عند 80% (24 من 30)
+  if (
+    billingSource === "trial_credit" &&
+    billing.trialCreditsUsed >= Math.floor(TRIAL_CREDITS * 0.8) &&
+    !billingState.trialWarningNotifiedAt
+  ) {
+    await prisma.developerNotification.create({
+      data: {
+        developerId: auth.developerId,
+        type: "TRIAL_WARNING",
+        title: "تنبيه استهلاك الرصيد التجريبي",
+        message: `وصلت لـ 80% من الرصيد التجريبي (${billing.trialCreditsUsed} من ${billing.trialCreditsTotal}) لمشروعك.`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`
+      }
+    });
+    await prisma.developerProject.update({
+      where: { id: auth.projectId },
+      data: { trialWarningNotifiedAt: new Date() },
+    });
+  }
+
+  const notifyTargetId = auth.ownerId ?? auth.developerId;
 
   // ── 5. Resolve template (المشروع من الـ API Key فقط) ────────────────────
   // لا يُقبل أي projectId من الـ client — ولا يُجبر الـ backend على اسم مختلف.
@@ -665,14 +696,67 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 12. Increment trial counter (non-blocking) ────────────────────────────
-  if (sendResult.success && incrementField) {
-    prisma.developerProject
-      .update({
+  // ── 12. Consume billing credit AFTER Meta success only ───────────────────
+  // حرج: الفشل قبل هذه النقطة (Meta فشل / حفظ فشل) لا يخصم أي رصيد.
+  let consumedBalance = billing.paidBalanceEGP;
+  if (sendResult.success) {
+    const { consumeAfterSuccess } = await import("@/lib/portal-billing");
+    try {
+      const consumed = await consumeAfterSuccess(auth.projectId, billingSource, {
+        wabaId: auth.metaConnection.wabaId,
+        phoneNumberId: auth.metaConnection.phoneNumberId,
+        metaMessageId: sendResult.metaMessageId ?? null,
+      });
+      consumedBalance = consumed.paidBalanceEGP;
+
+      // تنبيهات الرصيد المنخفض / المديونية (مرة واحدة لكل حالة)
+      const { messagesFromBalance, LOW_BALANCE_MSGS, MAX_DEBT_EGP } = await import("@/lib/portal-billing");
+      const fresh = await prisma.developerProject.findUnique({
         where: { id: auth.projectId },
-        data: { trialMessagesUsed: { increment: 1 } },
-      })
-      .catch(() => {});
+        select: { paidBalanceEGP: true, lowBalanceNotifiedAt: true, debtNotifiedAt: true },
+      });
+      if (fresh) {
+        if (
+          billingSource !== "trial_credit" &&
+          billingSource !== "monthly_free" &&
+          messagesFromBalance(fresh.paidBalanceEGP) < LOW_BALANCE_MSGS &&
+          fresh.paidBalanceEGP >= 0 &&
+          !billingState.lowBalanceNotifiedAt
+        ) {
+          await prisma.developerNotification.create({
+            data: {
+              developerId: notifyTargetId,
+              type: "BILLING",
+              title: "رصيد المشروع قرب يخلص",
+              message: `متبقي ${messagesFromBalance(fresh.paidBalanceEGP)} رسالة تقريبًا (الرصيد ${fresh.paidBalanceEGP.toFixed(2)}ج) — اشحن من صفحة الفوترة.`,
+              link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
+            },
+          }).catch(() => {});
+          await prisma.developerProject.update({
+            where: { id: auth.projectId },
+            data: { lowBalanceNotifiedAt: new Date() },
+          }).catch(() => {});
+        }
+        if (fresh.paidBalanceEGP < 0 && !billingState.debtNotifiedAt) {
+          await prisma.developerNotification.create({
+            data: {
+              developerId: notifyTargetId,
+              type: "BILLING",
+              title: "المشروع دخل مديونية",
+              message: `رصيد المشروع ${fresh.paidBalanceEGP.toFixed(2)}ج (الحد الأقصى ${MAX_DEBT_EGP}ج) — اشحن الرصيد قبل توقف الإرسال.`,
+              link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
+            },
+          }).catch(() => {});
+          await prisma.developerProject.update({
+            where: { id: auth.projectId },
+            data: { debtNotifiedAt: new Date() },
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // الخصم فشل بعد نجاح Meta — لا نفشل الطلب (الكود وصل فعلًا)، نسجل فقط.
+      console.error("[developer-otp]", { event: "BILLING_CONSUME_FAILED", projectId: auth.projectId });
+    }
   }
 
   // ── 13. Return ────────────────────────────────────────────────────────────
@@ -707,9 +791,13 @@ export async function POST(req: NextRequest) {
     templateId: template.id,
   });
 
-  const remaining = incrementField
-    ? { messagesLeft: 50 - (auth.trialMessagesUsed + 1) }
-    : {};
+  const { messagesFromBalance: msgsFromBal } = await import("@/lib/portal-billing");
+  const remaining =
+    billingSource === "trial_credit"
+      ? { messagesLeft: billing.trialCreditsTotal - billing.trialCreditsUsed - 1, source: billingSource }
+      : billingSource === "monthly_free"
+        ? { messagesLeft: billing.monthlyFreeTotal - billing.monthlyFreeUsed - 1, source: billingSource }
+        : { messagesLeft: msgsFromBal(consumedBalance), paidBalanceEGP: consumedBalance, source: billingSource };
 
   return NextResponse.json({
     ok: true,

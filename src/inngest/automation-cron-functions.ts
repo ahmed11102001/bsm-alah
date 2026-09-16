@@ -395,8 +395,9 @@ export const subscriptionExpiryWarning = inngest.createFunction(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Cron 5: whatsappTokenExpiryCheck
-// يومياً الساعة 10 صباحاً: تحذير انتهاء توكن واتساب (Meta)
+// Cron: portalBillingRenewalCheck
+// يومياً الساعة 10 صباحاً: تجديد الحصة الشهرية المجانية (30) للمشاريع المسلّمة
+// + تنبيه الرصيد المنخفض/المديونية. (نظام الاشتراك الشهري ملغي — لا تجديد هنا.)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const ownerPlanRenewalCheck = inngest.createFunction(
   {
@@ -406,66 +407,94 @@ export const ownerPlanRenewalCheck = inngest.createFunction(
   },
   async ({ step }) => {
     const now = new Date();
-    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const { MONTHLY_PERIOD_DAYS } = await import("@/lib/portal-billing");
 
-    const expiringSoon = await step.run("get-expiring-soon-projects", async () => {
+    // 1) مشاريع انتهت فترتها الشهرية → تجديد (تصفير الاستخدام، بدون ترحيل)
+    const dueRenewal = await step.run("get-monthly-due-projects", async () => {
       return await prisma.developerProject.findMany({
         where: {
-          plan: "OWNER_PLAN",
-          planRenewsAt: { lte: threeDaysFromNow, gt: now },
-          planExpiringNotifiedAt: null,
+          status: "ACTIVE",
+          ownerId: { not: null },
+          monthlyPeriodEnd: { lt: now },
         },
-        select: { id: true, name: true, ownerId: true },
+        select: { id: true, name: true, ownerId: true, developerId: true, paidBalanceEGP: true },
       });
     });
 
-    for (const project of expiringSoon) {
-      await prisma.developerNotification.create({
-        data: {
-          developerId: project.ownerId!,
-          type: "PLAN_EXPIRING_SOON",
-          title: "تذكير بتجديد الباقة",
-          message: `يتبقى 3 أيام على انتهاء باقة مشروع "${project.name}".`,
-          link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
-        },
-      });
+    for (const project of dueRenewal) {
+      const start = now;
+      const end = new Date(now.getTime() + MONTHLY_PERIOD_DAYS * 24 * 60 * 60 * 1000);
       await prisma.developerProject.update({
         where: { id: project.id },
-        data: { planExpiringNotifiedAt: now },
+        data: {
+          monthlyFreeUsed: 0,
+          monthlyPeriodStart: start,
+          monthlyPeriodEnd: end,
+          monthlyRenewNotifiedAt: now,
+          lowBalanceNotifiedAt: null,
+        },
       });
+      await prisma.projectLedgerEntry.create({
+        data: {
+          projectId: project.id,
+          usageType: "otp",
+          source: "monthly_renew",
+          quantity: 0,
+          amountEGP: 0,
+          balanceAfter: project.paidBalanceEGP,
+        },
+      }).catch(() => {});
+      const targetId = project.ownerId ?? project.developerId;
+      if (targetId) {
+        await prisma.developerNotification.create({
+          data: {
+            developerId: targetId,
+            type: "BILLING",
+            title: "تجددت حصتك الشهرية المجانية",
+            message: `نزلت 30 رسالة مجانية جديدة لمشروع "${project.name}" — الاستهلاك هيقف من الرصيد المدفوع لحد ما يخلصوا.`,
+            link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
+          },
+        }).catch(() => {});
+      }
     }
 
-    const justExpired = await step.run("get-just-expired-projects", async () => {
+    // 2) تنبيه المديونية الصارمة (وصل -10 أو قريب منها) — مرة واحدة
+    const indebted = await step.run("get-indebted-projects", async () => {
       return await prisma.developerProject.findMany({
         where: {
-          plan: "OWNER_PLAN",
-          planRenewsAt: { lt: now },
-          planExpiredNotifiedAt: null,
+          status: "ACTIVE",
+          paidBalanceEGP: { lte: 0 },
+          debtNotifiedAt: null,
         },
-        select: { id: true, name: true, ownerId: true },
+        select: { id: true, name: true, ownerId: true, developerId: true, paidBalanceEGP: true },
       });
     });
 
-    for (const project of justExpired) {
+    for (const project of indebted) {
+      const targetId = project.ownerId ?? project.developerId;
+      if (!targetId) continue;
       await prisma.developerNotification.create({
         data: {
-          developerId: project.ownerId!,
-          type: "PLAN_EXPIRED",
-          title: "انتهت باقة الأونر",
-          message: `انتهت باقة مشروع "${project.name}" وتوقف إرسال رسائل OTP حتى التجديد.`,
+          developerId: targetId,
+          type: "BILLING",
+          title: project.paidBalanceEGP < 0 ? "مشروعك في مديونية" : "رصيد مشروعك خلص",
+          message: `رصيد مشروع "${project.name}": ${project.paidBalanceEGP.toFixed(2)}ج — اشحن من صفحة الفوترة قبل توقف الإرسال عند -10ج.`,
           link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
         },
-      });
+      }).catch(() => {});
       await prisma.developerProject.update({
         where: { id: project.id },
-        data: { planExpiredNotifiedAt: now },
-      });
+        data: { debtNotifiedAt: now },
+      }).catch(() => {});
     }
 
-    return { processed: expiringSoon.length + justExpired.length };
+    return { processed: dueRenewal.length + indebted.length };
   }
 );
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cron: whatsappTokenExpiryCheck — تحذير انتهاء توكن واتساب (Meta)
+// ═══════════════════════════════════════════════════════════════════════════════
 export const whatsappTokenExpiryCheck = inngest.createFunction(
   {
     id: "automation-whatsapp-token-expiry-check",

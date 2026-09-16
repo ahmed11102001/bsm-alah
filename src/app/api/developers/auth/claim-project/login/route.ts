@@ -63,10 +63,30 @@ export async function POST(req: NextRequest) {
 
     // Assign role
     if (invite.role === "OWNER") {
-      await prisma.developerProject.update({
+      const existing = await prisma.developerProject.findUnique({
         where: { id: invite.projectId },
-        data: { ownerId: existingUser.id },
+        select: { ownerId: true },
       });
+      if (!existing?.ownerId) {
+        // أول تسليم → بداية الحصة الشهرية المجانية (30) من اللحظة دي
+        const { newMonthlyPeriod } = await import("@/lib/portal-billing");
+        const { start, end } = newMonthlyPeriod();
+        await prisma.developerProject.update({
+          where: { id: invite.projectId },
+          data: {
+            ownerId: existingUser.id,
+            monthlyFreeTotal: 30,
+            monthlyFreeUsed: 0,
+            monthlyPeriodStart: start,
+            monthlyPeriodEnd: end,
+          },
+        });
+      } else {
+        await prisma.developerProject.update({
+          where: { id: invite.projectId },
+          data: { ownerId: existingUser.id },
+        });
+      }
     } else {
       await prisma.developerProject.update({
         where: { id: invite.projectId },

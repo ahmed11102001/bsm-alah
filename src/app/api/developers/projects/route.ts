@@ -65,11 +65,21 @@ export async function POST(req: NextRequest) {
 
 
 
+  const trialStartedAt = new Date();
+  const trialEndsAt = new Date(trialStartedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
   const project = await prisma.developerProject.create({
     data: {
       developerId: session.id,
       name: name.trim(),
       description: description?.trim() || null,
+      trialStartedAt,
+      trialEndsAt,
+      trialCreditsTotal: 30,
+      trialCreditsUsed: 0,
+      monthlyFreeTotal: 30,
+      monthlyFreeUsed: 0,
+      paidBalanceEGP: 0,
     },
   });
 

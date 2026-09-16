@@ -10,7 +10,7 @@ import {
 
 interface PaymentRequestItem {
   id: string;
-  type: "subscription" | "token_package" | "mcp_addon" | "developer_owner_plan";
+  type: "subscription" | "token_package" | "mcp_addon" | "developer_owner_plan" | "developer_topup";
   developerUserId: string | null;
   developerProjectId: string | null;
   planSlug: string | null;
@@ -65,7 +65,8 @@ const TYPE_LABELS: Record<string, { ar: string; en: string }> = {
   subscription: { ar: "اشتراك", en: "Subscription" },
   token_package: { ar: "باقة توكن", en: "Token Package" },
   mcp_addon: { ar: "إضافة Claude", en: "Claude Addon" },
-  developer_owner_plan: { ar: "باقة أونر (مطوّر)", en: "Owner Plan (Developer)" },
+  developer_owner_plan: { ar: "باقة أونر (مطوّر) — قديم", en: "Owner Plan (Developer) — Legacy" },
+  developer_topup: { ar: "شحن رصيد (بورتال)", en: "Balance Top-up (Portal)" },
 };
 
 function formatDate(d: string | null, locale: string): string {

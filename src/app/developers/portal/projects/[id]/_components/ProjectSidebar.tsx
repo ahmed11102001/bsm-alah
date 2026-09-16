@@ -27,7 +27,7 @@ function getNavItems(projectId: string, t: (en: string, ar: string) => string, d
     { label: "Live Tester",  href: devPath(`/portal/projects/${projectId}/live-tester`),   icon: Zap },
     { label: t("Quick Start", "البدء السريع"), href: devPath(`/portal/projects/${projectId}/quick-start`),   icon: Code },
     { label: t("Activity Logs", "السجلات"),      href: devPath(`/portal/projects/${projectId}/activity-logs`), icon: Activity },
-    { label: t("Project Plan", "خطة المشروع"), href: devPath(`/portal/projects/${projectId}/billing`), icon: CreditCard },
+    { label: t("Billing", "الفوترة"), href: devPath(`/portal/projects/${projectId}/billing`), icon: CreditCard },
     { label: t("Transfer Project", "تسليم المشروع"),href: devPath(`/portal/projects/${projectId}/transfer`),      icon: Share2 },
   ];
 }

@@ -328,7 +328,7 @@ export default function HeroCinematic() {
               {[
                 { n: "98%", l: t("open rate", "معدل فتح") },
                 { n: t("< 3s", "< ٣ث"), l: t("avg delivery", "وصول متوسط") },
-                { n: "50", l: t("free messages", "رسالة مجانية") },
+                { n: "30", l: t("free messages", "رسالة مجانية") },
               ].map(({ n, l }) => (
                 <div key={l} style={{ textAlign: "center" }}>
                   <div style={{ fontSize: "18px", fontWeight: 800, color: "#f0f0f0", fontFamily: "'JetBrains Mono',monospace" }}>{n}</div>
@@ -515,7 +515,7 @@ export default function HeroCinematic() {
               color: "rgba(255,255,255,0.25)",
               marginTop: "12px",
             }}>
-              {t("No credit card required · 50 free messages", "بدون بطاقة ائتمان · 50 رسالة مجانية")}
+              {t("No credit card required · 30 free messages", "بدون بطاقة ائتمان · 30 رسالة مجانية")}
             </p>
           </div>
         </div>

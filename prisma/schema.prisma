@@ -1152,6 +1152,19 @@ model DeveloperProject {
   trialMessagesUsed      Int                      @default(0)
   trialStartedAt         DateTime?
   trialWarningNotifiedAt DateTime?
+  // ── Prepaid wallet billing (يلغي الاشتراك الشهري) ──
+  // Trial: 30 رسالة / 30 يوم / مرة واحدة. Monthly free للـ Owner: 30 / 30 يوم بدون ترحيل.
+  // paidBalanceEGP قد يكون سالبًا حتى -MAX_DEBT_EGP (مديونية صارمة).
+  trialCreditsTotal      Int                      @default(30)
+  trialCreditsUsed       Int                      @default(0)
+  monthlyFreeTotal       Int                      @default(30)
+  monthlyFreeUsed        Int                      @default(0)
+  monthlyPeriodStart     DateTime?
+  monthlyPeriodEnd       DateTime?
+  monthlyRenewNotifiedAt DateTime?
+  paidBalanceEGP         Float                    @default(0)
+  lowBalanceNotifiedAt   DateTime?
+  debtNotifiedAt         DateTime?
   ownerWelcomeSeenAt     DateTime?
   planExpiredNotifiedAt  DateTime?
   planExpiringNotifiedAt DateTime?
@@ -1160,12 +1173,33 @@ model DeveloperProject {
   otpTemplates           DeveloperOtpTemplate[]
   invites                DeveloperProjectInvite[]
   paymentRequests        PaymentRequest[]
+  ledgerEntries          ProjectLedgerEntry[]
   developer              DeveloperUser            @relation(fields: [developerId], references: [id], onDelete: Cascade)
   owner                  DeveloperUser?           @relation("ProjectOwner", fields: [ownerId], references: [id])
 
   @@index([developerId])
   @@index([ownerId])
   @@map("developer_projects")
+}
+
+model ProjectLedgerEntry {
+  id            String           @id @default(cuid())
+  projectId     String
+  wabaId        String?
+  phoneNumberId String?
+  usageType     String           @default("otp")
+  // trial_credit | monthly_free | paid_wallet | debt | topup | migration_credit | monthly_renew
+  source        String
+  quantity      Int              @default(1)
+  amountEGP     Float            @default(0)
+  balanceAfter  Float?
+  metaMessageId String?
+  createdAt     DateTime         @default(now())
+  project       DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([projectId, source])
+  @@map("project_ledger_entries")
 }
 
 model DeveloperProjectInvite {
@@ -1943,6 +1977,7 @@ enum PaymentRequestType {
   token_package
   mcp_addon
   developer_owner_plan
+  developer_topup
 }
 
 enum PaymentRequestStatus {

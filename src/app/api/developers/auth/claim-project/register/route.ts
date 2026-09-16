@@ -66,9 +66,18 @@ export async function POST(req: NextRequest) {
 
     // Assign role
     if (invite.role === "OWNER") {
+      const { newMonthlyPeriod } = await import("@/lib/portal-billing");
+      const { start, end } = newMonthlyPeriod();
       await prisma.developerProject.update({
         where: { id: invite.projectId },
-        data: { ownerId: newUser.id },
+        // بداية الحصة الشهرية المجانية (30) من لحظة التسليم — الرصيد المدفوع ينتقل كاملًا
+        data: {
+          ownerId: newUser.id,
+          monthlyFreeTotal: 30,
+          monthlyFreeUsed: 0,
+          monthlyPeriodStart: start,
+          monthlyPeriodEnd: end,
+        },
       });
     } else {
       await prisma.developerProject.update({

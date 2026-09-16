@@ -200,13 +200,16 @@ describe("Developers Projects API — /api/developers/projects", () => {
       expect(data.ok).toBe(true);
       expect(data.project.name).toBe("مشروع جديد");
 
-      // التحقق من الـ data المبعوتة لـ Prisma
+      // التحقق من الـ data المبعوتة لـ Prisma (مع Trial الجديد 30/30d)
       expect(mockPrisma.developerProject.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           developerId: "dev-1",
           name: "مشروع جديد",
           description: "وصف",
-        },
+          trialCreditsTotal: 30,
+          trialCreditsUsed: 0,
+          paidBalanceEGP: 0,
+        }),
       });
     });
 
@@ -222,11 +225,11 @@ describe("Developers Projects API — /api/developers/projects", () => {
       await POST(makeReq("POST", { name: "تيست" }));
 
       expect(mockPrisma.developerProject.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           developerId: "dev-1",
           name: "تيست",
           description: null,
-        },
+        }),
       });
     });
   });

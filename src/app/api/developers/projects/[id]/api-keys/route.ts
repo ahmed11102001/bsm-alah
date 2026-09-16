@@ -92,17 +92,17 @@ export async function POST(
       },
     });
 
-    // Start trial timer on first ever API key (non-blocking)
+    // Start trial timer (30 يوم) on first ever API key (non-blocking)
     prisma.developerProject.findUnique({
       where: { id },
-      select: { plan: true, trialEndsAt: true },
+      select: { trialEndsAt: true, trialStartedAt: true },
     }).then(project => {
-      if (project?.plan === "TRIAL" && !project.trialEndsAt) {
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+      if (project && !project.trialEndsAt) {
+        const trialStartedAt = project.trialStartedAt ?? new Date();
+        const trialEndsAt = new Date(trialStartedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
         return prisma.developerProject.update({
           where: { id },
-          data: { trialEndsAt },
+          data: { trialStartedAt, trialEndsAt, trialCreditsTotal: 30 },
         });
       }
     }).catch(() => {});

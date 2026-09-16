@@ -11,7 +11,11 @@ const mockPrisma = vi.hoisted(() => ({
     findMany: vi.fn(),
   },
   developerProject: {
-    update: vi.fn().mockResolvedValue({}),
+    findUnique: vi.fn(),
+    update: vi.fn().mockResolvedValue({ paidBalanceEGP: 0 }),
+  },
+  projectLedgerEntry: {
+    create: vi.fn().mockResolvedValue({}),
   },
   developerNotification: {
     create: vi.fn().mockResolvedValue({}),
@@ -69,6 +73,14 @@ function makeKeyRecord(overrides: any = {}) {
       trialEndsAt: new Date(Date.now() + 14 * 86400_000),
       trialMessagesUsed: 0,
       trialWarningNotifiedAt: null,
+      trialCreditsTotal: 30,
+      trialCreditsUsed: 0,
+      monthlyFreeTotal: 30,
+      monthlyFreeUsed: 0,
+      monthlyPeriodStart: null,
+      monthlyPeriodEnd: null,
+      paidBalanceEGP: 0,
+      projectCreatedAt: new Date(),
       metaConnection: {
         accessToken: "ENC_TOKEN",
         phoneNumberId: "111",
@@ -102,11 +114,30 @@ function makeTemplate(overrides: any = {}) {
 }
 
 describe("Developers OTP Send — /api/developers/otp/send", () => {
+  const billingState = {
+    id: "proj-A",
+    ownerId: null,
+    trialCreditsTotal: 30,
+    trialCreditsUsed: 0,
+    trialStartedAt: new Date(),
+    trialEndsAt: new Date(Date.now() + 30 * 86400_000),
+    monthlyFreeTotal: 30,
+    monthlyFreeUsed: 0,
+    monthlyPeriodStart: null,
+    monthlyPeriodEnd: null,
+    paidBalanceEGP: 0,
+    createdAt: new Date(),
+    trialWarningNotifiedAt: null,
+    lowBalanceNotifiedAt: null,
+    debtNotifiedAt: null,
+  };
   beforeEach(() => {
     vi.clearAllMocks();
     mockPrisma.developerApiKey.findUnique.mockResolvedValue(makeKeyRecord());
     mockPrisma.developerApiKey.update.mockResolvedValue({});
-    mockPrisma.developerProject.update.mockResolvedValue({});
+    mockPrisma.developerProject.findUnique.mockResolvedValue({ ...billingState });
+    mockPrisma.developerProject.update.mockResolvedValue({ paidBalanceEGP: 0 });
+    mockPrisma.projectLedgerEntry.create.mockResolvedValue({});
     mockPrisma.developerNotification.create.mockResolvedValue({});
     mockPrisma.otpLog.create.mockResolvedValue({});
     mockFetch.mockResolvedValue({
@@ -496,7 +527,7 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
   });
 
   // ── F2: فشل الحفظ بعد نجاح Meta ─────────────────────────────────────────
-  it("Meta نجح والحفظ فشل → 502 OTP_STORE_FAILED ولا trial increment", async () => {
+  it("Meta نجح والحفظ فشل → 502 OTP_STORE_FAILED ولا billing consume", async () => {
     mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
     vi.mocked(storeOtp).mockRejectedValueOnce(new Error("redis down"));
     const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
@@ -504,8 +535,100 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     expect(res.status).toBe(502);
     expect(data.code).toBe("OTP_STORE_FAILED");
     expect(data).not.toHaveProperty("token");
-    // Meta اتبعت فعلًا لكن الـ trial لم يُحتسب (الكود غير قابل للتحقق)
+    // Meta اتبعت فعلًا لكن الرصيد لم يُخصم (الكود غير قابل للتحقق)
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockPrisma.developerProject.update).not.toHaveBeenCalled();
+    expect(mockPrisma.projectLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
+  // ── Prepaid wallet billing: trial → monthly → wallet → strict debt ────
+  function setBilling(over: any) {
+    mockPrisma.developerProject.findUnique.mockResolvedValue({
+      id: "proj-A",
+      ownerId: null,
+      trialCreditsTotal: 30,
+      trialCreditsUsed: 0,
+      trialStartedAt: new Date(),
+      trialEndsAt: new Date(Date.now() + 30 * 86400_000),
+      monthlyFreeTotal: 30,
+      monthlyFreeUsed: 0,
+      monthlyPeriodStart: null,
+      monthlyPeriodEnd: null,
+      paidBalanceEGP: 0,
+      createdAt: new Date(),
+      trialWarningNotifiedAt: new Date(),
+      lowBalanceNotifiedAt: new Date(),
+      debtNotifiedAt: new Date(),
+      ...over,
+    });
+  }
+
+  it("Billing: trial نشط → 200 + source=trial_credit + messagesLeft=29", async () => {
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.source).toBe("trial_credit");
+    expect(data.messagesLeft).toBe(29);
+    expect(mockPrisma.projectLedgerEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ source: "trial_credit" }) })
+    );
+  });
+
+  it("Billing: trial خلص + owner + monthly متاحة → source=monthly_free", async () => {
+    setBilling({
+      trialCreditsUsed: 30,
+      ownerId: "owner-1",
+      monthlyPeriodStart: new Date(),
+      monthlyPeriodEnd: new Date(Date.now() + 30 * 86400_000),
+      monthlyFreeUsed: 5,
+    });
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.source).toBe("monthly_free");
+    expect(data.messagesLeft).toBe(24);
+  });
+
+  it("Billing: trial+monthly خلصوا + رصيد كافٍ → source=paid_wallet", async () => {
+    setBilling({ trialCreditsUsed: 30, paidBalanceEGP: 5 });
+    mockPrisma.developerProject.update.mockResolvedValue({ paidBalanceEGP: 4.25 });
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.source).toBe("paid_wallet");
+    expect(data.paidBalanceEGP).toBe(4.25);
+  });
+
+  it("Billing: رصيد صفر + مديونية متاحة → source=debt", async () => {
+    setBilling({ trialCreditsUsed: 30, paidBalanceEGP: 0 });
+    mockPrisma.developerProject.update.mockResolvedValue({ paidBalanceEGP: -0.75 });
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.source).toBe("debt");
+  });
+
+  it("Billing: مديونية عند الحد (-10) → 403 INSUFFICIENT_BALANCE صارم", async () => {
+    setBilling({ trialCreditsUsed: 30, paidBalanceEGP: -10 });
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(403);
+    expect(data.code).toBe("INSUFFICIENT_BALANCE");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("Billing: رصيد -9.5 (آخر 0.5 لا تكفي رسالة كاملة) → 403", async () => {
+    setBilling({ trialCreditsUsed: 30, paidBalanceEGP: -9.5 });
+    mockPrisma.developerOtpTemplate.findUnique.mockResolvedValue(makeTemplate());
+    const res = await POST(makeReq({ phone: "01012345678", templateId: "tpl-1" }));
+    const data = await res.json();
+    expect(res.status).toBe(403);
+    expect(data.code).toBe("INSUFFICIENT_BALANCE");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

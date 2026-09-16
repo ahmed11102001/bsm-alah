@@ -59,12 +59,44 @@ export async function GET(
 
   const viewerRole = projectWithDetails.ownerId === session.id ? "owner" : "developer";
 
+  // سجل الفوترة — ظاهر للمطور والأونر
+  const ledger = await prisma.projectLedgerEntry.findMany({
+    where: { projectId: id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true, source: true, usageType: true, quantity: true,
+      amountEGP: true, balanceAfter: true, createdAt: true,
+    },
+  });
+
+  const topupPending = await prisma.paymentRequest.findFirst({
+    where: { developerProjectId: id, status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, amount: true, paymentMethod: true, status: true, createdAt: true },
+  });
+
   return NextResponse.json({
     project: {
       ...projectWithDetails,
       otpToday,
       viewerRole,
-      transactions: [],
+      transactions: ledger,
+      topupPending,
+      wallet: {
+        paidBalanceEGP: projectWithDetails.paidBalanceEGP,
+        trial: {
+          used: projectWithDetails.trialCreditsUsed,
+          total: projectWithDetails.trialCreditsTotal,
+          endsAt: projectWithDetails.trialEndsAt,
+        },
+        monthly: {
+          used: projectWithDetails.monthlyFreeUsed,
+          total: projectWithDetails.monthlyFreeTotal,
+          endsAt: projectWithDetails.monthlyPeriodEnd,
+          active: !!projectWithDetails.ownerId,
+        },
+      },
     },
   });
 }

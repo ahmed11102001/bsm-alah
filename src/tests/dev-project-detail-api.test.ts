@@ -9,6 +9,12 @@ const mockPrisma = vi.hoisted(() => ({
   otpLog: {
     count: vi.fn(),
   },
+  projectLedgerEntry: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  paymentRequest: {
+    findFirst: vi.fn().mockResolvedValue(null),
+  },
 }));
 
 const mockGetDevSession = vi.hoisted(() => vi.fn());
@@ -86,6 +92,13 @@ describe("Developers Project Detail API — /api/developers/projects/[id]", () =
           connectedAt: new Date(),
         },
         _count: { apiKeys: 2, otpTemplates: 1 },
+        paidBalanceEGP: 5,
+        trialCreditsUsed: 3,
+        trialCreditsTotal: 30,
+        trialEndsAt: new Date(),
+        monthlyFreeUsed: 0,
+        monthlyFreeTotal: 30,
+        monthlyPeriodEnd: new Date(),
         owner: { id: "owner-1", firstName: "Ahmed", lastName: "Ali", email: "a@b.com" },
         developer: { id: "dev-1", firstName: "Mohamed", lastName: "Hassan", email: "m@b.com" },
       };
@@ -100,6 +113,12 @@ describe("Developers Project Detail API — /api/developers/projects/[id]", () =
       expect(data.project.otpToday).toBe(15);
       // dev-1 مش الأونر → viewerRole = developer
       expect(data.project.viewerRole).toBe("developer");
+      // الفوترة ظاهرة للطرفين
+      expect(data.project.wallet.paidBalanceEGP).toBe(5);
+      expect(data.project.wallet.trial).toEqual(
+        expect.objectContaining({ used: 3, total: 30 })
+      );
+      expect(data.project.transactions).toEqual([]);
     });
 
     it("الأونر بيشوف المشروع → viewerRole = owner", async () => {
@@ -113,6 +132,13 @@ describe("Developers Project Detail API — /api/developers/projects/[id]", () =
         id: "proj-1",
         ownerId: "owner-1",
         developerId: "dev-1",
+        paidBalanceEGP: 0,
+        trialCreditsUsed: 0,
+        trialCreditsTotal: 30,
+        trialEndsAt: null,
+        monthlyFreeUsed: 0,
+        monthlyFreeTotal: 30,
+        monthlyPeriodEnd: null,
         metaConnection: null,
         _count: { apiKeys: 0, otpTemplates: 0 },
         owner: null,

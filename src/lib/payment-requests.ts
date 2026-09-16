@@ -6,9 +6,11 @@
 //  ويرسل إثبات الدفع على WhatsApp → الأدمن يراجع الطلب من "المدفوعات" في لوحة
 //  التحكم ويضغط تأكيد/رفض → عند التأكيد يتم تفعيل الباقة/الإضافة فعليًا هنا.
 //
-//  طلبات المطورين (type = developer_owner_plan) بتستخدم نفس الجدول بس مربوطة
-//  بـ developerUserId/developerProjectId بدل userId، وعند الموافقة بتفعّل
-//  DeveloperProject.plan = OWNER_PLAN لمدة 30 يوم.
+//  طلبات المطورين (type = developer_topup) بتستخدم نفس الجدول بس مربوطة
+//  بـ developerUserId/developerProjectId بدل userId، وعند الموافقة بتزوّد
+//  DeveloperProject.paidBalanceEGP بالمبلغ (رصيد مدفوع لا ينتهي).
+//  نوع developer_owner_plan القديم (اشتراك شهري) ملغي — أي طلب معلق قديم
+//  منه بيتحول لرصيد محفظة بنفس المبلغ عند الموافقة.
 // ══════════════════════════════════════════════════════════════════════════════
 
 import prisma from "@/lib/prisma";
@@ -341,6 +343,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       });
     });
   } else if ((request.type as string) === "developer_owner_plan") {
+    // ── نظام الاشتراك الشهري ملغي — أي طلب owner_plan معلق قديم يتحول لرصيد محفظة ──
     if (!request.developerProjectId) {
       throw new ManualPaymentError("طلب باقة الأونر ده مش مربوط بأي مشروع", 400);
     }
@@ -348,26 +351,77 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
-      const project = await tx.developerProject.findUnique({
-        where: { id: request.developerProjectId as string },
-        select: { planRenewsAt: true },
-      });
-
-      const baseDate =
-        project?.planRenewsAt && project.planRenewsAt > now ? project.planRenewsAt : now;
-      const newRenewsAt = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      await tx.developerProject.update({
+      const updated = await tx.developerProject.update({
         where: { id: request.developerProjectId as string },
         data: {
-          plan: "OWNER_PLAN",
-          planStartedAt: now,
-          planRenewsAt: newRenewsAt,
-          planExpiringNotifiedAt: null,
-          planExpiredNotifiedAt: null,
+          paidBalanceEGP: { increment: request.amount },
+          lowBalanceNotifiedAt: null,
+          debtNotifiedAt: null,
+        },
+        select: { paidBalanceEGP: true },
+      });
+
+      await tx.projectLedgerEntry.create({
+        data: {
+          projectId: request.developerProjectId as string,
+          usageType: "otp",
+          source: "topup",
+          quantity: 0,
+          amountEGP: request.amount,
+          balanceAfter: updated.paidBalanceEGP,
         },
       });
     });
+  } else if ((request.type as string) === "developer_topup") {
+    if (!request.developerProjectId) {
+      throw new ManualPaymentError("طلب الشحن ده مش مربوط بأي مشروع", 400);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await claimPending(tx);
+
+      const updated = await tx.developerProject.update({
+        where: { id: request.developerProjectId as string },
+        data: {
+          paidBalanceEGP: { increment: request.amount },
+          lowBalanceNotifiedAt: null,
+          debtNotifiedAt: null,
+        },
+        select: { paidBalanceEGP: true },
+      });
+
+      await tx.projectLedgerEntry.create({
+        data: {
+          projectId: request.developerProjectId as string,
+          usageType: "otp",
+          source: "topup",
+          quantity: 0,
+          amountEGP: request.amount,
+          balanceAfter: updated.paidBalanceEGP,
+        },
+      });
+    });
+
+    // إشعار صاحب الرصيد (المطور أو الأونر الحالي)
+    try {
+      const proj = await prisma.developerProject.findUnique({
+        where: { id: request.developerProjectId as string },
+        select: { ownerId: true, developerId: true },
+      });
+      const targetId = proj?.ownerId ?? proj?.developerId;
+      if (targetId) {
+        await prisma.developerNotification.create({
+          data: {
+            developerId: targetId,
+            type: "BILLING",
+            title: "تم شحن رصيد المشروع",
+            message: `اتشحن ${request.amount}ج لرصيد مشروعك بنجاح.`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[ManualPayment] Topup notify failed:", err);
+    }
   }
 
   // ── Conversions API (server-side Purchase) ──

@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { devError } from "@/lib/dev-errors";
-import { getProjectForOwner } from "@/lib/dev-project-auth";
-
-const OWNER_PLAN_PRICE = 249;
+import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
+import {
+  TOPUP_MIN_EGP,
+  TOPUP_MAX_EGP,
+  OTP_PRICE_EGP,
+  isValidTopupAmount,
+  messagesFromBalance,
+} from "@/lib/portal-billing";
 
 export async function GET(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
@@ -14,7 +19,8 @@ export async function GET(req: NextRequest) {
   const projectId = searchParams.get("projectId");
   if (!projectId) return devError("projectId is required", "INVALID_REQUEST", 400);
 
-  const project = await getProjectForOwner(projectId, session.id);
+  // الرصيد ظاهر للمطور والأونر — نفس الصلاحية
+  const project = await getProjectForOwnerOrDeveloper(projectId, session.id);
   if (!project) return devError("المشروع مش موجود أو مش بتاعك", "NOT_FOUND", 404);
 
   const pending = await prisma.paymentRequest.findFirst({
@@ -22,25 +28,63 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ success: true, pending });
+  const ledger = await prisma.projectLedgerEntry.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true, source: true, usageType: true, quantity: true,
+      amountEGP: true, balanceAfter: true, createdAt: true,
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    pending,
+    ledger,
+    wallet: {
+      paidBalanceEGP: project.paidBalanceEGP,
+      messagesAvailable: messagesFromBalance(project.paidBalanceEGP),
+      trial: {
+        used: project.trialCreditsUsed,
+        total: project.trialCreditsTotal,
+        endsAt: project.trialEndsAt,
+      },
+      monthly: {
+        used: project.monthlyFreeUsed,
+        total: project.monthlyFreeTotal,
+        endsAt: project.monthlyPeriodEnd,
+        active: !!project.ownerId,
+      },
+    },
+    limits: {
+      min: TOPUP_MIN_EGP,
+      max: TOPUP_MAX_EGP,
+      pricePerMessage: OTP_PRICE_EGP,
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
   const session = await getDevSessionFromRequest(req);
   if (!session) return devError("unauthenticated", "AUTH_REQUIRED", 401);
 
-  const { projectId, paymentMethod } = await req.json().catch(() => ({}));
+  const { projectId, amount, paymentMethod } = await req.json().catch(() => ({}));
   if (!projectId) return devError("projectId is required", "INVALID_REQUEST", 400);
+  if (!isValidTopupAmount(amount)) {
+    return devError(
+      `مبلغ الشحن لازم يكون بين ${TOPUP_MIN_EGP} و ${TOPUP_MAX_EGP} جنيه`,
+      "INVALID_REQUEST",
+      400
+    );
+  }
   if (paymentMethod && !["instapay", "etisalat"].includes(paymentMethod)) {
     return devError("طريقة دفع غير صالحة", "INVALID_REQUEST", 400);
   }
 
-  const project = await getProjectForOwner(projectId, session.id);
+  // المطور (قبل التسليم) والأونر (بعده) يقدروا يشحنوا
+  const project = await getProjectForOwnerOrDeveloper(projectId, session.id);
   if (!project) return devError("المشروع مش موجود أو مش بتاعك", "NOT_FOUND", 404);
-
-  if (project.plan === "OWNER_PLAN" && project.planRenewsAt && project.planRenewsAt > new Date()) {
-    return devError("المشروع ده مشترك بالفعل في باقة الأونر", "CONFLICT", 409);
-  }
 
   // منع تكرار طلب pending لنفس المشروع
   const existing = await prisma.paymentRequest.findFirst({
@@ -50,20 +94,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, reused: true, paymentRequest: existing });
   }
 
+  const messages = Math.floor(amount / OTP_PRICE_EGP);
   const request = await prisma.paymentRequest.create({
     data: {
       developerUserId: session.id,
       developerProjectId: projectId,
-      type: "developer_owner_plan",
-      productName: `باقة الأونر — مشروع ${project.name}`,
-      amount: OWNER_PLAN_PRICE,
+      type: "developer_topup",
+      productName: `شحن رصيد — مشروع ${project.name} — ${amount}ج (≈ ${messages} رسالة)`,
+      amount,
       currency: "EGP",
       paymentMethod: paymentMethod ?? null,
       status: "PENDING",
     },
   });
 
-  // 🔔 إشعار الأدمن بفاتورة مطور جديدة — fire-and-forget
+  // 🔔 إشعار الأدمن بفاتورة شحن جديدة — fire-and-forget
   void (async () => {
     try {
       const dev = await prisma.developerUser.findUnique({
