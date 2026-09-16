@@ -100,10 +100,12 @@ describe("pollDeviceToken", () => {
   });
 });
 
-describe("loginCommand (device flow, no passwords)", () => {
-  it("completes login and stores the access token", async () => {
-    const seen: any[] = [];
+describe("loginCommand (seamless browser flow, no passwords, no codes)", () => {
+  const TICKET_URI = "/developers/cli/authorize?ticket=" + "b".repeat(64);
+
+  function loginFetch() {
     let tokenCalls = 0;
+    const seen: string[] = [];
     const fetchImpl = (async (url: any) => {
       seen.push(String(url));
       const u = String(url);
@@ -111,7 +113,7 @@ describe("loginCommand (device flow, no passwords)", () => {
         return jsonRes(200, {
           device_code: "dev-9",
           user_code: "WXYZ-9876",
-          verification_uri: "/developers/cli/authorize",
+          verification_uri: TICKET_URI,
           expires_in: 600,
         });
       }
@@ -122,16 +124,49 @@ describe("loginCommand (device flow, no passwords)", () => {
       }
       return jsonRes(200, { developer: { email: "dev@x.com" } });
     }) as any;
+    return { seen, fetchImpl };
+  }
+
+  it("opens the ticket URL and completes login without typing any code", async () => {
+    const { seen, fetchImpl } = loginFetch();
+    const opened: string[] = [];
     const saved: { config: CliConfig | null } = { config: null };
     const ctx = baseCtx({
       config: { version: 2, apiKeys: {} },
       fetchImpl,
-      saveConfig: (c) => { saved.config = c; },
+      saveConfig: (c) => {
+        saved.config = c;
+      },
     });
-    await loginCommand(ctx, parseArgs(["--no-open"]));
+    await loginCommand(ctx, parseArgs([]), { openBrowser: (url) => { opened.push(url); return true; } });
     assert.equal(saved.config?.cliAccessToken, "wani_cli_saved");
+    // The exact ticket URL from the server is opened (query preserved).
+    assert.deepEqual(opened, [`https://api.test/developers/cli/authorize?ticket=${"b".repeat(64)}`]);
     assert.ok(seen.some((u) => u.endsWith("/cli/device/code")));
     assert.ok(seen.some((u) => u.endsWith("/auth/me")));
+  });
+
+  it("--no-open prints the URL and backup code instead of opening", async () => {
+    const { fetchImpl } = loginFetch();
+    const opened: string[] = [];
+    let captured = "";
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown) => { captured += String(chunk); return true; }) as typeof process.stdout.write;
+    try {
+      const saved: { config: CliConfig | null } = { config: null };
+      const ctx = baseCtx({
+        config: { version: 2, apiKeys: {} },
+        fetchImpl,
+        saveConfig: (c) => { saved.config = c; },
+      });
+      await loginCommand(ctx, parseArgs(["--no-open"]), { openBrowser: (url) => { opened.push(url); return true; } });
+      assert.equal(opened.length, 0);
+      assert.match(captured, /ticket=/);
+      assert.match(captured, /WXYZ-9876/);
+      assert.equal(saved.config?.cliAccessToken, "wani_cli_saved");
+    } finally {
+      process.stdout.write = origWrite;
+    }
   });
 });
 

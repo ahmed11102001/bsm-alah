@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TerminalSquare, ShieldCheck, X, Check, Loader2 } from "lucide-react";
 import { useLanguage } from "../../_components/LanguageProvider";
 
@@ -14,17 +14,62 @@ interface LookupResult {
   created_at: string;
 }
 
-export default function CliAuthorizePage() {
+function CliAuthorizeInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { language, t } = useLanguage();
   const isAr = language === "ar";
 
   const [phase, setPhase] = useState<Phase>("enter");
   const [code, setCode] = useState("");
+  const [ticket, setTicket] = useState<string | null>(null);
   const [info, setInfo] = useState<LookupResult | null>(null);
   const [me, setMe] = useState<{ email: string } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Seamless flow: ?ticket=… (opened by `wani login`) resolves straight to
+  // the approval screen — no code typing. Invalid/expired tickets fall back
+  // to manual code entry below.
+  useEffect(() => {
+    const ticketParam = searchParams.get("ticket");
+    if (!ticketParam) return;
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      try {
+        const [lookupRes, meRes] = await Promise.all([
+          fetch("/api/developers/cli/authorize/lookup-ticket", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticket: ticketParam }),
+          }),
+          fetch("/api/developers/auth/me"),
+        ]);
+        if (cancelled) return;
+        const data = await lookupRes.json();
+        if (!lookupRes.ok) {
+          setError(data.error || t("This link is invalid or expired", "هذا الرابط غير صالح أو منتهي"));
+          return;
+        }
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          setMe({ email: meData.developer?.email ?? "" });
+        }
+        setTicket(ticketParam);
+        setInfo(data);
+        setPhase("review");
+      } catch {
+        if (!cancelled) setError(t("Connection error", "مشكلة في الاتصال"));
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -64,7 +109,7 @@ export default function CliAuthorizePage() {
       const res = await fetch("/api/developers/cli/authorize/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_code: code, decision }),
+        body: JSON.stringify(ticket ? { ticket, decision } : { user_code: code, decision }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -154,9 +199,15 @@ export default function CliAuthorizePage() {
       <div className="cliauth-root">
         <div className="cliauth-card">
           <div className="cliauth-icon"><TerminalSquare size={20} /></div>
-          <h1 className="cliauth-title">Wani CLI</h1>
+          <h1 className="cliauth-title">
+            {phase === "review" && ticket
+              ? t("Connect Wani CLI", "ربط Wani CLI")
+              : "Wani CLI"}
+          </h1>
           <p className="cliauth-desc">
-            {t("Connect your terminal to your Wani account.", "اربط الطرفية بحساب Wani الخاص بك.")}
+            {phase === "review" && ticket
+              ? t("You're signing in to Wani CLI from your terminal.", "أنت تسجل الدخول إلى Wani CLI من الطرفية.")
+              : t("Connect your terminal to your Wani account.", "اربط الطرفية بحساب Wani الخاص بك.")}
           </p>
 
           {phase === "enter" && (
@@ -224,5 +275,13 @@ export default function CliAuthorizePage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function CliAuthorizePage() {
+  return (
+    <Suspense>
+      <CliAuthorizeInner />
+    </Suspense>
   );
 }

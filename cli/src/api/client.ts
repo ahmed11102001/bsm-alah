@@ -77,7 +77,7 @@ export class ApiClient {
       res = await this.fetchImpl(url, init);
     } catch (err) {
       if (controller.signal.aborted && !(signal?.aborted ?? false)) {
-        throw new CliError(`Request timed out after ${this.timeoutMs}ms.`, { kind: "http", code: "TIMEOUT" });
+        throw new CliError(`Request timed out after ${this.timeoutMs}ms (raise it with --timeout <ms>).`, { kind: "http", code: "TIMEOUT" });
       }
       throw new CliError("Network error — the request did not complete.", { kind: "http", code: "NETWORK_ERROR" });
     } finally {

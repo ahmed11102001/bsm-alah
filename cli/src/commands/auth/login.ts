@@ -1,10 +1,14 @@
 /**
  * `wani login [--no-open]`
  *
- * Browser-based device authorization. No email/password ever touches the
- * terminal: the CLI shows a short code, opens the portal authorization page,
- * and polls until the developer approves (or the request expires).
- * The issued access token is stored locally (0600, encrypted at rest).
+ * Seamless browser authorization (default): opens the portal approval page
+ * with a short-lived single-use ticket embedded in the URL — no code typing.
+ * The developer approves there; the CLI polls until approval and stores the
+ * session token (0600, encrypted at rest). No email/password ever touches
+ * the terminal.
+ *
+ * `wani login --no-open` (SSH/servers) prints the URL + backup code instead
+ * of opening a browser — the manual device flow remains as fallback.
  */
 import * as os from "node:os";
 import { authorizePageUrl, openInBrowser } from "../../auth/browser-login.js";
@@ -20,8 +24,31 @@ interface MeResponse {
   developer?: { email?: string };
 }
 
-export async function loginCommand(ctx: CommandContext, args: ParsedArgs): Promise<void> {
+export const LOGIN_HELP = `wani login [--no-open]
+
+Log in via the browser (device flow). No email or password is ever typed
+in the terminal: the CLI shows a code, opens the portal approval page,
+and waits until you approve (or the request expires).
+
+  wani login              Open the browser and wait for approval
+  wani login --no-open    Print the approval URL instead (SSH / servers)
+
+The session token is stored encrypted in ~/.wani/config.json. Manage or
+revoke it anytime from Portal Settings → CLI & Integrations, or with
+\`wani logout\`.
+`;
+
+export interface LoginDeps {
+  openBrowser?: ((url: string) => boolean) | undefined;
+}
+
+export async function loginCommand(
+  ctx: CommandContext,
+  args: ParsedArgs,
+  deps?: LoginDeps
+): Promise<void> {
   const noOpen = args.options["no-open"] === true || args.options["noOpen"] === true;
+  const openBrowser = deps?.openBrowser ?? openInBrowser;
 
   const deviceName = `${os.hostname()} (${process.platform})`.slice(0, 64);
   const started = await requestDeviceCode(ctx.baseUrl, deviceName, {
@@ -31,23 +58,21 @@ export async function loginCommand(ctx: CommandContext, args: ParsedArgs): Promi
   const url = authorizePageUrl(ctx.baseUrl, started.verificationUri);
 
   if (ctx.json) {
-    printJson({ ok: true, user_code: started.userCode, verification_uri: url, expires_in: started.expiresInSecs });
-  } else {
-    printLine("Your login code:");
-    printLine(`  ${started.userCode}`);
-    printLine(`Open this page in your browser to approve:`);
+    printJson({ ok: true, verification_uri: url, expires_in: started.expiresInSecs });
+    openBrowser(url);
+  } else if (noOpen) {
+    printLine("Open this URL in your browser to approve:");
     printLine(`  ${url}`);
-  }
-
-  if (!noOpen && !ctx.json) {
-    if (!openInBrowser(url)) {
-      printLine("Could not open a browser automatically — open the URL above manually.");
+    printLine(`Backup code (if the link does not work): ${started.userCode}`);
+  } else {
+    printLine("Opening Wani in your browser...");
+    if (!openBrowser(url)) {
+      printLine("Could not open a browser automatically — open this URL manually:");
+      printLine(`  ${url}`);
     }
-  } else if (!noOpen && ctx.json) {
-    openInBrowser(url);
   }
 
-  if (!ctx.json) {
+  if (!ctx.json && !noOpen) {
     printLine("Waiting for browser approval…");
   }
   const token = await pollDeviceToken(ctx.baseUrl, started.deviceCode, started.expiresInSecs, {
@@ -79,7 +104,10 @@ export async function loginCommand(ctx: CommandContext, args: ParsedArgs): Promi
 
   if (ctx.json) {
     printJson({ ok: true, email: email ?? null });
-  } else {
+  } else if (noOpen) {
     printLine(email ? `Logged in as ${email}.` : "Logged in.");
+  } else {
+    printLine("✓ Browser authorization approved");
+    printLine(email ? `✓ Logged in as ${email}.` : "✓ Logged in.");
   }
 }

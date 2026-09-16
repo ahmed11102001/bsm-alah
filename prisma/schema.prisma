@@ -1306,6 +1306,11 @@ model DeveloperCliAuthorization {
   id             String         @id @default(cuid())
   deviceCodeHash String         @unique
   userCodeHash   String         @unique
+  // Short-lived single-use browser ticket embedded in the approval URL
+  // (`/cli/authorize?ticket=…`) so `wani login` needs no code typing.
+  // Distinct from device_code (polling-only); dies on use or after 5 min.
+  browserTicketHash      String?   @unique
+  browserTicketExpiresAt DateTime?
   developerId    String?
   developer      DeveloperUser? @relation(fields: [developerId], references: [id], onDelete: Cascade)
   deviceName     String?

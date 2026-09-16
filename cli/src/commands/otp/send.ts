@@ -9,6 +9,18 @@ import { printJson } from "../../output/json.js";
 import { printKeyValue, printLine } from "../../output/human.js";
 import { makeOtpClient } from "./common.js";
 
+export const OTP_SEND_HELP = `wani otp send --phone <phone> (--template-id <id> | --template <name> [--language <code>]) [--expires <minutes>] [--project <id>] [--api-key <key>]
+
+Send a WhatsApp OTP. Needs a project API key: --api-key flag, WANI_API_KEY
+env, or a key saved with \`wani project use --api-key\`.
+
+  wani otp send --phone 201012345678 --template-id tpl_123
+  wani otp send --phone 201012345678 --template otp_verification --language en_US --expires 10
+
+--project selects which *stored* key to use (never sent to the API).
+--expires is 1–60 minutes (default 10).
+`;
+
 export interface OtpSendResult {
   token: string;
   expiresAt: string;

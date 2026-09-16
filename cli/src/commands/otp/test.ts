@@ -24,6 +24,17 @@ import {
   type OtpTemplateOption,
 } from "./templates.js";
 
+export const OTP_TEST_HELP = `wani otp test [--phone <phone>] [--template-id <id> | --template <name> [--language <code>]] [--code <code>] [--expires <minutes>] [--project <id>] [--api-key <key>]
+
+Guided end-to-end OTP check: shows project + key, prompts for phone,
+template (approved templates listed when logged in) and code, sends,
+then verifies. Any missing value is prompted for in an interactive
+terminal; scripts must pass every value explicitly.
+
+  wani otp test
+  wani otp test --phone 201012345678 --template-id tpl_123 --code 123456
+`;
+
 interface TestFlags {
   phone?: string | undefined;
   templateId?: string | undefined;

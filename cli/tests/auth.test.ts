@@ -54,6 +54,18 @@ describe("authorizePageUrl", () => {
     );
   });
 
+  it("preserves the approval ticket query string", () => {
+    const uri = "/developers/cli/authorize?ticket=" + "a".repeat(64);
+    assert.equal(
+      authorizePageUrl("https://developers.aiwni.com", uri),
+      "https://developers.aiwni.com/cli/authorize?ticket=" + "a".repeat(64)
+    );
+    assert.equal(
+      authorizePageUrl("http://localhost:3000/", uri),
+      "http://localhost:3000/developers/cli/authorize?ticket=" + "a".repeat(64)
+    );
+  });
+
   it("passes absolute URLs through untouched", () => {
     assert.equal(
       authorizePageUrl("http://localhost:3000", "https://developers.aiwni.com/cli/authorize"),

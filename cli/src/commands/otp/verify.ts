@@ -13,6 +13,14 @@ import { printKeyValue } from "../../output/human.js";
 import { makeOtpClient } from "./common.js";
 import { promptText } from "../../utils/prompt.js";
 
+export const OTP_VERIFY_HELP = `wani otp verify --token <token> [--code <code>]
+
+Verify an OTP code. When --code is omitted in an interactive terminal,
+the code is prompted for; scripts must pass --code explicitly.
+
+  wani otp verify --token <token> --code 123456
+`;
+
 export async function otpVerifyCommand(ctx: CommandContext, args: ParsedArgs): Promise<void> {
   const token = optString(args.options, "token", "t")?.trim() ?? args.positional[0]?.trim();
   if (!token) {

@@ -11,6 +11,15 @@ import type { ParsedArgs } from "../../utils/args.js";
 import { printJson } from "../../output/json.js";
 import { printLine } from "../../output/human.js";
 
+export const LOGOUT_HELP = `wani logout [--all]
+
+Revoke the stored CLI session server-side (best-effort) and discard it
+locally. Stored project API keys are kept unless --all is passed.
+
+  wani logout          Log out, keep saved project keys
+  wani logout --all    Log out and clear saved keys + selected project
+`;
+
 export async function logoutCommand(ctx: CommandContext, args?: ParsedArgs): Promise<void> {
   const all = args?.options["all"] === true;
   const hadSession = Boolean(ctx.config.cliAccessToken);

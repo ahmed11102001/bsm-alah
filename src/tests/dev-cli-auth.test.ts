@@ -9,6 +9,8 @@ interface FakeAuth {
   id: string;
   deviceCodeHash: string;
   userCodeHash: string;
+  browserTicketHash: string | null;
+  browserTicketExpiresAt: Date | null;
   developerId: string | null;
   deviceName: string | null;
   status: string;
@@ -52,9 +54,14 @@ function applySelect<T extends object>(row: T, select: Record<string, boolean> |
 function matchAuth(a: FakeAuth, where: any): boolean {
   if (where.userCodeHash && a.userCodeHash !== where.userCodeHash) return false;
   if (where.deviceCodeHash && a.deviceCodeHash !== where.deviceCodeHash) return false;
+  if (where.browserTicketHash && a.browserTicketHash !== where.browserTicketHash) return false;
   if (where.id && a.id !== where.id) return false;
   if (where.status && a.status !== where.status) return false;
   if (where.expiresAt?.gt && !(a.expiresAt.getTime() > where.expiresAt.gt.getTime())) return false;
+  if (where.browserTicketExpiresAt?.gt) {
+    if (!a.browserTicketExpiresAt) return false;
+    if (!(a.browserTicketExpiresAt.getTime() > where.browserTicketExpiresAt.gt.getTime())) return false;
+  }
   return true;
 }
 
@@ -74,6 +81,7 @@ const mockPrisma = vi.hoisted(() => {
     for (const a of store.auths.values()) {
       if (where.userCodeHash && a.userCodeHash === where.userCodeHash) return applySelect(a, select);
       if (where.deviceCodeHash && a.deviceCodeHash === where.deviceCodeHash) return applySelect(a, select);
+      if (where.browserTicketHash && a.browserTicketHash === where.browserTicketHash) return applySelect(a, select);
       if (where.id && a.id === where.id) return applySelect(a, select);
     }
     return null;
@@ -90,6 +98,8 @@ const mockPrisma = vi.hoisted(() => {
           consumedAt: null,
           createdAt: new Date(),
           developerId: null,
+          browserTicketHash: null,
+          browserTicketExpiresAt: null,
           ...data,
         };
         store.auths.set(row.id, row);
@@ -174,7 +184,10 @@ vi.mock("@/lib/rate-limit", () => ({
 
 import { POST as deviceCodePOST } from "@/app/api/developers/cli/device/code/route";
 import { POST as lookupPOST } from "@/app/api/developers/cli/authorize/lookup/route";
-import { POST as approvePOST } from "@/app/api/developers/cli/authorize/approve/route";
+import { POST as approvePOST } from
+"@/app/api/developers/cli/authorize/approve/route";
+import { POST as lookupTicketPOST } from
+"@/app/api/developers/cli/authorize/lookup-ticket/route";
 import { POST as deviceTokenPOST } from "@/app/api/developers/cli/device/token/route";
 import { GET as sessionsGET } from "@/app/api/developers/cli/sessions/route";
 import { POST as revokePOST } from "@/app/api/developers/cli/sessions/revoke/route";
@@ -443,5 +456,112 @@ describe("CLI device authorization (Portal side)", () => {
     const data = await res.json();
     expect(data.ok).toBe(false);
     expect(data.code).toBe("INVALID_REQUEST");
+  });
+});
+
+function ticketFromUri(verificationUri: string): string {
+  const query = verificationUri.split("?", 2)[1] ?? "";
+  const ticket = new URLSearchParams(query).get("ticket") ?? "";
+  expect(ticket).toMatch(/^[0-9a-f]{64}$/);
+  return ticket;
+}
+
+describe("CLI seamless ticket flow (?ticket=�)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    store.auths.clear();
+    store.sessions.clear();
+    store.userStatus = "ACTIVE";
+    store.seq = 0;
+    vi.stubEnv("NODE_ENV", "production");
+  });
+
+  it("device/code embeds a ticket; lookup-ticket resolves straight to review", async () => {
+    authed("dev-1");
+    const codeRes = await deviceCodePOST(makeReq("/api/developers/cli/device/code", "POST", { device_name: "Term" }));
+    expect(codeRes.status).toBe(200);
+    const started = await codeRes.json();
+    expect(started.verification_uri).toContain("?ticket=");
+    const ticket = ticketFromUri(started.verification_uri);
+
+    const lookup = await lookupTicketPOST(
+      makeReq("/api/developers/cli/authorize/lookup-ticket", "POST", { ticket })
+    );
+    expect(lookup.status).toBe(200);
+    const data = await lookup.json();
+    expect(data.status).toBe("PENDING");
+    expect(data.device_name).toBe("Term");
+    expect(JSON.stringify(data)).not.toMatch(/tokenHash|deviceCodeHash|userCodeHash|ticketHash|password/i);
+  });
+
+  it("approve via ticket completes the flow; ticket is single-use", async () => {
+    authed("dev-1");
+    const codeRes = await deviceCodePOST(makeReq("/api/developers/cli/device/code", "POST", {}));
+    const started = await codeRes.json();
+    const ticket = ticketFromUri(started.verification_uri);
+    const headers = { origin: `http://${HOST}` };
+
+    const approve = await approvePOST(
+      makeReq("/api/developers/cli/authorize/approve", "POST", { ticket, decision: "allow" }, headers)
+    );
+    expect(approve.status).toBe(200);
+
+    // Same ticket again ? gone (killed on transition).
+    const reuse = await approvePOST(
+      makeReq("/api/developers/cli/authorize/approve", "POST", { ticket, decision: "allow" }, headers)
+    );
+    expect(reuse.status).toBe(409);
+
+    // device_code still mints exactly one session.
+    const first = await deviceTokenPOST(
+      makeReq("/api/developers/cli/device/token", "POST", { device_code: started.device_code })
+    );
+    expect(first.status).toBe(200);
+    const second = await deviceTokenPOST(
+      makeReq("/api/developers/cli/device/token", "POST", { device_code: started.device_code })
+    );
+    expect(second.status).toBe(400);
+  });
+
+  it("manual user_code flow still works after the ticket change", async () => {
+    authed("dev-1");
+    const codeRes = await deviceCodePOST(makeReq("/api/developers/cli/device/code", "POST", {}));
+    const { user_code, device_code } = await codeRes.json();
+    const headers = { origin: `http://${HOST}` };
+
+    const approve = await approvePOST(
+      makeReq("/api/developers/cli/authorize/approve", "POST", { user_code, decision: "allow" }, headers)
+    );
+    expect(approve.status).toBe(200);
+
+    const token = await deviceTokenPOST(
+      makeReq("/api/developers/cli/device/token", "POST", { device_code })
+    );
+    expect(token.status).toBe(200);
+    expect(typeof (await token.json()).access_token).toBe("string");
+  });
+
+  it("expired ticket rejected; malformed ticket rejected", async () => {
+    authed("dev-1");
+    const codeRes = await deviceCodePOST(makeReq("/api/developers/cli/device/code", "POST", {}));
+    const ticket = ticketFromUri((await codeRes.json()).verification_uri);
+    for (const a of store.auths.values()) {
+      a.browserTicketExpiresAt = new Date(Date.now() - 1000);
+    }
+
+    const expired = await lookupTicketPOST(
+      makeReq("/api/developers/cli/authorize/lookup-ticket", "POST", { ticket })
+    );
+    expect(expired.status).toBe(410);
+
+    const malformed = await lookupTicketPOST(
+      makeReq("/api/developers/cli/authorize/lookup-ticket", "POST", { ticket: "not-hex" })
+    );
+    expect(malformed.status).toBe(400);
+
+    const unknown = await lookupTicketPOST(
+      makeReq("/api/developers/cli/authorize/lookup-ticket", "POST", { ticket: "a".repeat(64) })
+    );
+    expect(unknown.status).toBe(404);
   });
 });

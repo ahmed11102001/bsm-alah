@@ -9,6 +9,14 @@ import { printJson } from "../../output/json.js";
 import { printKeyValue } from "../../output/human.js";
 import { makeOtpClient } from "./common.js";
 
+export const OTP_STATUS_HELP = `wani otp status --token <token>
+
+Check OTP delivery status. The token is also accepted positionally.
+
+  wani otp status --token <token>
+  wani otp status <token> --api-key wani_live_xxxx
+`;
+
 function asString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }

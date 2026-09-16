@@ -57,7 +57,12 @@ export async function POST(req: NextRequest) {
   // Atomic single-use consume — a concurrent poll loses the race (count 0).
   const consumed = await prisma.developerCliAuthorization.updateMany({
     where: { id: auth.id, status: CLI_AUTH_STATUS.APPROVED },
-    data: { status: CLI_AUTH_STATUS.CONSUMED, consumedAt: new Date() },
+    data: {
+      status: CLI_AUTH_STATUS.CONSUMED,
+      consumedAt: new Date(),
+      browserTicketHash: null,
+      browserTicketExpiresAt: null,
+    },
   });
   if (consumed.count === 0) {
     return devError("طلب غير صالح أو تم استخدامه بالفعل", "AUTHORIZATION_INVALID", 400);

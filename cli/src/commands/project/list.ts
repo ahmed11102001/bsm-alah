@@ -8,6 +8,24 @@ import { requireSession } from "../context.js";
 import { printJson } from "../../output/json.js";
 import { printProjects } from "../../output/human.js";
 
+export const PROJECT_HELP = `wani project <list | use | current>
+
+  wani project list
+      List your projects (id, name, role).
+
+  wani project use <id-or-name> [--api-key <key>]
+      Select the working project. Matches by exact id, id prefix, or
+      exact name. With --api-key, verifies the key belongs to the
+      project (when the server supports it) and saves it for OTP
+      commands.
+
+      wani project use my-store
+      wani project use cmu123abc --api-key wani_live_xxxx
+
+  wani project current
+      Show the selected project.
+`;
+
 export interface ProjectSummary {
   id: string;
   name: string;

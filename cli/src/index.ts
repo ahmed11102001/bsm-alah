@@ -10,18 +10,18 @@ import { assertTrustedBaseUrl } from "./api/trusted-hosts.js";
 import { BASE_URL_ENV_VAR, CLI_NAME, CLI_VERSION, DEFAULT_BASE_URL, DEFAULT_TIMEOUT_MS } from "./constants.js";
 import { loadConfig, resolveBaseUrl, saveConfig } from "./config/config.js";
 import type { CommandContext } from "./commands/context.js";
-import { loginCommand } from "./commands/auth/login.js";
-import { logoutCommand } from "./commands/auth/logout.js";
-import { whoamiCommand } from "./commands/auth/whoami.js";
-import { projectListCommand } from "./commands/project/list.js";
+import { loginCommand, LOGIN_HELP } from "./commands/auth/login.js";
+import { logoutCommand, LOGOUT_HELP } from "./commands/auth/logout.js";
+import { whoamiCommand, WHOAMI_HELP } from "./commands/auth/whoami.js";
+import { projectListCommand, PROJECT_HELP } from "./commands/project/list.js";
 import { projectUseCommand } from "./commands/project/use.js";
 import { projectCurrentCommand } from "./commands/project/current.js";
-import { otpSendCommand } from "./commands/otp/send.js";
-import { otpVerifyCommand } from "./commands/otp/verify.js";
-import { otpStatusCommand } from "./commands/otp/status.js";
-import { otpTestCommand } from "./commands/otp/test.js";
-import { otpInitCommand } from "./commands/init/init.js";
-import { setupCommand } from "./commands/setup.js";
+import { otpSendCommand, OTP_SEND_HELP } from "./commands/otp/send.js";
+import { otpVerifyCommand, OTP_VERIFY_HELP } from "./commands/otp/verify.js";
+import { otpStatusCommand, OTP_STATUS_HELP } from "./commands/otp/status.js";
+import { otpTestCommand, OTP_TEST_HELP } from "./commands/otp/test.js";
+import { otpInitCommand, INIT_HELP } from "./commands/init/init.js";
+import { setupCommand, SETUP_HELP } from "./commands/setup.js";
 import { printError } from "./output/errors.js";
 import { isHelpRequest, isJsonOutput, optString, parseArgs } from "./utils/args.js";
 
@@ -81,6 +81,39 @@ with \`wani project use <id> --api-key <key>\`. The project itself is always
 resolved server-side from that key.
 `;
 
+/** Topic help for `wani <command> --help` (and `wani help <command>`). */
+function commandHelp(group: string | undefined, action: string | undefined): string {
+  switch (group) {
+    case "login":
+      return LOGIN_HELP;
+    case "logout":
+      return LOGOUT_HELP;
+    case "whoami":
+      return WHOAMI_HELP;
+    case "project":
+      return PROJECT_HELP;
+    case "init":
+      return INIT_HELP;
+    case "setup":
+      return SETUP_HELP;
+    case "otp":
+      switch (action) {
+        case "send":
+          return OTP_SEND_HELP;
+        case "verify":
+          return OTP_VERIFY_HELP;
+        case "status":
+          return OTP_STATUS_HELP;
+        case "test":
+          return OTP_TEST_HELP;
+        default:
+          return OTP_HELP;
+      }
+    default:
+      return HELP;
+  }
+}
+
 function parseTimeoutMs(raw: string | undefined): number {
   if (raw === undefined) return DEFAULT_TIMEOUT_MS;
   const parsed = Number(raw);
@@ -123,14 +156,21 @@ async function main(argv: string[]): Promise<void> {
   const positional = [...rest, ...args.positional];
   const scoped: typeof args = { command: args.command, positional, options: args.options };
 
-  if (args.command.length === 0 || isHelpRequest(args.options, args.positional)) {
-    if (group === "otp") {
-      process.stdout.write(OTP_HELP);
-      return;
-    }
+  // `wani help <command>` behaves like `wani <command> --help`.
+  if (group === "help") {
+    process.stdout.write(commandHelp(action, rest[0]));
+    return;
+  }
+
+  if (isHelpRequest(args.options, args.positional)) {
+    process.stdout.write(commandHelp(group, action));
+    return;
+  }
+
+  if (args.command.length === 0) {
     // Bare `wani` in an interactive terminal starts guided setup;
     // scripts/pipes (non-TTY) keep the classic help output.
-    if (args.command.length === 0 && process.stdin.isTTY && !isHelpRequest(args.options, args.positional)) {
+    if (process.stdin.isTTY) {
       await setupCommand(ctx, scoped);
       return;
     }

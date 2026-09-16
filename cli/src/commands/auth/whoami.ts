@@ -8,6 +8,12 @@ import { requireSession } from "../context.js";
 import { printJson } from "../../output/json.js";
 import { printKeyValue } from "../../output/human.js";
 
+export const WHOAMI_HELP = `wani whoami
+
+Show the logged-in developer account (name, email, phone, status).
+Requires a login (\`wani login\`).
+`;
+
 interface MeResponse {
   developer?: {
     id?: string;

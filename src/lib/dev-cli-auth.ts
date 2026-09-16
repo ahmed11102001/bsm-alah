@@ -31,6 +31,8 @@ import prisma from "@/lib/prisma";
 // - Suspended developers cannot approve or mint CLI sessions.
 
 export const CLI_AUTH_REQUEST_TTL_SECS = 10 * 60;
+/** Browser approval ticket: single-use, URL-safe, deliberately short-lived. */
+export const CLI_AUTH_TICKET_TTL_SECS = 5 * 60;
 export const CLI_SESSION_TTL_SECS = 90 * 24 * 60 * 60;
 export const CLI_MAX_ACTIVE_SESSIONS = 10;
 
@@ -67,6 +69,25 @@ export function newUserCode(): { raw: string; hash: string; display: string } {
   const display = `${compact.slice(0, 4)}-${compact.slice(4)}`;
   // Lookup accepts both "XXXX-XXXX" and "XXXXXXXX" — normalize before hashing.
   return { raw: compact, hash: sha256hex(compact), display };
+}
+
+/**
+ * Browser ticket for the seamless flow (`/cli/authorize?ticket=…`).
+ * 256-bit, URL-safe hex, hashed at rest, single-use, 5-minute expiry.
+ * It only *identifies* a pending request for the logged-in approver —
+ * approval still binds developerId at click time, and the ticket dies on
+ * approve/deny/consume/expiry.
+ */
+export function newBrowserTicket(): { raw: string; hash: string } {
+  const raw = randomBytes(32).toString("hex");
+  return { raw, hash: sha256hex(raw) };
+}
+
+export function normalizeTicket(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const compact = input.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(compact)) return null;
+  return compact;
 }
 
 export function normalizeUserCode(input: unknown): string | null {

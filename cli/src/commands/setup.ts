@@ -22,6 +22,13 @@ import { projectUseCommand } from "./project/use.js";
 import { projectCurrentCommand } from "./project/current.js";
 import { otpTestCommand } from "./otp/test.js";
 
+export const SETUP_HELP = `wani setup
+
+Interactive first-run menu (needs a terminal): login, select project,
+test OTP, view project. Exits on 5 / q. Equivalent commands exist for
+every step, so scripts should call those directly instead.
+`;
+
 export interface SetupDeps {
   prompt?: ((question: string) => Promise<string>) | undefined;
 }

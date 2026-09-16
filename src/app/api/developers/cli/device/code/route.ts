@@ -5,7 +5,9 @@ import { devRateLimited, devError } from "@/lib/dev-errors";
 import {
   newDeviceCode,
   newUserCode,
+  newBrowserTicket,
   CLI_AUTH_REQUEST_TTL_SECS,
+  CLI_AUTH_TICKET_TTL_SECS,
 } from "@/lib/dev-cli-auth";
 
 // ─── POST /api/developers/cli/device/code ───────────────────────────────────
@@ -32,12 +34,15 @@ export async function POST(req: NextRequest) {
 
   const device = newDeviceCode();
   const user = newUserCode();
+  const ticket = newBrowserTicket();
 
   try {
     await prisma.developerCliAuthorization.create({
       data: {
         deviceCodeHash: device.hash,
         userCodeHash: user.hash,
+        browserTicketHash: ticket.hash,
+        browserTicketExpiresAt: new Date(Date.now() + CLI_AUTH_TICKET_TTL_SECS * 1000),
         deviceName: deviceName ?? null,
         status: "PENDING",
         expiresAt: new Date(Date.now() + CLI_AUTH_REQUEST_TTL_SECS * 1000),
@@ -51,7 +56,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     device_code: device.raw,
     user_code: user.display,
-    verification_uri: "/developers/cli/authorize",
+    // Seamless flow: the URI carries a short-lived single-use ticket, so the
+    // browser lands straight on the approval screen — no code typing.
+    // Manual fallback (typing user_code) keeps working unchanged.
+    verification_uri: `/developers/cli/authorize?ticket=${ticket.raw}`,
     expires_in: CLI_AUTH_REQUEST_TTL_SECS,
   });
 }

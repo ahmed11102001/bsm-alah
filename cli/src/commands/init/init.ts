@@ -36,6 +36,26 @@ import {
   type OtpTemplateOption,
 } from "../otp/templates.js";
 
+export const INIT_HELP = `wani init [--framework <id>] [--template-id <id> | --template <name> [--language <code>]] [--project <id>] [--api-key <key>] [--force] [--no-install]
+
+Scaffold a Wani OTP integration inside the current project directory:
+
+  1. Detect the framework (Node.js, Next.js, React, Django, Flask,
+     FastAPI, Laravel, Symfony, Shell) — override with --framework.
+  2. Resolve an approved template (or pass --template-id).
+  3. Fetch generated integration code from the official portal API.
+  4. Write one integration file (never overwrites without --force).
+  5. Install @aiwni/sdk for JS/TS projects (skip with --no-install).
+  6. Configure WANI_API_KEY placeholder in the env file (a real key is
+     written only when --api-key is passed explicitly) and ensure the
+     env file is gitignored.
+
+Requires a login (\`wani login\`). The key never goes into browser code.
+
+  wani init
+  wani init --framework next --template-id tpl_123 --force
+`;
+
 export interface InitDeps {
   cwd?: string | undefined;
   install?: ((packageManager: string, args: string[]) => { ok: boolean; error?: string }) | undefined;
