@@ -1118,6 +1118,8 @@ model DeveloperUser {
   lastName            String
   phone               String
   password            String
+  // ربط حساب Google (فلو التسجيل الجديد) — للمطابقة عند الدخول بجوجل لاحقًا
+  googleSub           String?                       @unique
   status              DeveloperStatus               @default(PENDING_META)
   createdAt           DateTime                      @default(now())
   updatedAt           DateTime                      @updatedAt

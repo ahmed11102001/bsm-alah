@@ -12,9 +12,13 @@ export async function GET(req: NextRequest) {
   if (!session) return devError("غير مصرح", "AUTH_REQUIRED", 401);
 
   // الـ CLI للمطورين فقط — الأونر (حساب عميل) مالوش أجهزة CLI
-  const { isOwnerOnlyAccount } = await import("@/lib/dev-role");
-  if (await isOwnerOnlyAccount(session.id)) {
-    return NextResponse.json({ sessions: [] });
+  try {
+    const { isOwnerOnlyAccount } = await import("@/lib/dev-role");
+    if (await isOwnerOnlyAccount(session.id)) {
+      return NextResponse.json({ sessions: [] });
+    }
+  } catch {
+    /* لو فشل الفحص كمّل عادي — الـ findMany هو الفيصل */
   }
 
   const now = new Date();

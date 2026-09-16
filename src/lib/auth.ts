@@ -37,25 +37,46 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email or phone", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
+          throw new Error("الرجاء إدخال البريد الإلكتروني أو رقم الهاتف وكلمة المرور");
         }
 
-        const key = `login:${credentials.email.toLowerCase()}`;
+        // المعرف قد يكون إيميلًا أو رقم واتساب — يُحدد تلقائيًا
+        const { parseIdentifier } = await import("@/lib/login-identifier");
+        const identifier = parseIdentifier(credentials.email);
+        if (!identifier) {
+          // رسالة عامة دائمًا — ضد enumeration
+          throw new Error("بيانات الدخول غير صحيحة");
+        }
+
+        const key = `login:${identifier.kind}:${identifier.value}`;
         const result = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
         if (!result.success) {
           throw new Error(`كثير من المحاولات. حاول بعد ${result.retryAfter} ثانية.`);
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
-        });
+        const user =
+          identifier.kind === "email"
+            ? await prisma.user.findUnique({ where: { email: identifier.value } })
+            : await prisma.user.findFirst({ where: { phone: identifier.value } });
 
-        if (!user || !user.password || (user as any).deletedAt) {
+        // مقارنة وهمية عند غياب الحساب — لمنع التمييز بالتوقيت (anti-enumeration)
+        const { DUMMY_PASSWORD_HASH } = await import("@/lib/login-identifier");
+        const hashToCompare = user?.password ?? DUMMY_PASSWORD_HASH;
+        let isValid = false;
+        try {
+          isValid = user?.password
+            ? await bcrypt.compare(credentials.password, user.password)
+            : await bcrypt.compare(credentials.password, hashToCompare).then(() => false);
+        } catch {
+          isValid = false;
+        }
+
+        if (!user || !isValid || (user as any).deletedAt) {
           throw new Error("بيانات الدخول غير صحيحة");
         }
 
@@ -65,11 +86,6 @@ export const authOptions: NextAuthOptions = {
 
         if (user.role !== "OWNER" && user.inviteCode) {
           throw new Error("يرجى تفعيل حسابك أولاً باستخدام كود الانضمام");
-        }
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) {
-          throw new Error("بيانات الدخول غير صحيحة");
         }
 
         return {

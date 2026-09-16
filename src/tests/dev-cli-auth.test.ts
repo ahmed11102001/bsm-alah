@@ -177,6 +177,10 @@ const mockGetDevSession = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 vi.mock("@/lib/dev-auth", () => ({ getDevSessionFromRequest: mockGetDevSession }));
+vi.mock("@/lib/dev-role", () => ({
+  isOwnerOnlyAccount: vi.fn().mockResolvedValue(false),
+  getLatestOwnedProjectId: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/lib/rate-limit", () => ({
   rateLimit: vi.fn(async () => ({ success: true })),
   getIP: () => "1.2.3.4",

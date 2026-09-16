@@ -19,7 +19,17 @@ function SignUpContent() {
   const router = useRouter();
   const { language, toggleLanguage, t } = useLanguage();
   const devPath = useDevPath();
-  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", password: "" });
+  const [step, setStep] = useState<"google" | "profile" | "code">("google");
+  const [signupToken, setSignupToken] = useState("");
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [terms, setTerms] = useState(false);
+  const [code, setCode] = useState("");
+  const [resendIn, setResendIn] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,38 +38,145 @@ function SignUpContent() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  function set(field: string, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
-    if (fieldErrors[field]) setFieldErrors((e) => ({ ...e, [field]: "" }));
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((v) => v - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  // Google Identity Services — إثبات الإيميل فقط، بدون إنشاء حساب
+  useEffect(() => {
+    if (!mounted || step !== "google") return;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError(t("Google signup is not enabled right now", "التسجيل بجوجل غير مفعّل حاليًا"));
+      return;
+    }
+    const render = () => {
+      const w = window as any;
+      if (!w.google?.accounts?.id) return;
+      w.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (resp: any) => { if (resp?.credential) handleGoogleCredential(resp.credential); },
+        auto_select: false,
+      });
+      const el = document.getElementById("dev-gsi-signup");
+      if (el) {
+        el.innerHTML = "";
+        w.google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", width: 300, text: "signup_with", shape: "rectangular" });
+      }
+    };
+    if ((window as any).google?.accounts?.id) { render(); return; }
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.defer = true;
+    s.onload = render;
+    document.head.appendChild(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, step]);
+
+  async function handleGoogleCredential(idToken: string) {
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/developers/auth/signup/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setLoading(false);
+      if (!res.ok) {
+        setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني"));
+        return;
+      }
+      setSignupToken(data.signupToken);
+      setGoogleEmail(data.email || "");
+      const parts = String(data.name || "").trim().split(/\s+/);
+      if (parts.length > 1) {
+        setFirstName(parts[0]);
+        setLastName(parts.slice(1).join(" "));
+      } else if (parts.length === 1) {
+        setFirstName(parts[0]);
+      }
+      setStep("profile");
+    } catch {
+      setLoading(false);
+      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
+    }
   }
 
-  function validate() {
+  function validateProfile() {
     const errs: Record<string, string> = {};
-    if (!form.firstName.trim()) errs.firstName = t("First name is required", "الاسم الأول مطلوب");
-    else if (form.firstName.trim().length < 2) errs.firstName = t("At least 2 characters", "حرفين على الأقل");
-    if (!form.lastName.trim()) errs.lastName = t("Last name is required", "الاسم الأخير مطلوب");
-    else if (form.lastName.trim().length < 2) errs.lastName = t("At least 2 characters", "حرفين على الأقل");
-    if (!form.phone.trim()) errs.phone = t("Phone number is required", "رقم الموبايل مطلوب");
-    if (!form.email.trim()) errs.email = t("Email is required", "الإيميل مطلوب");
-    if (!form.password) errs.password = t("Password is required", "كلمة المرور مطلوبة");
-    else if (form.password.length < 8) errs.password = t("At least 8 characters", "8 أحرف على الأقل");
+    if (!firstName.trim() || firstName.trim().length < 2) errs.firstName = t("At least 2 characters", "حرفين على الأقل");
+    if (!lastName.trim() || lastName.trim().length < 2) errs.lastName = t("At least 2 characters", "حرفين على الأقل");
+    if (!phone.trim()) errs.phone = t("Phone number is required", "رقم الواتساب مطلوب");
+    if (!password) errs.password = t("Password is required", "كلمة المرور مطلوبة");
+    else if (password.length < 8) errs.password = t("At least 8 characters", "8 أحرف على الأقل");
+    if (password !== confirmPassword) errs.confirmPassword = t("Passwords do not match", "كلمتا المرور غير متطابقتين");
+    if (!terms) errs.terms = t("You must accept the terms", "لازم توافق على الشروط");
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleProfileSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validateProfile()) return;
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/developers/auth/register", {
+      const res = await fetch("/api/developers/auth/signup/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ signupToken, firstName, lastName, phone, password, terms: true }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setLoading(false);
       if (!res.ok) { setError(data.error || t("Something went wrong, try again", "حصل خطأ، حاول تاني")); return; }
+      setCode("");
+      setResendIn(60);
+      setStep("code");
+    } catch {
+      setLoading(false);
+      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
+    }
+  }
+
+  async function handleResend() {
+    if (resendIn > 0 || loading) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/developers/auth/signup/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signupToken }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setLoading(false);
+      if (!res.ok) {
+        setError(data.error || t("Something went wrong", "حصل خطأ"));
+        if (typeof data.retryAfter === "number") setResendIn(data.retryAfter);
+        return;
+      }
+      setResendIn(60);
+    } catch {
+      setLoading(false);
+      setError(t("Connection error, try again", "حصل خطأ في الاتصال، حاول تاني"));
+    }
+  }
+
+  async function handleVerifySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (code.trim().length < 4) { setError(t("Enter the code sent to you", "أدخل الكود المرسل إليك")); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/developers/auth/signup/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signupToken, code: code.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setLoading(false);
+      if (!res.ok) { setError(data.error || t("Something went wrong", "حصل خطأ")); return; }
       router.push(devPath(data.redirect || "/portal"));
       router.refresh();
     } catch {
@@ -68,24 +185,10 @@ function SignUpContent() {
     }
   }
 
-  const strengthScore = (() => {
-    const p = form.password; if (!p) return 0;
-    let s = 0;
-    if (p.length >= 8) s++;
-    if (/[A-Z]/.test(p)) s++;
-    if (/[0-9]/.test(p)) s++;
-    if (/[^A-Za-z0-9]/.test(p)) s++;
-    return s;
-  })();
-  const strengthLabels = ["", t("Weak", "ضعيفة"), t("Fair", "مقبولة"), t("Good", "جيدة"), t("Strong", "قوية")];
-  const strengthLabel = strengthLabels[strengthScore];
-  const strengthColor = ["", "#ef4444", "#f59e0b", "#3b82f6", "#20d378"][strengthScore];
-
   const STEPS = [
-    { n: language === 'ar' ? "١" : "1", t: t("Create account", "إنشاء الحساب"), d: t("Register your info and a strong password", "سجّل بياناتك وكلمة مرور قوية") },
-    { n: language === 'ar' ? "٢" : "2", t: t("Create your first project", "إنشاء مشروعك الأول"), d: t("Name your project and start working immediately", "سمّي مشروعك وابدأ العمل فوراً") },
-    { n: language === 'ar' ? "٣" : "3", t: t("Connect WhatsApp Business", "ربط WhatsApp Business"), d: t("Link your project's Meta account", "اربط حساب Meta الخاص بمشروعك") },
-    { n: language === 'ar' ? "٤" : "4", t: t("Use the API", "استخدم الـ API"), d: t("Send OTPs directly from your app", "أرسل OTPs مباشرة من تطبيقك") },
+    { n: language === 'ar' ? "١" : "1", t: t("Google account", "حساب جوجل"), d: t("Verify your email with Google", "أكّد إيميلك بحساب جوجل") },
+    { n: language === 'ar' ? "٢" : "2", t: t("WhatsApp + password", "واتساب + باسورد"), d: t("Your number gets an OTP code", "رقمك هيوصله كود تأكيد") },
+    { n: language === 'ar' ? "٣" : "3", t: t("Verify & start", "أكّد وابدأ"), d: t("Enter the code and use the portal", "أدخل الكود وابدأ البورتال") },
   ];
 
   return (
@@ -253,6 +356,45 @@ function SignUpContent() {
           font-size: 13px; text-align: center; margin-bottom: 14px;
         }
 
+        .step-hint {
+          font-size: 13px; color: rgba(255,255,255,0.5);
+          line-height: 1.8; margin-bottom: 16px;
+          text-align: ${language === 'ar' ? 'right' : 'left'};
+        }
+
+        .gsi-wrap {
+          display: flex; justify-content: center;
+          margin: 8px 0 4px; min-height: 44px;
+        }
+
+        .field-hint {
+          font-size: 11px; color: rgba(255,255,255,0.35);
+          margin-top: 6px;
+        }
+
+        .code-input {
+          text-align: center; font-size: 22px !important;
+          letter-spacing: 8px; font-weight: 700;
+        }
+
+        .terms-row {
+          display: flex; align-items: flex-start; gap: 10px;
+          font-size: 13px; color: rgba(255,255,255,0.6);
+          line-height: 1.8; margin: 16px 0 4px; cursor: pointer;
+        }
+        .terms-row input { margin-top: 5px; accent-color: #20d378; width: 16px; height: 16px; }
+        .terms-row a { color: #20d378; text-decoration: none; }
+
+        .resend-line {
+          font-size: 13px; color: rgba(255,255,255,0.4);
+          text-align: center; margin-top: 14px;
+        }
+        .link-btn {
+          background: none; border: none; cursor: pointer;
+          color: #20d378; font-size: 13px; font-family: inherit; font-weight: 600;
+        }
+        .link-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .submit-btn {
           width: 100%; padding: 13px 24px;
           background: #20d378; color: #060810;
@@ -378,87 +520,130 @@ function SignUpContent() {
             <h2 className="form-title">{t("Create New Account", "إنشاء حساب جديد")}</h2>
             <p className="form-desc">{t("Join thousands of developers using Wani", "انضم لآلاف المطورين اللي بيستخدموا وني")}</p>
 
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="name-row">
-                <div className="field-group">
-                  <label className="field-label">{t("First Name", "الاسم الأول")}</label>
-                  <input
-                    className={`field-input ${fieldErrors.firstName ? "has-error" : ""}`}
-                    type="text" placeholder={t("Ahmed", "أحمد")}
-                    value={form.firstName} onChange={(e) => set("firstName", e.target.value)}
-                    autoComplete="given-name" autoCapitalize="words"
-                  />
-                  {fieldErrors.firstName && <p className="field-error">{fieldErrors.firstName}</p>}
+            {step === "google" && (
+              <div>
+                <p className="step-hint">{t("Start with your Google account — then we'll verify your WhatsApp number.", "ابدأ بحساب جوجل — وبعدين هنأكد رقم الواتساب.")}</p>
+                <div id="dev-gsi-signup" className="gsi-wrap" />
+                {loading && <p className="step-hint">{t("Verifying...", "جاري التحقق...")}</p>}
+                {error && <div className="error-box">{error}</div>}
+              </div>
+            )}
+
+            {step === "profile" && (
+              <form onSubmit={handleProfileSubmit} noValidate>
+                <p className="step-hint">{googleEmail} ✓</p>
+                <div className="name-row">
+                  <div className="field-group">
+                    <label className="field-label">{t("First Name", "الاسم الأول")}</label>
+                    <input
+                      className={`field-input ${fieldErrors.firstName ? "has-error" : ""}`}
+                      type="text" placeholder={t("Ahmed", "أحمد")}
+                      value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
+                    />
+                    {fieldErrors.firstName && <p className="field-error">{fieldErrors.firstName}</p>}
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">{t("Last Name", "الاسم الأخير")}</label>
+                    <input
+                      className={`field-input ${fieldErrors.lastName ? "has-error" : ""}`}
+                      type="text" placeholder={t("Mohamed", "محمد")}
+                      value={lastName} onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
+                    />
+                    {fieldErrors.lastName && <p className="field-error">{fieldErrors.lastName}</p>}
+                  </div>
                 </div>
+
                 <div className="field-group">
-                  <label className="field-label">{t("Last Name", "الاسم الأخير")}</label>
+                  <label className="field-label">{t("WhatsApp Number", "رقم الواتساب")}</label>
                   <input
-                    className={`field-input ${fieldErrors.lastName ? "has-error" : ""}`}
-                    type="text" placeholder={t("Mohamed", "محمد")}
-                    value={form.lastName} onChange={(e) => set("lastName", e.target.value)}
-                    autoComplete="family-name" autoCapitalize="words"
+                    className={`field-input ltr ${fieldErrors.phone ? "has-error" : ""}`}
+                    type="tel" placeholder="01xxxxxxxxx"
+                    value={phone} onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel" inputMode="tel"
                   />
-                  {fieldErrors.lastName && <p className="field-error">{fieldErrors.lastName}</p>}
+                  {fieldErrors.phone && <p className="field-error">{fieldErrors.phone}</p>}
+                  <p className="field-hint">{t("You'll receive a confirmation code on it", "هيوصلك عليه كود التأكيد")}</p>
                 </div>
-              </div>
 
-              <div className="field-group">
-                <label className="field-label">{t("Phone Number", "رقم الموبايل")}</label>
-                <input
-                  className={`field-input ltr ${fieldErrors.phone ? "has-error" : ""}`}
-                  type="tel" placeholder="01xxxxxxxxx"
-                  value={form.phone} onChange={(e) => set("phone", e.target.value)}
-                  autoComplete="tel" inputMode="tel"
-                />
-                {fieldErrors.phone && <p className="field-error">{fieldErrors.phone}</p>}
-              </div>
+                <div className="field-group">
+                  <label className="field-label">{t("Password", "كلمة المرور")}</label>
+                  <div className="password-wrap">
+                    <input
+                      className={`field-input ltr ${fieldErrors.password ? "has-error" : ""}`}
+                      type={showPassword ? "text" : "password"}
+                      placeholder={t("At least 8 characters", "8 أحرف على الأقل")}
+                      value={password} onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                    <button type="button" className="pass-toggle" onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? "👁" : "👁‍🗨"}
+                    </button>
+                  </div>
+                  {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
+                </div>
 
-              <div className="field-group">
-                <label className="field-label">{t("Email", "الإيميل")}</label>
-                <input
-                  className={`field-input ltr ${fieldErrors.email ? "has-error" : ""}`}
-                  type="email" placeholder="dev@example.com"
-                  value={form.email} onChange={(e) => set("email", e.target.value)}
-                  autoComplete="email" inputMode="email"
-                />
-                {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
-              </div>
-
-              <div className="field-group">
-                <label className="field-label">{t("Password", "كلمة المرور")}</label>
-                <div className="password-wrap">
+                <div className="field-group">
+                  <label className="field-label">{t("Confirm Password", "تأكيد كلمة المرور")}</label>
                   <input
-                    className={`field-input ltr ${fieldErrors.password ? "has-error" : ""}`}
-                    type={showPassword ? "text" : "password"}
-                    placeholder={t("At least 8 characters", "8 أحرف على الأقل")}
-                    value={form.password} onChange={(e) => set("password", e.target.value)}
+                    className={`field-input ltr ${fieldErrors.confirmPassword ? "has-error" : ""}`}
+                    type="password" placeholder="••••••••"
+                    value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
                   />
-                  <button type="button" className="pass-toggle" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? (
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                    ) : (
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    )}
-                  </button>
+                  {fieldErrors.confirmPassword && <p className="field-error">{fieldErrors.confirmPassword}</p>}
                 </div>
-                {form.password && (
-                  <div className="strength-bar">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="strength-seg" style={{ background: i <= strengthScore ? strengthColor : undefined }} />
-                    ))}
-                    <span className="strength-label" style={{ color: strengthColor }}>{strengthLabel}</span>
-                  </div>
-                )}
-                {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
-              </div>
 
-              {error && <div className="error-box">{error}</div>}
+                <label className="terms-row">
+                  <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
+                  <span>
+                    {t("I agree to the ", "أوافق على ")}
+                    <Link href={devPath("/terms")} target="_blank">{t("Terms", "الشروط")}</Link>
+                    {t(" and ", " و")}
+                    <Link href={devPath("/privacy")} target="_blank">{t("Privacy Policy", "سياسة الخصوصية")}</Link>
+                  </span>
+                </label>
+                {fieldErrors.terms && <p className="field-error">{fieldErrors.terms}</p>}
 
-              <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? <><div className="spinner" />{t("Creating account...", "جاري إنشاء الحساب...")}</> : <>{t("Create Account", "إنشاء الحساب")}</>}
-              </button>
-            </form>
+                {error && <div className="error-box">{error}</div>}
+
+                <button type="submit" className="submit-btn" disabled={loading}>
+                  {loading ? <><div className="spinner" />{t("Sending code...", "جاري إرسال الكود...")}</> : <>{t("Send Confirmation Code", "إرسال كود التأكيد")}</>}
+                </button>
+              </form>
+            )}
+
+            {step === "code" && (
+              <form onSubmit={handleVerifySubmit} noValidate>
+                <p className="step-hint">{t("Enter the code sent to your WhatsApp — valid 10 minutes", "أدخل الكود المرسل لواتساب — صالح 10 دقائق")}</p>
+                <div className="field-group">
+                  <label className="field-label">{t("Confirmation Code", "كود التأكيد")}</label>
+                  <input
+                    className="field-input ltr code-input"
+                    type="text" inputMode="numeric" placeholder="••••••"
+                    value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  />
+                </div>
+
+                {error && <div className="error-box">{error}</div>}
+
+                <button type="submit" className="submit-btn" disabled={loading}>
+                  {loading ? <><div className="spinner" />{t("Verifying...", "جاري التحقق...")}</> : <>{t("Verify & Create Account", "تأكيد وإنشاء الحساب")}</>}
+                </button>
+
+                <p className="resend-line">
+                  {t("Didn't get the code? ", "موصلش الكود؟ ")}
+                  {resendIn > 0 ? (
+                    <span>{t(`Resend in ${resendIn}s`, `إعادة الإرسال بعد ${resendIn} ث`)}</span>
+                  ) : (
+                    <button type="button" className="link-btn" onClick={handleResend} disabled={loading}>
+                      {t("Send new code", "إرسال كود جديد")}
+                    </button>
+                  )}
+                </p>
+              </form>
+            )}
 
             <div className="auth-footer">
               {t("Already have an account? ", "عندك حساب بالفعل؟ ")}<Link href={devPath("/signin")}>{t("Sign In", "تسجيل الدخول")}</Link>

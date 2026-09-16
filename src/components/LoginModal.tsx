@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   AlertCircle, Loader2, KeyRound, Eye, EyeOff,
-  CheckCircle2, XCircle, ArrowRight, Mail, Lock,
-  Phone, User, X,
+  ArrowRight, Mail,
+  Phone, X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -133,18 +133,21 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   const [gBusy, setGBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // login
+  // login (identifier = email OR WhatsApp number)
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass, setLoginPass] = useState("");
 
-  // register
-  const [regFirst, setRegFirst] = useState("");
-  const [regLast, setRegLast] = useState("");
-  const [regEmail, setRegEmail] = useState("");
+  // register — Google-first stepped flow (no account before WhatsApp OTP)
+  const [regStep, setRegStep] = useState<"google" | "profile" | "code">("google");
+  const [signupToken, setSignupToken] = useState("");
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleName, setGoogleName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPass, setRegPass] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [resendIn, setResendIn] = useState(0);
 
   // forgot
   const [forgotEmail, setForgotEmail] = useState("");
@@ -157,15 +160,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   const [joinPhone, setJoinPhone] = useState("");
   const [joinPass, setJoinPass] = useState("");
 
-  // validation states
-  const emailFormatOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail);
-  const emailIcon = regEmail
-    ? emailFormatOk
-      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-      : <XCircle className="w-4 h-4 text-red-400" />
-    : null;
-
-  const go = (v: View) => { setView(v); setErr(""); };
+  const go = (v: View) => {
+    if (v === "register") resetRegFlow();
+    setView(v); setErr("");
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -223,8 +221,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
+      // المعرف قد يكون إيميلًا أو رقم واتساب — الـ backend يحدد تلقائيًا
       const res = await signIn("credentials", {
-        email: loginEmail.toLowerCase(), password: loginPass, redirect: false,
+        email: loginEmail.trim(), password: loginPass, redirect: false,
       });
       if (!res?.ok) { setErr(res?.error || "بيانات غير صحيحة"); return; }
       onClose(); router.push(callbackUrl || "/dashboard");
@@ -232,31 +231,159 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     finally { setBusy(false); }
   };
 
-  // ── Register ──────────────────────────────────────────────────────────────
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault(); setErr("");
-    if (!termsAccepted) {
-      setErr("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية.");
+  // ── Register: Google-first flow ──────────────────────────────────────────
+  function resetRegFlow() {
+    setRegStep("google");
+    setSignupToken("");
+    setGoogleEmail("");
+    setGoogleName("");
+    setRegPhone("");
+    setRegPass("");
+    setRegConfirm("");
+    setTermsAccepted(false);
+    setOtpCode("");
+    setResendIn(0);
+  }
+
+  // GIS callback — لا ينشئ جلسة، فقط يبدأ التسجيل المؤقت
+  async function handleGoogleCredential(idToken: string) {
+    setErr(""); setGBusy(true);
+    try {
+      const r = await fetch("/api/auth/signup/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (d.code === "EMAIL_EXISTS") {
+          setLoginEmail(d.email || "");
+          go("login");
+          setErr(d.error || "الإيميل مسجل بالفعل — سجل الدخول");
+        } else {
+          setErr(d.error || "تعذر التحقق من Google — حاول مرة أخرى");
+        }
+        return;
+      }
+      setSignupToken(d.signupToken);
+      setGoogleEmail(d.email || "");
+      setGoogleName(d.name || "");
+      setRegStep("profile");
+    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    finally { setGBusy(false); }
+  }
+
+  // render GIS button on register-google step
+  useEffect(() => {
+    if (!isOpen || view !== "register" || regStep !== "google") return;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setErr("التسجيل بـ Google غير مفعّل حاليًا — تواصل مع الدعم");
       return;
     }
-    const fullName = `${regFirst.trim()} ${regLast.trim()}`.trim();
-    if (!regFirst.trim() || !regLast.trim()) { setErr("الاسم الثنائي مطلوب"); return; }
-    if (!emailFormatOk) { setErr("صيغة البريد غير صحيحة"); return; }
-    if (!/^\d{8,15}$/.test(regPhone.replace(/\D/g, ""))) { setErr("من فضلك أدخل رقم هاتف صحيح"); return; }
+    const render = () => {
+      const w = window as any;
+      if (!w.google?.accounts?.id) return;
+      w.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (resp: any) => { if (resp?.credential) handleGoogleCredential(resp.credential); },
+        auto_select: false,
+      });
+      const el = document.getElementById("wani-gsi-register");
+      if (el) {
+        el.innerHTML = "";
+        w.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: 320, text: "signup_with" });
+      }
+    };
+    if ((window as any).google?.accounts?.id) { render(); return; }
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.defer = true;
+    s.onload = render;
+    document.head.appendChild(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, view, regStep]);
+
+  // resend countdown
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn(v => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const handleRegProfile = async (e: React.FormEvent) => {
+    e.preventDefault(); setErr("");
+    if (!termsAccepted) { setErr("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية."); return; }
+    if (!/^\d{8,15}$/.test(regPhone.replace(/\D/g, ""))) { setErr("من فضلك أدخل رقم واتساب صحيح"); return; }
     if (regPass.length < 8) { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
     if (regPass !== regConfirm) { setErr("كلمتا المرور غير متطابقتين"); return; }
     setBusy(true);
     try {
-      const r = await fetch("/api/register", {
+      const r = await fetch("/api/auth/signup/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: fullName, email: regEmail.toLowerCase(), phone: regPhone, password: regPass }),
+        body: JSON.stringify({ signupToken, phone: regPhone, password: regPass, terms: true }),
       });
-      const d = await r.json();
-      if (!r.ok) { setErr(d.error); return; }
-      toast.success("تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب.");
-      setLoginEmail(regEmail.toLowerCase());
-      go("login");
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setErr(d.error || "حدث خطأ، حاول مرة أخرى"); return; }
+      setOtpCode("");
+      setResendIn(60);
+      setRegStep("code");
+      toast.success("اتبعتلّك كود تأكيد على واتساب");
+    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    finally { setBusy(false); }
+  };
+
+  const handleRegResend = async () => {
+    if (resendIn > 0 || busy) return;
+    setErr(""); setBusy(true);
+    try {
+      const r = await fetch("/api/auth/signup/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signupToken }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErr(d.error || "حدث خطأ، حاول مرة أخرى");
+        if (typeof d.retryAfter === "number") setResendIn(d.retryAfter);
+        return;
+      }
+      setResendIn(60);
+      toast.success("اتبعتلّك كود جديد على واتساب");
+    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    finally { setBusy(false); }
+  };
+
+  const handleRegVerify = async (e: React.FormEvent) => {
+    e.preventDefault(); setErr("");
+    if (otpCode.trim().length < 4) { setErr("أدخل الكود المرسل إليك"); return; }
+    setBusy(true);
+    try {
+      const r = await fetch("/api/auth/signup/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signupToken, code: otpCode.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (d.code === "ALREADY_DONE") { setLoginEmail(d.email || googleEmail); go("login"); }
+        setErr(d.error || "حدث خطأ، حاول مرة أخرى");
+        return;
+      }
+      // الحساب اتعمل — سجل الدخول تلقائيًا بنفس الباسورد
+      const res = await signIn("credentials", {
+        email: d.email, password: regPass, redirect: false,
+      });
+      if (!res?.ok) {
+        setLoginEmail(d.email || "");
+        go("login");
+        toast.success("تم إنشاء الحساب — سجل الدخول");
+        return;
+      }
+      toast.success("تم إنشاء الحساب بنجاح 🎉");
+      onClose(); router.push(callbackUrl || "/dashboard");
     } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
     finally { setBusy(false); }
   };
@@ -362,23 +489,23 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
 
                   <OrDivider />
 
-                  {/* ── Email / Password (Secondary) ── */}
+                  {/* ── Email or Phone / Password (Secondary) ── */}
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
+                      <Label className="text-sm font-medium text-gray-700">الإيميل أو رقم الواتساب</Label>
                       <div className="relative">
                         <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                        <Input type="email" required value={loginEmail}
+                        <Input type="text" required value={loginEmail}
                           onChange={e => setLoginEmail(e.target.value)}
-                          placeholder="example@email.com"
-                          className="rounded-xl pr-10 h-12 text-sm border-gray-200" />
+                          placeholder="example@email.com أو 01xxxxxxxxx"
+                          className="rounded-xl pr-10 h-12 text-sm border-gray-200" dir="auto" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium text-gray-700">كلمة المرور</Label>
-                        <button type="button" onClick={() => { setForgotEmail(loginEmail.trim()); go("forgot"); }}
+                        <button type="button" onClick={() => { setForgotEmail(loginEmail.includes("@") ? loginEmail.trim() : ""); go("forgot"); }}
                           className="text-xs text-[#25D366] hover:underline">
                           نسيت كلمة المرور؟
                         </button>
@@ -396,115 +523,129 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
                 </motion.div>
               )}
 
-              {/* ══ REGISTER ══ */}
+              {/* ══ REGISTER — Google-first + WhatsApp OTP ══ */}
               {view === "register" && (
                 <motion.div key="register" {...slide} className="space-y-4">
 
-                  {/* ── Google (Primary CTA) ── */}
-                  <GoogleButton loading={gBusy} onClick={handleGoogle} />
+                  {/* Step 1: Google */}
+                  {regStep === "google" && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        سجل بإيميل Google أولًا، وبعدين هنأكد رقم الواتساب بكود.
+                      </p>
+                      <div id="wani-gsi-register" className="flex justify-center min-h-[44px]" />
+                      {err && <ErrMsg msg={err} />}
+                      <p className="text-xs text-gray-400 text-center">
+                        عندك حساب؟{" "}
+                        <button type="button" onClick={() => go("login")} className="text-[#25D366] hover:underline">
+                          سجل الدخول
+                        </button>
+                      </p>
+                    </div>
+                  )}
 
-                  <OrDivider />
+                  {/* Step 2: phone + password + terms */}
+                  {regStep === "profile" && (
+                    <form onSubmit={handleRegProfile} className="space-y-3.5">
+                      <div className="rounded-2xl bg-green-50 border border-green-100 px-3.5 py-2.5 text-xs text-green-800">
+                        {googleEmail} ✓ — كمّل بياناتك
+                      </div>
 
-                  {/* ── Email Register (Secondary) ── */}
-                  <form onSubmit={handleRegister} className="space-y-3.5">
-                    <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">الاسم الأول</Label>
+                        <Label className="text-xs font-medium text-gray-600">رقم الواتساب <span className="text-red-400">*</span></Label>
                         <div className="relative">
-                          <User className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                          <Input required value={regFirst} onChange={e => setRegFirst(e.target.value)}
-                            placeholder="أحمد" className="rounded-xl pr-9 h-11 text-sm border-gray-200" />
+                          <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                          <Input required type="tel" value={regPhone}
+                            onChange={e => setRegPhone(e.target.value)}
+                            placeholder="01xxxxxxxxx" className="rounded-xl pr-9 h-11 text-sm border-gray-200" dir="ltr" />
                         </div>
+                        <p className="text-[11px] text-gray-400">هيوصلك عليه كود التأكيد</p>
                       </div>
+
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">اسم العائلة</Label>
-                        <Input required value={regLast} onChange={e => setRegLast(e.target.value)}
-                          placeholder="محمد" className="rounded-xl h-11 text-sm border-gray-200" />
+                        <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
+                        <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl h-11 text-sm border-gray-200" />
                       </div>
-                    </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">البريد الإلكتروني</Label>
-                      <div className="relative">
-                        <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                        <Input type="email" required value={regEmail}
-                          onChange={e => setRegEmail(e.target.value)} placeholder="owner@email.com"
-                          className={`rounded-xl pr-9 pl-9 h-11 text-sm transition-colors border-gray-200 ${regEmail && !emailFormatOk ? "border-red-400 focus:ring-red-300" :
-                              regEmail && emailFormatOk ? "border-green-400 focus:ring-green-200" : ""
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
+                        <PasswordInput value={regConfirm} onChange={setRegConfirm}
+                          className={`rounded-xl h-11 text-sm border-gray-200 ${regConfirm && regPass !== regConfirm ? "border-red-400" :
+                              regConfirm && regPass === regConfirm ? "border-green-400" : ""
                             }`} />
-                        <span className="absolute left-3 top-3">{emailIcon}</span>
+                        {regConfirm && regPass !== regConfirm && (
+                          <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
+                        )}
                       </div>
-                    </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">رقم الهاتف <span className="text-red-400">*</span></Label>
-                      <div className="relative">
-                        <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                        <Input required type="tel" value={regPhone}
-                          onChange={e => setRegPhone(e.target.value)}
-                          placeholder="201234567890" className="rounded-xl pr-9 h-11 text-sm border-gray-200" dir="ltr" />
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <label htmlFor="terms-checkbox" className="flex items-start gap-3 cursor-pointer">
+                          <input id="terms-checkbox" type="checkbox" checked={termsAccepted}
+                            onChange={e => setTermsAccepted(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 bg-white text-[#25D366] focus:ring-[#25D366]" />
+                          <span className="text-sm leading-relaxed text-gray-700">
+                            أوافق على{" "}
+                            <a href="/terms" target="_blank" rel="noreferrer" className="text-[#25D366] hover:text-[#1fa455]">
+                              شروط الاستخدام
+                            </a>
+                            {" "}و{" "}
+                            <a href="/privacy" target="_blank" rel="noreferrer" className="text-[#25D366] hover:text-[#1fa455]">
+                              سياسة الخصوصية
+                            </a>
+                            .
+                          </span>
+                        </label>
                       </div>
-                    </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
-                      <div className="relative">
-                        <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                        <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl pr-9 h-11 text-sm border-gray-200" />
+                      {err && <ErrMsg msg={err} />}
+
+                      <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-white/95 border-t border-gray-100">
+                        <Button type="submit" disabled={busy || !termsAccepted}
+                          className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm disabled:opacity-60">
+                          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال كود التأكيد"}
+                        </Button>
+                        <button type="button" onClick={resetRegFlow}
+                          className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600">
+                          تغيير الإيميل
+                        </button>
                       </div>
-                      {regPass && (
-                        <div className="flex gap-1 mt-1">
-                          {[4, 6, 8, 10].map((threshold, i) => (
-                            <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${regPass.length >= threshold
-                                ? i < 1 ? "bg-red-400" : i < 2 ? "bg-orange-400" : i < 3 ? "bg-yellow-400" : "bg-green-400"
-                                : "bg-gray-200"
-                              }`} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    </form>
+                  )}
 
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
-                      <PasswordInput value={regConfirm} onChange={setRegConfirm}
-                        className={`rounded-xl h-11 text-sm border-gray-200 ${regConfirm && regPass !== regConfirm ? "border-red-400" :
-                            regConfirm && regPass === regConfirm ? "border-green-400" : ""
-                          }`} />
-                      {regConfirm && regPass !== regConfirm && (
-                        <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
-                      )}
-                    </div>
+                  {/* Step 3: OTP code */}
+                  {regStep === "code" && (
+                    <form onSubmit={handleRegVerify} className="space-y-4">
+                      <div className="rounded-2xl bg-green-50 border border-green-100 px-3.5 py-2.5 text-xs text-green-800 leading-relaxed">
+                        اتبعتلّك كود على واتساب ({regPhone}) — صالح 10 دقائق
+                      </div>
 
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                      <label htmlFor="terms-checkbox" className="flex items-start gap-3 cursor-pointer">
-                        <input id="terms-checkbox" type="checkbox" checked={termsAccepted}
-                          onChange={e => setTermsAccepted(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 bg-white text-[#25D366] focus:ring-[#25D366]" />
-                        <span className="text-sm leading-relaxed text-gray-700">
-                          أوافق على{" "}
-                          <a href="/terms" target="_blank" rel="noreferrer"
-                            className="text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
-                            شروط الاستخدام
-                          </a>
-                          {" "}و{" "}
-                          <a href="/privacy" target="_blank" rel="noreferrer"
-                            className="text-[#25D366] transition-colors duration-150 hover:text-[#1fa455] focus:outline-none focus:ring-2 focus:ring-[#25D366]/50 rounded">
-                            سياسة الخصوصية
-                          </a>
-                          .
-                        </span>
-                      </label>
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium text-gray-700">كود التأكيد</Label>
+                        <Input required value={otpCode}
+                          onChange={e => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="••••••" inputMode="numeric" dir="ltr"
+                          className="rounded-xl h-12 text-center text-xl tracking-[0.5em] font-bold border-gray-200" />
+                      </div>
 
-                    {err && <ErrMsg msg={err} />}
+                      {err && <ErrMsg msg={err} />}
 
-                    <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-white/95 border-t border-gray-100">
-                      <Button type="submit" disabled={busy || !termsAccepted || (!!regEmail && !emailFormatOk)}
-                        className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60">
-                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إنشاء الحساب"}
+                      <Button type="submit" disabled={busy}
+                        className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
+                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد وإنشاء الحساب"}
                       </Button>
-                    </div>
-                  </form>
+
+                      <p className="text-xs text-gray-400 text-center">
+                        موصلش الكود؟{" "}
+                        {resendIn > 0 ? (
+                          <span>إعادة الإرسال بعد {resendIn} ث</span>
+                        ) : (
+                          <button type="button" onClick={handleRegResend} className="text-[#25D366] hover:underline">
+                            إرسال كود جديد
+                          </button>
+                        )}
+                      </p>
+                    </form>
+                  )}
                 </motion.div>
               )}
 

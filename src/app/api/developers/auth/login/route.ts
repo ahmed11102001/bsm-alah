@@ -10,10 +10,17 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     if (!email || !password) {
-      return devError("الإيميل وكلمة المرور مطلوبين", "INVALID_REQUEST", 400);
+      return devError("الإيميل أو رقم الهاتف وكلمة المرور مطلوبين", "INVALID_REQUEST", 400);
     }
 
-    const key = `dev-login:${email.toLowerCase()}`;
+    // المعرف قد يكون إيميلًا أو رقم واتساب — يُحدد تلقائيًا
+    const { parseIdentifier } = await import("@/lib/login-identifier");
+    const identifier = parseIdentifier(email);
+    if (!identifier) {
+      return devError("بيانات الدخول غير صحيحة", "INVALID_CREDENTIALS", 401);
+    }
+
+    const key = `dev-login:${identifier.kind}:${identifier.value}`;
     const rl = await rateLimit(key, { limit: 10, windowSecs: 15 * 60 });
     if (!rl.success) {
       return devRateLimited(
@@ -23,10 +30,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const developer = await prisma.developerUser.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-    if (!developer || !(await bcrypt.compare(password, developer.password))) {
+    const developer =
+      identifier.kind === "email"
+        ? await prisma.developerUser.findUnique({ where: { email: identifier.value } })
+        : // توافق مع الصيغتين القديمة (+20...) والجديدة (20...)
+          await prisma.developerUser.findFirst({
+            where: {
+              OR: [{ phone: identifier.value }, { phone: `+${identifier.value}` }],
+            },
+          });
+
+    // مقارنة وهمية عند غياب الحساب — لمنع التمييز بالتوقيت (anti-enumeration)
+    const { DUMMY_PASSWORD_HASH } = await import("@/lib/login-identifier");
+    let isValid = false;
+    try {
+      isValid = developer
+        ? await bcrypt.compare(password, developer.password)
+        : await bcrypt.compare(password, DUMMY_PASSWORD_HASH).then(() => false);
+    } catch {
+      isValid = false;
+    }
+    if (!developer || !isValid) {
       return devError("بيانات الدخول غير صحيحة", "INVALID_CREDENTIALS", 401);
     }
     if (developer.status === "SUSPENDED") {

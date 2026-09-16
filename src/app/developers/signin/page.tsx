@@ -409,8 +409,8 @@ function SignInContent() {
 
                 <form onSubmit={handleLoginSubmit}>
                   <div className="field-group">
-                    <label className="field-label">{t("Email", "الإيميل")}</label>
-                    <input className="field-input ltr" type="email" placeholder="dev@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <label className="field-label">{t("Email or WhatsApp number", "الإيميل أو رقم الواتساب")}</label>
+                    <input className="field-input ltr" type="text" placeholder="dev@example.com / 01xxxxxxxxx" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="field-group">
                     <label className="field-label">{t("Password", "كلمة المرور")}</label>
