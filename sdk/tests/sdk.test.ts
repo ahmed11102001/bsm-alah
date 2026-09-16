@@ -179,6 +179,29 @@ describe("errors", () => {
     });
   });
 
+  it("429 retryAfter is surfaced first-class for backoff", async () => {
+    behavior = () => jsonRes(429, { ok: false, error: "slow down", code: "RATE_LIMIT_PHONE", retryAfter: 45 });
+    await assert.rejects(client().otp.send({ phone: "2010", templateId: "t" }), (e: any) => {
+      assert.ok(e instanceof WaniError);
+      assert.equal(e.status, 429);
+      assert.equal(e.code, "RATE_LIMIT_PHONE");
+      assert.equal(e.retryAfter, 45);
+      return true;
+    });
+    behavior = () => jsonRes(200, { ok: true, token: "tok", expiresAt: "2030-01-01T00:00:00.000Z" });
+    await client().otp.send({ phone: "2010", templateId: "t" });
+  });
+
+  it("non-rate-limit errors leave retryAfter undefined", async () => {
+    behavior = () =>
+      jsonRes(400, { ok: false, error: "not approved", code: "TEMPLATE_NOT_APPROVED" });
+    await assert.rejects(client().otp.send({ phone: "2010", templateId: "t" }), (e: any) => {
+      assert.ok(e instanceof WaniError);
+      assert.equal(e.retryAfter, undefined);
+      return true;
+    });
+  });
+
   it("API error code propagates (e.g. TEMPLATE_NOT_APPROVED)", async () => {
     behavior = () =>
       jsonRes(400, { ok: false, error: "not approved", code: "TEMPLATE_NOT_APPROVED" });

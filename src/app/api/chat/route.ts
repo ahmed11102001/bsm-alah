@@ -213,13 +213,17 @@ async function getConversations(userId: string, sp: URLSearchParams, session: an
     aiPreparing: !!c.aiReplyPendingAt && (now - c.aiReplyPendingAt.getTime() < AI_PREPARING_FRESH_MS),
   }));
 
-  const mediaGuard = await checkFeature(userId, "mediaMessages");
+  const [mediaGuard, videoGuard] = await Promise.all([
+    checkFeature(userId, "mediaMessages"),
+    checkFeature(userId, "videoMessages"),
+  ]);
 
   return NextResponse.json({
     conversations,
     globalTextEnabled,
     globalVoiceEnabled,
     canSendMedia: mediaGuard.allowed,
+    canSendVideo: videoGuard.allowed,
     plan: mediaGuard.allowed ? undefined : mediaGuard.plan,
   });
 }
@@ -232,7 +236,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
   const contact = await prisma.contact.findFirst({ where: contactScope(session, contactId) });
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
 
-  const [messages, mediaGuard] = await Promise.all([
+  const [messages, mediaGuard, videoGuard] = await Promise.all([
     prisma.message.findMany({
       where: {
         contactId,
@@ -250,6 +254,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
       },
     }),
     checkFeature(userId, "mediaMessages"),
+    checkFeature(userId, "videoMessages"),
   ]);
 
   // Mark inbound as read
@@ -264,7 +269,7 @@ async function getMessages(userId: string, sp: URLSearchParams, session: any) {
     }),
   ]);
 
-  return NextResponse.json({ messages, canSendMedia: mediaGuard.allowed });
+  return NextResponse.json({ messages, canSendMedia: mediaGuard.allowed, canSendVideo: videoGuard.allowed });
 }
 
 // ─── POST /api/chat ────────────────────────────────────────────────────────────

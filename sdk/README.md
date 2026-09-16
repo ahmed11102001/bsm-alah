@@ -82,13 +82,15 @@ try {
       // bad or revoked API key — check x-api-key
     }
     if (err.isRateLimitError) {
-      // slow down and retry later
+      // slow down and retry after err.retryAfter seconds (if present)
+      const waitMs = (err.retryAfter ?? 60) * 1000;
+      await new Promise((r) => setTimeout(r, waitMs));
     }
   }
 }
 ```
 
-`WaniError` exposes `status`, `code`, `requestId` and `details`. Network failures, timeouts and HTTP/API errors are distinguishable via `isNetworkError` / `isTimeoutError` / `isAuthenticationError` / `isRateLimitError`. Error messages never contain your API key.
+`WaniError` exposes `status`, `code`, `requestId`, `retryAfter` (seconds, on 429/503 rate-limit bodies) and `details`. Network failures, timeouts and HTTP/API errors are distinguishable via `isNetworkError` / `isTimeoutError` / `isAuthenticationError` / `isRateLimitError`. Error messages never contain your API key.
 
 ## Configuration
 

@@ -121,28 +121,22 @@ const jsQuote = (value: string) => JSON.stringify(value);
 
 function jsNodeCode(options: IntegrationCodeOptions, typed: boolean): string {
   const label = frameworkLabel(options.language, "node");
-  const templateId = options.templateId ? jsQuote(options.templateId) : "undefined";
+  const templateId = options.templateId ? jsQuote(options.templateId) : `"YOUR_TEMPLATE_ID"`;
   const type = typed ? ": string" : "";
   const includeSend = options.operation === "send" || options.operation === "send-verify";
   const includeVerify = options.operation === "verify" || options.operation === "send-verify";
   const includeStatus = options.operation === "status";
   const send = includeSend ? `
 export async function sendOtp(phone${type}) {
-  return waniRequest("/send", { phone, templateId: ${templateId}, expiryMinutes: 10 });
+  return getWani().otp.send({ phone, templateId: ${templateId}, expiryMinutes: 10 });
 }` : "";
   const verify = includeVerify ? `
 export async function verifyOtp(token${type}, code${type}) {
-  return waniRequest("/verify", { token, code });
+  return getWani().otp.verify({ token, code });
 }` : "";
   const status = includeStatus ? `
 export async function getOtpStatus(token${type}) {
-  if (!WANI_API_KEY) throw new Error("WANI_API_KEY is not configured");
-  const response = await fetch(WANI_BASE_URL + "/status/" + encodeURIComponent(token), {
-    headers: { "x-api-key": WANI_API_KEY },
-  });
-  const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error ?? "Wani request failed");
-  return data;
+  return getWani().otp.status(token);
 }` : "";
   const flow = options.operation === "send-verify"
     ? `
@@ -151,22 +145,15 @@ export async function getOtpStatus(token${type}) {
 // const result = await verifyOtp(String(sent.token), codeEnteredByUser);
 `
     : "";
-  const bodyType = typed ? ": Record<string, unknown>" : "";
-  return `// Wani OTP integration (${label})
+  return `// Wani OTP integration (${label}) — powered by @aiwni/sdk
+// npm install @aiwni/sdk
 // Keep WANI_API_KEY on your server. Never put it in browser/client code.
-const WANI_API_KEY = process.env.WANI_API_KEY;
-const WANI_BASE_URL = ${jsQuote(options.baseUrl)};
+import { Wani } from "@aiwni/sdk";
 
-async function waniRequest(path${type}, body${bodyType}) {
-  if (!WANI_API_KEY) throw new Error("WANI_API_KEY is not configured");
-  const response = await fetch(WANI_BASE_URL + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": WANI_API_KEY },
-    body: JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error ?? "Wani request failed");
-  return data;
+function getWani() {
+  const apiKey = process.env.WANI_API_KEY;
+  if (!apiKey) throw new Error("WANI_API_KEY is not configured");
+  return new Wani({ apiKey });
 }
 ${send}
 ${verify}
@@ -180,73 +167,87 @@ function jsNextRouteFile(
   operation: "send" | "verify" | "status"
 ): string {
   const ext = typed ? "ts" : "js";
-  const apiKey = "process.env.WANI_API_KEY";
   const header = (file: string) => `// ${file} — Wani OTP via Next.js App Router (server-only)
+// Powered by @aiwni/sdk (npm install @aiwni/sdk).
 // Keep WANI_API_KEY in your server environment. It never reaches the browser.`;
-  const guard = `  const apiKey = ${apiKey};
-  if (!apiKey) return Response.json({ ok: false, error: "WANI_API_KEY is not configured" }, { status: 500 });`;
-  const post = (path: string, body: string) => `  const upstream = await fetch(WANI_BASE_URL + ${jsQuote(path)}, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-    body: JSON.stringify(${body}),
-  });
-  const data = await upstream.json();
-  if (!upstream.ok || !data.ok) {
-    return Response.json({ ok: false, error: data.error ?? "Wani request failed" }, { status: upstream.status });
+  const imports = `${typed ? "import { NextRequest } from \"next/server\";\n" : ""}import { Wani, WaniError } from "@aiwni/sdk";`;
+  const helper = `function getWani() {
+  const apiKey = process.env.WANI_API_KEY;
+  if (!apiKey) throw new Error("WANI_API_KEY is not configured");
+  return new Wani({ apiKey });
+}
+
+function waniErrorResponse(err: unknown) {
+  if (err instanceof WaniError) {
+    return Response.json(
+      { ok: false, error: err.message, ...(err.code ? { code: err.code } : {}) },
+      { status: err.status ?? 502 },
+    );
   }
-  return Response.json(data);`;
-  const base = `const WANI_BASE_URL = ${jsQuote(options.baseUrl)};`;
-  const reqType = typed ? "import { NextRequest } from \"next/server\";\n\n" : "";
+  return Response.json({ ok: false, error: "Wani request failed" }, { status: 502 });
+}`;
   const reqParam = typed ? "request: NextRequest" : "request";
+  const unknownDecl = typed ? ": unknown" : "";
 
   if (operation === "send") {
     const tid = options.templateId ? jsQuote(options.templateId) : `"YOUR_TEMPLATE_ID"`;
     return `${header(`app/api/otp/send/route.${ext}`)}
-${reqType}${base}
+${imports}
+
+${helper}
 
 export async function POST(${reqParam}) {
-${guard}
-  let phone${typed ? ": unknown" : ""};
+  let phone${unknownDecl};
   try {
     ({ phone } = await request.json());
   } catch {
     return Response.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
   }
-  if (!phone) return Response.json({ ok: false, error: "phone is required" }, { status: 400 });
-${post("/send", `{ phone, templateId: ${tid}, expiryMinutes: 10 }`)}
+  if (${typed ? "typeof phone !== \"string\" || phone === \"\"" : "!phone"}) return Response.json({ ok: false, error: "phone is required" }, { status: 400 });
+  try {
+    const sent = await getWani().otp.send({ phone, templateId: ${tid}, expiryMinutes: 10 });
+    return Response.json(sent);
+  } catch (err) {
+    return waniErrorResponse(err);
+  }
 }`;
   }
   if (operation === "verify") {
     return `${header(`app/api/otp/verify/route.${ext}`)}
-${reqType}${base}
+${imports}
+
+${helper}
 
 export async function POST(${reqParam}) {
-${guard}
-  let token${typed ? ": unknown" : ""}, code${typed ? ": unknown" : ""};
+  let token${unknownDecl}, code${unknownDecl};
   try {
     ({ token, code } = await request.json());
   } catch {
     return Response.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
   }
-  if (!token || !code) return Response.json({ ok: false, error: "token and code are required" }, { status: 400 });
-${post("/verify", "{ token, code }")}
+  if (${typed ? "typeof token !== \"string\" || !token || typeof code !== \"string\" || !code" : "!token || !code"}) return Response.json({ ok: false, error: "token and code are required" }, { status: 400 });
+  try {
+    const result = await getWani().otp.verify({ token, code });
+    return Response.json(result);
+  } catch (err) {
+    return waniErrorResponse(err);
+  }
 }`;
   }
   return `${header(`app/api/otp/status/route.${ext}`)}
-${reqType}${base}
+${imports}
+
+${helper}
 
 export async function GET(${reqParam}) {
-${guard}
   const token = request.nextUrl.searchParams.get("token");
   if (!token) return Response.json({ ok: false, error: "token is required" }, { status: 400 });
-  const upstream = await fetch(WANI_BASE_URL + "/status/" + encodeURIComponent(token), {
-    headers: { "x-api-key": apiKey },
-  });
-  const data = await upstream.json();
-  if (!upstream.ok || !data.ok) {
-    return Response.json({ ok: false, error: data.error ?? "Wani request failed" }, { status: upstream.status });
+  try {
+    const result = await getWani().otp.status(token);
+    return Response.json(result);
+  } catch (err) {
+    return waniErrorResponse(err);
   }
-  return Response.json(data);
 }`;
 }
 

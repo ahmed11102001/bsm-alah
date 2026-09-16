@@ -18,11 +18,29 @@ const base = {
 describe("developer integration generator", () => {
   it("generates the real send and verify contract from templateId", () => {
     const code = generateIntegrationCode(base);
-    expect(code).toContain("/send");
-    expect(code).toContain("/verify");
+    expect(code).toContain(".otp.send");
+    expect(code).toContain(".otp.verify");
     expect(code).toContain('templateId: "project-template-1"');
     expect(code).toContain("process.env.WANI_API_KEY");
     expect(code).not.toContain("templateName");
+  });
+
+  it("JS/TS integrations delegate HTTP to the official SDK (no raw fetch)", () => {
+    for (const framework of ["node", "next"] as const) {
+      const code = generateIntegrationCode({ ...base, framework, operation: "send-verify" });
+      expect(code).toContain('from "@aiwni/sdk"');
+      expect(code).not.toContain("waniRequest");
+      // No hand-rolled auth headers — the SDK owns HTTP/auth/errors.
+      expect(code).not.toContain('"x-api-key"');
+      expect(code).not.toContain("fetch(WANI_BASE_URL");
+    }
+  });
+
+  it("Next.js routes surface typed WaniError failures with status", () => {
+    const code = generateIntegrationCode({ ...base, framework: "next", operation: "send" });
+    expect(code).toContain("WaniError");
+    expect(code).toContain("err.status ?? 502");
+    expect(code).toContain("route.ts");
   });
 
   it("does not require a template for verify-only code", () => {
@@ -64,12 +82,12 @@ describe("framework registry", () => {
 });
 
 describe("every framework generates production-safe code", () => {
-  const cases: { language: IntegrationLanguage; framework: string; markers: string[] }[] = [
-    { language: "javascript", framework: "node", markers: ["process.env.WANI_API_KEY", "waniRequest"] },
-    { language: "javascript", framework: "next", markers: ["route.js", "export async function POST"] },
+  const cases: { language: IntegrationLanguage; framework: string; markers: string[]; sdk?: boolean }[] = [
+    { language: "javascript", framework: "node", markers: ["@aiwni/sdk", "getWani().otp.send"], sdk: true },
+    { language: "javascript", framework: "next", markers: ["route.js", "export async function POST", "@aiwni/sdk"], sdk: true },
     { language: "javascript", framework: "react", markers: ["useState", "/api/otp/send"] },
-    { language: "typescript", framework: "node", markers: ["process.env.WANI_API_KEY", ": string"] },
-    { language: "typescript", framework: "next", markers: ["route.ts", "NextRequest"] },
+    { language: "typescript", framework: "node", markers: ["@aiwni/sdk", ": string"], sdk: true },
+    { language: "typescript", framework: "next", markers: ["route.ts", "NextRequest", "WaniError"], sdk: true },
     { language: "typescript", framework: "react", markers: ["useState<string>", "/api/otp/send"] },
     { language: "python", framework: "django", markers: ["JsonResponse", "require_POST"] },
     { language: "python", framework: "flask", markers: ["Flask", "@app.post"] },
@@ -82,7 +100,8 @@ describe("every framework generates production-safe code", () => {
   // Framework markers are asserted on the send output only — verify/status
   // outputs legitimately omit sibling operations (e.g. no POST in a Next.js
   // GET status route, no /api/otp/send in a React status checker).
-  for (const { language, framework, markers } of cases) {
+  const sdkMethodFor = { send: ".otp.send", verify: ".otp.verify", status: ".otp.status" } as const;
+  for (const { language, framework, markers, sdk } of cases) {
     it(`${language}/${framework} generates safe code for send, verify and status`, () => {
       const sendCode = generateIntegrationCode({
         operation: "send",
@@ -113,8 +132,13 @@ describe("every framework generates production-safe code", () => {
             templateId: "tmpl_123",
             baseUrl: "https://wani.example/api/developers/otp",
           });
-        // Same contract path the page displays must appear in the code.
-        expect(code).toContain(contract.path.replace("/:token", ""));
+        if (sdk) {
+          // SDK-owned HTTP: the same operation must surface as an SDK call.
+          expect(code).toContain(sdkMethodFor[operation]);
+        } else {
+          // Same contract path the page displays must appear in the code.
+          expect(code).toContain(contract.path.replace("/:token", ""));
+        }
         // Key is referenced from the server environment, never embedded.
         expect(code).toContain("WANI_API_KEY");
         expect(code).not.toContain("wani_live_");
@@ -147,3 +171,4 @@ describe("every framework generates production-safe code", () => {
     }
   });
 });
+

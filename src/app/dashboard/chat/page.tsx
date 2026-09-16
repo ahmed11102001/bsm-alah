@@ -94,6 +94,7 @@ export default function ChatPage() {
   const [forwardTarget, setForwardTarget] = useState<Conversation | null>(null);
   const [forwardingBusy, setForwardingBusy] = useState(false);
   const [canSendMedia, setCanSendMedia] = useState(true);
+  const [canSendVideo, setCanSendVideo] = useState(false);
   const [globalTextEnabled, setGlobalTextEnabled] = useState(true);
   const [globalVoiceEnabled, setGlobalVoiceEnabled] = useState(false);
 
@@ -178,6 +179,9 @@ export default function ChatPage() {
       if (typeof d.canSendMedia === "boolean") {
         setCanSendMedia(d.canSendMedia);
       }
+      if (typeof d.canSendVideo === "boolean") {
+        setCanSendVideo(d.canSendVideo);
+      }
       if (typeof d.globalTextEnabled === "boolean") {
         setGlobalTextEnabled(d.globalTextEnabled);
       }
@@ -202,6 +206,9 @@ export default function ChatPage() {
       const d = await r.json();
       if (typeof d.canSendMedia === "boolean") {
         setCanSendMedia(d.canSendMedia);
+      }
+      if (typeof d.canSendVideo === "boolean") {
+        setCanSendVideo(d.canSendVideo);
       }
       const newMsgs: Message[] = d.messages ?? [];
       if (requestId !== messageRequestId.current || controller.signal.aborted) return;
@@ -469,11 +476,16 @@ export default function ChatPage() {
 
   const sendFile = async (file: File, mediaType: string) => {
     if (!selected) return;
-    if (!canSendMedia) {
+    const isVideo = mediaType === "video";
+    if (isVideo ? !canSendVideo : !canSendMedia) {
       toast.error(
         lang === "ar"
-          ? "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك."
-          : "Sending images and files requires Go plan or higher. Please upgrade."
+          ? (isVideo
+            ? "إرسال الفيديو متاح في باقة Pro وما فوقها. يرجى ترقية باقتك."
+            : "إرسال الصور والملفات متاح في باقة Go وما فوقها. يرجى ترقية باقتك.")
+          : (isVideo
+            ? "Sending videos requires Pro plan or higher. Please upgrade."
+            : "Sending images and files requires Go plan or higher. Please upgrade.")
       );
       return;
     }
@@ -633,7 +645,7 @@ export default function ChatPage() {
 
   const ATTACH_OPTIONS = [
     { key: "image", label: t[lang].photoLabel, icon: <ImageIcon className="w-4 h-4" />, accept: "image/*", color: "bg-purple-500", locked: !canSendMedia },
-    { key: "video", label: t[lang].videoLabel, icon: <Video className="w-4 h-4" />, accept: "video/*", color: "bg-red-500", disabled: true },
+    { key: "video", label: t[lang].videoLabel, icon: <Video className="w-4 h-4" />, accept: "video/*", color: "bg-red-500", locked: !canSendVideo, lockLabel: "Pro" },
     { key: "document", label: t[lang].docLabel, icon: <FileText className="w-4 h-4" />, accept: ".pdf,.doc,.docx,.xls,.xlsx,.txt", color: "bg-blue-500", locked: !canSendMedia },
   ];
 
@@ -1148,7 +1160,7 @@ export default function ChatPage() {
                     rounded-2xl shadow-xl overflow-hidden border w-44`}>
                     {ATTACH_OPTIONS.map(a => {
                       const isLocked = Boolean(a.locked);
-                      const isDisabled = Boolean(a.disabled) || isLocked;
+                      const isDisabled = isLocked;
                       return (
                         <label key={a.key}
                           onClick={e => {
@@ -1179,7 +1191,7 @@ export default function ChatPage() {
                           {isLocked && (
                             <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
                               <Lock className="w-2.5 h-2.5" />
-                              <span>Go</span>
+                              <span>{a.lockLabel ?? "Go"}</span>
                             </span>
                           )}
                           {!isLocked && (

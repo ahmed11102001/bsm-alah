@@ -47,6 +47,25 @@ export async function fetchProjects(ctx: CommandContext): Promise<ProjectSummary
   return projects.filter((p) => typeof p?.id === "string" && typeof p?.name === "string");
 }
 
+/**
+ * Best-effort display name of the currently selected project (null when
+ * logged out, offline, or nothing selected). Never throws — callers that
+ * only want a friendly label use this instead of failing the whole flow.
+ */
+export async function resolveCurrentProjectName(ctx: CommandContext): Promise<string | null> {
+  if (!ctx.config.cliAccessToken) return null;
+  try {
+    const projects = await fetchProjects(ctx);
+    const current = ctx.config.currentProjectId;
+    const found = current ? projects.find((p) => p.id === current) : undefined;
+    if (found) return found.name;
+    if (!current && projects.length === 1 && projects[0]) return projects[0].name;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function projectListCommand(ctx: CommandContext): Promise<void> {
   const projects = await fetchProjects(ctx);
   if (ctx.json) {

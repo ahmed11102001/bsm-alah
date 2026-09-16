@@ -1,6 +1,6 @@
 {
   "name": "@aiwni/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official server-side Node.js SDK for the Wani Developer OTP API (WhatsApp OTP send, verify and status).",
   "license": "MIT",
   "author": "Wani",

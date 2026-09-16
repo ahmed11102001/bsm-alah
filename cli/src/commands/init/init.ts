@@ -35,6 +35,7 @@ import {
   fetchApprovedTemplates,
   type OtpTemplateOption,
 } from "../otp/templates.js";
+import { fetchProjects } from "../project/list.js";
 
 export const INIT_HELP = `wani init [--framework <id>] [--template-id <id> | --template <name> [--language <code>]] [--project <id>] [--api-key <key>] [--force] [--no-install]
 
@@ -43,8 +44,10 @@ Scaffold a Wani OTP integration inside the current project directory:
   1. Detect the framework (Node.js, Next.js, React, Django, Flask,
      FastAPI, Laravel, Symfony, Shell) — override with --framework.
   2. Resolve an approved template (or pass --template-id).
-  3. Fetch generated integration code from the official portal API.
-  4. Write one integration file (never overwrites without --force).
+  3. Fetch SDK-based integration code from the official portal API
+     (the SDK owns all HTTP/auth/error handling — no raw fetch).
+  4. Write the integration files (Next.js: shared helper + thin
+     send/verify routes; never overwrites without --force).
   5. Install @aiwni/sdk for JS/TS projects (skip with --no-install).
   6. Configure WANI_API_KEY placeholder in the env file (a real key is
      written only when --api-key is passed explicitly) and ensure the
@@ -90,17 +93,103 @@ function targetFor(stack: DetectedStack): Target {
   }
 }
 
+/**
+ * Thin Next.js route wiring around the generated SDK helper — no API contract
+ * lives here (paths, payloads and errors all come from @aiwni/sdk via the
+ * helper module). `helperImport` is the relative import to lib/wani.
+ */
+function buildNextRouteFile(
+  operation: "send" | "verify",
+  appDir: string,
+  typed: boolean
+): { file: string; code: string } {
+  const ext = typed ? "ts" : "js";
+  const file = operation === "send"
+    ? `${appDir}/api/otp/send/route.${ext}`
+    : `${appDir}/api/otp/verify/route.${ext}`;
+  // appDir/api/otp/<op>/route → lib is always three levels up (app/… or src/app/…).
+  const helperImport = "../../../lib/wani";
+  const reqParam = typed ? "request: Request" : "request";
+  const bodyType = typed ? " as { phone?: unknown }" : "";
+  const bodyTypeVerify = typed ? " as { token?: unknown; code?: unknown }" : "";
+  const check = typed
+    ? { phone: 'typeof phone !== "string" || phone === ""', tokenCode: 'typeof token !== "string" || !token || typeof code !== "string" || !code' }
+    : { phone: "!phone", tokenCode: "!token || !code" };
+  const call = operation === "send"
+    ? `return Response.json(await sendOtp(phone));`
+    : `return Response.json(await verifyOtp(token, code));`;
+  const fn = operation === "send" ? "sendOtp" : "verifyOtp";
+  const input = operation === "send"
+    ? `let phone${typed ? ": unknown" : ""};
+  try {
+    ({ phone } = await request.json()${bodyType});
+  } catch {
+    return Response.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (${check.phone}) return Response.json({ ok: false, error: "phone is required" }, { status: 400 });`
+    : `let token${typed ? ": unknown" : ""}, code${typed ? ": unknown" : ""};
+  try {
+    ({ token, code } = await request.json()${bodyTypeVerify});
+  } catch {
+    return Response.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (${check.tokenCode}) return Response.json({ ok: false, error: "token and code are required" }, { status: 400 });`;
+  return {
+    file,
+    code: `// ${file} — thin Wani OTP route (server-only). All logic lives in lib/wani.ts.
+import { ${fn} } from "${helperImport}";
+
+export async function POST(${reqParam}) {
+${input}
+  try {
+    ${call}
+  } catch (err) {
+    return Response.json({ ok: false, error: err instanceof Error ? err.message : "Wani request failed" }, { status: 502 });
+  }
+}
+`,
+  };
+}
+
 function detectPackageManager(cwd: string): { name: string; addArgs: string[] } {
   if (fs.existsSync(path.join(cwd, "pnpm-lock.yaml"))) return { name: "pnpm", addArgs: ["add"] };
   if (fs.existsSync(path.join(cwd, "yarn.lock"))) return { name: "yarn", addArgs: ["add"] };
   return { name: "npm", addArgs: ["install"] };
 }
 
+/**
+ * Shell-less child execution (no DEP0190 warning, no shell injection).
+ * On Windows the package manager is a `.cmd` shim, which Node cannot exec
+ * directly — so it is routed through `cmd /d /c` *without* the shell
+ * option: argv stays an array, nothing is reinterpreted. Both the `cmd`
+ * literal and every element are fixed internal constants here
+ * (`packageManager` only ever comes from {@link detectPackageManager} —
+ * npm/pnpm/yarn — and args are hardcoded subcommands), never user input,
+ * so no quoting layer is needed at all.
+ */
+export function spawnWithoutShell(
+  cmd: string,
+  args: string[],
+  stdio: "inherit" | "pipe" = "inherit"
+): { status: number | null; error?: string; stdout?: string; stderr?: string } {
+  const res = process.platform === "win32"
+    ? spawnSync("cmd", ["/d", "/c", cmd, ...args], { stdio, encoding: "utf8" })
+    : spawnSync(cmd, args, { stdio, encoding: "utf8" });
+  const out: { status: number | null; error?: string; stdout?: string; stderr?: string } = {
+    status: res.status,
+  };
+  if (typeof res.error?.message === "string") out.error = res.error.message;
+  if (stdio === "pipe") {
+    if (typeof res.stdout === "string") out.stdout = res.stdout;
+    if (typeof res.stderr === "string") out.stderr = res.stderr;
+  }
+  return out;
+}
+
 function defaultInstall(packageManager: string, args: string[]): { ok: boolean; error?: string } {
-  const res = spawnSync(packageManager, args, { stdio: "inherit", shell: process.platform === "win32" });
+  const res = spawnWithoutShell(packageManager, args, "inherit");
   if (res.status === 0) return { ok: true };
-  const detail = typeof res.error?.message === "string" ? res.error.message : `exit code ${res.status}`;
-  return { ok: false, error: detail };
+  return { ok: false, error: res.error ?? `exit code ${res.status}` };
 }
 
 async function pickStack(
@@ -142,13 +231,19 @@ async function pickStack(
   };
 }
 
-async function resolveInitTemplateId(
+interface ResolvedTemplate {
+  id: string | undefined;
+  /** Display name when known (picked from the project list); id otherwise. */
+  name: string | null;
+}
+
+async function resolveInitTemplate(
   ctx: CommandContext,
   args: ParsedArgs,
   prompt: (question: string) => Promise<string>
-): Promise<string | undefined> {
+): Promise<ResolvedTemplate> {
   const templateId = optString(args.options, "template-id", "templateId")?.trim();
-  if (templateId) return templateId;
+  if (templateId) return { id: templateId, name: null };
   const templateName = optString(args.options, "template", "template-name", "templateName")?.trim();
   const language = optString(args.options, "language", "lang")?.trim();
   const projectId = optString(args.options, "project")?.trim() || ctx.config.currentProjectId;
@@ -169,7 +264,7 @@ async function resolveInitTemplateId(
     const matches = templates.filter(
       (t) => t.name === templateName && (!language || t.language === language)
     );
-    if (matches.length === 1 && matches[0]) return matches[0].id;
+    if (matches.length === 1 && matches[0]) return { id: matches[0].id, name: matches[0].name };
     if (matches.length === 0) {
       throw new CliError(`Template "${templateName}" not found among approved templates.`, { kind: "usage" });
     }
@@ -179,8 +274,7 @@ async function resolveInitTemplateId(
     );
   }
   if (templates.length === 1 && templates[0]) {
-    printLine(`Template: ${templates[0].name} (${templates[0].language})`);
-    return templates[0].id;
+    return { id: templates[0].id, name: templates[0].name };
   }
   if (!process.stdin.isTTY) {
     throw new CliError("Multiple approved templates — re-run with --template-id <id>.", { kind: "usage" });
@@ -189,7 +283,7 @@ async function resolveInitTemplateId(
   templates.forEach((t: OtpTemplateOption, i: number) => printLine(`  ${i + 1}) ${t.name} — ${t.language}`));
   const answer = await prompt(`Template [1]: `);
   const picked = templates[chooseTemplateIndex(answer, templates.length)] as OtpTemplateOption;
-  return picked.id;
+  return { id: picked.id, name: picked.name };
 }
 
 function ensureGitignored(cwd: string, envFile: string): "ok" | "added" {
@@ -225,6 +319,62 @@ function writeEnvFile(cwd: string, envFile: string, explicitKey: string | undefi
   return "created";
 }
 
+async function fetchGeneratedCode(
+  ctx: CommandContext,
+  accessToken: string,
+  stack: DetectedStack,
+  frameworkOverride: string,
+  operation: "send" | "verify" | "send-verify" | "status",
+  templateId: string | undefined
+): Promise<string> {
+  const client = new ApiClient({
+    baseUrl: ctx.baseUrl,
+    timeoutMs: ctx.timeoutMs,
+    fetchImpl: ctx.fetchImpl,
+    accessToken,
+  });
+  const generated = await client.post<{ code?: unknown }>(ENDPOINTS.cliCodegen, {
+    language: stack.language,
+    framework: frameworkOverride,
+    operation,
+    ...(templateId ? { templateId } : {}),
+  });
+  if (typeof generated.code !== "string" || generated.code === "") {
+    throw new CliError("Code generation returned an unexpected response.", { kind: "http" });
+  }
+  return generated.code;
+}
+
+function writeInitFile(cwd: string, rel: string, code: string, force: boolean, executable: boolean): void {
+  const filePath = path.join(cwd, rel);
+  if (fs.existsSync(filePath) && !force) {
+    throw new CliError(`Refusing to overwrite existing ${rel} (re-run with --force).`, { kind: "usage" });
+  }
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, code.endsWith("\n") ? code : code + "\n", "utf8");
+  if (executable) {
+    try {
+      fs.chmodSync(filePath, 0o755);
+    } catch {
+      // best effort (e.g. filesystems without unix modes)
+    }
+  }
+}
+
+async function resolveInitProjectName(ctx: CommandContext, args: ParsedArgs): Promise<string | null> {
+  const flag = optString(args.options, "project")?.trim();
+  if (!ctx.config.cliAccessToken) return flag ?? ctx.config.currentProjectId ?? null;
+  try {
+    const projects = await fetchProjects(ctx);
+    const wanted = flag ?? ctx.config.currentProjectId;
+    const found = wanted ? projects.find((p) => p.id === wanted || p.name === wanted) : undefined;
+    if (found) return found.name;
+    return wanted ?? null;
+  } catch {
+    return flag ?? ctx.config.currentProjectId ?? null;
+  }
+}
+
 export async function runInit(
   ctx: CommandContext,
   args: ParsedArgs,
@@ -239,6 +389,12 @@ export async function runInit(
   const noInstall = args.options["no-install"] === true || args.options["noInstall"] === true;
   const explicitKey = optString(args.options, "api-key", "apiKey")?.trim() || undefined;
 
+  // 0. Login gate.
+  const accessToken = ctx.config.cliAccessToken;
+  if (!accessToken) {
+    throw new CliError("Not logged in. Run `wani login` first.", { kind: "auth" });
+  }
+
   // 1. Framework.
   let stack: DetectedStack;
   if (frameworkFlag) {
@@ -251,53 +407,59 @@ export async function runInit(
       );
     }
     stack = resolved;
-    if (!ctx.json) printLine(`Framework: ${stack.display} (--framework).`);
   } else {
     stack = await pickStack(detectStacks(realFsProbe(cwd)), prompt);
   }
   const target = targetFor(stack);
-
-  // 2. Template (send snippet needs a real template id when available).
-  const accessToken = ctx.config.cliAccessToken;
-  if (!accessToken) {
-    throw new CliError("Not logged in. Run `wani login` first.", { kind: "auth" });
-  }
-  const templateId = await resolveInitTemplateId(ctx, args, prompt);
-
-  // 3. Generated integration from the official portal API (single source).
-  const client = new ApiClient({
-    baseUrl: ctx.baseUrl,
-    timeoutMs: ctx.timeoutMs,
-    fetchImpl: ctx.fetchImpl,
-    accessToken,
-  });
-  const generated = await client.post<{ code?: unknown; endpoint?: unknown }>(ENDPOINTS.cliCodegen, {
-    language: stack.language,
-    framework: stack.framework,
-    operation: "send",
-    ...(templateId ? { templateId } : {}),
-  });
-  if (typeof generated.code !== "string" || generated.code === "") {
-    throw new CliError("Code generation returned an unexpected response.", { kind: "http" });
+  if (!ctx.json) {
+    printLine(frameworkFlag ? `✓ Detected ${stack.display} (--framework).` : `✓ Detected ${stack.display}`);
   }
 
-  // 4. Write the integration file (never overwrite without --force).
-  const filePath = path.join(cwd, target.file);
-  if (fs.existsSync(filePath) && !force) {
-    throw new CliError(`Refusing to overwrite existing ${target.file} (re-run with --force).`, { kind: "usage" });
+  // 2. Project + template (names resolved for display; ids drive generation).
+  const projectName = await resolveInitProjectName(ctx, args);
+  if (!ctx.json) {
+    printLine(projectName ? `✓ Connected to Wani project: ${projectName}` : "• Project: using current selection");
   }
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, generated.code.endsWith("\n") ? generated.code : generated.code + "\n", "utf8");
-  if (target.tsExtension === "sh") {
-    try {
-      fs.chmodSync(filePath, 0o755);
-    } catch {
-      // best effort (e.g. filesystems without unix modes)
+  const template = await resolveInitTemplate(ctx, args, prompt);
+  if (!ctx.json) {
+    if (template.name) printLine(`✓ Selected OTP template: ${template.name}`);
+    else if (template.id) printLine(`✓ Using template: ${template.id}`);
+    else printLine("• Template: using default reference");
+  }
+
+  // 3. Generated integration(s) from the official portal API (single source).
+  // Next.js gets a shared SDK helper plus thin send/verify routes; Node.js
+  // gets the full SDK helper module; every other framework gets its single
+  // SDK-based (or manual, for non-JS) module.
+  const createdFiles: string[] = [];
+  if (stack.framework === "next") {
+    const useSrcDir = realFsProbe(cwd).exists("src/app");
+    const appDir = useSrcDir ? "src/app" : "app";
+    const helperFile = `${useSrcDir ? "src/lib" : "lib"}/wani.${stack.typescript ? "ts" : "js"}`;
+    const helperLanguage = stack.typescript ? "typescript" : "javascript";
+    const helper = await fetchGeneratedCode(ctx, accessToken,
+      { ...stack, language: helperLanguage }, "node", "send-verify", template.id);
+    writeInitFile(cwd, helperFile, helper, force, false);
+    createdFiles.push(helperFile);
+    for (const op of ["send", "verify"] as const) {
+      const route = buildNextRouteFile(op, appDir, stack.typescript);
+      writeInitFile(cwd, route.file, route.code, force, false);
+      createdFiles.push(route.file);
     }
+  } else {
+    // Node.js starts from the complete send+verify SDK module; other
+    // frameworks start from their focused send snippet.
+    const operation = stack.framework === "node" ? "send-verify" : "send";
+    const generated = await fetchGeneratedCode(ctx, accessToken, stack, stack.framework, operation, template.id);
+    writeInitFile(cwd, target.file, generated, force, target.tsExtension === "sh");
+    createdFiles.push(target.file);
   }
-  if (!ctx.json) printLine(`✓ Created ${target.file}`);
+  if (!ctx.json) {
+    printLine("✓ Created:");
+    for (const f of createdFiles) printLine(`  ${f}`);
+  }
 
-  // 5. Install the SDK (JS/TS ecosystems only).
+  // 4. Install the SDK (JS/TS ecosystems only).
   let installed = false;
   if (target.needsSdkInstall && !noInstall) {
     const pm = detectPackageManager(cwd);
@@ -310,7 +472,7 @@ export async function runInit(
     }
   }
 
-  // 6. Environment placeholder (+ explicit key only with --api-key).
+  // 5. Environment placeholder (+ explicit key only with --api-key).
   let envState: string | null = null;
   if (target.envFile) {
     envState = writeEnvFile(cwd, target.envFile, explicitKey);
@@ -324,11 +486,10 @@ export async function runInit(
     }
   }
 
-  // 7. Security check: env file must be gitignored (the key never belongs in git,
+  // 6. Security check: env file must be gitignored (the key never belongs in git,
   // and React/browser code never receives it — generated snippets are server-only).
-  let gitignored: string | null = null;
   if (target.envFile) {
-    gitignored = ensureGitignored(cwd, target.envFile);
+    const gitignored = ensureGitignored(cwd, target.envFile);
     if (!ctx.json) {
       printLine(gitignored === "ok" ? `✓ ${target.envFile} is gitignored` : `✓ Added ${target.envFile} to .gitignore`);
     }
@@ -339,14 +500,20 @@ export async function runInit(
       ok: true,
       framework: stack.framework,
       language: stack.language,
-      file: target.file,
+      files: createdFiles,
       envFile: target.envFile,
       installed,
-      templateId: templateId ?? null,
+      templateId: template.id ?? null,
     });
     return;
   }
+  printLine("");
   printLine("Integration ready.");
+  printLine("");
+  printLine("Next:");
+  if (stack.framework === "next") printLine("  npm run dev");
+  printLine("Test your integration:");
+  printLine("  wani otp test");
 }
 
 export async function otpInitCommand(ctx: CommandContext, args: ParsedArgs): Promise<void> {

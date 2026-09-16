@@ -163,7 +163,8 @@ export class Wani {
       ? maybe.error
       : `Wani: request failed with HTTP ${status}.`;
     const code = typeof maybe.code === "string" ? maybe.code : undefined;
+    const retryAfter = typeof maybe.retryAfter === "number" ? maybe.retryAfter : undefined;
     const details: Record<string, unknown> = { ...body };
-    return new WaniError({ message, status, code, details, requestId });
+    return new WaniError({ message, status, code, details, requestId, retryAfter });
   }
 }

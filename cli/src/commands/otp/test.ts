@@ -17,7 +17,7 @@ import { printJson } from "../../output/json.js";
 import { printLine } from "../../output/human.js";
 import { promptText } from "../../utils/prompt.js";
 import { makeOtpClient } from "./common.js";
-import { fetchProjects } from "../project/list.js";
+import { resolveCurrentProjectName } from "../project/list.js";
 import {
   chooseTemplateIndex,
   fetchApprovedTemplates,
@@ -100,20 +100,6 @@ async function resolveTemplateId(
   return { templateId: picked.id, templateName: undefined, language: undefined };
 }
 
-async function resolveProjectName(ctx: CommandContext): Promise<string | null> {
-  if (!ctx.config.cliAccessToken) return null;
-  try {
-    const projects = await fetchProjects(ctx);
-    const current = ctx.config.currentProjectId;
-    const found = current ? projects.find((p) => p.id === current) : undefined;
-    if (found) return found.name;
-    if (!current && projects.length === 1 && projects[0]) return (projects[0] as { name: string }).name;
-    return null;
-  } catch {
-    return null; // offline / expired session: keep going with the id
-  }
-}
-
 export async function otpTestCommand(ctx: CommandContext, args: ParsedArgs): Promise<void> {
   const flags = readFlags(args);
   const projectId = flags.projectId ?? ctx.config.currentProjectId;
@@ -121,7 +107,7 @@ export async function otpTestCommand(ctx: CommandContext, args: ParsedArgs): Pro
   const { client, keySource } = makeOtpClient(ctx, args);
 
   // Header: what are we testing with?
-  const projectName = await resolveProjectName(ctx);
+  const projectName = await resolveCurrentProjectName(ctx);
   const projectLabel = projectName ?? projectId ?? null;
   if (!ctx.json) {
     printLine(projectLabel ? `✓ Project: ${projectLabel}` : "• Project: not selected (key decides server-side)");

@@ -76,8 +76,8 @@ Global options: `--base-url <url>` (or `WANI_BASE_URL`), `--dev`, `--timeout <ms
 ## `wani init` details
 
 - Detects Node.js / Next.js / React / Django / Flask / FastAPI / Laravel / Symfony from the current directory (override with `--framework`).
-- Fetches the integration code from the official portal codegen API — the same generator the portal Quick Start uses.
-- Writes one integration file (e.g. `lib/wani.ts`, `wani_otp.py`), installs `@aiwni/sdk` for JS/TS projects, and adds `WANI_API_KEY=your_project_api_key` to the framework's env file (`.env.local`/`.env`). Pass `--api-key <key>` explicitly to write a real key; existing files are never overwritten without `--force`.
+- Fetches SDK-based integration code from the official portal codegen API — the same generator the portal Quick Start uses. The SDK owns all HTTP/auth/error handling; generated files contain no raw `fetch`.
+- Writes the integration files (Next.js: shared `lib/wani.ts` helper plus thin `app/api/otp/send|verify` routes; Node.js: `wani.mjs`; other frameworks: one focused module), installs `@aiwni/sdk` for JS/TS projects, and adds `WANI_API_KEY=your_project_api_key` to the framework's env file (`.env.local`/`.env`). Pass `--api-key <key>` explicitly to write a real key; existing files are never overwritten without `--force`.
 - Ensures the env file is gitignored. Generated snippets are server-only — the key never goes into React/browser code.
 
 ## Automation (CI / non-interactive)

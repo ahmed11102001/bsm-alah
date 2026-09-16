@@ -16,6 +16,8 @@ export interface WaniErrorOptions {
   details?: unknown;
   /** Value of the `x-request-id` response header, when present. */
   requestId?: string | undefined;
+  /** Seconds after which a rate-limited request may be retried (429/503 bodies). */
+  retryAfter?: number | undefined;
   cause?: unknown;
 }
 
@@ -34,6 +36,7 @@ export class WaniError extends Error {
   readonly code?: string | undefined;
   readonly details?: unknown;
   readonly requestId?: string | undefined;
+  readonly retryAfter?: number | undefined;
 
   constructor(options: WaniErrorOptions) {
     super(options.message);
@@ -41,6 +44,7 @@ export class WaniError extends Error {
     this.code = options.code;
     this.details = options.details;
     this.requestId = options.requestId;
+    this.retryAfter = options.retryAfter;
     if (options.cause !== undefined) {
       // `Error.cause` is ES2022 — assigned explicitly for clarity.
       (this as { cause?: unknown }).cause = options.cause;
