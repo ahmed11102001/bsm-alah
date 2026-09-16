@@ -8,8 +8,57 @@ import { rateLimit } from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
 import { wasRoleChangedSince } from "@/lib/session-invalidation";
 
+// ── كوكيز مشتركة بين aiwni.com و developers.aiwni.com ───────────────────────
+// زر Google في البورتال (نفس التاب، بدون popup) بيبدأ OAuth على الـ subdomain،
+// لكن الـ redirect_uri (مشتق من NEXTAUTH_URL) بيرجع على الدومين الرئيسي.
+// كوكيز NextAuth الافتراضية host-only، فكوكيز الـ state/PKCE اللي اتحطت على
+// الـ subdomain مش بتتبعت مع الـ callback على الدومين الرئيسي → فشل التحقق
+// → رمي اليوزر على صفحة الـ signIn (اللاندينج) بعد اختيار الإيميل.
+// الـ Domain المشترك بيخلي الـ state والـ session مقروئين على الهوستين.
+// ملحوظة: مقصود عدم لمس csrfToken — اسمه ببادئة __Host- اللي بتمنع Domain.
+/// الشرط مقيّد بهوست aiwni.com عشان previews/localhost يفضلوا host-only.
+const NEXTAUTH_HOST = (() => {
+  try {
+    return new URL(process.env.NEXTAUTH_URL || "").hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+})();
+const SHARED_COOKIE_DOMAIN =
+  NEXTAUTH_HOST === "aiwni.com" || NEXTAUTH_HOST.endsWith(".aiwni.com")
+    ? ".aiwni.com"
+    : undefined;
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
+
+  ...(SHARED_COOKIE_DOMAIN
+    ? {
+        cookies: {
+          sessionToken: {
+            name: `${USE_SECURE_COOKIES ? "__Secure-" : ""}next-auth.session-token`,
+            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: USE_SECURE_COOKIES, domain: SHARED_COOKIE_DOMAIN },
+          },
+          callbackUrl: {
+            name: `${USE_SECURE_COOKIES ? "__Secure-" : ""}next-auth.callback-url`,
+            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: USE_SECURE_COOKIES, domain: SHARED_COOKIE_DOMAIN },
+          },
+          state: {
+            name: `${USE_SECURE_COOKIES ? "__Secure-" : ""}next-auth.state`,
+            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: USE_SECURE_COOKIES, domain: SHARED_COOKIE_DOMAIN },
+          },
+          nonce: {
+            name: `${USE_SECURE_COOKIES ? "__Secure-" : ""}next-auth.nonce`,
+            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: USE_SECURE_COOKIES, domain: SHARED_COOKIE_DOMAIN },
+          },
+          pkceCodeVerifier: {
+            name: `${USE_SECURE_COOKIES ? "__Secure-" : ""}next-auth.pkce.code_verifier`,
+            options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: USE_SECURE_COOKIES, domain: SHARED_COOKIE_DOMAIN },
+          },
+        },
+      }
+    : {}),
 
   providers: [
     GoogleProvider({

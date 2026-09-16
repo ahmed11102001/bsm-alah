@@ -19,6 +19,34 @@ import { getValidShopifyAccessToken } from "@/lib/shopify-auth";
 
 const STATE_TTL_MS = 10 * 60 * 1000; // صلاحية الـstate: 10 دقائق ضد الـreplay
 
+// ── تحقق التوقيع اللي شوبيفاي نفسها بتحطه على الـcallback (hmac query param) ──
+// منفصل تمامًا عن verifyState تحت (اللي هو توقيعنا احنا لحماية CSRF/هوية اليوزر).
+// من غيره أي حد عارف يبني رابط callback بنفسه (لو عنده code/shop/state سليمين
+// بشكل ما) مفيش حاجة تتأكد إن الطلب ده فعلاً جاي من شوبيفاي. الخوارزمية
+// موثّقة رسميًا من شوبيفاي: رتّب كل الـquery params أبجديًا ما عدا hmac،
+// اعمل HMAC-SHA256 بسر التطبيق، وقارن hex بمقارنة ثابتة الزمن.
+function verifyShopifyCallbackHmac(url: URL, secret: string): boolean {
+  const hmac = url.searchParams.get("hmac");
+  if (!hmac) return false;
+
+  const params: string[] = [];
+  url.searchParams.forEach((value, key) => {
+    if (key === "hmac" || key === "signature") return;
+    params.push(`${key}=${value}`);
+  });
+  params.sort();
+  const message = params.join("&");
+
+  const expected = crypto.createHmac("sha256", secret).update(message).digest("hex");
+  try {
+    const a = Buffer.from(expected, "hex");
+    const b = Buffer.from(hmac, "hex");
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 export function verifyState(state: string): string | null {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) return null;
@@ -61,6 +89,13 @@ export async function GET(req: NextRequest) {
 
   if (!code || !shop || !state) return fail("missing_params");
   if (!/^[a-z0-9-]+\.myshopify\.com$/.test(shop)) return fail("invalid_shop");
+
+  // ── تحقق hmac شوبيفاي (منفصل عن verifyState تحت) — قبل أي حاجة تانية ──────
+  const callbackSecret = process.env.SHOPIFY_APP_CLIENT_SECRET;
+  if (!callbackSecret || !verifyShopifyCallbackHmac(req.nextUrl, callbackSecret)) {
+    console.warn("[Shopify OAuth] Invalid callback hmac — rejected");
+    return fail("invalid_hmac");
+  }
 
   const email = verifyState(state);
   if (!email) return fail("invalid_state");
