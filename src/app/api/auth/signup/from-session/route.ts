@@ -44,5 +44,17 @@ export async function POST(req: Request) {
     name: user.name,
     picture: user.image,
   });
+
+  // NextAuth's adapter creates a temporary Google User before OAuth returns.
+  // Remove that shell now; the real User is created only after phone OTP verification.
+  const isUnfinishedGoogleShell =
+    user.signupMethod === "GOOGLE" &&
+    !user.phone &&
+    !user.password &&
+    !user.onboardingCompleted;
+  if (isUnfinishedGoogleShell) {
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+
   return NextResponse.json({ signupToken: token, email: user.email, name: user.name });
 }

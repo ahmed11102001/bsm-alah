@@ -472,7 +472,7 @@ function SignUpContent() {
               <div>
                 <p className="step-hint">{t("Start with your Google account — then we'll verify your WhatsApp number.", "ابدأ بحساب جوجل — وبعدين هنأكد رقم الواتساب.")}</p>
                 <GoogleOAuthButton
-                  callbackUrl={`/auth/google-signup?context=portal&returnTo=${encodeURIComponent(devPath("/signup"))}`}
+                  callbackUrl={`/auth/callback?signupContext=portal&returnTo=${encodeURIComponent(devPath("/signup"))}`}
                   loading={loading}
                   label={t("Continue with Google", "متابعة بـ Google")}
                   onStart={() => setLoading(true)}

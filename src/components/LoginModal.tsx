@@ -231,7 +231,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     const currentLang = lang || (document.cookie.includes("NEXT_LOCALE=en") ? "en" : "ar");
     const returnTo = `/${currentLang}?openLogin=1`;
     await signIn("google", {
-      callbackUrl: `/auth/google-signup?context=dashboard&returnTo=${encodeURIComponent(returnTo)}`,
+      callbackUrl: `/auth/callback?signupContext=dashboard&returnTo=${encodeURIComponent(returnTo)}`,
     });
   };
 
@@ -425,10 +425,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
               </span>
             </motion.div>
 
-            {(view === "login" || view === "register" || view === "join") && (
+            {(view === "login" || view === "join") && (
               <div className="flex border-b border-gray-100 mb-0">
                 <Tab active={view === "login"} onClick={() => go("login")}>دخول</Tab>
-                <Tab active={view === "register"} onClick={() => go("register")}>حساب جديد</Tab>
                 <Tab active={view === "join"} onClick={() => go("join")}>انضمام لفريق</Tab>
               </div>
             )}
@@ -477,6 +476,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
                       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تسجيل الدخول"}
                     </Button>
                   </form>
+
+                  <p className="text-xs text-gray-400 text-center">
+                    معندكش حساب؟{" "}
+                    <button type="button" onClick={() => go("register")} className="text-[#25D366] hover:underline">
+                      سجل جديد
+                    </button>
+                  </p>
                 </motion.div>
               )}
 

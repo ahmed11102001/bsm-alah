@@ -19,6 +19,8 @@ function AuthCallbackInner() {
   //    ليها بعد ما نتأكد إنه مش محتاج onboarding. ────────────────────────────
   const next = params.get("next");
   const lang = params.get("lang") || params.get("locale");
+  const signupContext = params.get("signupContext");
+  const signupReturnTo = params.get("returnTo");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -28,17 +30,17 @@ function AuthCallbackInner() {
       return;
     }
 
-    if (session.user.needsOnboarding) {
-      // لازم يكمل الـ onboarding الأول — منمرر next وlang معاه
-      const query = new URLSearchParams();
-      if (next) query.set("next", next);
-      if (lang) query.set("lang", lang);
-      const qStr = query.toString();
-      router.replace(qStr ? `/onboarding?${qStr}` : "/onboarding");
-    } else {
-      router.replace(next || "/dashboard");
+    // Google signup must enter the new phone/password/OTP flow before the
+    // legacy onboarding page. This marker is set only by signup buttons.
+    if (signupContext === "dashboard" || signupContext === "portal") {
+      const query = new URLSearchParams({ context: signupContext });
+      if (signupReturnTo) query.set("returnTo", signupReturnTo);
+      router.replace(`/auth/google-signup?${query.toString()}`);
+      return;
     }
-  }, [session, status, router, next, lang]);
+
+    router.replace(next || "/dashboard");
+  }, [session, status, router, next, lang, signupContext, signupReturnTo]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
