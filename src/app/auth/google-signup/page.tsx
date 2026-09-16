@@ -11,6 +11,8 @@ export default function GoogleSignupContinuation() {
   const params = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
+  const context = params.get("context") === "portal" ? "portal" : "dashboard";
 
   useEffect(() => {
     if (status === "loading") return;
@@ -18,7 +20,6 @@ export default function GoogleSignupContinuation() {
       router.replace("/");
       return;
     }
-    const context = params.get("context") === "portal" ? "portal" : "dashboard";
     const returnTo = params.get("returnTo") || (context === "portal" ? "/developers/signup" : "/?openLogin=1");
     let cancelled = false;
     (async () => {
@@ -31,6 +32,7 @@ export default function GoogleSignupContinuation() {
       if (cancelled) return;
       if (!res.ok) {
         setError(data.error || "This email is already registered. Please sign in.");
+        setErrorCode(data.code || "");
         return;
       }
       await signOut({ redirect: false });
@@ -59,11 +61,39 @@ export default function GoogleSignupContinuation() {
       router.replace(`${url.pathname}${url.search}`);
     })().catch(() => setError("Could not continue with Google. Please try again."));
     return () => { cancelled = true; };
-  }, [session, status, params, router]);
+  }, [session, status, params, router, context]);
+
+  // الإيميل مسجل قبل كده → رجّعه لتسجيل الدخول بدل صفحة مسدودة.
+  // الداشبورد على نفس الهوست (/?openLogin=1 بيفتح مودال الدخول)،
+  // البورتال على السب دومين (cross-host → href مباشر).
+  const signInUrl =
+    context === "portal" ? `${DEVELOPERS_BASE_URL}/signin` : "/?openLogin=1";
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
-      {error ? <p className="text-sm text-red-600 text-center">{error}</p> : <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />}
+      {error ? (
+        <div className="flex flex-col items-center gap-4 max-w-sm">
+          <p className="text-sm text-red-600 text-center">{error}</p>
+          {errorCode === "EMAIL_EXISTS" ? (
+            <a
+              href={signInUrl}
+              className="px-6 h-11 inline-flex items-center justify-center rounded-xl bg-[#25D366] text-white text-sm font-medium hover:brightness-95 transition"
+            >
+              Sign in instead
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-6 h-11 inline-flex items-center justify-center rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      ) : (
+        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+      )}
     </main>
   );
 }

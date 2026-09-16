@@ -230,8 +230,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     setGBusy(true);
     const currentLang = lang || (document.cookie.includes("NEXT_LOCALE=en") ? "en" : "ar");
     const returnTo = `/${currentLang}?openLogin=1`;
+    const query = new URLSearchParams({ signupContext: "dashboard", returnTo });
+    query.set("lang", currentLang);
     await signIn("google", {
-      callbackUrl: `/auth/callback?signupContext=dashboard&returnTo=${encodeURIComponent(returnTo)}`,
+      callbackUrl: `/auth/callback?${query.toString()}`,
     });
   };
 

@@ -8,6 +8,7 @@ import { useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams }  from "next/navigation";
 import { Loader2 }    from "lucide-react";
+import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
 function AuthCallbackInner() {
   const { data: session, status } = useSession();
@@ -25,6 +26,16 @@ function AuthCallbackInner() {
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
+      // بدون جلسة مفيش توكن يتعمل — لكن بدل رمي اليوزر على لاندينج ميتة،
+      // رجّعه لمكان يقدر يكمل منه (تسجيل الدخول) مع الحفاظ على السياق.
+      if (signupContext === "portal") {
+        window.location.href = `${DEVELOPERS_BASE_URL}/signin`;
+        return;
+      }
+      if (signupContext === "dashboard") {
+        router.replace(signupReturnTo || (lang === "en" ? "/en?openLogin=1" : "/ar?openLogin=1"));
+        return;
+      }
       const fallback = lang === "en" ? "/en" : "/ar";
       router.replace(fallback);
       return;
