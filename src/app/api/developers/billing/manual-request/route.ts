@@ -5,9 +5,10 @@ import { devError } from "@/lib/dev-errors";
 import { getProjectForOwnerOrDeveloper } from "@/lib/dev-project-auth";
 import {
   TOPUP_MIN_EGP,
-  TOPUP_MAX_EGP,
+  TOPUP_ABS_MAX_EGP,
   OTP_PRICE_EGP,
   isValidTopupAmount,
+  topupError,
   messagesFromBalance,
 } from "@/lib/portal-billing";
 
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
     },
     limits: {
       min: TOPUP_MIN_EGP,
-      max: TOPUP_MAX_EGP,
+      absMax: TOPUP_ABS_MAX_EGP,
       pricePerMessage: OTP_PRICE_EGP,
     },
   });
@@ -72,11 +73,7 @@ export async function POST(req: NextRequest) {
   const { projectId, amount, paymentMethod } = await req.json().catch(() => ({}));
   if (!projectId) return devError("projectId is required", "INVALID_REQUEST", 400);
   if (!isValidTopupAmount(amount)) {
-    return devError(
-      `مبلغ الشحن لازم يكون بين ${TOPUP_MIN_EGP} و ${TOPUP_MAX_EGP} جنيه`,
-      "INVALID_REQUEST",
-      400
-    );
+    return devError(topupError(), "INVALID_REQUEST", 400);
   }
   if (paymentMethod && !["instapay", "etisalat"].includes(paymentMethod)) {
     return devError("طريقة دفع غير صالحة", "INVALID_REQUEST", 400);

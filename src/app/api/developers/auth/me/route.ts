@@ -26,7 +26,10 @@ export async function GET(req: Request) {
       return devError("Not found", "NOT_FOUND", 404);
     }
 
-    return NextResponse.json({ developer });
+    const { isOwnerOnlyAccount } = await import("@/lib/dev-role");
+    const isOwnerOnly = await isOwnerOnlyAccount(session.id);
+
+    return NextResponse.json({ developer, isOwnerOnly });
   } catch (error) {
     return devError("Server error", "INTERNAL", 500);
   }

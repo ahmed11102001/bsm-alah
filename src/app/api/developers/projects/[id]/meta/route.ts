@@ -22,7 +22,36 @@ export async function POST(
 
     const { accessToken, phoneNumberId, wabaId, displayPhone } = await req.json();
 
-    if (!accessToken || !phoneNumberId || !wabaId) {
+    const existing = await prisma.developerMetaConnection.findUnique({
+      where: { projectId: id },
+    });
+
+    // تعديل بيانات الربط بدون توكن جديد → نحتفظ بالتوكن القديم (لما ينتهي غيّره فقط)
+    if (!accessToken) {
+      if (!existing) {
+        return devError(
+          "Access Token, Phone Number ID, و WABA ID مطلوبين",
+          "INVALID_REQUEST",
+          400
+        );
+      }
+      if (!phoneNumberId || !wabaId) {
+        return devError("Phone Number ID و WABA ID مطلوبين", "INVALID_REQUEST", 400);
+      }
+      await prisma.developerMetaConnection.update({
+        where: { projectId: id },
+        data: {
+          phoneNumberId,
+          wabaId,
+          displayPhone: displayPhone || "",
+          isVerified: true,
+          updatedAt: new Date(),
+        },
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!phoneNumberId || !wabaId) {
       return devError(
         "Access Token, Phone Number ID, و WABA ID مطلوبين",
         "INVALID_REQUEST",

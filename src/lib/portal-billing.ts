@@ -19,7 +19,9 @@ export const TRIAL_DAYS = 30;
 export const OWNER_MONTHLY_FREE = 30;
 export const MONTHLY_PERIOD_DAYS = 30;
 export const TOPUP_MIN_EGP = 20;
-export const TOPUP_MAX_EGP = 200;
+// لا يوجد حد أقصى للشحن — المبلغ مفتوح بدءًا من 20ج.
+// TOPUP_ABS_MAX مجرد حارس sanity ضد الأخطاء المطبعية (مليون جنيه).
+export const TOPUP_ABS_MAX_EGP = 1000000;
 export const TOPUP_PRESETS = [20, 50, 100, 200];
 export const MAX_DEBT_EGP = 10;
 export const LOW_BALANCE_MSGS = 10;
@@ -47,8 +49,13 @@ export function isValidTopupAmount(amount: unknown): amount is number {
     typeof amount === "number" &&
     Number.isInteger(amount) &&
     amount >= TOPUP_MIN_EGP &&
-    amount <= TOPUP_MAX_EGP
+    amount <= TOPUP_ABS_MAX_EGP &&
+    amount % 5 === 0
   );
+}
+
+export function topupError(): string {
+  return `مبلغ الشحن لازم يكون ${TOPUP_MIN_EGP} جنيه على الأقل وبمضاعفات 5 (20، 25، 30، ...)`;
 }
 
 interface ProjectBillingState {

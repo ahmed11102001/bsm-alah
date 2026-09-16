@@ -27,6 +27,12 @@ export default function ProjectApiKeysPage() {
   const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState("");
+  // نسخ مفتاح موجود بعد تأكيد الباسورد
+  const [revealKeyId, setRevealKeyId] = useState<string | null>(null);
+  const [revealPassword, setRevealPassword] = useState("");
+  const [revealLoading, setRevealLoading] = useState(false);
+  const [revealError, setRevealError] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -80,6 +86,39 @@ export default function ProjectApiKeysPage() {
     await navigator.clipboard.writeText(key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function openReveal(keyId: string) {
+    setRevealKeyId(keyId);
+    setRevealPassword("");
+    setRevealError("");
+  }
+
+  async function confirmRevealAndCopy() {
+    if (!revealKeyId || !revealPassword || revealLoading) return;
+    setRevealLoading(true);
+    setRevealError("");
+    try {
+      const res = await fetch(`/api/developers/projects/${projectId}/api-keys/reveal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyId: revealKeyId, password: revealPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRevealError(data.error || t("An error occurred", "حصل خطأ"));
+        return;
+      }
+      await navigator.clipboard.writeText(data.fullKey);
+      setCopiedId(revealKeyId);
+      setTimeout(() => setCopiedId(null), 2000);
+      setRevealKeyId(null);
+      setRevealPassword("");
+    } catch {
+      setRevealError(t("Connection error occurred", "حصل خطأ في الاتصال"));
+    } finally {
+      setRevealLoading(false);
+    }
   }
 
   if (loading) {
@@ -139,8 +178,8 @@ export default function ProjectApiKeysPage() {
       {generatedKey && (
         <div style={{ background: "rgba(32,211,120,0.08)", border: "1px solid rgba(32,211,120,0.2)", borderRadius: 14, padding: 20, marginBottom: 20, textAlign: language === 'ar' ? 'right' : 'left' }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, color: "#20d378", fontSize: 14, fontWeight: 600, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-            <AlertTriangle size={15} />
-            <span>{t("Save this key — you won't see it again!", "احفظ المفتاح ده — مش هتشوفه تاني!")}</span>
+            <Key size={15} />
+            <span>{t("Your new key is ready", "مفتاحك الجديد جاهز")}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
             <code style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "rgba(0,0,0,0.3)", fontSize: 12, fontFamily: "Fira Code, monospace", color: "#fff", wordBreak: "break-all" }}>
@@ -152,6 +191,9 @@ export default function ProjectApiKeysPage() {
             <button onClick={() => copyKey(generatedKey)} style={{ padding: 8, borderRadius: 8, background: "rgba(32,211,120,0.15)", border: "none", cursor: "pointer", color: "#20d378" }}>
               {copied ? <Check size={15} /> : <Copy size={15} />}
             </button>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 12, lineHeight: 1.7 }}>
+            {t("You can copy any key anytime from the list below after confirming your password.", "تقدر تنسخ أي مفتاح في أي وقت من القائمة تحت بعد تأكيد الباسورد.")}
           </div>
           <button onClick={() => setGeneratedKey(null)} style={{ marginTop: 12, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: 12, fontFamily: "inherit" }}>
             {t("Understood, close ✕", "فهمت، أقفل ✕")}
@@ -202,15 +244,24 @@ export default function ProjectApiKeysPage() {
                 {new Date(key.createdAt).toLocaleDateString(language === 'ar' ? "ar-EG" : "en-US")}
               </span>
               {key.status === "ACTIVE" ? (
-                <button
-                  onClick={() => revokeKey(key.id)}
-                  style={{ padding: 7, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)" }}
-                  title={t("Revoke key", "إلغاء المفتاح")}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
-                >
-                  <Trash2 size={15} />
-                </button>
+                <>
+                  <button
+                    onClick={() => openReveal(key.id)}
+                    style={{ padding: 7, borderRadius: 8, background: "rgba(32,211,120,0.1)", border: "none", cursor: "pointer", color: "#20d378" }}
+                    title={t("Copy full key", "نسخ المفتاح كامل")}
+                  >
+                    {copiedId === key.id ? <Check size={15} /> : <Copy size={15} />}
+                  </button>
+                  <button
+                    onClick={() => revokeKey(key.id)}
+                    style={{ padding: 7, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)" }}
+                    title={t("Revoke key", "إلغاء المفتاح")}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </>
               ) : (
                 <span style={{ fontSize: 11, color: "rgba(239,68,68,0.6)", padding: "3px 8px", borderRadius: 6, background: "rgba(239,68,68,0.08)" }}>
                   {t("Revoked", "ملغي")}
@@ -219,6 +270,52 @@ export default function ProjectApiKeysPage() {
             </div>
           </div>
         ))
+      )}
+
+      {/* Password confirm modal for copying a key */}
+      {revealKeyId && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => { if (!revealLoading) setRevealKeyId(null); }}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 400, background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: 24, textAlign: language === 'ar' ? 'right' : 'left' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: "#fff", marginBottom: 6 }}>
+              {t("Confirm your password", "أكّد الباسورد")}
+            </h3>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 16, lineHeight: 1.7 }}>
+              {t("Enter your account password to copy the full key.", "أدخل باسورد حسابك لنسخ المفتاح كامل.")}
+            </p>
+            <input
+              type="password"
+              value={revealPassword}
+              onChange={(e) => { setRevealPassword(e.target.value); setRevealError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && confirmRevealAndCopy()}
+              placeholder={t("Password", "الباسورد")}
+              autoFocus
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+            />
+            {revealError && <p style={{ color: "#f87171", fontSize: 12, marginTop: 8 }}>{revealError}</p>}
+            <div style={{ display: "flex", gap: 10, marginTop: 16, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+              <button
+                onClick={confirmRevealAndCopy}
+                disabled={!revealPassword || revealLoading}
+                style={{ flex: 1, padding: 12, borderRadius: 10, background: "#20d378", color: "#060810", fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer", opacity: !revealPassword || revealLoading ? 0.5 : 1, fontFamily: "inherit" }}
+              >
+                {revealLoading ? t("Checking...", "جاري التحقق...") : t("Copy key", "نسخ المفتاح")}
+              </button>
+              <button
+                onClick={() => setRevealKeyId(null)}
+                disabled={revealLoading}
+                style={{ padding: "12px 18px", borderRadius: 10, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", fontSize: 14, border: "none", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                {t("Cancel", "إلغاء")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

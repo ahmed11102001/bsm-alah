@@ -16,7 +16,7 @@ import {
 // Bearer CLI session only. Never returns secrets; templateId comes from the
 // caller's own project data.
 const LANGUAGES: IntegrationLanguage[] = ["javascript", "typescript", "python", "php", "curl"];
-const OPERATIONS: QuickStartOperation[] = ["send", "verify", "status"];
+const OPERATIONS: QuickStartOperation[] = ["send", "verify", "send-verify", "status"];
 
 export async function POST(req: NextRequest) {
   const cli = await requireCliSession(req);

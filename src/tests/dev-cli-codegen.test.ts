@@ -57,6 +57,19 @@ describe("POST /api/developers/cli/codegen", () => {
     expect(JSON.stringify(data)).not.toMatch(/wani_live_/);
   });
 
+  it("accepts the Node init send-verify operation and uses the SDK methods", async () => {
+    const res = await POST(
+      authedReq({ language: "javascript", framework: "node", operation: "send-verify", templateId: "tmpl_otp" })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.operation).toBe("send-verify");
+    expect(data.endpoint).toBe("/api/developers/otp/send");
+    expect(data.code).toContain("getWani().otp.send");
+    expect(data.code).toContain("getWani().otp.verify");
+    expect(data.code).not.toContain("Unsupported operation");
+  });
+
   it("rejects unknown framework for the language", async () => {
     const res = await POST(authedReq({ language: "python", framework: "next", operation: "send" }));
     expect(res.status).toBe(400);

@@ -727,7 +727,7 @@ export default function ApiDocsPage() {
                     "const wani = new Wani({ apiKey: process.env.WANI_API_KEY });",
                     "",
                     "const sent = await wani.otp.send({",
-                    '  phone: "201012345678",',
+                    '  phone: "2010xxxxxxxx",',
                     '  templateId: "YOUR_TEMPLATE_ID",',
                     "  expiryMinutes: 10,",
                     "});",

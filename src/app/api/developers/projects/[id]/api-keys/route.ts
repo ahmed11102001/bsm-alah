@@ -82,11 +82,14 @@ export async function POST(
 
     const { prefix, fullKey, hash } = generateApiKey();
 
+    // نخزن نسخة مشفرة من المفتاح الكامل — عشان النسخ لاحقًا بعد تأكيد الباسورد
+    const { encryptToken } = await import("@/lib/crypto");
     await prisma.developerApiKey.create({
       data: {
         projectId: id,
         keyHash: hash,
         keyPrefix: prefix,
+        keyEncrypted: encryptToken(fullKey),
         name: name || null,
         status: "ACTIVE",
       },

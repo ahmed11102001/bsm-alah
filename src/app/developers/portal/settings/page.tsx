@@ -25,6 +25,8 @@ export default function DeveloperSettingsPage() {
   const { language, t } = useLanguage();
   const [devices, setDevices] = useState<CliDevice[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
+  // الـ CLI للمطورين فقط — مخفي عن حسابات الأونر
+  const [isOwnerOnly, setIsOwnerOnly] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -47,6 +49,11 @@ export default function DeveloperSettingsPage() {
             lastName: data.developer.lastName,
             email: data.developer.email,
           }));
+          if (data.isOwnerOnly) {
+            setIsOwnerOnly(true);
+            setDevicesLoading(false);
+            return;
+          }
         }
       } catch {
         // Handle error quietly
@@ -447,7 +454,8 @@ export default function DeveloperSettingsPage() {
             </div>
           </div>
 
-          {/* CLI & Integrations */}
+          {/* CLI & Integrations — للمطورين فقط */}
+          {!isOwnerOnly && (
           <div className="settings-card">
             <div className="card-header">
               <div className="card-icon"><TerminalSquare size={16} /></div>
@@ -500,6 +508,7 @@ export default function DeveloperSettingsPage() {
               ))
             )}
           </div>
+          )}
 
           <div className="submit-wrap">
             <button type="submit" className="btn-save" disabled={saving}>

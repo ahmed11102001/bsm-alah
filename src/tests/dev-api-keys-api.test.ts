@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.hoisted(() => {
+  if (!process.env.ENCRYPTION_KEY) process.env.ENCRYPTION_KEY = "b".repeat(64);
+});
+
 // ── Mocks ────────────────────────────────────────────────────────────────────
 const mockPrisma = vi.hoisted(() => ({
   developerApiKey: {

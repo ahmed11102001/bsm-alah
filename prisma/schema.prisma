@@ -1263,6 +1263,9 @@ model DeveloperApiKey {
   id         String                @id @default(cuid())
   keyHash    String                @unique
   keyPrefix  String
+  // النسخة المشفرة من المفتاح الكامل — للنسخ لاحقًا بعد تأكيد الباسورد.
+  // المفاتيح القديمة (null) غير قابلة للاسترجاع — لازم إنشاء مفتاح جديد.
+  keyEncrypted String?
   name       String?
   status     DeveloperApiKeyStatus @default(ACTIVE)
   lastUsedAt DateTime?

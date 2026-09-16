@@ -89,6 +89,43 @@ describe("wani init", () => {
     assert.match(fs.readFileSync(path.join(cwd, ".gitignore"), "utf8"), /\.env\.local/);
   });
 
+  it("generates a Node integration with the SDK send and verify methods", async () => {
+    const cwd = tmpDir();
+    fs.writeFileSync(path.join(cwd, "package.json"), JSON.stringify({}));
+    let codegenRequest: any;
+    const ctx = testContext(
+      { apiKeys: {}, currentProjectId: "p1", cliAccessToken: "tok" },
+      (url, init) => {
+        if (url.endsWith("/cli/codegen")) {
+          codegenRequest = JSON.parse(String(init?.body));
+          return {
+            ok: true,
+            language: "javascript",
+            framework: "node",
+            operation: "send-verify",
+            endpoint: "/api/developers/otp/send",
+            code: `import { Wani } from "@aiwni/sdk";
+export async function sendOtp(phone) { return getWani().otp.send({ phone, templateId: "tpl_otp" }); }
+export async function verifyOtp(token, code) { return getWani().otp.verify({ token, code }); }
+`,
+          };
+        }
+        return codegenBehavior(url);
+      }
+    );
+
+    await runInit(ctx, parseArgs(["--template-id", "tpl_otp", "--no-install"]), {
+      cwd,
+      install: () => ({ ok: true }),
+    });
+
+    assert.equal(codegenRequest.operation, "send-verify");
+    const generated = fs.readFileSync(path.join(cwd, "wani.mjs"), "utf8");
+    assert.match(generated, /getWani\(\)\.otp\.send/);
+    assert.match(generated, /getWani\(\)\.otp\.verify/);
+    assert.doesNotMatch(generated, /fetch\(/);
+  });
+
   it("honors src/ layout for Next.js projects", async () => {
     const cwd = tmpDir();
     fs.writeFileSync(path.join(cwd, "package.json"), JSON.stringify({ dependencies: { next: "^14.0.0" } }));

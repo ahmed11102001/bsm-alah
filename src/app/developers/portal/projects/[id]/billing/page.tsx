@@ -8,7 +8,6 @@ import { useDevPath } from "@/lib/dev-links";
 
 const PRICE_PER_MESSAGE = 0.75;
 const TOPUP_MIN = 20;
-const TOPUP_MAX = 200;
 const MAX_DEBT = 10;
 
 function fmtDate(d: string | null, locale: string) {
@@ -264,7 +263,7 @@ export default function BillingPage() {
           </div>
           <button className="btn-topup" onClick={() => router.push(devPath(`/portal/projects/${projectId}/checkout`))}>
             <Plus size={18} />
-            {t(`Top up (${TOPUP_MIN}–${TOPUP_MAX} EGP)`, `اشحن الرصيد (${TOPUP_MIN}–${TOPUP_MAX} جنيه)`)}
+            {t(`Top up (from ${TOPUP_MIN} EGP)`, `اشحن الرصيد (من ${TOPUP_MIN} جنيه)`)}
           </button>
         </div>
 
@@ -360,8 +359,8 @@ export default function BillingPage() {
               </tr>
               <tr>
                 <td>{t("Top-up", "الشحن")}</td>
-                <td>{TOPUP_MIN}–{TOPUP_MAX} {t("EGP", "ج")}</td>
-                <td>{TOPUP_MIN}–{TOPUP_MAX} {t("EGP", "ج")}</td>
+                <td>{t(`From ${TOPUP_MIN} EGP`, `من ${TOPUP_MIN} جنيه`)}</td>
+                <td>{t(`From ${TOPUP_MIN} EGP`, `من ${TOPUP_MIN} جنيه`)}</td>
               </tr>
               <tr>
                 <td>{t("Paid balance expiry", "انتهاء الرصيد")}</td>
@@ -388,7 +387,7 @@ export default function BillingPage() {
               <div className="feature-list">
                 <div className="feature-row"><Check size={14} className="feature-check" />{t("30 free OTP every 30 days, auto-renewed", "30 رسالة مجانية كل 30 يوم، تتجدد تلقائيًا")}</div>
                 <div className="feature-row"><Check size={14} className="feature-check" />{t("Extra usage at 0.75 EGP per message from balance", "الاستهلاك الزائد بـ 0.75 جنيه للرسالة من الرصيد")}</div>
-                <div className="feature-row"><Check size={14} className="feature-check" />{t("Top up 20–200 EGP anytime — balance never expires", "اشحن 20–200 جنيه في أي وقت — الرصيد لا ينتهي")}</div>
+                <div className="feature-row"><Check size={14} className="feature-check" />{t("Top up any amount from 20 EGP — balance never expires", "اشحن أي مبلغ من 20 جنيه — الرصيد لا ينتهي")}</div>
               </div>
             </div>
           </div>

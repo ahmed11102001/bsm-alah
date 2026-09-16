@@ -14,7 +14,7 @@ const ETISALAT_ACCOUNT = process.env.NEXT_PUBLIC_ETISALAT_CASH_ACCOUNT || "";
 
 const PRICE_PER_MESSAGE = 0.75;
 const TOPUP_MIN = 20;
-const TOPUP_MAX = 200;
+const TOPUP_ABS_MAX = 1000000;
 const PRESETS = [20, 50, 100, 200];
 
 type PaymentMethod = "instapay" | "etisalat";
@@ -82,7 +82,7 @@ export default function DeveloperCheckoutPage() {
 
   const effectiveAmount = customAmount.trim() ? parseInt(customAmount.trim(), 10) : amount;
   const amountValid =
-    Number.isInteger(effectiveAmount) && effectiveAmount >= TOPUP_MIN && effectiveAmount <= TOPUP_MAX;
+    Number.isInteger(effectiveAmount) && effectiveAmount >= TOPUP_MIN && effectiveAmount <= TOPUP_ABS_MAX && effectiveAmount % 5 === 0;
   const messages = amountValid ? Math.floor(effectiveAmount / PRICE_PER_MESSAGE) : 0;
 
   const devName = developer ? `${developer.firstName || ""} ${developer.lastName || ""}`.trim() : "";
@@ -240,7 +240,7 @@ export default function DeveloperCheckoutPage() {
             ) : (
               <>
                 <div className="card-panel">
-                  <h2 className="panel-title"><Wallet size={18} /> {t("Top-up amount (20–200 EGP)", "مبلغ الشحن (20–200 جنيه)")}</h2>
+                  <h2 className="panel-title"><Wallet size={18} /> {t("Top-up amount (min 20 EGP)", "مبلغ الشحن (20 جنيه على الأقل)")}</h2>
                   <div className="amount-grid">
                     {PRESETS.map((p) => (
                       <button
@@ -254,13 +254,12 @@ export default function DeveloperCheckoutPage() {
                       </button>
                     ))}
                   </div>
-                  <label className="field-label">{t("Or custom amount", "أو مبلغ مخصص")}</label>
+                  <label className="field-label">{t("Or custom amount (multiples of 5)", "أو مبلغ مخصص (بمضاعفات 5)")}</label>
                   <input
                     className="custom-input"
                     type="number"
                     min={TOPUP_MIN}
-                    max={TOPUP_MAX}
-                    placeholder={`${TOPUP_MIN} – ${TOPUP_MAX}`}
+                    placeholder={`${TOPUP_MIN}+`}
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     dir="ltr"
@@ -268,7 +267,7 @@ export default function DeveloperCheckoutPage() {
                   />
                   {customAmount.trim() && !amountValid && (
                     <p style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>
-                      {t(`Amount must be between ${TOPUP_MIN} and ${TOPUP_MAX} EGP`, `المبلغ لازم يكون بين ${TOPUP_MIN} و ${TOPUP_MAX} جنيه`)}
+                      {t(`Amount must be at least ${TOPUP_MIN} EGP in multiples of 5 (20, 25, 30, ...)`, `المبلغ لازم يكون ${TOPUP_MIN} جنيه على الأقل وبمضاعفات 5 (20، 25، 30، ...)`)}
                     </p>
                   )}
                 </div>

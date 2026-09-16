@@ -1,7 +1,7 @@
 export type IntegrationOperation = "send" | "verify" | "send-verify" | "status";
 export type IntegrationLanguage = "javascript" | "typescript" | "python" | "php" | "curl";
 
-export type QuickStartOperation = "send" | "verify" | "status";
+export type QuickStartOperation = "send" | "verify" | "send-verify" | "status";
 
 export interface IntegrationCodeOptions {
   operation: IntegrationOperation;
@@ -81,7 +81,7 @@ export function getOtpApiContract(
   operation: QuickStartOperation,
   templateId?: string
 ): OtpApiContract {
-  if (operation === "send") {
+  if (operation === "send" || operation === "send-verify") {
     return {
       method: "POST",
       path: "/send",

@@ -77,11 +77,15 @@ describe("portal-billing engine", () => {
     expect(d).toEqual({ allowed: true, source: "paid_wallet" });
   });
 
-  it("topup validation: 20–200 صحيح فقط", () => {
+  it("topup validation: 20 على الأقل وبمضاعفات 5 فقط", () => {
     expect(isValidTopupAmount(20)).toBe(true);
+    expect(isValidTopupAmount(25)).toBe(true);
+    expect(isValidTopupAmount(30)).toBe(true);
     expect(isValidTopupAmount(200)).toBe(true);
+    expect(isValidTopupAmount(5000)).toBe(true);
     expect(isValidTopupAmount(19)).toBe(false);
-    expect(isValidTopupAmount(201)).toBe(false);
+    expect(isValidTopupAmount(21)).toBe(false);
+    expect(isValidTopupAmount(39)).toBe(false);
     expect(isValidTopupAmount(50.5)).toBe(false);
     expect(isValidTopupAmount("50" as any)).toBe(false);
     expect(isValidTopupAmount(NaN)).toBe(false);

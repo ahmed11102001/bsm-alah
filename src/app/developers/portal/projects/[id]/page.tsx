@@ -77,6 +77,7 @@ export default function ProjectOverviewPage() {
 
   // Meta connect form
   const [showMetaForm, setShowMetaForm] = useState(false);
+  const [isMetaEdit, setIsMetaEdit] = useState(false);
   const [metaForm, setMetaForm] = useState({
     accessToken: "",
     phoneNumberId: "",
@@ -285,6 +286,8 @@ export default function ProjectOverviewPage() {
       }
 
       setShowMetaForm(false);
+      setIsMetaEdit(false);
+      setMetaForm({ accessToken: "", phoneNumberId: "", wabaId: "", displayPhone: "" });
       fetchAll();
     } catch {
       setMetaError(
@@ -578,6 +581,25 @@ export default function ProjectOverviewPage() {
     fetchAll();
   }
 
+  function openMetaEdit() {
+    if (!project?.metaConnection) return;
+    setMetaForm({
+      accessToken: "",
+      phoneNumberId: project.metaConnection.phoneNumberId || "",
+      wabaId: project.metaConnection.wabaId || "",
+      displayPhone: project.metaConnection.displayPhone || "",
+    });
+    setMetaError("");
+    setIsMetaEdit(true);
+    setShowMetaForm(true);
+  }
+
+  function closeMetaForm() {
+    setShowMetaForm(false);
+    setIsMetaEdit(false);
+    setMetaError("");
+  }
+
   function copyText(text: string, id: string) {
     navigator.clipboard.writeText(text);
     setCopied(id);
@@ -658,6 +680,16 @@ export default function ProjectOverviewPage() {
         .pov-header { margin-bottom: 28px; }
         .pov-title { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
         .pov-sub { font-size: 13px; color: rgba(255,255,255,0.4); }
+
+        .proj-id-row {
+          display: inline-flex; align-items: center; gap: 10px;
+          margin-top: 12px; padding: 8px 12px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px;
+        }
+        .proj-id-label { font-size: 11px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.5px; }
+        .proj-id-value { font-size: 12px; color: rgba(255,255,255,0.75); font-family: 'Fira Code', monospace; direction: ltr; }
 
         .pov-stats {
           display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
@@ -892,6 +924,23 @@ export default function ProjectOverviewPage() {
           background: rgba(239,68,68,0.15);
         }
 
+        .btn-edit-meta {
+          padding: 6px 14px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.65);
+          font-size: 12px;
+          cursor: pointer;
+          transition: background 0.2s;
+          font-family: inherit;
+        }
+
+        .btn-edit-meta:hover {
+          background: rgba(255,255,255,0.1);
+          color: #fff;
+        }
+
         .meta-form { margin-top: 16px; }
 
         .form-field { margin-bottom: 14px; }
@@ -1054,6 +1103,22 @@ export default function ProjectOverviewPage() {
               "كل البيانات دي خاصة بالمشروع ده بس"
             )}
           </p>
+
+          <div className="proj-id-row">
+            <span className="proj-id-label">Project ID</span>
+            <code className="proj-id-value">{project.id}</code>
+            <button
+              className="copy-btn"
+              onClick={() => copyText(project.id, "project-id")}
+              title={t("Copy Project ID", "نسخ معرف المشروع")}
+            >
+              {copied === "project-id" ? (
+                <Check size={12} />
+              ) : (
+                <Copy size={12} />
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="pov-stats">
@@ -1158,23 +1223,6 @@ export default function ProjectOverviewPage() {
                       {k.name}
                     </span>
                   )}
-
-                  <button
-                    className="copy-btn"
-                    onClick={() =>
-                      copyText(k.keyPrefix, k.id)
-                    }
-                    title={t(
-                      "Copy prefix",
-                      "نسخ الـ prefix"
-                    )}
-                  >
-                    {copied === k.id ? (
-                      <Check size={12} />
-                    ) : (
-                      <Copy size={12} />
-                    )}
-                  </button>
                 </div>
               ))
             )}
@@ -1287,16 +1335,24 @@ export default function ProjectOverviewPage() {
             </span>
 
             {metaConnected && (
-              <button
-                className="btn-disconnect"
-                onClick={disconnectMeta}
-              >
-                {t("Disconnect", "قطع الاتصال")}
-              </button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  className="btn-edit-meta"
+                  onClick={openMetaEdit}
+                >
+                  {t("Edit", "تعديل")}
+                </button>
+                <button
+                  className="btn-disconnect"
+                  onClick={disconnectMeta}
+                >
+                  {t("Disconnect", "قطع الاتصال")}
+                </button>
+              </div>
             )}
           </div>
 
-          {metaConnected && project.metaConnection ? (
+          {metaConnected && project.metaConnection && !showMetaForm ? (
             <>
               <div
                 className="meta-connected-row"
@@ -1549,7 +1605,7 @@ export default function ProjectOverviewPage() {
                         : "left",
                   }}
                 >
-                  Access Token *
+                  Access Token {isMetaEdit ? t("(optional — leave empty to keep current)", "(اختياري — سيبه فاضي للاحتفاظ بالحالي)") : "*"}
                 </label>
 
                 <input
@@ -1690,9 +1746,7 @@ export default function ProjectOverviewPage() {
               >
                 <button
                   className="btn-cancel-form"
-                  onClick={() =>
-                    setShowMetaForm(false)
-                  }
+                  onClick={closeMetaForm}
                 >
                   {t("Cancel", "إلغاء")}
                 </button>
@@ -1707,10 +1761,12 @@ export default function ProjectOverviewPage() {
                         "Connecting...",
                         "جاري الربط..."
                       )
-                    : t(
-                        "Connect Meta",
-                        "ربط Meta"
-                      )}
+                    : isMetaEdit
+                      ? t("Save changes", "حفظ التعديلات")
+                      : t(
+                          "Connect Meta",
+                          "ربط Meta"
+                        )}
                 </button>
               </div>
             </div>

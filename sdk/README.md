@@ -31,7 +31,7 @@ const wani = new Wani({
 
 // 1. Send an OTP (templateId is shown next to each template in the portal)
 const sent = await wani.otp.send({
-  phone: "201012345678",
+  phone: "2010xxxxxxxx",
   templateId: "YOUR_TEMPLATE_ID",
   expiryMinutes: 10, // optional, default 10
 });
@@ -57,7 +57,7 @@ For backwards compatibility with existing integrations you may pass a **`templat
 
 ```ts
 await wani.otp.send({
-  phone: "201012345678",
+  phone: "2010xxxxxxxx",
   templateName: "otp_verification",
   language: "en_US", // only needed when the name exists in several languages
 });
