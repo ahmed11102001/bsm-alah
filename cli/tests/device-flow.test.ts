@@ -2,7 +2,7 @@ import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { pollDeviceToken, requestDeviceCode } from "../src/auth/device-flow.js";
-import { loginCommand } from "../src/commands/auth/login.js";
+import { loginCommand, verificationHasTicket } from "../src/commands/auth/login.js";
 import { logoutCommand } from "../src/commands/auth/logout.js";
 import type { CommandContext } from "../src/commands/context.js";
 import type { CliConfig } from "../src/config/config.js";
@@ -100,6 +100,15 @@ describe("pollDeviceToken", () => {
   });
 });
 
+describe("verificationHasTicket", () => {
+  it("detects ticket URLs vs bare authorize paths", () => {
+    assert.equal(verificationHasTicket("https://x/cli/authorize?ticket=" + "a".repeat(64)), true);
+    assert.equal(verificationHasTicket("https://x/developers/cli/authorize"), false);
+    assert.equal(verificationHasTicket("https://x/cli/authorize?code=ABCD-1234"), false);
+    assert.equal(verificationHasTicket("not a url"), false);
+  });
+});
+
 describe("loginCommand (seamless browser flow, no passwords, no codes)", () => {
   const TICKET_URI = "/developers/cli/authorize?ticket=" + "b".repeat(64);
 
@@ -141,9 +150,48 @@ describe("loginCommand (seamless browser flow, no passwords, no codes)", () => {
     await loginCommand(ctx, parseArgs([]), { openBrowser: (url) => { opened.push(url); return true; } });
     assert.equal(saved.config?.cliAccessToken, "wani_cli_saved");
     // The exact ticket URL from the server is opened (query preserved).
-    assert.deepEqual(opened, [`https://api.test/developers/cli/authorize?ticket=${"b".repeat(64)}`]);
+    assert.deepStrictEqual(opened, [`https://api.test/developers/cli/authorize?ticket=${"b".repeat(64)}`]);
     assert.ok(seen.some((u) => u.endsWith("/cli/device/code")));
     assert.ok(seen.some((u) => u.endsWith("/auth/me")));
+  });
+
+  it("ticket-less server (old portal) falls back to showing the backup code", async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: any) => {
+      seen.push(String(url));
+      const u = String(url);
+      if (u.endsWith("/cli/device/code")) {
+        return jsonRes(200, {
+          device_code: "dev-old",
+          user_code: "AAAA-1111",
+          verification_uri: "/developers/cli/authorize",
+          expires_in: 600,
+        });
+      }
+      if (u.endsWith("/cli/device/token")) {
+        return jsonRes(200, { access_token: "tok-old", token_type: "Bearer", expires_in: 100 });
+      }
+      return jsonRes(200, { developer: { email: "dev@x.com" } });
+    }) as any;
+    let captured = "";
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: unknown) => { captured += String(chunk); return true; }) as typeof process.stdout.write;
+    try {
+      const saved: { config: CliConfig | null } = { config: null };
+      const ctx = baseCtx({
+        config: { version: 2, apiKeys: {} },
+        fetchImpl,
+        saveConfig: (c) => { saved.config = c; },
+      });
+      const opened: string[] = [];
+      await loginCommand(ctx, parseArgs([]), { openBrowser: (url) => { opened.push(url); return true; } });
+      assert.deepStrictEqual(opened, ["https://api.test/developers/cli/authorize"]);
+      assert.match(captured, /AAAA-1111/);
+      assert.match(captured, /manual entry/);
+      assert.equal(saved.config?.cliAccessToken, "tok-old");
+    } finally {
+      process.stdout.write = origWrite;
+    }
   });
 
   it("--no-open prints the URL and backup code instead of opening", async () => {
@@ -204,5 +252,6 @@ describe("logoutCommand", () => {
     assert.equal(saved.config?.cliAccessToken, undefined);
   });
 });
+
 
 

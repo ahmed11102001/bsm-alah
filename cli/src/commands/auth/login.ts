@@ -27,8 +27,8 @@ interface MeResponse {
 export const LOGIN_HELP = `wani login [--no-open]
 
 Log in via the browser (device flow). No email or password is ever typed
-in the terminal: the CLI shows a code, opens the portal approval page,
-and waits until you approve (or the request expires).
+in the terminal: the CLI opens the portal approval page and waits until
+you approve (or the request expires).
 
   wani login              Open the browser and wait for approval
   wani login --no-open    Print the approval URL instead (SSH / servers)
@@ -40,6 +40,16 @@ revoke it anytime from Portal Settings → CLI & Integrations, or with
 
 export interface LoginDeps {
   openBrowser?: ((url: string) => boolean) | undefined;
+}
+
+/**
+ * True when the server embedded a seamless approval ticket in the URL.
+ * Older portals return a bare authorize path — the CLI then falls back to
+ * showing the backup user code for manual entry on that page.
+ */
+export function verificationHasTicket(url: string): boolean {
+  const query = url.split("?", 2)[1] ?? "";
+  return new URLSearchParams(query).has("ticket");
 }
 
 export async function loginCommand(
@@ -57,18 +67,33 @@ export async function loginCommand(
   });
   const url = authorizePageUrl(ctx.baseUrl, started.verificationUri);
 
+  const seamless = verificationHasTicket(url);
+
   if (ctx.json) {
-    printJson({ ok: true, verification_uri: url, expires_in: started.expiresInSecs });
+    printJson({
+      ok: true,
+      verification_uri: url,
+      seamless,
+      ...(seamless ? {} : { user_code: started.userCode }),
+      expires_in: started.expiresInSecs,
+    });
     openBrowser(url);
   } else if (noOpen) {
     printLine("Open this URL in your browser to approve:");
     printLine(`  ${url}`);
-    printLine(`Backup code (if the link does not work): ${started.userCode}`);
+    printLine(
+      seamless
+        ? `Backup code (if the link does not work): ${started.userCode}`
+        : `This portal version needs manual entry — type this code on the page: ${started.userCode}`
+    );
   } else {
     printLine("Opening Wani in your browser...");
     if (!openBrowser(url)) {
       printLine("Could not open a browser automatically — open this URL manually:");
       printLine(`  ${url}`);
+    }
+    if (!seamless) {
+      printLine(`When the page asks for a code, enter: ${started.userCode}`);
     }
   }
 
