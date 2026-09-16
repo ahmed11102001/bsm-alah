@@ -182,7 +182,14 @@ export async function proxy(req: NextRequest) {
   // على الدومين الرئيسي: يفضل زي ما هو (rawPathname == pathname دايمًا).
   // استثناء: ملفات الميتا الجذرية (robots.txt / sitemap.xml) بتتخدم من نفس
   // الـ route على أي هوست — ومحتواها بقى dual-host أصلًا — فبتعدي من غير prefix.
-  const DEV_HOST_PASSTHROUGH = new Set(["/robots.txt", "/sitemap.xml"]);
+  // OAuth continuation pages are shared app routes, not developer portal pages.
+  // Keep them unprefixed on developers.aiwni.com so /auth/callback resolves.
+  const DEV_HOST_PASSTHROUGH = new Set([
+    "/robots.txt",
+    "/sitemap.xml",
+    "/auth/callback",
+    "/auth/google-signup",
+  ]);
   const pathname = (onDevHost && !rawPathname.startsWith("/api") && !DEV_HOST_PASSTHROUGH.has(rawPathname))
     ? `/developers${rawPathname === "/" ? "" : rawPathname}`
     : rawPathname;

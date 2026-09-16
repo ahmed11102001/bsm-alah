@@ -33,6 +33,7 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
   // ── لو جاي من /checkout بدون session (عن طريق الـ middleware) ──────────────
   const callbackUrl = params.get("callbackUrl");
   const shouldOpenLogin = params.get("openLogin") === "1";
+  const hasSignupContinuation = params.has("signupToken");
 
   useEffect(() => {
     if (shouldOpenLogin) setIsLoginModalOpen(true);
@@ -49,8 +50,10 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
   }, [initialLang]);
 
   useEffect(() => {
-    if (session) router.push(callbackUrl || "/dashboard");
-  }, [session, router, callbackUrl]);
+    if (session && !shouldOpenLogin && !hasSignupContinuation) {
+      router.push(callbackUrl || "/dashboard");
+    }
+  }, [session, router, callbackUrl, shouldOpenLogin, hasSignupContinuation]);
 
   const handleLangChange = (newLang: Lang) => {
     setLang(newLang);
@@ -65,7 +68,7 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
   };
 
   if (status === "loading") return <LandingPageSkeleton lang={lang} />;
-  if (session) return null;
+  if (session && !shouldOpenLogin && !hasSignupContinuation) return null;
 
   return (
     <div className="min-h-screen bg-white">
