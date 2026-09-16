@@ -446,15 +446,14 @@ export const ownerPlanRenewalCheck = inngest.createFunction(
       }).catch(() => {});
       const targetId = project.ownerId ?? project.developerId;
       if (targetId) {
-        await prisma.developerNotification.create({
-          data: {
-            developerId: targetId,
-            type: "BILLING",
-            title: "تجددت حصتك الشهرية المجانية",
-            message: `نزلت 30 رسالة مجانية جديدة لمشروع "${project.name}" — الاستهلاك هيقف من الرصيد المدفوع لحد ما يخلصوا.`,
-            link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
-          },
-        }).catch(() => {});
+        const { notifyDeveloper } = await import("@/lib/dev-notifications");
+        await notifyDeveloper(targetId, {
+          type: "BILLING",
+          title: "تجددت حصتك الشهرية المجانية",
+          message: `نزلت 30 رسالة مجانية جديدة لمشروع "${project.name}" — الاستهلاك هيقف من الرصيد المدفوع لحد ما يخلصوا.`,
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
+          dedupHours: 24,
+        });
       }
     }
 
@@ -473,22 +472,55 @@ export const ownerPlanRenewalCheck = inngest.createFunction(
     for (const project of indebted) {
       const targetId = project.ownerId ?? project.developerId;
       if (!targetId) continue;
-      await prisma.developerNotification.create({
-        data: {
-          developerId: targetId,
-          type: "BILLING",
-          title: project.paidBalanceEGP < 0 ? "مشروعك في مديونية" : "رصيد مشروعك خلص",
-          message: `رصيد مشروع "${project.name}": ${project.paidBalanceEGP.toFixed(2)}ج — اشحن من صفحة الفوترة قبل توقف الإرسال عند -10ج.`,
-          link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
-        },
-      }).catch(() => {});
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      await notifyDeveloper(targetId, {
+        type: "BILLING",
+        title: project.paidBalanceEGP < 0 ? "مشروعك في مديونية" : "رصيد مشروعك خلص",
+        message: `رصيد مشروع "${project.name}": ${project.paidBalanceEGP.toFixed(2)}ج — اشحن من صفحة الفوترة قبل توقف الإرسال عند -10ج.`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
+        dedupHours: 24,
+      });
       await prisma.developerProject.update({
         where: { id: project.id },
         data: { debtNotifiedAt: now },
       }).catch(() => {});
     }
 
-    return { processed: dueRenewal.length + indebted.length };
+    // 3) الـ Trial هيخلص خلال 3 أيام ولسه فيه رصيد متبقي → تنبيه مرة واحدة
+    const trialExpiring = await step.run("get-trial-expiring-projects", async () => {
+      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const candidates = await prisma.developerProject.findMany({
+        where: {
+          status: "ACTIVE",
+          trialEndsAt: { gt: now, lte: threeDaysFromNow },
+        },
+        select: {
+          id: true, name: true, ownerId: true, developerId: true,
+          trialCreditsTotal: true, trialCreditsUsed: true, trialEndsAt: true,
+        },
+      });
+      return candidates.filter((p) => p.trialCreditsUsed < p.trialCreditsTotal);
+    });
+
+    for (const project of trialExpiring) {
+      const targetId = project.ownerId ?? project.developerId;
+      if (!targetId) continue;
+      const daysLeft = Math.max(
+        1,
+        Math.ceil((new Date(project.trialEndsAt!).getTime() - now.getTime()) / 86_400_000)
+      );
+      const left = project.trialCreditsTotal - project.trialCreditsUsed;
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      await notifyDeveloper(targetId, {
+        type: "TRIAL_EXPIRING",
+        title: "الرصيد التجريبي هيخلص قريب",
+        message: `متبقي ${left} رسالة تجريبية لمشروع "${project.name}" والفترة تنتهي خلال ${daysLeft} يوم — اشحن الرصيد عشان الإرسال ميقفش.`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${project.id}/billing`,
+        dedupHours: 72,
+      });
+    }
+
+    return { processed: dueRenewal.length + indebted.length + trialExpiring.length };
   }
 );
 

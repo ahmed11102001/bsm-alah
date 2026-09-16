@@ -18,6 +18,7 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn().mockResolvedValue({}),
   },
   developerNotification: {
+    findFirst: vi.fn(),
     create: vi.fn().mockResolvedValue({}),
   },
   otpLog: {
@@ -137,6 +138,7 @@ describe("Developers OTP Send — /api/developers/otp/send", () => {
     mockPrisma.developerApiKey.update.mockResolvedValue({});
     mockPrisma.developerProject.findUnique.mockResolvedValue({ ...billingState });
     mockPrisma.developerProject.update.mockResolvedValue({ paidBalanceEGP: 0 });
+    mockPrisma.developerNotification.findFirst.mockResolvedValue(null);
     mockPrisma.projectLedgerEntry.create.mockResolvedValue({});
     mockPrisma.developerNotification.create.mockResolvedValue({});
     mockPrisma.otpLog.create.mockResolvedValue({});

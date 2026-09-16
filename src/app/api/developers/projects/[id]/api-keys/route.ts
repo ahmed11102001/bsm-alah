@@ -110,6 +110,18 @@ export async function POST(
       }
     }).catch(() => {});
 
+    // إشعار — fire-and-forget
+    void (async () => {
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+      await notifyDeveloper(session.id, {
+        type: "API_KEY",
+        title: "مفتاح API جديد",
+        message: `اتعمل مفتاح جديد${name ? ` (${name})` : ""} لمشروع "${project.name}".`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${id}/api-keys`,
+      });
+    })();
+
     return NextResponse.json({
       ok: true,
       key: { prefix, fullKey, name: name || null },
@@ -148,6 +160,17 @@ export async function DELETE(
       where: { id: keyId },
       data: { status: "REVOKED", revokedAt: new Date() },
     });
+
+    void (async () => {
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+      await notifyDeveloper(session.id, {
+        type: "API_KEY",
+        title: "اتلغى مفتاح API",
+        message: `اتلغى مفتاح${key.name ? ` (${key.name})` : ""} من مشروع "${project.name}".`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${id}/api-keys`,
+      });
+    })();
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -10,12 +10,37 @@ import {
   RefreshCw,
   ExternalLink,
   X,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Key,
+  Wifi,
+  Share2,
+  Wallet,
+  FlaskConical,
 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
+type NotificationType =
+  | "META_UPDATE"
+  | "BILLING"
+  | "SECURITY"
+  | "SYSTEM"
+  | "TRIAL_WARNING"
+  | "TRIAL_EXPIRING"
+  | "PLAN_EXPIRING_SOON"
+  | "PLAN_EXPIRED"
+  | "TOPUP_APPROVED"
+  | "TOPUP_REJECTED"
+  | "BALANCE_LOW"
+  | "DEBT_CLEARED"
+  | "API_KEY"
+  | "META_CONNECTION"
+  | "TRANSFER";
+
 interface Notification {
   id: string;
-  type: "META_UPDATE" | "BILLING" | "SECURITY" | "SYSTEM";
+  type: NotificationType;
   title: string;
   message: string;
   isRead: boolean;
@@ -25,11 +50,17 @@ interface Notification {
 
 /* ── Config per type ───────────────────────────────────────────────────────── */
 const TYPE_CONFIG: Record<
-  Notification["type"],
+  NotificationType,
   { icon: typeof Bell; color: string; bg: string; label: string }
 > = {
   META_UPDATE: {
     icon: RefreshCw,
+    color: "#22c55e",
+    bg: "rgba(34,197,94,0.10)",
+    label: "Meta",
+  },
+  META_CONNECTION: {
+    icon: Wifi,
     color: "#22c55e",
     bg: "rgba(34,197,94,0.10)",
     label: "Meta",
@@ -39,6 +70,66 @@ const TYPE_CONFIG: Record<
     color: "#f59e0b",
     bg: "rgba(245,158,11,0.10)",
     label: "فوترة",
+  },
+  BALANCE_LOW: {
+    icon: Wallet,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.10)",
+    label: "رصيد",
+  },
+  TOPUP_APPROVED: {
+    icon: CheckCircle2,
+    color: "#20d378",
+    bg: "rgba(32,211,120,0.10)",
+    label: "شحن",
+  },
+  TOPUP_REJECTED: {
+    icon: XCircle,
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.10)",
+    label: "شحن",
+  },
+  DEBT_CLEARED: {
+    icon: CheckCircle2,
+    color: "#20d378",
+    bg: "rgba(32,211,120,0.10)",
+    label: "مديونية",
+  },
+  TRIAL_WARNING: {
+    icon: FlaskConical,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.10)",
+    label: "تجريبي",
+  },
+  TRIAL_EXPIRING: {
+    icon: AlertTriangle,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.10)",
+    label: "تجريبي",
+  },
+  PLAN_EXPIRING_SOON: {
+    icon: AlertTriangle,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.10)",
+    label: "باقة",
+  },
+  PLAN_EXPIRED: {
+    icon: XCircle,
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.10)",
+    label: "باقة",
+  },
+  API_KEY: {
+    icon: Key,
+    color: "#a78bfa",
+    bg: "rgba(167,139,250,0.10)",
+    label: "مفتاح",
+  },
+  TRANSFER: {
+    icon: Share2,
+    color: "#60a5fa",
+    bg: "rgba(96,165,250,0.10)",
+    label: "تسليم",
   },
   SECURITY: {
     icon: ShieldCheck,
@@ -52,6 +143,13 @@ const TYPE_CONFIG: Record<
     bg: "rgba(99,102,241,0.10)",
     label: "نظام",
   },
+};
+
+const FALLBACK_CONFIG = {
+  icon: Info,
+  color: "#6366f1",
+  bg: "rgba(99,102,241,0.10)",
+  label: "نظام",
 };
 
 /* ── Time ago helper ───────────────────────────────────────────────────────── */
@@ -490,7 +588,7 @@ export default function NotificationBell() {
                 </div>
               ) : (
                 notifications.map((n) => {
-                  const cfg = TYPE_CONFIG[n.type];
+                  const cfg = TYPE_CONFIG[n.type] ?? FALLBACK_CONFIG;
                   const Icon = cfg.icon;
                   return (
                     <div
@@ -498,7 +596,10 @@ export default function NotificationBell() {
                       className={`nbell-item ${!n.isRead ? "unread" : ""}`}
                       onClick={() => {
                         if (!n.isRead) markRead(n.id);
-                        if (n.link) window.open(n.link, "_blank");
+                        if (n.link) {
+                          setOpen(false);
+                          window.location.assign(n.link);
+                        }
                       }}
                     >
                       <div

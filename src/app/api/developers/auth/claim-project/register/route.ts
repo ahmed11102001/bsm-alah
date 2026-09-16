@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     if (invite.role === "OWNER") {
       const { newMonthlyPeriod } = await import("@/lib/portal-billing");
       const { start, end } = newMonthlyPeriod();
-      await prisma.developerProject.update({
+      const claimed = await prisma.developerProject.update({
         where: { id: invite.projectId },
         // بداية الحصة الشهرية المجانية (30) من لحظة التسليم — الرصيد المدفوع ينتقل كاملًا
         data: {
@@ -78,7 +78,20 @@ export async function POST(req: NextRequest) {
           monthlyPeriodStart: start,
           monthlyPeriodEnd: end,
         },
+        select: { developerId: true, name: true },
       });
+
+      // إشعار المطور: العميل استلم المشروع
+      void (async () => {
+        const { notifyDeveloper } = await import("@/lib/dev-notifications");
+        const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+        await notifyDeveloper(claimed.developerId, {
+          type: "TRANSFER",
+          title: "العميل استلم المشروع",
+          message: `استلم "${newUser.firstName} ${newUser.lastName}" مشروع "${claimed.name}" — بدأت حصته الشهرية (30 رسالة مجانية).`,
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${invite.projectId}`,
+        });
+      })();
     } else {
       await prisma.developerProject.update({
         where: { id: invite.projectId },

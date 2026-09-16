@@ -48,6 +48,19 @@ export async function POST(
           updatedAt: new Date(),
         },
       });
+
+      void (async () => {
+        const { notifyDeveloper } = await import("@/lib/dev-notifications");
+        const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+        await notifyDeveloper(session.id, {
+          type: "META_CONNECTION",
+          title: "اتحدث ربط Meta",
+          message: `اتحدثت بيانات ربط Meta لمشروع "${project.name}" (نفس التوكن).`,
+          link: `${DEVELOPERS_BASE_URL}/portal/projects/${id}`,
+          dedupHours: 1,
+        });
+      })();
+
       return NextResponse.json({ ok: true });
     }
 
@@ -70,6 +83,7 @@ export async function POST(
     // (التحقق الفعلي من Meta بيحصل لما يحاول يرسل OTP — لو البيانات غلط هيجي خطأ من Meta)
     // تشفير الـ accessToken قبل الحفظ في DB
     const encryptedToken = encryptToken(accessToken);
+    const isEdit = !!existing;
 
     await prisma.developerMetaConnection.upsert({
       where: { projectId: id },
@@ -90,6 +104,20 @@ export async function POST(
         isVerified: true,
       },
     });
+
+    void (async () => {
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+      await notifyDeveloper(session.id, {
+        type: "META_CONNECTION",
+        title: isEdit ? "اتحدث ربط Meta" : "تم ربط Meta",
+        message: isEdit
+          ? `اتحدثت بيانات ربط Meta لمشروع "${project.name}".`
+          : `اترابط مشروع "${project.name}" بـ Meta بنجاح.`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${id}`,
+        dedupHours: isEdit ? 1 : undefined,
+      });
+    })();
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -114,6 +142,17 @@ export async function DELETE(
     await prisma.developerMetaConnection.deleteMany({
       where: { projectId: id },
     });
+
+    void (async () => {
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+      await notifyDeveloper(session.id, {
+        type: "META_CONNECTION",
+        title: "اتقطع ربط Meta",
+        message: `اتقطع ربط Meta من مشروع "${project.name}" — مش هيقدر يرسل OTP.`,
+        link: `${DEVELOPERS_BASE_URL}/portal/projects/${id}`,
+      });
+    })();
 
     return NextResponse.json({ ok: true });
   } catch (err) {

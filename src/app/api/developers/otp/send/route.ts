@@ -529,14 +529,13 @@ export async function POST(req: NextRequest) {
     billing.trialCreditsUsed >= Math.floor(TRIAL_CREDITS * 0.8) &&
     !billingState.trialWarningNotifiedAt
   ) {
-    await prisma.developerNotification.create({
-      data: {
-        developerId: auth.developerId,
-        type: "TRIAL_WARNING",
-        title: "تنبيه استهلاك الرصيد التجريبي",
-        message: `وصلت لـ 80% من الرصيد التجريبي (${billing.trialCreditsUsed} من ${billing.trialCreditsTotal}) لمشروعك.`,
-        link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`
-      }
+    const { notifyDeveloper } = await import("@/lib/dev-notifications");
+    await notifyDeveloper(auth.developerId, {
+      type: "TRIAL_WARNING",
+      title: "تنبيه استهلاك الرصيد التجريبي",
+      message: `وصلت لـ 80% من الرصيد التجريبي (${billing.trialCreditsUsed} من ${billing.trialCreditsTotal}) لمشروعك.`,
+      link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
+      dedupHours: 24,
     });
     await prisma.developerProject.update({
       where: { id: auth.projectId },
@@ -711,6 +710,8 @@ export async function POST(req: NextRequest) {
 
       // تنبيهات الرصيد المنخفض / المديونية (مرة واحدة لكل حالة)
       const { messagesFromBalance, LOW_BALANCE_MSGS, MAX_DEBT_EGP } = await import("@/lib/portal-billing");
+      const { notifyDeveloper } = await import("@/lib/dev-notifications");
+      const billingLink = `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`;
       const fresh = await prisma.developerProject.findUnique({
         where: { id: auth.projectId },
         select: { paidBalanceEGP: true, lowBalanceNotifiedAt: true, debtNotifiedAt: true },
@@ -723,30 +724,26 @@ export async function POST(req: NextRequest) {
           fresh.paidBalanceEGP >= 0 &&
           !billingState.lowBalanceNotifiedAt
         ) {
-          await prisma.developerNotification.create({
-            data: {
-              developerId: notifyTargetId,
-              type: "BILLING",
-              title: "رصيد المشروع قرب يخلص",
-              message: `متبقي ${messagesFromBalance(fresh.paidBalanceEGP)} رسالة تقريبًا (الرصيد ${fresh.paidBalanceEGP.toFixed(2)}ج) — اشحن من صفحة الفوترة.`,
-              link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
-            },
-          }).catch(() => {});
+          await notifyDeveloper(notifyTargetId, {
+            type: "BALANCE_LOW",
+            title: "رصيد المشروع قرب يخلص",
+            message: `متبقي ${messagesFromBalance(fresh.paidBalanceEGP)} رسالة تقريبًا (الرصيد ${fresh.paidBalanceEGP.toFixed(2)}ج) — اشحن من صفحة الفوترة.`,
+            link: billingLink,
+            dedupHours: 24,
+          });
           await prisma.developerProject.update({
             where: { id: auth.projectId },
             data: { lowBalanceNotifiedAt: new Date() },
           }).catch(() => {});
         }
         if (fresh.paidBalanceEGP < 0 && !billingState.debtNotifiedAt) {
-          await prisma.developerNotification.create({
-            data: {
-              developerId: notifyTargetId,
-              type: "BILLING",
-              title: "المشروع دخل مديونية",
-              message: `رصيد المشروع ${fresh.paidBalanceEGP.toFixed(2)}ج (الحد الأقصى ${MAX_DEBT_EGP}ج) — اشحن الرصيد قبل توقف الإرسال.`,
-              link: `${DEVELOPERS_BASE_URL}/portal/projects/${auth.projectId}/billing`,
-            },
-          }).catch(() => {});
+          await notifyDeveloper(notifyTargetId, {
+            type: "BILLING",
+            title: "المشروع دخل مديونية",
+            message: `رصيد المشروع ${fresh.paidBalanceEGP.toFixed(2)}ج (الحد الأقصى ${MAX_DEBT_EGP}ج) — اشحن الرصيد قبل توقف الإرسال.`,
+            link: billingLink,
+            dedupHours: 24,
+          });
           await prisma.developerProject.update({
             where: { id: auth.projectId },
             data: { debtNotifiedAt: new Date() },

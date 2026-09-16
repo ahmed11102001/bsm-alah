@@ -377,11 +377,17 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       throw new ManualPaymentError("طلب الشحن ده مش مربوط بأي مشروع", 400);
     }
 
+    const projectId = request.developerProjectId as string;
+    const before = await prisma.developerProject.findUnique({
+      where: { id: projectId },
+      select: { paidBalanceEGP: true, name: true },
+    });
+
     await prisma.$transaction(async (tx) => {
       await claimPending(tx);
 
       const updated = await tx.developerProject.update({
-        where: { id: request.developerProjectId as string },
+        where: { id: projectId },
         data: {
           paidBalanceEGP: { increment: request.amount },
           lowBalanceNotifiedAt: null,
@@ -392,7 +398,7 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
 
       await tx.projectLedgerEntry.create({
         data: {
-          projectId: request.developerProjectId as string,
+          projectId,
           usageType: "otp",
           source: "topup",
           quantity: 0,
@@ -402,26 +408,39 @@ export async function approvePaymentRequest(requestId: string, adminId: string) 
       });
     });
 
-    // إشعار صاحب الرصيد (المطور أو الأونر الحالي)
-    try {
-      const proj = await prisma.developerProject.findUnique({
-        where: { id: request.developerProjectId as string },
-        select: { ownerId: true, developerId: true },
-      });
-      const targetId = proj?.ownerId ?? proj?.developerId;
-      if (targetId) {
-        await prisma.developerNotification.create({
-          data: {
-            developerId: targetId,
-            type: "BILLING",
-            title: "تم شحن رصيد المشروع",
-            message: `اتشحن ${request.amount}ج لرصيد مشروعك بنجاح.`,
-          },
+    // إشعار صاحب الرصيد (المطور أو الأونر الحالي) — fire-and-forget
+    void (async () => {
+      try {
+        const proj = await prisma.developerProject.findUnique({
+          where: { id: projectId },
+          select: { ownerId: true, developerId: true },
         });
+        const targetId = proj?.ownerId ?? proj?.developerId;
+        if (!targetId) return;
+        const { notifyDeveloper } = await import("@/lib/dev-notifications");
+        const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+        const billingLink = `${DEVELOPERS_BASE_URL}/portal/projects/${projectId}/billing`;
+        const wasInDebt = (before?.paidBalanceEGP ?? 0) < 0;
+        await notifyDeveloper(targetId, {
+          type: "TOPUP_APPROVED",
+          title: "تم شحن رصيد المشروع",
+          message: wasInDebt
+            ? `اتشحن ${request.amount}ج لرصيد مشروع "${before?.name ?? ""}" — المديونية اتسددت والرصيد رجع موجب.`
+            : `اتشحن ${request.amount}ج لرصيد مشروع "${before?.name ?? ""}" بنجاح.`,
+          link: billingLink,
+        });
+        if (wasInDebt) {
+          await notifyDeveloper(targetId, {
+            type: "DEBT_CLEARED",
+            title: "المديونية اتسددت",
+            message: `رصيد مشروع "${before?.name ?? ""}" رجع موجب بعد الشحن.`,
+            link: billingLink,
+          });
+        }
+      } catch (err) {
+        console.error("[ManualPayment] Topup notify failed:", err);
       }
-    } catch (err) {
-      console.error("[ManualPayment] Topup notify failed:", err);
-    }
+    })();
   }
 
   // ── Conversions API (server-side Purchase) ──
@@ -491,6 +510,42 @@ export async function rejectPaymentRequest(
 
   if (claimed.count === 0) {
     throw new ManualPaymentError("تمت مراجعة هذا الطلب بالفعل", 400);
+  }
+
+  // إشعار المطور/الأونر برفض طلب الشحن — fire-and-forget
+  if (
+    (request.type as string) === "developer_topup" ||
+    (request.type as string) === "developer_owner_plan"
+  ) {
+    void (async () => {
+      try {
+        const { notifyDeveloper } = await import("@/lib/dev-notifications");
+        const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+        let targetId: string | null = null;
+        let link: string | null = null;
+        if (request.developerProjectId) {
+          const proj = await prisma.developerProject.findUnique({
+            where: { id: request.developerProjectId },
+            select: { ownerId: true, developerId: true },
+          });
+          targetId = proj?.ownerId ?? proj?.developerId ?? null;
+          link = `${DEVELOPERS_BASE_URL}/portal/projects/${request.developerProjectId}/billing`;
+        } else if (request.developerUserId) {
+          targetId = request.developerUserId;
+        }
+        if (!targetId) return;
+        await notifyDeveloper(targetId, {
+          type: "TOPUP_REJECTED",
+          title: "اترفض طلب الشحن",
+          message: reason
+            ? `اترفض طلب شحن ${request.amount}ج — السبب: ${reason}`
+            : `اترفض طلب شحن ${request.amount}ج — تواصل مع الدعم للتفاصيل.`,
+          link,
+        });
+      } catch (err) {
+        console.error("[ManualPayment] Reject notify failed:", err);
+      }
+    })();
   }
 
   return prisma.paymentRequest.findUnique({ where: { id: requestId } });

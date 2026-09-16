@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     if (invite.role === "OWNER") {
       const existing = await prisma.developerProject.findUnique({
         where: { id: invite.projectId },
-        select: { ownerId: true },
+        select: { ownerId: true, developerId: true, name: true },
       });
       if (!existing?.ownerId) {
         // أول تسليم → بداية الحصة الشهرية المجانية (30) من اللحظة دي
@@ -81,6 +81,19 @@ export async function POST(req: NextRequest) {
             monthlyPeriodEnd: end,
           },
         });
+
+        // إشعار المطور: العميل استلم المشروع
+        void (async () => {
+          const { notifyDeveloper } = await import("@/lib/dev-notifications");
+          const { DEVELOPERS_BASE_URL } = await import("@/lib/dev-links");
+          if (!existing?.developerId) return;
+          await notifyDeveloper(existing.developerId, {
+            type: "TRANSFER",
+            title: "العميل استلم المشروع",
+            message: `استلم "${existingUser.firstName} ${existingUser.lastName}" مشروع "${existing.name}" — بدأت حصته الشهرية (30 رسالة مجانية).`,
+            link: `${DEVELOPERS_BASE_URL}/portal/projects/${invite.projectId}`,
+          });
+        })();
       } else {
         await prisma.developerProject.update({
           where: { id: invite.projectId },
