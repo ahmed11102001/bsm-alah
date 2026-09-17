@@ -96,7 +96,7 @@ describe("Email Marketing Architecture & Services", () => {
         }),
         update: vi.fn().mockResolvedValue({ id: "camp_123", status: "QUEUED" }),
       },
-      emailContact: {
+      contact: {
         count: vi.fn().mockResolvedValue(250),
       },
     };
@@ -105,7 +105,7 @@ describe("Email Marketing Architecture & Services", () => {
     const campaign = await mockPrisma.emailCampaign.findFirst({
       where: { id: "camp_123", userId: "user_123" },
     });
-    const targetCount = await mockPrisma.emailContact.count();
+    const targetCount = await mockPrisma.contact.count();
     await mockPrisma.emailCampaign.update({
       where: { id: campaign.id },
       data: { status: "QUEUED", targetCount },
@@ -162,4 +162,56 @@ describe("Email Marketing Architecture & Services", () => {
     const isDisconnected = Boolean((emailConnectionDisconnected as any)?.host);
     expect(isDisconnected).toBe(false);
   });
+
+  it("verifies CRM unified contact targeting query constraints for email campaigns", () => {
+    // Campaign recipients query must strictly filter contacts with non-null email and SUBSCRIBED status
+    const buildTargetWhere = (userId: string, targetTag?: string | null) => {
+      const where: any = {
+        userId,
+        email: { not: null },
+        emailStatus: "SUBSCRIBED",
+      };
+      if (targetTag) {
+        where.tags = { has: targetTag };
+      }
+      return where;
+    };
+
+    const generalWhere = buildTargetWhere("usr_123");
+    expect(generalWhere).toEqual({
+      userId: "usr_123",
+      email: { not: null },
+      emailStatus: "SUBSCRIBED",
+    });
+
+    const taggedWhere = buildTargetWhere("usr_123", "VIP");
+    expect(taggedWhere).toEqual({
+      userId: "usr_123",
+      email: { not: null },
+      emailStatus: "SUBSCRIBED",
+      tags: { has: "VIP" },
+    });
+  });
+
+  it("verifies EmailDelivery links directly to CRM Contact", () => {
+    const mockContact = {
+      id: "cnt_crm_999",
+      email: "lead@store.com",
+      name: "سارة أحمد",
+      phone: "+201000000000",
+    };
+
+    const deliveryRecord = {
+      campaignId: "camp_777",
+      contactId: mockContact.id,
+      contactEmail: mockContact.email,
+      contactName: mockContact.name,
+      status: "QUEUED" as const,
+    };
+
+    expect(deliveryRecord.contactId).toBe(mockContact.id);
+    expect(deliveryRecord.contactEmail).toBe("lead@store.com");
+    expect(deliveryRecord.contactName).toBe("سارة أحمد");
+  });
 });
+

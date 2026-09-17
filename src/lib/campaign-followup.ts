@@ -107,7 +107,7 @@ export async function handleCampaignFollowUpReply(
       { userId, contactId: record.contactId, label: "رد طلب أوردر الحملة" }
     );
     if (contact) {
-      await notifyAiHandoffNeeded(userId, contact.name ?? contact.phone, contact.id, "عميل مهتم بحملة تسويقية", "high");
+      await notifyAiHandoffNeeded(userId, contact.name ?? contact.phone ?? "عميل", contact.id, "عميل مهتم بحملة تسويقية", "high");
     }
     return;
   }
@@ -122,7 +122,7 @@ export async function handleCampaignFollowUpReply(
       { userId, contactId: record.contactId, label: "رد سؤال الحملة" }
     );
     if (contact) {
-      await notifyAiHandoffNeeded(userId, contact.name ?? contact.phone, contact.id, "استفسار عن حملة تسويقية", "normal");
+      await notifyAiHandoffNeeded(userId, contact.name ?? contact.phone ?? "عميل", contact.id, "استفسار عن حملة تسويقية", "normal");
     }
     return;
   }

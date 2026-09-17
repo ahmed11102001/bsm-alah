@@ -70,16 +70,17 @@ export async function createEmailCampaign(
   userId: string,
   input: CreateCampaignInput
 ) {
-  // حساب عدد المستهدفين مبدئيًا
+  // حساب عدد المستهدفين مبدئيًا — CRM Contact with email + SUBSCRIBED status
   const whereContacts: any = {
     userId,
-    status: "SUBSCRIBED",
+    email: { not: null },
+    emailStatus: "SUBSCRIBED",
   };
   if (input.targetTag) {
     whereContacts.tags = { has: input.targetTag };
   }
 
-  const targetCount = await prisma.emailContact.count({
+  const targetCount = await prisma.contact.count({
     where: whereContacts,
   });
 
@@ -118,16 +119,17 @@ export async function queueCampaignSending(userId: string, campaignId: string) {
     throw new Error("الحملة أو القالب المطلوب غير موجود.");
   }
 
-  // حساب عدد المستهدفين مبدئيًا
+  // حساب عدد المستهدفين — CRM Contact with email + SUBSCRIBED
   const whereContacts: any = {
     userId,
-    status: "SUBSCRIBED",
+    email: { not: null },
+    emailStatus: "SUBSCRIBED",
   };
   if (campaign.targetTag) {
     whereContacts.tags = { has: campaign.targetTag };
   }
 
-  const targetCount = await prisma.emailContact.count({
+  const targetCount = await prisma.contact.count({
     where: whereContacts,
   });
 
@@ -180,13 +182,14 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
 
   const whereContacts: any = {
     userId,
-    status: "SUBSCRIBED",
+    email: { not: null },
+    emailStatus: "SUBSCRIBED",
   };
   if (campaign.targetTag) {
     whereContacts.tags = { has: campaign.targetTag };
   }
 
-  const contacts = await prisma.emailContact.findMany({
+  const contacts = await prisma.contact.findMany({
     where: whereContacts,
   });
 
@@ -217,8 +220,8 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
         data: {
           campaignId: campaign.id,
           contactId: c.id,
-          contactEmail: c.email,
-          contactName: c.firstName ? `${c.firstName} ${c.lastName || ""}`.trim() : null,
+          contactEmail: c.email!,       // email is guaranteed non-null by whereContacts filter
+          contactName: c.name || null,   // Snapshot from CRM Contact
           status: "QUEUED",
         },
       })
@@ -277,4 +280,3 @@ export async function executeCampaignSendingDirect(userId: string, campaignId: s
     failedCount,
   };
 }
-

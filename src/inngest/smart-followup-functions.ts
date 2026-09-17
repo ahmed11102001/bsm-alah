@@ -110,7 +110,7 @@ export const scheduleCampaignFollowUpFn = inngest.createFunction(
 
       let count = 0;
       for (const msg of messages) {
-        if (!msg.contact) continue;
+        if (!msg.contact || !msg.contact.phone) continue;
 
         const record = await prisma.campaignFollowUpRecord.create({
           data: {

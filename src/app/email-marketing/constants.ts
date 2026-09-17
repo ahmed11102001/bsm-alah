@@ -60,8 +60,7 @@ export const MOCK_CONTACTS: EmailContactDTO[] = [
   {
     id: "cnt_1",
     email: "ahmed.khalil@example.com",
-    firstName: "أحمد",
-    lastName: "خليل",
+    name: "أحمد خليل",
     tags: ["VIP", "عملاء قدامى"],
     status: "SUBSCRIBED",
     createdAt: "2026-09-10T14:30:00Z",
@@ -69,8 +68,7 @@ export const MOCK_CONTACTS: EmailContactDTO[] = [
   {
     id: "cnt_2",
     email: "sara.nour@example.com",
-    firstName: "سارة",
-    lastName: "نور",
+    name: "سارة نور",
     tags: ["مهتمين", "متجر"],
     status: "SUBSCRIBED",
     createdAt: "2026-09-12T09:15:00Z",
@@ -78,8 +76,7 @@ export const MOCK_CONTACTS: EmailContactDTO[] = [
   {
     id: "cnt_3",
     email: "mohamed.ali@company.net",
-    firstName: "محمد",
-    lastName: "علي",
+    name: "محمد علي",
     tags: ["شركات"],
     status: "SUBSCRIBED",
     createdAt: "2026-09-14T18:20:00Z",
@@ -87,8 +84,7 @@ export const MOCK_CONTACTS: EmailContactDTO[] = [
   {
     id: "cnt_4",
     email: "fatma.kamal@mail.com",
-    firstName: "فاطمة",
-    lastName: "كمال",
+    name: "فاطمة كمال",
     tags: ["سلة متروكة"],
     status: "UNSUBSCRIBED",
     createdAt: "2026-09-15T11:00:00Z",
@@ -96,8 +92,7 @@ export const MOCK_CONTACTS: EmailContactDTO[] = [
   {
     id: "cnt_5",
     email: "omar.hassan@test.org",
-    firstName: "عمر",
-    lastName: "حسن",
+    name: "عمر حسن",
     tags: ["VIP"],
     status: "BOUNCED",
     createdAt: "2026-09-16T16:45:00Z",

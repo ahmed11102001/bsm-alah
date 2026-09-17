@@ -56,8 +56,7 @@ export async function POST(req: NextRequest) {
 
     const contact = await createEmailContact(ownerId, {
       email: body.email,
-      firstName: body.firstName,
-      lastName: body.lastName,
+      name: body.name || (body.firstName ? `${body.firstName} ${body.lastName || ""}`.trim() : null),
       tags: body.tags,
       status: body.status,
     });

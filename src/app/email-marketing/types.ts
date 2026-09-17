@@ -5,8 +5,10 @@ export type EmailContactStatus = "SUBSCRIBED" | "UNSUBSCRIBED" | "BOUNCED";
 export interface EmailContactDTO {
   id: string;
   email: string;
-  firstName?: string | null;
-  lastName?: string | null;
+  name?: string | null;
+  firstName?: string | null; // Compatibility with legacy UI until Phase 3
+  lastName?: string | null;  // Compatibility with legacy UI until Phase 3
+  phone?: string | null;
   tags: string[];
   status: EmailContactStatus;
   createdAt: string;

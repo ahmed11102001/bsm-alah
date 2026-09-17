@@ -190,7 +190,7 @@ export const conversationNudgeFn = inngest.createFunction(
       });
 
       const account = contact?.user?.whatsappAccount;
-      if (!contact || !account) return { sent: false, reason: "no_whatsapp_account" };
+      if (!contact || !contact.phone || !account) return { sent: false, reason: "no_whatsapp_account" };
 
       const nudge = await generateNudgeMessage(contactId, userId);
       if (!nudge.ok || !nudge.text) return { sent: false, reason: "nudge_generation_failed" };

@@ -25,8 +25,8 @@ export async function GET() {
       recentCampaigns,
       recentDeliveries,
     ] = await Promise.all([
-      prisma.emailContact.count({ where: { userId: ownerId } }),
-      prisma.emailContact.count({ where: { userId: ownerId, status: "SUBSCRIBED" } }),
+      prisma.contact.count({ where: { userId: ownerId, email: { not: null } } }),
+      prisma.contact.count({ where: { userId: ownerId, email: { not: null }, emailStatus: "SUBSCRIBED" } }),
       prisma.emailCampaign.count({ where: { userId: ownerId } }),
       prisma.emailCampaign.aggregate({
         where: { userId: ownerId },

@@ -529,6 +529,7 @@ async function sendMessage(
   ]);
 
   if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+  if (!contact.phone) return NextResponse.json({ error: "جهة الاتصال لا تملك رقم هاتف" }, { status: 400 });
   if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
   const isTemplate = type === "template" && !!templateName;
@@ -565,7 +566,7 @@ async function sendMessage(
         userId,
         whatsappAccountId: account.id,
         phoneNumberId: account.phoneNumberId,
-        toPhone: contact.phone,
+        toPhone: contact.phone!,
         contactId,
         messageType: isMedia ? "media" : isTemplate ? "template" : "text",
         templateName: isTemplate ? templateName : null,
@@ -673,6 +674,7 @@ async function sendMedia(userId: string, req: NextRequest, session: any) {
     ]);
 
     if (!contact) return NextResponse.json({ error: "العميل غير موجود" }, { status: 404 });
+    if (!contact.phone) return NextResponse.json({ error: "جهة الاتصال لا تملك رقم هاتف" }, { status: 400 });
     if (!account) return NextResponse.json({ error: "حساب واتساب غير مربوط" }, { status: 400 });
 
     // ── Step 1: ارفع الملف على Meta عشان تجيب media_id ──────────────────────
@@ -758,7 +760,7 @@ async function sendMedia(userId: string, req: NextRequest, session: any) {
           userId,
           whatsappAccountId: account.id,
           phoneNumberId: account.phoneNumberId,
-          toPhone: contact.phone,
+          toPhone: contact.phone!,
           contactId,
           messageType: "media",
           content: `${metaType}:${mediaId}`,

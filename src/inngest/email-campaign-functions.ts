@@ -46,18 +46,19 @@ export const processEmailCampaign = inngest.createFunction(
         return { alreadyCompleted: true, total: campaign.targetCount };
       }
 
-      // جلب جهات الاتصال النشطة المؤهلة
+      // جلب جهات الاتصال النشطة المؤهلة — CRM Contact with email
       const whereContacts: any = {
         userId,
-        status: "SUBSCRIBED",
+        email: { not: null },
+        emailStatus: "SUBSCRIBED",
       };
       if (campaign.targetTag) {
         whereContacts.tags = { has: campaign.targetTag };
       }
 
-      const contacts = await prisma.emailContact.findMany({
+      const contacts = await prisma.contact.findMany({
         where: whereContacts,
-        select: { id: true, email: true, firstName: true, lastName: true },
+        select: { id: true, email: true, name: true },
       });
 
       if (contacts.length === 0) {
@@ -91,19 +92,18 @@ export const processEmailCampaign = inngest.createFunction(
 
       if (existingCount === 0) {
         await prisma.emailDelivery.createMany({
-          data: contacts.map((c) => ({
+          data: contacts.map((c: { id: string; email: string | null; name: string | null }) => ({
             campaignId,
             contactId: c.id,
-            contactEmail: c.email,
-            contactName: c.firstName
-              ? `${c.firstName} ${c.lastName || ""}`.trim()
-              : null,
+            contactEmail: c.email!,     // guaranteed non-null by filter
+            contactName: c.name || null, // Snapshot from CRM Contact
             status: "QUEUED",
           })),
         });
       }
 
       return { empty: false, total: contacts.length, alreadyCompleted: false };
+
     });
 
     if (prep.alreadyCompleted || prep.empty) {
