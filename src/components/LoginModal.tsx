@@ -44,6 +44,128 @@ const slide = {
   exit: { opacity: 0, x: -20, transition: { duration: 0.15, ease: easeSmooth } },
 };
 
+// ─── i18n (الكارت باللغتين حسب lang) ───────────────────────────────────────────
+const AUTH_T = {
+  ar: {
+    continueGoogle: "متابعة بـ Google",
+    or: "أو",
+    loginTab: "تسجيل الدخول",
+    joinTab: "انضمام لفريق",
+    identifier: "الإيميل أو رقم الواتساب",
+    identifierPh: "example@email.com أو 01xxxxxxxxx",
+    password: "كلمة المرور",
+    forgot: "نسيت كلمة المرور؟",
+    signIn: "تسجيل الدخول",
+    noAccount: "معندكش حساب؟",
+    signUp: "سجل جديد",
+    regIntro: "سجل بإيميل Google أولًا، وبعدين هنأكد رقم الواتساب بكود.",
+    haveAccount: "عندك حساب؟",
+    completeProfile: (email: string) => `${email} ✓ — كمّل بياناتك`,
+    waNumber: "رقم الواتساب",
+    waHint: "هيوصلك عليه كود التأكيد",
+    newPass: "كلمة المرور (8 أحرف على الأقل)",
+    confirmPass: "تأكيد كلمة المرور",
+    passMismatch: "كلمتا المرور غير متطابقتين",
+    terms1: "أوافق على",
+    terms2: "شروط الاستخدام",
+    terms3: "و",
+    terms4: "سياسة الخصوصية",
+    termsRequired: "يجب الموافقة على شروط الاستخدام وسياسة الخصوصية.",
+    badPhone: "من فضلك أدخل رقم واتساب صحيح",
+    passShort: "كلمة المرور 8 أحرف على الأقل",
+    sendCode: "إرسال كود التأكيد",
+    changeEmail: "تغيير الإيميل",
+    codeSentWa: "اتبعتلّك كود تأكيد على واتساب",
+    codeOnWa: (phone: string) => `اتبعتلّك كود على واتساب (${phone}) — صالح 10 دقائق`,
+    otpLabel: "كود التأكيد",
+    verifyCreate: "تأكيد وإنشاء الحساب",
+    noCode: "موصلش الكود؟",
+    resendIn: (s: number) => `إعادة الإرسال بعد ${s} ث`,
+    sendNewCode: "إرسال كود جديد",
+    newCodeSent: "اتبعتلّك كود جديد على واتساب",
+    enterOtp: "أدخل الكود المرسل إليك",
+    genericError: "حدث خطأ، حاول مرة أخرى",
+    badCreds: "بيانات الدخول غير صحيحة",
+    connError: "حصل خطأ في الاتصال، حاول تاني",
+    accountCreatedLogin: "تم إنشاء الحساب — سجل الدخول",
+    accountCreated: "تم إنشاء الحساب بنجاح 🎉",
+    joinInfo: "إذا كنت موظفاً، أدخل بريدك وكود الدعوة الذي استلمته من مدير الفريق لتفعيل حسابك.",
+    email: "البريد الإلكتروني",
+    inviteCode: "كود الانضمام",
+    choosePass: "اختر كلمة مرور",
+    activateJoin: "تفعيل الحساب والانضمام",
+    joinFailed: "فشل الانضمام للفريق",
+    joinedOk: "🎉 تم الانضمام إلى الفريق بنجاح! جاري تحويلك...",
+    backToLogin: "العودة لتسجيل الدخول",
+    forgotTitle: "نسيت كلمة المرور؟",
+    forgotDesc: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.",
+    change: "تغيير",
+    sendResetLink: "إرسال رابط الاستعادة",
+    sentTitle: "تم الإرسال!",
+    sentDesc1: "أرسلنا رابط إعادة التعيين إلى",
+    sentDesc2: "تحقق من بريدك الوارد.",
+  },
+  en: {
+    continueGoogle: "Continue with Google",
+    or: "or",
+    loginTab: "Sign In",
+    joinTab: "Join a team",
+    identifier: "Email or WhatsApp number",
+    identifierPh: "example@email.com or 01xxxxxxxxx",
+    password: "Password",
+    forgot: "Forgot password?",
+    signIn: "Sign In",
+    noAccount: "Don't have an account?",
+    signUp: "Sign Up",
+    regIntro: "Sign up with your Google email first, then we'll verify your WhatsApp number with a code.",
+    haveAccount: "Already have an account?",
+    completeProfile: (email: string) => `${email} ✓ — complete your details`,
+    waNumber: "WhatsApp number",
+    waHint: "You'll receive the confirmation code on it",
+    newPass: "Password (8+ characters)",
+    confirmPass: "Confirm password",
+    passMismatch: "Passwords don't match",
+    terms1: "I agree to the",
+    terms2: "Terms of Use",
+    terms3: "and",
+    terms4: "Privacy Policy",
+    termsRequired: "You must accept the Terms of Use and Privacy Policy.",
+    badPhone: "Please enter a valid WhatsApp number",
+    passShort: "Password must be at least 8 characters",
+    sendCode: "Send confirmation code",
+    changeEmail: "Change email",
+    codeSentWa: "A confirmation code was sent to your WhatsApp",
+    codeOnWa: (phone: string) => `A code was sent to WhatsApp (${phone}) — valid for 10 minutes`,
+    otpLabel: "Confirmation code",
+    verifyCreate: "Verify & create account",
+    noCode: "Didn't get the code?",
+    resendIn: (s: number) => `Resend in ${s}s`,
+    sendNewCode: "Send a new code",
+    newCodeSent: "A new code was sent to your WhatsApp",
+    enterOtp: "Enter the code sent to you",
+    genericError: "An error occurred, please try again",
+    badCreds: "Incorrect email or password",
+    connError: "Connection error, please try again",
+    accountCreatedLogin: "Account created — please sign in",
+    accountCreated: "Account created successfully 🎉",
+    joinInfo: "If you're an employee, enter your email and the invite code you received from your team manager to activate your account.",
+    email: "Email",
+    inviteCode: "Invite code",
+    choosePass: "Choose a password",
+    activateJoin: "Activate & join",
+    joinFailed: "Failed to join the team",
+    joinedOk: "🎉 Joined the team successfully! Redirecting...",
+    backToLogin: "Back to sign in",
+    forgotTitle: "Forgot password?",
+    forgotDesc: "Enter your email and we'll send you a password reset link.",
+    change: "Change",
+    sendResetLink: "Send reset link",
+    sentTitle: "Sent!",
+    sentDesc1: "We sent a reset link to",
+    sentDesc2: "Check your inbox.",
+  },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function ErrMsg({ msg }: { msg: string }) {
   return (
@@ -63,9 +185,9 @@ function PasswordInput({ value, onChange, placeholder = "•••••••�
     <div className="relative">
       <Input {...rest} type={show ? "text" : "password"} value={value}
         placeholder={placeholder} onChange={e => onChange(e.target.value)}
-        className="rounded-xl pl-10 pr-4 h-12" />
+        className="rounded-xl ps-4 pe-10 h-12" />
       <button type="button" onClick={() => setShow(p => !p)}
-        className="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+        className="absolute end-3 top-3.5 text-gray-400 hover:text-gray-600" tabIndex={-1}>
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
@@ -74,7 +196,7 @@ function PasswordInput({ value, onChange, placeholder = "•••••••�
 
 // ─── Google Button ─────────────────────────────────────────────────────────────
 // تصميم Google الرسمي (brand guidelines)
-function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+function GoogleButton({ loading, onClick, label }: { loading: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
@@ -93,7 +215,7 @@ function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => v
             <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05" />
             <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335" />
           </svg>
-          متابعة بـ Google
+          {label}
         </>
       )}
     </button>
@@ -101,11 +223,11 @@ function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => v
 }
 
 // ─── Divider ──────────────────────────────────────────────────────────────────
-function OrDivider() {
+function OrDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 my-1">
       <div className="flex-1 h-px bg-gray-200" />
-      <span className="text-xs text-gray-400">أو</span>
+      <span className="text-xs text-gray-400">{label}</span>
       <div className="flex-1 h-px bg-gray-200" />
     </div>
   );
@@ -115,6 +237,8 @@ function OrDivider() {
 export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standalone = false, initialView = "login" }: LoginModalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const effLang = lang === "en" ? "en" : "ar";
+  const L = AUTH_T[effLang];
   const [view, setView] = useState<View>(standalone ? initialView : "login");
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
@@ -236,7 +360,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       const authCallback = `/auth/callback?${query.toString()}`;
       await signIn("google", { callbackUrl: authCallback });
     } catch {
-      setErr(lang === "en" ? "An error occurred, please try again" : "حدث خطأ، حاول مرة أخرى");
+      setErr(L.genericError);
       setGBusy(false);
     }
   };
@@ -264,9 +388,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       const res = await signIn("credentials", {
         email: loginEmail.trim(), password: loginPass, redirect: false,
       });
-      if (!res?.ok) { setErr(res?.error || "بيانات غير صحيحة"); return; }
+      if (!res?.ok) { setErr(res?.error || L.badCreds); return; }
       onClose(); router.push(callbackUrl || "/dashboard");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
@@ -293,10 +417,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
   const handleRegProfile = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
-    if (!termsAccepted) { setErr("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية."); return; }
-    if (!/^\d{8,15}$/.test(regPhone.replace(/\D/g, ""))) { setErr("من فضلك أدخل رقم واتساب صحيح"); return; }
-    if (regPass.length < 8) { setErr("كلمة المرور 8 أحرف على الأقل"); return; }
-    if (regPass !== regConfirm) { setErr("كلمتا المرور غير متطابقتين"); return; }
+    if (!termsAccepted) { setErr(L.termsRequired); return; }
+    if (!/^\d{8,15}$/.test(regPhone.replace(/\D/g, ""))) { setErr(L.badPhone); return; }
+    if (regPass.length < 8) { setErr(L.passShort); return; }
+    if (regPass !== regConfirm) { setErr(L.passMismatch); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/auth/signup/profile", {
@@ -305,12 +429,12 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         body: JSON.stringify({ signupToken, phone: regPhone, password: regPass, terms: true }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setErr(d.error || "حدث خطأ، حاول مرة أخرى"); return; }
+      if (!r.ok) { setErr(d.error || L.genericError); return; }
       setOtpCode("");
       setResendIn(60);
       setRegStep("code");
-      toast.success("اتبعتلّك كود تأكيد على واتساب");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+      toast.success(L.codeSentWa);
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
@@ -325,19 +449,19 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setErr(d.error || "حدث خطأ، حاول مرة أخرى");
+        setErr(d.error || L.genericError);
         if (typeof d.retryAfter === "number") setResendIn(d.retryAfter);
         return;
       }
       setResendIn(60);
-      toast.success("اتبعتلّك كود جديد على واتساب");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+      toast.success(L.newCodeSent);
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
   const handleRegVerify = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
-    if (otpCode.trim().length < 4) { setErr("أدخل الكود المرسل إليك"); return; }
+    if (otpCode.trim().length < 4) { setErr(L.enterOtp); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/auth/signup/verify", {
@@ -348,7 +472,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
         if (d.code === "ALREADY_DONE") { setLoginEmail(d.email || googleEmail); go("login"); }
-        setErr(d.error || "حدث خطأ، حاول مرة أخرى");
+        setErr(d.error || L.genericError);
         return;
       }
       // الحساب اتعمل — سجل الدخول تلقائيًا بنفس الباسورد
@@ -358,12 +482,12 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       if (!res?.ok) {
         setLoginEmail(d.email || "");
         go("login");
-        toast.success("تم إنشاء الحساب — سجل الدخول");
+        toast.success(L.accountCreatedLogin);
         return;
       }
-      toast.success("تم إنشاء الحساب بنجاح 🎉");
+      toast.success(L.accountCreated);
       onClose(); router.push(callbackUrl || "/dashboard");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
@@ -377,9 +501,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         body: JSON.stringify({ email: joinEmail.toLowerCase().trim(), inviteCode: joinCode.trim().toUpperCase(), password: joinPass }),
       });
       const d = await r.json();
-      if (!r.ok) { setErr(d.error || "فشل الانضمام للفريق"); return; }
+      if (!r.ok) { setErr(d.error || L.joinFailed); return; }
 
-      toast.success("🎉 تم الانضمام إلى الفريق بنجاح! جاري تحويلك...");
+      toast.success(L.joinedOk);
 
       // Auto sign-in with credentials
       const res = await signIn("credentials", {
@@ -395,7 +519,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         setLoginEmail(joinEmail.toLowerCase().trim());
         go("login");
       }
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
@@ -411,7 +535,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       const d = await r.json();
       if (!r.ok) { setErr(d.error); return; }
       go("reset-sent");
-    } catch { setErr("حدث خطأ، حاول مرة أخرى"); }
+    } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
 
@@ -429,7 +553,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         <button
           type="button"
           onClick={onClose}
-          aria-label="إغلاق"
+          aria-label={effLang === "en" ? "Close" : "إغلاق"}
           className="absolute top-4 right-4 z-30 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-[#25D366]/50"
         >
           <X className="w-4 h-4" />
@@ -451,6 +575,31 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
           </div>
 
           <div className="flex-1 overflow-y-auto px-7 pb-6 pt-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#25D366]/35 hover:scrollbar-thumb-[#25D366]">
+            {/* ── تبويبات الدخول/الانضمام (زي تبويبات البورتال) ── */}
+            {(view === "login" || view === "join") && (
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 mb-4">
+                <button
+                  type="button"
+                  onClick={() => switchAuthMode("login")}
+                  className={`h-10 rounded-lg text-sm transition-all ${view === "login"
+                    ? "bg-white shadow-sm font-bold text-gray-900"
+                    : "font-medium text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  {L.loginTab}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchAuthMode("join")}
+                  className={`h-10 rounded-lg text-sm transition-all ${view === "join"
+                    ? "bg-white shadow-sm font-bold text-gray-900"
+                    : "font-medium text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  {L.joinTab}
+                </button>
+              </div>
+            )}
             <AnimatePresence mode="wait">
 
               {/* ══ LOGIN ══ */}
@@ -458,29 +607,29 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                 <motion.div key="login" {...slide} className="space-y-4">
 
                   {/* ── Google (Primary CTA) ── */}
-                  <GoogleButton loading={gBusy} onClick={handleGoogle} />
+                  <GoogleButton loading={gBusy} onClick={handleGoogle} label={L.continueGoogle} />
 
-                  <OrDivider />
+                  <OrDivider label={L.or} />
 
                   {/* ── Email or Phone / Password (Secondary) ── */}
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-gray-700">الإيميل أو رقم الواتساب</Label>
+                      <Label className="text-sm font-medium text-gray-700">{L.identifier}</Label>
                       <div className="relative">
-                        <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
+                        <Mail className="absolute start-3 top-3.5 w-4 h-4 text-gray-400" />
                         <Input type="text" required value={loginEmail}
                           onChange={e => setLoginEmail(e.target.value)}
-                          placeholder="example@email.com أو 01xxxxxxxxx"
-                          className="rounded-xl pr-10 h-12 text-sm border-gray-200" dir="auto" />
+                          placeholder={L.identifierPh}
+                          className="rounded-xl ps-10 h-12 text-sm border-gray-200" dir="auto" />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">كلمة المرور</Label>
+                        <Label className="text-sm font-medium text-gray-700">{L.password}</Label>
                         <button type="button" onClick={() => { setForgotEmail(loginEmail.includes("@") ? loginEmail.trim() : ""); go("forgot"); }}
                           className="text-xs text-[#25D366] hover:underline">
-                          نسيت كلمة المرور؟
+                          {L.forgot}
                         </button>
                       </div>
                       <PasswordInput value={loginPass} onChange={setLoginPass} />
@@ -490,19 +639,15 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                     <Button type="submit" disabled={busy}
                       className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
-                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تسجيل الدخول"}
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : L.signIn}
                     </Button>
                   </form>
 
-                  <p className="text-xs text-gray-400 text-center">
-                    معندكش حساب؟{" "}
-                     <button type="button" onClick={() => switchAuthMode("register")} className="text-[#25D366] hover:underline">
-                        سجل جديد
-                      </button>
-                      {" "}·{" "}
-                      <button type="button" onClick={() => switchAuthMode("join")} className="text-[#25D366] hover:underline">
-                        انضمام لفريق
-                      </button>
+                  <p className="text-center">
+                    <span className="text-sm text-gray-400">{L.noAccount}</span>{" "}
+                    <button type="button" onClick={() => switchAuthMode("register")} className="text-base font-bold text-[#25D366] hover:underline">
+                      {L.signUp}
+                    </button>
                   </p>
                 </motion.div>
               )}
@@ -515,15 +660,15 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   {regStep === "google" && (
                     <div className="space-y-3">
                       <p className="text-sm text-gray-600 leading-relaxed">
-                        سجل بإيميل Google أولًا، وبعدين هنأكد رقم الواتساب بكود.
+                        {L.regIntro}
                       </p>
-                      <GoogleButton loading={gBusy} onClick={handleGoogleSignup} />
+                      <GoogleButton loading={gBusy} onClick={handleGoogleSignup} label={L.continueGoogle} />
                       {err && <ErrMsg msg={err} />}
-                      <p className="text-xs text-gray-400 text-center">
-                        عندك حساب؟{" "}
-                         <button type="button" onClick={() => switchAuthMode("login")} className="text-[#25D366] hover:underline">
-                           سجل الدخول
-                         </button>
+                      <p className="text-center">
+                        <span className="text-sm text-gray-400">{L.haveAccount}</span>{" "}
+                        <button type="button" onClick={() => switchAuthMode("login")} className="text-base font-bold text-[#25D366] hover:underline">
+                          {L.signIn}
+                        </button>
                       </p>
                     </div>
                   )}
@@ -532,33 +677,33 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   {regStep === "profile" && (
                     <form onSubmit={handleRegProfile} className="space-y-3.5">
                       <div className="rounded-2xl bg-green-50 border border-green-100 px-3.5 py-2.5 text-xs text-green-800">
-                        {googleEmail} ✓ — كمّل بياناتك
+                        {L.completeProfile(googleEmail)}
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">رقم الواتساب <span className="text-red-400">*</span></Label>
+                        <Label className="text-xs font-medium text-gray-600">{L.waNumber} <span className="text-red-400">*</span></Label>
                         <div className="relative">
-                          <Phone className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                          <Phone className="absolute start-3 top-3 w-4 h-4 text-gray-400" />
                           <Input required type="tel" value={regPhone}
                             onChange={e => setRegPhone(e.target.value)}
-                            placeholder="01xxxxxxxxx" className="rounded-xl pr-9 h-11 text-sm border-gray-200" dir="ltr" />
+                            placeholder="01xxxxxxxxx" className="rounded-xl ps-9 h-11 text-sm border-gray-200" dir="ltr" />
                         </div>
-                        <p className="text-[11px] text-gray-400">هيوصلك عليه كود التأكيد</p>
+                        <p className="text-[11px] text-gray-400">{L.waHint}</p>
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">كلمة المرور (8 أحرف على الأقل)</Label>
+                        <Label className="text-xs font-medium text-gray-600">{L.newPass}</Label>
                         <PasswordInput value={regPass} onChange={setRegPass} className="rounded-xl h-11 text-sm border-gray-200" />
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">تأكيد كلمة المرور</Label>
+                        <Label className="text-xs font-medium text-gray-600">{L.confirmPass}</Label>
                         <PasswordInput value={regConfirm} onChange={setRegConfirm}
                           className={`rounded-xl h-11 text-sm border-gray-200 ${regConfirm && regPass !== regConfirm ? "border-red-400" :
                               regConfirm && regPass === regConfirm ? "border-green-400" : ""
                             }`} />
                         {regConfirm && regPass !== regConfirm && (
-                          <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
+                          <p className="text-xs text-red-500">{L.passMismatch}</p>
                         )}
                       </div>
 
@@ -568,13 +713,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                             onChange={e => setTermsAccepted(e.target.checked)}
                             className="mt-1 h-4 w-4 rounded border-gray-300 bg-white text-[#25D366] focus:ring-[#25D366]" />
                           <span className="text-sm leading-relaxed text-gray-700">
-                            أوافق على{" "}
+                            {L.terms1}{" "}
                             <a href="/terms" target="_blank" rel="noreferrer" className="text-[#25D366] hover:text-[#1fa455]">
-                              شروط الاستخدام
+                              {L.terms2}
                             </a>
-                            {" "}و{" "}
+                            {" "}{L.terms3}{" "}
                             <a href="/privacy" target="_blank" rel="noreferrer" className="text-[#25D366] hover:text-[#1fa455]">
-                              سياسة الخصوصية
+                              {L.terms4}
                             </a>
                             .
                           </span>
@@ -586,11 +731,11 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                       <div className="sticky bottom-0 z-10 -mx-7 px-7 pb-4 pt-4 bg-white/95 border-t border-gray-100">
                         <Button type="submit" disabled={busy || !termsAccepted}
                           className="w-full h-11 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm disabled:opacity-60">
-                          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال كود التأكيد"}
+                          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : L.sendCode}
                         </Button>
                         <button type="button" onClick={resetRegFlow}
                           className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600">
-                          تغيير الإيميل
+                          {L.changeEmail}
                         </button>
                       </div>
                     </form>
@@ -600,11 +745,11 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   {regStep === "code" && (
                     <form onSubmit={handleRegVerify} className="space-y-4">
                       <div className="rounded-2xl bg-green-50 border border-green-100 px-3.5 py-2.5 text-xs text-green-800 leading-relaxed">
-                        اتبعتلّك كود على واتساب ({regPhone}) — صالح 10 دقائق
+                        {L.codeOnWa(regPhone)}
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">كود التأكيد</Label>
+                        <Label className="text-sm font-medium text-gray-700">{L.otpLabel}</Label>
                         <Input required value={otpCode}
                           onChange={e => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                           placeholder="••••••" inputMode="numeric" dir="ltr"
@@ -615,16 +760,16 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                       <Button type="submit" disabled={busy}
                         className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
-                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد وإنشاء الحساب"}
+                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : L.verifyCreate}
                       </Button>
 
                       <p className="text-xs text-gray-400 text-center">
-                        موصلش الكود؟{" "}
+                        {L.noCode}{" "}
                         {resendIn > 0 ? (
-                          <span>إعادة الإرسال بعد {resendIn} ث</span>
+                          <span>{L.resendIn(resendIn)}</span>
                         ) : (
                           <button type="button" onClick={handleRegResend} className="text-[#25D366] hover:underline">
-                            إرسال كود جديد
+                            {L.sendNewCode}
                           </button>
                         )}
                       </p>
@@ -639,22 +784,22 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   <div className="bg-green-50 border border-green-100 rounded-2xl p-3.5 flex items-start gap-2.5">
                     <KeyRound className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-green-800 leading-relaxed">
-                      إذا كنت موظفاً، أدخل بريدك وكود الدعوة الذي استلمته من مدير الفريق لتفعيل حسابك.
+                      {L.joinInfo}
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
+                    <Label className="text-sm font-medium text-gray-700">{L.email}</Label>
                     <div className="relative">
-                      <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
+                      <Mail className="absolute start-3 top-3.5 w-4 h-4 text-gray-400" />
                       <Input type="email" required value={joinEmail}
                         onChange={e => setJoinEmail(e.target.value)}
-                        placeholder="your@email.com" className="rounded-xl pr-10 h-12 text-sm" />
+                        placeholder="your@email.com" className="rounded-xl ps-10 h-12 text-sm" />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">كود الانضمام</Label>
+                    <Label className="text-sm font-medium text-gray-700">{L.inviteCode}</Label>
                     <Input required value={joinCode}
                       onChange={e => setJoinCode(e.target.value.toUpperCase())}
                       placeholder="WANI-XXXX-XXXX"
@@ -662,7 +807,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">اختر كلمة مرور</Label>
+                    <Label className="text-sm font-medium text-gray-700">{L.choosePass}</Label>
                     <PasswordInput value={joinPass} onChange={setJoinPass} />
                   </div>
 
@@ -670,7 +815,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                   <Button type="submit" disabled={busy}
                     className="w-full h-12 bg-[#128C7E] hover:bg-[#0e7066] text-white rounded-xl font-semibold text-sm">
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "تفعيل الحساب والانضمام"}
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : L.activateJoin}
                   </Button>
                 </motion.form>
               )}
@@ -681,27 +826,27 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                   <div>
                     <button type="button" onClick={() => go("login")}
                       className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-4">
-                      <ArrowRight className="w-4 h-4" /> العودة لتسجيل الدخول
+                      <ArrowRight className="w-4 h-4 ltr:-scale-x-100" /> {L.backToLogin}
                     </button>
-                    <h2 className="text-lg font-bold text-gray-900 mb-1">نسيت كلمة المرور؟</h2>
+                    <h2 className="text-lg font-bold text-gray-900 mb-1">{L.forgotTitle}</h2>
                     <p className="text-sm text-gray-500">
-                      أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.
+                      {L.forgotDesc}
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">البريد الإلكتروني</Label>
+                    <Label className="text-sm font-medium text-gray-700">{L.email}</Label>
                     {forgotEmail ? (
                       <div className="flex h-12 items-center justify-between rounded-xl border border-green-200 bg-green-50 px-3 text-sm">
                         <span className="flex items-center gap-2 text-gray-700"><Mail className="w-4 h-4 text-[#25D366]" />{maskEmail(forgotEmail)}</span>
-                        <button type="button" onClick={() => setForgotEmail("")} className="text-xs text-[#128C7E] hover:underline">تغيير</button>
+                        <button type="button" onClick={() => setForgotEmail("")} className="text-xs text-[#128C7E] hover:underline">{L.change}</button>
                       </div>
                     ) : (
                       <div className="relative">
-                        <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
+                        <Mail className="absolute start-3 top-3.5 w-4 h-4 text-gray-400" />
                         <Input type="email" required value={forgotEmail}
                           onChange={e => setForgotEmail(e.target.value)}
-                          placeholder="example@email.com" className="rounded-xl pr-10 h-12 text-sm" />
+                          placeholder="example@email.com" className="rounded-xl ps-10 h-12 text-sm" />
                       </div>
                     )}
                   </div>
@@ -710,7 +855,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                   <Button type="submit" disabled={busy}
                     className="w-full h-12 bg-[#25D366] hover:bg-[#20bb5a] text-white rounded-xl font-semibold text-sm">
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال رابط الاستعادة"}
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : L.sendResetLink}
                   </Button>
                 </motion.form>
               )}
@@ -722,15 +867,15 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                     <Mail className="w-8 h-8 text-green-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">تم الإرسال!</h2>
+                    <h2 className="text-lg font-bold text-gray-900">{L.sentTitle}</h2>
                     <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                      أرسلنا رابط إعادة التعيين إلى <strong>{forgotEmail}</strong>.<br />
-                      تحقق من بريدك الوارد.
+                      {L.sentDesc1} <strong>{forgotEmail}</strong>.<br />
+                      {L.sentDesc2}
                     </p>
                   </div>
                   <button type="button" onClick={() => go("login")}
                     className="text-sm text-[#25D366] hover:underline font-medium">
-                    العودة لتسجيل الدخول
+                    {L.backToLogin}
                   </button>
                 </motion.div>
               )}
@@ -748,7 +893,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       <DialogContent
         showCloseButton={false}
         className="force-light w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
-        dir="rtl"
+        dir={effLang === "en" ? "ltr" : "rtl"}
       >
         {inner}
       </DialogContent>
