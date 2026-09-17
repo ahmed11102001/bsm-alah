@@ -66,13 +66,6 @@ function AuthPageContent({ initialView = "login" }: AuthPageProps) {
     } catch {}
   };
 
-  const head =
-    selectedView === "register"
-      ? { title: t.signupTitle, desc: t.signupDesc }
-      : selectedView === "join"
-        ? { title: t.joinTitle, desc: t.joinDesc }
-        : { title: t.loginTitle, desc: t.loginDesc };
-
   return (
     <>
       <style>{`
@@ -157,9 +150,6 @@ function AuthPageContent({ initialView = "login" }: AuthPageProps) {
           z-index: 1;
           overflow-y: auto;
         }
-        .dash-auth-heading { text-align: center; margin-bottom: 20px; max-width: 440px; }
-        .dash-auth-heading h1 { font-size: 24px; font-weight: 700; color: #fff; margin: 0 0 6px; }
-        .dash-auth-heading p { font-size: 13.5px; color: rgba(255,255,255,0.55); margin: 0; line-height: 1.7; }
         .dash-auth-card {
           width: 100%;
           max-width: 440px;
@@ -246,10 +236,6 @@ function AuthPageContent({ initialView = "login" }: AuthPageProps) {
 
         {/* Form panel */}
         <div className="dash-auth-form-panel">
-          <div className="dash-auth-heading">
-            <h1>{head.title}</h1>
-            <p>{head.desc}</p>
-          </div>
           <div className="dash-auth-card">
             <LoginModal
               isOpen
