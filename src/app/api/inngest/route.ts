@@ -43,6 +43,7 @@ import {
 } from "@/inngest/product-sync-functions";
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
+import { signupLeadsReminder } from "@/inngest/signup-leads-functions";
 import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
 import { aiReplyDebounceFn } from "@/inngest/ai-reply-debounce-functions";
 import { handoffResumeFn } from "@/inngest/handoff-resume-functions";
@@ -91,6 +92,8 @@ const inngestHandler = serve({
     // ── Conversation Nudge ──
     conversationNudgeFn,
     googleSheetsSyncCron,
+    // ── Signup Leads Reminder ──
+    signupLeadsReminder,
   ],
 });
 

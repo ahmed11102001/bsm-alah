@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAppServerSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { createSignupSession, type SignupContext } from "@/lib/signup-session";
+import { upsertSignupLead, normalizeLeadLocale, type SignupLeadSource } from "@/lib/signup-leads";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function POST(req: Request) {
   const session = await getAppServerSession();
@@ -16,6 +18,11 @@ export async function POST(req: Request) {
     console.log("[from-session] outcome=invalid-context");
     return NextResponse.json({ error: "Invalid signup context" }, { status: 400 });
   }
+  // اللغة اللي دخل بيها (الكلاينت بيبعتها لما يعرفها) وإلا لغة الطلب الحالية
+  const locale =
+    body?.locale === "ar" || body?.locale === "en"
+      ? body.locale
+      : getRequestLocale(req);
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -47,6 +54,15 @@ export async function POST(req: Request) {
     email: user.email,
     name: user.name,
     picture: user.image,
+  });
+
+  // سجّل الليد (اختار الإيميل ولسه مكمّلش) — best-effort
+  await upsertSignupLead({
+    email: user.email,
+    name: user.name,
+    googleSub: account.providerAccountId,
+    source: (context === "portal" ? "PORTAL" : "DASHBOARD") as SignupLeadSource,
+    locale: normalizeLeadLocale(locale),
   });
 
   // NextAuth's adapter creates a temporary Google User before OAuth returns.

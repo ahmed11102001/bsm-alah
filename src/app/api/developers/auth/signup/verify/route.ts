@@ -80,6 +80,12 @@ export async function POST(req: NextRequest) {
     await updateSignupSession(token, { finalized: true });
     await deleteSignupSession(token);
 
+    // كمّل التسجيل — اقفل الليد (best-effort)
+    try {
+      const { markSignupLeadConverted } = await import("@/lib/signup-leads");
+      await markSignupLeadConverted(state.google.email);
+    } catch {}
+
     const devToken = await signDevToken({
       id: developer.id,
       email: developer.email,

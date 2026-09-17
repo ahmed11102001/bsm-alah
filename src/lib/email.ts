@@ -8,6 +8,7 @@ import {
   renderWelcomeEmail,
   renderDeveloperResetEmail,
   renderProjectTransferInviteEmail,
+  renderSignupResumeEmail,
   renderTeamInviteEmail,
 } from "@/lib/email-templates";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
@@ -108,6 +109,28 @@ export async function sendProjectTransferInviteEmail({
     role,
     claimUrl,
     expiresDays: 7,
+    locale,
+  });
+  await sendEmail({ to, subject, html, text });
+}
+
+export async function sendSignupResumeEmail({
+  to,
+  name,
+  resumeUrl,
+  source,
+  locale = "ar",
+}: {
+  to: string;
+  name?: string | null;
+  resumeUrl: string;
+  source: "DASHBOARD" | "PORTAL";
+  locale?: "ar" | "en";
+}) {
+  const { subject, html, text } = renderSignupResumeEmail({
+    name,
+    resumeUrl,
+    source,
     locale,
   });
   await sendEmail({ to, subject, html, text });

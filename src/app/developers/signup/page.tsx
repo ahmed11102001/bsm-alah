@@ -80,7 +80,7 @@ function SignUpContent() {
       const res = await fetch("/api/developers/auth/signup/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signupToken, firstName, lastName, phone, password, terms: true }),
+        body: JSON.stringify({ signupToken, firstName, lastName, phone, password, terms: true, locale: language }),
       });
       const data = await res.json().catch(() => ({}));
       setLoading(false);

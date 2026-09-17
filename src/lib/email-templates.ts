@@ -452,3 +452,65 @@ export function renderTeamInviteEmail({
     text,
   };
 }
+
+// ── 7. Signup Resume Reminder ────────────────────────────────────────────
+// تذكير للي اختار الإيميل ومكمّلش إنشاء الحساب — اللينك بيرجعه مكان ما وقف.
+export function renderSignupResumeEmail({
+  name,
+  resumeUrl,
+  source,
+  locale = "ar",
+}: {
+  name?: string | null;
+  resumeUrl: string;
+  source: "DASHBOARD" | "PORTAL";
+  locale?: Locale;
+}): EmailRenderOutput {
+  const isAr = locale === "ar";
+  const recipientName = name?.trim() ? ` ${name.trim()}` : "";
+  const platformName = isAr
+    ? source === "PORTAL"
+      ? "بوابة مطوري واني"
+      : "منصة واني"
+    : source === "PORTAL"
+      ? "Wani Developer Portal"
+      : "Wani Platform";
+
+  const subject = isAr
+    ? `حسابك على ${platformName} لسه مخلصش — كمّل في دقيقة`
+    : `Your ${platformName} account isn't finished — complete it in a minute`;
+
+  const contentHtml = isAr
+    ? `
+      <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px;text-align:center;">لسه فاضل خطوة واحدة${recipientName} 👋</h2>
+      <p style="font-size:15px;line-height:1.8;color:#334155;margin:0 0 16px;">
+        بدأت إنشاء حسابك على <strong>${platformName}</strong> بإيميلك ومكمّلتش. حسابك محفوظ ومستنيك — دوس على الزرار وكمّل من نفس المكان اللي وقفت عنده.
+      </p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${resumeUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 38px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3);">كمّل إنشاء حسابك ←</a>
+      </div>
+      <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0 0 8px;text-align:center;">اللينك ده خاص بيك وصالح لمدة 7 أيام.</p>
+      <p style="color:#94a3b8;font-size:12px;line-height:1.6;margin:0;text-align:center;">لو مكنتش أنت اللي بدأت التسجيل، تجاهل الرسالة دي بأمان.</p>
+    `
+    : `
+      <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px;text-align:center;">Just one step left${recipientName} 👋</h2>
+      <p style="font-size:15px;line-height:1.8;color:#334155;margin:0 0 16px;">
+        You started creating your account on <strong>${platformName}</strong> but didn't finish. Your progress is saved — click the button below to pick up right where you left off.
+      </p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${resumeUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 38px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3);">Complete Your Account →</a>
+      </div>
+      <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0 0 8px;text-align:center;">This link is personal to you and valid for 7 days.</p>
+      <p style="color:#94a3b8;font-size:12px;line-height:1.6;margin:0;text-align:center;">If you didn't start this signup, safely ignore this email.</p>
+    `;
+
+  const text = isAr
+    ? `حسابك على ${platformName} لسه مخلصش\n\nكمّل إنشاء حسابك من نفس المكان اللي وقفت عنده:\n${resumeUrl}\n\nاللينك صالح لمدة 7 أيام.`
+    : `Your ${platformName} account isn't finished\n\nPick up right where you left off:\n${resumeUrl}\n\nThis link is valid for 7 days.`;
+
+  return {
+    subject,
+    html: emailWrapper({ locale, title: subject, contentHtml }),
+    text,
+  };
+}

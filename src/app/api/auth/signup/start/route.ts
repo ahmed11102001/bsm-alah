@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { verifyGoogleIdToken } from "@/lib/google-verify";
 import { createSignupSession } from "@/lib/signup-session";
+import { upsertSignupLead } from "@/lib/signup-leads";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function POST(req: Request) {
   const ip = getIP(req);
@@ -42,6 +44,14 @@ export async function POST(req: Request) {
     email: identity.email,
     name: identity.name,
     picture: identity.picture,
+  });
+
+  await upsertSignupLead({
+    email: identity.email,
+    name: identity.name,
+    googleSub: identity.sub,
+    source: "DASHBOARD",
+    locale: getRequestLocale(req),
   });
 
   return NextResponse.json({

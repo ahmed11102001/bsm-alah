@@ -1111,6 +1111,32 @@ model LeadBotConfig {
   @@index([ownerId])
 }
 
+// ── تسجيلات ناقصة: يوزر اختار الإيميل (Google) ومكمّلش إنشاء الحساب ────────
+// الصف بيتعمل لحظة إصدار signupToken، والحالة بتتحدث مع تقدم الفلو.
+// القيم: source = DASHBOARD | PORTAL — locale = ar | en (اللغة اللي دخل بيها)
+// stage = EMAIL_PICKED | PHONE_ENTERED — status = PENDING | REMINDED | CONVERTED
+model SignupLead {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  googleSub        String?
+  source           String
+  locale           String    @default("ar")
+  stage            String    @default("EMAIL_PICKED")
+  phone            String?
+  status           String    @default("PENDING")
+  resumeTokenHash  String?   @unique
+  resumeExpiresAt  DateTime?
+  reminderSentAt   DateTime?
+  reminderAttempts Int       @default(0)
+  convertedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@map("signup_leads")
+}
+
 model DeveloperUser {
   id                  String                        @id @default(cuid())
   email               String                        @unique

@@ -426,7 +426,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       const r = await fetch("/api/auth/signup/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signupToken, phone: regPhone, password: regPass, terms: true }),
+        body: JSON.stringify({ signupToken, phone: regPhone, password: regPass, terms: true, locale: effLang }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setErr(d.error || L.genericError); return; }

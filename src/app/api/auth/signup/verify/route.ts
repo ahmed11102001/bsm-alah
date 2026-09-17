@@ -125,6 +125,12 @@ export async function POST(req: Request) {
   await updateSignupSession(token, { finalized: true });
   await deleteSignupSession(token);
 
+  // كمّل التسجيل — اقفل الليد (best-effort)
+  try {
+    const { markSignupLeadConverted } = await import("@/lib/signup-leads");
+    await markSignupLeadConverted(user.email);
+  } catch {}
+
   // الترحيب بالإيميل (موجود ومحفوظ عليه) + referral/cookies مثل التسجيل القديم
   try {
     const locale = getRequestLocale(req);

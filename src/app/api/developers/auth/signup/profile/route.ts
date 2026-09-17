@@ -7,6 +7,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
 import { getSignupSession, updateSignupSession } from "@/lib/signup-session";
 import { requestSignupOtp } from "@/lib/signup-otp-send";
+import { markSignupLeadPhone, normalizeLeadLocale } from "@/lib/signup-leads";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
       return devRateLimited("كثير من المحاولات — حاول بعد ساعة", "RATE_LIMITED", rl.retryAfter);
     }
 
-    const { signupToken, firstName, lastName, phone, password, terms } =
+    const { signupToken, firstName, lastName, phone, password, terms, locale } =
       await req.json().catch(() => ({}));
 
     const state = await getSignupSession(String(signupToken ?? ""));
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest) {
     if (!updated) {
       return devError("جلسة التسجيل انتهت — ابدأ من جديد", "INVALID_REQUEST", 400);
     }
+
+    // وصل لخطوة الرقم — حدّث الليد (best-effort)
+    await markSignupLeadPhone(updated.google.email, normalizedPhone, normalizeLeadLocale(locale));
 
     const sent = await requestSignupOtp(String(signupToken), ip);
     if (!sent.ok) {

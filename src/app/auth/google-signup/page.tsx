@@ -15,12 +15,22 @@ export default function GoogleSignupContinuation() {
 
   useEffect(() => {
     const returnTo = params.get("returnTo") || (context === "portal" ? "/developers/signup" : "/?openLogin=1");
+    // اللغة اللي دخل بيها: من returnTo (الداشبورد بيبعت lang) وإلا الكوكي وإلا المتصفح
+    let locale = "ar";
+    try {
+      const m = returnTo.match(/[?&]lang=(ar|en)\b/);
+      const cm = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=(ar|en)\b/);
+      if (m) locale = m[1];
+      else if (cm) locale = cm[1];
+      else if (navigator.language?.toLowerCase().startsWith("ar")) locale = "ar";
+      else locale = "en";
+    } catch {}
     let cancelled = false;
     (async () => {
       const res = await fetch("/api/auth/signup/from-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context }),
+        body: JSON.stringify({ context, locale }),
       });
       const data = await res.json().catch(() => ({}));
       if (cancelled) return;

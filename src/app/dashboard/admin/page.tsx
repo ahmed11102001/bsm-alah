@@ -62,6 +62,15 @@ interface Lead {
   status: "NEW" | "CONTACTED" | "CONVERTED" | "LOST";
   notes: string | null; createdAt: string;
 }
+interface SignupLeadRow {
+  id: string; email: string; name: string | null;
+  source: "DASHBOARD" | "PORTAL"; locale: string;
+  stage: "EMAIL_PICKED" | "PHONE_ENTERED" | string;
+  phone: string | null;
+  status: "PENDING" | "REMINDED" | "CONVERTED";
+  reminderSentAt: string | null; convertedAt: string | null;
+  createdAt: string;
+}
 interface WaniPartnerCardRow extends PartnerCardContent {
   id: string;
   template: number;
@@ -165,6 +174,12 @@ export default function AdminPage() {
   const [leadTotal,     setLeadTotal]     = useState(0);
   const [updatingLead,  setUpdatingLead]  = useState<string | null>(null);
   const [deletingLead,  setDeletingLead]  = useState<string | null>(null);
+  // signup leads (تسجيلات ناقصة)
+  const [signupLeads,   setSignupLeads]   = useState<SignupLeadRow[]>([]);
+  const [loadingSL,     setLoadingSL]     = useState(false);
+  const [slStatus,      setSlStatus]      = useState<"all"|"PENDING"|"REMINDED"|"CONVERTED">("all");
+  const [slSource,      setSlSource]      = useState<"all"|"DASHBOARD"|"PORTAL">("all");
+  const [slTotal,       setSlTotal]       = useState(0);
 
   // wani partner
   const [waniCards,      setWaniCards]      = useState<WaniPartnerCardRow[]>([]);
@@ -237,6 +252,19 @@ export default function AdminPage() {
       setLeadTotal(data.total);
     }
     setLoadingL(false);
+  };
+  const fetchSignupLeads = async (status: string = slStatus, source: string = slSource) => {
+    setLoadingSL(true);
+    const params = new URLSearchParams();
+    if (status !== "all") params.set("status", status);
+    if (source !== "all") params.set("source", source);
+    const r = await fetch(`/api/admin/signup-leads?${params}`);
+    if (r.ok) {
+      const data = await r.json();
+      setSignupLeads(data.leads ?? []);
+      setSlTotal(data.total ?? 0);
+    }
+    setLoadingSL(false);
   };
 
   // ── Protection Claims: عدد الطلبات التي تحتاج مراجعة ──────────────────
@@ -391,7 +419,7 @@ export default function AdminPage() {
     if (activeTab === "testimonials")       fetchTestimonials(testimonialsTab);
     if (activeTab === "coupons")            fetchCoupons();
     if (activeTab === "articles")           fetchArticles();
-    if (activeTab === "leads")              { fetchLeads(leadStatus); fetchBotConfig(); }
+    if (activeTab === "leads")              { fetchLeads(leadStatus); fetchSignupLeads(); fetchBotConfig(); }
     if (activeTab === "wani-partner")       fetchWaniCards();
     if (activeTab === "protection-claims")  fetchProtectionClaimsCount();
     if (activeTab === "payments")           fetchPendingPaymentsCount();
@@ -1622,6 +1650,128 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+
+            {/* ── Signup Leads (تسجيلات ناقصة) ─────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mt-5 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {adm.leads.signup.title}
+                      {slTotal > 0 && (
+                        <span className="mr-2 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{slTotal}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{adm.leads.signup.subtitle}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(["all", "PENDING", "REMINDED", "CONVERTED"] as const).map(s => {
+                    const labelMap: Record<string, string> = {
+                      all:       adm.leads.signup.statusAll,
+                      PENDING:   adm.leads.signup.statusPending,
+                      REMINDED:  adm.leads.signup.statusReminded,
+                      CONVERTED: adm.leads.signup.statusConverted,
+                    };
+                    return (
+                      <button key={s}
+                        onClick={() => { setSlStatus(s); fetchSignupLeads(s, slSource); }}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                          slStatus === s
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:opacity-80"
+                        }`}>
+                        {labelMap[s]}
+                      </button>
+                    );
+                  })}
+                  <select
+                    value={slSource}
+                    onChange={e => { const v = e.target.value as typeof slSource; setSlSource(v); fetchSignupLeads(slStatus, v); }}
+                    className="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-full px-3 py-1 text-xs focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{adm.leads.signup.sourceAll}</option>
+                    <option value="DASHBOARD">{adm.leads.signup.sourceDashboard}</option>
+                    <option value="PORTAL">{adm.leads.signup.sourcePortal}</option>
+                  </select>
+                </div>
+              </div>
+
+              {loadingSL ? (
+                <TableRowsSkeleton rows={3} />
+              ) : signupLeads.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Clock className="w-8 h-8 text-gray-200 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">{adm.leads.signup.empty}</p>
+                </div>
+              ) : (
+                <div className="admin-table-scroll">
+                  <table className="w-full min-w-[720px] text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                      <tr>
+                        {adm.leads.signup.headers.map((h, i) => (
+                          <th key={i} className="text-right py-3 px-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {signupLeads.map(sl => {
+                        const stColors: Record<string, string> = {
+                          PENDING:   "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",
+                          REMINDED:  "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+                          CONVERTED: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
+                        };
+                        const stLabels: Record<string, string> = {
+                          PENDING:   adm.leads.signup.statusPending,
+                          REMINDED:  adm.leads.signup.statusReminded,
+                          CONVERTED: adm.leads.signup.statusConverted,
+                        };
+                        return (
+                          <tr key={sl.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-gray-900 dark:text-white text-sm">{sl.name || "—"}</p>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-300 text-xs font-mono" dir="ltr">{sl.email}</td>
+                            <td className="py-3 px-3">
+                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
+                                sl.source === "PORTAL"
+                                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                                  : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                              }`}>
+                                {sl.source === "PORTAL" ? adm.leads.signup.sourcePortal : adm.leads.signup.sourceDashboard}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full uppercase">
+                                {sl.locale}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                              {sl.stage === "PHONE_ENTERED" ? adm.leads.signup.stagePhone : adm.leads.signup.stageEmail}
+                              {sl.phone && <span className="font-mono" dir="ltr"> · {sl.phone}</span>}
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${stColors[sl.status]}`}>
+                                {stLabels[sl.status]}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">
+                              {new Date(sl.createdAt).toLocaleDateString(dateLocale)}
+                            </td>
+                            <td className="py-3 px-3 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">
+                              {sl.reminderSentAt ? new Date(sl.reminderSentAt).toLocaleDateString(dateLocale) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

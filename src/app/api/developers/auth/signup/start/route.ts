@@ -5,6 +5,8 @@ import { devError, devRateLimited } from "@/lib/dev-errors";
 import { rateLimit, getIP } from "@/lib/rate-limit";
 import { verifyGoogleIdToken } from "@/lib/google-verify";
 import { createSignupSession } from "@/lib/signup-session";
+import { upsertSignupLead } from "@/lib/signup-leads";
+import { getRequestLocale } from "@/lib/locale-resolver";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +35,14 @@ export async function POST(req: NextRequest) {
       email: identity.email,
       name: identity.name,
       picture: identity.picture,
+    });
+
+    await upsertSignupLead({
+      email: identity.email,
+      name: identity.name,
+      googleSub: identity.sub,
+      source: "PORTAL",
+      locale: getRequestLocale(req),
     });
 
     return NextResponse.json({ signupToken: token, email: identity.email, name: identity.name });

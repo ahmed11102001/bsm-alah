@@ -7,6 +7,7 @@ import { rateLimit, getIP } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
 import { getSignupSession, updateSignupSession } from "@/lib/signup-session";
 import { requestSignupOtp } from "@/lib/signup-otp-send";
+import { markSignupLeadPhone, normalizeLeadLocale } from "@/lib/signup-leads";
 
 export const TERMS_VERSION = "2026-09-v1";
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { signupToken, phone, password, terms } = await req.json().catch(() => ({}));
+  const { signupToken, phone, password, terms, locale } = await req.json().catch(() => ({}));
 
   const state = await getSignupSession(String(signupToken ?? ""));
   if (!state || state.finalized || state.context !== "dashboard") {
@@ -59,6 +60,9 @@ export async function POST(req: Request) {
   if (!updated) {
     return NextResponse.json({ error: "جلسة التسجيل انتهت — ابدأ من جديد" }, { status: 400 });
   }
+
+  // وصل لخطوة الرقم — حدّث الليد (best-effort)
+  await markSignupLeadPhone(updated.google.email, normalizedPhone, normalizeLeadLocale(locale));
 
   const sent = await requestSignupOtp(String(signupToken), ip);
   if (!sent.ok) {
