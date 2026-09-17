@@ -7,12 +7,14 @@ import { createSignupSession, type SignupContext } from "@/lib/signup-session";
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.user.email) {
+    console.log("[from-session] outcome=no-session");
     return NextResponse.json({ error: "Google session is required" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));
   const context = body?.context as SignupContext;
   if (context !== "dashboard" && context !== "portal") {
+    console.log("[from-session] outcome=invalid-context");
     return NextResponse.json({ error: "Invalid signup context" }, { status: 400 });
   }
 
@@ -25,15 +27,18 @@ export async function POST(req: Request) {
     select: { providerAccountId: true },
   });
   if (!user || !account) {
+    console.log("[from-session] outcome=no-account", { context });
     return NextResponse.json({ error: "Google account could not be verified" }, { status: 401 });
   }
 
   if (context === "dashboard" && (user.phone || user.password || user.onboardingCompleted)) {
+    console.log("[from-session] outcome=exists", { context });
     return NextResponse.json({ error: "This email is already registered", code: "EMAIL_EXISTS" }, { status: 409 });
   }
   if (context === "portal") {
     const existingDeveloper = await prisma.developerUser.findUnique({ where: { email: user.email } });
     if (existingDeveloper) {
+      console.log("[from-session] outcome=exists", { context });
       return NextResponse.json({ error: "This email is already registered", code: "EMAIL_EXISTS" }, { status: 409 });
     }
   }
@@ -56,5 +61,6 @@ export async function POST(req: Request) {
     await prisma.user.delete({ where: { id: user.id } });
   }
 
+  console.log("[from-session] outcome=created", { context });
   return NextResponse.json({ signupToken: token, email: user.email, name: user.name });
 }

@@ -17,7 +17,11 @@ export default function GoogleSignupContinuation() {
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.user?.email) {
-      router.replace("/");
+      if (context === "portal") {
+        window.location.href = `${DEVELOPERS_BASE_URL}/signin?error=no-session`;
+      } else {
+        router.replace("/?openLogin=1&authError=no-session");
+      }
       return;
     }
     const returnTo = params.get("returnTo") || (context === "portal" ? "/developers/signup" : "/?openLogin=1");

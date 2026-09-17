@@ -28,12 +28,22 @@ function AuthCallbackInner() {
     if (!session) {
       // بدون جلسة مفيش توكن يتعمل — لكن بدل رمي اليوزر على لاندينج ميتة،
       // رجّعه لمكان يقدر يكمل منه (تسجيل الدخول) مع الحفاظ على السياق.
+      // الـ authError في الـ URL عشان سبب الرجوع يبقى ظاهر للتشخيص.
       if (signupContext === "portal") {
-        window.location.href = `${DEVELOPERS_BASE_URL}/signin`;
+        window.location.href = `${DEVELOPERS_BASE_URL}/signin?error=no-session`;
         return;
       }
       if (signupContext === "dashboard") {
-        router.replace(signupReturnTo || (lang === "en" ? "/en?openLogin=1" : "/ar?openLogin=1"));
+        try {
+          const target = new URL(
+            signupReturnTo || (lang === "en" ? "/en?openLogin=1" : "/ar?openLogin=1"),
+            window.location.origin
+          );
+          target.searchParams.set("authError", "no-session");
+          router.replace(`${target.pathname}${target.search}`);
+        } catch {
+          router.replace("/ar?openLogin=1&authError=no-session");
+        }
         return;
       }
       const fallback = lang === "en" ? "/en" : "/ar";
