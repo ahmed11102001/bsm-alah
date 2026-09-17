@@ -257,8 +257,8 @@ export default function HeroCinematic() {
     { t: isAr ? "مشاريع غير محدودة" : "Unlimited projects", s: isAr ? "كل مشروع معزول ببياناته وإحصائياته" : "Each project fully isolated with its own data" },
     { t: isAr ? "رصيد تجريبي لكل مشروع" : "Trial balance per project", s: isAr ? "ابني وجرّب بدون أي تكلفة مقدمة" : "Build & test with zero upfront costs" },
     { t: isAr ? "ربط Meta مخصص" : "Custom Meta integration", s: isAr ? "رقم WhatsApp Business خاص بكل مشروع" : "Dedicated WhatsApp Business number per project" },
-    { t: isAr ? "تسليم المشروع بضغطة زر" : "One-click handover", s: isAr ? "انقل الملكية للعميل في ثواني" : "Transfer ownership to your client instantly" },
-    { t: isAr ? "إدارة كاملة من Dashboard وحدة" : "Unified dashboard", s: isAr ? "تابع وتحكم في كل مشاريعك من مكان واحد" : "Monitor & manage all projects from one place" },
+    { t: isAr ? "تسليم المشروع بالإيميل تلقائياً" : "Automatic email handover", s: isAr ? "كود الدعوة بيوصل إيميل العميل لوحده" : "The invite code lands in your client's inbox by itself" },
+    { t: isAr ? "استلام وإدارة المطور" : "Claim & developer management", s: isAr ? "العميل يستلم من صفحة الدخول والمالك يدير مطوره" : "Clients claim from sign-in, owners manage their developer" },
   ];
 
   const dim = (i: number) => (active === i ? 1 : 0.08);
@@ -296,7 +296,7 @@ export default function HeroCinematic() {
           <div style={{ position: "absolute", left: `${SCENES[0].camera.x * 100}%`, top: `${SCENES[0].camera.y * 100}%`, transform: "translate(-50%,-50%)", opacity: dim(0), transition: "opacity .6s" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "7px 16px", borderRadius: "100px", border: "1px solid rgba(37,211,102,0.25)", background: "rgba(37,211,102,0.06)", fontSize: "14px", color: "#25D366", fontFamily: "'JetBrains Mono','Fira Code',monospace", whiteSpace: "nowrap" }}>
               <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#25D366", boxShadow: "0 0 8px #25D366", animation: reducedMotion ? "none" : "hc-pulse 2s infinite" }} />
-              WhatsApp OTP API · BETA
+              WhatsApp OTP API
             </div>
           </div>
 
