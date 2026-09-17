@@ -14,7 +14,6 @@ import Pricing from "@/sections/Pricing";
 import Testimonials from "@/sections/Testimonials";
 import FAQ from "@/sections/FAQ";
 import Footer from "@/sections/Footer";
-import LoginModal from "@/components/LoginModal";
 import AIAssistantWidget from "@/components/AIAssistantWidget";
 import RevealSection from "@/components/RevealSection";
 import type { Lang } from "@/lib/translations";
@@ -24,7 +23,6 @@ interface LandingPageProps {
 }
 
 function LandingPageContent({ initialLang }: LandingPageProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [lang, setLang] = useState<Lang>(initialLang);
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -36,8 +34,14 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
   const hasSignupContinuation = params.has("signupToken");
 
   useEffect(() => {
-    if (shouldOpenLogin) setIsLoginModalOpen(true);
-  }, [shouldOpenLogin]);
+    if (hasSignupContinuation) {
+      router.replace(`/auth?mode=signup${params.toString() ? `&${params.toString()}` : ""}`);
+    } else if (params.get("login") === "join" || params.get("tab") === "join") {
+      router.replace(`/auth?mode=join${params.toString() ? `&${params.toString()}` : ""}`);
+    } else if (shouldOpenLogin) {
+      router.replace(`/auth?mode=login${params.toString() ? `&${params.toString()}` : ""}`);
+    }
+  }, [shouldOpenLogin, hasSignupContinuation, params, router]);
 
   useEffect(() => {
     setLang(initialLang);
@@ -67,32 +71,27 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
     router.push(`/${newLang}${search}`);
   };
 
+  const openLoginPage = () => router.push(`/auth?mode=login&lang=${lang}`);
+
   if (status === "loading") return <LandingPageSkeleton lang={lang} />;
   if (session && !shouldOpenLogin && !hasSignupContinuation) return null;
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar
-        onLoginClick={() => setIsLoginModalOpen(true)}
+        onLoginClick={openLoginPage}
         lang={lang}
         onLangChange={handleLangChange}
       />
-      <Hero onLoginClick={() => setIsLoginModalOpen(true)} lang={lang} />
+      <Hero onLoginClick={openLoginPage} lang={lang} />
 
       <Features lang={lang} />
       <RevealSection><Partners lang={lang} /></RevealSection>
-      <RevealSection><HowItWorks lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
+      <RevealSection><HowItWorks lang={lang} onLoginClick={openLoginPage} /></RevealSection>
       <RevealSection><Pricing lang={lang} /></RevealSection>
-      <RevealSection><Testimonials lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
-      <RevealSection><FAQ lang={lang} onLoginClick={() => setIsLoginModalOpen(true)} /></RevealSection>
+      <RevealSection><Testimonials lang={lang} onLoginClick={openLoginPage} /></RevealSection>
+      <RevealSection><FAQ lang={lang} onLoginClick={openLoginPage} /></RevealSection>
       <RevealSection><Footer lang={lang} /></RevealSection>
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        callbackUrl={callbackUrl ?? undefined}
-        lang={lang}
-      />
 
       {/* ── AI Assistant Widget ── */}
       <AIAssistantWidget lang={lang} />

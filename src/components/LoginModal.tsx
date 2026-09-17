@@ -26,6 +26,7 @@ interface LoginModalProps {
   callbackUrl?: string;
   lang?: "ar" | "en";
   standalone?: boolean;
+  initialView?: "login" | "register" | "join";
 }
 
 // ─── Animations ───────────────────────────────────────────────────────────────
@@ -71,22 +72,6 @@ function PasswordInput({ value, onChange, placeholder = "•••••••�
   );
 }
 
-function Tab({ active, onClick, children }: {
-  active: boolean; onClick: () => void; children: React.ReactNode;
-}) {
-  return (
-    <button type="button" onClick={onClick}
-      className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all relative ${active ? "text-[#25D366]" : "text-gray-400 hover:text-gray-600"
-        }`}>
-      {children}
-      {active && (
-        <motion.div layoutId="tab-indicator"
-          className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#25D366] rounded-full" />
-      )}
-    </button>
-  );
-}
-
 // ─── Google Button ─────────────────────────────────────────────────────────────
 // تصميم Google الرسمي (brand guidelines)
 function GoogleButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
@@ -127,10 +112,10 @@ function OrDivider() {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standalone = false }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standalone = false, initialView = "login" }: LoginModalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<View>(standalone ? "register" : "login");
+  const [view, setView] = useState<View>(standalone ? initialView : "login");
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -238,7 +223,8 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   const handleGoogleSignup = async () => {
     setGBusy(true);
     const currentLang = lang || (document.cookie.includes("NEXT_LOCALE=en") ? "en" : "ar");
-    const signupReturn = new URL("/signup", window.location.origin);
+    const signupReturn = new URL("/auth", window.location.origin);
+    signupReturn.searchParams.set("mode", "signup");
     signupReturn.searchParams.set("lang", currentLang);
     if (callbackUrl) signupReturn.searchParams.set("callbackUrl", callbackUrl);
     const returnTo = `${signupReturn.pathname}${signupReturn.search}`;
@@ -439,12 +425,6 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
               </span>
             </motion.div>
 
-            {(view === "login" || view === "join") && (
-              <div className="flex border-b border-gray-100 mb-0">
-                <Tab active={view === "login"} onClick={() => go("login")}>دخول</Tab>
-                <Tab active={view === "join"} onClick={() => go("join")}>انضمام لفريق</Tab>
-              </div>
-            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-7 pb-6 pt-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[#25D366]/35 hover:scrollbar-thumb-[#25D366]">
@@ -493,9 +473,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                   <p className="text-xs text-gray-400 text-center">
                     معندكش حساب؟{" "}
-                     <button type="button" onClick={() => router.push(`/signup?lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
-                      سجل جديد
-                    </button>
+                     <button type="button" onClick={() => router.push(`/auth?mode=signup&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
+                       سجل جديد
+                     </button>
+                     {" "}·{" "}
+                     <button type="button" onClick={() => router.push(`/auth?mode=join&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
+                       انضمام لفريق
+                     </button>
                   </p>
                 </motion.div>
               )}
@@ -514,7 +498,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                       {err && <ErrMsg msg={err} />}
                       <p className="text-xs text-gray-400 text-center">
                         عندك حساب؟{" "}
-                         <button type="button" onClick={() => standalone ? router.push(`/${lang || "ar"}?openLogin=1`) : go("login")} className="text-[#25D366] hover:underline">
+                         <button type="button" onClick={() => router.push(`/auth?mode=login&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
                           سجل الدخول
                         </button>
                       </p>

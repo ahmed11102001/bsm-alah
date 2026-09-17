@@ -80,7 +80,8 @@ export default async function AuthCallbackPage({ searchParams }: AuthCallbackPag
 
     const query = new URLSearchParams({ context: "dashboard" });
     // Google login for a new account continues on the standalone signup page.
-    const returnUrl = new URL("/signup", "http://localhost");
+    const returnUrl = new URL("/auth", "http://localhost");
+    returnUrl.searchParams.set("mode", "signup");
     returnUrl.searchParams.set("lang", lang === "en" ? "en" : "ar");
     if (next) returnUrl.searchParams.set("callbackUrl", next);
     const returnTo = `${returnUrl.pathname}${returnUrl.search}`;
