@@ -20,7 +20,7 @@ export default function EmailNavbar({
         {/* Left: Brand + Back to Channels */}
         <div className="flex items-center gap-4">
           <Link
-            href="/dashboard/channels"
+            href="/channels"
             className="group flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/70 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 active:scale-95"
             title="الرجوع لمركز القنوات"
           >

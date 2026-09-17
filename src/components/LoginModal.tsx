@@ -242,6 +242,11 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   const [view, setView] = useState<View>(standalone ? initialView : "login");
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
+  // بعد نجاح الدخول/التسجيل/الانضمام: بنستنى الـnavigation يخلص بدل ما نقفل
+  // المودال فورًا (onClose) وهو لسه بيتنقل — ده كان بيسبب فلاش للاندينج بيدج
+  // اللي المودال كان فوقها. طول ما isRedirecting=true المودال فاضل مفتوح
+  // (Dialog root بيتشال مع الشجرة كلها لما الـnavigation يخلص فعليًا).
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [err, setErr] = useState("");
 
   // login (identifier = email OR WhatsApp number)
@@ -389,7 +394,8 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         email: loginEmail.trim(), password: loginPass, redirect: false,
       });
       if (!res?.ok) { setErr(res?.error || L.badCreds); return; }
-      onClose(); router.push(callbackUrl || "/dashboard/channels");
+      setIsRedirecting(true);
+      router.push(callbackUrl || "/channels");
     } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
@@ -486,7 +492,8 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         return;
       }
       toast.success(L.accountCreated);
-      onClose(); router.push(callbackUrl || "/dashboard/channels");
+      setIsRedirecting(true);
+      router.push(callbackUrl || "/channels");
     } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
@@ -513,8 +520,8 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       });
 
       if (res?.ok) {
-        onClose();
-        router.push(callbackUrl || "/dashboard/channels");
+        setIsRedirecting(true);
+        router.push(callbackUrl || "/channels");
       } else {
         setLoginEmail(joinEmail.toLowerCase().trim());
         go("login");
@@ -549,7 +556,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       {/* Top gradient bar */}
       <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366]" />
 
-      {!standalone && (
+      {!standalone && !isRedirecting && (
         <button
           type="button"
           onClick={onClose}
@@ -561,6 +568,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
       )}
 
       <div className="relative flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-white text-gray-900">
+        {/* ── Redirect overlay: بيغطي المحتوى لحد ما الـnavigation يخلص فعليًا،
+            بدل ما نقفل المودال ونكشف اللاندينج بيدج تحته للحظة. ── */}
+        {isRedirecting && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-white">
+            <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+          </div>
+        )}
           <div className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm px-7 pt-5 pb-4">
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center gap-2.5 mb-4">
@@ -889,7 +903,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   if (standalone) return inner;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isRedirecting) onClose(); }}>
       <DialogContent
         showCloseButton={false}
         className="force-light w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"

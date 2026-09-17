@@ -125,7 +125,7 @@ function OnboardingInner() {
       return;
     }
     if (!session.user.needsOnboarding) {
-      router.replace(next || "/dashboard");
+      router.replace(next || "/channels");
     }
   }, [session, status, router, next, locale]);
 
@@ -190,7 +190,7 @@ function OnboardingInner() {
 
       await update({ needsOnboarding: false });
       toast.success(t.toastSuccess);
-      router.replace(next || "/dashboard");
+      router.replace(next || "/channels");
     } catch {
       setErr(t.genericError);
     } finally {

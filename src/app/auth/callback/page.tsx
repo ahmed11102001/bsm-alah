@@ -75,7 +75,7 @@ export default async function AuthCallbackPage({ searchParams }: AuthCallbackPag
       !user.onboardingCompleted;
 
     if (!isUnfinishedGoogleAccount) {
-      redirect(next || "/dashboard/channels");
+      redirect(next || "/channels");
     }
 
     const query = new URLSearchParams({ context: "dashboard" });
@@ -97,5 +97,5 @@ export default async function AuthCallbackPage({ searchParams }: AuthCallbackPag
     redirect(`/auth/google-signup?${query.toString()}`);
   }
 
-  redirect(next || "/dashboard/channels");
+  redirect(next || "/channels");
 }

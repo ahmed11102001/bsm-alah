@@ -82,10 +82,10 @@ export default function GoogleSignupContinuation() {
     context === "portal" ? `${DEVELOPERS_BASE_URL}/signin` : "/?openLogin=1";
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
+    <main className="min-h-screen flex flex-col items-center justify-center gap-5 p-6 bg-[#064e3b]">
       {error ? (
         <div className="flex flex-col items-center gap-4 max-w-sm">
-          <p className="text-sm text-red-600 text-center">{error}</p>
+          <p className="text-sm text-red-200 text-center">{error}</p>
           {errorCode === "EMAIL_EXISTS" ? (
             <a
               href={signInUrl}
@@ -97,14 +97,19 @@ export default function GoogleSignupContinuation() {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="px-6 h-11 inline-flex items-center justify-center rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              className="px-6 h-11 inline-flex items-center justify-center rounded-xl border border-white/25 text-sm font-medium text-white hover:bg-white/10 transition"
             >
               Try again
             </button>
           )}
         </div>
       ) : (
-        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+        <>
+          <span className="w-11 h-11 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-[#25D366]">
+            <img src="/faviconlink.svg" alt="Wani" className="w-full h-full object-cover" />
+          </span>
+          <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
+        </>
       )}
     </main>
   );
