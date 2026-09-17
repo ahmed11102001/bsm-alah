@@ -37,6 +37,14 @@ const nextConfig: NextConfig = {
         source: "/dashboard/channels",
         destination: "/channels",
       },
+      {
+        source: "/dashboard/email",
+        destination: "/email-marketing",
+      },
+      {
+        source: "/dashboard/email/:path*",
+        destination: "/email-marketing/:path*",
+      },
     ];
   },
 
