@@ -71,7 +71,7 @@ export default async function ProjectLayout({
         allProjects={allProjects}
         viewerRole={viewerRole}
       />
-      <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
+      <main style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "clip" }}>{children}</main>
     </div>
   );
 }

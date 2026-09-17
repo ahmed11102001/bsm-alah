@@ -67,8 +67,10 @@ function WAPreview({ headerType, headerText, body, footer, category, addSecurity
       background: "#0a1628",
       borderRadius: 20,
       padding: "0",
-      width: 280,
-      flexShrink: 0,
+      width: "100%",
+      maxWidth: 280,
+      boxSizing: "border-box",
+      flexShrink: 1,
       overflow: "hidden",
       border: "8px solid #0d1f35",
       boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
@@ -439,7 +441,7 @@ export default function ProjectTemplatesPage() {
         .tp-inner.visible { opacity:1; transform:translateY(0); }
 
         /* Page header */
-        .tp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; }
+        .tp-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:32px; }
         .tp-title { font-size:26px; font-weight:600; }
         .tp-subtitle { font-size:14px; color:rgba(255,255,255,0.4); margin-top:4px; }
         .btn-new { display:flex; align-items:center; gap:8px; padding:10px 20px; background:#20d378; color:#060810; border:none; border-radius:12px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .2s; }
@@ -447,13 +449,13 @@ export default function ProjectTemplatesPage() {
 
         /* Template list */
         .tmpl-grid { display:flex; flex-direction:column; gap:12px; }
-        .tmpl-card { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:20px 24px; display:flex; align-items:center; gap:16px; transition:border-color .2s, background .2s; }
+        .tmpl-card { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:20px 24px; display:flex; align-items:center; flex-wrap:wrap; gap:16px; transition:border-color .2s, background .2s; }
         .tmpl-card:hover { border-color:rgba(255,255,255,0.12); background:rgba(255,255,255,0.035); }
         .tmpl-icon { width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-        .tmpl-info { flex:1; }
+        .tmpl-info { flex:1 1 200px; min-width:0; }
         .tmpl-name { font-size:15px; font-weight:600; font-family:'Fira Code',monospace; margin-bottom:4px; }
         .tmpl-meta { font-size:12px; color:rgba(255,255,255,0.4); display:flex; gap:12px; flex-wrap:wrap; }
-        .tmpl-body-preview { font-size:13px; color:rgba(255,255,255,0.5); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:500px; }
+        .tmpl-body-preview { font-size:13px; color:rgba(255,255,255,0.5); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
         .status-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; flex-shrink:0; }
         .rejected-reason { margin-top:6px; font-size:12px; color:#f87171; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:6px 10px; }
 
@@ -496,9 +498,9 @@ export default function ProjectTemplatesPage() {
         .htype-btn.active { background:rgba(32,211,120,0.1); border-color:rgba(32,211,120,0.3); color:#20d378; }
 
         /* Var examples */
-        .var-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+        .var-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; }
         .var-tag { padding:4px 10px; background:rgba(32,211,120,0.12); color:#20d378; border-radius:8px; font-size:12px; font-family:'Fira Code',monospace; flex-shrink:0; }
-        .var-input { flex:1; padding:9px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:10px; color:#fff; font-size:13px; font-family:inherit; outline:none; }
+        .var-input { flex:1 1 140px; min-width:0; padding:9px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:10px; color:#fff; font-size:13px; font-family:inherit; outline:none; }
         .var-input:focus { border-color:rgba(32,211,120,0.3); }
         .var-input::placeholder { color:rgba(255,255,255,0.2); }
 
@@ -507,7 +509,7 @@ export default function ProjectTemplatesPage() {
         .form-success { padding:12px 16px; background:rgba(32,211,120,0.08); border:1px solid rgba(32,211,120,0.2); border-radius:10px; color:#20d378; font-size:13px; margin-bottom:16px; }
 
         /* Buttons */
-        .form-actions { display:flex; gap:10px; margin-top:24px; }
+        .form-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
         .btn-draft { flex:1; padding:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.65); border-radius:12px; font-size:14px; font-family:inherit; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
         .btn-draft:hover:not(:disabled) { background:rgba(255,255,255,0.07); }
         .btn-submit { flex:2; padding:12px; background:#20d378; color:#060810; border:none; border-radius:12px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
@@ -556,6 +558,7 @@ export default function ProjectTemplatesPage() {
           .tp-inner { padding:24px 16px; }
           .tp-header { flex-direction:column; align-items:flex-start; gap:12px; }
           .form-panel { padding:20px; }
+          .tmpl-card { padding:16px; gap:12px; }
         }
       `}</style>
 
@@ -570,7 +573,7 @@ export default function ProjectTemplatesPage() {
                   <h1 className="tp-title">{t("OTP Templates", "قوالب OTP")}</h1>
                   <p className="tp-subtitle">{t("Create verification templates, send them to Meta, and wait for approval", "أنشئ قوالب التحقق، أرسلها لـ Meta، وانتظر الموافقة")}</p>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
                   <button
                     onClick={handleSync}
                     disabled={syncing}
@@ -677,7 +680,7 @@ export default function ProjectTemplatesPage() {
                             <div className="rejected-reason">{t("❌ Rejection Reason: ", "❌ سبب الرفض: ")}{tData.rejectedReason}</div>
                           )}
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", marginInlineStart: "auto" }}>
                           <div className="status-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
                             {s.icon} {s.label}
                           </div>

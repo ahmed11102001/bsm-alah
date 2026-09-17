@@ -132,7 +132,7 @@ export default function ProjectApiKeysPage() {
   const activeKeys = keys.filter((k) => k.status === "ACTIVE");
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 24px", direction: language === 'ar' ? "rtl" : "ltr", fontFamily: "IBM Plex Sans Arabic, sans-serif" }}>
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: "clamp(20px, 5vw, 32px) clamp(16px, 4vw, 24px)", direction: language === 'ar' ? "rtl" : "ltr", fontFamily: "IBM Plex Sans Arabic, sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 28, textAlign: language === 'ar' ? 'right' : 'left' }}>
         <h1 style={{ fontSize: 22, fontWeight: 600, color: "#fff", marginBottom: 6 }}>API Keys</h1>
@@ -149,19 +149,19 @@ export default function ProjectApiKeysPage() {
           <Plus size={15} style={{ color: "#20d378" }} />
           <span>{t("New Key", "مفتاح جديد")}</span>
         </div>
-        <div style={{ display: "flex", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
           <input
             type="text"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder={t("Key name (optional) — e.g. Production Server", "اسم المفتاح (اختياري) — مثلاً: Production Server")}
-            style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 13, outline: "none", fontFamily: "inherit", textAlign: language === 'ar' ? 'right' : 'left' }}
+            style={{ flex: "1 1 160px", minWidth: 0, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 13, outline: "none", fontFamily: "inherit", textAlign: language === 'ar' ? 'right' : 'left' }}
             onKeyDown={(e) => e.key === "Enter" && generateKey()}
           />
           <button
             onClick={generateKey}
             disabled={activeKeys.length >= 5}
-            style={{ padding: "10px 20px", borderRadius: 10, background: "#20d378", color: "#060810", fontWeight: 600, fontSize: 13, border: "none", cursor: "pointer", opacity: activeKeys.length >= 5 ? 0.4 : 1, fontFamily: "inherit" }}
+            style={{ padding: "10px 20px", borderRadius: 10, background: "#20d378", color: "#060810", fontWeight: 600, fontSize: 13, border: "none", cursor: "pointer", opacity: activeKeys.length >= 5 ? 0.4 : 1, fontFamily: "inherit", flexShrink: 0 }}
           >
             {t("Create", "إنشاء")}
           </button>
@@ -181,14 +181,14 @@ export default function ProjectApiKeysPage() {
             <Key size={15} />
             <span>{t("Your new key is ready", "مفتاحك الجديد جاهز")}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
-            <code style={{ flex: 1, padding: "10px 14px", borderRadius: 10, background: "rgba(0,0,0,0.3)", fontSize: 12, fontFamily: "Fira Code, monospace", color: "#fff", wordBreak: "break-all" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+            <code style={{ flex: "1 1 160px", minWidth: 0, padding: "10px 14px", borderRadius: 10, background: "rgba(0,0,0,0.3)", fontSize: 12, fontFamily: "Fira Code, monospace", color: "#fff", wordBreak: "break-all" }}>
               {showKey ? generatedKey : generatedKey.slice(0, 22) + "••••••••••••••••"}
             </code>
-            <button onClick={() => setShowKey((v) => !v)} style={{ padding: 8, borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)" }}>
+            <button onClick={() => setShowKey((v) => !v)} style={{ padding: 8, borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", flexShrink: 0 }}>
               {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
-            <button onClick={() => copyKey(generatedKey)} style={{ padding: 8, borderRadius: 8, background: "rgba(32,211,120,0.15)", border: "none", cursor: "pointer", color: "#20d378" }}>
+            <button onClick={() => copyKey(generatedKey)} style={{ padding: 8, borderRadius: 8, background: "rgba(32,211,120,0.15)", border: "none", cursor: "pointer", color: "#20d378", flexShrink: 0 }}>
               {copied ? <Check size={15} /> : <Copy size={15} />}
             </button>
           </div>
@@ -225,21 +225,24 @@ export default function ProjectApiKeysPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              flexWrap: "wrap",
+              rowGap: 10,
+              columnGap: 12,
               flexDirection: language === 'ar' ? 'row' : 'row-reverse'
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
               <div style={{ width: 7, height: 7, borderRadius: "50%", background: key.status === "ACTIVE" ? "#20d378" : "#ef4444", flexShrink: 0 }} />
-              <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
-                <code style={{ fontSize: 13, fontFamily: "Fira Code, monospace", color: "#fff" }}>
+              <div style={{ textAlign: language === 'ar' ? 'right' : 'left', minWidth: 0 }}>
+                <code style={{ fontSize: 13, fontFamily: "Fira Code, monospace", color: "#fff", overflowWrap: "anywhere" }}>
                   {key.keyPrefix}_••••••••
                 </code>
                 {key.name && (
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{key.name}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2, overflowWrap: "anywhere" }}>{key.name}</div>
                 )}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, flexDirection: language === 'ar' ? 'row' : 'row-reverse' }}>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>
                 {new Date(key.createdAt).toLocaleDateString(language === 'ar' ? "ar-EG" : "en-US")}
               </span>

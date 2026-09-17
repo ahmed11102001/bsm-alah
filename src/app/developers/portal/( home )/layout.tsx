@@ -20,7 +20,7 @@ export default async function PortalHomeLayout({ children }: { children: ReactNo
   return (
     <div style={{ height: "100%", background: "#060810", display: "flex", overflow: "hidden" }}>
       <PortalSidebar developer={developer} />
-      <main style={{ flex: 1, overflow: "auto" }}>
+      <main style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "clip" }}>
         {children}
       </main>
     </div>

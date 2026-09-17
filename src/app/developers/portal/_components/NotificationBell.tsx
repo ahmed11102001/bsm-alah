@@ -284,6 +284,7 @@ export default function NotificationBell() {
           top: calc(100% + 10px);
           left: 0;
           width: 380px;
+          max-width: calc(100vw - 24px);
           max-height: 480px;
           background: #0d1117;
           border: 1px solid rgba(255,255,255,0.08);
@@ -514,9 +515,14 @@ export default function NotificationBell() {
         /* ── Responsive ───────────────────────────────────────── */
         @media (max-width: 480px) {
           .nbell-panel {
-            width: calc(100vw - 24px);
-            left: auto;
-            right: -8px;
+            /* تتثبت على الشاشة بعرض آمن بدل الحسابات النسبية اللي بتطلعها برا */
+            position: fixed;
+            top: 62px;
+            left: 12px;
+            right: 12px;
+            width: auto;
+            max-width: none;
+            max-height: calc(100vh - 140px);
             transform: none;
           }
           @keyframes nbell-panel-in {

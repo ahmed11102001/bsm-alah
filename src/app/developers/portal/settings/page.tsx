@@ -357,9 +357,13 @@ export default function DeveloperSettingsPage() {
 
         @media (max-width: 768px) {
           .settings-container { padding: 16px; }
+          .settings-card { padding: 20px 16px; }
           .form-grid { grid-template-columns: 1fr; gap: 16px; }
           .settings-title { font-size: 20px; }
           .settings-desc { font-size: 13px; }
+          .devices-title { flex-wrap: wrap; gap: 8px; }
+          .submit-wrap { justify-content: stretch; }
+          .btn-save { width: 100%; justify-content: center; }
         }
       `}</style>
 

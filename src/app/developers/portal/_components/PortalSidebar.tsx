@@ -102,7 +102,7 @@ export default function PortalSidebar({ developer }: { developer: any }) {
             .sidebar {
               position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
               transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              background: #060810; border-left: none; width: 260px;
+              background: #060810; border-left: none; width: 260px; max-width: 85vw;
             }
             .sidebar.mobile-open { transform: translateX(0); }
             .mobile-close-btn {

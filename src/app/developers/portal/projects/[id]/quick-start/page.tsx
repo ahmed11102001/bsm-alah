@@ -292,20 +292,20 @@ wani otp status --token <token>`;
           display: flex; align-items: center; gap: 10px; margin-top: 8px;
           background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.07);
           border-radius: 10px; padding: 8px 10px 8px 12px;
-          flex-direction: row;
+          flex-direction: row; min-width: 0; overflow: hidden;
         }
-        .qs-tid-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
-        .qs-tid-value { flex: 1; font-family: 'Fira Code', monospace; font-size: 11.5px; color: #20d378; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap; }
+        .qs-tid-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; flex-shrink: 0; }
+        .qs-tid-value { flex: 1; min-width: 0; font-family: 'Fira Code', monospace; font-size: 11.5px; color: #20d378; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap; }
 
         .qs-endpoint {
           display: flex; align-items: center; gap: 10px; margin: 6px 0 4px;
           font-family: 'Fira Code', monospace; font-size: 12.5px; direction: ltr; text-align: left;
           background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.06);
           border-radius: 12px; padding: 12px 16px;
-          flex-direction: row;
+          flex-direction: row; min-width: 0; overflow: hidden;
         }
-        .qs-method { font-weight: 700; color: ${contract.method === "GET" ? "#38bdf8" : "#f59e0b"}; }
-        .qs-url { color: rgba(255,255,255,0.75); word-break: break-all; }
+        .qs-method { font-weight: 700; flex-shrink: 0; color: ${contract.method === "GET" ? "#38bdf8" : "#f59e0b"}; }
+        .qs-url { color: rgba(255,255,255,0.75); word-break: break-all; min-width: 0; }
 
         .qs-block-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: .6px; margin: 16px 0 8px; text-align: ${isAr ? "right" : "left"}; }
 
@@ -320,9 +320,9 @@ wani otp status --token <token>`;
         }
         .qs-copy-btn:hover { border-color: rgba(32,211,120,0.35); color: #20d378; }
 
-        .qs-install-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 6px; flex-direction: ${isAr ? "row" : "row-reverse"}; }
+        .qs-install-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 6px; min-width: 0; overflow: hidden; flex-direction: ${isAr ? "row" : "row-reverse"}; }
         .qs-install-code {
-          flex: 1; font-family: 'Fira Code', monospace; font-size: 12.5px; color: #fff;
+          flex: 1; min-width: 0; font-family: 'Fira Code', monospace; font-size: 12.5px; color: #fff;
           background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
           border-radius: 11px; padding: 11px 14px; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap;
         }
@@ -358,6 +358,8 @@ wani otp status --token <token>`;
 
         @media (max-width: 700px) {
           .qs-root { padding: 24px 16px 40px; }
+          .qs-section { padding: 16px; }
+          .qs-endpoint { padding: 10px 12px; font-size: 11.5px; }
           .qs-path-grid { grid-template-columns: 1fr; }
           .qs-controls { grid-template-columns: 1fr; }
           .qs-reqres-grid { grid-template-columns: 1fr; }

@@ -204,6 +204,7 @@ export default function PortalTopBar({
           top: calc(100% + 8px);
           left: 0;
           min-width: 200px;
+          max-width: calc(100vw - 32px);
           background: #0d1117;
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 14px;
@@ -216,18 +217,25 @@ export default function PortalTopBar({
         }
         .menu-user-info {
           padding: 10px 14px 12px;
+          min-width: 0;
         }
         .menu-name {
           font-size: 13px;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.85);
           margin-bottom: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .menu-email {
           font-size: 11px;
           color: rgba(255, 255, 255, 0.3);
           direction: ltr;
           text-align: right;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .menu-divider {
           height: 1px;
@@ -271,10 +279,20 @@ export default function PortalTopBar({
         }
 
         @media (max-width: 768px) {
-          .ptopbar { padding: 0 16px; }
+          .ptopbar { padding: 0 16px; gap: 8px; }
           .ptopbar-links { display: none; }
           .ptopbar-brand-name, .ptopbar-brand-badge { display: none; }
           .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+          /* القايمة تنزل كشريط بعرض الشاشة بدل ما تطلع برا على الموبايل */
+          .ptopbar-menu {
+            position: fixed;
+            top: 62px;
+            left: 12px;
+            right: 12px;
+            min-width: 0;
+            width: auto;
+            max-width: none;
+          }
         }
       `}</style>
 

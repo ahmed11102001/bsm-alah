@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Key, FileText, Activity,
   ChevronLeft, ChevronDown, Check, Plus,
-  Share2, Code, Zap, X, BarChart2, CreditCard
+  Share2, UserPlus, Code, Zap, X, BarChart2, CreditCard
 } from "lucide-react";
 import { useMobileNav } from "../../../_components/MobileNavContext";
 
@@ -19,7 +19,7 @@ interface Project {
   status: string;
 }
 
-function getNavItems(projectId: string, t: (en: string, ar: string) => string, devPath: (p: string) => string) {
+function getNavItems(projectId: string, t: (en: string, ar: string) => string, devPath: (p: string) => string, viewerRole: "owner" | "developer") {
   return [
     { label: t("Overview", "نظرة عامة"),    href: devPath(`/portal/projects/${projectId}`),               icon: LayoutDashboard, exact: true },
     { label: "API Keys",     href: devPath(`/portal/projects/${projectId}/api-keys`),      icon: Key },
@@ -28,7 +28,10 @@ function getNavItems(projectId: string, t: (en: string, ar: string) => string, d
     { label: t("Quick Start", "البدء السريع"), href: devPath(`/portal/projects/${projectId}/quick-start`),   icon: Code },
     { label: t("Activity Logs", "السجلات"),      href: devPath(`/portal/projects/${projectId}/activity-logs`), icon: Activity },
     { label: t("Billing", "الفوترة"), href: devPath(`/portal/projects/${projectId}/billing`), icon: CreditCard },
-    { label: t("Transfer Project", "تسليم المشروع"),href: devPath(`/portal/projects/${projectId}/transfer`),      icon: Share2 },
+    // المطور بيسلّم المشروع لعميل — الأونر بيدير/يضيف مطور لمشروعه
+    viewerRole === "owner"
+      ? { label: t("Manage Developer", "إدارة المطور"), href: devPath(`/portal/projects/${projectId}/transfer`), icon: UserPlus }
+      : { label: t("Transfer Project", "تسليم المشروع"), href: devPath(`/portal/projects/${projectId}/transfer`), icon: Share2 },
   ];
 }
 
@@ -49,7 +52,7 @@ export default function ProjectSidebar({
   const { language, t } = useLanguage();
   const devPath = useDevPath();
 
-  const NAV_ITEMS = getNavItems(project.id, t, devPath);
+  const NAV_ITEMS = getNavItems(project.id, t, devPath, viewerRole);
   const metaConnected = !!project.metaConnection?.isVerified;
 
   const fullName =
@@ -201,7 +204,7 @@ export default function ProjectSidebar({
           .psidebar {
             position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
             transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #060810; border-left: none; width: 260px;
+            background: #060810; border-left: none; width: 260px; max-width: 85vw;
           }
           .psidebar.mobile-open { transform: translateX(0); }
           .mobile-close-btn {
