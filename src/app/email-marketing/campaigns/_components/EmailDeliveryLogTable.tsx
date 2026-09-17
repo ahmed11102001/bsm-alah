@@ -228,7 +228,7 @@ export default function EmailDeliveryLogTable({
                       )}
                     </td>
                     <td className="py-3 px-3 text-white/70">{d.contactName || "—"}</td>
-                    <td className="py-3 px-3">{getDeliveryStatus(d.status, d.errorMessage, d.contactEmail)}</td>
+                    <td className="py-3 px-3">{getDeliveryStatus(d.status, d.errorMessage ?? null, d.contactEmail)}</td>
                     <td className="py-3 pl-2 text-left text-white/40 text-[11px] font-mono">
                       {d.sentAt
                         ? new Date(d.sentAt).toLocaleTimeString("ar-EG", {
