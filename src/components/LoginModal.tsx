@@ -207,7 +207,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
       // NextAuth بيعمل redirect تلقائي لـ Google ثم يرجع لـ /auth/callback.
       // لو عندنا callbackUrl (مثلاً جاي من /checkout) بنمررها كـ "next"
       // جوه الـ URL عشان /auth/callback يحترمها بعد ما يتأكد من الـ session
-      // (بعد الـ onboarding لو محتاج، أو مباشرة لو لأ).
+      // الحساب المكتمل يذهب للداشبورد، والحساب الجديد يدخل نفس فلو التسجيل.
       const currentLang =
         lang ||
         (typeof document !== "undefined" &&
@@ -217,6 +217,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
       const query = new URLSearchParams();
       if (callbackUrl) query.set("next", callbackUrl);
       if (currentLang) query.set("lang", currentLang);
+      query.set("authContext", "login");
       const authCallback = `/auth/callback?${query.toString()}`;
       await signIn("google", { callbackUrl: authCallback });
     } catch {

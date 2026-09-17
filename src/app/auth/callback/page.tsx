@@ -5,6 +5,7 @@
 import { redirect } from "next/navigation";
 import { getAppServerSession } from "@/lib/auth";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
+import prisma from "@/lib/prisma";
 
 type AuthCallbackPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -50,10 +51,37 @@ export default async function AuthCallbackPage({ searchParams }: AuthCallbackPag
   const lang = pickParam(params, "lang") || pickParam(params, "locale") || "ar";
   const signupContext = pickParam(params, "signupContext");
   const signupReturnTo = pickParam(params, "returnTo");
+  const authContext = pickParam(params, "authContext");
 
   const session = await getAppServerSession();
   if (!session?.user) {
     noSessionRedirect(signupContext, signupReturnTo, lang);
+  }
+
+  // Google login: completed accounts go straight to the dashboard. A Google
+  // shell created by NextAuth for a new/unfinished account uses the existing
+  // signup flow (phone + password + OTP), never the legacy onboarding page.
+  if (authContext === "login") {
+    const user = session.user.id
+      ? await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { phone: true, password: true, onboardingCompleted: true, signupMethod: true },
+        })
+      : null;
+    const isUnfinishedGoogleAccount =
+      user?.signupMethod === "GOOGLE" &&
+      !user.phone &&
+      !user.password &&
+      !user.onboardingCompleted;
+
+    if (!isUnfinishedGoogleAccount) {
+      redirect(next || "/dashboard");
+    }
+
+    const query = new URLSearchParams({ context: "dashboard" });
+    const returnTo = next || (lang === "en" ? "/en" : "/ar");
+    query.set("returnTo", returnTo);
+    redirect(`/auth/google-signup?${query.toString()}`);
   }
 
   // Google signup must enter the new phone/password/OTP flow before the

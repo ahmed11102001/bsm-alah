@@ -299,10 +299,9 @@ export async function proxy(req: NextRequest) {
     }
 
     if (token) {
-      if (isDashboard && token.needsOnboarding) {
-        return applyHeaders(NextResponse.redirect(new URL("/onboarding", req.url)), nonce, req, currentLocale);
-      }
-      if (isOnboarding && !token.needsOnboarding) {
+      // The legacy Google onboarding route is retired. New Google accounts
+      // are completed through the signup phone/password/OTP flow instead.
+      if (isOnboarding) {
         return applyHeaders(NextResponse.redirect(new URL("/dashboard", req.url)), nonce, req, currentLocale);
       }
 
