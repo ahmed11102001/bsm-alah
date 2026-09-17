@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -128,6 +128,7 @@ function OrDivider() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: LoginModalProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<View>("login");
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
@@ -160,6 +161,16 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   const [joinPhone, setJoinPhone] = useState("");
   const [joinPass, setJoinPass] = useState("");
 
+  // Keep the modal in sync when the signup continuation token is added to the
+  // URL while the modal is already open after the Google redirect.
+  const loginParam = searchParams.get("login");
+  const tabParam = searchParams.get("tab");
+  const emailParam = searchParams.get("email");
+  const codeParam = searchParams.get("code") || searchParams.get("inviteCode") || searchParams.get("joinCode");
+  const signupTokenParam = searchParams.get("signupToken");
+  const signupEmailParam = searchParams.get("signupEmail");
+  const signupNameParam = searchParams.get("signupName");
+
   const go = (v: View) => {
     if (v === "register") resetRegFlow();
     setView(v); setErr("");
@@ -171,33 +182,29 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
     document.body.style.overflow = "hidden";
 
     try {
-      const sp = new URLSearchParams(window.location.search);
-      if (sp.get("login") === "join" || sp.get("tab") === "join") {
+      if (loginParam === "join" || tabParam === "join") {
         setView("join");
       }
-      const emailParam = sp.get("email");
       if (emailParam) {
         setJoinEmail(emailParam);
         setLoginEmail(emailParam);
       }
-      const codeParam = sp.get("code") || sp.get("inviteCode") || sp.get("joinCode");
       if (codeParam) {
         setJoinCode(codeParam.toUpperCase().trim());
       }
-      const signupTokenParam = sp.get("signupToken");
       if (signupTokenParam) {
         setView("register");
         setRegStep("profile");
         setSignupToken(signupTokenParam);
-        setGoogleEmail(sp.get("signupEmail") || "");
-        setGoogleName(sp.get("signupName") || "");
+        setGoogleEmail(signupEmailParam || "");
+        setGoogleName(signupNameParam || "");
       }
     } catch {}
 
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [isOpen]);
+  }, [isOpen, loginParam, tabParam, emailParam, codeParam, signupTokenParam, signupEmailParam, signupNameParam]);
 
 
   // ── Google Login ──────────────────────────────────────────────────────────
