@@ -7,6 +7,7 @@ import {
   renderResetEmail,
   renderWelcomeEmail,
   renderDeveloperResetEmail,
+  renderProjectTransferInviteEmail,
   renderTeamInviteEmail,
 } from "@/lib/email-templates";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
@@ -84,6 +85,31 @@ export async function sendDeveloperResetEmail(
   // رابط إعادة تعيين المطورين يوجّه مباشرة للسب دومين (من غير المرور بتحويل 301)
   const resetUrl = `${DEVELOPERS_BASE_URL}/reset-password?token=${encodeURIComponent(token)}`;
   const { subject, html, text } = renderDeveloperResetEmail({ firstName, resetUrl, locale });
+  await sendEmail({ to, subject, html, text });
+}
+
+export async function sendProjectTransferInviteEmail({
+  to,
+  projectName,
+  inviteCode,
+  role,
+  locale = "ar",
+}: {
+  to: string;
+  projectName: string;
+  inviteCode: string;
+  role: "OWNER" | "DEVELOPER";
+  locale?: "ar" | "en";
+}) {
+  const claimUrl = `${DEVELOPERS_BASE_URL}/signin?tab=claim&email=${encodeURIComponent(to)}&code=${encodeURIComponent(inviteCode)}`;
+  const { subject, html, text } = renderProjectTransferInviteEmail({
+    projectName,
+    inviteCode,
+    role,
+    claimUrl,
+    expiresDays: 7,
+    locale,
+  });
   await sendEmail({ to, subject, html, text });
 }
 

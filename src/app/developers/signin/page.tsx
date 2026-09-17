@@ -45,6 +45,14 @@ function SignInContent() {
   useEffect(() => {
     setMounted(true);
     if (errorParam === "suspended") setError(t("Account suspended, contact support", "الحساب موقف، تواصل مع الدعم"));
+    // Pre-fill claim form from invite email link (?tab=claim&email=..&code=..)
+    if (searchParams.get("tab") === "claim") {
+      setTab("claim");
+      const qEmail = searchParams.get("email");
+      const qCode = searchParams.get("code");
+      if (qEmail) setEmail(qEmail);
+      if (qCode) setInviteCode(qCode.toUpperCase().trim());
+    }
   }, [errorParam]);
 
   async function handleLoginSubmit(e: React.FormEvent) {

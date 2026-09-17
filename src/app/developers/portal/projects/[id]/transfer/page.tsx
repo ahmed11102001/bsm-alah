@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Share2, AlertTriangle, Check, Mail, ArrowLeft, Copy, UserX } from "lucide-react";
+import { Share2, AlertTriangle, Mail, ArrowLeft, MailCheck, UserX } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../../../_components/LanguageProvider";
 import { useDevPath } from "@/lib/dev-links";
@@ -19,8 +19,7 @@ export default function TransferProjectPage() {
   const [email, setEmail] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState(false);
 
   const dir = language === "ar" ? "rtl" : "ltr";
@@ -48,7 +47,7 @@ export default function TransferProjectPage() {
 
     setActionLoading(true);
     setError("");
-    setInviteCode(null);
+    setSentEmail(null);
     try {
       const res = await fetch(`/api/developers/projects/${projectId}/transfer`, {
         method: "POST",
@@ -60,7 +59,8 @@ export default function TransferProjectPage() {
         setError(data.error || t("An error occurred", "حصل خطأ"));
         return;
       }
-      setInviteCode(data.code);
+      // الكود اتبعت تلقائيًا على الإيميل — نعرض رسالة نجاح بدل الكود
+      setSentEmail(data.email || email.trim());
     } finally {
       setActionLoading(false);
     }
@@ -83,14 +83,6 @@ export default function TransferProjectPage() {
       setRemoveConfirm(false);
     } finally {
       setActionLoading(false);
-    }
-  }
-
-  function copyCode() {
-    if (inviteCode) {
-      navigator.clipboard.writeText(inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   }
 
@@ -238,16 +230,20 @@ export default function TransferProjectPage() {
                   <div className="user-email">{project.owner.email}</div>
                 </div>
               </div>
-            ) : inviteCode ? (
+            ) : sentEmail ? (
               <div className="code-box">
-                <div className="code-title">{t("Invite Code Generated", "تم إنشاء كود الدعوة")}</div>
-                <div className="code-value">{inviteCode}</div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
-                  {t("Send this code to the client. They will use it to claim the project.", "أرسل هذا الكود للعميل ليقوم باستخدامه لاستلام المشروع.")}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+                  <MailCheck size={32} color="#20d378" />
+                </div>
+                <div className="code-title">{t("Invite Sent!", "تم إرسال الدعوة!")}</div>
+                <p style={{ fontSize: 14, color: "#fff", marginBottom: 8 }} dir="ltr">
+                  {sentEmail}
                 </p>
-                <button className="btn-copy" onClick={copyCode}>
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  {copied ? t("Copied!", "تم النسخ!") : t("Copy Code", "نسخ الكود")}
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
+                  {t("The invite code was sent to this email. The client will use it to claim the project.", "اتبعت كود الدعوة على الإيميل ده. العميل هيستخدمه لاستلام المشروع.")}
+                </p>
+                <button className="btn-copy" onClick={() => { setSentEmail(null); setEmail(""); }}>
+                  {t("Send to another email", "إرسال لإيميل تاني")}
                 </button>
               </div>
             ) : (
@@ -272,8 +268,12 @@ export default function TransferProjectPage() {
                   onClick={() => handleInvite("OWNER")}
                   disabled={actionLoading || !email}
                 >
-                  {actionLoading ? t("Generating...", "جاري الإنشاء...") : t("Generate Invite Code", "إنشاء كود الدعوة")}
+                  <Mail size={16} />
+                  {actionLoading ? t("Sending...", "جاري الإرسال...") : t("Send Invite Code", "إرسال كود الدعوة")}
                 </button>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 12, textAlign: "center" }}>
+                  {t("The code will be sent automatically to this email.", "الكود هيتبعت تلقائيًا على الإيميل ده.")}
+                </p>
               </>
             )}
           </>
@@ -321,16 +321,20 @@ export default function TransferProjectPage() {
                   </button>
                 )}
               </div>
-            ) : inviteCode ? (
+            ) : sentEmail ? (
               <div className="code-box">
-                <div className="code-title">{t("Invite Code Generated", "تم إنشاء كود الدعوة")}</div>
-                <div className="code-value">{inviteCode}</div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
-                  {t("Send this code to the developer. They will use it to access the project.", "أرسل هذا الكود للمطور ليقوم باستخدامه للوصول للمشروع.")}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+                  <MailCheck size={32} color="#20d378" />
+                </div>
+                <div className="code-title">{t("Invite Sent!", "تم إرسال الدعوة!")}</div>
+                <p style={{ fontSize: 14, color: "#fff", marginBottom: 8 }} dir="ltr">
+                  {sentEmail}
                 </p>
-                <button className="btn-copy" onClick={copyCode}>
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  {copied ? t("Copied!", "تم النسخ!") : t("Copy Code", "نسخ الكود")}
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>
+                  {t("The invite code was sent to this email. The developer will use it to access the project.", "اتبعت كود الدعوة على الإيميل ده. المطور هيستخدمه للوصول للمشروع.")}
+                </p>
+                <button className="btn-copy" onClick={() => { setSentEmail(null); setEmail(""); }}>
+                  {t("Send to another email", "إرسال لإيميل تاني")}
                 </button>
               </div>
             ) : (
@@ -355,8 +359,12 @@ export default function TransferProjectPage() {
                   onClick={() => handleInvite("DEVELOPER")}
                   disabled={actionLoading || !email}
                 >
-                  {actionLoading ? t("Generating...", "جاري الإنشاء...") : t("Generate Invite Code", "إنشاء كود الدعوة")}
+                  <Mail size={16} />
+                  {actionLoading ? t("Sending...", "جاري الإرسال...") : t("Send Invite Code", "إرسال كود الدعوة")}
                 </button>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 12, textAlign: "center" }}>
+                  {t("The code will be sent automatically to this email.", "الكود هيتبعت تلقائيًا على الإيميل ده.")}
+                </p>
               </>
             )}
           </>

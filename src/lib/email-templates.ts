@@ -284,7 +284,87 @@ export function renderDeveloperResetEmail({
   };
 }
 
-// ── 5. Team Invitation Email Template ────────────────────────────────────────
+// ── 5. Project Transfer Invite Email Template ────────────────────────────────
+// يُستخدم عند تسليم مشروع: المطور يدخل إيميل العميل (أو المالك يدخل إيميل المطور)
+// والكود يُرسل تلقائيًا على الإيميل بدل النسخ اليدوي.
+export function renderProjectTransferInviteEmail({
+  projectName,
+  inviteCode,
+  role,
+  claimUrl,
+  expiresDays = 7,
+  locale = "ar",
+}: {
+  projectName: string;
+  inviteCode: string;
+  role: "OWNER" | "DEVELOPER";
+  claimUrl: string;
+  expiresDays?: number;
+  locale?: Locale;
+}): EmailRenderOutput {
+  const isAr = locale === "ar";
+  const isOwnerInvite = role === "OWNER";
+
+  const subject = isAr
+    ? isOwnerInvite
+      ? `تمت دعوتك لاستلام مشروع "${projectName}" — واني`
+      : `تمت دعوتك لإدارة مشروع "${projectName}" — واني`
+    : isOwnerInvite
+      ? `You've been invited to claim project "${projectName}" — Wani`
+      : `You've been invited to manage project "${projectName}" — Wani`;
+
+  const contentHtml = isAr
+    ? `
+      <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px;text-align:center;">${isOwnerInvite ? "دعوة لاستلام مشروع 📦" : "دعوة لإدارة مشروع 🛠️"}</h2>
+      <p style="font-size:15px;line-height:1.8;color:#334155;margin:0 0 12px;">
+        ${isOwnerInvite
+          ? `تمت دعوتك لاستلام ملكية مشروع <strong>${projectName}</strong> على منصة واني.`
+          : `تمت دعوتك لإدارة مشروع <strong>${projectName}</strong> على منصة واني كمطور.`}
+      </p>
+      <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:16px;padding:24px 16px;text-align:center;margin:0 0 24px;">
+        <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 12px;">كود الدعوة الخاص بك</p>
+        <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;padding:12px 18px;display:inline-block;">
+          <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d;">${inviteCode}</code>
+        </div>
+        <p style="font-size:11px;color:#16a34a;margin:10px 0 0;">صالح لمدة ${expiresDays} أيام — مخصص لهذا البريد فقط</p>
+      </div>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${claimUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3);">${isOwnerInvite ? "استلام المشروع الآن ←" : "قبول الدعوة الآن ←"}</a>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0;text-align:center;">ستُطلب منك إدخال بريدك الإلكتروني وهذا الكود لإتمام العملية.</p>
+    `
+    : `
+      <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px;text-align:center;">${isOwnerInvite ? "Project ownership invitation 📦" : "Project management invitation 🛠️"}</h2>
+      <p style="font-size:15px;line-height:1.8;color:#334155;margin:0 0 12px;">
+        ${isOwnerInvite
+          ? `You've been invited to claim ownership of project <strong>${projectName}</strong> on Wani.`
+          : `You've been invited to manage project <strong>${projectName}</strong> on Wani as a developer.`}
+      </p>
+      <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:16px;padding:24px 16px;text-align:center;margin:0 0 24px;">
+        <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#166534;margin:0 0 12px;">YOUR INVITE CODE</p>
+        <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;padding:12px 18px;display:inline-block;">
+          <code style="font-family:'Courier New',Courier,monospace;font-size:22px;font-weight:800;letter-spacing:3px;color:#15803d;">${inviteCode}</code>
+        </div>
+        <p style="font-size:11px;color:#16a34a;margin:10px 0 0;">Valid for ${expiresDays} days — personal to this email only</p>
+      </div>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${claimUrl}" style="display:inline-block;background:#25D366;color:#ffffff;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:bold;box-shadow:0 4px 12px rgba(37,211,102,0.3);">${isOwnerInvite ? "Claim Project Now →" : "Accept Invitation →"}</a>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#64748b;margin:0;text-align:center;">You'll be asked to enter your email and this code to complete the process.</p>
+    `;
+
+  const text = isAr
+    ? `${subject}\n\nكود الدعوة: ${inviteCode}\nرابط الاستلام:\n${claimUrl}\n\nصالح لمدة ${expiresDays} أيام.`
+    : `${subject}\n\nInvite code: ${inviteCode}\nClaim link:\n${claimUrl}\n\nValid for ${expiresDays} days.`;
+
+  return {
+    subject,
+    html: emailWrapper({ locale, title: subject, contentHtml }),
+    text,
+  };
+}
+
+// ── 6. Team Invitation Email Template ────────────────────────────────────────
 export function renderTeamInviteEmail({
   to,
   name,

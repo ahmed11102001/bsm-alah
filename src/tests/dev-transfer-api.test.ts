@@ -14,6 +14,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 const mockGetDevSession = vi.hoisted(() => vi.fn());
 const mockGetProjectForOwner = vi.hoisted(() => vi.fn());
+const mockSendInviteEmail = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/prisma", () => ({ default: mockPrisma }));
 vi.mock("@/lib/dev-auth", () => ({
@@ -21,6 +22,12 @@ vi.mock("@/lib/dev-auth", () => ({
 }));
 vi.mock("@/lib/dev-project-auth", () => ({
   getProjectForOwner: mockGetProjectForOwner,
+}));
+vi.mock("@/lib/email", () => ({
+  sendProjectTransferInviteEmail: mockSendInviteEmail,
+}));
+vi.mock("@/lib/locale-resolver", () => ({
+  getRequestLocale: () => "ar",
 }));
 
 import { POST, DELETE } from "@/app/api/developers/projects/[id]/transfer/route";
@@ -41,6 +48,7 @@ const makeParams = (id = "proj-1") => Promise.resolve({ id });
 describe("Developers Transfer API — /api/developers/projects/[id]/transfer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSendInviteEmail.mockResolvedValue(undefined);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -98,10 +106,11 @@ describe("Developers Transfer API — /api/developers/projects/[id]/transfer", (
       expect(res.status).toBe(403);
     });
 
-    it("دعوة OWNER ناجحة → بيرجع ok وكود الدعوة 8 أحرف", async () => {
+    it("دعوة OWNER ناجحة → بيبعت الإيميل تلقائيًا ويرجع emailed بدون كشف الكود", async () => {
       mockGetDevSession.mockResolvedValue({ id: "dev-1" });
       mockPrisma.developerProject.findFirst.mockResolvedValue({
         id: "proj-1",
+        name: "Test Project",
         developerId: "dev-1",
         ownerId: null,
         status: "ACTIVE",
@@ -116,8 +125,10 @@ describe("Developers Transfer API — /api/developers/projects/[id]/transfer", (
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.ok).toBe(true);
-      expect(typeof data.code).toBe("string");
-      expect(data.code.length).toBe(8);
+      expect(data.emailed).toBe(true);
+      expect(data.email).toBe("client@test.com");
+      // الكود لا يُكشف في الرد لأسباب أمنية
+      expect(data.code).toBeUndefined();
 
       expect(mockPrisma.developerProjectInvite.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -130,6 +141,37 @@ describe("Developers Transfer API — /api/developers/projects/[id]/transfer", (
           }),
         })
       );
+
+      // الإيميل اتبعت تلقائيًا بالكود
+      expect(mockSendInviteEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "client@test.com",
+          projectName: "Test Project",
+          role: "OWNER",
+        })
+      );
+    });
+
+    it("فشل إرسال الإيميل → 502 EMAIL_FAILED", async () => {
+      mockGetDevSession.mockResolvedValue({ id: "dev-1" });
+      mockPrisma.developerProject.findFirst.mockResolvedValue({
+        id: "proj-1",
+        name: "Test Project",
+        developerId: "dev-1",
+        ownerId: null,
+        status: "ACTIVE",
+      });
+      mockPrisma.developerProjectInvite.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.developerProjectInvite.create.mockResolvedValue({});
+      mockSendInviteEmail.mockRejectedValueOnce(new Error("SMTP down"));
+
+      const res = await POST(makeReq("POST", { email: "client@test.com", role: "OWNER" }), {
+        params: makeParams(),
+      });
+
+      expect(res.status).toBe(502);
+      const data = await res.json();
+      expect(data.code).toBe("EMAIL_FAILED");
     });
 
     it("دعوة DEVELOPER من المالك والمطور نشط بالفعل → 409", async () => {
@@ -151,6 +193,7 @@ describe("Developers Transfer API — /api/developers/projects/[id]/transfer", (
       mockGetDevSession.mockResolvedValue({ id: "owner-1" });
       mockGetProjectForOwner.mockResolvedValue({
         id: "proj-1",
+        name: "Test Project",
         ownerId: "owner-1",
         developerRemovedAt: new Date(), // المطور سابق مًزال
       });
@@ -164,7 +207,10 @@ describe("Developers Transfer API — /api/developers/projects/[id]/transfer", (
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.ok).toBe(true);
-      expect(data.code).toBeDefined();
+      expect(data.emailed).toBe(true);
+      expect(mockSendInviteEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "dev2@test.com", role: "DEVELOPER" })
+      );
     });
   });
 
