@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Wallet, Check, AlertTriangle, ShieldCheck, Plus, History, Gift, FlaskConical, BadgeCheck } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import PortalLoader from "../../../_components/PortalLoader";
 import { useDevPath } from "@/lib/dev-links";
 
 const PRICE_PER_MESSAGE = 0.75;
@@ -59,11 +60,7 @@ export default function BillingPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ color: "rgba(255,255,255,0.5)", padding: 40, textAlign: "center", fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-        {t("Loading...", "جاري التحميل...")}
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   if (!project) return null;

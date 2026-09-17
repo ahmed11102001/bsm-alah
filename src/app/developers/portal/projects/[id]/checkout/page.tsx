@@ -7,6 +7,7 @@ import {
   Copy, MessageCircle, Clock, Wallet,
 } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import PortalLoader from "../../../_components/PortalLoader";
 
 const SALES_WHATSAPP = process.env.NEXT_PUBLIC_SALES_WHATSAPP || "201281657907";
 const INSTAPAY_ACCOUNT = process.env.NEXT_PUBLIC_INSTAPAY_ACCOUNT || "";
@@ -128,11 +129,7 @@ export default function DeveloperCheckoutPage() {
   };
 
   if (loading) {
-    return (
-      <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#060810" }}>
-        <Loader2 className="animate-spin text-[#20d378]" size={32} />
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   const balance = project?.wallet?.paidBalanceEGP ?? 0;

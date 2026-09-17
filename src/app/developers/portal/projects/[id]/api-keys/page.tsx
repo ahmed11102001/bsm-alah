@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Key, Plus, Trash2, Copy, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import PortalLoader from "../../../_components/PortalLoader";
 
 interface ApiKey {
   id: string;
@@ -122,11 +123,7 @@ export default function ProjectApiKeysPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-[#25D366] border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   const activeKeys = keys.filter((k) => k.status === "ACTIVE");

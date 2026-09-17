@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { User, Shield, Save, ArrowRight, TerminalSquare, MonitorSmartphone, LogOut } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLanguage } from "../../_components/LanguageProvider";
+import PortalLoader from "../_components/PortalLoader";
 import { useDevPath } from "@/lib/dev-links";
 
 interface CliDevice {
@@ -138,11 +139,7 @@ export default function DeveloperSettingsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="settings-loading">
-        <div className="spinner" />
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Share2, AlertTriangle, Mail, ArrowLeft, MailCheck, UserX } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../../../_components/LanguageProvider";
+import PortalLoader from "../../../_components/PortalLoader";
 import { useDevPath } from "@/lib/dev-links";
 
 export default function TransferProjectPage() {
@@ -87,11 +88,7 @@ export default function TransferProjectPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ color: "rgba(255,255,255,0.5)", padding: 40, textAlign: "center", fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-        {t("Loading...", "جاري التحميل...")}
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   if (!project) return null;

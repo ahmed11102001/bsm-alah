@@ -401,7 +401,6 @@ export default function ProjectsDashboard() {
           {/* Active Projects */}
           {loading ? (
             <>
-              <div className="section-label">{t("Loading...", "جاري التحميل...")}</div>
               <div className="projects-grid">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="skeleton-card">
