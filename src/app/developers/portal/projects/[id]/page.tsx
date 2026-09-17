@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useLanguage } from "../../../_components/LanguageProvider";
+import PortalLoader from "../../_components/PortalLoader";
 import { useDevPath } from "@/lib/dev-links";
 import { GRAPH_API_VERSION } from "@/lib/meta-graph";
 
@@ -623,22 +624,7 @@ export default function ProjectOverviewPage() {
   };
 
   if (loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "60vh",
-          color: "rgba(255,255,255,0.3)",
-          fontFamily: "IBM Plex Sans Arabic, sans-serif",
-          direction:
-            language === "ar" ? "rtl" : "ltr",
-        }}
-      >
-        {t("Loading...", "جاري التحميل...")}
-      </div>
-    );
+    return <PortalLoader label={t("Loading...", "جاري التحميل...")} />;
   }
 
   if (!project) {
