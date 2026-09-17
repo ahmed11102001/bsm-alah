@@ -128,6 +128,9 @@ export const translations = {
         aiAgentCard: {
           title: "وني الوكيل الذكي",
           enterpriseSubtitle: "رسالة رد عليها وني تلقائياً آخر 7 أيام",
+          totalLabel: "إجمالي الردود",
+          last7days: "آخر 7 أيام",
+          emptyHint: "لسه الوكيل مردش على حد — أول رد هيظهر هنا",
           proHook: "خلّي وني يرد على عملائك ويقفل البيع 24/7 من غير ما تحرك ساكن — متاح بس في باقة Max.",
           proCta: "رقّي لـ Max",
           lowerHook: "رقّي لـ Pro وهتاخد Claude AI + توليد صوت طبيعي بالـ ElevenLabs، أو اقفز على طول لـ Max واستمتع بيهم كلهم مع وني الوكيل الذكي اللي بيرد ويقفل البيع لوحده.",
@@ -809,6 +812,9 @@ export const translations = {
         aiAgentCard: {
           title: "Wani AI Agent",
           enterpriseSubtitle: "messages Wani replied to automatically, last 7 days",
+          totalLabel: "Total replies",
+          last7days: "Last 7 days",
+          emptyHint: "No replies yet — the first reply will show up here",
           proHook: "Let Wani reply to your customers and close sales 24/7 while you do nothing — Max plan only.",
           proCta: "Upgrade to Max",
           lowerHook: "Upgrade to Pro to get Claude AI + natural voice with ElevenLabs, or jump straight to Max and get it all with Wani, the AI agent that replies and closes sales on its own.",

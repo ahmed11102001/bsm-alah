@@ -115,11 +115,24 @@ export async function GET(req: NextRequest) {
             d.setDate(d.getDate() + i);
             seriesMap.set(dayKey(d), { sent: 0, delivered: 0, replies: 0 });
         }
+        // ── AI agent daily series — always last 7 days for the home card ──
+        const aiWeekStart = new Date();
+        aiWeekStart.setDate(aiWeekStart.getDate() - 6);
+        aiWeekStart.setHours(0, 0, 0, 0);
+        const aiDailyMap = new Map<string, number>();
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(aiWeekStart);
+            d.setDate(d.getDate() + i);
+            aiDailyMap.set(dayKey(d), 0);
+        }
         let aiAgentReplies = 0;
         for (const m of messagesInRange) {
             const key = dayKey(new Date(m.createdAt));
             const bucket = seriesMap.get(key);
-            if (m.senderType === MessageSenderType.ai) aiAgentReplies += 1;
+            if (m.senderType === MessageSenderType.ai) {
+                aiAgentReplies += 1;
+                if (aiDailyMap.has(key)) aiDailyMap.set(key, (aiDailyMap.get(key) ?? 0) + 1);
+            }
             if (!bucket) continue;
             if (m.direction === MessageDirection.outbound) {
                 bucket.sent += 1;
@@ -129,6 +142,7 @@ export async function GET(req: NextRequest) {
             }
         }
         const series = Array.from(seriesMap.entries()).map(([date, v]) => ({ date, ...v }));
+        const aiAgentDaily = Array.from(aiDailyMap.entries()).map(([date, count]) => ({ date, count }));
 
         // ── Automation performance (rules + Wani as one row) ──
         const ruleStatsMap = new Map<string, { success: number; failure: number }>();
@@ -194,6 +208,7 @@ export async function GET(req: NextRequest) {
             campaignBreakdown,
             messagingPerformance: series,
             aiAgentReplies,
+            aiAgentDaily,
             automationPerformance,
             recentConversations,
         });

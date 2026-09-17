@@ -7,6 +7,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useSubscription, type DashboardData } from "@/lib/dashboard-context";
 import { toast } from "sonner";
 import { STATUS_BADGE } from "@/app/dashboard/_shared";
+import AiAgentMiniChart from "@/app/dashboard/_components/AiAgentMiniChart";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ interface OverviewData {
   campaignBreakdown: { draft: number; scheduled: number; running: number; completed: number; failed: number };
   messagingPerformance: Array<{ date: string; sent: number; delivered: number; replies: number }>;
   aiAgentReplies: number;
+  aiAgentDaily?: Array<{ date: string; count: number }>;
   automationPerformance: Array<{
     id: string; name: string; source: "rule" | "ai"; isEnabled: boolean;
     triggered: number; successRate: number | null;
@@ -477,17 +479,38 @@ function HomeDashboard({ data, onCreateCampaign, onOpenSettings, campaignAtLimit
               </div>
               <CardTitle className="text-base font-bold">{ov.aiAgentCard.title}</CardTitle>
             </CardHeader>
-            <CardContent className="px-4 sm:px-5 pb-5 flex flex-col items-center justify-center h-[240px] text-center">
+            <CardContent className="px-4 sm:px-5 pb-4 flex flex-col h-[240px]">
               {loadingOverview ? (
-                <div className="animate-pulse flex flex-col items-center gap-2 py-4">
-                  <div className="h-10 w-24 rounded-xl bg-muted" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-muted/60" />
+                <div className="animate-pulse flex flex-col gap-2 py-2 h-full">
+                  <div className="h-8 w-24 rounded-xl bg-muted" />
+                  <div className="flex items-end gap-1.5 flex-1 mt-3">
+                    {[40, 65, 30, 80, 55, 70, 45].map((h, i) => (
+                      <div key={i} className="flex-1 rounded-t-md bg-muted/60" style={{ height: `${h}%` }} />
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <>
-                  <p className="text-4xl font-extrabold text-foreground">{numFmt(overview?.aiAgentReplies ?? 0)}</p>
-                  <p className="text-xs text-muted-foreground mt-2 max-w-[220px]">{ov.aiAgentCard.enterpriseSubtitle}</p>
-                </>
+                (() => {
+                  const days: Array<{ date: string; count: number }> = [];
+                  for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    days.push({ date: d.toISOString().slice(0, 10), count: 0 });
+                  }
+                  const daily = overview?.aiAgentDaily && overview.aiAgentDaily.length === 7
+                    ? overview.aiAgentDaily
+                    : days;
+                  return (
+                    <AiAgentMiniChart
+                      daily={daily}
+                      totalLabel={ov.aiAgentCard.totalLabel}
+                      emptyHint={ov.aiAgentCard.emptyHint}
+                      last7Label={ov.aiAgentCard.last7days}
+                      dateLocale={dateLocale}
+                      numFmt={numFmt}
+                    />
+                  );
+                })()
               )}
             </CardContent>
           </Card>

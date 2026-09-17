@@ -231,6 +231,15 @@ export const DEMO_OVERVIEW_DATA = {
     { id: "wani-ai-agent", name: "Wani AI", source: "ai" as const, isEnabled: true, triggered: 72, successRate: 86 },
   ],
   aiAgentReplies: 72,
+  aiAgentDaily: [
+    { date: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 6 },
+    { date: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 9 },
+    { date: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 12 },
+    { date: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 8 },
+    { date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 14 },
+    { date: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString().slice(0, 10), count: 11 },
+    { date: new Date(Date.now()).toISOString().slice(0, 10), count: 12 },
+  ],
   // نفس الـids في chat-data.ts — ليعمل الـdeep-link (?contact=) من كارت الهوم
   recentConversations: [
     { id: "demo-contact-sara", name: "سارة أحمد", lastMessage: "تمام، هوصلك رابط تأكيد الطلب دلوقتي 🌸", lastMessageAt: new Date(Date.now() - 2 * 60000).toISOString(), status: "auto", unread: false, unreadCount: 0 },
