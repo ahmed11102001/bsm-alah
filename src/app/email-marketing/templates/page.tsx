@@ -82,6 +82,30 @@ export default function EmailTemplatesPage() {
     }
   };
 
+  const handleDuplicateTemplate = async (tpl: EmailTemplateDTO) => {
+    try {
+      const res = await fetch("/api/email/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${tpl.name} (نسخة)`,
+          subject: tpl.subject,
+          bodyHtml: tpl.bodyHtml,
+          previewText: tpl.previewText,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`تم إنشاء نسخة من القالب "${tpl.name}" بنجاح! 🎉`);
+        loadTemplates();
+      } else {
+        toast.error(data.error || "فشل تكرار القالب");
+      }
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء تكرار القالب.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -104,6 +128,7 @@ export default function EmailTemplatesPage() {
       <EmailTemplateList
         templates={templates}
         onEdit={handleEditOpen}
+        onDuplicate={handleDuplicateTemplate}
         onDelete={handleDeleteTemplate}
         onOpenCreate={handleCreateOpen}
       />

@@ -7,6 +7,8 @@ import { MOCK_SMTP_CONFIG } from "../constants";
 import type { SmtpConfigDTO } from "../types";
 import { Loader2 } from "lucide-react";
 
+import DomainDnsGuidanceCard from "./_components/DomainDnsGuidanceCard";
+
 export default function EmailSettingsPage() {
   const [config, setConfig] = useState<SmtpConfigDTO>(MOCK_SMTP_CONFIG);
   const [loading, setLoading] = useState(true);
@@ -55,12 +57,14 @@ export default function EmailSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left: Settings Form */}
-        <div className="lg:col-span-2">
+        {/* Left: Settings Form & DNS Guidance */}
+        <div className="lg:col-span-2 space-y-6">
           <SmtpConnectionForm
             initialData={config}
             onSaveSuccess={(updated) => setConfig(updated)}
           />
+
+          <DomainDnsGuidanceCard fromEmail={config.fromEmail} />
         </div>
 
         {/* Right: Connection Status and Guide */}

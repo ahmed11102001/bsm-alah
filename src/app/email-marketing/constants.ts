@@ -5,6 +5,7 @@ import {
   Send,
   Settings,
   Mail,
+  Activity,
 } from "lucide-react";
 import type {
   EmailContactDTO,
@@ -17,9 +18,10 @@ import type {
 
 export const EMAIL_TABS = [
   { id: "overview", label: "نظرة عامة", href: "/dashboard/email", icon: BarChart3 },
-  { id: "contacts", label: "جهات الاتصال", href: "/dashboard/email/contacts", icon: Users },
-  { id: "templates", label: "القوالب", href: "/dashboard/email/templates", icon: FileText },
   { id: "campaigns", label: "الحملات", href: "/dashboard/email/campaigns", icon: Send },
+  { id: "templates", label: "القوالب", href: "/dashboard/email/templates", icon: FileText },
+  { id: "activity", label: "النشاط وسجل الإرسال", href: "/dashboard/email/activity", icon: Activity },
+  { id: "contacts", label: "جهات الاتصال", href: "/dashboard/email/contacts", icon: Users },
   { id: "settings", label: "إعدادات الربط", href: "/dashboard/email/settings", icon: Settings },
 ] as const;
 

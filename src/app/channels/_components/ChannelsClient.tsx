@@ -25,12 +25,19 @@ interface ChannelsClientProps {
     phoneNumberId?: string | null;
     wabaId?: string | null;
   } | null;
+  isEmailConnected?: boolean;
+  emailData?: {
+    fromEmail?: string | null;
+    lastTestSuccess?: boolean | null;
+  } | null;
   userName?: string | null;
 }
 
 export default function ChannelsClient({
   isWhatsAppConnected,
   whatsAppData,
+  isEmailConnected = false,
+  emailData,
   userName,
 }: ChannelsClientProps) {
   const containerVariants: Variants = {
@@ -69,6 +76,14 @@ export default function ChannelsClient({
           أدر قنوات التواصل المتاحة وتابع محادثات عملائك وحملاتك الآلية من منصة موحدة فائقة الذكاء.
         </p>
       </motion.div>
+
+      {/* Section Header: Retention Marketing */}
+      <div className="mb-4 flex items-center gap-2">
+        <div className="h-2 w-2 rounded-full bg-emerald-400" />
+        <h2 className="text-xs font-bold uppercase tracking-wider text-white/50">
+          قنوات التسويق والاحتفاظ بالعملاء (Retention Marketing)
+        </h2>
+      </div>
 
       {/* Channels Grid */}
       <motion.div
@@ -157,11 +172,20 @@ export default function ChannelsClient({
           </div>
         </motion.div>
 
-        {/* 2. Email Card (Phase 2 placeholder) */}
+        {/* 2. Email Card */}
         <motion.div
           variants={itemVariants}
-          className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md transition-all duration-300 hover:border-blue-500/30 hover:bg-white/[0.05]"
+          className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border transition-all duration-300 ${
+            isEmailConnected
+              ? "border-blue-500/30 bg-gradient-to-b from-blue-950/40 via-blue-950/20 to-transparent hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20"
+              : "border-white/10 bg-white/[0.03] hover:border-blue-500/30 hover:bg-white/[0.05]"
+          } p-6 backdrop-blur-md`}
         >
+          {/* Decorative glow if connected */}
+          {isEmailConnected && (
+            <div className="pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full bg-blue-500/20 blur-3xl" />
+          )}
+
           <div>
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
@@ -169,10 +193,20 @@ export default function ChannelsClient({
                 <Mail className="h-7 w-7" />
               </div>
 
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/50">
-                <XCircle className="h-3.5 w-3.5 text-white/40" />
-                <span>غير متصل</span>
-              </div>
+              {isEmailConnected ? (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-300 shadow-sm shadow-blue-950">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                  </span>
+                  <span>متصل</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/50">
+                  <XCircle className="h-3.5 w-3.5 text-white/40" />
+                  <span>غير متصل</span>
+                </div>
+              )}
             </div>
 
             {/* Title & Description */}
@@ -180,24 +214,44 @@ export default function ChannelsClient({
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-white">البريد الإلكتروني</h2>
                 <span className="rounded-md bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.5 text-[10px] font-bold text-blue-300">
-                  Email
+                  Email Marketing
                 </span>
               </div>
               <p className="mt-2 text-xs sm:text-sm text-white/65 leading-relaxed">
                 إرسال حملات إخبارية وترويجية عبر الإيميل، إشعارات تلقائية للطلبات، ومتابعة معدلات الفتح والتفاعل.
               </p>
             </div>
+
+            {/* Connected email meta if connected */}
+            {isEmailConnected && emailData?.fromEmail && (
+              <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-950/30 p-2.5 text-[11px] text-blue-200/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/40">بريد الإرسال:</span>
+                  <span className="font-mono text-blue-300 font-semibold">{emailData.fromEmail}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Button */}
           <div className="mt-7 pt-4 border-t border-white/5">
-            <Link
-              href="/dashboard/email"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/40 bg-blue-500/10 px-5 py-3 text-sm font-bold text-blue-300 transition-all duration-200 hover:bg-blue-500/20 active:scale-[0.98]"
-            >
-              <span>ربط الإيميل</span>
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+            {isEmailConnected ? (
+              <Link
+                href="/dashboard/email"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+              >
+                <span>افتح الداشبورد</span>
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard/email/settings"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/40 bg-blue-500/10 px-5 py-3 text-sm font-bold text-blue-300 transition-all duration-200 hover:bg-blue-500/20 active:scale-[0.98]"
+              >
+                <span>ربط الإيميل</span>
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            )}
           </div>
         </motion.div>
 

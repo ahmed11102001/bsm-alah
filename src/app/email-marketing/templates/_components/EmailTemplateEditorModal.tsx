@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, FileText, Eye, Edit3, Code, Sparkles, Plus, Save } from "lucide-react";
+import { X, FileText, Eye, Edit3, Code, Sparkles, Plus, Save, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { EmailTemplateDTO } from "../../types";
 
@@ -22,6 +22,9 @@ export default function EmailTemplateEditorModal({
   const [bodyHtml, setBodyHtml] = useState("");
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [saving, setSaving] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     if (template) {
@@ -232,24 +235,122 @@ export default function EmailTemplateEditorModal({
           )}
 
           {/* Footer Actions */}
-          <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 font-medium text-white/60 hover:bg-white/5 hover:text-white"
-            >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              <span>{saving ? "جاري الحفظ..." : "حفظ القالب"}</span>
-            </button>
+          <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-2.5 shrink-0">
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowTestModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 active:scale-95 transition-all"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>إرسال بريد تجريبي (Test Email)</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl px-4 py-2 font-medium text-white/60 hover:bg-white/5 hover:text-white"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                <span>{saving ? "جاري الحفظ..." : "حفظ القالب"}</span>
+              </button>
+            </div>
           </div>
         </form>
+
+        {/* Test Email Popover/Modal */}
+        {showTestModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#031510] p-6 shadow-2xl">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Send className="h-4 w-4 text-blue-400" />
+                  <span>إرسال تجربة حية للقالب</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowTestModal(false)}
+                  className="p-1 text-white/40 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mt-3 text-xs text-white/60 leading-relaxed">
+                أدخل عنوان بريدك الإلكتروني لمعاينة مظهر هذا القالب كما سيظهر للعميل في صندوق الوارد عبر خادم SMTP المربوط.
+              </p>
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold text-white/80 mb-1">
+                  بريدك الإلكتروني لاستقبال التجربة:
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-blue-500 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTestModal(false)}
+                  className="rounded-xl px-3.5 py-2 text-xs text-white/60 hover:bg-white/5"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  disabled={sendingTest || !testEmail.trim()}
+                  onClick={async () => {
+                    if (!testEmail.trim()) return;
+                    setSendingTest(true);
+                    const toastId = toast.loading("جاري إرسال البريد التجريبي...");
+                    try {
+                      const res = await fetch("/api/email/templates/test-send", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          recipientEmail: testEmail.trim(),
+                          subject: subject || "معاينة تجريبية",
+                          bodyHtml: bodyHtml || "<p>مرحباً</p>",
+                          previewText,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        toast.success(`تم إرسال البريد التجريبي إلى ${testEmail} بنجاح! 🚀`, { id: toastId });
+                        setShowTestModal(false);
+                      } else {
+                        toast.error(data.error || "فشل إرسال البريد التجريبي", { id: toastId });
+                      }
+                    } catch {
+                      toast.error("حدث خطأ في الاتصال أثناء إرسال التجربة", { id: toastId });
+                    } finally {
+                      setSendingTest(false);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50"
+                >
+                  {sendingTest && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{sendingTest ? "جاري الإرسال..." : "إرسال التجربة الآن"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

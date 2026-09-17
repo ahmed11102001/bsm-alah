@@ -45,10 +45,17 @@ export async function saveEmailConnection(userId: string, data: SmtpInputData) {
     where: { userId },
   });
 
-  // إذا لم يتم تمرير كلمة مرور جديدة، نحتفظ بالقديمة
+  // إذا لم يتم تمرير كلمة مرور جديدة أو كانت نقاط مشفرة مسبقًا، نحتفظ بالقديمة
   let passwordToSave = existing?.password || "";
-  if (data.password && data.password.trim()) {
-    passwordToSave = encryptToken(data.password.trim());
+  const hasNewRawPassword = Boolean(
+    data.password &&
+      data.password.trim() &&
+      !data.password.includes("•") &&
+      !data.password.includes("*")
+  );
+
+  if (hasNewRawPassword) {
+    passwordToSave = encryptToken(data.password!.trim());
   }
 
   const saved = await prisma.emailConnection.upsert({
@@ -68,7 +75,7 @@ export async function saveEmailConnection(userId: string, data: SmtpInputData) {
       port: Number(data.port) || 587,
       secure: Boolean(data.secure),
       userLogin: data.user.trim(),
-      ...(data.password?.trim() ? { password: passwordToSave } : {}),
+      ...(hasNewRawPassword ? { password: passwordToSave } : {}),
       fromEmail: data.fromEmail.trim().toLowerCase(),
       fromName: data.fromName.trim(),
     },

@@ -30,10 +30,24 @@ export default async function ChannelsPage() {
       whatsappAccount?.tokenStatus !== "EXPIRED"
   );
 
+  // فحص وجود EmailConnection للمستخدم المالك
+  const emailConnection = await prisma.emailConnection.findUnique({
+    where: { userId: ownerId },
+    select: {
+      host: true,
+      fromEmail: true,
+      lastTestSuccess: true,
+    },
+  });
+
+  const isEmailConnected = Boolean(emailConnection?.host);
+
   return (
     <ChannelsClient
       isWhatsAppConnected={isWhatsAppConnected}
       whatsAppData={whatsappAccount}
+      isEmailConnected={isEmailConnected}
+      emailData={emailConnection}
       userName={session.user.name}
     />
   );

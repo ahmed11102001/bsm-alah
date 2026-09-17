@@ -1,16 +1,18 @@
 "use client";
 
-import { FileText, Edit, Trash2, Eye, Plus, Calendar } from "lucide-react";
+import { FileText, Edit, Trash2, Eye, Plus, Calendar, Copy } from "lucide-react";
 import type { EmailTemplateDTO } from "../../types";
 
 export default function EmailTemplateList({
   templates,
   onEdit,
+  onDuplicate,
   onDelete,
   onOpenCreate,
 }: {
   templates: EmailTemplateDTO[];
   onEdit: (template: EmailTemplateDTO) => void;
+  onDuplicate: (template: EmailTemplateDTO) => void;
   onDelete: (id: string) => void;
   onOpenCreate: () => void;
 }) {
@@ -46,6 +48,14 @@ export default function EmailTemplateList({
                   <FileText className="h-5 w-5" />
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onDuplicate(tpl)}
+                    className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition-colors"
+                    title="تكرار القالب (Duplicate)"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => onEdit(tpl)}

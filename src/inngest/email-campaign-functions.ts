@@ -157,7 +157,7 @@ export const processEmailCampaign = inngest.createFunction(
               await prisma.emailDelivery.update({
                 where: { id: delivery.id },
                 data: {
-                  status: "DELIVERED",
+                  status: "SENT",
                   sentAt: new Date(),
                   errorMessage: null,
                 },

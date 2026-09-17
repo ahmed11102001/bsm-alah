@@ -23,6 +23,7 @@ export async function GET() {
       campaignsStats,
       connection,
       recentCampaigns,
+      recentDeliveries,
     ] = await Promise.all([
       prisma.emailContact.count({ where: { userId: ownerId } }),
       prisma.emailContact.count({ where: { userId: ownerId, status: "SUBSCRIBED" } }),
@@ -37,7 +38,7 @@ export async function GET() {
       }),
       prisma.emailConnection.findUnique({
         where: { userId: ownerId },
-        select: { fromEmail: true, host: true, lastTestSuccess: true },
+        select: { fromEmail: true, host: true, lastTestSuccess: true, lastTestedAt: true },
       }),
       prisma.emailCampaign.findMany({
         where: { userId: ownerId },
@@ -45,22 +46,34 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
+      prisma.emailDelivery.findMany({
+        where: { campaign: { userId: ownerId } },
+        include: { campaign: { select: { name: true, subject: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
     ]);
 
     const sent = campaignsStats._sum.sentCount || 0;
     const delivered = campaignsStats._sum.deliveredCount || 0;
-    const deliveryRate = sent > 0 ? +((delivered / sent) * 100).toFixed(1) : 100;
+    const failed = campaignsStats._sum.failedCount || 0;
+    const acceptanceRate = sent > 0 ? +((delivered / sent) * 100).toFixed(1) : 100;
 
     return NextResponse.json({
       stats: {
         totalContacts,
         subscribedContacts,
+        unsubscribedContacts: totalContacts - subscribedContacts,
         totalCampaigns,
         totalEmailsSent: sent,
-        deliveryRate,
-        openRate: 0,
+        acceptedEmails: delivered,
+        failedEmails: failed,
+        deliveryRate: acceptanceRate,
+        openRate: null, // Generic SMTP does not track opens without tracking proxy
         isSmtpConfigured: Boolean(connection?.host),
         fromEmail: connection?.fromEmail || null,
+        host: connection?.host || null,
+        lastTestSuccess: connection?.lastTestSuccess || null,
       },
       recentCampaigns: recentCampaigns.map((c) => ({
         id: c.id,
@@ -74,6 +87,17 @@ export async function GET() {
         failedCount: c.failedCount,
         status: c.status,
         createdAt: c.createdAt.toISOString(),
+      })),
+      recentActivity: recentDeliveries.map((d) => ({
+        id: d.id,
+        campaignName: d.campaign.name,
+        subject: d.campaign.subject,
+        contactEmail: d.contactEmail,
+        contactName: d.contactName,
+        status: d.status,
+        errorMessage: d.errorMessage,
+        sentAt: d.sentAt?.toISOString() || null,
+        createdAt: d.createdAt.toISOString(),
       })),
     });
   } catch (err: any) {

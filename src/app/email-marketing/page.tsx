@@ -13,12 +13,14 @@ import {
 import EmailKpiCard from "./_components/overview/EmailKpiCard";
 import EmailConnectionStatusBanner from "./_components/overview/EmailConnectionStatusBanner";
 import RecentEmailCampaignsTable from "./_components/overview/RecentEmailCampaignsTable";
+import RecentEmailActivityFeed from "./_components/overview/RecentEmailActivityFeed";
 import { MOCK_OVERVIEW_STATS } from "./constants";
 import type { EmailOverviewStats, EmailCampaignDTO } from "./types";
 
 export default function EmailOverviewPage() {
   const [stats, setStats] = useState<EmailOverviewStats>(MOCK_OVERVIEW_STATS);
   const [recentCampaigns, setRecentCampaigns] = useState<EmailCampaignDTO[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [fromEmail, setFromEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,6 +33,9 @@ export default function EmailOverviewPage() {
           setFromEmail(data.stats.fromEmail || null);
           if (Array.isArray(data.recentCampaigns)) {
             setRecentCampaigns(data.recentCampaigns);
+          }
+          if (Array.isArray(data.recentActivity)) {
+            setRecentActivity(data.recentActivity);
           }
         }
       })
@@ -60,7 +65,7 @@ export default function EmailOverviewPage() {
             </span>
           </h1>
           <p className="mt-1.5 text-sm text-white/60">
-            نظرة شاملة على أداء الحملات البريدية، جهات الاتصال، ومعدلات التسليم والتفاعل.
+            نظرة شاملة على أداء الحملات البريدية، جهات الاتصال، ومعدلات القبول عبر خادم SMTP.
           </p>
         </div>
 
@@ -96,13 +101,11 @@ export default function EmailOverviewPage() {
           value={stats.subscribedContacts.toLocaleString()}
           subtitle={`من إجمالي ${stats.totalContacts.toLocaleString()} جهة اتصال`}
           icon={Users}
-          trend="+100%"
-          trendUp={true}
           accentColor="blue"
         />
 
         <EmailKpiCard
-          title="إجمالي الرسائل المرسلة"
+          title="الرسائل المقبولة (SMTP)"
           value={stats.totalEmailsSent.toLocaleString()}
           subtitle={`عبر ${stats.totalCampaigns} حملة بريدية`}
           icon={Send}
@@ -110,9 +113,9 @@ export default function EmailOverviewPage() {
         />
 
         <EmailKpiCard
-          title="معدل التسليم الناجح"
+          title="نسبة القبول (Accepted)"
           value={`${stats.deliveryRate}%`}
-          subtitle="نسبة وصول الرسائل للـ Inbox"
+          subtitle="معدل قبول خادم البريد للرسائل"
           icon={CheckCircle}
           accentColor="emerald"
         />
@@ -120,14 +123,21 @@ export default function EmailOverviewPage() {
         <EmailKpiCard
           title="حالة خادم SMTP"
           value={stats.isSmtpConfigured ? "متصل ✅" : "غير مربوط ⚠️"}
-          subtitle={stats.isSmtpConfigured ? "الخادم جاهز للإرسال" : "يتطلب تهيئة الخادم"}
+          subtitle={stats.isSmtpConfigured ? (fromEmail || "الخادم جاهز للإرسال") : "يتطلب تهيئة الخادم"}
           icon={Eye}
           accentColor="amber"
         />
       </div>
 
-      {/* Recent Campaigns Table */}
-      <RecentEmailCampaignsTable campaigns={recentCampaigns} />
+      {/* Lower Section: Recent Campaigns (3 cols) + Recent Activity Feed (2 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <RecentEmailCampaignsTable campaigns={recentCampaigns} />
+        </div>
+        <div className="lg:col-span-2">
+          <RecentEmailActivityFeed items={recentActivity} />
+        </div>
+      </div>
     </div>
   );
 }

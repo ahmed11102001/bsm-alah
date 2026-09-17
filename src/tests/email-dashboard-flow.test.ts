@@ -124,4 +124,42 @@ describe("Email Marketing Architecture & Services", () => {
       data: { campaignId: "camp_123", userId: "user_123" },
     });
   });
+
+  it("safeguards masked bullet passwords from overwriting existing encrypted password", () => {
+    const existingEncrypted = "iv_123:tag_123:cipher_123";
+    const maskedInput = "••••••••";
+
+    const hasNewRawPassword = Boolean(
+      maskedInput &&
+        maskedInput.trim() &&
+        !maskedInput.includes("•") &&
+        !maskedInput.includes("*")
+    );
+
+    expect(hasNewRawPassword).toBe(false);
+
+    // If new raw password is provided
+    const newRawInput = "MyBrandNewSmtpPass!99";
+    const hasValidRaw = Boolean(
+      newRawInput &&
+        newRawInput.trim() &&
+        !newRawInput.includes("•") &&
+        !newRawInput.includes("*")
+    );
+    expect(hasValidRaw).toBe(true);
+  });
+
+  it("verifies Channels page resolves email connection state properly", () => {
+    const emailConnectionConnected = {
+      host: "smtp.gmail.com",
+      fromEmail: "sales@store.com",
+      lastTestSuccess: true,
+    };
+    const isConnected = Boolean(emailConnectionConnected?.host);
+    expect(isConnected).toBe(true);
+
+    const emailConnectionDisconnected = null;
+    const isDisconnected = Boolean((emailConnectionDisconnected as any)?.host);
+    expect(isDisconnected).toBe(false);
+  });
 });

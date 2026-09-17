@@ -202,7 +202,49 @@ export default function SmtpConnectionForm({
 
       {/* Buttons */}
       <div className="mt-8 pt-5 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <TestConnectionButton getConfig={() => formData} />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <TestConnectionButton getConfig={() => formData} />
+
+          {formData.isConfigured && (
+            <button
+              type="button"
+              onClick={async () => {
+                const confirmed = window.confirm(
+                  "هل أنت متأكد من رغبتك في حذف إعدادات خادم SMTP وإلغاء ربط البريد؟"
+                );
+                if (!confirmed) return;
+
+                try {
+                  const res = await fetch("/api/email/connection", { method: "DELETE" });
+                  if (res.ok) {
+                    const resetData: SmtpConfigDTO = {
+                      host: "",
+                      port: 587,
+                      secure: false,
+                      user: "",
+                      password: "",
+                      fromEmail: "",
+                      fromName: "",
+                      isConfigured: false,
+                      lastTestedAt: null,
+                      lastTestSuccess: null,
+                    };
+                    setFormData(resetData);
+                    toast.success("تم إلغاء ربط خادم البريد بنجاح.");
+                    if (onSaveSuccess) onSaveSuccess(resetData);
+                  } else {
+                    toast.error("فشل إلغاء الربط");
+                  }
+                } catch {
+                  toast.error("حدث خطأ أثناء محاولة إلغاء الربط");
+                }
+              }}
+              className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 active:scale-95 transition-all"
+            >
+              إلغاء الربط (Disconnect)
+            </button>
+          )}
+        </div>
 
         <button
           type="submit"

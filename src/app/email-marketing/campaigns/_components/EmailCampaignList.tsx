@@ -44,7 +44,7 @@ export default function EmailCampaignList({
               <th className="pb-3 pr-3">اسم الحملة والعنوان</th>
               <th className="pb-3 px-3">القالب</th>
               <th className="pb-3 px-3">الجمهور المستهدف</th>
-              <th className="pb-3 px-3">التسليم والوصول</th>
+              <th className="pb-3 px-3">المقبول عبر SMTP</th>
               <th className="pb-3 px-3">الحالة</th>
               <th className="pb-3 px-3">تاريخ الإنشاء</th>
               <th className="pb-3 pl-3 text-center">إجراءات</th>
