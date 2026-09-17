@@ -221,7 +221,9 @@ export async function POST(req: Request) {
     },
   });
 
-  // 5. Send invitation email
+  // 5. Send invitation email — الفشل هنا لازم يظهر للمالك فورًا:
+  // الكود مخزّن hash فقط ولا يمكن استرجاعه، فدعوة من غير إيميل = دعوة ميتة
+  // بتمنع أي محاولة جديدة ("توجد دعوة معلقة بالفعل"). لذلك نمسحها ونرجع خطأ واضح.
   const locale = getRequestLocale(req);
   try {
     const inviter = await prisma.user.findUnique({
@@ -241,7 +243,16 @@ export async function POST(req: Request) {
     });
   } catch (emailErr) {
     console.error("[TEAM_INVITE_EMAIL_ERROR]", emailErr);
-    // Even if email fails, invitation record was created, but we inform the user if appropriate
+    try {
+      await prisma.teamInvitation.delete({ where: { id: invitation.id } });
+    } catch {}
+    return NextResponse.json(
+      {
+        error: "تعذّر إرسال إيميل الدعوة إلى هذا البريد — تأكد من صحة الإيميل وحاول مرة تانية",
+        code: "EMAIL_FAILED",
+      },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({

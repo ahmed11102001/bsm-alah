@@ -94,6 +94,13 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[TEAM_RESEND_EMAIL_ERROR]", err);
+    return NextResponse.json(
+      {
+        error: "تعذّر إرسال إيميل الدعوة — حاول إعادة الإرسال مرة تانية",
+        code: "EMAIL_FAILED",
+      },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({

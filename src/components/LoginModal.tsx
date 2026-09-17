@@ -25,6 +25,7 @@ interface LoginModalProps {
    *  الثابتة — بتحافظ على نية اليوزر (مثلاً باقة مختارة في /checkout). */
   callbackUrl?: string;
   lang?: "ar" | "en";
+  standalone?: boolean;
 }
 
 // ─── Animations ───────────────────────────────────────────────────────────────
@@ -126,10 +127,10 @@ function OrDivider() {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standalone = false }: LoginModalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<View>("login");
+  const [view, setView] = useState<View>(standalone ? "register" : "login");
   const [busy, setBusy] = useState(false);
   const [gBusy, setGBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -237,7 +238,10 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
   const handleGoogleSignup = async () => {
     setGBusy(true);
     const currentLang = lang || (document.cookie.includes("NEXT_LOCALE=en") ? "en" : "ar");
-    const returnTo = `/${currentLang}?openLogin=1`;
+    const signupReturn = new URL("/signup", window.location.origin);
+    signupReturn.searchParams.set("lang", currentLang);
+    if (callbackUrl) signupReturn.searchParams.set("callbackUrl", callbackUrl);
+    const returnTo = `${signupReturn.pathname}${signupReturn.search}`;
     const query = new URLSearchParams({ signupContext: "dashboard", returnTo });
     query.set("lang", currentLang);
     await signIn("google", {
@@ -489,7 +493,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
 
                   <p className="text-xs text-gray-400 text-center">
                     معندكش حساب؟{" "}
-                    <button type="button" onClick={() => go("register")} className="text-[#25D366] hover:underline">
+                     <button type="button" onClick={() => router.push(`/signup?lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
                       سجل جديد
                     </button>
                   </p>
@@ -510,7 +514,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang }: Login
                       {err && <ErrMsg msg={err} />}
                       <p className="text-xs text-gray-400 text-center">
                         عندك حساب؟{" "}
-                        <button type="button" onClick={() => go("login")} className="text-[#25D366] hover:underline">
+                         <button type="button" onClick={() => standalone ? router.push(`/${lang || "ar"}?openLogin=1`) : go("login")} className="text-[#25D366] hover:underline">
                           سجل الدخول
                         </button>
                       </p>
