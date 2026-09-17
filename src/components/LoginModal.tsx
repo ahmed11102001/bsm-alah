@@ -147,6 +147,16 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   const [joinPhone, setJoinPhone] = useState("");
   const [joinPass, setJoinPass] = useState("");
 
+  // standalone (/auth page): التنقل بين الأوضاع بيتم بنفس الصفحة من غير
+  // remount — فلازم الـ view الداخلي يتزامن مع initialView لما الـ URL يتغير،
+  // وإلا أزرار (سجل جديد / انضمام لفريق) بتغير الرابط بس من غير ما تفتح حاجة
+  useEffect(() => {
+    if (standalone) {
+      setView(initialView);
+      setErr("");
+    }
+  }, [standalone, initialView]);
+
   // Keep the modal in sync when the signup continuation token is added to the
   // URL while the modal is already open after the Google redirect.
   const loginParam = searchParams.get("login");
@@ -160,6 +170,18 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   const go = (v: View) => {
     if (v === "register") resetRegFlow();
     setView(v); setErr("");
+  };
+
+  // التنقل بين (دخول / جديد / انضمام) داخل الصفحة مباشرة — بيحدّث الـ state
+  // فورًا وبيزامن الـ URL (مع الحفاظ على باقي الباراميترات زي كود الدعوة)
+  // عشان الـ deep-link والرجوع يفضلوا شغالين
+  const switchAuthMode = (m: "login" | "register" | "join") => {
+    go(m);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set("mode", m === "register" ? "signup" : m);
+      router.replace(`/auth?${params.toString()}`, { scroll: false });
+    } catch {}
   };
 
   useEffect(() => {
@@ -394,16 +416,16 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        showCloseButton={false}
-        className="force-light w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
-        dir="rtl"
-      >
-        {/* Top gradient bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366]" />
+  // المحتوى الداخلي مشترك بين الوضعين:
+  // - standalone (/auth page): بيرجع مباشرة من غير Dialog/overlay عشان
+  //   الصفحة تبان صفحة حقيقية مش popup طافي
+  // - modal: بيتغلّف بـ Dialog كالمعتاد
+  const inner = (
+    <>
+      {/* Top gradient bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366]" />
 
+      {!standalone && (
         <button
           type="button"
           onClick={onClose}
@@ -412,8 +434,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         >
           <X className="w-4 h-4" />
         </button>
+      )}
 
-        <div className="flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-white text-gray-900">
+      <div className="relative flex flex-col max-h-[95vh] sm:max-h-[90vh] bg-white text-gray-900">
           <div className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm px-7 pt-5 pb-4">
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center gap-2.5 mb-4">
@@ -473,13 +496,13 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
                   <p className="text-xs text-gray-400 text-center">
                     معندكش حساب؟{" "}
-                     <button type="button" onClick={() => router.push(`/auth?mode=signup&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
-                       سجل جديد
-                     </button>
-                     {" "}·{" "}
-                     <button type="button" onClick={() => router.push(`/auth?mode=join&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
-                       انضمام لفريق
-                     </button>
+                     <button type="button" onClick={() => switchAuthMode("register")} className="text-[#25D366] hover:underline">
+                        سجل جديد
+                      </button>
+                      {" "}·{" "}
+                      <button type="button" onClick={() => switchAuthMode("join")} className="text-[#25D366] hover:underline">
+                        انضمام لفريق
+                      </button>
                   </p>
                 </motion.div>
               )}
@@ -498,9 +521,9 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
                       {err && <ErrMsg msg={err} />}
                       <p className="text-xs text-gray-400 text-center">
                         عندك حساب؟{" "}
-                         <button type="button" onClick={() => router.push(`/auth?mode=login&lang=${lang || "ar"}`)} className="text-[#25D366] hover:underline">
-                          سجل الدخول
-                        </button>
+                         <button type="button" onClick={() => switchAuthMode("login")} className="text-[#25D366] hover:underline">
+                           سجل الدخول
+                         </button>
                       </p>
                     </div>
                   )}
@@ -715,6 +738,19 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
             </AnimatePresence>
           </div>
         </div>
+    </>
+  );
+
+  if (standalone) return inner;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        showCloseButton={false}
+        className="force-light w-[95vw] sm:max-w-[440px] max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden rounded-3xl border-0 shadow-2xl"
+        dir="rtl"
+      >
+        {inner}
       </DialogContent>
     </Dialog>
   );
