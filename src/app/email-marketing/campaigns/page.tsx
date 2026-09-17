@@ -54,6 +54,20 @@ export default function EmailCampaignsPage() {
     loadData();
   }, [loadData]);
 
+  // تحديث دوري تلقائي لو فيه حملات في حالة QUEUED أو SENDING للمتابعة اللحظية
+  useEffect(() => {
+    const hasActive = campaigns.some(
+      (c) => c.status === "QUEUED" || c.status === "SENDING"
+    );
+    if (!hasActive) return;
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [campaigns, loadData]);
+
   const handleCreateCampaign = async (
     newCampaign: EmailCampaignDTO,
     sendNow: boolean
@@ -77,7 +91,7 @@ export default function EmailCampaignsPage() {
       }
 
       if (sendNow) {
-        toast.loading("جاري إطلاق الحملة وإرسال الرسائل عبر SMTP...", { id: "send-toast" });
+        toast.loading("جاري جدولة الحملة في طابور Inngest للخلفية...", { id: "send-toast" });
         const sendRes = await fetch(`/api/email/campaigns/${data.id}/send`, {
           method: "POST",
         });
@@ -85,11 +99,11 @@ export default function EmailCampaignsPage() {
 
         if (sendRes.ok) {
           toast.success(
-            `تم إرسال الحملة بنجاح! تم التسليم: ${sendData.deliveredCount}، فشل: ${sendData.failedCount}`,
+            "تم وضع الحملة في طابور الإرسال عبر Inngest بنجاح! يتم الإرسال في الخلفية 🚀",
             { id: "send-toast" }
           );
         } else {
-          toast.error(sendData.error || "حصل خطأ أثناء الإرسال", { id: "send-toast" });
+          toast.error(sendData.error || "حصل خطأ أثناء الجدولة", { id: "send-toast" });
         }
       } else {
         toast.success(`تم حفظ مسودة الحملة "${data.name}" بنجاح.`);
@@ -102,7 +116,7 @@ export default function EmailCampaignsPage() {
   };
 
   const handleSendNow = async (campaign: EmailCampaignDTO) => {
-    const toastId = toast.loading(`جاري بدء إرسال حملة "${campaign.name}" عبر SMTP...`);
+    const toastId = toast.loading(`جاري وضع حملة "${campaign.name}" في طابور الإرسال عبر Inngest...`);
     try {
       const res = await fetch(`/api/email/campaigns/${campaign.id}/send`, {
         method: "POST",
@@ -111,7 +125,7 @@ export default function EmailCampaignsPage() {
 
       if (res.ok) {
         toast.success(
-          `تم إرسال الحملة بنجاح! تم التسليم: ${data.deliveredCount}، فشل: ${data.failedCount} 🎉`,
+          `تم إدراج الحملة في طابور Inngest بنجاح! يتم معالجة الإرسال في الخلفية ومتابعة التقدم تلقائيًا 🚀`,
           { id: toastId }
         );
         loadData();

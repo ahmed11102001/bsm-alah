@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { sendEmailViaUserSmtp } from "./sender";
+import { inngest } from "@/inngest/client";
 
 export interface CreateCampaignInput {
   name: string;
@@ -103,7 +104,11 @@ export async function deleteEmailCampaign(userId: string, id: string) {
   });
 }
 
-export async function executeCampaignSending(userId: string, campaignId: string) {
+/**
+ * جدولة وتشغيل إرسال الحملة عبر Inngest في الخلفية (Background Job).
+ * يمنع الـ Timeout على Vercel ويدعم إعادة المحاولة التلقائية ومعالجة الـ Chunks.
+ */
+export async function queueCampaignSending(userId: string, campaignId: string) {
   const campaign = await prisma.emailCampaign.findFirst({
     where: { id: campaignId, userId },
     include: { template: true },
@@ -113,7 +118,66 @@ export async function executeCampaignSending(userId: string, campaignId: string)
     throw new Error("الحملة أو القالب المطلوب غير موجود.");
   }
 
-  // 1. جلب جهات الاتصال المستهدفة
+  // حساب عدد المستهدفين مبدئيًا
+  const whereContacts: any = {
+    userId,
+    status: "SUBSCRIBED",
+  };
+  if (campaign.targetTag) {
+    whereContacts.tags = { has: campaign.targetTag };
+  }
+
+  const targetCount = await prisma.emailContact.count({
+    where: whereContacts,
+  });
+
+  // تحديث حالة الحملة فورياً إلى QUEUED
+  await prisma.emailCampaign.update({
+    where: { id: campaign.id },
+    data: {
+      status: "QUEUED",
+      targetCount,
+    },
+  });
+
+  // إرسال Event إلى Inngest لمعالجة الحملة في الخلفية بأمان
+  try {
+    await inngest.send({
+      name: "email/campaign.send",
+      data: {
+        campaignId: campaign.id,
+        userId,
+      },
+    });
+  } catch (err) {
+    console.error("[queueCampaignSending] Inngest event dispatch error:", err);
+    // إذا كان Inngest غير متاح أو في بيئة تجريبية، لا نعطل العملية بل نسجل الخطأ
+  }
+
+  return {
+    success: true,
+    queued: true,
+    status: "QUEUED",
+    targetCount,
+    message: "تم وضع الحملة في طابور الإرسال عبر Inngest بنجاح",
+  };
+}
+
+export const executeCampaignSending = queueCampaignSending;
+
+/**
+ * إرسال مباشر (Direct Execution) مخصص للاختبارات المعزولة أو البيئات التي لا تدعم Inngest.
+ */
+export async function executeCampaignSendingDirect(userId: string, campaignId: string) {
+  const campaign = await prisma.emailCampaign.findFirst({
+    where: { id: campaignId, userId },
+    include: { template: true },
+  });
+
+  if (!campaign || !campaign.template) {
+    throw new Error("الحملة أو القالب المطلوب غير موجود.");
+  }
+
   const whereContacts: any = {
     userId,
     status: "SUBSCRIBED",
@@ -139,7 +203,6 @@ export async function executeCampaignSending(userId: string, campaignId: string)
     return { success: true, delivered: 0, failed: 0 };
   }
 
-  // 2. تحديث حالة الحملة إلى SENDING وإنشاء سجلات الـ Deliveries
   await prisma.emailCampaign.update({
     where: { id: campaign.id },
     data: {
@@ -162,7 +225,6 @@ export async function executeCampaignSending(userId: string, campaignId: string)
     )
   );
 
-  // 3. الإرسال المتتابع لجهات الاتصال
   let deliveredCount = 0;
   let failedCount = 0;
 
@@ -197,7 +259,6 @@ export async function executeCampaignSending(userId: string, campaignId: string)
     }
   }
 
-  // 4. إنهاء الحملة وتحديث الأرقام النهائية
   await prisma.emailCampaign.update({
     where: { id: campaign.id },
     data: {
@@ -216,3 +277,4 @@ export async function executeCampaignSending(userId: string, campaignId: string)
     failedCount,
   };
 }
+

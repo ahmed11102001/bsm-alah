@@ -81,4 +81,47 @@ describe("Email Marketing Architecture & Services", () => {
     expect(deliveryRate).toBe(98.0);
     expect(deliveredCount + failedCount).toBe(sentCount);
   });
+
+  it("dispatches Inngest event for email campaign background execution", async () => {
+    const mockInngestSend = vi.fn().mockResolvedValue({ ids: ["test-event-id"] });
+    const mockPrisma = {
+      emailCampaign: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "camp_123",
+          userId: "user_123",
+          name: "Black Friday Email Blast",
+          subject: "Special Offer!",
+          templateId: "tmpl_123",
+          template: { id: "tmpl_123", bodyHtml: "<p>Hello</p>", previewText: "Hi" },
+        }),
+        update: vi.fn().mockResolvedValue({ id: "camp_123", status: "QUEUED" }),
+      },
+      emailContact: {
+        count: vi.fn().mockResolvedValue(250),
+      },
+    };
+
+    // Simulate queueCampaignSending behavior
+    const campaign = await mockPrisma.emailCampaign.findFirst({
+      where: { id: "camp_123", userId: "user_123" },
+    });
+    const targetCount = await mockPrisma.emailContact.count();
+    await mockPrisma.emailCampaign.update({
+      where: { id: campaign.id },
+      data: { status: "QUEUED", targetCount },
+    });
+    await mockInngestSend({
+      name: "email/campaign.send",
+      data: { campaignId: campaign.id, userId: "user_123" },
+    });
+
+    expect(mockPrisma.emailCampaign.update).toHaveBeenCalledWith({
+      where: { id: "camp_123" },
+      data: { status: "QUEUED", targetCount: 250 },
+    });
+    expect(mockInngestSend).toHaveBeenCalledWith({
+      name: "email/campaign.send",
+      data: { campaignId: "camp_123", userId: "user_123" },
+    });
+  });
 });

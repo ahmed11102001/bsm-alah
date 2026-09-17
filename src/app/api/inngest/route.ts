@@ -48,11 +48,17 @@ import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
 import { aiReplyDebounceFn } from "@/inngest/ai-reply-debounce-functions";
 import { handoffResumeFn } from "@/inngest/handoff-resume-functions";
 import { googleSheetsSyncCron } from "@/inngest/google-sheets-functions";
+import {
+  processEmailCampaign,
+  scheduleEmailCampaign,
+} from "@/inngest/email-campaign-functions";
 
 const inngestHandler = serve({
   client: inngest,
   functions: [
     scheduleCampaign,
+    processEmailCampaign,
+    scheduleEmailCampaign,
     aiReplyDebounceFn,
     handoffResumeFn,
     processCampaign,
