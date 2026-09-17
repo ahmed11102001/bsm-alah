@@ -79,7 +79,12 @@ export default async function AuthCallbackPage({ searchParams }: AuthCallbackPag
     }
 
     const query = new URLSearchParams({ context: "dashboard" });
-    const returnTo = next || (lang === "en" ? "/en" : "/ar");
+    // The landing page opens the modal from `openLogin=1`. Keep the signup
+    // token on that same return URL so LoginModal can show the profile step.
+    const returnUrl = new URL(lang === "en" ? "/en" : "/ar", "http://localhost");
+    returnUrl.searchParams.set("openLogin", "1");
+    if (next) returnUrl.searchParams.set("callbackUrl", next);
+    const returnTo = `${returnUrl.pathname}${returnUrl.search}`;
     query.set("returnTo", returnTo);
     redirect(`/auth/google-signup?${query.toString()}`);
   }
