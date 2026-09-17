@@ -1,11 +1,11 @@
 "use client";
 
 // ── PortalLoader ────────────────────────────────────────────────────────────
-// لودر البورتال: حرف W بيتملي أخضر من تحت لفوق (أنيميشن تمثيلي — مدة التحميل
-// الحقيقية غير معروفة، فالملء بيتكرر لحد ما المحتوى يجهز).
+// لودر البورتال: حرف W رمادي شفاف بيتملي أخضر من تحت لفوق (أنيميشن تمثيلي —
+// مدة التحميل الحقيقية غير معروفة، فالملء بيتكرر لحد ما المحتوى يجهز).
 // الاستخدام: <PortalLoader label={t("Loading...", "جاري التحميل...")} />
 
-export default function PortalLoader({ label = "Loading...", size = 76 }: {
+export default function PortalLoader({ label = "Loading...", size = 88 }: {
   label?: string;
   size?: number;
 }) {
@@ -21,26 +21,23 @@ export default function PortalLoader({ label = "Loading...", size = 76 }: {
         }
         .portal-loader-w {
           position: relative;
-          width: ${size}px;
-          height: ${size}px;
-        }
-        .portal-loader-w img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+          font-size: ${size}px;
+          font-weight: 800;
+          line-height: 1;
+          font-family: 'IBM Plex Sans Arabic', Arial, sans-serif;
           user-select: none;
-          -webkit-user-drag: none;
         }
         .portal-loader-base {
-          filter: grayscale(1);
-          opacity: 0.22;
+          color: rgba(255, 255, 255, 0.13);
         }
         .portal-loader-fill {
+          position: absolute;
+          inset: 0;
+          color: #20d378;
           overflow: hidden;
           clip-path: inset(100% 0 0 0);
           animation: portal-loader-fill 1.8s ease-in-out infinite;
+          text-shadow: 0 0 28px rgba(32, 211, 120, 0.45);
         }
         @keyframes portal-loader-fill {
           0%   { clip-path: inset(100% 0 0 0); }
@@ -62,8 +59,8 @@ export default function PortalLoader({ label = "Loading...", size = 76 }: {
 
       <div className="portal-loader-wrap" role="status" aria-busy="true" aria-label={label}>
         <div className="portal-loader-w" aria-hidden="true">
-          <img src="/landingpage-dev.svg" alt="" draggable={false} className="portal-loader-base" />
-          <img src="/landingpage-dev.svg" alt="" draggable={false} className="portal-loader-fill" />
+          <span className="portal-loader-base">W</span>
+          <span className="portal-loader-fill">W</span>
         </div>
         <span className="portal-loader-sr">{label}</span>
       </div>
