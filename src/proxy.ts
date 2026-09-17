@@ -1,4 +1,5 @@
 import { getToken } from "next-auth/jwt";
+import { getNextAuthSessionCookieName } from "@/lib/nextauth-cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDevSessionFromRequest } from "@/lib/dev-auth";
 import { hasPermission, type Permission, type UserRole } from "@/lib/permissions-core";
@@ -274,7 +275,11 @@ export async function proxy(req: NextRequest) {
   const isCheckout = pathname.startsWith("/checkout");
 
   if (isDashboard || isOnboarding || isCheckout) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+      cookieName: getNextAuthSessionCookieName(),
+    });
 
     if (!token && isDashboard) {
       // زي /checkout بالظبط: بدل ما نسيب الزائر واقف على اللاندينج من غير أي

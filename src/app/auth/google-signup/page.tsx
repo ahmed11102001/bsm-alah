@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { DEVELOPERS_BASE_URL, isDevHostname } from "@/lib/dev-links";
 
 export default function GoogleSignupContinuation() {
-  const { data: session, status } = useSession();
   const params = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState("");
@@ -15,15 +14,6 @@ export default function GoogleSignupContinuation() {
   const context = params.get("context") === "portal" ? "portal" : "dashboard";
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.user?.email) {
-      if (context === "portal") {
-        window.location.href = `${DEVELOPERS_BASE_URL}/signin?error=no-session`;
-      } else {
-        router.replace("/?openLogin=1&authError=no-session");
-      }
-      return;
-    }
     const returnTo = params.get("returnTo") || (context === "portal" ? "/developers/signup" : "/?openLogin=1");
     let cancelled = false;
     (async () => {
@@ -34,6 +24,14 @@ export default function GoogleSignupContinuation() {
       });
       const data = await res.json().catch(() => ({}));
       if (cancelled) return;
+      if (res.status === 401) {
+        if (context === "portal") {
+          window.location.href = `${DEVELOPERS_BASE_URL}/signin?error=no-session`;
+        } else {
+          router.replace("/?openLogin=1&authError=no-session");
+        }
+        return;
+      }
       if (!res.ok) {
         setError(data.error || "This email is already registered. Please sign in.");
         setErrorCode(data.code || "");
@@ -65,7 +63,7 @@ export default function GoogleSignupContinuation() {
       router.replace(`${url.pathname}${url.search}`);
     })().catch(() => setError("Could not continue with Google. Please try again."));
     return () => { cancelled = true; };
-  }, [session, status, params, router, context]);
+  }, [params, router, context]);
 
   // الإيميل مسجل قبل كده → رجّعه لتسجيل الدخول بدل صفحة مسدودة.
   // الداشبورد على نفس الهوست (/?openLogin=1 بيفتح مودال الدخول)،

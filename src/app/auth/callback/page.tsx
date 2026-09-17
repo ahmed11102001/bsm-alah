@@ -1,83 +1,68 @@
-"use client";
-
 // src/app/auth/callback/page.tsx
-// صفحة بيمر عليها اليوزر بعد Google OAuth
-// بتشوف هل محتاج onboarding أو dashboard مباشرة
+// صفحة بيمر عليها اليوزر بعد Google OAuth — server-side عشان الجلسة تتقرأ
+// من الكوكي مباشرة (useSession على العميل كان بيرجع no-session قبل ما تجهز).
 
-import { useEffect, Suspense } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams }  from "next/navigation";
-import { Loader2 }    from "lucide-react";
+import { redirect } from "next/navigation";
+import { getAppServerSession } from "@/lib/auth";
 import { DEVELOPERS_BASE_URL } from "@/lib/dev-links";
 
-function AuthCallbackInner() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const params = useSearchParams();
+type AuthCallbackPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  // ── الباقة/الصفحة اللي اليوزر كان قاصدها قبل ما يدخل اللوجين
-  //    (مثلاً /checkout?plan=pro&cycle=annual) — لو موجودة، الأولوية
-  //    ليها بعد ما نتأكد إنه مش محتاج onboarding. ────────────────────────────
-  const next = params.get("next");
-  const lang = params.get("lang") || params.get("locale");
-  const signupContext = params.get("signupContext");
-  const signupReturnTo = params.get("returnTo");
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      // بدون جلسة مفيش توكن يتعمل — لكن بدل رمي اليوزر على لاندينج ميتة،
-      // رجّعه لمكان يقدر يكمل منه (تسجيل الدخول) مع الحفاظ على السياق.
-      // الـ authError في الـ URL عشان سبب الرجوع يبقى ظاهر للتشخيص.
-      if (signupContext === "portal") {
-        window.location.href = `${DEVELOPERS_BASE_URL}/signin?error=no-session`;
-        return;
-      }
-      if (signupContext === "dashboard") {
-        try {
-          const target = new URL(
-            signupReturnTo || (lang === "en" ? "/en?openLogin=1" : "/ar?openLogin=1"),
-            window.location.origin
-          );
-          target.searchParams.set("authError", "no-session");
-          router.replace(`${target.pathname}${target.search}`);
-        } catch {
-          router.replace("/ar?openLogin=1&authError=no-session");
-        }
-        return;
-      }
-      const fallback = lang === "en" ? "/en" : "/ar";
-      router.replace(fallback);
-      return;
-    }
-
-    // Google signup must enter the new phone/password/OTP flow before the
-    // legacy onboarding page. This marker is set only by signup buttons.
-    if (signupContext === "dashboard" || signupContext === "portal") {
-      const query = new URLSearchParams({ context: signupContext });
-      if (signupReturnTo) query.set("returnTo", signupReturnTo);
-      router.replace(`/auth/google-signup?${query.toString()}`);
-      return;
-    }
-
-    router.replace(next || "/dashboard");
-  }, [session, status, router, next, lang, signupContext, signupReturnTo]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
-    </div>
-  );
+function pickParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string
+): string | null {
+  const value = params[key];
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return null;
 }
 
-export default function AuthCallback() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
-      </div>
-    }>
-      <AuthCallbackInner />
-    </Suspense>
-  );
+function noSessionRedirect(
+  signupContext: string | null,
+  signupReturnTo: string | null,
+  lang: string
+): never {
+  if (signupContext === "portal") {
+    redirect(`${DEVELOPERS_BASE_URL}/signin?error=no-session`);
+  }
+  if (signupContext === "dashboard") {
+    try {
+      const base = process.env.NEXTAUTH_URL || "https://aiwni.com";
+      const target = new URL(
+        signupReturnTo || (lang === "en" ? "/en?openLogin=1" : "/ar?openLogin=1"),
+        base
+      );
+      target.searchParams.set("authError", "no-session");
+      redirect(`${target.pathname}${target.search}`);
+    } catch {
+      redirect("/ar?openLogin=1&authError=no-session");
+    }
+  }
+  redirect(lang === "en" ? "/en" : "/ar");
+}
+
+export default async function AuthCallbackPage({ searchParams }: AuthCallbackPageProps) {
+  const params = await searchParams;
+  const next = pickParam(params, "next");
+  const lang = pickParam(params, "lang") || pickParam(params, "locale") || "ar";
+  const signupContext = pickParam(params, "signupContext");
+  const signupReturnTo = pickParam(params, "returnTo");
+
+  const session = await getAppServerSession();
+  if (!session?.user) {
+    noSessionRedirect(signupContext, signupReturnTo, lang);
+  }
+
+  // Google signup must enter the new phone/password/OTP flow before the
+  // legacy onboarding page. This marker is set only by signup buttons.
+  if (signupContext === "dashboard" || signupContext === "portal") {
+    const query = new URLSearchParams({ context: signupContext });
+    if (signupReturnTo) query.set("returnTo", signupReturnTo);
+    redirect(`/auth/google-signup?${query.toString()}`);
+  }
+
+  redirect(next || "/dashboard");
 }

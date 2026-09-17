@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAppServerSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { createSignupSession, type SignupContext } from "@/lib/signup-session";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getAppServerSession();
   if (!session?.user?.id || !session.user.email) {
     console.log("[from-session] outcome=no-session");
     return NextResponse.json({ error: "Google session is required" }, { status: 401 });

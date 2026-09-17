@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { rateLimit } from "@/lib/rate-limit";
 import { needsGoogleOnboarding } from "@/lib/onboarding";
 import { wasRoleChangedSince } from "@/lib/session-invalidation";
+import { getNextAuthSessionCookieName } from "@/lib/nextauth-cookies";
 
 // ── كوكيز مشتركة بين aiwni.com و developers.aiwni.com ───────────────────────
 // زر Google في البورتال (نفس التاب، بدون popup) بيبدأ OAuth على الـ subdomain،
@@ -29,6 +30,34 @@ const SHARED_COOKIE_DOMAIN =
     ? ".aiwni.com"
     : undefined;
 const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+
+/** Server-side session read — prefer over client useSession right after OAuth redirect. */
+export async function getAppServerSession() {
+  const { getServerSession } = await import("next-auth");
+  const { cookies } = await import("next/headers");
+  const { getToken } = await import("next-auth/jwt");
+
+  const session = await getServerSession(authOptions);
+  if (session?.user) return session;
+
+  const cookieStore = await cookies();
+  const token = await getToken({
+    req: { headers: { cookie: cookieStore.toString() } } as any,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: getNextAuthSessionCookieName(),
+  });
+  if (!token?.email) return null;
+
+  return {
+    user: {
+      id: (token.id as string) || (token.sub as string),
+      email: token.email as string,
+      name: (token.name as string | null) ?? null,
+      image: (token.picture as string | null) ?? null,
+    },
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
