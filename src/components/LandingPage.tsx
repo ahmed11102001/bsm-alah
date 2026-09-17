@@ -55,7 +55,7 @@ function LandingPageContent({ initialLang }: LandingPageProps) {
 
   useEffect(() => {
     if (session && !shouldOpenLogin && !hasSignupContinuation) {
-      router.push(callbackUrl || "/dashboard");
+      router.push(callbackUrl || "/dashboard/channels");
     }
   }, [session, router, callbackUrl, shouldOpenLogin, hasSignupContinuation]);
 

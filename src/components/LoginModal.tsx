@@ -389,7 +389,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         email: loginEmail.trim(), password: loginPass, redirect: false,
       });
       if (!res?.ok) { setErr(res?.error || L.badCreds); return; }
-      onClose(); router.push(callbackUrl || "/dashboard");
+      onClose(); router.push(callbackUrl || "/dashboard/channels");
     } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
@@ -486,7 +486,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
         return;
       }
       toast.success(L.accountCreated);
-      onClose(); router.push(callbackUrl || "/dashboard");
+      onClose(); router.push(callbackUrl || "/dashboard/channels");
     } catch { setErr(L.genericError); }
     finally { setBusy(false); }
   };
@@ -514,7 +514,7 @@ export default function LoginModal({ isOpen, onClose, callbackUrl, lang, standal
 
       if (res?.ok) {
         onClose();
-        router.push(callbackUrl || "/dashboard");
+        router.push(callbackUrl || "/dashboard/channels");
       } else {
         setLoginEmail(joinEmail.toLowerCase().trim());
         go("login");

@@ -31,6 +31,15 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      {
+        source: "/dashboard/channels",
+        destination: "/channels",
+      },
+    ];
+  },
+
   // تقليل حجم الـ bundle — تجاهل source maps في production
   productionBrowserSourceMaps: false,
 
