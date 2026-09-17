@@ -1,13 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SmtpConnectionForm from "./_components/SmtpConnectionForm";
 import EmailConnectionStatusCard from "./_components/EmailConnectionStatusCard";
 import { MOCK_SMTP_CONFIG } from "../constants";
 import type { SmtpConfigDTO } from "../types";
+import { Loader2 } from "lucide-react";
 
 export default function EmailSettingsPage() {
   const [config, setConfig] = useState<SmtpConfigDTO>(MOCK_SMTP_CONFIG);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/email/connection")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.isConfigured) {
+          setConfig({
+            host: data.host,
+            port: data.port,
+            secure: data.secure,
+            user: data.user,
+            password: data.password || "",
+            fromEmail: data.fromEmail,
+            fromName: data.fromName,
+            isConfigured: true,
+            lastTestedAt: data.lastTestedAt,
+            lastTestSuccess: data.lastTestSuccess,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("[EmailSettingsPage] Failed to fetch saved connection:", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

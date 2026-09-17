@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Zap, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
+import type { SmtpConfigDTO } from "../../types";
 
 export default function TestConnectionButton({
-  onTest,
+  getConfig,
   disabled,
 }: {
-  onTest?: () => Promise<boolean> | boolean;
+  getConfig?: () => SmtpConfigDTO;
   disabled?: boolean;
 }) {
   const [testing, setTesting] = useState(false);
@@ -19,22 +20,27 @@ export default function TestConnectionButton({
     const toastId = toast.loading("جاري اختبار الاتصال بسيرفر SMTP...");
 
     try {
-      // محاكاة استدعاء السيرفر لاختبار الاتصال في مرحلة الـ UI Mock
-      await new Promise((r) => setTimeout(r, 1600));
+      const config = getConfig ? getConfig() : undefined;
 
-      const success = onTest ? await onTest() : true;
+      const res = await fetch("/api/email/connection/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config || {}),
+      });
 
-      if (success) {
-        toast.success("نجح الاتصال بسيرفر SMTP وتم التحقق من الصلاحيات! ✅", {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        toast.success(data.message || "نجح الاتصال بسيرفر SMTP وتم التحقق من الصلاحيات! ✅", {
           id: toastId,
         });
       } else {
-        toast.error("فشل الاتصال: تأكد من صحة بيانات الخادم وكلمة المرور.", {
+        toast.error(data.message || data.error || "فشل الاتصال: تأكد من صحة بيانات الخادم وكلمة المرور.", {
           id: toastId,
         });
       }
     } catch {
-      toast.error("حصل خطأ أثناء اختبار الاتصال بالسيرفر.", { id: toastId });
+      toast.error("حصل خطأ في الشبكة أثناء اختبار الاتصال بالسيرفر.", { id: toastId });
     } finally {
       setTesting(false);
     }

@@ -1,16 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import EmailTemplateList from "./_components/EmailTemplateList";
 import EmailTemplateEditorModal from "./_components/EmailTemplateEditorModal";
-import { MOCK_TEMPLATES } from "../constants";
 import type { EmailTemplateDTO } from "../types";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function EmailTemplatesPage() {
-  const [templates, setTemplates] = useState<EmailTemplateDTO[]>(MOCK_TEMPLATES);
+  const [templates, setTemplates] = useState<EmailTemplateDTO[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplateDTO | null>(null);
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/email/templates");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setTemplates(data);
+      }
+    } catch (err) {
+      console.error("[EmailTemplatesPage] Failed to fetch templates:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const handleCreateOpen = () => {
     setSelectedTemplate(null);
@@ -22,22 +41,54 @@ export default function EmailTemplatesPage() {
     setEditorOpen(true);
   };
 
-  const handleSaveTemplate = (saved: EmailTemplateDTO) => {
-    setTemplates((prev) => {
-      const idx = prev.findIndex((t) => t.id === saved.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
+  const handleSaveTemplate = async (saved: EmailTemplateDTO) => {
+    const isEdit = Boolean(selectedTemplate?.id);
+    const url = isEdit
+      ? `/api/email/templates/${selectedTemplate!.id}`
+      : "/api/email/templates";
+    const method = isEdit ? "PATCH" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(saved),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("تم حفظ القالب بنجاح! 🎉");
+        loadTemplates();
+      } else {
+        toast.error(data.error || "فشل حفظ القالب");
       }
-      return [saved, ...prev];
-    });
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء حفظ القالب.");
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    toast.success("تم حذف القالب بنجاح.");
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      const res = await fetch(`/api/email/templates/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+        toast.success("تم حذف القالب بنجاح.");
+      } else {
+        toast.error("فشل حذف القالب.");
+      }
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء الحذف.");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

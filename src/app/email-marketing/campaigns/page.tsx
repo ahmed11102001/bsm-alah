@@ -1,82 +1,165 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import EmailCampaignList from "./_components/EmailCampaignList";
 import CreateEmailCampaignModal from "./_components/CreateEmailCampaignModal";
 import EmailDeliveryLogTable from "./_components/EmailDeliveryLogTable";
-import {
-  MOCK_CAMPAIGNS,
-  MOCK_TEMPLATES,
-  MOCK_CONTACTS,
-  MOCK_DELIVERIES,
-} from "../constants";
-import type { EmailCampaignDTO, EmailDeliveryDTO } from "../types";
+import type { EmailCampaignDTO, EmailDeliveryDTO, EmailTemplateDTO } from "../types";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function EmailCampaignsPage() {
-  const [campaigns, setCampaigns] = useState<EmailCampaignDTO[]>(MOCK_CAMPAIGNS);
-  const [deliveries, setDeliveries] = useState<EmailDeliveryDTO[]>(MOCK_DELIVERIES);
+  const [campaigns, setCampaigns] = useState<EmailCampaignDTO[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplateDTO[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [totalContacts, setTotalContacts] = useState(0);
+  const [deliveries, setDeliveries] = useState<EmailDeliveryDTO[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [selectedCampaignForLogs, setSelectedCampaignForLogs] =
     useState<EmailCampaignDTO | null>(null);
 
-  // Derive unique tags from contacts
-  const availableTags = Array.from(
-    new Set(MOCK_CONTACTS.flatMap((c) => c.tags))
-  );
+  const loadData = useCallback(async () => {
+    try {
+      const [campaignsRes, templatesRes, contactsRes] = await Promise.all([
+        fetch("/api/email/campaigns"),
+        fetch("/api/email/templates"),
+        fetch("/api/email/contacts?limit=100"),
+      ]);
 
-  const handleCreateCampaign = (newCampaign: EmailCampaignDTO, sendNow: boolean) => {
-    setCampaigns((prev) => [newCampaign, ...prev]);
+      const [cData, tData, cntData] = await Promise.all([
+        campaignsRes.json(),
+        templatesRes.json(),
+        contactsRes.json(),
+      ]);
 
-    // If sent immediately, generate mock delivery records
-    if (sendNow) {
-      const generatedDeliveries: EmailDeliveryDTO[] = MOCK_CONTACTS.slice(0, 4).map((c, i) => ({
-        id: `del_gen_${Date.now()}_${i}`,
-        campaignId: newCampaign.id,
-        contactEmail: c.email,
-        contactName: c.firstName ? `${c.firstName} ${c.lastName || ""}` : null,
-        status: i === 3 ? "FAILED" : "DELIVERED",
-        errorMessage: i === 3 ? "Mailbox full / quota exceeded" : null,
-        sentAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      }));
+      if (campaignsRes.ok && Array.isArray(cData)) setCampaigns(cData);
+      if (templatesRes.ok && Array.isArray(tData)) setTemplates(tData);
+      if (contactsRes.ok && cntData.contacts) {
+        setTotalContacts(cntData.total || cntData.contacts.length);
+        const tags = Array.from(
+          new Set(cntData.contacts.flatMap((c: any) => c.tags || []))
+        ) as string[];
+        setAvailableTags(tags);
+      }
+    } catch (err) {
+      console.error("[EmailCampaignsPage] Failed to fetch data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-      setDeliveries((prev) => [...generatedDeliveries, ...prev]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleCreateCampaign = async (
+    newCampaign: EmailCampaignDTO,
+    sendNow: boolean
+  ) => {
+    try {
+      const res = await fetch("/api/email/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCampaign.name,
+          subject: newCampaign.subject,
+          templateId: newCampaign.templateId,
+          targetTag: newCampaign.targetTag,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل إنشاء الحملة");
+        return;
+      }
+
+      if (sendNow) {
+        toast.loading("جاري إطلاق الحملة وإرسال الرسائل عبر SMTP...", { id: "send-toast" });
+        const sendRes = await fetch(`/api/email/campaigns/${data.id}/send`, {
+          method: "POST",
+        });
+        const sendData = await sendRes.json();
+
+        if (sendRes.ok) {
+          toast.success(
+            `تم إرسال الحملة بنجاح! تم التسليم: ${sendData.deliveredCount}، فشل: ${sendData.failedCount}`,
+            { id: "send-toast" }
+          );
+        } else {
+          toast.error(sendData.error || "حصل خطأ أثناء الإرسال", { id: "send-toast" });
+        }
+      } else {
+        toast.success(`تم حفظ مسودة الحملة "${data.name}" بنجاح.`);
+      }
+
+      loadData();
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء إنشاء الحملة.");
     }
   };
 
   const handleSendNow = async (campaign: EmailCampaignDTO) => {
-    const toastId = toast.loading(`جاري بدء إرسال حملة "${campaign.name}"...`);
-    await new Promise((r) => setTimeout(r, 1200));
+    const toastId = toast.loading(`جاري بدء إرسال حملة "${campaign.name}" عبر SMTP...`);
+    try {
+      const res = await fetch(`/api/email/campaigns/${campaign.id}/send`, {
+        method: "POST",
+      });
+      const data = await res.json();
 
-    setCampaigns((prev) =>
-      prev.map((c) =>
-        c.id === campaign.id
-          ? {
-              ...c,
-              status: "COMPLETED",
-              sentCount: c.targetCount,
-              deliveredCount: Math.max(0, c.targetCount - 1),
-              failedCount: 1,
-              completedAt: new Date().toISOString(),
-            }
-          : c
-      )
-    );
-
-    toast.success(`تم إرسال الحملة "${campaign.name}" بنجاح! 🎉`, { id: toastId });
+      if (res.ok) {
+        toast.success(
+          `تم إرسال الحملة بنجاح! تم التسليم: ${data.deliveredCount}، فشل: ${data.failedCount} 🎉`,
+          { id: toastId }
+        );
+        loadData();
+      } else {
+        toast.error(data.error || "فشل إطلاق الحملة البريدية.", { id: toastId });
+      }
+    } catch {
+      toast.error("حدث خطأ في الشبكة أثناء الإرسال.", { id: toastId });
+    }
   };
 
-  const handleDeleteCampaign = (id: string) => {
-    setCampaigns((prev) => prev.filter((c) => c.id !== id));
-    toast.success("تم حذف الحملة بنجاح.");
+  const handleDeleteCampaign = async (id: string) => {
+    try {
+      const res = await fetch(`/api/email/campaigns/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setCampaigns((prev) => prev.filter((c) => c.id !== id));
+        toast.success("تم حذف الحملة بنجاح.");
+      } else {
+        toast.error("فشل حذف الحملة.");
+      }
+    } catch {
+      toast.error("حدث خطأ في الشبكة أثناء الحذف.");
+    }
   };
 
-  const handleOpenLogs = (campaign: EmailCampaignDTO) => {
+  const handleOpenLogs = async (campaign: EmailCampaignDTO) => {
     setSelectedCampaignForLogs(campaign);
     setIsLogsOpen(true);
+    try {
+      const res = await fetch(`/api/email/campaigns/${campaign.id}`);
+      const data = await res.json();
+      if (res.ok && data.deliveries) {
+        setDeliveries(data.deliveries);
+      }
+    } catch (err) {
+      console.error("[EmailCampaignsPage] Failed to fetch delivery logs:", err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -100,9 +183,9 @@ export default function EmailCampaignsPage() {
       {/* Create Modal Wizard */}
       <CreateEmailCampaignModal
         isOpen={isCreateOpen}
-        templates={MOCK_TEMPLATES}
+        templates={templates}
         availableTags={availableTags}
-        totalContactsCount={MOCK_CONTACTS.length}
+        totalContactsCount={totalContacts}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateCampaign}
       />

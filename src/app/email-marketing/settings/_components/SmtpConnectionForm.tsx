@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, Save, KeyRound, Server, Mail, User, Shield, Check } from "lucide-react";
+import { Eye, EyeOff, Save, Server } from "lucide-react";
 import { toast } from "sonner";
 import TestConnectionButton from "./TestConnectionButton";
 import { SMTP_PORT_PRESETS } from "../../constants";
@@ -34,14 +34,32 @@ export default function SmtpConnectionForm({
     }
 
     setSaving(true);
-    // محاكاة حفظ الإعدادات في مرحلة الـ UI Mock
-    await new Promise((r) => setTimeout(r, 1000));
-    setSaving(false);
+    try {
+      const res = await fetch("/api/email/connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    const updated = { ...formData, isConfigured: true };
-    setFormData(updated);
-    toast.success("تم حفظ إعدادات خادم البريد (SMTP) بنجاح! 🎉");
-    if (onSaveSuccess) onSaveSuccess(updated);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل حفظ إعدادات خادم البريد");
+        return;
+      }
+
+      const updated: SmtpConfigDTO = {
+        ...formData,
+        isConfigured: true,
+        password: formData.password ? "••••••••" : "",
+      };
+      setFormData(updated);
+      toast.success("تم حفظ إعدادات خادم البريد (SMTP) بنجاح! 🎉");
+      if (onSaveSuccess) onSaveSuccess(updated);
+    } catch {
+      toast.error("حدث خطأ في الاتصال أثناء حفظ الإعدادات.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -136,8 +154,7 @@ export default function SmtpConnectionForm({
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              required
-              placeholder="••••••••••••••••"
+              placeholder={formData.isConfigured ? "•••••••• (محفوظة مسبقًا)" : "••••••••••••••••"}
               value={formData.password || ""}
               onChange={(e) => handleChange("password", e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/25 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
@@ -185,7 +202,7 @@ export default function SmtpConnectionForm({
 
       {/* Buttons */}
       <div className="mt-8 pt-5 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <TestConnectionButton />
+        <TestConnectionButton getConfig={() => formData} />
 
         <button
           type="submit"

@@ -89,6 +89,10 @@ model User {
   websitePages             WebsitePage[]
   whatsappAccount          WhatsAppAccount?
   wooCommerceStore         WooCommerceStore?
+  emailConnection          EmailConnection?
+  emailContacts            EmailContact[]
+  emailTemplates           EmailTemplate[]
+  emailCampaigns           EmailCampaign[]
 
   @@index([email])
   @@index([workspaceId])
@@ -2037,4 +2041,124 @@ enum TrainingRuleStatus {
   pending
   approved
   rejected
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ─── EMAIL MARKETING (Phase 2) ───────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+
+model EmailConnection {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  host            String
+  port            Int       @default(587)
+  secure          Boolean   @default(false)
+  userLogin       String
+  password        String    // Encrypted via src/lib/crypto.ts
+  fromEmail       String
+  fromName        String
+  lastTestedAt    DateTime?
+  lastTestSuccess Boolean?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model EmailContact {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String
+  firstName   String?
+  lastName    String?
+  tags        String[]            @default([])
+  status      EmailContactStatus  @default(SUBSCRIBED)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deliveries  EmailDelivery[]
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum EmailContactStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+model EmailTemplate {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  subject     String
+  bodyHtml    String
+  previewText String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  campaigns   EmailCampaign[]
+
+  @@index([userId])
+}
+
+model EmailCampaign {
+  id             String              @id @default(cuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  subject        String
+  templateId     String
+  template       EmailTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  targetTag      String?
+  targetCount    Int                 @default(0)
+  sentCount      Int                 @default(0)
+  deliveredCount Int                 @default(0)
+  failedCount    Int                 @default(0)
+  status         EmailCampaignStatus @default(DRAFT)
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deliveries     EmailDelivery[]
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  COMPLETED
+  FAILED
+}
+
+model EmailDelivery {
+  id           String              @id @default(cuid())
+  campaignId   String
+  campaign     EmailCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId    String?
+  contact      EmailContact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactEmail String
+  contactName  String?
+  status       EmailDeliveryStatus @default(QUEUED)
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime            @default(now())
+
+  @@index([campaignId])
+  @@index([campaignId, status])
+  @@index([contactEmail])
+}
+
+enum EmailDeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  FAILED
 }

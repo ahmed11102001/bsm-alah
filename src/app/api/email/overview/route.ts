@@ -1,0 +1,83 @@
+import { NextResponse } from "next/server";
+import { getAppServerSession } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+
+function resolveOwnerId(session: any): string {
+  if (session.user.role === "OWNER") return session.user.id as string;
+  return (session.user.parentId as string | null) ?? (session.user.id as string);
+}
+
+export async function GET() {
+  try {
+    const session = await getAppServerSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: "غير مصرح لك" }, { status: 401 });
+    }
+
+    const ownerId = resolveOwnerId(session);
+
+    const [
+      totalContacts,
+      subscribedContacts,
+      totalCampaigns,
+      campaignsStats,
+      connection,
+      recentCampaigns,
+    ] = await Promise.all([
+      prisma.emailContact.count({ where: { userId: ownerId } }),
+      prisma.emailContact.count({ where: { userId: ownerId, status: "SUBSCRIBED" } }),
+      prisma.emailCampaign.count({ where: { userId: ownerId } }),
+      prisma.emailCampaign.aggregate({
+        where: { userId: ownerId },
+        _sum: {
+          sentCount: true,
+          deliveredCount: true,
+          failedCount: true,
+        },
+      }),
+      prisma.emailConnection.findUnique({
+        where: { userId: ownerId },
+        select: { fromEmail: true, host: true, lastTestSuccess: true },
+      }),
+      prisma.emailCampaign.findMany({
+        where: { userId: ownerId },
+        include: { template: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+    ]);
+
+    const sent = campaignsStats._sum.sentCount || 0;
+    const delivered = campaignsStats._sum.deliveredCount || 0;
+    const deliveryRate = sent > 0 ? +((delivered / sent) * 100).toFixed(1) : 100;
+
+    return NextResponse.json({
+      stats: {
+        totalContacts,
+        subscribedContacts,
+        totalCampaigns,
+        totalEmailsSent: sent,
+        deliveryRate,
+        openRate: 0,
+        isSmtpConfigured: Boolean(connection?.host),
+        fromEmail: connection?.fromEmail || null,
+      },
+      recentCampaigns: recentCampaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        subject: c.subject,
+        templateName: c.template?.name,
+        targetTag: c.targetTag,
+        targetCount: c.targetCount,
+        sentCount: c.sentCount,
+        deliveredCount: c.deliveredCount,
+        failedCount: c.failedCount,
+        status: c.status,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    });
+  } catch (err: any) {
+    console.error("[api/email/overview GET]:", err);
+    return NextResponse.json({ error: "فشل جلب إحصائيات البريد" }, { status: 500 });
+  }
+}

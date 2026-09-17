@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -5,24 +8,45 @@ import {
   CheckCircle,
   Eye,
   Plus,
-  FileText,
-  Settings,
-  Mail,
-  ArrowLeft,
-  Sparkles,
+  Loader2,
 } from "lucide-react";
 import EmailKpiCard from "./_components/overview/EmailKpiCard";
 import EmailConnectionStatusBanner from "./_components/overview/EmailConnectionStatusBanner";
 import RecentEmailCampaignsTable from "./_components/overview/RecentEmailCampaignsTable";
-import {
-  MOCK_OVERVIEW_STATS,
-  MOCK_CAMPAIGNS,
-  MOCK_SMTP_CONFIG,
-} from "./constants";
+import { MOCK_OVERVIEW_STATS } from "./constants";
+import type { EmailOverviewStats, EmailCampaignDTO } from "./types";
 
 export default function EmailOverviewPage() {
-  const stats = MOCK_OVERVIEW_STATS;
-  const recentCampaigns = MOCK_CAMPAIGNS.slice(0, 5);
+  const [stats, setStats] = useState<EmailOverviewStats>(MOCK_OVERVIEW_STATS);
+  const [recentCampaigns, setRecentCampaigns] = useState<EmailCampaignDTO[]>([]);
+  const [fromEmail, setFromEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/email/overview")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.stats) {
+          setStats(data.stats);
+          setFromEmail(data.stats.fromEmail || null);
+          if (Array.isArray(data.recentCampaigns)) {
+            setRecentCampaigns(data.recentCampaigns);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("[EmailOverviewPage] Failed to fetch overview:", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -62,7 +86,7 @@ export default function EmailOverviewPage() {
       {/* SMTP Connection Warning / Status Banner */}
       <EmailConnectionStatusBanner
         isConfigured={stats.isSmtpConfigured}
-        fromEmail={MOCK_SMTP_CONFIG.fromEmail}
+        fromEmail={fromEmail}
       />
 
       {/* KPI Cards Grid */}
@@ -72,7 +96,7 @@ export default function EmailOverviewPage() {
           value={stats.subscribedContacts.toLocaleString()}
           subtitle={`من إجمالي ${stats.totalContacts.toLocaleString()} جهة اتصال`}
           icon={Users}
-          trend="+12%"
+          trend="+100%"
           trendUp={true}
           accentColor="blue"
         />
@@ -82,8 +106,6 @@ export default function EmailOverviewPage() {
           value={stats.totalEmailsSent.toLocaleString()}
           subtitle={`عبر ${stats.totalCampaigns} حملة بريدية`}
           icon={Send}
-          trend="+8.5%"
-          trendUp={true}
           accentColor="indigo"
         />
 
@@ -92,18 +114,14 @@ export default function EmailOverviewPage() {
           value={`${stats.deliveryRate}%`}
           subtitle="نسبة وصول الرسائل للـ Inbox"
           icon={CheckCircle}
-          trend="+0.4%"
-          trendUp={true}
           accentColor="emerald"
         />
 
         <EmailKpiCard
-          title="معدل فتح الرسائل (Open Rate)"
-          value={`${stats.openRate}%`}
-          subtitle="تفاعل المشتركين مع العناوين"
+          title="حالة خادم SMTP"
+          value={stats.isSmtpConfigured ? "متصل ✅" : "غير مربوط ⚠️"}
+          subtitle={stats.isSmtpConfigured ? "الخادم جاهز للإرسال" : "يتطلب تهيئة الخادم"}
           icon={Eye}
-          trend="+2.1%"
-          trendUp={true}
           accentColor="amber"
         />
       </div>
