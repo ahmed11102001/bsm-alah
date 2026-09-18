@@ -1,0 +1,66 @@
+"use client";
+
+import Link from "next/link";
+import { Users, Store, Bot } from "lucide-react";
+
+// ─── شريط جانبي عائم (كارت طولي صغير في النصف الأسفل) ──────────────────────
+// مش سايدبار للتنقل العام — اختصارات سريعة: وني CRM (شغّال) + ربط المتجر
+// ووني AI (واجهة فقط حاليًا).
+export default function ChannelsSideRail() {
+  return (
+    <>
+      <style>{`
+        @keyframes rail-float {
+          0%, 100% { transform: translateY(calc(-50% - 6px)); }
+          50% { transform: translateY(calc(-50% + 6px)); }
+        }
+        .channels-side-rail {
+          animation: rail-float 3.2s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .channels-side-rail { animation: none; }
+        }
+      `}</style>
+    <div
+      className="channels-side-rail hidden lg:flex fixed left-4 top-[62%] z-40 flex-col items-stretch gap-1.5 rounded-2xl border border-white/10 bg-black/50 p-2 shadow-2xl shadow-black/50 backdrop-blur-xl"
+      aria-label="اختصارات سريعة"
+    >
+      {/* وني CRM — ينقل لصفحة CRM */}
+      <Link
+        href="/crm"
+        title="وني CRM"
+        className="group flex w-[76px] flex-col items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2 py-3 transition-all duration-200 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95"
+      >
+        <Users className="h-5 w-5 text-emerald-300 transition-transform duration-200 group-hover:scale-110" />
+        <span className="text-[11px] font-bold text-emerald-200">وني CRM</span>
+      </Link>
+
+      {/* ربط المتجر — واجهة فقط حاليًا */}
+      <button
+        type="button"
+        title="ربط المتجر"
+        className="group flex w-[76px] cursor-default flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-3 transition-all duration-200 hover:bg-white/[0.08]"
+      >
+        <Store className="h-5 w-5 text-white/60 transition-transform duration-200 group-hover:scale-110" />
+        <span className="text-[11px] font-semibold text-white/70">ربط المتجر</span>
+        <span className="rounded-full bg-white/10 px-1.5 py-px text-[9px] font-medium text-white/40">
+          قريبًا
+        </span>
+      </button>
+
+      {/* وني AI — زر فقط حاليًا */}
+      <button
+        type="button"
+        title="وني AI"
+        className="group flex w-[76px] cursor-default flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-3 transition-all duration-200 hover:bg-white/[0.08]"
+      >
+        <Bot className="h-5 w-5 text-white/60 transition-transform duration-200 group-hover:scale-110" />
+        <span className="text-[11px] font-semibold text-white/70">وني AI</span>
+        <span className="rounded-full bg-white/10 px-1.5 py-px text-[9px] font-medium text-white/40">
+          قريبًا
+        </span>
+      </button>
+    </div>
+    </>
+  );
+}

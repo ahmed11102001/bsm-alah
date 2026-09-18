@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ChannelsSideRail from "./ChannelsSideRail";
 import { motion, type Variants } from "framer-motion";
 import {
   MessageSquare,
@@ -57,6 +58,7 @@ export default function ChannelsClient({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <ChannelsSideRail />
       {/* Header section */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
