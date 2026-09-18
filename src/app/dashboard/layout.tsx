@@ -538,17 +538,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
               <LanguageToggle />
               <ThemeToggle />
-
-              <div className="mt-1 border-t border-border pt-1.5">
-                <button
-                  type="button"
-                  onClick={() => signOutWithPushCleanup(signOut, { callbackUrl: "/" })}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-500/10"
-                >
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
-                  <span>{t.signOut}</span>
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -666,14 +655,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
                 </button>
                 <LanguageToggle />
                 <ThemeToggle />
-                <button
-                  type="button"
-                  onClick={() => { signOutWithPushCleanup(signOut, { callbackUrl: "/" }); setAccountPanelOpen(false); setMobileMenuOpen(false); }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-500/10"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>{t.signOut}</span>
-                </button>
               </div>
             )}
           </div>
@@ -713,6 +694,16 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <div className="flex-1 hidden lg:block" />
 
           <div className="flex items-center gap-2">
+            {/* رجوع لمركز القنوات — زي توب بار الإيميل */}
+            <Link
+              href="/channels"
+              title={locale === "ar" ? "الرجوع لمركز القنوات" : "Back to channels"}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">{locale === "ar" ? "مركز القنوات" : "Channels"}</span>
+            </Link>
+
             <NotificationBell
               onNavigate={navigateTo}
               lang={locale === "en" ? "en" : "ar"}
@@ -732,6 +723,30 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               />
             )}
             <div id="assistant-header-slot" className="flex items-center" />
+
+            {/* المستخدم → صفحة الإعدادات المشتركة + خروج — زي توب بار الإيميل */}
+            <Link
+              href="/settings"
+              title={locale === "ar" ? "الإعدادات" : "Settings"}
+              className="hidden sm:flex items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-1.5 transition-all hover:border-primary/40 hover:bg-primary/10 active:scale-95"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground flex-shrink-0">
+                {initials}
+              </div>
+              <span className="max-w-[110px] truncate text-xs font-semibold text-foreground">
+                {displayName}
+              </span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => signOutWithPushCleanup(signOut, { callbackUrl: "/" })}
+              title={t.signOut}
+              className="group flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
+            >
+              <LogOut className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:group-hover:translate-x-0.5" />
+              <span className="hidden md:inline">{locale === "ar" ? "خروج" : "Logout"}</span>
+            </button>
 
           </div>
         </header>
