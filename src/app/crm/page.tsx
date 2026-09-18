@@ -37,7 +37,7 @@ export default function CrmPage() {
     try {
       const id = new URLSearchParams(window.location.search).get("contactId");
       if (id) setDetailId(id);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function CrmPage() {
         setPage(d.page ?? 1);
         setPageCount(d.pageCount ?? 1);
       }
-    } catch {}
+    } catch { }
     setLoading(false);
   }, []);
 
@@ -148,3 +148,4 @@ export default function CrmPage() {
     </div>
   );
 }
+
