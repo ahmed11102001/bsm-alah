@@ -4,6 +4,7 @@
 
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
+import { upsertStoreContact } from "@/lib/store-contacts";
 
 export const handleEasyOrderReceived = inngest.createFunction(
   {
@@ -25,11 +26,14 @@ export const handleEasyOrderReceived = inngest.createFunction(
     } = event.data;
 
     // ── Step 1: Upsert Contact ─────────────────────────────────────────────
+    // EasyOrders payload مفيهوش إيميل أصلًا (رقم + اسم بس) — التعامل بالرقم فقط زي قبل كده
     const contact = await step.run("upsert-contact", async () => {
-      return prisma.contact.upsert({
-        where:  { phone_userId: { phone, userId } },
-        update: { name: name && name !== "العميل" ? name : undefined },
-        create: { phone, userId, name: name || "عميل" },
+      return upsertStoreContact({
+        userId,
+        phone,
+        email: undefined,
+        updateName: name && name !== "العميل" ? name : undefined,
+        createName: name || "عميل",
       });
     });
 

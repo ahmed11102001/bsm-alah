@@ -8,6 +8,7 @@ import {
   SHOPIFY_CREDENTIALS_SELECT,
   getValidShopifyAccessToken,
 } from "@/lib/shopify-auth";
+import { upsertStoreContact } from "@/lib/store-contacts";
 
 // ─── Helper: تنظيف رقم الهاتف ───────────────────────────────────────────────
 function cleanPhone(phone: string): string {
@@ -32,22 +33,25 @@ export const handleShopifyOrderCreated = inngest.createFunction(
       currency,
       customerName,
       customerPhone,
+      customerEmail,
       rawData,
     } = event.data;
 
-    if (!customerPhone) {
-      console.warn(`[Shopify] Order ${orderNumber} has no phone — skipping`);
-      return { skipped: true, reason: "no_phone" };
+    if (!customerPhone && !customerEmail) {
+      console.warn(`[Shopify] Order ${orderNumber} has no phone and no email — skipping`);
+      return { skipped: true, reason: "no_phone_no_email" };
     }
 
-    const phone = cleanPhone(customerPhone);
+    const phone = customerPhone ? cleanPhone(customerPhone) : undefined;
 
     // ── Step 1: Upsert Contact ─────────────────────────────────────────────
     const contact = await step.run("upsert-contact", async () => {
-      return prisma.contact.upsert({
-        where: { phone_userId: { phone, userId } },
-        update: { name: customerName || undefined },
-        create: { phone, userId, name: customerName || "عميل شوبيفاي" },
+      return upsertStoreContact({
+        userId,
+        phone,
+        email: customerEmail,
+        updateName: customerName || undefined,
+        createName: customerName || "عميل شوبيفاي",
       });
     });
 
@@ -68,7 +72,8 @@ export const handleShopifyOrderCreated = inngest.createFunction(
           externalId: String(orderId),
           orderNumber: orderNumber ? String(orderNumber) : undefined,
           customerName: customerName,
-          customerPhone: phone,
+          // customerPhone مطلوب في السكيما — أوردر الإيميل-بس بيتسجل "" (ممنوع تغيير السكيما في المرحلة دي)
+          customerPhone: phone || "",
           total: totalPrice != null ? Number(totalPrice) : undefined,
           currency: currency || "USD",
           status: "pending",

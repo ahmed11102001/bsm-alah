@@ -3,6 +3,7 @@
 
 import { inngest } from "./client";
 import prisma      from "@/lib/prisma";
+import { upsertStoreContact } from "@/lib/store-contacts";
 
 function cleanPhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -20,19 +21,21 @@ export const handleWooOrderCreated = inngest.createFunction(
       woocommerceStoreId, couponCodes,
     } = event.data;
 
-    if (!customerPhone) {
-      console.warn(`[WooCommerce] Order ${orderNumber} — no phone`);
-      return { skipped: true, reason: "no_phone" };
+    if (!customerPhone && !customerEmail) {
+      console.warn(`[WooCommerce] Order ${orderNumber} — no phone and no email`);
+      return { skipped: true, reason: "no_phone_no_email" };
     }
 
-    const phone = cleanPhone(customerPhone);
+    const phone = customerPhone ? cleanPhone(customerPhone) : undefined;
 
     // ── Step 1: Upsert Contact ─────────────────────────────────────────────
     const contact = await step.run("upsert-contact", async () => {
-      return prisma.contact.upsert({
-        where:  { phone_userId: { phone, userId } },
-        update: { name: customerName || undefined },
-        create: { phone, userId, name: customerName || "عميل WooCommerce" },
+      return upsertStoreContact({
+        userId,
+        phone,
+        email: customerEmail,
+        updateName: customerName || undefined,
+        createName: customerName || "عميل WooCommerce",
       });
     });
 
@@ -53,7 +56,8 @@ export const handleWooOrderCreated = inngest.createFunction(
           externalId:         String(orderId),
           orderNumber:        orderNumber ? String(orderNumber) : undefined,
           customerName,
-          customerPhone:      phone,
+          // customerPhone مطلوب في السكيما — أوردر الإيميل-بس بيتسجل "" (ممنوع تغيير السكيما في المرحلة دي)
+          customerPhone:      phone || "",
           total:              totalPrice != null ? Number(totalPrice) : undefined,
           currency:           currency || "EGP",
           status:             "pending",
