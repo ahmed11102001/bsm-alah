@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Filter, Mail, CheckCircle2, XCircle, AlertCircle, Tag, Plus, Upload } from "lucide-react";
+import { Search, Filter, Mail, CheckCircle2, XCircle, AlertCircle, Tag, Plus, Upload, ExternalLink } from "lucide-react";
 import EmailContactRowActions from "./EmailContactRowActions";
 import type { EmailContactDTO, EmailContactStatus } from "../../types";
 
@@ -166,11 +166,22 @@ export default function EmailContactsTable({
                     })}
                   </td>
                   <td className="py-3.5 pl-3 text-center">
-                    <EmailContactRowActions
-                      contact={c}
-                      onDelete={onDelete}
-                      onStatusChange={onStatusChange}
-                    />
+                    <span className="inline-flex items-center gap-1">
+                      <a
+                        href={`/crm?contactId=${c.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="عرض في CRM"
+                        className="p-1.5 rounded-lg text-white/40 hover:text-emerald-300 hover:bg-white/[0.06] transition"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      <EmailContactRowActions
+                        contact={c}
+                        onDelete={onDelete}
+                        onStatusChange={onStatusChange}
+                      />
+                    </span>
                   </td>
                 </tr>
               ))

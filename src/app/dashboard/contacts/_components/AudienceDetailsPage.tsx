@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Search, SlidersHorizontal, Copy, X, Plus, Edit2, Loader2, Users, ArrowRight,
-  MessageCircle, AlertCircle, ChevronLeft, ChevronRight,
+  MessageCircle, AlertCircle, ChevronLeft, ChevronRight, ExternalLink,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import { normalizePhone, isValidPhone } from "./phone-utils";
@@ -414,8 +414,17 @@ export default function AudienceDetailsPage() {
                           <Badge tone={c.textAiEnabled ? "green" : "gray"}>{c.textAiEnabled ? "مفعّل" : "متوقف"}</Badge>
                         </div>
 
-                        <div className="min-w-0 text-xs text-gray-500 dark:text-gray-400">
-                          {c.assignedTo?.name || c.assignedTo?.email || "غير معين"}
+                        <div className="min-w-0 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                          <span className="truncate">{c.assignedTo?.name || c.assignedTo?.email || "غير معين"}</span>
+                          <a
+                            href={`/crm?contactId=${c.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={locale === "ar" ? "عرض في CRM" : "View in CRM"}
+                            className="flex-shrink-0 p-1 rounded-lg text-gray-400 hover:text-[#25D366] hover:bg-green-50 dark:hover:bg-green-900/20 transition"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
                         </div>
                       </div>
                     ))}

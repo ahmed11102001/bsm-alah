@@ -32,6 +32,14 @@ export default function CrmPage() {
   const [excelOpen, setExcelOpen] = useState(false);
   const [sheetsOpen, setSheetsOpen] = useState(false);
 
+  // لينك خارجي (?contactId=) — يفتح مودال التفاصيل تلقائيًا على نفس العميل
+  useEffect(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get("contactId");
+      if (id) setDetailId(id);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
