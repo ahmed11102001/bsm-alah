@@ -90,8 +90,8 @@ export async function GET() {
       })),
       recentActivity: recentDeliveries.map((d) => ({
         id: d.id,
-        campaignName: d.campaign.name,
-        subject: d.campaign.subject,
+        campaignName: d.campaign?.name ?? "أتمتة تلقائية",
+        subject: d.campaign?.subject ?? "—",
         contactEmail: d.contactEmail,
         contactName: d.contactName,
         status: d.status,

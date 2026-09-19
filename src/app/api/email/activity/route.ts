@@ -71,8 +71,9 @@ export async function GET(req: NextRequest) {
     const items = deliveries.map((d) => ({
       id: d.id,
       campaignId: d.campaignId,
-      campaignName: d.campaign.name,
-      subject: d.campaign.subject,
+      // إرسالات الأتمتة (عيد ميلاد/بعد الاستلام/...) ملهاش حملة
+      campaignName: d.campaign?.name ?? "أتمتة تلقائية",
+      subject: d.campaign?.subject ?? "—",
       contactEmail: d.contactEmail,
       contactName: d.contactName,
       status: d.status,
