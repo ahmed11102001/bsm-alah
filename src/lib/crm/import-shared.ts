@@ -6,11 +6,14 @@
 import prisma from "@/lib/prisma";
 import { upsertStoreContact } from "@/lib/store-contacts";
 import { normalizeCrmPhone, normalizeCrmEmail } from "./contacts";
+import { parseBirthDate, cleanCity } from "./birthdate";
 
 export interface ImportRow {
   name?: unknown;
   phone?: unknown;
   email?: unknown;
+  birthDate?: unknown;
+  city?: unknown;
 }
 
 export type ImportSkipReason = "NO_CHANNEL" | "ROW_LIMIT";
@@ -21,6 +24,9 @@ export interface ImportSummary {
   updated: number;
   skipped: number;
   skippedSamples: Array<{ row: number; reason: ImportSkipReason }>;
+  /** صفوف اتقبلت بس تاريخ ميلادها غير صالح فاتجاهل الحقل بس */
+  invalidBirthDates: number;
+  invalidBirthDateRows: number[];
 }
 
 export const IMPORT_MAX_ROWS = 500;
@@ -49,14 +55,37 @@ async function existedBefore(ownerId: string, phone: string | null, email: strin
   return false;
 }
 
+export interface ImportRowOutcome {
+  status: "added" | "updated" | ImportSkipReason;
+  /** true لو الصف اتقبل بس تاريخ ميلاده غير صالح فاتجاهل الحقل بس */
+  invalidBirthDate: boolean;
+}
+
+function hasBirthDateInput(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+  if (typeof v === "number") return true;
+  if (v instanceof Date) return true;
+  return typeof v === "string" && v.trim() !== "";
+}
+
 /** معالجة صف واحد — بترجع الحالة للملخص */
 export async function processImportRow(
   ownerId: string,
   row: ImportRow
-): Promise<"added" | "updated" | ImportSkipReason> {
+): Promise<ImportRowOutcome> {
   const phone = normalizeCrmPhone(row.phone);
   const email = normalizeCrmEmail(row.email);
-  if (!phone && !email) return "NO_CHANNEL";
+  if (!phone && !email) return { status: "NO_CHANNEL", invalidBirthDate: false };
+
+  // تاريخ الميلاد الغلط بيوقع الحقل بس — مش الصف كله
+  let birthDate: Date | undefined;
+  let invalidBirthDate = false;
+  if (hasBirthDateInput(row.birthDate)) {
+    const parsed = parseBirthDate(row.birthDate);
+    if (parsed) birthDate = parsed;
+    else invalidBirthDate = true;
+  }
+  const city = cleanCity(row.city) ?? undefined;
 
   const name = cleanImportName(row.name);
   const wasThere = await existedBefore(ownerId, phone, email);
@@ -66,8 +95,10 @@ export async function processImportRow(
     email,
     updateName: name ?? undefined,
     createName: name ?? "",
+    birthDate,
+    city,
   });
-  return wasThere ? "updated" : "added";
+  return { status: wasThere ? "updated" : "added", invalidBirthDate };
 }
 
 /** معالجة دفعة صفوف مع ملخص (added/updated/skipped) */
@@ -81,17 +112,25 @@ export async function processImportRows(
     updated: 0,
     skipped: 0,
     skippedSamples: [],
+    invalidBirthDates: 0,
+    invalidBirthDateRows: [],
   };
   const limited = rows.slice(0, IMPORT_MAX_ROWS);
   for (let i = 0; i < limited.length; i++) {
     try {
       const outcome = await processImportRow(ownerId, limited[i]);
-      if (outcome === "added") summary.added++;
-      else if (outcome === "updated") summary.updated++;
+      if (outcome.status === "added") summary.added++;
+      else if (outcome.status === "updated") summary.updated++;
       else {
         summary.skipped++;
         if (summary.skippedSamples.length < 20) {
-          summary.skippedSamples.push({ row: i + 1, reason: outcome });
+          summary.skippedSamples.push({ row: i + 1, reason: outcome.status });
+        }
+      }
+      if (outcome.invalidBirthDate) {
+        summary.invalidBirthDates++;
+        if (summary.invalidBirthDateRows.length < 20) {
+          summary.invalidBirthDateRows.push(i + 1);
         }
       }
     } catch {

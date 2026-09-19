@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Trash2, MessageCircle, Mail } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-import { tx, type CrmContact } from "../types";
+import { tx, birthDateToInput, type CrmContact } from "../types";
 
 interface Props {
   contactId: string | null;
@@ -21,6 +21,7 @@ const CODE_MSG: Record<string, { ar: string; en: string }> = {
   PHONE_OR_EMAIL_REQUIRED: { ar: "لازم رقم أو إيميل على الأقل — مينفعش تمسح الاتنين", en: "Phone or email is required" },
   INVALID_PHONE: { ar: "رقم الهاتف غير صحيح", en: "Invalid phone number" },
   INVALID_EMAIL: { ar: "الإيميل غير صحيح", en: "Invalid email" },
+  INVALID_BIRTHDATE: { ar: "تاريخ الميلاد غير صحيح", en: "Invalid birth date" },
   CONFLICT: { ar: "الرقم أو الإيميل مرتبط بعميل تاني", en: "Phone or email belongs to another contact" },
   NOT_FOUND: { ar: "العميل مش موجود", en: "Contact not found" },
 };
@@ -34,6 +35,8 @@ export default function CrmContactDetailModal({ contactId, onClose, onSaved, onD
   const [email, setEmail] = useState("");
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [city, setCity] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -52,6 +55,8 @@ export default function CrmContactDetailModal({ contactId, onClose, onSaved, onD
         setEmail(c.email ?? "");
         setTags((c.tags ?? []).join(", "));
         setNotes(c.notes ?? "");
+        setBirthDate(birthDateToInput(c.birthDate ?? null));
+        setCity(c.city ?? "");
       })
       .catch(() => setErr(tx("تعذر تحميل العميل", "Failed to load contact", locale)))
       .finally(() => setLoading(false));
@@ -69,6 +74,8 @@ export default function CrmContactDetailModal({ contactId, onClose, onSaved, onD
           phone, email,
           tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
           notes: notes.trim() || null,
+          birthDate: birthDate || null,
+          city: city.trim() || null,
         }),
       });
       const d = await r.json().catch(() => ({}));
@@ -144,6 +151,18 @@ export default function CrmContactDetailModal({ contactId, onClose, onSaved, onD
               <div>
                 <Label className="text-sm dark:text-gray-300">{tx("الإيميل", "Email", locale)}</Label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm dark:text-gray-300">{tx("تاريخ الميلاد", "Birth date", locale)}</Label>
+                <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
+                  className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
+              </div>
+              <div>
+                <Label className="text-sm dark:text-gray-300">{tx("المدينة", "City", locale)}</Label>
+                <Input value={city} onChange={(e) => setCity(e.target.value)}
+                  className="mt-1 dark:bg-gray-700 dark:border-gray-600" />
               </div>
             </div>
             <div>

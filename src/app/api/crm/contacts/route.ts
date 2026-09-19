@@ -49,12 +49,20 @@ export async function POST(req: Request) {
       email: body?.email,
       tags: body?.tags,
       notes: body?.notes,
+      birthDate: body?.birthDate,
+      city: body?.city,
     });
     return NextResponse.json({ contact, created }, { status: created ? 201 : 200 });
   } catch (err: any) {
     if (err?.code === "PHONE_OR_EMAIL_REQUIRED") {
       return NextResponse.json(
         { error: "لازم رقم أو إيميل على الأقل", code: "PHONE_OR_EMAIL_REQUIRED" },
+        { status: 400 }
+      );
+    }
+    if (err?.code === "INVALID_BIRTHDATE") {
+      return NextResponse.json(
+        { error: "تاريخ الميلاد غير صحيح", code: "INVALID_BIRTHDATE" },
         { status: 400 }
       );
     }

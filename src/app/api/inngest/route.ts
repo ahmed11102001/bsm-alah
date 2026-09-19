@@ -44,6 +44,8 @@ import {
 import { websiteCrawlOnDemand } from "@/inngest/website-crawl-functions";
 import { reconcileStoreAutomationClaims } from "@/inngest/store-automation-reconciliation";
 import { signupLeadsReminder } from "@/inngest/signup-leads-functions";
+import { birthdayDailyCron, birthdayManualTrigger } from "@/inngest/email-birthday-functions";
+import { postDeliveryShopify, postDeliveryWoo } from "@/inngest/email-post-delivery-functions";
 import { conversationNudgeFn } from "@/inngest/conversation-nudge-functions";
 import { aiReplyDebounceFn } from "@/inngest/ai-reply-debounce-functions";
 import { handoffResumeFn } from "@/inngest/handoff-resume-functions";
@@ -100,6 +102,12 @@ const inngestHandler = serve({
     googleSheetsSyncCron,
     // ── Signup Leads Reminder ──
     signupLeadsReminder,
+    // ── Birthday Emails ──
+    birthdayDailyCron,
+    birthdayManualTrigger,
+    // ── Post-delivery Emails ──
+    postDeliveryShopify,
+    postDeliveryWoo,
   ],
 });
 

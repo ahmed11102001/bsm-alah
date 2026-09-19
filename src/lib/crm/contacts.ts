@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { normalizePhone } from "@/lib/phone";
 import { upsertStoreContact } from "@/lib/store-contacts";
+import { parseBirthDate, cleanCity } from "./birthdate";
 
 export type CrmChannel = "all" | "phone" | "email" | "both";
 
@@ -16,6 +17,8 @@ export interface CrmContactInput {
   email?: string | null;
   tags?: string[] | null;
   notes?: string | null;
+  birthDate?: string | null;
+  city?: string | null;
 }
 
 export interface NormalizedContact {
@@ -24,6 +27,8 @@ export interface NormalizedContact {
   email: string | null;
   tags: string[];
   notes: string | null;
+  birthDate: Date | null;
+  city: string | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,7 +79,25 @@ export function normalizeCrmInput(input: CrmContactInput): NormalizedContact | n
     email,
     tags: normalizeCrmTags(input.tags),
     notes: cleanNotes(input.notes),
+    birthDate: parseBirthDate(input.birthDate),
+    city: cleanCity(input.city),
   };
+}
+
+/**
+ * تحقق تاريخ الميلاد للفورم: فاضي → null، صالح → Date، غير صالح → throw.
+ * (الاستيراد بيتجاهل الحقل الغلط بدل ما يرفض — شوف import-shared)
+ */
+export function requireBirthDateOrNull(v: unknown): Date | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
+  const parsed = parseBirthDate(v);
+  if (!parsed) {
+    const err: any = new Error("INVALID_BIRTHDATE");
+    err.code = "INVALID_BIRTHDATE";
+    throw err;
+  }
+  return parsed;
 }
 
 function channelWhere(channel: CrmChannel, base: Record<string, unknown> = {}) {
@@ -122,7 +145,8 @@ export async function listCrmContacts(params: CrmListParams) {
 
   const select = {
     id: true, name: true, phone: true, email: true,
-    tags: true, notes: true, createdAt: true, updatedAt: true,
+    tags: true, notes: true, birthDate: true, city: true,
+    createdAt: true, updatedAt: true,
   };
 
   const [items, total, all, phoneOnly, emailOnly, both] = await Promise.all([
@@ -174,6 +198,17 @@ function unionTags(a: string[] | null | undefined, b: string[]): string[] {
 }
 
 export async function createCrmContact(ownerId: string, input: CrmContactInput) {
+  // الفورم: تاريخ غلط → 400 (عكس الاستيراد اللي بيتجاهل الحقل بس)
+  if (
+    input.birthDate !== undefined &&
+    input.birthDate !== null &&
+    !(typeof input.birthDate === "string" && input.birthDate.trim() === "") &&
+    !parseBirthDate(input.birthDate)
+  ) {
+    const err: any = new Error("INVALID_BIRTHDATE");
+    err.code = "INVALID_BIRTHDATE";
+    throw err;
+  }
   const data = normalizeCrmInput(input);
   if (!data) {
     const err: any = new Error("PHONE_OR_EMAIL_REQUIRED");
@@ -194,6 +229,8 @@ export async function createCrmContact(ownerId: string, input: CrmContactInput) 
           email: data.email ?? existing.email,
           tags: unionTags(existing.tags, data.tags),
           notes: data.notes ?? existing.notes,
+          birthDate: data.birthDate ?? existing.birthDate ?? undefined,
+          city: data.city ?? existing.city ?? undefined,
         },
       });
       return { contact: restored, created: true as const };
@@ -205,6 +242,8 @@ export async function createCrmContact(ownerId: string, input: CrmContactInput) 
       email: data.email,
       updateName: data.name ?? undefined,
       createName: data.name ?? "",
+      birthDate: data.birthDate ?? undefined,
+      city: data.city ?? undefined,
     });
     const mergedTags = unionTags((merged as any).tags, data.tags);
     const contact =
@@ -225,6 +264,8 @@ export async function createCrmContact(ownerId: string, input: CrmContactInput) 
       email: data.email,
       tags: data.tags,
       notes: data.notes,
+      birthDate: data.birthDate,
+      city: data.city,
     },
   });
   return { contact: created, created: true as const };
@@ -236,6 +277,8 @@ export interface CrmUpdateInput {
   email?: string | null; // "" أو null = مسح الإيميل
   tags?: string[] | null; // replace كامل
   notes?: string | null;
+  birthDate?: string | null; // "" أو null = مسح التاريخ
+  city?: string | null; // "" أو null = مسح المدينة
 }
 
 export async function updateCrmContact(ownerId: string, id: string, input: CrmUpdateInput) {
@@ -248,10 +291,14 @@ export async function updateCrmContact(ownerId: string, id: string, input: CrmUp
     throw err;
   }
 
-  const patch: { name?: string | null; phone?: string | null; email?: string | null; tags?: string[]; notes?: string | null } = {};
+  const patch: { name?: string | null; phone?: string | null; email?: string | null; tags?: string[]; notes?: string | null; birthDate?: Date | null; city?: string | null } = {};
   if (input.name !== undefined) patch.name = cleanName(input.name);
   if (input.tags !== undefined) patch.tags = normalizeCrmTags(input.tags);
   if (input.notes !== undefined) patch.notes = cleanNotes(input.notes);
+  if (input.birthDate !== undefined) patch.birthDate = requireBirthDateOrNull(input.birthDate);
+  if (input.city !== undefined) {
+    patch.city = typeof input.city === "string" && input.city.trim() ? input.city.trim().slice(0, 120) : null;
+  }
 
   let nextPhone: string | null | undefined;
   let nextEmail: string | null | undefined;
@@ -323,7 +370,8 @@ export async function getCrmContact(ownerId: string, id: string) {
     where: { id, userId: ownerId, deletedAt: null },
     select: {
       id: true, name: true, phone: true, email: true,
-      tags: true, notes: true, createdAt: true, updatedAt: true,
+      tags: true, notes: true, birthDate: true, city: true,
+      createdAt: true, updatedAt: true,
     },
   });
 }

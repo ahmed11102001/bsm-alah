@@ -22,6 +22,8 @@ function mapError(err: any) {
       return NextResponse.json({ error: "رقم الهاتف غير صحيح", code: "INVALID_PHONE" }, { status: 400 });
     case "INVALID_EMAIL":
       return NextResponse.json({ error: "الإيميل غير صحيح", code: "INVALID_EMAIL" }, { status: 400 });
+    case "INVALID_BIRTHDATE":
+      return NextResponse.json({ error: "تاريخ الميلاد غير صحيح", code: "INVALID_BIRTHDATE" }, { status: 400 });
     case "CONFLICT":
       return NextResponse.json(
         { error: "الرقم أو الإيميل مرتبط بعميل تاني", code: "CONFLICT" },
@@ -60,6 +62,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       email: body?.email,
       tags: body?.tags,
       notes: body?.notes,
+      birthDate: body?.birthDate,
+      city: body?.city,
     });
     return NextResponse.json({ contact });
   } catch (err) {

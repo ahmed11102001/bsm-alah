@@ -37,6 +37,8 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
   const [nameCol, setNameCol] = useState<number | "">("");
   const [phoneCol, setPhoneCol] = useState<number | "">("");
   const [emailCol, setEmailCol] = useState<number | "">("");
+  const [birthCol, setBirthCol] = useState<number | "">("");
+  const [cityCol, setCityCol] = useState<number | "">("");
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [err, setErr] = useState("");
@@ -45,7 +47,16 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
   const reset = () => {
     setFileName(""); setHeaders([]); setRows([]);
     setNameCol(""); setPhoneCol(""); setEmailCol("");
+    setBirthCol(""); setCityCol("");
     setErr(""); setSummary(null);
+  };
+
+  const guessCol = (head: string[], hints: string[]): number | "" => {
+    for (let i = 0; i < head.length; i++) {
+      const h = head[i].trim().toLowerCase();
+      if (h && hints.some((hint) => h === hint || h.includes(hint))) return i;
+    }
+    return "";
   };
 
   const parseFile = async (file: File) => {
@@ -82,9 +93,17 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
       setHeaders(head);
       setRows(body);
       setFileName(file.name);
-      setNameCol(0 < maxCols ? 0 : "");
-      setPhoneCol(1 < maxCols ? 1 : "");
-      setEmailCol(2 < maxCols ? 2 : "");
+      const lower = head.map((h) => h.toLowerCase());
+      const gName = guessCol(lower, ["name", "الاسم", "العميل", "customer", "client"]);
+      const gPhone = guessCol(lower, ["phone", "mobile", "tel", "whatsapp", "الهاتف", "رقم", "الموبايل", "جوال"]);
+      const gEmail = guessCol(lower, ["email", "mail", "الإيميل", "البريد", "ايميل"]);
+      const gBirth = guessCol(lower, ["birth", "birthday", "dob", "ميلاد", "الميلاد", "تاريخ"]);
+      const gCity = guessCol(lower, ["city", "town", "المدينة", "مدينة", "location"]);
+      setNameCol(gName !== "" ? gName : (0 < maxCols ? 0 : ""));
+      setPhoneCol(gPhone !== "" ? gPhone : (1 < maxCols ? 1 : ""));
+      setEmailCol(gEmail !== "" ? gEmail : (2 < maxCols ? 2 : ""));
+      setBirthCol(gBirth);
+      setCityCol(gCity);
     } catch (e: any) {
       setErr(e.message || tx("تعذر قراءة الملف", "Failed to read file", locale));
     } finally {
@@ -96,6 +115,8 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
     name: nameCol === "" ? undefined : r[nameCol],
     phone: phoneCol === "" ? undefined : r[phoneCol],
     email: emailCol === "" ? undefined : r[emailCol],
+    birthDate: birthCol === "" ? undefined : r[birthCol],
+    city: cityCol === "" ? undefined : r[cityCol],
   }));
   const validCount = mappedRows.filter((r) => (r.phone && String(r.phone).trim()) || (r.email && String(r.email).trim())).length;
 
@@ -133,7 +154,7 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
             {tx("استيراد من Excel", "Import from Excel", locale)}
           </DialogTitle>
           <DialogDescription className="dark:text-gray-400">
-            {tx("ارفع الملف وحدد عمود الاسم + عمود الرقم (اختياري) + عمود الإيميل (اختياري).", "Upload the file and map the name, phone (optional) and email (optional) columns.", locale)}
+            {tx("ارفع الملف وحدد الأعمدة (الرقم أو الإيميل إجباري، والباقي اختياري).", "Upload the file and map columns (phone or email required, rest optional).", locale)}
           </DialogDescription>
         </DialogHeader>
 
@@ -162,6 +183,15 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
                 {summary.skippedSamples.slice(0, 10).map((s) => `#${s.row}`).join("، ")}
               </p>
             )}
+            {(summary.invalidBirthDates ?? 0) > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {tx(
+                  `تواريخ ميلاد غير صالحة (اتجاهل الحقل بس): ${summary.invalidBirthDates} — صفوف ${(summary.invalidBirthDateRows ?? []).slice(0, 10).map((n) => `#${n}`).join("، ")}`,
+                  `Invalid birth dates (field skipped only): ${summary.invalidBirthDates} — rows ${(summary.invalidBirthDateRows ?? []).slice(0, 10).map((n) => `#${n}`).join(", ")}`,
+                  locale
+                )}
+              </p>
+            )}
             <Button onClick={() => { onOpenChange(false); reset(); }} className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white">
               {tx("تم", "Done", locale)}
             </Button>
@@ -184,12 +214,14 @@ export default function CrmExcelImportDialog({ open, onOpenChange, onImported }:
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { l: tx("عمود الاسم", "Name column", locale), v: nameCol, s: setNameCol, optional: true },
-                    { l: tx("عمود الرقم", "Phone column", locale), v: phoneCol, s: setPhoneCol, optional: true },
-                    { l: tx("عمود الإيميل", "Email column", locale), v: emailCol, s: setEmailCol, optional: true },
+                    { l: tx("عمود الاسم", "Name column", locale), v: nameCol, s: setNameCol },
+                    { l: tx("عمود الرقم", "Phone column", locale), v: phoneCol, s: setPhoneCol },
+                    { l: tx("عمود الإيميل", "Email column", locale), v: emailCol, s: setEmailCol },
+                    { l: tx("عمود تاريخ الميلاد", "Birth date column", locale), v: birthCol, s: setBirthCol },
+                    { l: tx("عمود المدينة", "City column", locale), v: cityCol, s: setCityCol },
                   ].map((f) => (
                     <label key={f.l} className="text-sm dark:text-gray-200">
-                      {f.l} {f.optional && <span className="text-gray-400">({tx("اختياري", "optional", locale)})</span>}
+                      {f.l} <span className="text-gray-400">({tx("اختياري", "optional", locale)})</span>
                       <select
                         value={f.v} onChange={(e) => f.s(e.target.value === "" ? "" : Number(e.target.value))}
                         className="mt-1 w-full rounded-lg border p-2 bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"

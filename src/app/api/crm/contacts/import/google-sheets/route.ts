@@ -68,6 +68,8 @@ async function fetchSheetRows(url: string): Promise<string[][]> {
 const NAME_HINTS = ["name", "الاسم", "full name", "fullname", "العميل", "customer", "client"];
 const PHONE_HINTS = ["phone", "mobile", "tel", "telephone", "whatsapp", "التليفون", "الهاتف", "رقم", "الموبايل", "جوال", "هاتف"];
 const EMAIL_HINTS = ["email", "e-mail", "mail", "الإيميل", "البريد", "ايميل", "بريد"];
+const BIRTH_HINTS = ["birth", "birthday", "dob", "ميلاد", "الميلاد", "تاريخ"];
+const CITY_HINTS = ["city", "town", "المدينة", "مدينة", "location", "governorate", "محافظة"];
 
 function guessColumn(headers: string[], hints: string[]): number | null {
   for (let i = 0; i < headers.length; i++) {
@@ -125,6 +127,8 @@ export async function POST(req: Request) {
   const nameCol = pickCol(mapping, "nameCol", headers, NAME_HINTS, 0);
   const phoneCol = pickCol(mapping, "phoneCol", headers, PHONE_HINTS, 1);
   const emailCol = pickCol(mapping, "emailCol", headers, EMAIL_HINTS, 2);
+  const birthCol = pickCol(mapping, "birthCol", headers, BIRTH_HINTS, null);
+  const cityCol = pickCol(mapping, "cityCol", headers, CITY_HINTS, null);
 
   const ownerId = (session.user.parentId as string | null) ?? (session.user.id as string);
   const summary = await processImportRows(
@@ -133,6 +137,8 @@ export async function POST(req: Request) {
       name: nameCol !== null ? r[nameCol] : undefined,
       phone: phoneCol !== null ? r[phoneCol] : undefined,
       email: emailCol !== null ? r[emailCol] : undefined,
+      birthDate: birthCol !== null ? r[birthCol] : undefined,
+      city: cityCol !== null ? r[cityCol] : undefined,
     }))
   );
   return NextResponse.json({ summary });

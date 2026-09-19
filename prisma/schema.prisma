@@ -93,6 +93,7 @@ model User {
 
   emailTemplates           EmailTemplate[]
   emailCampaigns           EmailCampaign[]
+  emailAutomations         EmailAutomation[]
 
   @@index([email])
   @@index([workspaceId])
@@ -301,6 +302,9 @@ model Contact {
   phone                  String?                 // Optional: WhatsApp contacts have phone
   email                  String?                 // Optional: Email contacts have email
   notes                  String?
+  birthDate              DateTime?               // Optional: birthday (birthday automation)
+  city                   String?                 // Optional: city
+  lastBirthdayEmailSentAt DateTime?              // Last birthday email sent — prevents same-year duplicates
 
   // ===== Email-specific state =====
   tags                   String[]                @default([])
@@ -2105,6 +2109,7 @@ model EmailTemplate {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   campaigns   EmailCampaign[]
+  automations EmailAutomation[]
 
   @@index([userId])
 }
@@ -2143,8 +2148,8 @@ enum EmailCampaignStatus {
 
 model EmailDelivery {
   id           String              @id @default(cuid())
-  campaignId   String
-  campaign     EmailCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId   String?
+  campaign     EmailCampaign?      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   contactId    String?
   contact      Contact?            @relation(fields: [contactId], references: [id], onDelete: SetNull)
   contactEmail String
@@ -2165,4 +2170,29 @@ enum EmailDeliveryStatus {
   DELIVERED
   OPENED
   FAILED
+}
+
+enum EmailAutomationType {
+  BIRTHDAY
+  POST_DELIVERY
+  CART_ABANDONED
+  VIP_REPEAT
+  WIN_BACK
+}
+
+model EmailAutomation {
+  id         String              @id @default(cuid())
+  userId     String
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       EmailAutomationType
+  enabled    Boolean             @default(false)
+  templateId String?
+  template   EmailTemplate?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  // إعدادات حرة لكل نوع (مثال: CART_ABANDONED delaysHours، WIN_BACK daysInactive)
+  settings   Json?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([userId, type])
+  @@index([type, enabled])
 }

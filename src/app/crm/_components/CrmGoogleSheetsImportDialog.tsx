@@ -21,6 +21,8 @@ export default function CrmGoogleSheetsImportDialog({ open, onOpenChange, onImpo
   const [nameCol, setNameCol] = useState<number | "">("");
   const [phoneCol, setPhoneCol] = useState<number | "">("");
   const [emailCol, setEmailCol] = useState<number | "">("");
+  const [birthCol, setBirthCol] = useState<number | "">("");
+  const [cityCol, setCityCol] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [err, setErr] = useState("");
@@ -28,6 +30,7 @@ export default function CrmGoogleSheetsImportDialog({ open, onOpenChange, onImpo
 
   const reset = () => {
     setPreview(null); setNameCol(""); setPhoneCol(""); setEmailCol("");
+    setBirthCol(""); setCityCol("");
     setErr(""); setSummary(null);
   };
 
@@ -74,6 +77,8 @@ export default function CrmGoogleSheetsImportDialog({ open, onOpenChange, onImpo
             nameCol: nameCol === "" ? undefined : nameCol,
             phoneCol: phoneCol === "" ? undefined : phoneCol,
             emailCol: emailCol === "" ? undefined : emailCol,
+            birthCol: birthCol === "" ? undefined : birthCol,
+            cityCol: cityCol === "" ? undefined : cityCol,
           },
         }),
       });
@@ -126,6 +131,15 @@ export default function CrmGoogleSheetsImportDialog({ open, onOpenChange, onImpo
                 {summary.skippedSamples.slice(0, 10).map((s) => `#${s.row}`).join("، ")}
               </p>
             )}
+            {(summary.invalidBirthDates ?? 0) > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {tx(
+                  `تواريخ ميلاد غير صالحة (اتجاهل الحقل بس): ${summary.invalidBirthDates} — صفوف ${(summary.invalidBirthDateRows ?? []).slice(0, 10).map((n) => `#${n}`).join("، ")}`,
+                  `Invalid birth dates (field skipped only): ${summary.invalidBirthDates} — rows ${(summary.invalidBirthDateRows ?? []).slice(0, 10).map((n) => `#${n}`).join(", ")}`,
+                  locale
+                )}
+              </p>
+            )}
             <Button onClick={() => { onOpenChange(false); reset(); }} className="w-full bg-[#25D366] hover:bg-[#20bb5a] text-white">
               {tx("تم", "Done", locale)}
             </Button>
@@ -154,6 +168,8 @@ export default function CrmGoogleSheetsImportDialog({ open, onOpenChange, onImpo
                     { l: tx("عمود الاسم", "Name column", locale), v: nameCol, s: setNameCol },
                     { l: tx("عمود الرقم", "Phone column", locale), v: phoneCol, s: setPhoneCol },
                     { l: tx("عمود الإيميل", "Email column", locale), v: emailCol, s: setEmailCol },
+                    { l: tx("عمود تاريخ الميلاد", "Birth date column", locale), v: birthCol, s: setBirthCol },
+                    { l: tx("عمود المدينة", "City column", locale), v: cityCol, s: setCityCol },
                   ].map((f) => (
                     <label key={f.l} className="text-sm dark:text-gray-200">
                       {f.l} <span className="text-gray-400">({tx("اختياري", "optional", locale)})</span>

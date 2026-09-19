@@ -12,6 +12,8 @@ export interface CrmContact {
   email: string | null;
   tags: string[];
   notes: string | null;
+  birthDate: string | null;
+  city: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +40,16 @@ export interface ImportSummary {
   updated: number;
   skipped: number;
   skippedSamples: Array<{ row: number; reason: string }>;
+  invalidBirthDates?: number;
+  invalidBirthDateRows?: number[];
+}
+
+/** YYYY-MM-DD لعرض تاريخ الميلاد في input type=date */
+export function birthDateToInput(v: string | null): string {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
 }
 
 export interface SheetPreview {
