@@ -22,20 +22,20 @@ export default async function EmailMarketingLayout({
 
   return (
     <div
-      className="relative min-h-screen min-h-[100dvh] bg-[#02140e] text-foreground font-sans selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden flex flex-col"
+      className="relative min-h-screen min-h-[100dvh] bg-[#fafbfc] text-slate-900 font-sans selection:bg-red-500/20 selection:text-red-700 overflow-x-hidden flex flex-col"
       dir="rtl"
     >
-      {/* Ambient background glows and mesh */}
+      {/* Ambient background glows and mesh with warm red accents */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[130px]" />
-        <div className="absolute top-1/2 -right-40 h-[450px] w-[450px] rounded-full bg-indigo-600/10 blur-[140px]" />
-        <div className="absolute -bottom-40 left-10 h-[400px] w-[400px] rounded-full bg-emerald-600/10 blur-[120px]" />
+        <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-red-500/[0.04] blur-[130px]" />
+        <div className="absolute top-1/2 -right-40 h-[450px] w-[450px] rounded-full bg-rose-500/[0.03] blur-[140px]" />
+        <div className="absolute -bottom-40 left-10 h-[400px] w-[400px] rounded-full bg-red-600/[0.025] blur-[120px]" />
 
-        {/* Subtle grid */}
+        {/* Subtle red-tinted grid */}
         <div
-          className="absolute inset-0 opacity-[0.05]"
+          className="absolute inset-0 opacity-[0.4]"
           style={{
-            backgroundImage: `linear-gradient(rgba(59, 130, 246, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.4) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(239, 68, 68, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(239, 68, 68, 0.035) 1px, transparent 1px)`,
             backgroundSize: "44px 44px",
           }}
         />
@@ -51,11 +51,6 @@ export default async function EmailMarketingLayout({
       <main className="relative z-10 flex-1 flex flex-col">
         {children}
       </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-5 text-center text-xs text-white/30">
-        <p>© {new Date().getFullYear()} WANI — منصة التسويق عبر البريد الإلكتروني والقنوات الذكية</p>
-      </footer>
     </div>
   );
 }

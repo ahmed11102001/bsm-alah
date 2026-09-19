@@ -8,7 +8,7 @@ export default function EmailTabsNav() {
   const pathname = usePathname();
 
   return (
-    <div className="border-b border-white/10 bg-[#031510]/60 backdrop-blur-md">
+    <div className="border-b border-slate-200/90 bg-white/90 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <nav className="flex space-x-2 rtl:space-x-reverse overflow-x-auto py-2.5 no-scrollbar" aria-label="Tabs">
           {EMAIL_TABS.map((tab) => {
@@ -25,13 +25,13 @@ export default function EmailTabsNav() {
                 href={tab.href}
                 className={`group flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
-                    : "text-white/60 hover:bg-white/[0.05] hover:text-white"
+                    ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-500/25"
+                    : "text-slate-600 hover:bg-red-50/80 hover:text-red-600"
                 }`}
               >
                 <Icon
                   className={`h-4 w-4 transition-transform duration-200 group-hover:scale-110 ${
-                    isActive ? "text-white" : "text-white/40 group-hover:text-white/70"
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-red-500"
                   }`}
                 />
                 <span>{tab.label}</span>

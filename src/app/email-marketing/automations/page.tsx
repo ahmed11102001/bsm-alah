@@ -10,8 +10,8 @@ export default function EmailAutomationsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">الأتمتة</h1>
-        <p className="mt-1 text-sm text-white/60">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900">الأتمتة (Automations)</h1>
+        <p className="mt-1 text-sm text-slate-500">
           رسائل تلقائية بتتبعت لوحدها حسب قواعد — من غير تدخل منك.
         </p>
       </div>

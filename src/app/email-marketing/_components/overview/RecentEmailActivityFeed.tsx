@@ -20,7 +20,7 @@ export default function RecentEmailActivityFeed({ items }: { items: ActivityItem
     switch (status) {
       case "OPENED":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
             <Eye className="h-3 w-3" />
             مفتوح
           </span>
@@ -28,21 +28,21 @@ export default function RecentEmailActivityFeed({ items }: { items: ActivityItem
       case "DELIVERED":
       case "SENT":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400">
+          <span className="inline-flex items-center gap-1 rounded-md bg-red-50 border border-red-200 px-2 py-0.5 text-[11px] font-semibold text-red-700">
             <CheckCircle2 className="h-3 w-3" />
             مقبول (SMTP)
           </span>
         );
       case "QUEUED":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300">
+          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
             <Clock className="h-3 w-3" />
             في الطابور
           </span>
         );
       case "FAILED":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-400">
+          <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
             <XCircle className="h-3 w-3" />
             فشل
           </span>
@@ -51,24 +51,24 @@ export default function RecentEmailActivityFeed({ items }: { items: ActivityItem
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
-      <div className="flex items-center justify-between pb-4 border-b border-white/5">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-blue-400" />
-          <h3 className="text-sm font-bold text-white">آخر نشاطات الإرسال (Live Activity)</h3>
+          <Activity className="h-4 w-4 text-red-600" />
+          <h3 className="text-sm font-bold text-slate-900">آخر نشاطات الإرسال (Live Activity)</h3>
         </div>
         <Link
           href="/dashboard/email/activity"
-          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 transition-colors"
         >
           <span>عرض الكل</span>
           <ArrowLeft className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      <div className="mt-4 divide-y divide-white/5">
+      <div className="mt-4 divide-y divide-slate-100">
         {items.length === 0 ? (
-          <div className="py-8 text-center text-xs text-white/40">
+          <div className="py-8 text-center text-xs text-slate-400">
             لا توجد نشاطات إرسال حديثة حتى الآن.
           </div>
         ) : (
@@ -76,15 +76,15 @@ export default function RecentEmailActivityFeed({ items }: { items: ActivityItem
             <div key={act.id} className="py-3 flex items-center justify-between gap-3 text-xs">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-white font-medium truncate">{act.contactEmail}</span>
+                  <span className="font-mono text-slate-900 font-semibold truncate">{act.contactEmail}</span>
                   {getStatusBadge(act.status)}
                 </div>
-                <p className="text-[11px] text-white/40 truncate mt-0.5">
+                <p className="text-[11px] text-slate-500 truncate mt-0.5">
                   حملة: {act.campaignName} — {act.subject}
                 </p>
               </div>
 
-              <div className="text-left shrink-0 text-[10px] text-white/40 font-mono">
+              <div className="text-left shrink-0 text-[10px] text-slate-400 font-mono">
                 {act.sentAt || act.createdAt ? (
                   new Date(act.sentAt || act.createdAt).toLocaleTimeString("ar-EG", {
                     hour: "2-digit",

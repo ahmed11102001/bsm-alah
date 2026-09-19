@@ -48,7 +48,7 @@ export default function EmailOverviewPage() {
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
     );
   }
@@ -58,13 +58,13 @@ export default function EmailOverviewPage() {
       {/* Header */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 flex items-center gap-2.5">
             <span>لوحة تحكم البريد الإلكتروني</span>
-            <span className="rounded-full bg-blue-500/20 border border-blue-500/30 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+            <span className="rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-xs font-bold text-red-700">
               Email Hub
             </span>
           </h1>
-          <p className="mt-1.5 text-sm text-white/60">
+          <p className="mt-1.5 text-sm text-slate-500">
             نظرة شاملة على أداء الحملات البريدية، جهات الاتصال، ومعدلات القبول عبر خادم SMTP.
           </p>
         </div>
@@ -73,14 +73,14 @@ export default function EmailOverviewPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/dashboard/email/campaigns"
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:brightness-110 active:scale-95"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-red-500/25 transition-all hover:from-red-700 hover:to-rose-700 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             <span>حملة جديدة</span>
           </Link>
           <Link
             href="/dashboard/email/contacts"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/80 transition-all hover:bg-white/[0.08]"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-red-200 hover:bg-red-50/60 hover:text-red-600 active:scale-95"
           >
             <Users className="h-4 w-4" />
             <span>إضافة جهات اتصال</span>
@@ -101,7 +101,7 @@ export default function EmailOverviewPage() {
           value={stats.subscribedContacts.toLocaleString()}
           subtitle={`من إجمالي ${stats.totalContacts.toLocaleString()} جهة اتصال`}
           icon={Users}
-          accentColor="blue"
+          accentColor="red"
         />
 
         <EmailKpiCard
@@ -109,7 +109,7 @@ export default function EmailOverviewPage() {
           value={stats.totalEmailsSent.toLocaleString()}
           subtitle={`عبر ${stats.totalCampaigns} حملة بريدية`}
           icon={Send}
-          accentColor="indigo"
+          accentColor="rose"
         />
 
         <EmailKpiCard

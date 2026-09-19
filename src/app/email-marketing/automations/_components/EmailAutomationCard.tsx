@@ -23,28 +23,8 @@ export default function EmailAutomationCard({ type, icon, title, description, ac
   const [templates, setTemplates] = useState<EmailTemplateDTO[]>([]);
   const [connected, setConnected] = useState(false);
 
-  const accentText = {
-    pink: "text-pink-300",
-    emerald: "text-emerald-300",
-    amber: "text-amber-300",
-    violet: "text-violet-300",
-  }[accent];
-  const accentChip =
-    accent === "pink"
-      ? "bg-pink-500/15 border-pink-500/25"
-      : accent === "amber"
-        ? "bg-amber-500/15 border-amber-500/25"
-        : accent === "violet"
-          ? "bg-violet-500/15 border-violet-500/25"
-          : "bg-emerald-500/15 border-emerald-500/25";
-  const saveGradient =
-    accent === "pink"
-      ? "from-pink-600 to-rose-600 shadow-pink-500/20"
-      : accent === "amber"
-        ? "from-amber-600 to-orange-600 shadow-amber-500/20"
-        : accent === "violet"
-          ? "from-violet-600 to-indigo-600 shadow-violet-500/20"
-          : "from-emerald-600 to-teal-600 shadow-emerald-500/20";
+  const accentChip = "bg-red-50 border-red-200 text-red-600";
+  const saveGradient = "from-red-600 to-rose-600 shadow-md shadow-red-500/25";
 
   useEffect(() => {
     (async () => {
@@ -101,42 +81,42 @@ export default function EmailAutomationCard({ type, icon, title, description, ac
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+        <Loader2 className="h-6 w-6 animate-spin text-red-600" />
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 backdrop-blur-md">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className={`flex h-11 w-11 items-center justify-center rounded-xl border flex-shrink-0 ${accentChip}`}>
             {icon}
           </span>
           <div>
-            <h2 className="text-base font-extrabold text-white">{title}</h2>
-            <p className="mt-0.5 text-xs text-white/50 leading-relaxed">{description}</p>
+            <h2 className="text-base font-extrabold text-slate-900">{title}</h2>
+            <p className="mt-0.5 text-xs text-slate-500 leading-relaxed">{description}</p>
           </div>
         </div>
         <span
           className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold border ${
             enabled
-              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-              : "bg-white/[0.04] border-white/10 text-white/40"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+              : "bg-slate-100 border-slate-200 text-slate-500"
           }`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-400" : "bg-white/30"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-600" : "bg-slate-400"}`} />
           {enabled ? "مفعّلة" : "متوقفة"}
         </span>
       </div>
 
       {!connected ? (
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
-          <AlertTriangle className="h-4 w-4 text-amber-300 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-200/90 leading-relaxed">
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
             لازم تربط بريدك الأول من{" "}
-            <a href="/dashboard/email/settings" className="font-bold underline hover:text-amber-100">
+            <a href="/dashboard/email/settings" className="font-bold underline hover:text-amber-900">
               الإعدادات
             </a>{" "}
             ويكون Test Connection ناجح، وبعدين تقدر تفعّل الأتمتة.
@@ -144,31 +124,31 @@ export default function EmailAutomationCard({ type, icon, title, description, ac
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          <label className="block text-xs font-semibold text-white/70">
+          <label className="block text-xs font-semibold text-slate-700">
             قالب الإيميل
             <select
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-red-500 focus:outline-none"
             >
-              <option value="" className="bg-[#04241b]">اختار قالب…</option>
+              <option value="" className="bg-white">اختار قالب…</option>
               {templates.map((t) => (
-                <option key={t.id} value={t.id} className="bg-[#04241b]">
+                <option key={t.id} value={t.id} className="bg-white">
                   {t.name} — {t.subject}
                 </option>
               ))}
             </select>
           </label>
 
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-3 cursor-pointer">
-            <span className="text-sm font-semibold text-white/85">تفعيل الأتمتة</span>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 cursor-pointer">
+            <span className="text-sm font-semibold text-slate-800">تفعيل الأتمتة</span>
             <button
               type="button"
               role="switch"
               aria-checked={enabled}
               onClick={() => setEnabled((v) => !v)}
               className={`relative h-6 w-11 rounded-full transition-colors flex-shrink-0 ${
-                enabled ? "bg-emerald-500" : "bg-white/15"
+                enabled ? "bg-red-600" : "bg-slate-200"
               }`}
             >
               <span
@@ -179,9 +159,9 @@ export default function EmailAutomationCard({ type, icon, title, description, ac
             </button>
           </label>
 
-          {error && <p className="text-xs text-red-300">{error}</p>}
+          {error && <p className="text-xs text-rose-600">{error}</p>}
           {savedMsg && (
-            <p className="flex items-center gap-1.5 text-xs text-emerald-300">
+            <p className="flex items-center gap-1.5 text-xs text-emerald-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {savedMsg}
             </p>
@@ -191,7 +171,7 @@ export default function EmailAutomationCard({ type, icon, title, description, ac
             type="button"
             onClick={save}
             disabled={saving}
-            className={`w-full sm:w-auto rounded-xl bg-gradient-to-r px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 ${saveGradient}`}
+            className={`w-full sm:w-auto rounded-xl bg-gradient-to-r px-6 py-2.5 text-sm font-bold text-white shadow-md hover:from-red-700 hover:to-rose-700 active:scale-95 transition-all disabled:opacity-50 ${saveGradient}`}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
           </button>

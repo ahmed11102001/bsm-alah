@@ -122,15 +122,15 @@ export default function CartAbandonAutomationCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 backdrop-blur-md">
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/25 flex-shrink-0">
-            <ShoppingCart className="h-5 w-5 text-orange-300" />
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 border border-red-200 flex-shrink-0">
+            <ShoppingCart className="h-5 w-5 text-red-600" />
           </span>
           <div>
-            <h2 className="text-base font-extrabold text-white">السلة المتروكة 🛒</h2>
-            <p className="mt-0.5 text-xs text-white/50 leading-relaxed">
+            <h2 className="text-base font-extrabold text-slate-900">السلة المتروكة 🛒</h2>
+            <p className="mt-0.5 text-xs text-slate-500 leading-relaxed">
               إرسال سلسلة من الإيميلات (حتى 3 خطوات) للعملاء اللي سابوا منتجات في السلة بدون إتمام الشراء. 
               لو العميل اشترى في أي وقت السلسلة هتقف تلقائي.
             </p>
@@ -139,21 +139,21 @@ export default function CartAbandonAutomationCard() {
         <span
           className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold border ${
             enabled
-              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-              : "bg-white/[0.04] border-white/10 text-white/40"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+              : "bg-slate-100 border-slate-200 text-slate-500"
           }`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-400" : "bg-white/30"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-600" : "bg-slate-400"}`} />
           {enabled ? "مفعّلة" : "متوقفة"}
         </span>
       </div>
 
       {!connected ? (
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
-          <AlertTriangle className="h-4 w-4 text-amber-300 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-200/90 leading-relaxed">
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
             لازم تربط بريدك الأول من{" "}
-            <a href="/dashboard/email/settings" className="font-bold underline hover:text-amber-100">
+            <a href="/dashboard/email/settings" className="font-bold underline hover:text-amber-900">
               الإعدادات
             </a>{" "}
             ويكون Test Connection ناجح، وبعدين تقدر تفعّل الأتمتة.
@@ -161,15 +161,15 @@ export default function CartAbandonAutomationCard() {
         </div>
       ) : (
         <div className="mt-5 space-y-4">
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-3 cursor-pointer mb-2">
-            <span className="text-sm font-semibold text-white/85">تفعيل أتمتة السلة المتروكة</span>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 cursor-pointer mb-2">
+            <span className="text-sm font-semibold text-slate-800">تفعيل أتمتة السلة المتروكة</span>
             <button
               type="button"
               role="switch"
               aria-checked={enabled}
               onClick={() => setEnabled((v) => !v)}
               className={`relative h-6 w-11 rounded-full transition-colors flex-shrink-0 ${
-                enabled ? "bg-emerald-500" : "bg-white/15"
+                enabled ? "bg-red-600" : "bg-slate-200"
               }`}
             >
               <span
@@ -182,12 +182,12 @@ export default function CartAbandonAutomationCard() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white/70">خطوات الإرسال</h3>
+              <h3 className="text-sm font-semibold text-slate-700">خطوات الإرسال</h3>
               {steps.length < 3 && (
                 <button
                   type="button"
                   onClick={addStep}
-                  className="flex items-center gap-1.5 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   إضافة خطوة
@@ -196,9 +196,9 @@ export default function CartAbandonAutomationCard() {
             </div>
 
             {steps.map((step, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-white/[0.02] border border-white/10 p-3 rounded-xl">
-                <div className="flex items-center gap-2 text-xs font-bold text-white/60 w-full sm:w-auto flex-shrink-0">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10">{idx + 1}</span>
+              <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 w-full sm:w-auto flex-shrink-0">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-700 font-bold">{idx + 1}</span>
                   بعد
                 </div>
                 
@@ -207,18 +207,18 @@ export default function CartAbandonAutomationCard() {
                   min="1"
                   value={step.delayHours}
                   onChange={(e) => updateStep(idx, "delayHours", Number(e.target.value))}
-                  className="w-full sm:w-20 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-sm text-center text-white focus:border-orange-500 focus:outline-none"
+                  className="w-full sm:w-20 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-center text-slate-900 focus:border-red-500 focus:outline-none"
                 />
-                <span className="text-xs font-semibold text-white/60">ساعة</span>
+                <span className="text-xs font-semibold text-slate-600">ساعة</span>
 
                 <select
                   value={step.templateId}
                   onChange={(e) => updateStep(idx, "templateId", e.target.value)}
-                  className="flex-1 w-full rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-sm text-white focus:border-orange-500 focus:outline-none"
+                  className="flex-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-red-500 focus:outline-none"
                 >
-                  <option value="" className="bg-[#04241b]">اختار قالب…</option>
+                  <option value="" className="bg-white">اختار قالب…</option>
                   {templates.map((t) => (
-                    <option key={t.id} value={t.id} className="bg-[#04241b]">
+                    <option key={t.id} value={t.id} className="bg-white">
                       {t.name} — {t.subject}
                     </option>
                   ))}
@@ -228,7 +228,7 @@ export default function CartAbandonAutomationCard() {
                   type="button"
                   onClick={() => removeStep(idx)}
                   disabled={steps.length === 1}
-                  className="p-1.5 text-white/40 hover:text-red-400 transition-colors disabled:opacity-30 flex-shrink-0"
+                  className="p-1.5 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-30 flex-shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -236,9 +236,9 @@ export default function CartAbandonAutomationCard() {
             ))}
           </div>
 
-          {error && <p className="text-xs text-red-300">{error}</p>}
+          {error && <p className="text-xs text-rose-600">{error}</p>}
           {savedMsg && (
-            <p className="flex items-center gap-1.5 text-xs text-emerald-300">
+            <p className="flex items-center gap-1.5 text-xs text-emerald-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {savedMsg}
             </p>
@@ -248,7 +248,7 @@ export default function CartAbandonAutomationCard() {
             type="button"
             onClick={save}
             disabled={saving}
-            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-orange-600 to-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-red-500/25 hover:from-red-700 hover:to-rose-700 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
           </button>

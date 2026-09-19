@@ -9,35 +9,35 @@ export default function EmailCampaignStatusBadge({
   switch (status) {
     case "COMPLETED":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
           <CheckCircle2 className="h-3 w-3" />
           مكتملة
         </span>
       );
     case "SENDING":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-bold text-blue-300">
-          <Radio className="h-3 w-3 animate-pulse text-blue-400" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-700">
+          <Radio className="h-3 w-3 animate-pulse text-red-600" />
           جاري الإرسال
         </span>
       );
     case "QUEUED":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-300">
-          <Clock className="h-3 w-3 animate-spin text-amber-400" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
+          <Clock className="h-3 w-3 animate-spin text-amber-600" />
           قيد الانتظار
         </span>
       );
     case "DRAFT":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-white/60">
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
           <FileEdit className="h-3 w-3" />
           مسودة
         </span>
       );
     case "FAILED":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold text-red-300">
+        <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700">
           <XCircle className="h-3 w-3" />
           فشلت
         </span>

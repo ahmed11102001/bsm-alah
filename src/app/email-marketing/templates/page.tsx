@@ -109,7 +109,7 @@ export default function EmailTemplatesPage() {
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
     );
   }
@@ -118,8 +118,8 @@ export default function EmailTemplatesPage() {
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">قوالب البريد الإلكتروني (Email Templates)</h1>
-        <p className="mt-1 text-sm text-white/60">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900">قوالب البريد الإلكتروني (Email Templates)</h1>
+        <p className="mt-1 text-sm text-slate-500">
           صمّم قوالب جذابة ومتوافقة مع الهواتف وصناديق البريد، واستخدم المتغيرات لتخصيص كل رسالة باسم العميل.
         </p>
       </div>
